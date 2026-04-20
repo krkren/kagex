@@ -292,6 +292,8 @@ Storages.addAutoPath(System.exePath + "video/"); // video/ under exePath
 
 Storages.addAutoPath("data/"); // data folder
 
+Storages.addAutoPath(System.exePath + "plugin/");
+
 {
 
 	// Register subfolders under data
@@ -517,8 +519,6 @@ Plugins.link("layerExRaster.dll");
 Plugins.link("scriptsEx.dll");
 
 Plugins.link("shrinkCopy.dll");
-
-Plugins.link("gfxEffect.dll");
 
 Plugins.link("menu.dll");
 
