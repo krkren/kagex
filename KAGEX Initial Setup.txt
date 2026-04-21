@@ -8,31 +8,13 @@ Author: Go Watanabe
 
 1. Obtaining the Base
 
-
-
-　Use Subversion to obtain the following from the official Kirikiri repository:
-
-
-
-　  https://sv.kikyou.info/svn/kirikiri2/tags/kag3ex3
-
-
+  https://github.com/krkren/kagex
 
 2. Deploying Executable Files
 
+ Run setup.bat as administrator
 
-
-  Download the Kirikiri binary distribution from the repository and place it here:
-
-  https://sv.kikyou.info/svn/kirikiri2/trunk/kirikiri2/bin/win32
-
-
-
-  *Note: Operation has only been confirmed with the latest development binary (Rev.5034) or later.
-
-
-
- Executing krkr.exe will start the sample system.
+ Executing krkrz.exe will start the sample system.
 
 
 
@@ -52,4 +34,4 @@ Author: Go Watanabe
 
   When actually releasing a game, it is better to copy template/system and template/startup.tjs 
 
-　directly into the data directory.
+　directly into the data directory. Delete data/system/Config.tjs afterwards.
