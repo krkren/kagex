@@ -30,14 +30,14 @@ if errorlevel 2 (
     set "ARCH=x86"
     set "VCVARS_ARG=x86"
     set "VCPKG_TRIPLET=x86-windows"
-    set "CMAKE_PRESET=x86-windows"
+    set "CMAKE_PRESET=x86-windows-win"
     set "MSBUILD_PLATFORM=Win32"
     set "WUV_PROJ=wuvorbis.vcxproj"
 ) else (
     set "ARCH=x64"
     set "VCVARS_ARG=x64"
     set "VCPKG_TRIPLET=x64-windows"
-    set "CMAKE_PRESET=x64-windows"
+    set "CMAKE_PRESET=x64-windows-win"
     set "MSBUILD_PLATFORM=x64"
     set "WUV_PROJ=wuvorbis64.vcxproj"
 )
