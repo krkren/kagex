@@ -212,11 +212,9 @@ set "VCPKG_ROOT=%VCPKG_DIR%"
 echo.
 echo [*] Checking Repositories...
 set "REPO_DIR=%ROOT_DIR%\krkrz_dev"
-set "WUV_DIR=%ROOT_DIR%\wuvorbis"
 set "SAMPLE_DIR=%ROOT_DIR%\SamplePlugin"
 
 if not exist "%REPO_DIR%" "!GIT_EXE!" clone --recursive https://github.com/wamsoft/krkrz_dev.git "%REPO_DIR%" || goto :error
-if not exist "%WUV_DIR%" "!GIT_EXE!" clone https://github.com/krkrz/wuvorbis.git "%WUV_DIR%" || goto :error
 if not exist "%SAMPLE_DIR%" "!GIT_EXE!" clone https://github.com/krkrz/SamplePlugin.git "%SAMPLE_DIR%" || goto :error
 
 :: -----------------------------------------------------
@@ -248,22 +246,6 @@ if exist "build" rmdir /s /q "build"
 
 cmake --preset %CMAKE_PRESET% -DCMAKE_ASM_NASM_COMPILER="!NASM_EXE!" || goto :error
 cmake --build --preset %CMAKE_PRESET% --config %CONFIG% || goto :error
-popd
-
-:: -----------------------------------------------------
-:: Step 10: Build wuvorbis (MSBuild)
-:: -----------------------------------------------------
-echo.
-echo [*] Building wuvorbis (%MSBUILD_PLATFORM% / %CONFIG%)...
-pushd "%WUV_DIR%"
-
-:: Securely determine the correct PlatformToolset based on VS version
-set "TOOLSET=v143"
-if "%VisualStudioVersion%"=="16.0" set "TOOLSET=v142"
-if "%VisualStudioVersion%"=="15.0" set "TOOLSET=v141"
-set "SDK_VER=%WindowsSDKVersion:~0,-1%"
-
-msbuild %WUV_PROJ% -m /p:Configuration=%CONFIG% /p:Platform=%MSBUILD_PLATFORM% /p:WindowsTargetPlatformVersion=%SDK_VER% /p:PlatformToolset=%TOOLSET% /p:OutDir="%WUV_DIR%\%MSBUILD_PLATFORM%\%CONFIG%\\" || goto :error
 popd
 
 :: -----------------------------------------------------

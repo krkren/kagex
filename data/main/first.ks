@@ -1,8 +1,4 @@
-﻿@loadplugin module=wuvorbis.dll
-
-@loadplugin module=extrans.dll
-
-@loadplugin module=csvparser.dll
+﻿@loadplugin module=extrans.dll
 
 @call storage="macro.ks"
 
