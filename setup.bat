@@ -321,6 +321,7 @@ echo [*] Cleaning up source code, vcpkg, and legacy stubs for distribution...
 if exist "%VCPKG_DIR%" rmdir /s /q "%VCPKG_DIR%"
 if exist "%WUV_DIR%" rmdir /s /q "%WUV_DIR%"
 if exist "%SAMPLE_DIR%" rmdir /s /q "%SAMPLE_DIR%"
+if exist "%REPO_DIR%" rmdir /s /q "%REPO_DIR%"
 if exist "%ROOT_DIR%\build_tools" rmdir /s /q "%ROOT_DIR%\build_tools"
 
 if exist "tp_stub.h" del "tp_stub.h"
