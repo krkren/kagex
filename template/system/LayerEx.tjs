@@ -33,7 +33,8 @@
 //	 */
 //	function modulate(hue, saturation, luminance);
 
-Plugins.link("layerExImage.dll");
+// layerExImage.dll - load only if not already loaded (e.g., by Initialize.tjs)
+try { Plugins.link("layerExImage.dll") if typeof global.Layer.operateRect == "undefined"; } catch {}
 
 /**
  * Add drop shadow

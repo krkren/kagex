@@ -478,6 +478,14 @@ function CanLoadPlugin(name) {
 
 	if (exist(exepath+name) || exist(exepath+"plugin/"+name) || exist(exepath+"system/"+name)) return true;
 
+	// On Linux, Plugins.link converts .dll to libXXX.so, so also check for .so variant
+	var lower = name.toLowerCase();
+	if (lower.indexOf(".dll") >= 0) {
+		var base = lower.substring(0, lower.length - 4); // remove .dll
+		var soName = "lib" + base + ".so";
+		if (exist(exepath+soName) || exist(exepath+"plugin/"+soName) || exist(exepath+"system/"+soName)) return true;
+	}
+
 	var placed = Storages.getPlacedPath(name);
 
 	return placed != "" && exist(placed);
@@ -504,17 +512,14 @@ if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
 
 
-Plugins.link("csvParser.dll");
-
-Plugins.link("layerExBTOA.dll");
-
-Plugins.link("layerExImage.dll");
-
-Plugins.link("layerExRaster.dll");
-
-Plugins.link("scriptsEx.dll");
-
-Plugins.link("shrinkCopy.dll");
+// Load plugins (with guards to prevent double-loading on Linux where .dll/.DLL are case-sensitive)
+try { Plugins.link("csvParser.dll") if global.CSVParser === void; } catch {}
+try { Plugins.link("layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined"; } catch {}
+try { Plugins.link("layerExImage.dll") if typeof global.Layer.operateRect == "undefined"; } catch {}
+try { Plugins.link("layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined"; } catch {}
+// scriptsEx.dll - always try to load (Scripts class exists but this extends it)
+try { Plugins.link("scriptsEx.dll"); } catch {}
+try { Plugins.link("shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
 
 
 
