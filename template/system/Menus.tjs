@@ -1,6 +1,37 @@
 ﻿// Menus.tjs - Definition of menu creation functions
 // Copyright (C)2001-2008, W.Dee and contributors  Redistribution and modification are free.
 
+// Polyfill for missing Menu classes in SDL3 builds
+if (typeof global.MenuItem == "undefined") {
+    class MenuItem {
+        var caption = "";
+        var checked = false;
+        var enabled = true;
+        var visible = true;
+        var children = []; // <-- Added array to hold submenus
+
+        function MenuItem() {}
+        function finalize() {}
+        function add(item) { children.add(item); } // <-- Store added items
+        function insert() {}
+        function remove() {}
+    }
+    global.MenuItem = MenuItem;
+}
+
+if (typeof global.Menu == "undefined") {
+    class Menu {
+        var children = []; // <-- Added here as well
+
+        function Menu() {}
+        function finalize() {}
+        function add(item) { children.add(item); } // <-- Store added items
+        function insert() {}
+        function remove() {}
+    }
+    global.Menu = Menu;
+}
+
 function KAGWindow_createMenus()
 {
 	// This function is executed in the context of a MainWindow class object.

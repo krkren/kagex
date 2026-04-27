@@ -30,14 +30,14 @@ if errorlevel 2 (
     set "ARCH=x86"
     set "VCVARS_ARG=x86"
     set "VCPKG_TRIPLET=x86-windows"
-    set "CMAKE_PRESET=x86-windows-win"
+    set "CMAKE_PRESET=x86-windows"
     set "MSBUILD_PLATFORM=Win32"
     set "WUV_PROJ=wuvorbis.vcxproj"
 ) else (
     set "ARCH=x64"
     set "VCVARS_ARG=x64"
     set "VCPKG_TRIPLET=x64-windows"
-    set "CMAKE_PRESET=x64-windows-win"
+    set "CMAKE_PRESET=x64-windows"
     set "MSBUILD_PLATFORM=x64"
     set "WUV_PROJ=wuvorbis64.vcxproj"
 )
@@ -287,29 +287,31 @@ set "BLD=krkrz_dev\build\%CMAKE_PRESET%"
 
 if "%ARCH%"=="x64" (
     move /y "!BLD!\core\%CONFIG%\krkrz64.exe" "krkrz.exe" >nul 2>&1
+    move /y "!BLD!\core\%CONFIG%\SDL3.dll" "SDL3.dll" >nul 2>&1
     move /y "!BLD!\core\%CONFIG%\krkrz64d.exe" "krkrz.exe" >nul 2>&1
 ) else (
     move /y "!BLD!\core\%CONFIG%\krkrz.exe" "krkrz.exe" >nul 2>&1
+    move /y "!BLD!\core\%CONFIG%\SDL3.dll" "SDL3.dll" >nul 2>&1
     move /y "!BLD!\core\%CONFIG%\krkrzd.exe" "krkrz.exe" >nul 2>&1
 )
 
 move /y "!BLD!\%CONFIG%\krmovie.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\KAGParserEx\%CONFIG%\KAGParserEx.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\csvParser\%CONFIG%\csvParser.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\fstat\%CONFIG%\fstat.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\LayerExBTOA\%CONFIG%\LayerExBTOA.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\LayerExDraw\%CONFIG%\LayerExDraw.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\LayerExImage\%CONFIG%\LayerExImage.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\LayerExRaster\%CONFIG%\LayerExRaster.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\menu\%CONFIG%\menu.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\saveStruct\%CONFIG%\saveStruct.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\scriptsEx\%CONFIG%\scriptsEx.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\shrinkCopy\%CONFIG%\shrinkCopy.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\win32dialog\%CONFIG%\win32dialog.dll" "plugin\" >nul
-move /y "!BLD!\core\plugins\windowEx\%CONFIG%\windowEx.dll" "plugin\" >nul
+move /y "!BLD!\core\plugins\KAGParserEx\%CONFIG%\KAGParserEx.dll" "." >nul
+move /y "!BLD!\core\plugins\csvParser\%CONFIG%\csvParser.dll" "." >nul
+move /y "!BLD!\core\plugins\fstat\%CONFIG%\fstat.dll" "." >nul
+move /y "!BLD!\core\plugins\LayerExBTOA\%CONFIG%\LayerExBTOA.dll" "." >nul
+move /y "!BLD!\core\plugins\LayerExDraw\%CONFIG%\LayerExDraw.dll" "." >nul
+move /y "!BLD!\core\plugins\LayerExImage\%CONFIG%\LayerExImage.dll" "." >nul
+move /y "!BLD!\core\plugins\LayerExRaster\%CONFIG%\LayerExRaster.dll" "." >nul
+move /y "!BLD!\core\plugins\menu\%CONFIG%\menu.dll" "." >nul
+move /y "!BLD!\core\plugins\saveStruct\%CONFIG%\saveStruct.dll" "." >nul
+move /y "!BLD!\core\plugins\scriptsEx\%CONFIG%\scriptsEx.dll" "." >nul
+move /y "!BLD!\core\plugins\shrinkCopy\%CONFIG%\shrinkCopy.dll" "." >nul
+move /y "!BLD!\core\plugins\win32dialog\%CONFIG%\win32dialog.dll" "." >nul
+move /y "!BLD!\core\plugins\windowEx\%CONFIG%\windowEx.dll" "." >nul
 
-move /y "wuvorbis\%MSBUILD_PLATFORM%\%CONFIG%\wuvorbis.dll" "plugin\" >nul
-move /y "SamplePlugin\extrans\bin\%MSBUILD_PLATFORM%\%CONFIG%\extrans.dll" "plugin\" >nul
+move /y "wuvorbis\%MSBUILD_PLATFORM%\%CONFIG%\wuvorbis.dll" "." >nul
+move /y "SamplePlugin\extrans\bin\%MSBUILD_PLATFORM%\%CONFIG%\extrans.dll" "." >nul
 
 :: -----------------------------------------------------
 :: Step 13: Cleanup
@@ -317,7 +319,6 @@ move /y "SamplePlugin\extrans\bin\%MSBUILD_PLATFORM%\%CONFIG%\extrans.dll" "plug
 echo.
 echo [*] Cleaning up source code, vcpkg, and legacy stubs for distribution...
 if exist "%VCPKG_DIR%" rmdir /s /q "%VCPKG_DIR%"
-if exist "%REPO_DIR%" rmdir /s /q "%REPO_DIR%"
 if exist "%WUV_DIR%" rmdir /s /q "%WUV_DIR%"
 if exist "%SAMPLE_DIR%" rmdir /s /q "%SAMPLE_DIR%"
 if exist "%ROOT_DIR%\build_tools" rmdir /s /q "%ROOT_DIR%\build_tools"

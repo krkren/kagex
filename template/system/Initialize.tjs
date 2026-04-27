@@ -506,11 +506,7 @@ if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
 Plugins.link("csvParser.dll");
 
-Plugins.link("fstat.dll");
-
 Plugins.link("layerExBTOA.dll");
-
-Plugins.link("layerExDraw.dll");
 
 Plugins.link("layerExImage.dll");
 
@@ -519,10 +515,6 @@ Plugins.link("layerExRaster.dll");
 Plugins.link("scriptsEx.dll");
 
 Plugins.link("shrinkCopy.dll");
-
-Plugins.link("menu.dll");
-
-Plugins.link("windowEx.dll");
 
 
 
@@ -616,9 +608,22 @@ if(typeof global.config_version == "undefined" || config_version != kagVersion)
 
 */
 
-
+// Polyfill for missing System desktop properties in SDL3 builds
+if (typeof System.desktopLeft == "undefined") {
+    System.desktopLeft = 0;
+    System.desktopTop = 0;
+    
+    // Attempt to use the screen's actual resolution, or fallback to a default
+    System.desktopWidth = (typeof System.screenWidth != "undefined") ? System.screenWidth : 1920;
+    System.desktopHeight = (typeof System.screenHeight != "undefined") ? System.screenHeight : 1080;
+}
 
 // Lock using the executable file path as the key
+
+// Polyfill for missing createAppLock in SDL3 builds
+if (typeof System.createAppLock == "undefined") {
+    System.createAppLock = function(key) { return true; };
+}
 
 if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[^A-Za-z0-9]/g, '_')) && typeof global.restart == "undefined")
 
@@ -963,11 +968,18 @@ if(Storages.isExistentStorage("AfterInit.tjs"))
 
 
 /*
-
-	Executing first.ks
-
+    Executing first.ks
 */
 
-
+// Force SDL3 window size right before processing the first script
+if (typeof global.kag !== "undefined") {
+    // Dynamically grab the game's actual resolution from Config.tjs, fallback to 800x600
+    var gameWidth = typeof global.scWidth !== "undefined" ? global.scWidth : 800;
+    var gameHeight = typeof global.scHeight !== "undefined" ? global.scHeight : 600;
+    
+    global.kag.width = gameWidth;
+    global.kag.height = gameHeight;
+    global.kag.setInnerSize(gameWidth, gameHeight);
+}
 
 kag.process("first.ks");

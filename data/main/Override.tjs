@@ -112,6 +112,14 @@ function KAGWindow_createMenus()
 {
 	// This function is executed in the context of the MainWindow class object
 
+    // Polyfill missing window menu property for SDL3
+    if (typeof this.menu == "undefined") {
+        this.menu = new global.Menu();
+    }
+    if (typeof menu == "undefined") {
+        var menu = this.menu;
+    }
+
 	menu.add(this.systemMenu = new KAGMenuItem(this, "SYSTEM(&S)", 0, "", false));
 
 	systemMenu.add(this.storeMenu   = new KAGMenuItem(this, "SAVE(F2)", 0,"startSave()",false));
