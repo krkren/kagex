@@ -134,7 +134,7 @@ Fade flashing
 *label15|Video Layer Test
 
 [layopt layer=0 reset]
-[image layer=1 movie=test.mpg alpha=2 loop visible=true dafx=center dafy=center left=400 top=300]
+[image layer=1 movie=test.webm alpha=2 loop visible=true dafx=center dafy=center left=400 top=300]
 Loading video
 [l][r]
 
