@@ -863,11 +863,16 @@ function setReplaymodePageButton(work=void)
     var cgnum = 0;
     for (var i=0;i<tf.replaymodelist.count && cgnum < tf.cgbtnnum;i++) {
         var info = tf.replaymodelist[i];
-        var flagname = 'trail_' + info.scene + '_' + (info.target !== void ? info.target : "start");
+        if (info === void) continue;
+
+        // Check replay flag - default to false when sf access crashes on 
+        // non-existent flags. tf.allseen always overrides.
+        var replayFlagSet = tf.allseen;
+
         if (info.page == pagename) {
             var button = kag.current.names["cg" + cgnum];
             if (button !== void) {
-                if (tf.allseen || sf[flagname]) {
+                if (replayFlagSet) {
                     if (info.thum) {
                         setCGImage(button, info.thum);
                     } else {
