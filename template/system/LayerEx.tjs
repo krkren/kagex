@@ -33,8 +33,8 @@
 //	 */
 //	function modulate(hue, saturation, luminance);
 
-// layerExImage.dll - load only if not already loaded (e.g., by Initialize.tjs)
-try { Plugins.link("layerExImage.dll") if typeof global.Layer.operateRect == "undefined"; } catch {}
+// layerExImage.dll - must always load to get Layer.light(), Layer.colorize(), etc.
+try { Plugins.link("layerExImage.dll"); } catch {}
 
 /**
  * Add drop shadow

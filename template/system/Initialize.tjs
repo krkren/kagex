@@ -513,9 +513,10 @@ if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
 
 // Load plugins (with guards to prevent double-loading on Linux where .dll/.DLL are case-sensitive)
-try { Plugins.link("csvParser.dll") if global.CSVParser === void; } catch {}
+try { Plugins.link("csvParser.dll") if typeof global.CSVParser == "undefined"; } catch {}
 try { Plugins.link("layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined"; } catch {}
-try { Plugins.link("layerExImage.dll") if typeof global.Layer.operateRect == "undefined"; } catch {}
+// layerExImage.dll - must always load (operateRect may be defined by core engine as stub)
+try { Plugins.link("layerExImage.dll"); } catch {}
 try { Plugins.link("layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined"; } catch {}
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 try { Plugins.link("scriptsEx.dll"); } catch {}
