@@ -521,6 +521,7 @@ try { Plugins.link("layerExRaster.dll") if typeof global.Layer.copyRaster == "un
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 try { Plugins.link("scriptsEx.dll"); } catch {}
 try { Plugins.link("shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
+try { Plugins.link("extrans.dll"); } catch {}
 
 
 

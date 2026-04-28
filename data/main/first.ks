@@ -1,14 +1,4 @@
-﻿// extrans.dll has no Linux port yet; load only if plugin file exists
-[iscript]
-try {
-	var plPath = Storages.getPlacedPath("extrans.dll");
-	if (plPath != "" && Storages.isExistentStorage(plPath)) {
-		Plugins.link("extrans.dll");
-	}
-} catch {}
-[endscript]
-
-@call storage="macro.ks"
+﻿@call storage="macro.ks"
 
 
 
