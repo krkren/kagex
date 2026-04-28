@@ -1,6 +1,4 @@
-﻿@loadplugin module=extrans.dll
-
-@call storage="macro.ks"
+﻿@call storage="macro.ks"
 
 
 

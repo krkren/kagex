@@ -243,6 +243,34 @@ cmake --build "$BUILD_DIR" --config "$CONFIG" || err "Build failed"
 popd >/dev/null
 
 # -----------------------------------------------------
+# Step 5b: Clone SamplePlugin and init submodules
+# -----------------------------------------------------
+log "Cloning SamplePlugin (for extrans plugin)..."
+SAMPLE_DIR="$ROOT_DIR/SamplePlugin"
+
+if [ ! -d "$SAMPLE_DIR" ]; then
+    git clone https://github.com/krkren/SamplePlugin.git "$SAMPLE_DIR" || err "Failed to clone SamplePlugin"
+else
+    log "SamplePlugin already exists, skipping clone."
+fi
+
+log "Initializing git submodules (tp_stub)..."
+cd "$SAMPLE_DIR"
+git submodule update --init --recursive || err "Failed to init submodules"
+cd "$ROOT_DIR"
+
+# -----------------------------------------------------
+# Step 5c: Build extrans plugin from SamplePlugin
+# -----------------------------------------------------
+log "Building extrans plugin..."
+pushd "$SAMPLE_DIR" >/dev/null
+if [ -d "build-linux" ]; then rm -rf build-linux; fi
+cmake --preset linux-x64 || err "SamplePlugin CMake configure failed"
+CONFIG_LOWER=$(echo "$CONFIG" | tr '[:upper:]' '[:lower:]')
+    cmake --build --preset "linux-x64-$CONFIG_LOWER" || err "SamplePlugin build failed"
+popd >/dev/null
+
+# -----------------------------------------------------
 # Step 6: Move Files to Output
 # -----------------------------------------------------
 log "Moving compiled artifacts to final folder..."
@@ -309,6 +337,14 @@ if [ "$PLUGIN_COUNT" -eq 0 ]; then
     warn "No .so plugin files found in the build tree."
 fi
 
+# Copy extrans plugin to plugin folder
+if [ -f "$SAMPLE_DIR/build-linux/libextrans.so" ]; then
+    cp "$SAMPLE_DIR/build-linux/libextrans.so" ./plugin/ && \
+    log "Copied libextrans.so to plugin/"
+else
+    warn "libextrans.so not found at $SAMPLE_DIR/build-linux/libextrans.so"
+fi
+
 # -----------------------------------------------------
 # Step 7: Cleanup source trees (optional)
 # -----------------------------------------------------
@@ -316,6 +352,7 @@ log "Cleaning up build artifacts and clones for distribution..."
 
 if [ -d "$VCPKG_DIR" ]; then rm -rf "$VCPKG_DIR"; fi
 if [ -d "$REPO_DIR" ]; then rm -rf "$REPO_DIR"; fi
+if [ -d "$SAMPLE_DIR" ]; then rm -rf "$SAMPLE_DIR"; fi
 
 echo ""
 echo "==================================================="
