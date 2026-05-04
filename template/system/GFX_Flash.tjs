@@ -6,7 +6,7 @@ if (typeof global.FlashPlayer == "undefined") {
 
 	try {
 
-		Plugins.link("flashPlayer.dll");
+		Plugins.link("plugin/flashPlayer.dll");
 
 		invalidate global.__dummyGfxFlash;
 

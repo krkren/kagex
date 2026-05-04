@@ -16,8 +16,8 @@ KAGLoadScript("psdlayer.tjs");
 // Sound buffer processing
 if (typeof WaveSoundBuffer.setDefaultAheads == "undefined") {
 	WaveSoundBuffer.enableGetSample = false;
-	var plug = "getSample.dll";
-	if (CanLoadPlugin(plug)) try {
+	var plug = "plugin/getSample.dll";
+	try {
 		Plugins.link (plug);
 		// Sample pre-fetch value (for reducing lip-sync lag)
 		WaveSoundBuffer.setDefaultAheads((int)(200 * 44.1));
@@ -35,11 +35,11 @@ var allStandAnimMap;
 
 // Loading CSV parser plugin
 if (global.CSVParser === void) {
-    Plugins.link("csvParser.dll");
+    Plugins.link("plugin/csvParser.dll");
 }
 // Loading shrinkCopy plugin
 if (typeof global.Layer.shrinkCopy == "undefined") {
-	try { Plugins.link("shrinkCopy.dll"); } catch {}
+	try { Plugins.link("plugin/shrinkCopy.dll"); } catch {}
 }
 
 /**
@@ -541,7 +541,7 @@ function _dump(name, value)
 var dumpcount = 0;
 function dump() {
 	if (typeof global.Array.save2 == "undefined") {
-		Plugins.link("savestruct.dll");
+		Plugins.link("plugin/savestruct.dll");
 	}
 	dumplist = [];
 	dumpdone = %[];

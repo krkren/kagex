@@ -292,8 +292,6 @@ Storages.addAutoPath(System.exePath + "video/"); // video/ under exePath
 
 Storages.addAutoPath("data/"); // data folder
 
-Storages.addAutoPath(System.exePath + "plugin/");
-
 {
 
 	// Register subfolders under data
@@ -472,36 +470,6 @@ function KAGConfigEnabled(name, dflt) {
 
 }
 
-function CanLoadPlugin(name) {
-
-	var exepath = System.exePath, exist = Storages.isExistentStorage;
-
-	if (exist(exepath+name) || exist(exepath+"plugin/"+name) || exist(exepath+"system/"+name)) return true;
-
-	// On Linux, Plugins.link converts .dll to libXXX.so, so also check for .so variant
-	var lower = name.toLowerCase();
-	if (lower.indexOf(".dll") >= 0) {
-		var base = lower.substring(0, lower.length - 4); // remove .dll
-		var soName = "lib" + base + ".so";
-		if (exist(exepath+soName) || exist(exepath+"plugin/"+soName) || exist(exepath+"system/"+soName)) return true;
-	}
-
-	var placed = Storages.getPlacedPath(name);
-
-	return placed != "" && exist(placed);
-
-}
-
-try {
-
-	var dll = "KAGParserEx.dll";
-
-	Plugins.link(dll) if (CanLoadPlugin(dll));
-
-} catch {}
-
-
-
 if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
     Debug.console = %[];
@@ -513,15 +481,16 @@ if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
 
 // Load plugins (with guards to prevent double-loading on Linux where .dll/.DLL are case-sensitive)
-try { Plugins.link("csvParser.dll") if typeof global.CSVParser == "undefined"; } catch {}
-try { Plugins.link("layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined"; } catch {}
+try { Plugins.link("plugin/KAGParserEx.dll"); } catch {}
+try { Plugins.link("plugin/csvParser.dll") if typeof global.CSVParser == "undefined"; } catch {}
+try { Plugins.link("plugin/layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined"; } catch {}
 // layerExImage.dll - must always load (operateRect may be defined by core engine as stub)
-try { Plugins.link("layerExImage.dll"); } catch {}
-try { Plugins.link("layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined"; } catch {}
+try { Plugins.link("plugin/layerExImage.dll"); } catch {}
+try { Plugins.link("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined"; } catch {}
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
-try { Plugins.link("scriptsEx.dll"); } catch {}
-try { Plugins.link("shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
-try { Plugins.link("extrans.dll"); } catch {}
+try { Plugins.link("plugin/scriptsEx.dll"); } catch {}
+try { Plugins.link("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
+try { Plugins.link("plugin/extrans.dll"); } catch {}
 
 
 
@@ -758,15 +727,15 @@ KAGLoadScript("GraphicLayer.tjs");
 
 
 
-KAGLoadScript("GFX_Fire.tjs")     if (KAGConfigEnabled("gfxFireEnabled",     true) && CanLoadPlugin("gfxEffect.dll"));
+KAGLoadScript("GFX_Fire.tjs")     if (KAGConfigEnabled("gfxFireEnabled",     true));
 
 KAGLoadScript("GFX_Movie.tjs")    if (KAGConfigEnabled("gfxMovieEnabled",    true));
 
-KAGLoadScript("GFX_Flash.tjs")    if (KAGConfigEnabled("gfxFlashEnabled",    true) && CanLoadPlugin("flashPlayer.dll"));
+KAGLoadScript("GFX_Flash.tjs")    if (KAGConfigEnabled("gfxFlashEnabled",    true));
 
 KAGLoadScript("GFX_Particle.tjs") if (KAGConfigEnabled("gfxParticleEnabled", true));
 
-KAGLoadScript("GFX_AMovie.tjs")   if (KAGConfigEnabled("gfxAlphaMovieEnabled", true) && CanLoadPlugin("AlphaMovie.dll"));
+KAGLoadScript("GFX_AMovie.tjs")   if (KAGConfigEnabled("gfxAlphaMovieEnabled", true));
 
 
 

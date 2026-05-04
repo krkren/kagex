@@ -552,7 +552,7 @@ class StandViewWindow extends KAGWindow
 	}
 	// Save current character images
 	function saveFaces() {
-		Plugins.link("layerExSave.dll") if (typeof global.Layer.saveLayerImagePng == "undefined");
+		Plugins.link("plugin/layerExSave.dll") if (typeof global.Layer.saveLayerImagePng == "undefined");
 		var ch = currentCh, file = System.exePath+"_temp_extract_faces";
 		var name = ch.name + @"／LV${ch.level}";
 		with (ch) {
@@ -608,7 +608,7 @@ class StandViewWindow extends KAGWindow
 	// Save specified character image
 	var saveImageExt = [ "Pose", "Diff", "Dress", "Face" ]; // Order of expansion
 	function saveCharaIndexImage(name, ch, file, fontsz = defaultSaveFontSize, zoom = defaultSaveZoomPerc) {
-		Plugins.link("layerExSave.dll") if (typeof global.Layer.getDiffRect == "undefined");
+		Plugins.link("plugin/layerExSave.dll") if (typeof global.Layer.getDiffRect == "undefined");
 		var tags = [];
 		tags.assign(saveImageExt);
 		tags.remove("Diff", true) if (typeof ch.diff == "undefined");
@@ -853,7 +853,7 @@ class StandViewWindow extends KAGWindow
 	function setupWin32Dialog() {
 		if (typeof global.WIN32DialogEX != "Object") {
 			try {
-				Plugins.link("win32dialog.dll");
+				Plugins.link("plugin/win32dialog.dll");
 				Scripts.execStorage("win32dialog.tjs");
 			} catch (e) { Debug.message(e.message); }
 		}

@@ -682,7 +682,7 @@ class KAGEnvironment extends KAGEnvTrans {
 @if (DEBUG && !PACKED)
 			try {
 				// During debugging, judge replacement by looking at file date
-				Plugins.link("fstat.dll") if (typeof Storages.dirlist == "undefined");
+				Plugins.link("plugin/fstat.dll") if (typeof Storages.dirlist == "undefined");
 				var timeinfo;
 				if ((timeinfo = envinfo[base + "_time"]) === void)  {
 					timeinfo = %[];

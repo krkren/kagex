@@ -1,7 +1,7 @@
 ﻿// Plugin for raster scroll processing
 if (typeof global.Layer.copyRaster == "undefined") {
 	try {
-		Plugins.link("layerExRaster.dll");
+		Plugins.link("plugin/layerExRaster.dll");
 	} catch(e) {
 
 	}
@@ -10,7 +10,7 @@ if (typeof global.Layer.copyRaster == "undefined") {
 // Plugin for vector processing
 if (typeof global.Layer.drawImage == "undefined") {
 	try {
-		Plugins.link("layerExDraw.dll");
+		Plugins.link("plugin/layerExDraw.dll");
 	} catch(e) {
 
 	}

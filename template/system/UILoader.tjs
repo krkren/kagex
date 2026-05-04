@@ -4,7 +4,7 @@
 
 // Loading the CSV parser plugin
 if (global.CSVParser === void) {
-    Plugins.link("csvParser.dll");
+    Plugins.link("plugin/csvParser.dll");
 }
 
 var buttonStateNames = %[ normal:true, over:true, on:true, off:true ];

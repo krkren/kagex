@@ -4,7 +4,7 @@ if (typeof global.Layer.copyBottomBlueToTopAlpha == "undefined") {
 
 	try {
 
-		Plugins.link("layerExBTOA.dll");
+		Plugins.link("plugin/layerExBTOA.dll");
 
 	} catch(e) {
 

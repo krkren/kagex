@@ -6,7 +6,7 @@ if (typeof global.gfxFire == "undefined") {
 
 	try {
 
-		Plugins.link("gfxEffect.dll");
+		Plugins.link("plugin/gfxEffect.dll");
 
 		Debug.notice( 
 

@@ -42,7 +42,7 @@ var LINEMODE_FREE = 5;
 
 
 
-// try { Plugins.link("windowEx.dll"); } catch {}
+// try { Plugins.link("plugin/windowEx.dll"); } catch {}
 
 
 
@@ -17638,7 +17638,7 @@ class KAGWindow extends Window
 	 * @param elm Argument info
 	 */
 	function forkSquirrel(name, script, elm) {
-		Plugins.link("squirrel.dll") if (typeof global.Scripts.forkStorageSQ != "Object");
+		Plugins.link("plugin/squirrel.dll") if (typeof global.Scripts.forkStorageSQ != "Object");
 		var th = Scripts.forkStorageSQ(script, kag, elm);
 		squirrelThreads.add(%[name:name, th:th]);
 		if (Scripts.getThreadCountSQ() == 1) {

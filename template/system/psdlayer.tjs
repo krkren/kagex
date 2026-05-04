@@ -2,9 +2,9 @@
 
 if (typeof global.Layer.loadSubImage == "undefined") {
 
-	var plug = "layerExSubImage.dll";
+	var plug = "plugin/layerExSubImage.dll";
 
-	if (CanLoadPlugin(plug)) try {
+	try {
 
 		Plugins.link (plug);
 
@@ -954,7 +954,7 @@ class PSDInfo {
 
 		if (typeof global.PSD == "undefined") {
 
-			Plugins.link("psd.dll");
+			Plugins.link("plugin/psd.dll");
 
 		}
 
@@ -2246,9 +2246,9 @@ class PSDInfo {
 
 	 */
 
-	function useLayerExSave() { Plugins.link("layerExSave.dll") if (typeof global.Layer.saveLayerImageTlg5 != "Object"); }
+	function useLayerExSave() { Plugins.link("plugin/layerExSave.dll") if (typeof global.Layer.saveLayerImageTlg5 != "Object"); }
 
-	function useSaveStruct()  { Plugins.link("savestruct.dll")  if (typeof global.Array.save2              != "Object"); }
+	function useSaveStruct()  { Plugins.link("plugin/savestruct.dll")  if (typeof global.Array.save2              != "Object"); }
 
 };
 

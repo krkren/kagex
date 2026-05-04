@@ -34,7 +34,7 @@
 //	function modulate(hue, saturation, luminance);
 
 // layerExImage.dll - must always load to get Layer.light(), Layer.colorize(), etc.
-try { Plugins.link("layerExImage.dll"); } catch {}
+try { Plugins.link("plugin/layerExImage.dll"); } catch {}
 
 /**
  * Add drop shadow
