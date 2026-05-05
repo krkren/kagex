@@ -222,17 +222,20 @@ popd
 echo.
 echo [*] Moving required artifacts to final folder...
 
+
+if not exist "plugin" mkdir "plugin"
+
 set "BLD=krkrz_dev\build\%CMAKE_PRESET%"
 
 :: Move krmovie.dll to plugin folder
-move /y "!BLD!\%CONFIG%\krmovie.dll" "." >nul 2>&1
+move /y "!BLD!\%CONFIG%\krmovie.dll" "plugin" >nul 2>&1
 
 :: Copy all plugin DLLs from build output (recursive) - TO PLUGIN FOLDER
 :: Format: krkrz_dev/build/x64-windows/core/plugins/PLUGINNAME/CONFIG/PLUGINNAME.dll
-for /d %%G in ("!BLD!\core\plugins\*") do copy /y "%%G\%CONFIG%\*.dll" "." >nul 2>&1
+for /d %%G in ("!BLD!\core\plugins\*") do copy /y "%%G\%CONFIG%\*.dll" "plugin" >nul 2>&1
 
 :: Copy extrans.dll to plugin folder
-move /y "SamplePlugin\build\%CONFIG%\extrans.dll" "." >nul 2>&1
+move /y "SamplePlugin\build\%CONFIG%\extrans.dll" "plugin" >nul 2>&1
 
 :: Move krkrz.exe and SDL3.dll (overwrite if they exist)
 move /y "!BLD!\core\%CONFIG%\krkrz64.exe" "krkrz.exe" >nul 2>&1
