@@ -83,31 +83,51 @@ if "!GIT_EXE!"=="" (
 :: -----------------------------------------------------
 echo [*] Checking for NASM...
 set "NASM_EXE="
-where nasm >nul 2>&1
-if %errorlevel% equ 0 (
-    for /f "tokens=3" %%v in ('nasm -v') do set "NASM_VER=%%v"
-    set "NASM_EXE=nasm"
+
+:: 1. Check explicit folders FIRST to bypass devkitPro/MSYS2 PATH pollution
+if exist "%ProgramFiles%\NASM\nasm.exe" set "NASM_EXE=%ProgramFiles%\NASM\nasm.exe"
+if "!NASM_EXE!"=="" if exist "%ProgramFiles(x86)%\NASM\nasm.exe" set "NASM_EXE=%ProgramFiles(x86)%\NASM\nasm.exe"
+if "!NASM_EXE!"=="" if exist "%LocalAppData%\NASM\nasm.exe" set "NASM_EXE=%LocalAppData%\NASM\nasm.exe"
+if "!NASM_EXE!"=="" if exist "%LocalAppData%\Programs\NASM\nasm.exe" set "NASM_EXE=%LocalAppData%\Programs\NASM\nasm.exe"
+if "!NASM_EXE!"=="" if exist "%LocalAppData%\bin\NASM\nasm.exe" set "NASM_EXE=%LocalAppData%\bin\NASM\nasm.exe"
+
+:: 2. Only check system PATH as a fallback
+if "!NASM_EXE!"=="" (
+    where nasm >nul 2>&1
+    if !errorlevel! equ 0 set "NASM_EXE=nasm"
 )
 
-if "!NASM_EXE!"=="" (set "FORCE_NASM=1") else if "!NASM_VER:~0,4!"=="2.15" (set "FORCE_NASM=1") else if "!NASM_VER:~0,4!"=="2.16" (set "FORCE_NASM=1") else (set "FORCE_NASM=0")
+:: 3. If found, safely check the version
+if not "!NASM_EXE!"=="" (
+    for /f "usebackq tokens=3" %%v in (`"!NASM_EXE!" -v`) do set "NASM_VER=%%v"
+    echo [*] Found NASM version: !NASM_VER!
+)
 
+:: 4. Determine if we need to force an install
+if "!NASM_EXE!"=="" (
+    set "FORCE_NASM=1"
+) else if "!NASM_VER:~0,4!"=="2.15" (
+    set "FORCE_NASM=1"
+) else if "!NASM_VER:~0,4!"=="2.16" (
+    set "FORCE_NASM=1"
+) else if "!NASM_VER:~0,4!"=="2.17" (
+    set "FORCE_NASM=1"
+) else (
+    set "FORCE_NASM=0"
+)
+
+:: 5. Install if missing or incompatible
 if "!FORCE_NASM!"=="1" (
-    echo [*] Compatible NASM not found or incompatible version detected.
-    echo [*] Downloading NASM 2.14.02 installer ^(required for krkrz macro support^)...
+    echo [*] Incompatible NASM version detected. Forcing 2.14.02 install...
     curl -fL "https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-installer-x64.exe" -o "nasm_installer.exe" || goto :error
     echo [*] Launching NASM installer. Please complete the setup wizard...
     start /wait "" nasm_installer.exe
     del "nasm_installer.exe"
     
-    if exist "%ProgramFiles%\NASM\nasm.exe" (
-        set "NASM_EXE=%ProgramFiles%\NASM\nasm.exe"
-    ) else if exist "%LocalAppData%\bin\NASM\nasm.exe" (
-        set "NASM_EXE=%LocalAppData%\bin\NASM\nasm.exe"
-    )
-)
-
-if "!NASM_EXE!"=="" (
+    :: Re-acquire the exact executable path to guarantee we use the fresh install
     if exist "%ProgramFiles%\NASM\nasm.exe" set "NASM_EXE=%ProgramFiles%\NASM\nasm.exe"
+    if "!NASM_EXE!"=="" if exist "%LocalAppData%\NASM\nasm.exe" set "NASM_EXE=%LocalAppData%\NASM\nasm.exe"
+    if "!NASM_EXE!"=="" if exist "%LocalAppData%\bin\NASM\nasm.exe" set "NASM_EXE=%LocalAppData%\bin\NASM\nasm.exe"
 )
 
 :: -----------------------------------------------------
@@ -133,21 +153,21 @@ if exist "%ROOT_DIR%\build_tools\ninja.exe" (
 )
 
 :: -----------------------------------------------------
-:: Step 4: Check and Install Visual Studio with ATL
+:: Step 4: Check and Install Visual Studio with ATL & CMake
 :: -----------------------------------------------------
-echo [*] Checking for Visual Studio and required ATL components...
+echo [*] Checking for Visual Studio and required C++ components...
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 set "VS_INSTALL_DIR="
 
-:: We now check explicitly for the ATL component as well
+:: Check explicitly for the C++ tools, ATL, and CMake components
 if exist "%VSWHERE%" (
-    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL -property installationPath`) do (
+    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath`) do (
         set "VS_INSTALL_DIR=%%i"
     )
 )
 
 if "!VS_INSTALL_DIR!"=="" (
-    echo [*] Visual Studio with C++ and ATL Tools not found.
+    echo [*] Visual Studio with required components ^(C++, ATL, CMake^) not found.
     echo [*] Downloading the latest Visual Studio Community bootstrapper...
     curl -fL "https://aka.ms/vs/17/release/vs_community.exe" -o "vs_community.exe" || goto :error
     echo [*] Launching Visual Studio Installer...
@@ -156,12 +176,13 @@ if "!VS_INSTALL_DIR!"=="" (
         --add Microsoft.VisualStudio.Workload.NativeDesktop ^
         --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
         --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
-        --add Microsoft.VisualStudio.Component.VC.ATL
+        --add Microsoft.VisualStudio.Component.VC.ATL ^
+        --add Microsoft.VisualStudio.Component.VC.CMake.Project
         
     echo.
     echo ==========================================================
     echo IMPORTANT: WAIT FOR VISUAL STUDIO TO FINISH!
-    echo The required C++ components ^(including ATL^) have been pre-selected.
+    echo The required C++ components ^(including ATL and CMake^) have been pre-selected.
     echo Please click "Modify" or "Install" in the Visual Studio window.
     echo.
     echo DO NOT PRESS ANY KEY HERE UNTIL VISUAL STUDIO IS 100%% DONE!
@@ -169,17 +190,22 @@ if "!VS_INSTALL_DIR!"=="" (
     pause
     del "vs_community.exe"
 
+    :: Re-verify installation after the user finishes the prompt
     if exist "%VSWHERE%" (
-        for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL -property installationPath`) do (
+        for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath`) do (
             set "VS_INSTALL_DIR=%%i"
         )
     )
     
     if "!VS_INSTALL_DIR!"=="" (
-        echo [ERROR] Visual Studio installation failed or ATL tools not found.
+        echo [ERROR] Visual Studio installation failed or components are still missing.
         goto :error
     )
 )
+
+set "VCVARS=!VS_INSTALL_DIR!\VC\Auxiliary\Build\vcvarsall.bat"
+echo [*] Loading Visual Studio Environment for %VCVARS_ARG%...
+call "%VCVARS%" %VCVARS_ARG% >nul
 
 set "VCVARS=!VS_INSTALL_DIR!\VC\Auxiliary\Build\vcvarsall.bat"
 echo [*] Loading Visual Studio Environment for %VCVARS_ARG%...
@@ -207,7 +233,7 @@ call "%VCPKG_DIR%\vcpkg.exe" install libogg:%VCPKG_TRIPLET% libvorbis:%VCPKG_TRI
 set "VCPKG_ROOT=%VCPKG_DIR%"
 
 :: -----------------------------------------------------
-:: Step 6: Clone Repositories
+:: Step 6: Clone Repositories (Shallow)
 :: -----------------------------------------------------
 echo.
 echo [*] Checking Repositories...
@@ -215,9 +241,10 @@ set "REPO_DIR=%ROOT_DIR%\krkrz_dev"
 set "WUV_DIR=%ROOT_DIR%\wuvorbis"
 set "SAMPLE_DIR=%ROOT_DIR%\SamplePlugin"
 
-if not exist "%REPO_DIR%" "!GIT_EXE!" clone --recursive https://github.com/wamsoft/krkrz_dev.git "%REPO_DIR%" || goto :error
-if not exist "%WUV_DIR%" "!GIT_EXE!" clone https://github.com/krkrz/wuvorbis.git "%WUV_DIR%" || goto :error
-if not exist "%SAMPLE_DIR%" "!GIT_EXE!" clone https://github.com/krkrz/SamplePlugin.git "%SAMPLE_DIR%" || goto :error
+:: Use --depth 1 and --shallow-submodules to drastically reduce download size and time
+if not exist "%REPO_DIR%" "!GIT_EXE!" clone --depth 1 --shallow-submodules --recursive https://github.com/wamsoft/krkrz_dev.git "%REPO_DIR%" || goto :error
+if not exist "%WUV_DIR%" "!GIT_EXE!" clone --depth 1 https://github.com/krkrz/wuvorbis.git "%WUV_DIR%" || goto :error
+if not exist "%SAMPLE_DIR%" "!GIT_EXE!" clone --depth 1 https://github.com/krkrz/SamplePlugin.git "%SAMPLE_DIR%" || goto :error
 
 :: -----------------------------------------------------
 :: Step 7: Download and Place Legacy Stubs
@@ -246,8 +273,19 @@ echo [*] Building krkrz_dev (%CMAKE_PRESET% / %CONFIG%)...
 pushd "%REPO_DIR%"
 if exist "build" rmdir /s /q "build"
 
-cmake --preset %CMAKE_PRESET% -DCMAKE_ASM_NASM_COMPILER="!NASM_EXE!" || goto :error
-cmake --build --preset %CMAKE_PRESET% --config %CONFIG% || goto :error
+:: Force the use of Visual Studio's bundled CMake to prevent MSYS2/MinGW conflicts
+set "VS_CMAKE=!VS_INSTALL_DIR!\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+
+:: Verify that the CMake component is actually installed
+if not exist "!VS_CMAKE!" (
+    echo [ERROR] Visual Studio CMake not found!
+    echo Please open the Visual Studio Installer, click Modify, and add "C++ CMake tools for Windows".
+    popd
+    goto :error
+)
+
+"!VS_CMAKE!" --preset %CMAKE_PRESET% -DCMAKE_ASM_NASM_COMPILER="!NASM_EXE!" || goto :error
+"!VS_CMAKE!" --build --preset %CMAKE_PRESET% --config %CONFIG% || goto :error
 popd
 
 :: -----------------------------------------------------
