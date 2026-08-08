@@ -95,50 +95,43 @@ if exist "%ROOT_DIR%\build_tools\ninja.exe" (
 )
 
 :: -----------------------------------------------------
-:: Step 4: Check and Install Visual Studio with ATL
+:: Step 4: Check and Install Visual Studio with ATL & CMake
 :: -----------------------------------------------------
-echo [*] Checking for Visual Studio and required ATL components...
+echo [*] Checking for Visual Studio and required C++ components...
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 set "VS_INSTALL_DIR="
 
-:: We now check explicitly for the ATL component as well
+:: Check explicitly for the C++ tools, ATL, and CMake components
 if exist "%VSWHERE%" (
-    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL -property installationPath`) do (
+    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath`) do (
         set "VS_INSTALL_DIR=%%i"
     )
 )
 
 if "!VS_INSTALL_DIR!"=="" (
-    echo [*] Visual Studio with C++ and ATL Tools not found.
+    echo [*] Visual Studio with required components ^(C++, ATL, CMake^) not found.
     echo [*] Downloading the latest Visual Studio Community bootstrapper...
     curl -fL "https://aka.ms/vs/17/release/vs_community.exe" -o "vs_community.exe" || goto :error
-    echo [*] Launching Visual Studio Installer...
+    echo [*] Launching Visual Studio Installer automatically...
     
-    start "" vs_community.exe --nocache ^
+    start /wait "" vs_community.exe --wait --passive --nocache ^
         --add Microsoft.VisualStudio.Workload.NativeDesktop ^
         --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
         --add Microsoft.VisualStudio.Component.Windows11SDK.22621 ^
-        --add Microsoft.VisualStudio.Component.VC.ATL
+        --add Microsoft.VisualStudio.Component.VC.ATL ^
+        --add Microsoft.VisualStudio.Component.VC.CMake.Project
         
-    echo.
-    echo ==========================================================
-    echo IMPORTANT: WAIT FOR VISUAL STUDIO TO FINISH!
-    echo The required C++ components ^(including ATL^) have been pre-selected.
-    echo Please click "Modify" or "Install" in the Visual Studio window.
-    echo.
-    echo DO NOT PRESS ANY KEY HERE UNTIL VISUAL STUDIO IS 100%% DONE!
-    echo ==========================================================
-    pause
     del "vs_community.exe"
 
+    :: Re-verify installation after the automated install finishes
     if exist "%VSWHERE%" (
-        for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL -property installationPath`) do (
+        for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.ATL Microsoft.VisualStudio.Component.VC.CMake.Project -property installationPath`) do (
             set "VS_INSTALL_DIR=%%i"
         )
     )
     
     if "!VS_INSTALL_DIR!"=="" (
-        echo [ERROR] Visual Studio installation failed or ATL tools not found.
+        echo [ERROR] Visual Studio installation failed or components are still missing.
         goto :error
     )
 )
@@ -169,20 +162,21 @@ call "%VCPKG_DIR%\vcpkg.exe" install libogg:%VCPKG_TRIPLET% libvorbis:%VCPKG_TRI
 set "VCPKG_ROOT=%VCPKG_DIR%"
 
 :: -----------------------------------------------------
-:: Step 6: Clone Repositories
+:: Step 6: Clone Repositories (Shallow)
 :: -----------------------------------------------------
 echo.
 echo [*] Checking Repositories...
 set "REPO_DIR=%ROOT_DIR%\krkrz_dev"
 set "SAMPLE_DIR=%ROOT_DIR%\SamplePlugin"
 
-if not exist "%REPO_DIR%" "!GIT_EXE!" clone --recursive https://github.com/wamsoft/krkrz_dev.git "%REPO_DIR%" || goto :error
-if not exist "%SAMPLE_DIR%" "!GIT_EXE!" clone https://github.com/krkren/SamplePlugin.git "%SAMPLE_DIR%" || goto :error
+if not exist "%REPO_DIR%" "!GIT_EXE!" clone --depth 1 --shallow-submodules --recursive https://github.com/wamsoft/krkrz_dev.git "%REPO_DIR%" || goto :error
+if not exist "%SAMPLE_DIR%" "!GIT_EXE!" clone --depth 1 https://github.com/krkren/SamplePlugin.git "%SAMPLE_DIR%" || goto :error
 
 :: -----------------------------------------------------
 :: Step 7: Download and Place Legacy Stubs
 :: -----------------------------------------------------
 echo.
+
 :: -----------------------------------------------------
 :: Step 8: Initialize Git Submodules
 :: -----------------------------------------------------
@@ -193,13 +187,31 @@ cd "%SAMPLE_DIR%"
 cd "%ROOT_DIR%"
 
 :: -----------------------------------------------------
+:: Step 9: Build krkrz_dev (CMake)
+:: -----------------------------------------------------
 echo.
 echo [*] Building krkrz_dev (%CMAKE_PRESET% / %CONFIG%)...
 pushd "%REPO_DIR%"
+
+:: Ensure all nested Git submodules are fully downloaded before building
+echo [*] Updating git submodules...
+"!GIT_EXE!" submodule update --init --recursive || goto :error
+
 if exist "build" rmdir /s /q "build"
 
-cmake --preset %CMAKE_PRESET% || goto :error
-cmake --build --preset %CMAKE_PRESET% --config %CONFIG% || goto :error
+:: Force the use of Visual Studio's bundled CMake to prevent MSYS2/MinGW conflicts
+set "VS_CMAKE=!VS_INSTALL_DIR!\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+
+:: Verify that the CMake component is actually installed
+if not exist "!VS_CMAKE!" (
+    echo [ERROR] Visual Studio CMake not found!
+    echo Please open the Visual Studio Installer, click Modify, and add "C++ CMake tools for Windows".
+    popd
+    goto :error
+)
+
+"!VS_CMAKE!" --preset %CMAKE_PRESET% || goto :error
+"!VS_CMAKE!" --build --preset %CMAKE_PRESET% --config %CONFIG% || goto :error
 popd
 
 :: -----------------------------------------------------
@@ -212,8 +224,8 @@ pushd "%SAMPLE_DIR%"
 set "EXTRANS_PRESET=x64"
 
 if exist "build" rmdir /s /q "build"
-cmake --preset %EXTRANS_PRESET% || goto :error
-cmake --build build --config %CONFIG% || goto :error
+"!VS_CMAKE!" --preset %EXTRANS_PRESET% || goto :error
+"!VS_CMAKE!" --build build --config %CONFIG% || goto :error
 popd
 
 :: -----------------------------------------------------
@@ -221,7 +233,6 @@ popd
 :: -----------------------------------------------------
 echo.
 echo [*] Moving required artifacts to final folder...
-
 
 if not exist "plugin" mkdir "plugin"
 
@@ -245,7 +256,6 @@ move /y "!BLD!\core\%CONFIG%\krkrz64d.exe" "krkrz.exe" >nul 2>&1
 :: -----------------------------------------------------
 :: Step 13: Cleanup
 :: -----------------------------------------------------
-echo.
 echo [*] Cleaning up source code, vcpkg, and legacy stubs for distribution...
 if exist "%VCPKG_DIR%" rmdir /s /q "%VCPKG_DIR%"
 if exist "%SAMPLE_DIR%" rmdir /s /q "%SAMPLE_DIR%"
