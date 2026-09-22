@@ -949,13 +949,18 @@ if(Storages.isExistentStorage("AfterInit.tjs"))
 
 // Force SDL3 window size right before processing the first script
 if (typeof global.kag !== "undefined") {
-    // Dynamically grab the game's actual resolution from Config.tjs, fallback to 800x600
-    var gameWidth = typeof global.scWidth !== "undefined" ? global.scWidth : 800;
-    var gameHeight = typeof global.scHeight !== "undefined" ? global.scHeight : 600;
-    
-    global.kag.width = gameWidth;
-    global.kag.height = gameHeight;
-    global.kag.setInnerSize(gameWidth, gameHeight);
+    // scWidth/scHeight are members of KAGWindow, set by (KAGWindow_config incontextof this)().
+    // They are never globals, so global.scWidth would always be undefined here.
+    var gameWidth  = global.kag.scWidth;
+    var gameHeight = global.kag.scHeight;
+
+    // Skip while full-screen: the fullScreen setter already sized the surface
+    // via setInnerSize(pxWidth, pxHeight), and resizing here would fight it.
+    if (!global.kag.fullScreen) {
+        global.kag.width  = gameWidth;
+        global.kag.height = gameHeight;
+        global.kag.setInnerSize(gameWidth, gameHeight);
+    }
 }
 
 kag.process("first.ks");

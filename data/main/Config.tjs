@@ -58,8 +58,8 @@ function KAGWindow_config()
 // Specify the screen width in scWidth and the screen height in scHeight in pixels.
 // If you set a screen size that is not a standard size like 640x480 or 800x600,
 // you may not be able to go full screen.
-;scWidth = 800;
-;scHeight = 600;
+;scWidth = 1920;
+;scHeight = 1080;
 
 
 // ◆ Read-only Mode
@@ -395,6 +395,13 @@ function KAGWindow_config()
 // [start-window-additionals] and [end-window-additionals])
 
 //[start-window-additionals]
+
+// ◆ Always Start Full-Screen
+// Shadows KAGWindow.getInitialFullScreenState, which the constructor calls before
+// showing the window. Without this, full-screen at startup depends on the persisted
+// scflags.fullScreen preference, or on the window happening to exceed the monitor
+// (the "forcefull" fallback), which varies by display.
+;getInitialFullScreenState = function() { return true; };
 
 //[end-window-additionals]
 
