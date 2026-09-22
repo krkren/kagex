@@ -192,9 +192,9 @@ class MyYesNoDialogWindow extends Window
 
 		yesButton.loadButtons("dialog_yes_normal", "dialog_yes_over", "dialog_yes_over");
 
-		yesButton.top  = 305;
+		yesButton.top  = (primaryLayer.height >> 1) + 5;
 
-		yesButton.left = 325;
+		yesButton.left = (primaryLayer.width  >> 1) - 75;
 
 		yesButton.visible = true;
 
@@ -206,9 +206,9 @@ class MyYesNoDialogWindow extends Window
 
         noButton.loadButtons("dialog_no_normal", "dialog_no_over", "dialog_no_over");
 
-        noButton.top  = 305;
+        noButton.top  = (primaryLayer.height >> 1) + 5;
 
-		noButton.left = 411;
+		noButton.left = (primaryLayer.width  >> 1) + 11;
 
 		noButton.visible = true;
 
@@ -410,11 +410,27 @@ class MyYesNoDialogLayer extends DialogLayer
 
 
 
-        setOption(%[frame : baseStorage]);
+        // The frame images are a full-screen overlay with the box drawn in the
 
-        addButton(%[ x : 325, y : 305, normal:"dialog_yes_normal", over:"dialog_yes_over", on:"dialog_yes_over"]);
+        // middle, so centre the image on the screen whatever size it is and place
 
-        addButton(%[ x : 411, y : 305, normal:"dialog_no_normal", over:"dialog_no_over",  on:"dialog_no_over"]);
+        // the buttons relative to the image centre (800x600 layout: 325,305/411,305).
+
+        var temp = kag.temporaryLayer;
+
+        temp.loadImages(baseStorage);
+
+        var fw = temp.imageWidth, fh = temp.imageHeight;
+
+        setOption(%[frame : baseStorage, left : (width - fw) >> 1, top : (height - fh) >> 1]);
+
+
+
+        var bx = fw >> 1, by = fh >> 1;
+
+        addButton(%[ x : bx - 75, y : by + 5, normal:"dialog_yes_normal", over:"dialog_yes_over", on:"dialog_yes_over"]);
+
+        addButton(%[ x : bx + 11, y : by + 5, normal:"dialog_no_normal", over:"dialog_no_over",  on:"dialog_no_over"]);
 
     }
 
