@@ -4,7 +4,7 @@
 
 ; Specification of selection placement area
 
-[selopt normal=select_normal over=select_over left=100 top=80 width=600 height=360]
+[selopt normal=select_normal over=select_over left=510 top=198 width=900 height=540 size=36]
 
 
 
