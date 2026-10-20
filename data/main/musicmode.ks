@@ -30,7 +30,7 @@
 
 [backlay]
 
-[position layer=message0 frame="musicmode_base" opacity=255 left=0 top=0 width=800 height=600 marginT=0 marginL=0 marginR=0 marginB=0 visible=true  transparent=false page=back]
+[position layer=message0 frame="musicmode_base" opacity=255 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true  transparent=false page=back]
 
 [current layer=message0 page=back]
 
@@ -38,19 +38,19 @@
 
 ; Navigation Buttons
 
-[locate x=330 y=48]
+[locate x=886 y=74]
 
 [button name="extra_cgmode" storage="cgmode.ks"]
 
-[locate x=456 y=47]
+[locate x=1119 y=74]
 
 [button name="extra_replaymode" storage="replay.ks"]
 
-[locate x=563 y=47]
+[locate x=1309 y=74]
 
 [button name="extra_musicmode" disabled]
 
-[locate x=692 y=47]
+[locate x=1476 y=74]
 
 [button name="return" target=*backtotitle]
 
@@ -58,19 +58,19 @@
 
 ; Function Buttons
 
-[locate x=140 y=484]
+[locate x=516 y=803]
 
 [button name="musicmode_play"      exp="startBgm()"]
 
-[locate x=  7 y=484]
+[locate x=290 y=803]
 
 [button name="musicmode_stop"      exp="stopBgm()"]
 
-[locate x=  7 y=530]
+[locate x=290 y=876]
 
 [button name="musicmode_repeat"    exp='setRepeat(true)']
 
-[locate x=140 y=530]
+[locate x=516 y=876]
 
 [button name="musicmode_allrepeat" exp='setRepeat(false)']
 
@@ -78,51 +78,51 @@
 
 ; Music Buttons
 
-[locate x=295 y=126]
+[locate x=871 y=291]
 
 [button name="track01" exp='playBgm(0)']
 
-[locate x=295 y=162]
+[locate x=871 y=345]
 
 [button name="track02" exp='playBgm(1)']
 
-[locate x=295 y=198]
+[locate x=871 y=399]
 
 [button name="track03" exp='playBgm(2)']
 
-[locate x=295 y=234]
+[locate x=871 y=453]
 
 [button name="track04" exp='playBgm(3)']
 
-[locate x=295 y=270]
+[locate x=871 y=507]
 
 [button name="track05" exp='playBgm(4)']
 
-[locate x=295 y=306]
+[locate x=871 y=561]
 
 [button name="track06" exp='playBgm(5)']
 
-[locate x=295 y=342]
+[locate x=871 y=615]
 
 [button name="track07" exp='playBgm(6)']
 
-[locate x=295 y=378]
+[locate x=871 y=669]
 
 [button name="track08" exp='playBgm(7)']
 
-[locate x=295 y=414]
+[locate x=871 y=723]
 
 [button name="track09" exp='playBgm(8)']
 
-[locate x=295 y=450]
+[locate x=871 y=777]
 
 [button name="track10" exp='playBgm(9)']
 
-[locate x=295 y=486]
+[locate x=871 y=831]
 
 [button name="track11" exp='playBgm(10)']
 
-[locate x=295 y=522]
+[locate x=871 y=885]
 
 [button name="track12" exp='playBgm(11)']
 

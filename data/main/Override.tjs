@@ -678,25 +678,27 @@ function setCGImage(target, filename)
 {
     var layer = new global.Layer(kag, kag.fore.base);
     var layer2 = new global.Layer(kag, kag.fore.base);
+    // Picture area inside the thumbnail frame's 3px border; the whole source image is fitted into it
+    var b = 3, pw = target.width - b*2, ph = target.height - b*2;
 
     if (Storages.isExistentStorage("thum_"+filename+".png")) {
         layer.loadImages("thum_"+filename);
         layer2.loadImages("cgmode_thum_normal");
         layer2.setSizeToImageSize();
-        layer2.operateStretch(0,0,116,87,layer,0,0,116,87,omAuto,255,stNearest);
-        layer2.imageWidth=116;
-        layer2.imageHeight=87;
+        layer2.operateStretch(0,0,pw,ph,layer,0,0,layer.imageWidth,layer.imageHeight,omAuto,255,stNearest);
+        layer2.imageWidth=pw;
+        layer2.imageHeight=ph;
     } else {
 	    layer.loadImages(filename);
         layer2.loadImages("cgmode_thum_normal");
-        layer2.imageWidth=116;
-        layer2.imageHeight=87;
-        layer2.operateStretch(0,0,116,87,layer,0,0,800,600,omAuto,255,stNearest);
+        layer2.imageWidth=pw;
+        layer2.imageHeight=ph;
+        layer2.operateStretch(0,0,pw,ph,layer,0,0,layer.imageWidth,layer.imageHeight,omAuto,255,stNearest);
     }
-    
-    target.operateRect(               2,  2,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
-    target.operateRect(target.width  +2,  2,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
-    target.operateRect(target.width*2+2,  2,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
+
+    target.operateRect(               b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
+    target.operateRect(target.width  +b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
+    target.operateRect(target.width*2+b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
 
     if (tf.viewcgfilename) {
 	    target.font.face = "MS Gothic";
@@ -873,7 +875,9 @@ function setReplaymodePageButton(work=void)
             var button = kag.current.names["cg" + cgnum];
             if (button !== void) {
                 if (replayFlagSet) {
-                    if (info.thum) {
+                    // Compare, don't test the string itself: the engine converts it to a number
+                    // ("event1" is false) and crashes on an empty one
+                    if (info.thum != "") {
                         setCGImage(button, info.thum);
                     } else {
                         button.loadButtons("cgmode_thum_normal");
