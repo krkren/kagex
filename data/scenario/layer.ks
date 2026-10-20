@@ -5,11 +5,11 @@
 [csysbutton]
 
 [layopt layer=message0 visible]
-This is a sample of KAGEX layer extension functions. You can control rotation and scaling of layers.
+This is a sample of KAGEX layer extension functions.[r]You can control rotation and scaling of layers.
 [l][r]
 
 [image layer=base page=fore storage="bg01_01"  visible=true left=0 top=0]
-[image layer=0     page=fore storage="ch_0_0_1" visible=true left=400 top=450 dafx=center dafy=center]
+[image layer=0     page=fore storage="ch_0_0_1" visible=true left=960 top=540 dafx=center dafy=center]
 [cm]
 
 Start
@@ -86,13 +86,13 @@ Horizontal Shake
 
 [layopt layer=0 reset]
 [action layer=0 module=LayerToRotateModule angle=30 time=1000]
-To specified angle
+To a specified angle. 
 [wact]
 [action layer=0 module=LayerToRotateModule angle=-50 time=1000]
-Let's try moving
+Let's try moving it. 
 [wact]
 [action layer=0 module=LayerToRotateModule angle=-0 time=1000]
-This is a test
+This is a test.
 [wact]
 [l][r]
 
@@ -134,7 +134,7 @@ Fade flashing
 *label15|Video Layer Test
 
 [layopt layer=0 reset]
-[image layer=1 movie=test.webm alpha=2 loop visible=true dafx=center dafy=center left=400 top=300]
+[image layer=1 movie=test.webm alpha=2 loop visible=true dafx=center dafy=center left=960 top=540]
 Loading video
 [l][r]
 

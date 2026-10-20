@@ -172,6 +172,12 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		}
 
+		// assignImages doesn't copy the layer type, so a target layer left at ltOpaque would draw
+
+		// an alpha movie's clear parts as solid white (across the whole screen for affine layers)
+
+		if (alpha == 1 || alpha == 2) for (var i = flipLayers.count-1; i >= 0; i--) flipLayers[i].type = ltAlpha;
+
 		flipAssign(targetLayer);
 
 	}

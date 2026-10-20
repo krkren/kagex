@@ -22,7 +22,7 @@ version
 [emb exp="sf.software_version"]
  [r]
 [r]
-(c)
+(c) 
 [emb exp="sf.software_year"]
  [emb exp="sf.software_maker"] 
 All Rights Reserved. 
