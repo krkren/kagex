@@ -14,16 +14,16 @@ It's easier to understand if you open char.ks and compare it with the actual fil
 [ai standard center]
 Character appearance
 
-【Ai】Name display, text display, and key input wait are automatically performed in the prescribed format.
-【Ai/???】To change the display name, just write the display name after the slash.
-【Ai】If a voice number is specified, the voice will be played along with the text.
-【Ai】Processing wait during auto-play is also automatically adjusted. The voice will play in the next text.
+【ai】Name display, text display, and key input wait are automatically performed in the prescribed format.
+【ai/???】To change the display name, just write the display name after the slash.
+【ai】If a voice number is specified, the voice will be played along with the text.
+【ai】Processing wait during auto-play is also automatically adjusted. The voice will play in the next text.
 
 [ai voice=1]
-【Ai】Junior High 3 Makiron Hell
+【ai】Ninth-grade antiseptic hell!
 
 [ai clearvoice]
-【Ai】By the way, you can change the voice playback speed in the debug menu.
+【ai】By the way, you can change the voice playback speed in the debug menu.
 
 ; Recollection end point
 [endrecollection]
