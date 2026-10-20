@@ -84,7 +84,7 @@ function KAGWindow_config()
 
 // ◆ Whether to Save Thumbnails
 // If false is specified, the extension of the save data will be .kdt, and thumbnails will not be saved.
-// If true is specified, the extension of the save data will be .bmp, and it will be possible to 
+// If true is specified, the extension of the save data will be .png, and it will be possible to 
 // display a thumbnail at the time of saving in the "Thumbnail" view of Explorer or the "Open" dialog box.
 ;saveThumbnail = true;
 
@@ -100,6 +100,7 @@ function KAGWindow_config()
 // If 8 is specified, it is saved as a 256-color bitmap.
 // If 24 is specified, it is saved as a 24-bit full-color bitmap.
 // 256-color bitmaps can keep the file size smaller, but the image quality will be worse.
+// No longer used: thumbnails are now always saved as PNG.
 ;thumbnailDepth = 24;
 
 
