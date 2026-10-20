@@ -5504,7 +5504,23 @@ class KAGWindow extends Window
 
 
 
-		chDefaultFace = scflags.chDefaultFace if scflags.chDefaultFace !== void;
+		if (scflags.chDefaultFace !== void) {
+
+			// Older saves hold a single face (e.g. "MS Gothic"), which the SDL engine draws as arrows
+
+			// where it isn't installed. Keep the saved face first and add the configured fallbacks.
+
+			var saved = scflags.chDefaultFace;
+
+			if (saved.indexOf(",") >= 0)
+
+				chDefaultFace = saved;
+
+			else if (("," + chDefaultFace + ",").indexOf("," + saved + ",") < 0)
+
+				chDefaultFace = saved + "," + chDefaultFace;
+
+		}
 
 		chBitmapFont  = scflags.chBitmapFont if scflags.chBitmapFont !== void;
 

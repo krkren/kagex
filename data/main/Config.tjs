@@ -701,7 +701,7 @@ function MessageLayer_config()
 // (Or delete the system variable file)
 // Multiple fonts can be specified separated by commas. In that case, 
 // if the font written first exists, it will take precedence.
-;userFace = "MS Gothic"; // Corresponds to the face attribute of the deffont tag
+;userFace = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto"; // Corresponds to the face attribute of the deffont tag
 
 
 
@@ -967,7 +967,7 @@ function HistoryLayer_config()
 
 
 // ◆ Font Name
-;fontName = "MS Gothic";
+;fontName = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
 
 
 

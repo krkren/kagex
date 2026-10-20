@@ -379,7 +379,7 @@ function fileDataButton(name, work)
         target.font.height=36;
         // MS Gothic on Windows. The SDL engine draws an unknown face with an icon font (arrows),
         // so list fonts it does register; it skips names it doesn't know.
-        target.font.face = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP Light,Roboto";
+        target.font.face = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
         // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
         while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
             savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
@@ -709,7 +709,7 @@ function setCGImage(target, filename)
     target.operateRect(target.width*2+b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
 
     if (tf.viewcgfilename) {
-	    target.font.face = "MS Gothic";
+	    target.font.face = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
 	    target.font.height = 14;
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }

@@ -835,7 +835,7 @@ function MessageLayer_config()
 // "chdefaultFace" line in ?????sc.* or delete the system variable file.
 // Can specify multiple fonts separated by commas (priority order).
 
-;userFace = "MS PMincho"; // Equivalent to 'face' attribute in [deffont] tag
+;userFace = "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto"; // Equivalent to 'face' attribute in [deffont] tag
 
 
 
@@ -1110,7 +1110,7 @@ function HistoryLayer_config()
 
 // ◆ Font Name
 
-;fontName = "MS PMincho";
+;fontName = "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto";
 
 
 
