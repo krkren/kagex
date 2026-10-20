@@ -92,6 +92,12 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		this.alpha = alpha;
 
+		// The [image] tag shows the layer before the first frame arrives; left at ltOpaque its empty
+
+		// image flashes white (across the whole screen for affine layers), so draw it with alpha
+
+		for (var i = flipLayers.count-1; i >= 0; i--) flipLayers[i].type = ltAlpha;
+
 		targetLayer.name = "Movie:" + filename;
 
 		this.loop=loop;
