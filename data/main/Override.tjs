@@ -376,19 +376,25 @@ function fileDataButton(name, work)
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = kag.getBookMarkPageName(savedatanum);
-        savedatatitle = savedatatitle.substring(0,9);
-        target.font.height=24;
-        target.font.face = "MS Gothic";
+        target.font.height=36;
+        // MS Gothic on Windows. The SDL engine draws an unknown face with an icon font (arrows),
+        // so list fonts it does register; it skips names it doesn't know.
+        target.font.face = "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP Light,Roboto";
+        // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
+        while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
+            savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
 
-        // Thumbnail image cutting
+        // Thumbnail image cutting (sl_win_base's thumbnail well starts at 8,8)
         var thum = new global.Layer(kag, kag.fore.base);
         thum.loadImages(savefilename);
-        layer.operateRect(7,7,thum,0,0,thum.imageWidth, thum.imageHeight,omPsNormal);
+        layer.operateRect(9,9,thum,0,0,thum.imageWidth, thum.imageHeight,omPsNormal);
 
+        // "New!" badge in the thumbnail's bottom-right corner
         var thum2 = new global.Layer(kag, kag.fore.base);
         thum2.loadImages("newdata");
         if (savedatanum == sf.newsavedata) {
-            layer.operateRect(82,62,thum2,0,0,thum2.imageWidth, thum2.imageHeight,omPsNormal);
+            layer.operateRect(9 + thum.imageWidth - 4 - thum2.imageWidth, 9 + thum.imageHeight - 4 - thum2.imageHeight,
+                              thum2,0,0,thum2.imageWidth, thum2.imageHeight,omPsNormal);
         }
 
         // Composite onto button
@@ -398,12 +404,14 @@ function fileDataButton(name, work)
         layer.colorRect(0,0,layer.imageWidth,layer.imageHeight,0xffffff,64); // Overlay white
         target.operateRect(0,  0,layer,0,0,w,h,omPsNormal); // normal
 
-        target.drawText( 123,16,savedatatitle,  0x000000,255,true);
-        target.drawText( 123,58,savedatadate,  0x000000,255,true);
-        target.drawText( 491,16,savedatatitle,  0x000000,255,true);
-        target.drawText( 491,58,savedatadate,  0x000000,255,true);
-        target.drawText( 859,16,savedatatitle,  0x000000,255,true);
-        target.drawText( 859,58,savedatadate,  0x000000,255,true);
+        // Title / date rows of the text area, repeated for the normal, over and on states
+        var tx = 260, ty1 = 23, ty2 = 89;
+        target.drawText(tx,     ty1,savedatatitle,  0x000000,255,true);
+        target.drawText(tx,     ty2,savedatadate,  0x000000,255,true);
+        target.drawText(tx+w,   ty1,savedatatitle,  0x000000,255,true);
+        target.drawText(tx+w,   ty2,savedatadate,  0x000000,255,true);
+        target.drawText(tx+w*2, ty1,savedatatitle,  0x000000,255,true);
+        target.drawText(tx+w*2, ty2,savedatadate,  0x000000,255,true);
 
         invalidate thum;
         

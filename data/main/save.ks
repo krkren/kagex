@@ -24,7 +24,7 @@
 
 [backlay]
 
-[position layer=message1 frame="save_base" opacity=255 left=0 top=0 width=800 height=600 marginT=0 marginL=0 marginR=0 marginB=0 visible=true  transparent=false page=back]
+[position layer=message1 frame="save_base" opacity=255 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true  transparent=false page=back]
 
 [current layer=message1 page=back]
 
@@ -36,39 +36,39 @@
 
 ; Page layout
 
-[locate x=312 y=47]
+[locate x=921 y=74]
 
 [button name="page1" exp="setSavePageButton(1)"]
 
-[locate x=352 y=47]
+[locate x=977 y=74]
 
 [button name="page2" exp="setSavePageButton(2)"]
 
-[locate x=392 y=47]
+[locate x=1033 y=74]
 
 [button name="page3" exp="setSavePageButton(3)"]
 
-[locate x=432 y=47]
+[locate x=1089 y=74]
 
 [button name="page4" exp="setSavePageButton(4)"]
 
-[locate x=472 y=47]
+[locate x=1145 y=74]
 
 [button name="page5" exp="setSavePageButton(5)"]
 
-[locate x=512 y=47]
+[locate x=1201 y=74]
 
 [button name="page6" exp="setSavePageButton(6)"]
 
-[locate x=552 y=47]
+[locate x=1257 y=74]
 
 [button name="page7" exp="setSavePageButton(7)"]
 
-[locate x=592 y=47]
+[locate x=1313 y=74]
 
 [button name="page8" exp="setSavePageButton(8)"]
 
-[locate x=632 y=47]
+[locate x=1369 y=74]
 
 [button name="page9" exp="setSavePageButton(9)"]
 
@@ -78,23 +78,23 @@
 
 ; 1st Column
 
-[locate x=32  y=96 ]
+[locate x=290 y=190]
 
 [button name="save0" normal="sl_win_base" exp="saveAction(0)"]
 
-[locate x=32  y=192]
+[locate x=290 y=358]
 
 [button name="save1" normal="sl_win_base" exp="saveAction(1)"]
 
-[locate x=32  y=288]
+[locate x=290 y=526]
 
 [button name="save2" normal="sl_win_base" exp="saveAction(2)"]
 
-[locate x=32  y=384]
+[locate x=290 y=694]
 
 [button name="save3" normal="sl_win_base" exp="saveAction(3)"]
 
-[locate x=32  y=480]
+[locate x=290 y=862]
 
 [button name="save4" normal="sl_win_base" exp="saveAction(4)"]
 
@@ -102,23 +102,23 @@
 
 ; 2nd Column
 
-[locate x=400 y= 96]
+[locate x=980 y=190]
 
 [button name="save5" normal="sl_win_base" exp="saveAction(5)"]
 
-[locate x=400 y=192]
+[locate x=980 y=358]
 
 [button name="save6" normal="sl_win_base" exp="saveAction(6)"]
 
-[locate x=400 y=288]
+[locate x=980 y=526]
 
 [button name="save7" normal="sl_win_base" exp="saveAction(7)"]
 
-[locate x=400 y=384]
+[locate x=980 y=694]
 
 [button name="save8" normal="sl_win_base" exp="saveAction(8)"]
 
-[locate x=400 y=480]
+[locate x=980 y=862]
 
 [button name="save9" normal="sl_win_base" exp="saveAction(9)"]
 
@@ -126,7 +126,7 @@
 
 ; Top-right return button
 
-[locate x=672 y=47]
+[locate x=1476 y=74]
 
 [button name="return" target=*backtogame]
 
