@@ -28,6 +28,30 @@ var dm = Debug.message; // With this, dm("message"); can display the message in 
 
 
 
+// Plugins are linked as "plugin/Foo.dll" so Windows finds them (the x64 engine's own plugin
+
+// folder is plugin64/). The SDL engine on Linux/macOS maps "Foo.dll" to "libFoo.so" but puts
+
+// "lib" in front of the whole path ("libplugin/Foo.so"), and it already searches plugin/ next
+
+// to the exe, so drop the folder there. Engines without System.platformTag are unchanged.
+
+var origPluginsLink = Plugins.link;
+
+if (typeof System.platformTag != "undefined" && System.platformTag != "windows") {
+
+	Plugins.link = function(name) {
+
+		if (name.substring(0, 7) == "plugin/") name = name.substring(7);
+
+		return origPluginsLink(name);
+
+	};
+
+}
+
+
+
 /*
 
 	Whether the debug window is enabled

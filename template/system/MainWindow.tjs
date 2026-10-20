@@ -1796,9 +1796,11 @@ class KAGWindow extends Window
 
 		{
 
-			if (typeof this.registerExEvent != "undefined") {
+			if (typeof this.registerExEvent != "undefined" && typeof this.exSystemMenu != "undefined") {
 
-				// windowEx extended events available
+				// windowEx extended events available (newer engines have registerExEvent built in on
+
+				// every platform, so also require exSystemMenu, which only the windowEx plugin adds)
 
 				borderStyle = bsSizeable;
 
