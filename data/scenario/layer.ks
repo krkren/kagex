@@ -9,7 +9,7 @@ This is a sample of KAGEX layer extension functions.[r]You can control rotation 
 [l][r]
 
 [image layer=base page=fore storage="bg01_01"  visible=true left=0 top=0]
-[image layer=0     page=fore storage="ch_0_0_1" visible=true left=960 top=540 dafx=center dafy=center]
+[image layer=0     page=fore storage="ch_0_0_1" visible=true left=960 top=810 dafx=center dafy=center]
 [cm]
 
 Start
@@ -32,7 +32,7 @@ Rotate
 Change rotation origin (top-left corner)
 [l][r]
 
-[layopt layer=0 afx=100 afy=100]
+[layopt layer=0 afx=180 afy=180]
 Change rotation origin (coordinate specification)
 [l][r]
 

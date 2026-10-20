@@ -71,9 +71,12 @@ class KAGWindow extends Window
 	var wrapComp = void;
 	var spaceChar = " ";
 	var newlineTag = "[r]";
+	var wrapDropSpace = false;     // the space the word wrap broke the line at is not drawn...
+	var wrapDropSpaceHist = false; // ...or stored in the history (the ch handler checks these)
 
 	function needsToBeWrapped(text) {
 		var textHist = text;
+		wrapDropSpace = wrapDropSpaceHist = false;
 		if(conductor.curLineStr[0] == "*" || conductor.curLineStr[0] == "[" || conductor.curLineStr[0] == ";" || 
        conductor.curLineStr[0] == "\t") return false;
 		if(conductor.curLineStr.indexOf(newlineTag)!=-1) return false;
@@ -137,6 +140,7 @@ class KAGWindow extends Window
 					if(historyLayer.font.getTextWidth(wrapSplitLine[wrapNum])<=historyLayer.relinePos)
 					{
 						textHist = "";
+						wrapDropSpaceHist = true;
 						historyLayer.reline();
 						wrapPosHist = historyLayer.font.getTextWidth(historyLayer.currentLine);
 					}
@@ -147,6 +151,7 @@ class KAGWindow extends Window
 					if(current.lineLayer.font.getTextWidth(wrapSplitLine[wrapNum])<=current.relinexpos)
 					{
 						text = "";
+						wrapDropSpace = true;
 						if(current.processReturn()) wrapNewPage = 1;
 					}
 					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
@@ -14836,7 +14841,7 @@ class KAGWindow extends Window
 			}
 		}
 		@endif
-		if (textWriteEnabled) {
+		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			if(currentWithBack) current.comp.processCh(text);
 			repage = current.processCh(text, chUserMode ? acs : 0);
 			if(repage)
@@ -14844,7 +14849,7 @@ class KAGWindow extends Window
 				return showPageBreakAndClear();
 			}
 		}
-		if(historyWriteEnabled)
+		if(historyWriteEnabled && !(wrapDropSpaceHist && text == spaceChar))
 		{
 			historyLayer.autoReline() if (repage === false && typeof historyLayer.autoReline == "Object");
 			historyLayer.store(text);

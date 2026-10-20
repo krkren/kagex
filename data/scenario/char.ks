@@ -136,9 +136,9 @@ Bring Ai2 to the front
 [ai2 back]
 Move Ai2 to the back
 
-[ai  xpos=-800 time=500]
-[ai2 xpos=-800 time=500]
-[ai3 xpos=-800 time=500]
+[ai  xpos=-1920 time=500]
+[ai2 xpos=-1920 time=500]
+[ai3 xpos=-1920 time=500]
 The End
 
 [jump storage=s0001.ks]

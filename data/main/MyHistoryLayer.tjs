@@ -61,10 +61,10 @@ class HistoryLayer extends Layer
 	var dataPages = 0;	//	Number of valid pages in data
 	var dataPage = 0;//	Current page being written to
 
-	var marginL = 12;
-	var marginR = 12;
-	var marginT = 12;
-	var marginB = 12;
+	var marginL = 22;
+	var marginR = 176; // keeps text clear of the page buttons / scroll bar on the right
+	var marginT = 22;
+	var marginB = 22;
 	var fontName = "MS P Mincho"; // "ＭＳ Ｐ明朝"
 	var fontBold = false;
 	var fontHeight = 24;
@@ -80,7 +80,7 @@ class HistoryLayer extends Layer
     var historyOverColor = 0xfd9618; // History hover color
 
 
-	var controlHeight = 20;
+	var controlHeight = 36;
 
 	var dispStart = 0;
 	var dispLines = 0;
@@ -286,23 +286,23 @@ class HistoryLayer extends Layer
         closeButton    = new LButtonLayer(window, this);
         scrollSlider   = new LSliderLayer(window, this, true);
         
-        topPageButton.left = 736;
-        topPageButton.top  = 32;
+        topPageButton.left = 1766;
+        topPageButton.top  = 58;
         topPageButton.loadButtons("log_first_normal", "log_first_over");
         topPageButton.visible = true;
         
-        prevPageButton.left    = 736;
-        prevPageButton.top     = 64;
+        prevPageButton.left    = 1766;
+        prevPageButton.top     = 115;
         prevPageButton.loadButtons("log_uppage_normal", "log_uppage_over");
         prevPageButton.visible = true;
         
-        nextPageButton.left    = 736;
-        nextPageButton.top     = 504;
+        nextPageButton.left    = 1766;
+        nextPageButton.top     = 907;
         nextPageButton.loadButtons("log_downpage_normal", "log_downpage_over");
         nextPageButton.visible = true;
 
-        endPageButton.left    = 737;
-        endPageButton.top     = 536;
+        endPageButton.left    = 1769;
+        endPageButton.top     = 965;
         endPageButton.loadButtons("log_last_normal", "log_last_over");
         endPageButton.visible = true;
         
@@ -313,10 +313,10 @@ class HistoryLayer extends Layer
         closeButton.hint      = "Close Message History";
 */
 
-        scrollSlider.left     = 756;
-        scrollSlider.top      =  96;
-        scrollSlider.width    =  24;
-        scrollSlider.height   = 408;
+        scrollSlider.left     = 1821;
+        scrollSlider.top      = 173;
+        scrollSlider.width    =  43;
+        scrollSlider.height   = 734;
         scrollSlider.loadTabs("log_bar_normal", "log_bar_over");
         scrollSlider.visible = true;
         scrollSlider.bgOpacity = 0;
@@ -480,7 +480,7 @@ class HistoryLayer extends Layer
 					currentLine=
 						currentLine.substring(0, currentLine.length - ch.length);	//	Remove the added character
 					reline();
-					currentLine = ch;
+					currentLine = ch == " " ? "" : ch; // English: drop the space a line wrapped at
 				}
 			}
 		}

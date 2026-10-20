@@ -4894,6 +4894,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		}
 
+		// English text: drop a space that would start an automatically wrapped line
+
+		if (relined && ch == " ") return false;
+
 
 
 		changeLineSize() if sizeChanged;

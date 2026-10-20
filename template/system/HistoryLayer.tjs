@@ -874,7 +874,7 @@ class HistoryLayer extends Layer
 
 					reline();
 
-					currentLine = ch;
+					currentLine = ch == " " ? "" : ch; // English: drop the space a line wrapped at
 
 				}
 

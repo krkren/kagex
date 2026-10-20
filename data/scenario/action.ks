@@ -26,7 +26,7 @@ Simultaneous display (nosync specified)
 This is a sample of composite actions.
 
 [ai sequence_test]
-Multiple continuous actions can be executed as asingle action.
+Multiple continuous actions can be executed as a single action.
 
 [ai sequence_test2]
 Example 2. This is a combination of separately defined actions.
