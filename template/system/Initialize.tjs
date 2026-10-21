@@ -515,6 +515,8 @@ try { Plugins.link("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster
 try { Plugins.link("plugin/scriptsEx.dll"); } catch {}
 try { Plugins.link("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
 try { Plugins.link("plugin/extrans.dll"); } catch {}
+// krkr_richtext.dll - optional; message text uses it when MessageLayer useRichText is set
+try { Plugins.link("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined"; } catch {}
 
 
 

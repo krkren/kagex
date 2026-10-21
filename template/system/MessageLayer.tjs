@@ -2278,6 +2278,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	/*C*/var antialiased; // Whether to apply anti-aliasing
 
+	/*C*/var useRichText = false; // Draw text with the krkr_richtext plugin when it is available
+
+	var richTextApp; // RichTextFontApp, created on first use
+
 	/*CS*/var vertical = false; // True when in vertical writing mode
 
 	/*C*/var currentRuby = ""; // Ruby for the next character
@@ -2957,6 +2961,8 @@ class MessageLayer extends AnimKAGLayerTransMove
         invalidate timeoutTimer if timeoutTimer !== void;
 
         invalidate textLayer if (textLayer !== void);
+
+        invalidate richTextApp if (richTextApp !== void);
 
 
 
@@ -4918,7 +4924,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-		var cw = llfont.getTextWidth(ch);
+		var rta = getRichTextApp(ll);
+
+		var cw = rta !== void ? rta.advance(this, ch) : llfont.getTextWidth(ch);
 
 
 
@@ -5071,6 +5079,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 			dt(lay, x+shadowOffsetX, y+shadowOffsetY, text, shadowColor) if (shadow);
 
 			dt(lay, x, y, text, color);
+
+			return;
+
+		}
+
+		// SelectLayer also calls this function, in the context of a style dictionary
+
+		var rta = typeof this.getRichTextApp != "undefined" ? getRichTextApp(lay) : void;
+
+		if (rta !== void) {
+
+			rta.drawText(this, lay, x, y, text, color);
 
 			return;
 
@@ -5265,6 +5285,276 @@ class MessageLayer extends AnimKAGLayerTransMove
 			// Manually update the update area of layerExDraw as it might be narrow.
 
 			lay.update(sx-padding, y-padding, (x-sx)+padding*2, fh+padding*2);
+
+		}
+
+	}
+
+
+
+	// krkr_richtext drawing (useRichText). Returns void, and the normal drawing is
+
+	// used, when the plugin or the faces of the layer font are unavailable.
+
+	function getRichTextApp(lay) {
+
+		if (!useRichText || vertical || typeof global.RichText == "undefined") return;
+
+		var win = lay.window;
+
+		if (typeof win.bitmapFont == "Object" && win.bitmapFont) return;
+
+		if (richTextApp === void) richTextApp = new global.MessageLayer.RichTextFontApp();
+
+		if (richTextApp.ready(lay.font)) return richTextApp;
+
+	}
+
+
+
+	// Draws text with the krkr_richtext plugin: kerned positions and vector outlines and
+
+	// shadows, using the same faces and baseline as Layer.drawText.
+
+	class RichTextFontApp {
+
+		var rt = global.RichText;
+
+		var faceFonts = %[]; // Font.face -> the names in it registered with RichText
+
+		var styles = %[];    // font settings -> [ RichText.Style, baseline ] ([] if unusable)
+
+		var app, appKey, appPad, layout, probe;
+
+		var style, baseLine; // selected by ready()
+
+		var runText = "", runTextWidth = 0, runWidth = 0, runNext = -1, runStyle; // see advance()
+
+
+
+		function RichTextFontApp() {
+
+			app    = new rt.Appearance();
+
+			layout = new rt.Layout();
+
+			probe  = new global.Font();
+
+		}
+
+		function finalize() {
+
+			invalidate app;
+
+			invalidate layout;
+
+			invalidate probe;
+
+		}
+
+
+
+		function measure(text) {
+
+			if (text == "") return 0; // layout("") keeps the previous result
+
+			layout.layout(text, style);
+
+			return layout.width;
+
+		}
+
+
+
+		// The faces in a Font.face list that the engine draws with. No other name may reach
+
+		// RichText.registerFont: the engine then opens every system font to search their
+
+		// names, which can deadlock its file cache.
+
+		function getFonts(face) {
+
+			var fonts = faceFonts[face];
+
+			if (fonts !== void) return fonts;
+
+			fonts = faceFonts[face] = [];
+
+			if (typeof global.Font.getVarAxes == "undefined") return fonts;
+
+			var names = [].split(",", face, , true);
+
+			probe.height = 20;
+
+			for (var i = 0; i < names.count; i++) {
+
+				var name = names[i].trim();
+
+				if (name == "" || global.Font.getVarAxes(name) === void) continue;
+
+				probe.face = name;
+
+				if (probe.getTextWidth("Hあ") > 0 && rt.registerFont(name, name)) fonts.add(name);
+
+			}
+
+			return fonts;
+
+		}
+
+
+
+		function makeStyle(lf, fonts) {
+
+			var st = new rt.Style();
+
+			st.setFonts(fonts);
+
+			st.fontSize   = Math.abs(lf.height);
+
+			st.fontWeight = lf.bold ? 700 : 400;
+
+			st.italic     = lf.italic;
+
+			// Baseline where Layer.drawText puts it (RichText's ascent comes from a taller
+
+			// metric), so the text keeps its place in the line layout
+
+			probe.face = lf.face, probe.height = lf.height, probe.bold = lf.bold, probe.italic = lf.italic;
+
+			var base = probe.getGlyphDrawRect("H").bottom;
+
+			if (base <= 0) layout.layout("H", st), base = -layout.ascent;
+
+			return [ st, base ];
+
+		}
+
+
+
+		// Selects the style for a layer font. False when none of its faces can be used
+
+		function ready(lf) {
+
+			var key = [ lf.face, lf.height, lf.bold, lf.italic ].join("/");
+
+			var info = styles[key];
+
+			if (info === void) {
+
+				var fonts = getFonts(lf.face);
+
+				info = styles[key] = fonts.count > 0 ? makeStyle(lf, fonts) : [];
+
+			}
+
+			if (info.count == 0) return false;
+
+			style = info[0], baseLine = info[1];
+
+			return true;
+
+		}
+
+
+
+		function argb(col) { return (col & 0xff000000) ? col : (0xff000000 | col); }
+
+
+
+		// Fill, edge and shadow from the message layer settings. As in drawTextToLayer,
+
+		// an edge replaces the shadow
+
+		function updateApp(base, color) { with (base) {
+
+			var key = [ color, .edge, .edgeColor, .edgeExtent, .shadow, .shadowColor,
+
+						.shadowWidth, .shadowOffsetX, .shadowOffsetY ].join(",");
+
+			if (key == appKey) return;
+
+			appKey = key;
+
+			// How far the edge or shadow reaches past the glyphs
+
+			appPad = .edge ? .edgeExtent * 2 : .shadow ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0;
+
+			app.clear();
+
+			if (.edge) {
+
+				app.addStroke(argb(.edgeColor), .edgeExtent * 2);
+
+			} else if (.shadow) {
+
+				app.addShadow(argb(.shadowColor), .shadowOffsetX, .shadowOffsetY);
+
+				app.addStroke(argb(.shadowColor), .shadowWidth, .shadowOffsetX, .shadowOffsetY) if (.shadowWidth > 0);
+
+			}
+
+			app.addFill(argb(color));
+
+		} }
+
+
+
+		// Draws text with its top-left at x, y, like Layer.drawText
+
+		function drawText(base, lay, x, y, text, color) {
+
+			if (text == "") return;
+
+			updateApp(base, color);
+
+			lay.drawTextEx(text, x, y + baseLine, style, app);
+
+			// drawTextEx only updates the glyphs' ink box, so without this the shadow and edge
+
+			// stay off the screen until something else redraws that area. The padding also
+
+			// covers fake bold/italic and side bearings
+
+			layout.layout(text, style);
+
+			var pad = appPad + style.fontSize \ 4 + 2;
+
+			lay.update(int(x) - pad, int(y + baseLine + layout.ascent) - pad,
+
+				int(layout.width) + pad * 2, int(layout.descent - layout.ascent) + pad * 2);
+
+		}
+
+
+
+		// Advance of ch at the current line position, kerned against the characters drawn
+
+		// before it on the line in the same style. The exact width of the run is rounded
+
+		// once per character, so positions don't drift
+
+		function advance(base, ch) {
+
+			var pos = base.lineLayerPos;
+
+			if (base.lineLayerLength == 0 || pos != runNext || style !== runStyle)
+
+				runText = "", runTextWidth = runWidth = 0, runStyle = style;
+
+			var w = measure(runText + ch), prev = runWidth;
+
+			runWidth += w - runTextWidth;
+
+			runText += ch, runTextWidth = w;
+
+			if (runText.length > 16) runText = runText.substr(8), runTextWidth = measure(runText);
+
+			var adv = int(Math.round(runWidth) - Math.round(prev));
+
+			runNext = pos + adv + base.pitch;
+
+			return adv;
 
 		}
 
@@ -8873,6 +9163,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		defaultAntialiased = src.defaultAntialiased;
 
 		antialiased = src.antialiased;
+
+		useRichText = src.useRichText;
 
 		vertical = src.vertical;
 

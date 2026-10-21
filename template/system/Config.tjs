@@ -917,6 +917,16 @@ function MessageLayer_config()
 
 
 
+// ◆ Draw Text with krkr_richtext?
+// Kerned text and smooth edges and shadows. Text is drawn normally when the
+// plugin or the fonts are not available.
+
+;useRichText = true;
+
+
+
+
+
 // ◆ Click Waiting Glyph Image Files
 // See AnimationLayer.tjs for how to create images. Do not specify extension.
 // Specify color keys via [glyph] tag in scenario if needed.

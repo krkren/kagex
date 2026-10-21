@@ -778,6 +778,15 @@ function MessageLayer_config()
 
 
 
+// ◆ Whether to draw text with the krkr_richtext plugin
+// Specify true if yes, false if no. Gives kerned text and smooth edges and shadows.
+// Text is drawn normally when the plugin or the fonts are not available.
+;useRichText = true;
+
+
+
+
+
 // ◆ Image file for click waiting glyph
 // See the animation layer (AnimationLayer.tjs) for how to make images. 
 // Do not specify the extension.
