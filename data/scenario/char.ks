@@ -41,7 +41,7 @@ Character movement (Center)
 Character level change (Front)
 
 [ai centerlevel]
-Character movement (Forward)
+Character level change (Middle)
 
 [ai hide]
 Character removal

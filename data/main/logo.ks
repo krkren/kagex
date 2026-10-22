@@ -3,7 +3,7 @@
 [cancelskip]
 [rclick enabled=false]
 [clickskip enabled=true]
-[position layer=message0 frame="" opacity=0 left=0 top=0 width=800 height=600 marginT=0 marginL=0 marginR=0 marginB=0 visible=true]
+[position layer=message0 frame="" opacity=0 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true]
 
 [beginskip]
 [begintrans]
