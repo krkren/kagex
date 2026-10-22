@@ -1092,3 +1092,60 @@ function playNext()
         stopBgm();
     }
 }
+
+// --------------------------------------------------------
+// About screen (F1)
+// --------------------------------------------------------
+
+/**
+ * The About screen, drawn in the game window like the Yes/No dialogs (MyYesNoDialog.tjs).
+ * The engine's own About (KAGWindow.onHelpAboutMenuItemClick) opens a second, modal OS window
+ * running about.ks; pressing F1 crashed the game on Linux, and this needs no second window.
+ */
+class AboutDialogLayer extends DialogLayer
+{
+    function AboutDialogLayer() {
+        super.DialogLayer(kag, kag.primaryLayer, "AboutDialog");
+        var frame = yesnoFrames[0];
+        var temp = kag.temporaryLayer;
+        temp.loadImages(frame.storage);
+        var fx = (width - temp.imageWidth) >> 1, fy = (height - temp.imageHeight) >> 1;
+        setOption(%[frame : frame.storage, left : fx, top : fy]);
+        // Title, version and copyright, centred in the frame's text area
+        var lines = [ [ sf.software_title, yesnoFontSize ],
+                      [ "Version " + sf.software_version, yesnoLabelSize ],
+                      [ "(c) " + sf.software_year + " " + sf.software_maker, yesnoLabelSize ] ];
+        var total = -yesnoLineGap;
+        for (var i = 0; i < lines.count; i++) {
+            setYesNoFont(this, lines[i][1]);
+            total += font.getTextHeight("Ag") + yesnoLineGap;
+        }
+        var y = fy + ((frame.textTop + frame.textBottom - total) >> 1);
+        for (var i = 0; i < lines.count; i++) {
+            setYesNoFont(this, lines[i][1]);
+            var w = measureYesNoText(this, lines[i][0]);
+            drawYesNoString(this, fx + frame.centerX - (w >> 1), y, lines[i][0], 0xffffff, yesnoTextBase);
+            y += font.getTextHeight("Ag") + yesnoLineGap;
+        }
+        addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
+                     normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+        drawYesNoLabel(names.close, "Close");
+    }
+    function onOpen() {
+        setFocusToLink(0, true);
+    }
+    function processLink(num) {
+        super.processLink(num);
+        close() if (this isvalid);
+    }
+}
+
+/**
+ * Shows the About screen, unless another dialog is open
+ */
+function showAbout()
+{
+    if (kag.currentDialog !== void) return;
+    var dialog = new AboutDialogLayer();
+    dialog.open();
+}
