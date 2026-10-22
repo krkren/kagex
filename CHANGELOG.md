@@ -9,6 +9,7 @@
 - Word wrap: two identical lines in a row, and text after a load onto the same line, lost word wrapping; under `[notextmode]` or a no-display skip it could still raise page breaks.
 - Letters that hang below the line (g, j, p, q, y) and their shadow were cut off at the bottom of each message line when krkr_richtext draws the text.
 - The window/full-screen choice is remembered between launches (the first launch is still full screen), and a windowed start fits the display instead of opening 1920x1080.
+- On Linux, the Config screen's Window/Full screen buttons showed the previous mode until a second click, and showed Window at start-up while the game was full screen: the engine switches asynchronously, and the mode was read back too early.
 - The Replay screen unlocks a scene once it has been played, instead of only in debug mode.
 - The Config screen's Title button failed to load a missing dialog image.
 - Music Mode's first track didn't play on Linux (file name case), and two tracks that don't exist were listed.

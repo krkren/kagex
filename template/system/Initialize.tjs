@@ -986,7 +986,8 @@ if (typeof global.kag !== "undefined") {
     // In a window, KAGWindow.setZoom sizes it to scWidth x scHeight (members of kag, not
     // globals) at the zoom the constructor picked, which is below 1 when that doesn't fit
     // the display. setInnerSize(scWidth, scHeight) made it taller than a 1080p screen.
-    if (!global.kag.fullScreen)
+    // fullScreened, not fullScreen: the start-up switch may not have taken effect yet
+    if (!global.kag.fullScreened)
         global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);
 }
 

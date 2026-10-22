@@ -4707,15 +4707,27 @@ class KAGWindow extends Window
 
 		if ( !fullScreened == !isfull) return;
 
+		var switched = true;
+
 		try { fullScreen   =   isfull; }
 
 		catch(e) {
+
+			switched = false;
 
 			Debug.notice("Failed to transition to " + (isfull ? "full-screen" : "window") + " mode: " + e.message);
 
 		}
 
-		var  menu = ((fullScreened = fullScreen) != 0) ? "fullScreenMenuItem" : "windowedMenuItem";
+		// The SDL engine switches asynchronously (the window manager confirms it later), so
+
+		// reading fullScreen back here still gives the old mode: the Config screen highlighted
+
+		// the wrong button until a second click, and the start-up switch to full screen was
+
+		// recorded, and saved, as windowed. Record the mode asked for unless the switch failed
+
+		var  menu = ((fullScreened = switched ? !!isfull : fullScreen) != 0) ? "fullScreenMenuItem" : "windowedMenuItem";
 
 		this[menu].checked = true if (typeof this[menu] == "Object");
 
