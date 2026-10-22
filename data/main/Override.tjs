@@ -164,7 +164,7 @@ function KAGWindow_createMenus()
 		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "MANUAL", 0,
 			onHelpIndexMenuItemClick, false));
 
-		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "ABOUT(F1) ", 0,
+		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "ABOUT(F1)", 0,
 		onHelpAboutMenuItemClick, false));
 
 	menu.add(this.debugMenu = new KAGMenuItem(this, "Debug(&D)", 0, void, false));
@@ -414,6 +414,7 @@ function fileDataButton(name, work)
         target.drawText(tx+w*2, ty2,savedatadate,  0x000000,255,true);
 
         invalidate thum;
+        invalidate thum2;
         
     } else {
 
@@ -574,7 +575,8 @@ function initial()
  */
 function gotoTitle()
 {
-    askYesNo("Return to the beginning. Are you sure?", "Confirmation", kag.goToStart);
+    // The same prompt as the system's own return to title (MyYesNoDialog shortens it)
+    askYesNo("Returning to title. Are you sure?", "Confirmation", kag.goToStart);
 }
 
 /**
@@ -689,19 +691,19 @@ function setCGImage(target, filename)
     // Picture area inside the thumbnail frame's 3px border; the whole source image is fitted into it
     var b = 3, pw = target.width - b*2, ph = target.height - b*2;
 
-    if (Storages.isExistentStorage("thum_"+filename+".png")) {
-        layer.loadImages("thum_"+filename);
-        layer2.loadImages("cgmode_thum_normal");
-        layer2.setSizeToImageSize();
-        layer2.operateStretch(0,0,pw,ph,layer,0,0,layer.imageWidth,layer.imageHeight,omAuto,255,stNearest);
-        layer2.imageWidth=pw;
-        layer2.imageHeight=ph;
+    // A prepared thumbnail (data/thum/thum_<name>.png, the picture area's size) avoids decoding
+    // the full CG on every page; without one the CG is shrunk here
+    layer.loadImages(Storages.isExistentStorage("thum_"+filename+".png") ? "thum_"+filename : filename);
+    layer2.loadImages("cgmode_thum_normal");
+    layer2.imageWidth=pw;
+    layer2.imageHeight=ph;
+    var sw = layer.imageWidth, sh = layer.imageHeight;
+    if (typeof layer2.shrinkCopy == "Object" && pw <= sw\2 && ph <= sh\2) {
+        // Averages the pixels it shrinks (a 1920x1080 CG is about 9x the picture area);
+        // a nearest-neighbour stretch made jagged thumbnails
+        layer2.shrinkCopy(0,0,pw,ph,layer,0,0,sw,sh,stLinear);
     } else {
-	    layer.loadImages(filename);
-        layer2.loadImages("cgmode_thum_normal");
-        layer2.imageWidth=pw;
-        layer2.imageHeight=ph;
-        layer2.operateStretch(0,0,pw,ph,layer,0,0,layer.imageWidth,layer.imageHeight,omAuto,255,stNearest);
+        layer2.operateStretch(0,0,pw,ph,layer,0,0,sw,sh,omAuto,255,stLinear);
     }
 
     target.operateRect(               b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
@@ -714,6 +716,7 @@ function setCGImage(target, filename)
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }
     invalidate layer;
+    invalidate layer2;
 }
 
 /**
@@ -875,9 +878,11 @@ function setReplaymodePageButton(work=void)
         var info = tf.replaymodelist[i];
         if (info === void) continue;
 
-        // Check replay flag - default to false when sf access crashes on 
-        // non-existent flags. tf.allseen always overrides.
-        var replayFlagSet = tf.allseen;
+        // A scene unlocks once its label has been passed: setRecordLabel (MainWindow.tjs)
+        // records it as sf["trail_<storage>_<label>"]. Compare, so a missing flag (void)
+        // is simply false. tf.allseen unlocks everything
+        var flagname = "trail_" + info.scene.toLowerCase() + "_" + (info.target != "" ? info.target : "start");
+        var replayFlagSet = tf.allseen || (sf[flagname] !== void && +sf[flagname] > 0);
 
         if (info.page == pagename) {
             var button = kag.current.names["cg" + cgnum];

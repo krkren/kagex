@@ -95,6 +95,7 @@ class HistoryLayer extends Layer
 	var lastHighlightedActionID = 0;
 
 	var lastWheelTick; // Tick count when the wheel was last operated
+	var wheelRest = 0; // wheel delta short of a notch (120), carried to the next event
 
 	var storeState = false; // Whether to save state to bookmarks
 
@@ -1208,6 +1209,10 @@ class HistoryLayer extends Layer
 	{
 		// Window wheel operation messages are flowed here
 		var currenttick = System.getTickCount();
+		// Trackpads and high-resolution wheels send steps smaller than a notch: add them up
+		// instead of dropping them, or the log never scrolls
+		delta = int(delta) + wheelRest;
+		wheelRest = delta % 120;
 		delta = delta \ 120;
 		if(delta > 0 )
 		{
