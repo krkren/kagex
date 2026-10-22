@@ -1,37 +1,19 @@
-﻿Title: KAGEX Initial Setup Method
+﻿Title: KAGEX Initial Setup
+Original: Go Watanabe, 2012/4/29 (updated for the SDL3 port)
 
-Date: 2012/4/29
+1. Getting it
 
-Author: Go Watanabe
+  Download a package from https://github.com/krkren/kagex/releases, unzip it and run
+  krkrz.exe (Windows) or ./krkrz (Linux). README.md lists what each platform needs.
+  The packages include the engine, built from https://github.com/wamsoft/krkrz_dev;
+  this repository holds only the scripts and assets.
 
+2. About the sample data
 
+  template/   The KAGEX framework (template/system) and empty folders for a new game.
+  data/       The sample game, with its system scripts (title screen, etc.).
 
-1. Obtaining the Base
+  Files under data/ load template/system.
 
-  https://github.com/krkren/kagex
-
-2. Deploying Executable Files
-
- Run setup.bat as administrator
-
- Executing krkrz.exe will start the sample system.
-
-
-
-3. About Sample Data
-
-
-
-  template/   These are the base template files.
-
-  data/       This is a sample that includes system scripts (title screen, etc.).
-
-
-
-  Files under data/ reference template/system.
-
-
-
-  When actually releasing a game, it is better to copy template/system and template/startup.tjs 
-
-　directly into the data directory. Delete data/system/Config.tjs afterwards.
+  When releasing a game, copy template/system and template/startup.tjs into the data
+  directory. template/main/ has empty versions of the game-side hooks to start from.

@@ -23,23 +23,33 @@ Configure the folder structure for Kirikiri/KAGEX.
 
  game/
 
-  krkr.exe				Kirikiri Executable
+  krkrz.exe				Kirikiri Z (SDL3) executable (krkrz on Linux)
 
-  plugin/				Plugin files
+  plugin/				Plugin files (lib*.so on Linux)
 
-	extrans.dll			Extended transitions
-
-	krmovie.dll			DLL for Movies
-
-	wuvorbis.dll		DLL for OGG playback
+	KAGParserEx.dll		Extended scenario parser
 
 	csvParser.dll		CSV parser extension
 
+	extrans.dll			Extended transitions
+
+	krkr_richtext.dll	Kerned text, outlines and shadows (optional)
+
+	layerExBTOA.dll		Movie alpha extension
+
 	layerExImage.dll	Image function extension
+
+	layerExRaster.dll	Raster effect extension
+
+	scriptsEx.dll		Script extension
+
+	shrinkCopy.dll		High-quality image shrinking
+
+	krmovie.dll			Movies (Windows)
 
   data/
 
-	system/				Copy the distribution from Kirikiri KAGEX
+	system/				Copy template/system from KAGEX
 
 	main/				Scripts for the system.
 
@@ -1723,7 +1733,7 @@ Sample: Movie Macro (Sample registered in macro.ks)
 
 [cancelautomode]
 
-[eval exp='tf.moviefile = mp.file + ".mpg"']
+[eval exp='tf.moviefile = mp.file + ".webm"']
 
 [eval exp='tf.movieflag = "movie_" + mp.file']
 
