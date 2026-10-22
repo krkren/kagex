@@ -504,19 +504,25 @@ if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
 
 
 
+// Links a plugin and logs a failure (console / krkr.console.log) instead of hiding it, so a
+// missing file shows up here rather than later as an unrelated "member does not exist"
+function KAGLinkPlugin(name) {
+	try { Plugins.link(name); return true; }
+	catch (e) { dm("Plugin not loaded: " + name + " (" + e.message + ")"); return false; }
+}
 // Load plugins (with guards to prevent double-loading on Linux where .dll/.DLL are case-sensitive)
-try { Plugins.link("plugin/KAGParserEx.dll"); } catch {}
-try { Plugins.link("plugin/csvParser.dll") if typeof global.CSVParser == "undefined"; } catch {}
-try { Plugins.link("plugin/layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined"; } catch {}
+KAGLinkPlugin("plugin/KAGParserEx.dll");
+KAGLinkPlugin("plugin/csvParser.dll") if typeof global.CSVParser == "undefined";
+KAGLinkPlugin("plugin/layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined";
 // layerExImage.dll - must always load (operateRect may be defined by core engine as stub)
-try { Plugins.link("plugin/layerExImage.dll"); } catch {}
-try { Plugins.link("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined"; } catch {}
+KAGLinkPlugin("plugin/layerExImage.dll");
+KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined";
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
-try { Plugins.link("plugin/scriptsEx.dll"); } catch {}
-try { Plugins.link("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined"; } catch {}
-try { Plugins.link("plugin/extrans.dll"); } catch {}
+KAGLinkPlugin("plugin/scriptsEx.dll");
+KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
+KAGLinkPlugin("plugin/extrans.dll");
 // krkr_richtext.dll - optional; message text uses it when MessageLayer useRichText is set
-try { Plugins.link("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined"; } catch {}
+KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined";
 
 
 
@@ -975,18 +981,13 @@ if(Storages.isExistentStorage("AfterInit.tjs"))
 
 // Force SDL3 window size right before processing the first script
 if (typeof global.kag !== "undefined") {
-    // scWidth/scHeight are members of KAGWindow, set by (KAGWindow_config incontextof this)().
-    // They are never globals, so global.scWidth would always be undefined here.
-    var gameWidth  = global.kag.scWidth;
-    var gameHeight = global.kag.scHeight;
-
     // Skip while full-screen: the fullScreen setter already sized the surface
     // via setInnerSize(pxWidth, pxHeight), and resizing here would fight it.
-    if (!global.kag.fullScreen) {
-        global.kag.width  = gameWidth;
-        global.kag.height = gameHeight;
-        global.kag.setInnerSize(gameWidth, gameHeight);
-    }
+    // In a window, KAGWindow.setZoom sizes it to scWidth x scHeight (members of kag, not
+    // globals) at the zoom the constructor picked, which is below 1 when that doesn't fit
+    // the display. setInnerSize(scWidth, scHeight) made it taller than a 1080p screen.
+    if (!global.kag.fullScreen)
+        global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);
 }
 
 kag.process("first.ks");

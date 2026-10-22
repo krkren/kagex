@@ -280,11 +280,11 @@ function KAGWindow_config()
 // Specifies the position name (left, left_center, etc.) of the foreground layer 
 // specified by the pos attribute of the image tag or img tag and the corresponding 
 // center position (x coordinate). Specified in the format ;scPositionX.PositionName = CenterPosition;
-;scPositionX.left = 160;
-;scPositionX.left_center = 240;
-;scPositionX.center = 320;
-;scPositionX.right_center = 400;
-;scPositionX.right = 480;
+;scPositionX.left = 480;
+;scPositionX.left_center = 720;
+;scPositionX.center = 960;
+;scPositionX.right_center = 1200;
+;scPositionX.right = 1440;
 
 
 
@@ -356,7 +356,7 @@ function KAGWindow_config()
 // ◆ File to execute when "Help > Index" is selected
 // The file specified here must be located in the same location as the 
 // Kirikiri executable file.
-;helpFile = "manual.txt";
+;helpFile = "readme.txt";
 
 
 
@@ -365,7 +365,7 @@ function KAGWindow_config()
 // ◆ Size of the display area of the window that appears when 
 // "Help > About this software" is selected
 // When this menu is selected, about.ks is executed within that window.
-;aboutWidth = 320; // Width
+;aboutWidth = 400; // Width (logo.png is 400x200)
 ;aboutHeight = 200; // Height
 
 
@@ -397,12 +397,11 @@ function KAGWindow_config()
 
 //[start-window-additionals]
 
-// ◆ Always Start Full-Screen
+// ◆ Start Full-Screen the First Time
 // Shadows KAGWindow.getInitialFullScreenState, which the constructor calls before
-// showing the window. Without this, full-screen at startup depends on the persisted
-// scflags.fullScreen preference, or on the window happening to exceed the monitor
-// (the "forcefull" fallback), which varies by display.
-;getInitialFullScreenState = function() { return true; };
+// showing the window. The first launch is full-screen, whatever the display; after
+// that the player's last choice (the persisted scflags.fullScreen) is kept.
+;getInitialFullScreenState = function() { return scflags.fullScreen !== void ? !!scflags.fullScreen : true; };
 
 //[end-window-additionals]
 
@@ -643,10 +642,10 @@ function MessageLayer_config()
 // ◆ Initial Position
 // These correspond to the left, top, width, and height attributes of the 
 // position tag respectively.
-;ml = 16;  // Left position
-;mt = 416;  // Top position
-;mw = 800-32;   // Width
-;mh = 200-32;   // Height
+;ml = 60;  // Left position
+;mt = 714;  // Top position
+;mw = 1800;   // Width
+;mh = 330;   // Height
 
 
 // ◆ Auto-return/Page Break
@@ -1059,7 +1058,7 @@ function HistoryLayer_config()
 //[start-historylayer-additionals]
 
 marginL = 100;
-marginR = 100;
+marginR = 176; // clear of the page buttons and scroll bar at x 1766-1881 (MyHistoryLayer.tjs)
 marginT = 40;
 marginB = 40;
     
