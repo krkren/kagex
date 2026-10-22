@@ -1,0 +1,29 @@
+# kagex
+
+An English translation of KAGEX, Wamsoft's extension of the Kirikiri KAG3 visual novel framework (affine layers, layer ordering, automatic actions and the "World" environment system), ported to the SDL3 version of [Kirikiri Z](https://github.com/wamsoft/krkrz_dev) and updated to 1920x1080.
+
+## Branches
+
+- **`main`**: the SDL3 version. It's more modern and in active development, supports multiple operating systems (Windows and Linux) and modern codecs, but has a less mature ecosystem.
+- **`legacy`**: the Windows-only version. It has more resources, but supports Windows only and doesn't support modern codecs. For reference, the best video codec it supports out of the box is WMV3, which came out in 2003.
+
+## Running the sample
+
+Download a package from [Releases](https://github.com/krkren/kagex/releases), unzip it, and run:
+
+- **Windows:** `krkrz.exe`. The engine needs OpenGL ES: a graphics driver that supports it, or ANGLE's `libEGL.dll` and `libGLESv2.dll` next to `krkrz.exe`.
+- **Linux:** `./krkrz`. Saves go to `~/.local/share/wamsoft/krkrz/` unless you pass `-datapath=savedata/`. Japanese text needs Noto Sans CJK JP (`noto-fonts-cjk` on Arch, `fonts-noto-cjk` on Debian and Ubuntu); English text works without it.
+
+The game starts full screen. The `_release` and `_debug` packages hold the same game files with a release or a debug build of the engine.
+
+## Layout
+
+- `data/`: the sample game. It loads the framework from `../template/system`.
+- `template/`: the KAGEX framework (`template/system`) and empty folders for a new game. To ship a game, copy `template/system` and `template/startup.tjs` into `data/`.
+- `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
+
+The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](https://github.com/wamsoft/krkrz_dev); `CLAUDE.md` has the build steps and the outputs to copy next to `data/`.
+
+## License
+
+KAGEX is licensed under the same terms as Kirikiri 2 and KAG3 (`doc/license.txt`). The release packages include the engine's `license.txt` and the licenses of the libraries it uses in `licenses/`.
