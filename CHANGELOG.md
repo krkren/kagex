@@ -12,7 +12,7 @@
 - The Replay screen unlocks a scene once it has been played, instead of only in debug mode.
 - The Config screen's Title button failed to load a missing dialog image.
 - Music Mode's first track didn't play on Linux (file name case), and two tracks that don't exist were listed.
-- Yes/No prompts are drawn in the game's font at 1080p size for every message, including the save-data and scenario-changed prompts that used to fall back to a separate window with no usable font. The title prompt is in English.
+- Yes/No prompts are redesigned at 1920x1080 and drawn in the game's font for every message, including the save-data and scenario-changed prompts that used to fall back to a separate window with no usable font. The title prompt is in English.
 - The message history's text ran under its page buttons (its right margin was overridden in `Config.tjs`), and it didn't scroll with trackpads or high-resolution wheels.
 - The save/load and CG/Replay screens freed their thumbnail layers, and CG thumbnails are shrunk smoothly instead of with nearest-neighbour.
 - Remaining 800x600 settings: the default message window, `scPositionX`, the logo screen, the About window.
@@ -27,7 +27,7 @@
 
 ### Removed
 
-- The per-message dialog images (`dialog_*_base`), replaced by `dialog_base` and `dialog_wide_base` with the text drawn at run time, and nine unused 800x600 images.
+- The per-message dialog images (`dialog_*_base`) and the `dialog_yes/no_*` buttons, replaced by `dialog_base`, `dialog_wide_base` and `dialog_button_normal/over` with the text drawn at run time, and nine unused 800x600 images.
 - `template/update_auto_copy_vars.bat`.
 
 ## 0.0.3
