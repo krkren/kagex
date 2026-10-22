@@ -3976,6 +3976,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		lineLayerOriginY = y;
 
+		updateLineLayerPadding();
+
 		if(!vertical)
 
 			ll.imageWidth = imageWidth + lineLayerPadding*2;
@@ -5326,6 +5328,42 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
+	// The line layer only reaches lineLayerPadding below the text cell. krkr_richtext's
+
+	// descenders (g, j, p, q, y) and the shadow or edge under them can reach further, and
+
+	// were cut off at the bottom of the line, so widen the padding for a new line when they
+
+	// need it. The padding is symmetric and every offset uses it, so the text doesn't move
+
+	var lineLayerPaddingConfig; // lineLayerPadding as configured
+
+	function updateLineLayerPadding() {
+
+		if (lineLayerPaddingConfig === void) lineLayerPaddingConfig = lineLayerPadding;
+
+		var pad = lineLayerPaddingConfig;
+
+		// The font and fontSize of the new line, in the order changeLineSize applies them next anyway
+
+		if(inLink!=-1) endLinkLine();
+
+		decideSizeChange();
+
+		var rta = vertical ? void : getRichTextApp(lineLayer);
+
+		if (rta !== void) {
+
+			var over = rta.bottomOverhang(this, fontSize);
+
+			if (over > pad) pad = over;
+
+		}
+
+		lineLayerPadding = pad;
+
+	}
+
 
 
 	// Draws text with the krkr_richtext plugin: kerned positions and vector outlines and
@@ -5377,6 +5415,22 @@ class MessageLayer extends AnimKAGLayerTransMove
 			layout.layout(text, style);
 
 			return layout.width;
+
+		}
+
+		// How far the current style's descenders, plus the edge or shadow drawn from the
+
+		// layer settings in base, reach below a text cell cellHeight pixels tall
+
+		function bottomOverhang(base, cellHeight) {
+
+			layout.layout("gjpqy", style);
+
+			var reach;
+
+			with (base) reach = .edge ? .edgeExtent * 2 : .shadow ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0;
+
+			return int(Math.ceil(baseLine + layout.descent + reach - cellHeight)) + 1;
 
 		}
 
@@ -9257,6 +9311,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		lineLayerOriginY = src.lineLayerOriginY;
 
 		lineLayerPadding = src.lineLayerPadding;
+
+		lineLayerPaddingConfig = src.lineLayerPaddingConfig;
 
 		align = src.align;
 
