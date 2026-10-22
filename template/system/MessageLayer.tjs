@@ -5084,9 +5084,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		}
 
-		// SelectLayer also calls this function, in the context of a style dictionary
+		// SelectLayer also calls this function, in the context of a style dictionary that
 
-		var rta = typeof this.getRichTextApp != "undefined" ? getRichTextApp(lay) : void;
+		// may carry a RichTextFontApp of its own (SelectLayer.getRichTextApp)
+
+		var rta = typeof this.getRichTextApp != "undefined" ? getRichTextApp(lay) :
+
+			(typeof this.richTextApp == "Object" && this.richTextApp.ready(lay.font)) ? this.richTextApp : void;
 
 		if (rta !== void) {
 
@@ -5310,6 +5314,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
+	// Width of text in the line layer's font, as processCh will advance over it (with
+
+	// krkr_richtext when that draws the text). The word wrap measures words with this
+
+	function measureText(text) {
+
+		var rta = getRichTextApp(lineLayer);
+
+		return rta !== void ? int(Math.round(rta.measure(text))) : lineLayer.font.getTextWidth(text);
+
+	}
+
 
 
 	// Draws text with the krkr_richtext plugin: kerned positions and vector outlines and
@@ -5460,15 +5476,39 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		function argb(col) { return (col & 0xff000000) ? col : (0xff000000 | col); }
 
+		// col (opaque when it has no alpha) with its alpha scaled by level/255
+
+		function argbLevel(col, level) {
+
+			var a = (col & 0xff000000) ? ((col >> 24) & 0xff) : 255;
+
+			a = int(a * Math.min(255, Math.max(0, level)) / 255);
+
+			return (a << 24) | (col & 0xffffff);
+
+		}
+
 
 
 		// Fill, edge and shadow from the message layer settings. As in drawTextToLayer,
 
-		// an edge replaces the shadow
+		// an edge replaces the shadow. Layer.drawText draws both as a blurred copy of the
+
+		// glyphs: the edge blurred by edgeExtent and strengthened by edgeEmphasis, the
+
+		// shadow blurred by shadowWidth. Here the edge is a stroke reaching edgeExtent past
+
+		// the glyphs, fully opaque from edgeEmphasis 255 up (the default is 512) and fainter
+
+		// below, and a blurred shadow gets three widening translucent strokes around the
+
+		// offset copy, so it fades out over shadowWidth (blurring also lightens it, so the
+
+		// copy under a blurred shadow is lighter too)
 
 		function updateApp(base, color) { with (base) {
 
-			var key = [ color, .edge, .edgeColor, .edgeExtent, .shadow, .shadowColor,
+			var key = [ color, .edge, .edgeColor, .edgeExtent, .edgeEmphasis, .shadow, .shadowColor,
 
 						.shadowWidth, .shadowOffsetX, .shadowOffsetY ].join(",");
 
@@ -5484,13 +5524,33 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			if (.edge) {
 
-				app.addStroke(argb(.edgeColor), .edgeExtent * 2);
+				app.addStroke(argbLevel(.edgeColor, .edgeEmphasis === void ? 255 : +.edgeEmphasis), .edgeExtent * 2);
 
 			} else if (.shadow) {
 
-				app.addShadow(argb(.shadowColor), .shadowOffsetX, .shadowOffsetY);
+				var sc = argb(.shadowColor), ox = .shadowOffsetX, oy = .shadowOffsetY, sw = +.shadowWidth;
 
-				app.addStroke(argb(.shadowColor), .shadowWidth, .shadowOffsetX, .shadowOffsetY) if (.shadowWidth > 0);
+				if (sw > 0) {
+
+					// about 63% over the glyphs, then 32%, 23% and 12% at a third, two thirds
+
+					// and all of sw past them, like the engine's blur on the Windows test
+
+					app.addShadow(argbLevel(sc, 115), ox, oy);
+
+					var faint = argbLevel(sc, 31);
+
+					app.addStroke(faint, sw * 2, ox, oy);
+
+					app.addStroke(faint, sw * 4 / 3, ox, oy);
+
+					app.addStroke(faint, sw * 2 / 3, ox, oy);
+
+				} else {
+
+					app.addShadow(sc, ox, oy);
+
+				}
 
 			}
 

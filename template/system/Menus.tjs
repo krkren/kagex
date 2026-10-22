@@ -483,7 +483,8 @@ class PopupMenuWindow extends Window
  * @param cls Close display    -1:Disabled 0:Hidden 1:Visible
  */
 function SetWindowControlMenu(win, min, max, res, cls) {
-	if (typeof win.minimize != "Object") return;
+	// Window.minimize is built into the SDL engine, but the menu icons come with windowEx
+	if (typeof win.minimize != "Object" || typeof global.MenuItem != "Object" || typeof global.MenuItem.biMinimize == "undefined") return;
 	var btns, tag = "__windowControlMenus";
 	if (typeof win[tag] == "undefined") {
 		var names = (typeof win.windowControlMenusNames == "Object") ?

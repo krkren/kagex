@@ -50,7 +50,7 @@ class SelectButtonLayer extends ButtonLayer
 
         var cnt = Butt_showFocusImage ? 4 : 3;
 
-        var tw = font.getTextWidth(message);
+        var tw = typeof owner.measureText != "undefined" ? owner.measureText(this, message) : font.getTextWidth(message);
 
         var th = font.getTextHeight(message);
 
@@ -836,6 +836,8 @@ class SelectLayer {
 
 		context.antialiased = true; //window.chDefaultAntialiased;
 
+		context.richTextApp = getRichTextApp(lay);
+
 		drawText(context, lay, x, y, text, col);
 
 		invalidate context;
@@ -845,6 +847,38 @@ class SelectLayer {
 	function drawText(context, *) {
 
 		return (MessageLayer.drawTextToLayer incontextof context)(*);
+
+	}
+
+	// krkr_richtext drawing for the choices when the message layers use it (useRichText),
+
+	// as in MessageLayer.getRichTextApp. Void when the plugin or the faces are unavailable
+
+	var richTextApp;
+
+	function getRichTextApp(lay) {
+
+		if (typeof global.RichText == "undefined") return;
+
+		var msg = window.fore.messages[0];
+
+		if (msg === void || typeof msg.useRichText == "undefined" || !msg.useRichText) return;
+
+		if (typeof window.bitmapFont == "Object" && window.bitmapFont) return;
+
+		if (richTextApp === void) richTextApp = new global.MessageLayer.RichTextFontApp();
+
+		if (richTextApp.ready(lay.font)) return richTextApp;
+
+	}
+
+	// Width of a choice's text, measured the way drawTextToLayer draws it
+
+	function measureText(lay, text) {
+
+		var rta = getRichTextApp(lay);
+
+		return rta !== void ? int(Math.round(rta.measure(text))) : lay.font.getTextWidth(text);
 
 	}
 
@@ -899,6 +933,8 @@ class SelectLayer {
         clearButtons();
 
 		invalidate fontAppearance.gdiplus if (fontAppearance.gdiplus !== void);
+
+		invalidate richTextApp if (richTextApp !== void);
 
     }
 

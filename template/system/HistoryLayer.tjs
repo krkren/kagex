@@ -252,6 +252,8 @@ class HistoryLayer extends Layer
 
 
 
+		invalidate richTextApp if richTextApp !== void;
+
 		super.finalize(...);
 
 	}
@@ -755,7 +757,7 @@ class HistoryLayer extends Layer
 
 			var last = ca[ca.count - 1];
 
-			last.end = font.getTextWidth(currentLine);
+			last.end = textWidth(currentLine);
 
 		}
 
@@ -780,7 +782,7 @@ class HistoryLayer extends Layer
 
 		var last = currentAction[currentAction.count] = %[];
 
-		last.start = font.getTextWidth(currentLine);
+		last.start = textWidth(currentLine);
 
 		last.action = action;
 
@@ -800,7 +802,7 @@ class HistoryLayer extends Layer
 
 		var last = currentAction[currentAction.count] = %[];
 
-		last.start = font.getTextWidth(currentLine);
+		last.start = textWidth(currentLine);
 
 		last.action = currentActionExp;
 
@@ -842,7 +844,7 @@ class HistoryLayer extends Layer
 			// When performing automatic line wrapping
 			var len;
 
-			if((len = font.getTextWidth(currentLine += ch)) >= relinePos)
+			if((len = textWidth(currentLine += ch)) >= relinePos)
 
 			{
 
@@ -1043,7 +1045,7 @@ class HistoryLayer extends Layer
 	{
 
 		// Set indentation at the current position
-		indentPos = font.getTextWidth(currentLine);
+		indentPos = textWidth(currentLine);
 
 	}
 
@@ -1230,6 +1232,54 @@ class HistoryLayer extends Layer
 
 
 
+	// krkr_richtext drawing for the history text when the message layers use it
+
+	// (useRichText), so it matches the message window. Void for vertical text, or when
+
+	// the plugin or the faces are unavailable
+
+	var richTextApp;
+
+	var richTextBase = %[ edge:false, edgeColor:0, edgeExtent:0, edgeEmphasis:255,
+
+		shadow:false, shadowColor:0, shadowWidth:0, shadowOffsetX:0, shadowOffsetY:0 ];
+
+	function getRichTextApp() {
+
+		if (verticalView || typeof global.RichText == "undefined") return;
+
+		var msg = window.fore.messages[0];
+
+		if (msg === void || typeof msg.useRichText == "undefined" || !msg.useRichText) return;
+
+		if (richTextApp === void) richTextApp = new global.MessageLayer.RichTextFontApp();
+
+		if (richTextApp.ready(font)) return richTextApp;
+
+	}
+
+	// Width of text in the history font, as drawHistoryText draws it
+
+	function textWidth(text) {
+
+		var rta = getRichTextApp();
+
+		return rta !== void ? int(Math.round(rta.measure(text))) : font.getTextWidth(text);
+
+	}
+
+	// Draws a horizontal line of history text with its top-left at x, y
+
+	function drawHistoryText(x, y, text, color) {
+
+		var rta = getRichTextApp();
+
+		if (rta !== void) rta.drawText(richTextBase, this, x, y, text, color);
+
+		else drawText(x, y, text, color, 255, antialiased);
+
+	}
+
 	function drawLine(n)
 
 	{
@@ -1257,7 +1307,7 @@ class HistoryLayer extends Layer
 
 			var y = n*lineHeight + controlHeight + marginT;
 
-			drawText(marginL + linestart, y, line, historyColor, 255, antialiased);
+			drawHistoryText(marginL + linestart, y, line, historyColor);
 
 		}
 
@@ -1307,9 +1357,9 @@ class HistoryLayer extends Layer
 
 				if(page[i]!="")
 
-					drawText(marginL + getLineStart2(dispStart, i), y, page[i],
+					drawHistoryText(marginL + getLineStart2(dispStart, i), y, page[i],
 
-						historyColor, 255, antialiased);
+						historyColor);
 
 				y += lineHeight;
 

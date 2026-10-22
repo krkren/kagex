@@ -74,6 +74,14 @@ class KAGWindow extends Window
 	var wrapDropSpace = false;     // the space the word wrap broke the line at is not drawn...
 	var wrapDropSpaceHist = false; // ...or stored in the history (the ch handler checks these)
 
+	// Word widths for the word wrap, measured the way the text is drawn (krkr_richtext
+	// advances when the message layer or the history uses it)
+	function msgTextWidth(text) {
+		return typeof current.measureText != "undefined" ? current.measureText(text) : current.lineLayer.font.getTextWidth(text);
+	}
+	function histTextWidth(text) {
+		return typeof historyLayer.textWidth != "undefined" ? historyLayer.textWidth(text) : historyLayer.font.getTextWidth(text);
+	}
 	function needsToBeWrapped(text) {
 		var textHist = text;
 		wrapDropSpace = wrapDropSpaceHist = false;
@@ -119,7 +127,7 @@ class KAGWindow extends Window
 				} else {
 					wrapSplitLine = cleanStr.split(spaceChar);
 					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
-					wrapPosHist = historyLayer.font.getTextWidth(historyLayer.currentLine);
+					wrapPosHist = histTextWidth(historyLayer.currentLine);
 					wrapNum = 0;
 				}
 				wrapComp = wrapSplitLine.join(spaceChar);
@@ -132,23 +140,23 @@ class KAGWindow extends Window
 					if(wrapNewPage != 1) wrapNum++;
 					wrapSplitLine[wrapNum] += spaceChar;
 					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
-					wrapPosHist = historyLayer.font.getTextWidth(historyLayer.currentLine);
+					wrapPosHist = histTextWidth(historyLayer.currentLine);
 				}
 
-				if(historyWriteEnabled && wrapPosHist+historyLayer.font.getTextWidth(wrapSplitLine[wrapNum]) >= historyLayer.relinePos)
+				if(historyWriteEnabled && wrapPosHist+histTextWidth(wrapSplitLine[wrapNum]) >= historyLayer.relinePos)
 				{
-					if(historyLayer.font.getTextWidth(wrapSplitLine[wrapNum])<=historyLayer.relinePos)
+					if(histTextWidth(wrapSplitLine[wrapNum])<=historyLayer.relinePos)
 					{
 						textHist = "";
 						wrapDropSpaceHist = true;
 						historyLayer.reline();
-						wrapPosHist = historyLayer.font.getTextWidth(historyLayer.currentLine);
+						wrapPosHist = histTextWidth(historyLayer.currentLine);
 					}
 				}
 
-				if(wrapPos+current.lineLayer.font.getTextWidth(wrapSplitLine[wrapNum])>=current.relinexpos)
+				if(wrapPos+msgTextWidth(wrapSplitLine[wrapNum])>=current.relinexpos)
 				{
-					if(current.lineLayer.font.getTextWidth(wrapSplitLine[wrapNum])<=current.relinexpos)
+					if(msgTextWidth(wrapSplitLine[wrapNum])<=current.relinexpos)
 					{
 						text = "";
 						wrapDropSpace = true;
@@ -306,6 +314,16 @@ class KAGWindow extends Window
 	var chDefaultAntialiased; // Whether to anti-alias text
 
 	var chDefaultFace; // Default font for text
+
+	// Default faces (userFace) that earlier releases saved into the system variables. A saved
+
+	// face equal to one of these is replaced by the configured default when it is restored
+
+	var previousDefaultFaces = [
+
+		"ＭＳ ゴシック", "MS Gothic", "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto",
+
+		"ＭＳ Ｐ明朝", "MS PMincho", "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto" ];
 
 	var chBitmapFont = ""; // Special bitmap font specification
 
@@ -5515,15 +5533,23 @@ class KAGWindow extends Window
 
 			// where it isn't installed. Keep the saved face first and add the configured fallbacks.
 
+			// A face that an earlier release saved as its default is not a choice: the configured
+
+			// default replaces it (previousDefaultFaces)
+
 			var saved = scflags.chDefaultFace;
 
-			if (saved.indexOf(",") >= 0)
+			if (previousDefaultFaces.find(saved) < 0) {
 
-				chDefaultFace = saved;
+				if (saved.indexOf(",") >= 0)
 
-			else if (("," + chDefaultFace + ",").indexOf("," + saved + ",") < 0)
+					chDefaultFace = saved;
 
-				chDefaultFace = saved + "," + chDefaultFace;
+				else if (("," + chDefaultFace + ",").indexOf("," + saved + ",") < 0)
+
+					chDefaultFace = saved + "," + chDefaultFace;
+
+			}
 
 		}
 
