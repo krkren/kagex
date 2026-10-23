@@ -101,6 +101,11 @@ jobs:
                   print("FAIL", so, e); bad.append(so)
           sys.exit(1 if bad else 0)
           PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-linux
+          path: kirikiri/kagex/build/linux/dist/*.tar.gz
+          if-no-files-found: error
       - name: Smoke test
         working-directory: kirikiri/kagex/build/linux/package/krkrz
         run: |
@@ -109,11 +114,6 @@ jobs:
           sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
             libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri > "$GITHUB_WORKSPACE/results/apt.log" 2>&1
           $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: kagex-linux
-          path: kirikiri/kagex/build/linux/dist/*.tar.gz
-          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
@@ -164,6 +164,11 @@ jobs:
           PY
           (cd "$site" && find . -type f | sort) > results/site-files.txt
           du -sh "$site" | tee -a results/site-files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-web
+          path: kirikiri/kagex/build/web/site
+          if-no-files-found: error
       - name: Smoke test in headless Chromium
         run: |
           python3 -m pip install --quiet playwright
@@ -174,11 +179,6 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --keep || s=$?
           cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
-      - uses: actions/upload-artifact@v4
-        with:
-          name: kagex-web
-          path: kirikiri/kagex/build/web/site
-          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
@@ -233,6 +233,11 @@ jobs:
           find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee results/apk.txt
           apk=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)
           unzip -l "$apk" | grep -E 'lib/|assets/data/(startup|system/Initialize)' | tee -a results/apk.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-android
+          path: kirikiri/kagex/build/android/app/outputs/apk/**/*.apk
+          if-no-files-found: error
       - name: Enable KVM for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -248,11 +253,6 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
           script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
-      - uses: actions/upload-artifact@v4
-        with:
-          name: kagex-android
-          path: kirikiri/kagex/build/android/app/outputs/apk/**/*.apk
-          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
@@ -290,6 +290,11 @@ jobs:
           ls "$app" | tee -a results/app.txt
           ditto -c -k --keepParent "$app" kagex-ios-simulator.zip
           echo "APP=$app" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-ios-simulator
+          path: kagex-ios-simulator.zip
+          if-no-files-found: error
       - name: Smoke test in the Simulator
         run: |
           dev=$(xcrun simctl list devices available -j | python3 -c "
@@ -303,11 +308,6 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep || s=$?
           cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
-      - uses: actions/upload-artifact@v4
-        with:
-          name: kagex-ios-simulator
-          path: kagex-ios-simulator.zip
-          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
@@ -359,13 +359,6 @@ jobs:
           cp "$PROJECT_DIR/krkrz.cf" "$app/Contents/MacOS/"
           find "$app" -maxdepth 3 | sort | tee results/app.txt
           echo "APP=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
-      - name: Smoke test
-        run: |
-          exe="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
-          # the game as the app holds it (the app has no template/). SDL's offscreen driver has
-          # no OpenGL ES here (the engine draws through ANGLE), but the runners have a desktop
-          cd "$APP/Contents/Resources"
-          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample
       - name: Pack the app
         run: ditto -c -k --keepParent "$APP" kagex-macos.zip
       - uses: actions/upload-artifact@v4
@@ -373,6 +366,13 @@ jobs:
           name: kagex-macos
           path: kagex-macos.zip
           if-no-files-found: error
+      - name: Smoke test
+        run: |
+          exe="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          # the game as the app holds it (the app has no template/). SDL's offscreen driver has
+          # no OpenGL ES here (the engine draws through ANGLE), but the runners have a desktop
+          cd "$APP/Contents/Resources"
+          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample
       - name: Publish results branch
         if: always()
         env:
