@@ -319,16 +319,9 @@ function quicksaveAction(map=false)
     }
 }
 
-/**
- * Name display filter
- */
-function dispNameFilter(dispName)
-{
-    if (dispName.length <= 1) {
-        dispName = " " + dispName + " ";
-    }
-    return "[" + dispName + "]";
-}
+// The name is centred in the message window's name box (namebox.png, [initscene] in
+// macro.ks), so it isn't bracketed or padded here any more; MyHistoryLayer.storeName brackets
+// it in the history. A dispNameFilter(dispName) function here can still change it.
 
 
 /**
@@ -359,20 +352,14 @@ function fileDataButton(name, work)
     var savefilename = kag.getBookMarkFileNameAtNum(savedatanum);
     var target = kag.current.names[name + work];
 
-    // Button redraw
+    // Button redraw: the slot frame for the normal state, <name>_win_over for the over and
+    // pressed states (the button image holds the three side by side)
     target.holdAlpha = false;
     target.loadButtons("sl_win_base", name + "_win_over");
+    var w = target.width;
 
-    // Mask for thumbnail cutting
-    var layer = new global.Layer(kag, kag.fore.base);
-    layer.loadImages("sl_win_base", name + "_win_over");
-
-    layer.holdAlpha = true;
-    var w = layer.imageWidth;
-    var h = layer.imageHeight;
-    
     if (Storages.isExistentStorage(savefilename)) {
-        
+
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = kag.getBookMarkPageName(savedatanum);
@@ -384,55 +371,30 @@ function fileDataButton(name, work)
         while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
             savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
 
-        // Thumbnail image cutting (sl_win_base's thumbnail well starts at 8,8)
         var thum = new global.Layer(kag, kag.fore.base);
         thum.loadImages(savefilename);
-        layer.operateRect(9,9,thum,0,0,thum.imageWidth, thum.imageHeight,omPsNormal);
-
         // "New!" badge in the thumbnail's bottom-right corner
         var thum2 = new global.Layer(kag, kag.fore.base);
         thum2.loadImages("newdata");
-        if (savedatanum == sf.newsavedata) {
-            layer.operateRect(9 + thum.imageWidth - 4 - thum2.imageWidth, 9 + thum.imageHeight - 4 - thum2.imageHeight,
-                              thum2,0,0,thum2.imageWidth, thum2.imageHeight,omPsNormal);
-        }
 
-        // Composite onto button
-        target.holdAlpha = true;	
-        target.operateRect(w,  0,layer,0,0,w,h,omPsNormal); // over
-        target.operateRect(w*2,0,layer,0,0,w,h,omPsNormal); // on
-        layer.colorRect(0,0,layer.imageWidth,layer.imageHeight,0xffffff,64); // Overlay white
-        target.operateRect(0,  0,layer,0,0,w,h,omPsNormal); // normal
-
-        // Title / date rows of the text area, repeated for the normal, over and on states
+        // The thumbnail goes in the frame's well at 9,9, then the title and date rows of the
+        // text area, in each of the three states; holdAlpha keeps the frame's rounded corners
+        target.holdAlpha = true;
         var tx = 260, ty1 = 23, ty2 = 89;
-        target.drawText(tx,     ty1,savedatatitle,  0x000000,255,true);
-        target.drawText(tx,     ty2,savedatadate,  0x000000,255,true);
-        target.drawText(tx+w,   ty1,savedatatitle,  0x000000,255,true);
-        target.drawText(tx+w,   ty2,savedatadate,  0x000000,255,true);
-        target.drawText(tx+w*2, ty1,savedatatitle,  0x000000,255,true);
-        target.drawText(tx+w*2, ty2,savedatadate,  0x000000,255,true);
+        for (var s = 0; s < 3; s++) {
+            var x = w * s;
+            target.operateRect(x + 9, 9, thum, 0, 0, thum.imageWidth, thum.imageHeight, omPsNormal);
+            if (savedatanum == sf.newsavedata) {
+                target.operateRect(x + 9 + thum.imageWidth - 6 - thum2.imageWidth, 9 + thum.imageHeight - 6 - thum2.imageHeight,
+                                   thum2, 0, 0, thum2.imageWidth, thum2.imageHeight, omPsNormal);
+            }
+            target.drawText(x + tx, ty1, savedatatitle, 0x24107a, 255, true);
+            target.drawText(x + tx, ty2, savedatadate,  0x5c4cb4, 255, true);
+        }
 
         invalidate thum;
         invalidate thum2;
-        
-    } else {
-
-        // Thumbnail image cutting
-        var thum = new global.Layer(kag, kag.fore.base);
-        thum.loadImages("sl_win_base");
-        layer.operateRect(0,0,thum,0,0,thum.imageWidth, thum.imageHeight,omPsNormal);
-
-        // Composite onto button
-        target.holdAlpha = true;
-        target.operateRect(w,  0,layer,0,0,w,h,omPsNormal); // over
-        target.operateRect(w*2,0,layer,0,0,w,h,omPsNormal); // on
-        target.operateRect(0,  0,layer,0,0,w,h,omPsNormal); // normal
-
-        invalidate thum;
     }
-
-    invalidate layer;
 }
 
 /**

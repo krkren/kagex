@@ -18,35 +18,35 @@
 
 [rclick enabled=true jump=false]
 
-[position layer=message0 frame="messagewindow" opacity=255 left=60 top=714 width=1800 height=330 marginL=24 marginT=60 marginR=24 marginB=24 nameLeft=48 nameTop=12 nameWidth=225 nameHeight=60 visible=false]
+[position layer=message0 frame="messagewindow" opacity=255 left=60 top=714 width=1800 height=330 marginL=48 marginT=76 marginR=60 marginB=36 nameLeft=36 nameTop=-30 nameWidth=300 nameHeight=64 nameframe="namebox" namealign=0 namevalign=0 visible=false]
 
 [current layer=message0]
 
 [if exp="tf.recollect"]
 
-[sysbutton name=msg_exit   x=1096 y=0 exp="kag.process('title.ks','*start')"]
+[sysbutton name=msg_exit   x=1108 y=18 exp="kag.process('title.ks','*start')"]
 
-[sysbutton name=msg_skip   x=1326 y=0 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
+[sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
 
-[sysbutton name=msg_auto   x=1441 y=0 exp="kag.onAutoModeMenuItemClick()" nostable]
+[sysbutton name=msg_auto   x=1372 y=18 exp="kag.onAutoModeMenuItemClick()" nostable]
 
-[sysbutton name=msg_log    x=1556 y=0 exp="kag.onShowHistoryMenuItemClick()"]
+[sysbutton name=msg_log    x=1504 y=18 exp="kag.onShowHistoryMenuItemClick()"]
 
-[sysbutton name=msg_config x=1671 y=0 exp="startConfig()"]
+[sysbutton name=msg_config x=1636 y=18 exp="startConfig()"]
 
 [else]
 
-[sysbutton name=msg_save   x=1096 y=0 exp="startSave()"]
+[sysbutton name=msg_save   x=976 y=18 exp="startSave()"]
 
-[sysbutton name=msg_load   x=1211 y=0 exp="startLoad()"]
+[sysbutton name=msg_load   x=1108 y=18 exp="startLoad()"]
 
-[sysbutton name=msg_skip   x=1326 y=0 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
+[sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
 
-[sysbutton name=msg_auto   x=1441 y=0 exp="kag.onAutoModeMenuItemClick()" nostable]
+[sysbutton name=msg_auto   x=1372 y=18 exp="kag.onAutoModeMenuItemClick()" nostable]
 
-[sysbutton name=msg_log    x=1556 y=0 exp="kag.onShowHistoryMenuItemClick()"]
+[sysbutton name=msg_log    x=1504 y=18 exp="kag.onShowHistoryMenuItemClick()"]
 
-[sysbutton name=msg_config x=1671 y=0 exp="startConfig()"]
+[sysbutton name=msg_config x=1636 y=18 exp="startConfig()"]
 
 [endif]
 

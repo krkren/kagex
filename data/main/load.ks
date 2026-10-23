@@ -50,39 +50,39 @@
 
 ; Page layout
 
-[locate x=921 y=74]
+[locate x=878 y=78]
 
 [button name="page1" exp="setLoadPageButton(1)"]
 
-[locate x=977 y=74]
+[locate x=940 y=78]
 
 [button name="page2" exp="setLoadPageButton(2)"]
 
-[locate x=1033 y=74]
+[locate x=1002 y=78]
 
 [button name="page3" exp="setLoadPageButton(3)"]
 
-[locate x=1089 y=74]
+[locate x=1064 y=78]
 
 [button name="page4" exp="setLoadPageButton(4)"]
 
-[locate x=1145 y=74]
+[locate x=1126 y=78]
 
 [button name="page5" exp="setLoadPageButton(5)"]
 
-[locate x=1201 y=74]
+[locate x=1188 y=78]
 
 [button name="page6" exp="setLoadPageButton(6)"]
 
-[locate x=1257 y=74]
+[locate x=1250 y=78]
 
 [button name="page7" exp="setLoadPageButton(7)"]
 
-[locate x=1313 y=74]
+[locate x=1312 y=78]
 
 [button name="page8" exp="setLoadPageButton(8)"]
 
-[locate x=1369 y=74]
+[locate x=1374 y=78]
 
 [button name="page9" exp="setLoadPageButton(9)"]
 
@@ -140,7 +140,7 @@
 
 ; Return button
 
-[locate x=1476 y=74]
+[locate x=1450 y=78]
 
 [if exp="tf.fromTitle == 1"]
 

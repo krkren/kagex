@@ -24,70 +24,70 @@
 ; Button placement
 
 ; Screen Mode
-[locate x=329 y=274]
+[locate x=322 y=278]
 [button name="config_window"     exp='setScreenButton(true)']
-[locate x=599 y=274]
+[locate x=578 y=278]
 [button name="config_fullscreen" exp='setScreenButton(false)']
 
 ; Text Speed
-[locate x=338 y=468]
-[slider width=540 height=42 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.textspeed nohilight]
+[locate x=402 y=428]
+[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.textspeed nohilight]
 
 ; Auto Speed
-[locate x=338 y=633]
-[slider width=540 height=42 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.autospeed nohilight]
+[locate x=402 y=578]
+[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.autospeed nohilight]
 
 ; Screen Effects
-[locate x=329 y=769]
+[locate x=322 y=728]
 [button name=config_effecton exp="setNoEffectButton(false)"]
-[locate x=599 y=769]
+[locate x=578 y=728]
 [button name=config_effectoff exp="setNoEffectButton(true)"]
 
 ; Skip
-[locate x=329 y=934]
+[locate x=322 y=878]
 [button name="config_skipall" exp="setSkipButton(true)"]
-[locate x=599 y=934]
+[locate x=578 y=878]
 [button name="config_skipalrdy" exp="setSkipButton(false)"]
 
 ; BGM Volume
-[locate x=1090 y=303]
-[slider width=540 height=42 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.bgmvolume nohilight]
+[locate x=1102 y=278]
+[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.bgmvolume nohilight]
 
 ; SE Volume
-[locate x=1090 y=468]
-[slider width=540 height=42 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.sevolume nohilight]
+[locate x=1102 y=428]
+[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.sevolume nohilight]
 
 ; VOICE Volume
-[locate x=1090 y=633]
-[slider width=540 height=42 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.voicevolume nohilight]
+[locate x=1102 y=578]
+[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.voicevolume nohilight]
 
 ; Voice Buttons
-[locate x=1081 y=781]
+[locate x=1022 y=728]
 [button name="config_voice0" normal="config_voice0_on" exp="setVoiceOnButton('voice0')"]
-[locate x=1261 y=781]
+[locate x=1218 y=728]
 [button name="config_voice1" normal="config_voice1_on" exp="setVoiceOnButton('voice1')"]
-[locate x=1441 y=781]
+[locate x=1414 y=728]
 [button name="config_voice2" normal="config_voice2_on" exp="setVoiceOnButton('voice2')"]
-[locate x=1081 y=847]
+[locate x=1022 y=804]
 [button name="config_voice3" normal="config_voice3_on" exp="setVoiceOnButton('voice3')"]
-[locate x=1261 y=847]
+[locate x=1218 y=804]
 [button name="config_voice4" normal="config_voice4_on" exp="setVoiceOnButton('voice4')"]
-[locate x=1441 y=847]
+[locate x=1414 y=804]
 [button name="config_voice5" normal="config_voice5_on" exp="setVoiceOnButton('voice5')"]
 
-; Initialize
-[locate x=1466 y=927]
-[button name="config_initial" exp="initial()"]
-
-; Return Button
+; Default, Title and Return, right-aligned in the header
 [if exp="tf.fromTitle"]
-[locate x=1525 y=74]
+[locate x=1260 y=78]
+[button name="config_initial" exp="initial()"]
+[locate x=1450 y=78]
 [button name="config_title" target=*backtotitle]
 [else]
-[locate x=1476 y=74]
-[button name="return" target=*backtogame]
-[locate x=1336 y=74]
+[locate x=1070 y=78]
+[button name="config_initial" exp="initial()"]
+[locate x=1260 y=78]
 [button name="config_title" exp="gotoTitle()"]
+[locate x=1450 y=78]
+[button name="return" target=*backtogame]
 [endif]
 
 [eval exp='configInit()']

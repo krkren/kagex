@@ -1102,6 +1102,44 @@ In the WORLD extension, processing using a name window is called.
 
 
 
+◆ position (Extension)
+
+
+
+The name window (Name Layer) is set up with [position] on its message layer.
+
+It is a layer of its own, placed relative to the message layer, so it may sit
+
+outside the message window (a negative nametop puts it above).
+
+Without nameleft, the message layer has no name window.
+
+
+
+Attributes
+
+    nameleft     Position X, relative to the message layer
+
+    nametop      Position Y, relative to the message layer
+
+    namewidth    Width
+
+    nameheight   Height
+
+    nameabsolute Stacking order, relative to the message layer
+
+    nameorigin   Which point of the name window nameleft/nametop place (originMode)
+
+    namealign    Horizontal text alignment (-1: left, 0: center, 1: right)
+
+    namevalign   Vertical text alignment (-1: top, 0: center, 1: bottom)
+
+    nameframe    Image drawn behind the name. The name window takes the image's size
+
+                 and is hidden while no name is shown. "" for none (the default).
+
+
+
 ◆ craftername (New)
 
 

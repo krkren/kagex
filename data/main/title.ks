@@ -86,11 +86,11 @@
 
 ; Button layout
 
-[locate x=811 y=500]
+[locate x=150 y=520]
 
 [button name="start" target=*gamestart]
 
-[locate x=811 y=572]
+[locate x=150 y=604]
 
 [button name="continue" storage=load.ks target=*startFromTitle]
 
@@ -98,7 +98,7 @@
 
 ; Change display based on clear flag
 
-[locate x=811 y=644]
+[locate x=150 y=688]
 
 [if exp="sf.clear || tf.allseen"]
 
@@ -106,15 +106,15 @@
 
 [else]
 
-[button name="extra" disabled]
+[button name="extra" disabled halftone=true]
 
 [endif]
 
-[locate x=811 y=716]
+[locate x=150 y=772]
 
 [button name="config" storage=config.ks  target=*startFromTitle]
 
-[locate x=811 y=788]
+[locate x=150 y=856]
 
 [button name="exit" exp='kag.close()']
 
