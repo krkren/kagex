@@ -173,12 +173,14 @@ jobs:
       - name: Smoke test in headless Chromium
         timeout-minutes: 20
         run: |
+          # the runner's own Chrome: Playwright's browser download installs its system
+          # dependencies with apt, which once took 20 minutes here
           python3 -m pip install --quiet playwright
-          python3 -m playwright install --with-deps chromium > results/playwright.log 2>&1
+          google-chrome --version | tee results/chrome.txt
           (cd "$PROJECT_DIR/build/web/site" && exec python3 serve.py 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
           sleep 3
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --keep || s=$?
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep || s=$?
           cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - name: Publish results branch

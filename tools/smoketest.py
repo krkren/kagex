@@ -25,7 +25,8 @@ The platform builds run the sample's steps the same way, through their own REPL 
                                        the browser REPL's HTTP server (-replweb), which is the
                                        REPL krkrz_ios builds have
   --target web --url http://...        the browser build in headless Chromium (Playwright):
-                                       krkrz_web's krkrz_repl_eval bridge
+                                       krkrz_web's krkrz_repl_eval bridge (--channel chrome
+                                       uses the installed Chrome)
 """
 
 import argparse
@@ -418,7 +419,7 @@ class WebEngine(Engine):
     crashed the page. So every command runs from a Timer, and the bridge only starts it and
     reads its result back."""
 
-    def __init__(self, url, workdir, verbose):
+    def __init__(self, url, workdir, verbose, channel=None):
         from playwright.sync_api import sync_playwright
         self.workdir = workdir
         self.verbose = verbose
@@ -426,7 +427,8 @@ class WebEngine(Engine):
         self.lines = []
         self.log_path = os.path.join(workdir, "console.txt")
         self.pw = sync_playwright().start()
-        self.browser = self.pw.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
+        self.browser = self.pw.chromium.launch(channel=channel,
+                                               args=["--autoplay-policy=no-user-gesture-required"])
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
         # written as it comes, so a page that hangs still leaves its console behind
         self.console = open(self.log_path, "w", encoding="utf-8")
@@ -684,7 +686,7 @@ def start_engine(opts, data, workdir):
     if opts.target == "ios-sim":
         return SimulatorEngine(opts.app, opts.bundle_id, workdir, opts.verbose, opts.device)
     if opts.target == "web":
-        return WebEngine(opts.url, workdir, opts.verbose)
+        return WebEngine(opts.url, workdir, opts.verbose, opts.channel)
     return DesktopEngine(opts.engine, data, workdir, opts.verbose)
 
 
@@ -747,6 +749,8 @@ def main():
     ap.add_argument("--bundle-id", default="io.github.krkren.kagex")
     ap.add_argument("--device", default="booted", help="ios-sim: the Simulator (UDID)")
     ap.add_argument("--url", help="web: the page that runs the game")
+    ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
+                    "instead of its own Chromium")
     opts = ap.parse_args()
     if opts.target != "desktop":
         opts.only = "sample"  # the platform packages hold the sample only
