@@ -541,7 +541,7 @@ function _dump(name, value)
 var dumpcount = 0;
 function dump() {
 	if (typeof global.Array.save2 == "undefined") {
-		Plugins.link("plugin/savestruct.dll");
+		Plugins.link("plugin/saveStruct.dll");
 	}
 	dumplist = [];
 	dumpdone = %[];

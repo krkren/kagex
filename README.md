@@ -30,7 +30,7 @@ These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. 
 
 - The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8) and buttons instead.
 - Scene playback with `[scenestart]` (`psbfile.dll`).
-- The fire, Flash and alpha-movie effects (`gfxEffect.dll`, `flashPlayer.dll`, `AlphaMovie.dll`).
+- The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`).
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
 - Native Windows dialogs (`win32dialog.dll`), used by the stand-picture viewer tool.
 

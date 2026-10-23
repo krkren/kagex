@@ -2248,7 +2248,7 @@ class PSDInfo {
 
 	function useLayerExSave() { Plugins.link("plugin/layerExSave.dll") if (typeof global.Layer.saveLayerImageTlg5 != "Object"); }
 
-	function useSaveStruct()  { Plugins.link("plugin/savestruct.dll")  if (typeof global.Array.save2              != "Object"); }
+	function useSaveStruct()  { Plugins.link("plugin/saveStruct.dll")  if (typeof global.Array.save2              != "Object"); }
 
 };
 
