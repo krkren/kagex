@@ -411,7 +411,12 @@ class AndroidEngine(Engine):
 
 class WebEngine(Engine):
     """The browser build in headless Chromium, through krkrz_web's krkrz_repl_eval bridge (the
-    one the devtools console's tjs() calls)."""
+    one the devtools console's tjs() calls).
+
+    The browser build loads scenario and image files on demand, and a load can only wait for
+    its download from the engine's own loop: one started inside a krkrz_repl_eval call
+    crashed the page. So every command runs from a Timer, and the bridge only starts it and
+    reads its result back."""
 
     def __init__(self, url, workdir, verbose):
         from playwright.sync_api import sync_playwright
@@ -431,8 +436,8 @@ class WebEngine(Engine):
         last = None
         while time.time() < end:
             try:
-                # ccall throws until the runtime is up
-                if self._eval("1", 10).get("ok"):
+                # ccall throws until the runtime is up; then wait for the game window
+                if self._raw('typeof global.kag == "Object" && kag !== void').get("result") == "1":
                     return
             except SmokeError as e:
                 last = e
@@ -440,12 +445,41 @@ class WebEngine(Engine):
         raise SmokeError("the engine didn't start in the page (%s); console:\n%s"
                          % (last, "\n".join(self.lines[-40:])))
 
-    def _eval(self, cmd, timeout):
+    def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
         try:
-            return json.loads(self.page.evaluate(js, cmd))
+            j = json.loads(self.page.evaluate(js, cmd))
         except Exception as e:
             raise SmokeError("page: %s" % e)
+        j["result"] = str(j.get("result", "")).strip()
+        return j
+
+    def _eval(self, cmd, timeout):
+        start = self._raw("""(function() {
+            global.__smokeRes = void;
+            global.__smokeFn = function() { return %s; };
+            if (typeof global.__smokeTimer == "undefined") {
+                global.__smokeRun = function() {
+                    global.__smokeTimer.enabled = false;
+                    try { global.__smokeRes = %%[ok: 1, value: global.__smokeFn()]; }
+                    catch (e) { global.__smokeRes = %%[ok: 0, error: e.message]; }
+                };
+                global.__smokeTimer = new Timer(global.__smokeRun, "");
+                global.__smokeTimer.interval = 1;
+            }
+            global.__smokeTimer.enabled = true;
+            return 1;
+        })()""" % cmd)
+        if not start.get("ok"):
+            return start
+        end = time.time() + timeout
+        while time.time() < end:
+            if self._raw("global.__smokeRes !== void")["result"] == "1":
+                if self._raw("global.__smokeRes.ok")["result"] == "1":
+                    return {"ok": True, "result": self._raw("global.__smokeRes.value")["result"]}
+                return {"ok": False, "error": self._raw("global.__smokeRes.error")["result"]}
+            time.sleep(0.02)
+        raise SmokeError("no answer from the engine within %ss:\n%s" % (timeout, cmd))
 
     def output(self):
         text = "\n".join(self.lines)
