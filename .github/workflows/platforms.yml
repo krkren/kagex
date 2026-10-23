@@ -146,8 +146,7 @@ jobs:
       - name: kagex's plugins in the shared binary
         run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
       - name: Build the shared binary
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build \
-            CMAKEOPT="-DCMAKE_PROJECT_minikin_INCLUDE=$PROJECT_DIR/.github/platforms/web-minikin.cmake"
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
       - name: Stage the site
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh stage python3 kirikiri/krkrz_web/tools/stage_web.py "$PROJECT_DIR"
