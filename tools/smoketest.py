@@ -15,6 +15,16 @@ usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [-
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
+
+The platform builds run the sample's steps the same way, through their own REPL channels
+(the packages hold the sample only):
+
+  --target android --apk kagex.apk     a debug APK on a running emulator or device (adb):
+                                       the socket channel debug builds open (<package>.repl)
+  --target ios-sim --app KAGEX.app     a Simulator build on a booted Simulator (xcrun simctl):
+                                       the file channel, in the app's data container
+  --target web --url http://...        the browser build in headless Chromium (Playwright):
+                                       krkrz_web's krkrz_repl_eval bridge
 """
 
 import argparse
@@ -41,86 +51,26 @@ class SmokeError(Exception):
 
 
 class Engine:
-    def __init__(self, exe, data, workdir, verbose):
-        self.workdir = workdir
-        self.chan = os.path.join(workdir, "repl")
-        self.savedir = os.path.join(workdir, "savedata")
-        os.makedirs(self.chan)
-        os.makedirs(self.savedir)
-        self.log_path = os.path.join(workdir, "engine.log")
-        self.verbose = verbose
-        self.modals = []
-        env = dict(os.environ)
-        env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
-        env.setdefault("SDL_AUDIO_DRIVER", "dummy")
-        args = [exe, data, "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
-                "-replmodaltimeout=0"]
-        self.log = open(self.log_path, "wb")
-        self.proc = subprocess.Popen(args, stdout=self.log, stderr=subprocess.STDOUT, env=env)
+    """What the steps drive the game through. A target supplies _eval (one TJS expression in,
+    the REPL's %[ok, result, error] out), output (the engine's log) and stop."""
+    modals = []
+    log_path = "(no log file)"
+    workdir = None
 
-    # --- REPL channel -------------------------------------------------------------------
-
-    def _answer_modal(self):
-        """Answers a native modal dialog the engine opened, and records it as a failure."""
-        path = os.path.join(self.chan, "modal")
-        if not os.path.exists(path):
-            return
-        time.sleep(0.05)
-        try:
-            with open(path, encoding="utf-8") as f:
-                req = f.read()
-        except OSError:
-            return
-        self.modals.append(req)
-        try:
-            kind = json.loads(req).get("type", "")
-        except ValueError:
-            kind = ""
-        answer = "no" if kind == "confirm" else ""
-        with open(os.path.join(self.chan, "modalresp.tmp"), "w", encoding="utf-8") as f:
-            f.write(answer)
-        os.replace(os.path.join(self.chan, "modalresp.tmp"), os.path.join(self.chan, "modalresp"))
-        print("  ! the engine opened a native dialog:", req.strip(), flush=True)
-        # The engine deletes modal and modalresp once it has read the answer; wait for that,
-        # so the next poll doesn't answer the same request again
-        end = time.time() + 5
-        while time.time() < end and (os.path.exists(path) or
-                                     os.path.exists(os.path.join(self.chan, "modalresp"))):
-            time.sleep(0.02)
+    def _eval(self, cmd, timeout):
+        raise NotImplementedError
 
     def tjs(self, body, timeout=30.0):
         """Runs TJS statements on the main thread; 'return x;' gives the result."""
         cmd = "(function() {\n" + body + "\n})()"
-        resp = os.path.join(self.chan, "resp")
-        if os.path.exists(resp):
-            os.remove(resp)
-        tmp = os.path.join(self.chan, "cmd.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(cmd)
-        os.replace(tmp, os.path.join(self.chan, "cmd"))
-        end = time.time() + timeout
-        while time.time() < end:
-            if self.proc.poll() is not None:
-                raise SmokeError("the engine exited (code %s)" % self.proc.returncode)
-            self._answer_modal()
-            if os.path.exists(resp):
-                time.sleep(0.02)
-                try:
-                    with open(resp, encoding="utf-8") as f:
-                        data = f.read()
-                except OSError:
-                    continue
-                os.remove(resp)
-                j = json.loads(data)
-                if not j.get("ok"):
-                    raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
-                result = j.get("result", "")
-                try:
-                    return json.loads(result)
-                except ValueError:
-                    return result
-            time.sleep(0.03)
-        raise SmokeError("no answer from the REPL within %ss:\n%s" % (timeout, body))
+        j = self._eval(cmd, timeout)
+        if not j.get("ok"):
+            raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
+        result = j.get("result", "")
+        try:
+            return json.loads(result)
+        except ValueError:
+            return result
 
     def wait(self, what, expr, timeout=60.0, interval=0.25):
         """Polls a TJS expression until it is true."""
@@ -169,6 +119,100 @@ class Engine:
             self.tjs('if (typeof global.__smokeClicker == "Object") __smokeClicker.enabled = false; return 1;')
 
     def output(self):
+        return ""
+
+    def stop(self):
+        pass
+
+
+class FileChannel(Engine):
+    """The REPL file channel (-replfile=<dir>): TJS in cmd, the answer in resp. A native modal
+    dialog shows up as a modal file; it is answered and counted as a failure."""
+    chan = None
+
+    def alive(self):
+        return True
+
+    def _answer_modal(self):
+        """Answers a native modal dialog the engine opened, and records it as a failure."""
+        path = os.path.join(self.chan, "modal")
+        if not os.path.exists(path):
+            return
+        time.sleep(0.05)
+        try:
+            with open(path, encoding="utf-8") as f:
+                req = f.read()
+        except OSError:
+            return
+        self.modals.append(req)
+        try:
+            kind = json.loads(req).get("type", "")
+        except ValueError:
+            kind = ""
+        answer = "no" if kind == "confirm" else ""
+        with open(os.path.join(self.chan, "modalresp.tmp"), "w", encoding="utf-8") as f:
+            f.write(answer)
+        os.replace(os.path.join(self.chan, "modalresp.tmp"), os.path.join(self.chan, "modalresp"))
+        print("  ! the engine opened a native dialog:", req.strip(), flush=True)
+        # The engine deletes modal and modalresp once it has read the answer; wait for that,
+        # so the next poll doesn't answer the same request again
+        end = time.time() + 5
+        while time.time() < end and (os.path.exists(path) or
+                                     os.path.exists(os.path.join(self.chan, "modalresp"))):
+            time.sleep(0.02)
+
+    def _eval(self, cmd, timeout):
+        resp = os.path.join(self.chan, "resp")
+        if os.path.exists(resp):
+            os.remove(resp)
+        tmp = os.path.join(self.chan, "cmd.tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(cmd)
+        os.replace(tmp, os.path.join(self.chan, "cmd"))
+        end = time.time() + timeout
+        while time.time() < end:
+            if not self.alive():
+                raise SmokeError("the engine exited")
+            self._answer_modal()
+            if os.path.exists(resp):
+                time.sleep(0.02)
+                try:
+                    with open(resp, encoding="utf-8") as f:
+                        data = f.read()
+                except OSError:
+                    continue
+                os.remove(resp)
+                return json.loads(data)
+            time.sleep(0.03)
+        raise SmokeError("no answer from the REPL within %ss:\n%s" % (timeout, cmd))
+
+
+class DesktopEngine(FileChannel):
+    """The engine as a process here, with SDL's offscreen video driver."""
+
+    def __init__(self, exe, data, workdir, verbose):
+        self.workdir = workdir
+        self.chan = os.path.join(workdir, "repl")
+        self.savedir = os.path.join(workdir, "savedata")
+        os.makedirs(self.chan)
+        os.makedirs(self.savedir)
+        self.log_path = os.path.join(workdir, "engine.log")
+        self.verbose = verbose
+        self.modals = []
+        env = dict(os.environ)
+        env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+        env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+        args = [exe, data, "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
+                "-replmodaltimeout=0"]
+        self.log = open(self.log_path, "wb")
+        self.proc = subprocess.Popen(args, stdout=self.log, stderr=subprocess.STDOUT, env=env)
+
+    def alive(self):
+        if self.proc.poll() is not None:
+            raise SmokeError("the engine exited (code %s)" % self.proc.returncode)
+        return True
+
+    def output(self):
         if not self.log.closed:
             self.log.flush()
         with open(self.log_path, "rb") as f:
@@ -188,6 +232,161 @@ class Engine:
                 self.proc.kill()  # a hung engine ignores SIGTERM (CLAUDE.md)
                 self.proc.wait()
         self.log.close()
+
+
+class SimulatorEngine(FileChannel):
+    """A Simulator build on a booted iOS Simulator. The file channel lives in the app's data
+    container, which the Simulator keeps as an ordinary folder on this Mac."""
+
+    def __init__(self, app, bundle_id, workdir, verbose, device="booted"):
+        self.workdir = workdir
+        self.verbose = verbose
+        self.modals = []
+        self.device = device
+        self.bundle_id = bundle_id
+        self.log_path = os.path.join(workdir, "simulator.log")
+        self.simctl("install", device, app)
+        container = self.simctl("get_app_container", device, bundle_id, "data").strip()
+        self.container = container
+        self.chan = os.path.join(container, "tmp", "smoke-repl")
+        shutil.rmtree(self.chan, ignore_errors=True)
+        os.makedirs(self.chan)
+        self.simctl("launch", "--terminate-running-process", device, bundle_id,
+                    "-replfile=" + self.chan, "-replmodaltimeout=0")
+
+    @staticmethod
+    def simctl(*args):
+        r = subprocess.run(["xcrun", "simctl"] + list(args), capture_output=True, text=True)
+        if r.returncode:
+            raise SmokeError("simctl %s failed: %s" % (" ".join(args), r.stderr.strip()))
+        return r.stdout
+
+    def output(self):
+        text = ""
+        for root, dirs, files in os.walk(self.container):
+            for name in files:
+                if name == "krkr.console.log":
+                    with open(os.path.join(root, name), "rb") as f:
+                        text += f.read().decode("utf-16-le", "replace")
+        with open(self.log_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return text
+
+    def stop(self):
+        subprocess.run(["xcrun", "simctl", "terminate", self.device, self.bundle_id], capture_output=True)
+
+
+class AndroidEngine(Engine):
+    """A debug APK on an emulator or device, through the REPL socket that debug builds open
+    (<applicationId>.repl, forwarded to a local port with adb)."""
+
+    def __init__(self, apk, package, workdir, verbose, adb="adb", port=9099):
+        import socket
+        self.workdir = workdir
+        self.verbose = verbose
+        self.modals = []
+        self.adb = adb
+        self.package = package
+        self.port = port
+        self.log_path = os.path.join(workdir, "logcat.txt")
+        self.run_adb("install", "-r", "-g", apk)
+        self.run_adb("shell", "pm", "clear", package)
+        self.run_adb("logcat", "-c")
+        self.run_adb("shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1")
+        self.run_adb("forward", "tcp:%d" % port, "localabstract:%s.repl" % package)
+        end = time.time() + 120
+        last = None
+        while time.time() < end:
+            try:
+                self.sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+                self.reader = self.sock.makefile("r", encoding="utf-8")
+                j = self._eval("1", 10)
+                if j.get("ok"):
+                    return
+            except (OSError, SmokeError, ValueError) as e:
+                last = e
+            time.sleep(2)
+        raise SmokeError("no REPL socket from %s: %s" % (package, last))
+
+    def run_adb(self, *args):
+        r = subprocess.run([self.adb] + list(args), capture_output=True, text=True)
+        if r.returncode:
+            raise SmokeError("adb %s failed: %s" % (" ".join(args), (r.stderr or r.stdout).strip()))
+        return r.stdout
+
+    def _eval(self, cmd, timeout):
+        # one line in, one line of JSON out
+        self.sock.settimeout(timeout)
+        try:
+            self.sock.sendall((" ".join(cmd.splitlines()) + "\n").encode("utf-8"))
+            line = self.reader.readline()
+        except OSError as e:
+            raise SmokeError("REPL socket: %s" % e)
+        if not line:
+            raise SmokeError("the REPL socket closed (did the app stop?)")
+        return json.loads(line)
+
+    def output(self):
+        r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
+        text = r.stdout.decode("utf-8", "replace")
+        with open(self.log_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return text
+
+    def stop(self):
+        subprocess.run([self.adb, "shell", "am", "force-stop", self.package], capture_output=True)
+        subprocess.run([self.adb, "forward", "--remove", "tcp:%d" % self.port], capture_output=True)
+
+
+class WebEngine(Engine):
+    """The browser build in headless Chromium, through krkrz_web's krkrz_repl_eval bridge (the
+    one the devtools console's tjs() calls)."""
+
+    def __init__(self, url, workdir, verbose):
+        from playwright.sync_api import sync_playwright
+        self.workdir = workdir
+        self.verbose = verbose
+        self.modals = []
+        self.lines = []
+        self.log_path = os.path.join(workdir, "console.txt")
+        self.pw = sync_playwright().start()
+        self.browser = self.pw.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
+        self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
+        self.page.on("console", lambda m: self.lines.append(m.text))
+        self.page.on("pageerror", lambda e: self.lines.append("pageerror: %s" % e))
+        self.page.goto(url)
+        end = time.time() + 180
+        while time.time() < end:
+            ready = self.page.evaluate("() => typeof Module !== 'undefined' && !!Module.calledRun && !!Module.ccall")
+            if ready:
+                try:
+                    if self._eval("typeof global.kag", 10).get("ok"):
+                        return
+                except Exception:
+                    pass
+            # the page may wait for a click before it starts (the audio gate)
+            self.page.mouse.click(640, 360)
+            time.sleep(2)
+        raise SmokeError("the engine didn't start in the page; console:\n" + "\n".join(self.lines[-40:]))
+
+    def _eval(self, cmd, timeout):
+        js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
+        try:
+            return json.loads(self.page.evaluate(js, cmd))
+        except Exception as e:
+            raise SmokeError("page: %s" % e)
+
+    def output(self):
+        text = "\n".join(self.lines)
+        with open(self.log_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return text
+
+    def stop(self):
+        try:
+            self.browser.close()
+        finally:
+            self.pw.stop()
 
 
 DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks"]
@@ -357,10 +556,25 @@ def run_steps(eng, steps):
     return failures
 
 
+def start_engine(opts, data, workdir):
+    if opts.target == "android":
+        return AndroidEngine(opts.apk, opts.package, workdir, opts.verbose, adb=opts.adb)
+    if opts.target == "ios-sim":
+        return SimulatorEngine(opts.app, opts.bundle_id, workdir, opts.verbose, opts.device)
+    if opts.target == "web":
+        return WebEngine(opts.url, workdir, opts.verbose)
+    return DesktopEngine(opts.engine, data, workdir, opts.verbose)
+
+
 def run_project(opts, label, data, make_steps):
-    print("== %s (%s)" % (label, data), flush=True)
+    print("== %s (%s, %s)" % (label, data, opts.target), flush=True)
     workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
-    eng = Engine(opts.engine, data, workdir, opts.verbose)
+    try:
+        eng = start_engine(opts, data, workdir)
+    except SmokeError as e:
+        print("FAIL starting the engine:", e)
+        print("kept", workdir)
+        return 1
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
@@ -402,7 +616,17 @@ def main():
                     help="run one project (default: the sample in data/, then template/)")
     ap.add_argument("--keep", action="store_true", help="keep the temporary folders")
     ap.add_argument("--verbose", action="store_true", help="print the engine log at the end")
+    ap.add_argument("--target", choices=["desktop", "android", "ios-sim", "web"], default="desktop")
+    ap.add_argument("--apk", help="android: the APK to install")
+    ap.add_argument("--package", default="io.github.krkren.kagex", help="android: its applicationId")
+    ap.add_argument("--adb", default="adb")
+    ap.add_argument("--app", help="ios-sim: the .app to install")
+    ap.add_argument("--bundle-id", default="io.github.krkren.kagex")
+    ap.add_argument("--device", default="booted", help="ios-sim: the Simulator (UDID)")
+    ap.add_argument("--url", help="web: the page that runs the game")
     opts = ap.parse_args()
+    if opts.target != "desktop":
+        opts.only = "sample"  # the platform packages hold the sample only
 
     failures = 0
     if opts.only in (None, "sample"):

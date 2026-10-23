@@ -16,6 +16,9 @@ fi
 if [ $# -ge 2 ]; then
   git clone -q "https://github.com/wamsoft/$1.git" "$1"
   git -C "$1" checkout -q "$2"
+  # Some of the kits' scripts have Windows line endings (krkrz_android's Makefile and
+  # install-sdl-aar.sh), which bash and make take as part of the commands
+  find "$1" -maxdepth 2 -type f \( -name Makefile -o -name '*.sh' \) -exec perl -pi -e 's/\r$//' {} +
 fi
 {
   echo "kagex $(git -C kagex rev-parse HEAD) ($(git -C kagex log -1 --format=%s))"

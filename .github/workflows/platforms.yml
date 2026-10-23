@@ -19,10 +19,6 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: platforms-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   # the engine the 0.1.x packages were built from
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
@@ -144,6 +140,16 @@ jobs:
           PY
           (cd "$site" && find . -type f | sort) > results/site-files.txt
           du -sh "$site" | tee -a results/site-files.txt
+      - name: Smoke test in headless Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium > results/playwright.log 2>&1
+          (cd "$PROJECT_DIR/build/web/site" && exec python3 serve.py 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
+          sleep 3
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --keep || s=$?
+          cp /tmp/kagex-smoke-*/console.txt results/ 2>/dev/null || true
+          exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-web
@@ -192,6 +198,21 @@ jobs:
           find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee results/apk.txt
           apk=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)
           unzip -l "$apk" | grep -E 'lib/|assets/data/(startup|system/Initialize)' | tee -a results/apk.txt
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          echo "APK=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
+      - name: Smoke test on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-android
@@ -232,6 +253,20 @@ jobs:
           echo "$app" | tee results/app.txt
           ls "$app" | tee -a results/app.txt
           ditto -c -k --keepParent "$app" kagex-ios-simulator.zip
+          echo "APP=$app" >> "$GITHUB_ENV"
+      - name: Smoke test in the Simulator
+        run: |
+          dev=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          print(next(x['udid'] for k, v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']))")
+          echo "device $dev" | tee results/simulator.txt
+          xcrun simctl boot "$dev" || true
+          xcrun simctl bootstatus "$dev" -b > /dev/null
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep || s=$?
+          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log results/ 2>/dev/null || true
+          exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-ios-simulator
