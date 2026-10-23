@@ -5,7 +5,12 @@ set -e
 name=$1; msg=$2
 cd "$GITHUB_WORKSPACE/results"
 for f in *.log; do
-  [ -f "$f" ] && [ "$(wc -l < "$f")" -gt 600 ] && { head -n 100 "$f"; echo "..."; tail -n 500 "$f"; } > "$f.cut" && mv "$f.cut" "$f"
+  [ -f "$f" ] || continue
+  # The error lines of every log, with some context, before long logs lose their middle
+  grep -n -E -B 3 -A 12 'error:|error [A-Z]+[0-9]+|Error [0-9]+|FAILED|CMake Error|fatal:|undefined (symbol|reference)|What went wrong|\*\* BUILD FAILED' "$f" \
+    | grep -v -E 'warning:|-Werror|Wno-error' | head -n 400 > "${f%.log}.errors" || true
+  [ -s "${f%.log}.errors" ] || rm -f "${f%.log}.errors"
+  [ "$(wc -l < "$f")" -gt 600 ] && { head -n 100 "$f"; echo "..."; tail -n 500 "$f"; } > "$f.cut" && mv "$f.cut" "$f"
 done
 rm -f *.tail
 git init -q -b results .
