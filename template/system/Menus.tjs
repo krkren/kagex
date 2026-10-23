@@ -38,7 +38,7 @@ function KAGWindow_createMenus()
 
 	// The SDL engine's Window has no menu bar: build the menu on the stand-in Menu above,
 	// so the menu items (which other code enables and checks) still exist
-	if (typeof this.menu == "undefined") this.menu = new global.Menu();
+	if (typeof this.menu == "undefined") { this.menu = new global.Menu(); this.menuBarStandIn = true; }
 
 	menu.add(this.systemMenu = new KAGMenuItem(this, "System(&S)", 0, "", false));
 

@@ -1757,6 +1757,9 @@ if (typeof kag.debugMenu != "undefined") {
 	if (debugWindowEnabled) {
 		item.shortcut = StandViewWindow.OpenCloseShortcut;
 		var flag = kag.scflags.standview;
-		showStandView(item) if (flag !== void && flag.visible);
+		// It's a second OS window, which the SDL engine (no menu bar, see Menus.tjs) handles
+		// badly: open it only when asked there, not again at every start-up
+		var standIn = typeof kag.menuBarStandIn != "undefined" && kag.menuBarStandIn;
+		showStandView(item) if (flag !== void && flag.visible && !standIn);
 	}
 }

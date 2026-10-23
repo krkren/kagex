@@ -12731,6 +12731,16 @@ class KAGWindow extends Window
 
 	function processKeys(key, shift)
 	{
+		// Debug keys (debug builds, -debugwin): the SDL engine has no menu bar for the Debug menu.
+		// Shift+F12 shows the debug window (the running line at the bottom of the screen), and
+		// Shift+F11 switches the debug level (none, simple, verbose).
+		if (debugWindowEnabled && shift == ssShift && (key == VK_F12 || key == VK_F11)) {
+			if (key == VK_F12) onDebugWinMenuItemClick(void);
+			else if (debugLevel == tkdlNone) onDebugLevelSimpleMenuItemClick(void);
+			else if (debugLevel == tkdlSimple) onDebugLevelVerboseMenuItemClick(void);
+			else onDebugLevelNoneMenuItemClick(void);
+			return;
+		}
 		if (key == VK_BACK && (shift == ssShift) && autoLabelStore !== void
 			&& typeof this.backToAutoLabelStoreMenuItem == "Object")
 		{
@@ -17534,6 +17544,8 @@ class KAGWindow extends Window
         voiceLog.clear();
     }
 	function initLogPad(pos = false, noclear = false) {
+		// The SDL engine has no Pad window: the log still goes to the console (dm)
+		if (typeof global.Pad == "undefined") return;
 		if (logPad === void) {
 			logPad = new Pad();
 			with (logPad) {
