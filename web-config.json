@@ -1,0 +1,19 @@
+{
+    "comment": "krkrz_web: the browser build. tools/stage_web.py puts the shared engine binary and this game under build/web/site/; gamedata/ is the game's data/ with the framework copied in as system/",
+    "name": "KAGEX Sample",
+    "port": 8100,
+    "args": [
+        "-orgname=krkren", "-appname=kagex",
+        "-bitmappoolsize=640", "-filepoolsize=320", "-soundpoolsize=96", "-krkrzpoolsize=128"
+    ],
+    "lowercase": true,
+    "assetPack": {
+        "baseFolder": "${PROJECT_DIR}",
+        "sources": [
+            { "comment": "fetched in the background after start-up, so the first play doesn't wait on them",
+              "type": "mirror", "from": "data/main", "to": "main", "delivery": "prefetch" },
+            { "type": "mirror", "from": "template/system", "to": "system", "delivery": "prefetch" },
+            { "type": "mirror", "from": "data", "to": "", "exclude": ["**/*.bak", "**/*.psd"] }
+        ]
+    }
+}

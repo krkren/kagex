@@ -1,0 +1,53 @@
+{
+    "comment": "krkrz_linux: the Linux package, built in Valve's Steam Linux Runtime 3.0 (sniper) SDK. PROJECT_DIR is this repository. The same files as the zip packages: krkrz, krkrz.cf, plugin/, data/ (with the framework copied in as data/system), template/ and doc/ for developers",
+
+    "name": "KAGEX Sample",
+    "version": "0.2.0",
+    "exeName": "krkrz",
+    "orgName": "krkren",
+    "appName": "kagex",
+
+    "cmake": {
+        "buildType": "Release",
+        "options": {},
+        "pluginFolders": [
+            "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+        ],
+        "plugins": [
+            "KAGParserEx", "clipfile", "csvParser", "getSample", "json",
+            "layerExAreaAverage", "layerExBTOA", "layerExImage", "layerExLongExposure",
+            "layerExRaster", "layerExVector", "lineParser", "minizip", "psdfile",
+            "saveStruct", "scriptsEx", "shrinkCopy", "krkr_richtext", "extrans",
+            "extNagano", "AlphaMovie", "expat", "layerExSave", "sigcheck",
+            "krkreffekseer", "krkrthreepp"
+        ],
+        "staticPlugins": []
+    },
+
+    "config": {
+        "options": {}
+    },
+
+    "desktop": {
+        "id": "io.github.krkren.kagex",
+        "comment": "KAGEX sample game",
+        "categories": "Game;",
+        "icon": "platform/icon.svg"
+    },
+
+    "assetPack": {
+        "baseFolder": "${PROJECT_DIR}",
+        "sources": [
+            { "type": "mirror", "from": "data", "to": "data", "exclude": ["**/*.bak", "**/*.psd"] },
+            { "comment": "data/startup.tjs runs data/system/Initialize.tjs when it is there",
+              "type": "mirror", "from": "template/system", "to": "data/system" },
+            { "type": "mirror", "from": "template", "to": "template" },
+            { "type": "mirror", "from": "doc", "to": "doc" },
+            { "type": "flatten", "from": ".", "include": ["KAGEX Initial Setup.txt"] }
+        ]
+    },
+
+    "package": {
+        "formats": ["dir", "tar"]
+    }
+}

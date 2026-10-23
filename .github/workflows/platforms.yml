@@ -1,0 +1,306 @@
+# Builds kagex for the platforms that Wamsoft's kits cover, from the configs at the root of
+# this repository (linux-config.json, web-config.json, app-config.json, ios-config.json),
+# plus macOS from krkrz_dev's own presets. Each job smoke-tests what it built where it can
+# and keeps its logs on branch ci/platform-results-<job>.
+#
+# Runs on pushes to platforms/** branches and by hand. A commit message with
+# "[platforms: linux web]" builds only those.
+name: Platform builds
+
+on:
+  push:
+    branches: ['platforms/**']
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Platforms to build"
+        default: "linux web android ios macos"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # the engine the 0.1.x packages were built from
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # the platform kits, at the commits this was set up with
+  KRKRZ_LINUX_SHA: 03605924f952f848abe9d5f85874846b9aa3f940
+  KRKRZ_WEB_SHA: 2fe46168acebc9ecf093d95e630a98f50a17efba
+  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
+  KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
+  STEAMDEV_SHA: e39d1d9dddc741a1c343dc6c653dc303515a0204
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.pick.outputs.list }}
+    steps:
+      - id: pick
+        env:
+          INPUT: ${{ github.event.inputs.platforms }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          list="linux web android ios macos"
+          [ -n "$INPUT" ] && list="$INPUT"
+          m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
+          [ -n "$m" ] && list="$m"
+          echo "list= $list " >> "$GITHUB_OUTPUT"
+          echo "building: $list"
+
+  linux:
+    needs: select
+    if: contains(needs.select.outputs.list, ' linux ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_linux
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_linux "$KRKRZ_LINUX_SHA"
+      - name: Build the Steam Linux Runtime (sniper) image
+        run: |
+          git clone -q https://github.com/wamsoft/steamdev.git steamdev
+          git -C steamdev checkout -q "$STEAMDEV_SHA"
+          kirikiri/kagex/.github/platforms/run-logged.sh image bash steamdev/deckbuild/deckbuild.sh image
+      - name: Build and package
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_linux all
+      - name: Every plugin loads
+        working-directory: kirikiri/kagex/build/linux/package/krkrz
+        run: |
+          ls -la . plugin | tee "$GITHUB_WORKSPACE/results/package.txt"
+          python3 - <<'PY' | tee "$GITHUB_WORKSPACE/results/plugins.txt"
+          import ctypes, glob, os, sys
+          bad = []
+          for so in sorted(glob.glob("plugin/*.so")):
+              try:
+                  ctypes.CDLL(os.path.abspath(so), mode=os.RTLD_NOW | os.RTLD_LOCAL)
+                  print("ok  ", so)
+              except OSError as e:
+                  print("FAIL", so, e); bad.append(so)
+          sys.exit(1 if bad else 0)
+          PY
+      - name: Smoke test
+        working-directory: kirikiri/kagex/build/linux/package/krkrz
+        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-linux
+          path: kirikiri/kagex/build/linux/dist/*.tar.gz
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh linux "linux, run ${{ github.run_id }} (${{ job.status }})"
+
+  web:
+    needs: select
+    if: contains(needs.select.outputs.list, ' web ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+      EMSDK: ${{ github.workspace }}/emsdk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_web
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
+      - name: Set up emsdk and vcpkg
+        run: |
+          git clone -q https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          kirikiri/kagex/.github/platforms/run-logged.sh emsdk bash -c "cd '$EMSDK' && ./emsdk install latest && ./emsdk activate latest"
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+      - name: kagex's plugins in the shared binary
+        run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
+      - name: Build the shared binary
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
+      - name: Stage the site
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh stage python3 kirikiri/krkrz_web/tools/stage_web.py "$PROJECT_DIR"
+          site="$PROJECT_DIR/build/web/site"
+          # GitHub Pages can't send the COOP/COEP headers that SharedArrayBuffer needs:
+          # coi-serviceworker adds them in the browser (as krkrz_web's stage_docs.py does)
+          cp kirikiri/krkrz_web/tools/coi-serviceworker.js "$site/"
+          python3 - "$site/index.html" <<'PY'
+          import sys
+          sys.path.insert(0, "kirikiri/krkrz_web/tools")
+          from stage_docs import inject_coi
+          p = sys.argv[1]
+          html = open(p, encoding="utf-8").read()
+          open(p, "w", encoding="utf-8").write(inject_coi(html, "coi-serviceworker.js"))
+          PY
+          (cd "$site" && find . -type f | sort) > results/site-files.txt
+          du -sh "$site" | tee -a results/site-files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-web
+          path: kirikiri/kagex/build/web/site
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh web "web, run ${{ github.run_id }} (${{ job.status }})"
+
+  android:
+    needs: select
+    if: contains(needs.select.outputs.list, ' android ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_android
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up the Android SDK, vcpkg and SDL3
+        run: |
+          ndk=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/app-config.json'))['ndkVersion'])")
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;$ndk" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0"
+          echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          (cd kirikiri/krkrz_android && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
+      - name: Build the debug APK
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
+      - name: List the APK
+        run: |
+          find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee results/apk.txt
+          apk=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)
+          unzip -l "$apk" | grep -E 'lib/|assets/data/(startup|system/Initialize)' | tee -a results/apk.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-android
+          path: kirikiri/kagex/build/android/app/outputs/apk/**/*.apk
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh android "android, run ${{ github.run_id }} (${{ job.status }})"
+
+  ios:
+    needs: select
+    if: contains(needs.select.outputs.list, ' ios ')
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_ios
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
+      - name: Set up vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          xcodebuild -version | tee results/xcode.txt
+      - name: Build for the Simulator
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+      - name: Pack the app
+        run: |
+          app=$(find "$PROJECT_DIR/build/ios" -name '*.app' -path '*iphonesimulator*' | head -1)
+          [ -n "$app" ] || { echo "::error::no .app"; exit 1; }
+          echo "$app" | tee results/app.txt
+          ls "$app" | tee -a results/app.txt
+          ditto -c -k --keepParent "$app" kagex-ios-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-ios-simulator
+          path: kagex-ios-simulator.zip
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh ios "ios, run ${{ github.run_id }} (${{ job.status }})"
+
+  macos:
+    needs: select
+    if: contains(needs.select.outputs.list, ' macos ')
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine
+        run: kirikiri/kagex/.github/platforms/setup.sh
+      - name: Set up vcpkg and ninja
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          command -v ninja || brew install ninja
+          { sw_vers; xcodebuild -version; cmake --version | head -1; } | tee results/toolchain.txt
+      - name: Configure
+        working-directory: kirikiri/krkrz_dev
+        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh configure cmake --preset arm64-osx -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - name: Build the engine and its plugins
+        working-directory: kirikiri/krkrz_dev
+        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh build cmake --build build/arm64-osx --config Release -- -k 0
+      - name: Install
+        working-directory: kirikiri/krkrz_dev
+        run: |
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh install cmake --install build/arm64-osx --config Release --prefix "$GITHUB_WORKSPACE/stage"
+          find "$GITHUB_WORKSPACE/stage" -maxdepth 4 | sort | tee "$GITHUB_WORKSPACE/results/install.txt"
+      - name: Put the game in the app
+        run: |
+          app=$(find stage -maxdepth 3 -name '*.app' | head -1)
+          [ -n "$app" ] || { echo "::error::no .app in the install"; exit 1; }
+          res="$app/Contents/Resources"
+          mkdir -p "$res"
+          rsync -a --exclude '*.bak' --exclude '*.psd' "$PROJECT_DIR/data/" "$res/data/"
+          rsync -a "$PROJECT_DIR/template/system/" "$res/data/system/"
+          cp "$PROJECT_DIR/krkrz.cf" "$res/"
+          cp "$PROJECT_DIR/krkrz.cf" "$app/Contents/MacOS/"
+          find "$app" -maxdepth 3 | sort | tee results/app.txt
+          echo "APP=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
+      - name: Smoke test
+        run: |
+          exe=$(find "$APP/Contents/MacOS" -maxdepth 1 -type f -perm -u+x | head -1)
+          cd "$PROJECT_DIR"
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B tools/smoketest.py --engine "$exe"
+      - name: Pack the app
+        run: ditto -c -k --keepParent "$APP" kagex-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-macos
+          path: kagex-macos.zip
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh macos "macos, run ${{ github.run_id }} (${{ job.status }})"
