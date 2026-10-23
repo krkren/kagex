@@ -22,7 +22,8 @@ The platform builds run the sample's steps the same way, through their own REPL 
   --target android --apk kagex.apk     a debug APK on a running emulator or device (adb):
                                        the socket channel debug builds open (<package>.repl)
   --target ios-sim --app KAGEX.app     a Simulator build on a booted Simulator (xcrun simctl):
-                                       the file channel, in the app's data container
+                                       the browser REPL's HTTP server (-replweb), which is the
+                                       REPL krkrz_ios builds have
   --target web --url http://...        the browser build in headless Chromium (Playwright):
                                        krkrz_web's krkrz_repl_eval bridge
 """
@@ -234,25 +235,36 @@ class DesktopEngine(FileChannel):
         self.log.close()
 
 
-class SimulatorEngine(FileChannel):
-    """A Simulator build on a booted iOS Simulator. The file channel lives in the app's data
-    container, which the Simulator keeps as an ordinary folder on this Mac."""
+class SimulatorEngine(Engine):
+    """A Simulator build on a booted iOS Simulator, through the browser REPL's HTTP server
+    (-replweb; krkrz_ios builds have no file channel). The Simulator shares this Mac's
+    network, so the server is on 127.0.0.1. POST /pad/exec runs a script and answers with
+    the same %[ok, result, error] JSON as the file channel."""
 
-    def __init__(self, app, bundle_id, workdir, verbose, device="booted"):
+    def __init__(self, app, bundle_id, workdir, verbose, device="booted", port=8931):
         self.workdir = workdir
         self.verbose = verbose
         self.modals = []
         self.device = device
         self.bundle_id = bundle_id
+        self.url = "http://127.0.0.1:%d/pad/exec" % port
         self.log_path = os.path.join(workdir, "simulator.log")
         self.simctl("install", device, app)
-        container = self.simctl("get_app_container", device, bundle_id, "data").strip()
-        self.container = container
-        self.chan = os.path.join(container, "tmp", "smoke-repl")
-        shutil.rmtree(self.chan, ignore_errors=True)
-        os.makedirs(self.chan)
+        self.container = self.simctl("get_app_container", device, bundle_id, "data").strip()
         self.simctl("launch", "--terminate-running-process", device, bundle_id,
-                    "-replfile=" + self.chan, "-replmodaltimeout=0")
+                    "-replweb=%d" % port, "-replwebidle=no", "-replmodaltimeout=0")
+        end = time.time() + 120
+        last = None
+        while time.time() < end:
+            try:
+                j = self._eval("1", 10)
+                if j.get("ok") and str(j.get("result")) == "1":
+                    return
+                last = j
+            except (OSError, SmokeError, ValueError) as e:
+                last = e
+            time.sleep(2)
+        raise SmokeError("no REPL server from %s: %s" % (bundle_id, last))
 
     @staticmethod
     def simctl(*args):
@@ -260,6 +272,18 @@ class SimulatorEngine(FileChannel):
         if r.returncode:
             raise SmokeError("simctl %s failed: %s" % (" ".join(args), r.stderr.strip()))
         return r.stdout
+
+    def _eval(self, cmd, timeout):
+        import urllib.request, urllib.error
+        # /pad/exec runs a whole script; its value is what the script returns
+        body = ("return " + cmd + ";").encode("utf-8")
+        req = urllib.request.Request(self.url, data=body, method="POST",
+                                     headers={"Content-Type": "text/plain; charset=utf-8"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except (urllib.error.URLError, OSError) as e:
+            raise SmokeError("no answer from the REPL within %ss (%s):\n%s" % (timeout, e, cmd))
 
     def output(self):
         text = ""
