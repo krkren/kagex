@@ -412,7 +412,11 @@ class YesNoFrameDialogWindow extends Window
 
 					 primaryLayer.height * zoomNumer / zoomDenom);
 
-        setMaskRegion() if typeof this.setMaskRegion != "undefined"; // shaped windows may not exist on the SDL engine
+        // The window's shape. Only the Windows-only engine implements it (the SDL engine's
+
+        // setMaskRegion throws "not implemented"), so askYesNo uses this window only there
+
+        try { setMaskRegion(); } catch (e) {}
 
         
 
@@ -734,31 +738,33 @@ class YesNoDialogLayer extends DialogLayer
 
     /**
 
-     * Esc and a right-click answer No, like the window version. DialogLayer would only
+     * Closing the prompt without picking an answer answers No, like the window version: Esc
 
-     * close the dialog, skipping noFunc and doneFunc.
+     * (DialogLayer.onKeyDown), a right-click on the panel, on a button or outside it
+
+     * (DialogLayer / DialogButtonLayer.onMouseUp, rightClickHook) and a close from elsewhere
+
+     * all go through close(). DialogLayer only closed the dialog, skipping noFunc and doneFunc.
 
      */
 
-    function onKeyDown(key, shift) {
+    var answered = false;
 
-        if (enabled && key == VK_ESCAPE) { processLink(1); return; }
+    function close() {
 
-        return super.onKeyDown(...);
+        if (!answered) { processLink(1); return; }
 
-    }
-
-    function rightClickHook() {
-
-        if (enabled) processLink(1);
-
-        return true;
+        super.close(...);
 
     }
 
     
 
     function processLink(num) {
+
+        if (answered) return; // one answer per prompt (a double click, or Esc after a click)
+
+        answered = true;
 
         super.processLink(num);
 
@@ -842,6 +848,26 @@ function yesNoCanUseLayer()
 
 /**
 
+ * Whether a prompt during a movie can use YesNoFrameDialogWindow, which needs a shaped window
+
+ * (setMaskRegion): the Windows-only engine has it, the SDL engine (it has
+
+ * Window.SDLOGLDrawDevice) doesn't, and its prompts stay in the game window.
+
+ */
+
+function yesNoCanUseFrameWindow()
+
+{
+
+    return typeof global.Window.SDLOGLDrawDevice == "undefined";
+
+}
+
+
+
+/**
+
  * Asks Yes or No in the game window. The callbacks run after the player answers (Esc and
 
  * a right-click answer No); the function itself returns at once.
@@ -854,9 +880,27 @@ function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, don
 
     if (!yesNoCanUseLayer()) {
 
-        // Too early for a layer dialog (e.g. an error during start-up)
+        // Too early for a layer dialog (e.g. an error during start-up). The stock window can't
 
-        return askYesNoWindow(...);
+        // open then on the SDL engine (a modal window needs another window under it), so ask
+
+        // with the system's message box, which every current engine has
+
+        if (typeof System.confirm == "undefined") return askYesNoWindow(...);
+
+        if (System.confirm(message, caption)) {
+
+            if (yesFunc !== void) yesFunc(param);
+
+        } else {
+
+            if (noFunc !== void) noFunc(param);
+
+        }
+
+        if (doneFunc !== void) doneFunc(param);
+
+        return;
 
     }
 
@@ -866,9 +910,9 @@ function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, don
 
     if (text.substring(0, 6) == "error:") text = text.substring(6); // KAGEnvPlayer's error prompts
 
-    if (kag.isMoviePlaying()) {
+    if (kag.isMoviePlaying() && yesNoCanUseFrameWindow()) {
 
-        // An overlay movie covers the layers, so this one uses a separate window
+        // An overlay movie covers the layers, so this one uses a separate, shaped window
 
         var win = new YesNoFrameDialogWindow(text);
 
@@ -952,21 +996,17 @@ class AboutDialogLayer extends DialogLayer
 
         var lines = [];
 
-        var title = (typeof sf.software_title == "String" && sf.software_title != "") ? sf.software_title : System.title;
+        var title = aboutText(sf.software_title);
 
-        lines.add([ title, yesnoFontSize ]);
+        lines.add([ title != "" ? title : System.title, yesnoFontSize ]);
 
-        if (typeof sf.software_version == "String" && sf.software_version != "")
+        var version = aboutText(sf.software_version), maker = aboutText(sf.software_maker);
 
-            lines.add([ "Version " + sf.software_version, yesnoLabelSize ]);
+        var year = aboutText(sf.software_year);
 
-        if (typeof sf.software_maker == "String" && sf.software_maker != "") {
+        if (version != "") lines.add([ "Version " + version, yesnoLabelSize ]);
 
-            var year = (typeof sf.software_year != "undefined" && sf.software_year !== void && sf.software_year != "") ? sf.software_year + " " : "";
-
-            lines.add([ "(c) " + year + sf.software_maker, yesnoLabelSize ]);
-
-        }
+        if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, yesnoLabelSize ]);
 
         lines.add([ "Kirikiri Z " + System.versionString, yesnoLabelSize ]);
 
@@ -1033,6 +1073,14 @@ class AboutDialogLayer extends DialogLayer
         super.processLink(num);
 
         close() if (this isvalid);
+
+    }
+
+    // A detail as text: "" when unset, so a number (a version of 1.2) shows too
+
+    function aboutText(v) {
+
+        return (v === void || typeof v == "Object") ? "" : (string)v;
 
     }
 
