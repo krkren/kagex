@@ -141,4 +141,6 @@ Move Ai2 to the back
 [ai3 xpos=-1920 time=500]
 The End
 
+[demodone name=char]
+
 [jump storage=s0001.ks]

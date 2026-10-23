@@ -18,9 +18,9 @@
 
 
 
-// Force clear flag ON XXX Delete this eventually!!!
+// sf.clear (Extras on the title screen) is set once every demo has been played to the end:
 
-sf.clear = true;
+// [demodone] in macro.ks
 
 
 
