@@ -22,4 +22,6 @@ Move stars
 [star2 hide]Clear Star 2
 [star3 hide]Clear Star 3
 
+[demodone name=envlayer]
+
 [jump storage=s0001.ks]

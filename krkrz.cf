@@ -1,0 +1,9 @@
+; Engine options for the kagex sample. The engine reads <exe name>.cf next to the executable
+; (krkrz.cf beside krkrz and krkrz.exe); each line is a command-line option without its "-".
+;
+; orgname/appname name the save folder on Linux (~/.local/share/<orgname>/<appname>/) and
+; macOS (~/Library/Application Support/<orgname>/<appname>/), so this game doesn't share
+; ~/.local/share/wamsoft/krkrz/ with every other game on the stock engine. Windows saves to
+; savedata/ next to the exe either way. A game made from the template should use its own names.
+orgname=krkren
+appname=kagex

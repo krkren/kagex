@@ -2,7 +2,7 @@
 
 // Copyright (C) 2001-2004 W.Dee and contributors  Free to modify and distribute
 
-;global.config_version = ""; // Please do not delete this line
+;global.config_version = "EX 3.27-dev.20070519"; // Please do not delete this line
 
 
 
@@ -446,7 +446,8 @@ function KAGWindow_config()
 
 
 // ◆ Window Display Size for "Help > About This Software"
-// about.ks will run within this window size.
+// about.ks will run within this window size. Only used with aboutInWindow = false
+// (MainWindow.tjs): About normally shows in the game window (YesNoDialogLayer.tjs).
 
 ;aboutWidth = 320; // Width
 ;aboutHeight = 200; // Height
@@ -833,7 +834,11 @@ function MessageLayer_config()
 // "chdefaultFace" line in ?????sc.* or delete the system variable file.
 // Can specify multiple fonts separated by commas (priority order).
 
-;userFace = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto"; // Equivalent to 'face' attribute in [deffont] tag
+// Noto Sans JP ships in template/system (Initialize.tjs registers it); Yu Gothic, where
+
+// installed, comes first for its kerned Latin letters.
+
+;userFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"; // Equivalent to 'face' attribute in [deffont] tag
 
 
 
@@ -1118,7 +1123,7 @@ function HistoryLayer_config()
 
 // ◆ Font Name
 
-;fontName = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+;fontName = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
 
 
 

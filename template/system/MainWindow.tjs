@@ -209,6 +209,8 @@ class KAGWindow extends Window
 
 	var aboutStorage = "about.ks";
 
+	var aboutInWindow = true; // Show About in the game window (false: the separate window above)
+
 
 
     var defaultName   = "Name"; // Default name - Used by world extensions for voice switching
@@ -345,7 +347,9 @@ class KAGWindow extends Window
 
 		"ＭＳ ゴシック", "MS Gothic", "MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto",
 
-		"ＭＳ Ｐ明朝", "MS PMincho", "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto" ];
+		"ＭＳ Ｐ明朝", "MS PMincho", "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto",
+
+		"Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto" ];
 
 	var chBitmapFont = ""; // Special bitmap font specification
 
@@ -2851,13 +2855,17 @@ class KAGWindow extends Window
 
 		// Mapping of pad input and its corresponding actions.
 
-		// By default, the D-pad is mapped to keyboard arrow keys,
+		// The D-pad (and, on the SDL engine, the left stick) moves like the arrow keys. The face
 
-		// Button 1 to Return, Button 2 to ESC, and Button 3 to Message History display.
+		// buttons go by their label (SDL engine): A (PlayStation ✕) is Return, B (○) is Esc,
+
+		// X (□) shows the message history and Y (△) switches auto mode. R1 skips to the next
+
+		// choice or unread text, and holding R2 skips like Ctrl. createPadKeyMap adds the stick.
 
 		// If a function is specified, that function is called when the button is pressed.
 
-		// Rewrite in Config.tjs as needed.
+		// Rewrite in Config.tjs or AfterInit.tjs as needed (padKeyMap, then recreatePadKeyMap()).
 
 		VK_PADLEFT =>		VK_LEFT,
 
@@ -2873,6 +2881,12 @@ class KAGWindow extends Window
 
 		VK_PAD3 =>			showHistoryByKey, //#'R',
 
+		VK_PAD4 =>			switchAutoModeByKey, // Y
+
+		VK_PAD6 =>			skipToNextStopByKey, // R1
+
+		VK_PAD8 =>			VK_CONTROL, // R2: held, skips like Ctrl (getKeyState reads it through padKeyMapReverse)
+
 		];
 
 	function createPadKeyMap()
@@ -2883,9 +2897,23 @@ class KAGWindow extends Window
 
 		(Dictionary.assign incontextof padKeyMap)(initialPadKeyMap, true);
 
-		// Rewrite if options are specified
+		// The left stick's directions (SDL engine; older engines don't have these keys)
 
-		for (var i = 1; i <= 10; i++) {
+		if (typeof global.VK_PAD_L_LEFT == "Integer") {
+
+			padKeyMap[VK_PAD_L_LEFT]  = VK_LEFT;
+
+			padKeyMap[VK_PAD_L_RIGHT] = VK_RIGHT;
+
+			padKeyMap[VK_PAD_L_UP]    = VK_UP;
+
+			padKeyMap[VK_PAD_L_DOWN]  = VK_DOWN;
+
+		}
+
+		// Rewrite if options are specified (-padbtn1 to -padbtn12)
+
+		for (var i = 1; i <= 12; i++) {
 
 			if (typeof global["VK_PAD"+i] != "Integer") continue;
 
@@ -4776,6 +4804,12 @@ class KAGWindow extends Window
 	function onHelpAboutMenuItemClick(sender)
 
 	{
+
+		// The About screen in the game window (YesNoDialogLayer.tjs). Set aboutInWindow to
+
+		// false for the old separate window running about.ks, which crashed on Linux.
+
+		if (aboutInWindow) { global.showAbout(); return; }
 
 		// Display "About this software" window
 
@@ -10914,7 +10948,8 @@ class KAGWindow extends Window
 	function setBitmapFont(name)
 	{
 		chBitmapFont  = name;
-		chDefaultFace = "MS Gothic"; // XXX
+		// chDefaultFace stays as it is: it isn't used while a bitmap font is set, and a single
+		// face here ("MS Gothic") drew as arrows on the SDL engine once the bitmap font was cleared
 		setMessageLayerUserFont();
 		saveSystemVariables();
 		callHook("onSetBitmapFontHook", chBitmapFont);
@@ -12696,6 +12731,17 @@ class KAGWindow extends Window
 
 	function processKeys(key, shift)
 	{
+		// Debug keys, while KAG's debug mode is on (it is unless -debugwin=no: set that for a
+		// release). The SDL engine has no menu bar for the Debug menu.
+		// Shift+F12 shows the debug window (the running line at the bottom of the screen), and
+		// Shift+F11 switches the debug level (none, simple, verbose).
+		if (debugWindowEnabled && shift == ssShift && (key == VK_F12 || key == VK_F11)) {
+			if (key == VK_F12) onDebugWinMenuItemClick(void);
+			else if (debugLevel == tkdlNone) onDebugLevelSimpleMenuItemClick(void);
+			else if (debugLevel == tkdlSimple) onDebugLevelVerboseMenuItemClick(void);
+			else onDebugLevelNoneMenuItemClick(void);
+			return;
+		}
 		if (key == VK_BACK && (shift == ssShift) && autoLabelStore !== void
 			&& typeof this.backToAutoLabelStoreMenuItem == "Object")
 		{
@@ -17499,6 +17545,8 @@ class KAGWindow extends Window
         voiceLog.clear();
     }
 	function initLogPad(pos = false, noclear = false) {
+		// The SDL engine has no Pad window: the log still goes to the console (dm)
+		if (typeof global.Pad == "undefined") return;
 		if (logPad === void) {
 			logPad = new Pad();
 			with (logPad) {

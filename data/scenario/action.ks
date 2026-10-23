@@ -33,4 +33,6 @@ Example 2. This is a combination of separately defined actions.
 
 End
 
+[demodone name=action]
+
 [jump storage=s0001.ks]

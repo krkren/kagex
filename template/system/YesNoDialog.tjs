@@ -180,8 +180,10 @@ class YesNoDialogWindow extends Window
 	}
 }
 
-// Function to clarify Yes or No
-function askYesNo(message, caption = "Confirm", yesFunc=void, noFunc=void, param=void, doneFunc=void, defaultFocus)
+// Asks Yes or No in a separate OS window (the stock KAG dialog). askYesNo in
+// YesNoDialogLayer.tjs asks in the game window instead, and uses this only before the
+// game window exists.
+function askYesNoWindow(message, caption = "Confirm", yesFunc=void, noFunc=void, param=void, doneFunc=void, defaultFocus)
 {
 	var win = new YesNoDialogWindow(message, caption, defaultFocus);
 	win.showModal();
@@ -202,3 +204,6 @@ function askYesNo(message, caption = "Confirm", yesFunc=void, noFunc=void, param
         doneFunc(param);
     }
 }
+
+// askYesNo, showAbout: in the game window
+KAGLoadScript("YesNoDialogLayer.tjs");

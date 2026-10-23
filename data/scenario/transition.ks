@@ -36,4 +36,6 @@ Update all at once
 [env day trans=rotateswap time=1000]rotateswap
 [env night trans=ripple time=1000]ripple
 
+[demodone name=transition]
+
 [jump storage=s0001.ks]

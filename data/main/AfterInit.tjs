@@ -5,7 +5,7 @@
 function keyFunc(key, shift)
 {
     if (key == VK_F1 && shift < 1) {
-        showAbout(); // in the game window (Override.tjs), not the engine's separate About window
+        showAbout(); // in the game window (YesNoDialogLayer.tjs)
         return true;
     } else if (key == VK_F2 && shift == 0 ) {
         startSave();
@@ -36,11 +36,16 @@ function keyFunc(key, shift)
     return false;
 }
 
-// The engine's About opens a second, modal OS window; use the in-game one everywhere
-kag.onHelpAboutMenuItemClick = function(sender) { showAbout(); } incontextof kag;
-
 // Register key binds
 kag.keyDownHook.add(keyFunc);
+
+// Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
+// screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1 and R2
+// (initialPadKeyMap in MainWindow.tjs).
+kag.padKeyMap[VK_PAD10] = VK_F4;
+kag.padKeyMap[VK_PAD9]  = VK_F2;
+kag.padKeyMap[VK_PAD5]  = VK_F3;
+kag.recreatePadKeyMap();
 
 // Restrict save and load
 kag.origCanStore   = kag.canStore;

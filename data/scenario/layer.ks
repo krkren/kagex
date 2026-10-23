@@ -146,4 +146,6 @@ Change zoom
 Rotate
 [l][r]
 
+[demodone name=layer]
+
 [jump storage=s0001.ks]

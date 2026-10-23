@@ -6482,7 +6482,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
             object.loadButtons(elm.normal, over, on, focus, elm.animcount, elm.animtime);
 
-            if (elm.trigger || elm.group) {
+            if (elm.trigger || elm.group != "") { // group is a name: as a boolean, "voice" reads as false
 
                 object.loadButtons(elm.on, over, on, focus, elm.animcount, elm.animtime, true);
 
@@ -6504,7 +6504,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
                 object.loadButtons(normal, over, on, focus, elm.animcount, elm.animtime);
 
-                if (elm.trigger || elm.group) {
+                if (elm.trigger || elm.group != "") { // group is a name: as a boolean, "voice" reads as false
 
                     object.loadButtons(elm.on, over, on, focus, elm.animcount, elm.animtime, true);
 

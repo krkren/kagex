@@ -97,15 +97,15 @@ class HistoryLayer extends Layer
 	var dataPage = 0;//	Current page being written
 
 
-	var marginL = 12;
+	var marginL = 40; // 1920x1080 (the 640x480 original had 12)
 
-	var marginR = 12;
+	var marginR = 40;
 
-	var marginT = 12;
+	var marginT = 24;
 
-	var marginB = 12;
+	var marginB = 24;
 
-	var fontName = "MS PMincho";
+	var fontName = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"; // Config.tjs sets the one in use
 
 	var fontBold = false;
 
@@ -124,7 +124,7 @@ class HistoryLayer extends Layer
 	var historyColor = 0xffffff;	//	History text color
 
 
-	var controlHeight = 20;
+	var controlHeight = 48; // the page and close buttons along the top (20 at 640x480)
 
 
 
@@ -572,6 +572,22 @@ class HistoryLayer extends Layer
 		closeButton.visible   = true;
 
 		closeButton.hint      = "Close message history";
+
+		// Their captions in the history's face list and in proportion to the buttons: the button
+
+		// default (an empty face) draws as arrows on the SDL engine
+
+		var buttons = [ prevPageButton, nextPageButton, closeButton ];
+
+		for (var i = 0; i < buttons.count; i++) {
+
+			buttons[i].font.face = fontName;
+
+			buttons[i].font.height = controlHeight * 5 \ 8;
+
+			buttons[i].update();
+
+		}
 
 
 

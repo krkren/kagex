@@ -1,5 +1,4 @@
 ﻿KAGLoadScript("MyHistoryLayer.tjs");
-KAGLoadScript("MyYesNoDialog.tjs");
 
 /**
  * Determination of whether the system menu is currently running
@@ -115,6 +114,7 @@ function KAGWindow_createMenus()
     // Polyfill missing window menu property for SDL3
     if (typeof this.menu == "undefined") {
         this.menu = new global.Menu();
+        this.menuBarStandIn = true; // no real menu bar (Menus.tjs, standview.tjs)
     }
     if (typeof menu == "undefined") {
         var menu = this.menu;
@@ -377,9 +377,9 @@ function fileDataButton(name, work)
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = kag.getBookMarkPageName(savedatanum);
         target.font.height=36;
-        // Yu Gothic on Windows. The SDL engine draws an unknown face with an icon font (arrows),
-        // so list fonts it does register; it skips names it doesn't know.
-        target.font.face = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+        // Yu Gothic on Windows, else the bundled Noto Sans JP. The SDL engine draws an unknown
+        // face with an icon font (arrows), so list fonts it does register; it skips the others.
+        target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
         // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
         while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
             savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
@@ -575,7 +575,7 @@ function initial()
  */
 function gotoTitle()
 {
-    // The same prompt as the system's own return to title (MyYesNoDialog shortens it)
+    // The same prompt as the system's own return to title (YesNoDialogLayer.tjs shortens it)
     askYesNo("Returning to title. Are you sure?", "Confirmation", kag.goToStart);
 }
 
@@ -711,7 +711,7 @@ function setCGImage(target, filename)
     target.operateRect(target.width*2+b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
 
     if (tf.viewcgfilename) {
-	    target.font.face = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+	    target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
 	    target.font.height = 14;
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }
@@ -1093,59 +1093,3 @@ function playNext()
     }
 }
 
-// --------------------------------------------------------
-// About screen (F1)
-// --------------------------------------------------------
-
-/**
- * The About screen, drawn in the game window like the Yes/No dialogs (MyYesNoDialog.tjs).
- * The engine's own About (KAGWindow.onHelpAboutMenuItemClick) opens a second, modal OS window
- * running about.ks; pressing F1 crashed the game on Linux, and this needs no second window.
- */
-class AboutDialogLayer extends DialogLayer
-{
-    function AboutDialogLayer() {
-        super.DialogLayer(kag, kag.primaryLayer, "AboutDialog");
-        var frame = yesnoFrames[0];
-        var temp = kag.temporaryLayer;
-        temp.loadImages(frame.storage);
-        var fx = (width - temp.imageWidth) >> 1, fy = (height - temp.imageHeight) >> 1;
-        setOption(%[frame : frame.storage, left : fx, top : fy]);
-        // Title, version and copyright, centred in the frame's text area
-        var lines = [ [ sf.software_title, yesnoFontSize ],
-                      [ "Version " + sf.software_version, yesnoLabelSize ],
-                      [ "(c) " + sf.software_year + " " + sf.software_maker, yesnoLabelSize ] ];
-        var total = -yesnoLineGap;
-        for (var i = 0; i < lines.count; i++) {
-            setYesNoFont(this, lines[i][1]);
-            total += font.getTextHeight("Ag") + yesnoLineGap;
-        }
-        var y = fy + ((frame.textTop + frame.textBottom - total) >> 1);
-        for (var i = 0; i < lines.count; i++) {
-            setYesNoFont(this, lines[i][1]);
-            var w = measureYesNoText(this, lines[i][0]);
-            drawYesNoString(this, fx + frame.centerX - (w >> 1), y, lines[i][0], 0xffffff, yesnoTextBase);
-            y += font.getTextHeight("Ag") + yesnoLineGap;
-        }
-        addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
-                     normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
-        drawYesNoLabel(names.close, "Close");
-    }
-    function onOpen() {
-        setFocusToLink(0, true);
-    }
-    function processLink(num) {
-        super.processLink(num);
-        close() if (this isvalid);
-    }
-}
-
-/**
- * Shows the About screen, unless another dialog is open
- */
-function showAbout()
-{
-    if (kag.currentDialog !== void) return;
-    var dialog = new AboutDialogLayer();
-    dialog.open();
-}

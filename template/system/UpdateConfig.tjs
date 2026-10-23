@@ -152,7 +152,11 @@ if(Storages.isExistentStorage("Config.~new"))
 
 
 
-	// Display Pad
+	// Display Pad (the SDL engine has none: the merged settings go to Config.tjs.merged in the
+
+	// save folder instead)
+
+	if (typeof global.Pad != "undefined") {
 
 	global.configPad = new Pad();
 
@@ -178,7 +182,19 @@ if(Storages.isExistentStorage("Config.~new"))
 
 		"You may delete the Config.~new file.");
 
+	} else {
 
+	var merged = System.dataPath + "Config.tjs.merged"; // writable even when Config.tjs is in an archive
+
+	[ lines ].save(merged);
+
+	System.inform("Settings have been carried over from the old Config.tjs into\n" +
+
+		Storages.getLocalName(merged) + ".\n"
+
+		"If it is correct, replace Config.tjs with it. You may delete the Config.~new file.");
+
+	}
 
 	// Reload new config
 

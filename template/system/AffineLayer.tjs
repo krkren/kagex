@@ -2038,6 +2038,10 @@ class AffineLayer extends KAGLayer {
 		var ret;
 		var ext = Storages.extractStorageExt(image).toUpperCase();
 		if (ext == ".EMF" || ext == ".WMF") {
+			// Vector images go through GDI+ (the layerExDraw plugin), which only the Windows-only
+			// engine build has
+			if (typeof global.GdiPlus == "undefined" || typeof global.GdiPlus.Image == "undefined")
+				throw new Exception(image + ": .emf/.wmf images need the layerExDraw plugin (GDI+), which this engine doesn't have");
 			_initVector();
 			ret = _image.loadImages(...);
 		} else {

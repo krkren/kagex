@@ -402,15 +402,15 @@ class SelectLayer {
 
     // Choice item attributes
 
-    var selectWidth  = 400;
+    var selectWidth  = 720; // 1920x1080 defaults, for [selopt] without images (was 400x50, size 24)
 
-    var selectHeight = 50;
+    var selectHeight = 90;
 
     var selectColor  = 0xffffff;
 
     var selectBaseColor = 0x888888;
 
-    var fontSize     = 24;
+    var fontSize     = 36;
 
 
 

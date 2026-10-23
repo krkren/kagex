@@ -3,7 +3,7 @@
 @clickskip enabled=false
 @position left=0 top=0 width=400 height=200 opacity=0 marginl=0 margint=0 marginr=0 marginb=0
 @style align=right
-@font size=13 shadow=true color=0xffcc99 face="Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto"
+@font size=13 shadow=true color=0xffcc99 face="Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"
 @nowait
 @backlay
 @current page=back

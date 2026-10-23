@@ -701,9 +701,11 @@ function MessageLayer_config()
 // Multiple fonts can be specified separated by commas. In that case, 
 // if the font written first exists, it will take precedence.
 // Yu Gothic comes first on Windows: its Latin letters are proportional and kerned
-// (MS Gothic's are fixed-width). A face that an earlier release saved as its default
-// is replaced by this one (previousDefaultFaces in MainWindow.tjs).
-;userFace = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto"; // Corresponds to the face attribute of the deffont tag
+// (MS Gothic's are fixed-width). Elsewhere, and on Windows without Yu Gothic, it's
+// Noto Sans JP, which ships in template/system (Initialize.tjs registers it). A face
+// that an earlier release saved as its default is replaced by this one
+// (previousDefaultFaces in MainWindow.tjs).
+;userFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"; // Corresponds to the face attribute of the deffont tag
 
 
 
@@ -978,7 +980,7 @@ function HistoryLayer_config()
 
 
 // ◆ Font Name
-;fontName = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+;fontName = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
 
 
 

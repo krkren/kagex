@@ -60,4 +60,18 @@
 
 
 
+; Marks a demo scene as played to the end; Extras on the title screen unlock once all
+
+; five have been (sf.clear)
+
+[macro name=demodone]
+
+[eval exp="sf['demodone_' + mp.name] = true"]
+
+[eval exp="sf.clear = true" cond="sf.demodone_layer && sf.demodone_char && sf.demodone_envlayer && sf.demodone_transition && sf.demodone_action"]
+
+[endmacro]
+
+
+
 @return
