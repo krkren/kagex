@@ -349,14 +349,37 @@ jobs:
           find "$GITHUB_WORKSPACE/stage" -maxdepth 4 | sort | tee "$GITHUB_WORKSPACE/results/install.txt"
       - name: Put the game in the app
         run: |
-          app=$(find stage -maxdepth 3 -name '*.app' | head -1)
-          [ -n "$app" ] || { echo "::error::no .app in the install"; exit 1; }
+          built=$(find stage -maxdepth 3 -name '*.app' | head -1)
+          [ -n "$built" ] || { echo "::error::no .app in the install"; exit 1; }
+          app=stage/KAGEX.app
+          mv "$built" "$app"
           res="$app/Contents/Resources"
           mkdir -p "$res"
           rsync -a --exclude '*.bak' --exclude '*.psd' "$PROJECT_DIR/data/" "$res/data/"
           rsync -a "$PROJECT_DIR/template/system/" "$res/data/system/"
           cp "$PROJECT_DIR/krkrz.cf" "$res/"
           cp "$PROJECT_DIR/krkrz.cf" "$app/Contents/MacOS/"
+          # the sample's name, bundle id, version and icon (platform/icon-1024.png, drawn by
+          # tools/assets/make_ui.py icons)
+          plist="$app/Contents/Info.plist"
+          set_plist() { /usr/libexec/PlistBuddy -c "Set :$1 $2" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$plist"; }
+          set_plist CFBundleName KAGEX
+          set_plist CFBundleDisplayName KAGEX
+          set_plist CFBundleIdentifier io.github.krkren.kagex
+          set_plist CFBundleShortVersionString "$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/ios-config.json'))['version'])")"
+          iconset="$RUNNER_TEMP/kagex.iconset"
+          mkdir -p "$iconset"
+          for s in 16 32 128 256 512; do
+            sips -z $s $s "$PROJECT_DIR/platform/icon-1024.png" --out "$iconset/icon_${s}x${s}.png" > /dev/null
+            sips -z $((s * 2)) $((s * 2)) "$PROJECT_DIR/platform/icon-1024.png" --out "$iconset/icon_${s}x${s}@2x.png" > /dev/null
+          done
+          iconutil -c icns "$iconset" -o "$res/kagex.icns"
+          set_plist CFBundleIconFile kagex
+          # Adding files and changing Info.plist broke the build's ad-hoc signature, which macOS
+          # reports as a damaged app: sign it again, still ad hoc (there's no Developer ID)
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          /usr/libexec/PlistBuddy -c Print "$plist" > results/Info.plist.txt
           find "$app" -maxdepth 3 | sort | tee results/app.txt
           echo "APP=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
       - name: Pack the app
