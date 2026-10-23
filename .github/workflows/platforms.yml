@@ -187,6 +187,7 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
             "ndk;$ndk" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0"
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
+          chmod +x kirikiri/krkrz_android/gradlew
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
