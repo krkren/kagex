@@ -89,16 +89,18 @@ class Engine:
             return self.tjs('return kag.conductor.curStorage + ":" + kag.conductor.curLine'
                             ' + " status " + kag.conductor.status + " inStable " + kag.inStable'
                             ' + " inSleep " + kag.inSleep + " transCount " + kag.transCount'
-                            ' + " moveCount " + kag.moveCount;', 5)
+                            ' + " moveCount " + kag.moveCount + " tick " + System.getTickCount();', 5)
         except SmokeError as e:
             return "(unknown: %s)" % e
 
     def key(self, name):
-        """Presses and releases a key over two frames, so getKeyState sees it held."""
-        self.tjs("Agent.keyDown(%s); return 1;" % name)
-        time.sleep(0.12)
-        self.tjs("Agent.keyUp(%s); return 1;" % name)
-        time.sleep(0.12)
+        """Presses and releases a key over two frames, so getKeyState sees it held. Builds
+        without the Agent class (the browser build) post the key events to the window."""
+        for ev in ("Down", "Up"):
+            self.tjs('if (typeof global.Agent != "undefined") Agent.key%s(%s);'
+                     ' else kag.postInputEvent("onKey%s", %%[key: %s, shift: 0]); return 1;'
+                     % (ev, name, ev, name))
+            time.sleep(0.12)
 
     def clicker(self, on, until=None):
         """Clicks every 50 ms, to read through scenes. With until (a scenario file name), the
