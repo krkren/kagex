@@ -3,8 +3,9 @@
 The sample's images are generated here rather than edited by hand.
 
 - `make_ui.py` draws the UI in `data/image` (title, logo, message window and its buttons,
-  choices, config, save/load, Extras, history), the click-wait glyphs in `template/system`
-  and the World demo's star. Every screen uses the look of the Yes/No dialogs in
+  choices, config, save/load, Extras, history), the click-wait glyphs in `template/system`,
+  the World demo's star and the app icons in `platform/` (the Linux desktop entry's SVG, the
+  iOS and macOS icon, Android's adaptive icon layers). Every screen uses the look of the Yes/No dialogs in
   `template/system`: lavender panels, violet borders, hard violet shadows, white buttons that
   turn violet when hovered or selected. The colours, sizes and labels are at the top of each
   function; the positions match the `.ks` files that place the images, so a layout change
@@ -16,9 +17,9 @@ The sample's images are generated here rather than edited by hand.
 ```bash
 python3 tools/assets/upscale.py          # sprites, backgrounds, CG thumbnail
 python3 tools/assets/make_ui.py          # all UI images; or name groups: title logo message
-                                         # config saveload extras history star thumbs
+                                         # config saveload extras history star thumbs icons
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the
-upscaled background and sprite. Both need NumPy and Pillow. The labels use the subset Noto
+upscaled background and sprite. Both need NumPy and Pillow; the `icons` group also needs fontTools, for the K's outline. The labels use the subset Noto
 Sans CJK JP fonts in `fonts/` (SIL OFL 1.1, `fonts/OFL.txt`); the game doesn't load them.
