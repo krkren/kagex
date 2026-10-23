@@ -262,7 +262,13 @@ jobs:
       # optimized release build, signed with the same debug key (the kit's release-debug)
       - name: Build the release APK
         run: |
-          kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug
+          # Gradle downloads lint's own dependencies here; a download cut off midway once
+          # failed this step, so it gets three tries
+          for try in 1 2 3; do
+            kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug && break
+            [ "$try" = 3 ] && exit 1
+            sleep 30
+          done
           find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee -a results/apk.txt
       - uses: actions/upload-artifact@v4
         with:
