@@ -4,17 +4,24 @@ An English translation of KAGEX, Wamsoft's extension of the Kirikiri KAG3 visual
 
 ## Branches
 
-- **`main`**: the SDL3 version. It's more modern and in active development, supports multiple operating systems (Windows and Linux) and modern codecs, but has a less mature ecosystem.
+- **`main`**: the SDL3 version. It's more modern and in active development, supports multiple platforms (Windows, Linux, macOS, Android, iOS and the web) and modern codecs, but has a less mature ecosystem.
 - **`legacy`**: the Windows-only version. It has more resources, but supports Windows only and doesn't support modern codecs. For reference, the best video codec it supports out of the box is WMV3, which came out in 2003.
 
 ## Running the sample
 
-Download a package from [Releases](https://github.com/krkren/kagex/releases), unzip it, and run:
+In a browser: **[krkren.github.io/kagex](https://krkren.github.io/kagex/)** runs the newest release.
 
-- **Windows:** `krkrz.exe`. The engine needs OpenGL ES: a graphics driver that supports it, or ANGLE's `libEGL.dll` and `libGLESv2.dll` next to `krkrz.exe`.
-- **Linux:** `./krkrz`. Saves go to `~/.local/share/krkren/kagex/` (set by `krkrz.cf` next to the engine) unless you pass `-datapath=savedata/`. Up to 0.0.4 they went to `~/.local/share/wamsoft/krkrz/`; move them over to keep them.
+Or download a package from [Releases](https://github.com/krkren/kagex/releases):
 
-The game starts full screen the first time; after that it remembers whether you left it in a window (F5 switches). The `_release` and `_debug` packages hold the same game files with a release or a debug build of the engine. The game font (Noto Sans JP) comes with it, so no fonts need installing.
+- **Windows** (`kagex_sdl3_windows_*.zip`): unzip and run `krkrz.exe`. The engine needs OpenGL ES: a graphics driver that supports it, or ANGLE's `libEGL.dll` and `libGLESv2.dll` next to `krkrz.exe`.
+- **Linux** (`kagex_sdl3_linux_*.zip`): unzip and run `./krkrz`. Saves go to `~/.local/share/krkren/kagex/` (set by `krkrz.cf` next to the engine) unless you pass `-datapath=savedata/`. Up to 0.0.4 they went to `~/.local/share/wamsoft/krkrz/`; move them over to keep them.
+- **Linux, Steam-ready** (`kagex_sdl3_linux_steam.tar.gz`): the same game built in Valve's Steam Linux Runtime 3.0 (sniper), so it runs on older distributions too and can be shipped on Steam as it is. Extract it and run `krkrz/krkrz`; it comes with a desktop entry (`io.github.krkren.kagex.desktop`) and icon.
+- **macOS** (`kagex_sdl3_macos.zip`, Apple silicon): unzip and open `krkrz.app`. It isn't signed, so macOS blocks it the first time: open it from the context menu (Open) or allow it under System Settings > Privacy & Security, or run `xattr -dr com.apple.quarantine krkrz.app`.
+- **Android** (`kagex_sdl3_android.apk`, arm64 and x86_64): install it on the device, allowing installs from unknown sources, or with `adb install kagex_sdl3_android.apk`. It's signed with a debug key, so it can't be updated from another source's build of the same app without uninstalling first.
+- **iOS Simulator** (`kagex_sdl3_ios_simulator.zip`): for Xcode's iOS Simulator on a Mac (`xcrun simctl install booted KAGEX.app`). A build for iPhones and iPads needs an Apple Developer account to sign it, which this project doesn't have.
+- **Web** (`kagex_sdl3_web.zip`): the site above. Run `python3 serve.py` in it and open `http://localhost:8100/` to play it locally.
+
+On the desktop the game starts full screen the first time; after that it remembers whether you left it in a window (F5 switches). The `_release` and `_debug` zips hold the same game files with a release or a debug build of the engine. The game font (Noto Sans JP) comes with it, so no fonts need installing. The web and iOS builds draw text with the engine's own renderer instead of krkr_richtext, which doesn't build for them yet, so lines aren't kerned there.
 
 With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 

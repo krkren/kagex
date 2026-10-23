@@ -404,20 +404,20 @@ class WebEngine(Engine):
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
         self.page.on("console", lambda m: self.lines.append(m.text))
         self.page.on("pageerror", lambda e: self.lines.append("pageerror: %s" % e))
-        self.page.goto(url)
+        # audiogate=0: start without waiting for a click (Chromium may play audio anyway here)
+        self.page.goto(url + ("&" if "?" in url else "?") + "audiogate=0")
         end = time.time() + 180
+        last = None
         while time.time() < end:
-            ready = self.page.evaluate("() => typeof Module !== 'undefined' && !!Module.calledRun && !!Module.ccall")
-            if ready:
-                try:
-                    if self._eval("typeof global.kag", 10).get("ok"):
-                        return
-                except Exception:
-                    pass
-            # the page may wait for a click before it starts (the audio gate)
-            self.page.mouse.click(640, 360)
+            try:
+                # ccall throws until the runtime is up
+                if self._eval("1", 10).get("ok"):
+                    return
+            except SmokeError as e:
+                last = e
             time.sleep(2)
-        raise SmokeError("the engine didn't start in the page; console:\n" + "\n".join(self.lines[-40:]))
+        raise SmokeError("the engine didn't start in the page (%s); console:\n%s"
+                         % (last, "\n".join(self.lines[-40:])))
 
     def _eval(self, cmd, timeout):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"

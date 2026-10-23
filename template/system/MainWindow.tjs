@@ -7595,6 +7595,14 @@ class KAGWindow extends Window
 
 						tmp.saveLayerImage(fn, "png");
 
+						// The PNG is shorter than the room calcThumbnailSize() keeps for it, and the save data
+
+						// goes after that room. The browser build's storage can't seek past the end of a file
+
+						// ("Seek error"), so grow the file to the data's offset first
+
+						if (typeof Storages.truncateFile == "Object") Storages.truncateFile(fn, size.size);
+
 
 
 						// Save data
@@ -7826,6 +7834,10 @@ class KAGWindow extends Window
 					tmp.loadImages(thumbfile);
 
 					tmp.saveLayerImage(fn, "png");
+
+					// grow the file to the data's offset (see saveBookMarkToFile)
+
+					if (typeof Storages.truncateFile == "Object") Storages.truncateFile(fn, sz);
 
 				} catch (e) {
 
