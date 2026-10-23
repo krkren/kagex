@@ -1,0 +1,39 @@
+# Runs tools/smoketest.py headless against the engine from the latest release package.
+# The engine is built from wamsoft/krkrz_dev and isn't part of this repository, so this
+# borrows the one the last release shipped (krkrz, libSDL3.so.0 and plugin/).
+name: Smoke test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the libraries the engine loads at run time
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig
+
+      - name: Get the engine from the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/engine"
+          gh release download --repo "$GITHUB_REPOSITORY" --pattern 'kagex_sdl3_linux_release.zip' --dir "$RUNNER_TEMP/engine"
+          unzip -q "$RUNNER_TEMP/engine/kagex_sdl3_linux_release.zip" -d "$RUNNER_TEMP/engine/pkg"
+          cp "$RUNNER_TEMP/engine/pkg/krkrz" "$RUNNER_TEMP/engine/pkg"/libSDL3.so* .
+          cp -r "$RUNNER_TEMP/engine/pkg/plugin" .
+          chmod +x krkrz
+
+      - name: Smoke test
+        run: python3 tools/smoketest.py
