@@ -1,0 +1,50 @@
+# Puts a release's browser build (kagex_sdl3_web.zip) on GitHub Pages.
+#
+# The release workflow starts this on main once it has published a release (a release it
+# creates doesn't fire the release event: GitHub doesn't start workflows for events its own
+# token caused). A release published by hand fires it directly, and it can be run by hand
+# with a tag. Pages has to be set to deploy from GitHub Actions (Settings > Pages > Source).
+name: Web demo
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release whose kagex_sdl3_web.zip to deploy"
+        required: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Download the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern kagex_sdl3_web.zip
+          mkdir site
+          unzip -q kagex_sdl3_web.zip -d site
+          test -f site/index.html
+          # serve.py is for running the site locally
+          rm -f site/serve.py
+          du -sh site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

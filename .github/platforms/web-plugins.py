@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""Edits krkrz_web's built-in plugin list (CMakeLists.txt) for kagex, in the CI checkout only:
+drops the plugins that come from Wamsoft repositories which aren't public (krkrtemplate,
+wamsoft_work; kagex uses none of them).
+
+krkr_richtext stays out: it doesn't compile for wasm32 at engine 2.6.5. Its main.cpp casts
+a tTJSVariant to tjs_intptr_t, and tp_stub only converts to that type on Apple (elsewhere it
+is int64_t, which on wasm32 it isn't), so the web build draws text with the engine's own
+drawText, the fallback kagex uses wherever the plugin is missing.
+usage: web-plugins.py <krkrz_web/CMakeLists.txt>"""
+import re, sys
+path = sys.argv[1]
+s = open(path, encoding="utf-8").read()
+drop = ["getLangName", "textrender", "tjsDataPack", "tlgSliceLoader", "psbfile"]
+for name in drop:
+    s, n = re.subn(r"^[ \t]*%s[ \t]*\n" % name, "", s, flags=re.M)
+    if n != 1:
+        sys.exit("expected one %s line in the plugin list, found %d" % (name, n))
+open(path, "w", encoding="utf-8").write(s)
+start = s.index("LIST(APPEND TVP_PLUGINS_STATIC")
+end = re.compile(r"^[ \t]*\)", re.M).search(s, start).end()
+print(s[start:end])

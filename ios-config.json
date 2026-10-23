@@ -1,0 +1,33 @@
+{
+  "comment": "krkrz_ios: the sample for the iOS Simulator (a device build needs an Apple Developer team). PROJECT_DIR is this repository; data/ (with the framework copied in as data/system) goes into the app bundle. No krkr_richtext: with it, CMake's Xcode generator stops with \"duplicate object ids not allowed\" (CMake 4.4, Xcode 16.4), so text is drawn with the engine's drawText, as on the web. a11y is off: at engine 2.6.5 (krkrz_dev 21d20e9) the engine's AccessKit setup couldn't find its library in the Android build, and kagex has no screen reader support yet",
+  "bundleId": "io.github.krkren.kagex",
+  "displayName": "KAGEX",
+  "version": "0.2.0",
+  "build": 200,
+  "deploymentTarget": "16.0",
+  "devices": ["iphone", "ipad"],
+  "orientations": ["landscapeLeft", "landscapeRight"],
+  "graphics": "gles",
+  "repl": true,
+  "a11y": false,
+  "icon": "platform/icon-1024.png",
+  "ipa": { "baseName": "kagex" },
+  "cmake": {
+    "pluginFolders": [
+      "${BUILD_SYSTEM_DIR}/plugins",
+      "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+    ],
+    "plugins": [
+      "json", "KAGParserEx", "csvParser",
+      "getSample", "layerExBTOA", "layerExImage", "layerExRaster", "saveStruct",
+      "scriptsEx", "shrinkCopy", "extrans", "virtualpad", "iosconfig"
+    ]
+  },
+  "assetPack": {
+    "baseFolder": "${PROJECT_DIR}",
+    "sources": [
+      { "type": "mirror", "from": "data", "to": "data", "exclude": ["**/*.bak", "**/*.psd"] },
+      { "type": "mirror", "from": "template/system", "to": "data/system" }
+    ]
+  }
+}

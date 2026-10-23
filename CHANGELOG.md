@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+
+- Packages for more platforms, built with Wamsoft's platform kits from the settings in `linux-config.json`, `web-config.json`, `app-config.json` and `ios-config.json`, and for macOS with krkrz_dev's own build:
+  - Linux, Steam-ready: built in Valve's Steam Linux Runtime 3.0 (sniper), so it runs on older distributions too, with a desktop entry and an icon.
+  - The web: the sample runs in the browser at [krkren.github.io/kagex](https://krkren.github.io/kagex/), and the site comes as a zip to run locally.
+  - Android: an APK for Android 10 and later (arm64 and x86_64), signed with a debug key.
+  - iOS: an app for the iOS Simulator. A build for iPhones and iPads needs an Apple Developer account.
+  - macOS: `KAGEX.app` for Apple silicon, signed ad hoc.
+- `.github/workflows/platforms.yml` builds all of them and smoke-tests each one: `tools/smoketest.py --target` drives the Android emulator, the iOS Simulator and headless Chromium as well as the desktop engine. `.github/workflows/pages.yml` puts each release's web build on GitHub Pages.
+- App icons, drawn by `tools/assets/make_ui.py icons` into `platform/`.
+
+### Changed
+
+- `data/startup.tjs` runs `data/system/Initialize.tjs` when there is one, so a package can carry the framework inside `data/` (the browser and phone builds have nothing outside it). In this repository the framework stays in `template/system`.
+- The web and iOS builds draw text with the engine's own renderer: krkr_richtext doesn't build for them at engine 2.6.5, so their text isn't kerned.
+
+### Fixed
+
+- Saving a game (framework): a PNG thumbnail is shorter than the room kept for it, and the save data goes after that room. Where the save folder can't be written past the end of a file or isn't a local folder (the browser and phone builds), every save failed with "Could not save to file", starting with the title screen's own. The file is now grown to the right size first, or put together in a temporary file and copied over.
+- Return and Space close the About screen (framework) even when its Close button doesn't have the keyboard focus. On Android the button lost the focus as soon as the screen opened, so only a tap closed it.
+
 ## 0.1.1
 
 ### Fixed

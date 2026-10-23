@@ -1,0 +1,428 @@
+# Builds kagex for the platforms that Wamsoft's kits cover, from the configs at the root of
+# this repository (linux-config.json, web-config.json, app-config.json, ios-config.json),
+# plus macOS from krkrz_dev's own presets. Each job smoke-tests what it built where it can
+# and keeps its logs on branch ci/platform-results-<job>.
+#
+# Runs on pushes to platforms/** branches, by hand, and from the release workflow
+# (workflow_call, with the release commit as `ref`); each job keeps what it built as an
+# artifact (kagex-linux, kagex-web, kagex-android, kagex-ios-simulator, kagex-macos). A pushed
+# commit message with "[platforms: linux web]" builds only those.
+name: Platform builds
+
+on:
+  push:
+    branches: ['platforms/**']
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Platforms to build"
+        default: "linux web android ios macos"
+  workflow_call:
+    inputs:
+      ref:
+        description: "The kagex commit to build"
+        type: string
+        required: true
+      platforms:
+        type: string
+        default: "linux web android ios macos"
+
+permissions:
+  contents: write
+
+env:
+  # the engine the 0.1.x packages were built from
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # the platform kits, at the commits this was set up with
+  KRKRZ_LINUX_SHA: 03605924f952f848abe9d5f85874846b9aa3f940
+  KRKRZ_WEB_SHA: 2fe46168acebc9ecf093d95e630a98f50a17efba
+  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
+  KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
+  STEAMDEV_SHA: e39d1d9dddc741a1c343dc6c653dc303515a0204
+  # CMake 4 (the macOS runners) refuses the old cmake_minimum_required of some engine
+  # dependencies (krkrz_vorbis)
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.pick.outputs.list }}
+    steps:
+      - id: pick
+        env:
+          INPUT: ${{ inputs.platforms }}
+          CALLED: ${{ inputs.ref }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          list="linux web android ios macos"
+          [ -n "$INPUT" ] && list="$INPUT"
+          # a called run gets the caller's push event: its message is the release branch's
+          m=""
+          [ -z "$CALLED" ] && m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
+          [ -n "$m" ] && list="$m"
+          echo "list= $list " >> "$GITHUB_OUTPUT"
+          echo "building: $list"
+
+  linux:
+    needs: select
+    if: contains(needs.select.outputs.list, ' linux ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_linux
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_linux "$KRKRZ_LINUX_SHA"
+      - name: Build the Steam Linux Runtime (sniper) image
+        run: |
+          git clone -q https://github.com/wamsoft/steamdev.git steamdev
+          git -C steamdev checkout -q "$STEAMDEV_SHA"
+          kirikiri/kagex/.github/platforms/run-logged.sh image bash steamdev/deckbuild/deckbuild.sh image
+      - name: Build and package
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_linux all
+      - name: Every plugin loads
+        working-directory: kirikiri/kagex/build/linux/package/krkrz
+        run: |
+          ls -la . plugin | tee "$GITHUB_WORKSPACE/results/package.txt"
+          python3 - <<'PY' | tee "$GITHUB_WORKSPACE/results/plugins.txt"
+          import ctypes, glob, os, sys
+          bad = []
+          for so in sorted(glob.glob("plugin/*.so")):
+              try:
+                  ctypes.CDLL(os.path.abspath(so), mode=os.RTLD_NOW | os.RTLD_LOCAL)
+                  print("ok  ", so)
+              except OSError as e:
+                  print("FAIL", so, e); bad.append(so)
+          sys.exit(1 if bad else 0)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-linux
+          path: kirikiri/kagex/build/linux/dist/*.tar.gz
+          if-no-files-found: error
+      - name: Smoke test
+        timeout-minutes: 20
+        working-directory: kirikiri/kagex/build/linux/package/krkrz
+        run: |
+          # the engine draws with OpenGL ES through EGL, which the runner image lacks (Mesa's
+          # software renderer stands in for a GPU)
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
+            libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri > "$GITHUB_WORKSPACE/results/apt.log" 2>&1
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh linux "linux, run ${{ github.run_id }} (${{ job.status }})"
+
+  web:
+    needs: select
+    if: contains(needs.select.outputs.list, ' web ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+      EMSDK: ${{ github.workspace }}/emsdk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_web
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
+      - name: Set up emsdk and vcpkg
+        run: |
+          git clone -q https://github.com/emscripten-core/emsdk.git "$EMSDK"
+          kirikiri/kagex/.github/platforms/run-logged.sh emsdk bash -c "cd '$EMSDK' && ./emsdk install latest && ./emsdk activate latest"
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+      - name: kagex's plugins in the shared binary
+        run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
+      - name: Build the shared binary
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
+      - name: Stage the site
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh stage python3 kirikiri/krkrz_web/tools/stage_web.py "$PROJECT_DIR"
+          site="$PROJECT_DIR/build/web/site"
+          # GitHub Pages can't send the COOP/COEP headers that SharedArrayBuffer needs:
+          # coi-serviceworker adds them in the browser (as krkrz_web's stage_docs.py does)
+          cp kirikiri/krkrz_web/tools/coi-serviceworker.js "$site/"
+          python3 - "$site/index.html" <<'PY'
+          import sys
+          sys.path.insert(0, "kirikiri/krkrz_web/tools")
+          from stage_docs import inject_coi
+          p = sys.argv[1]
+          html = open(p, encoding="utf-8").read()
+          open(p, "w", encoding="utf-8").write(inject_coi(html, "coi-serviceworker.js"))
+          PY
+          (cd "$site" && find . -type f | sort) > results/site-files.txt
+          du -sh "$site" | tee -a results/site-files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-web
+          path: kirikiri/kagex/build/web/site
+          if-no-files-found: error
+      - name: Smoke test in headless Chromium
+        timeout-minutes: 20
+        run: |
+          # the runner's own Chrome: Playwright's browser download installs its system
+          # dependencies with apt, which once took 20 minutes here
+          python3 -m pip install --quiet playwright
+          google-chrome --version | tee results/chrome.txt
+          (cd "$PROJECT_DIR/build/web/site" && exec python3 serve.py 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
+          sleep 3
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep || s=$?
+          cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
+          exit $s
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh web "web, run ${{ github.run_id }} (${{ job.status }})"
+
+  android:
+    needs: select
+    if: contains(needs.select.outputs.list, ' android ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_android
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up the Android SDK, vcpkg and SDL3
+        run: |
+          ndk=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/app-config.json'))['ndkVersion'])")
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          # The kit asks for the SDK's CMake 3.22.1, but krkr_richtext makes the engine download
+          # ICU with an option CMake 3.24 added (DOWNLOAD_EXTRACT_TIMESTAMP): use the newest 3.x
+          cmake=$("$sdk/cmdline-tools/latest/bin/sdkmanager" --list 2>/dev/null | grep -oE 'cmake;3\.[0-9]+\.[0-9]+' | sort -u -t. -k2,2n -k3,3n | tail -1)
+          echo "using $cmake" | tee results/cmake.txt
+          kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;$ndk" "$cmake" "platforms;android-36" "build-tools;36.0.0"
+          sed -i -E "s/version = \"3\.22\.1\"/version = \"${cmake#cmake;}\"/" kirikiri/krkrz_android/app/build.gradle
+          grep -n "version = \"${cmake#cmake;}\"" kirikiri/krkrz_android/app/build.gradle
+          echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
+          chmod +x kirikiri/krkrz_android/gradlew
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          # libvpx for x86_64 (the emulator's ABI) assembles with nasm
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 nasm > results/apt.log 2>&1
+          mkdir -p kirikiri/krkrz_android/app/libs
+          (cd kirikiri/krkrz_android && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
+      - name: Build the debug APK
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
+      - name: List the APK
+        run: |
+          find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee results/apk.txt
+          apk=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)
+          unzip -l "$apk" | grep -E 'lib/|assets/data/(startup|system/Initialize)' | tee -a results/apk.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-android-debug
+          path: kirikiri/kagex/build/android/app/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          echo "APK=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
+      - name: Smoke test on an emulator
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
+      # The smoke test needs the debug build (only it has the REPL); the package is the
+      # optimized release build, signed with the same debug key (the kit's release-debug)
+      - name: Build the release APK
+        run: |
+          # Gradle downloads lint's own dependencies here; a download cut off midway once
+          # failed this step, so it gets three tries
+          for try in 1 2 3; do
+            kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug && break
+            [ "$try" = 3 ] && exit 1
+            sleep 30
+          done
+          find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee -a results/apk.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-android
+          path: kirikiri/kagex/build/android/app/outputs/apk/releaseDebugSigned/*.apk
+          if-no-files-found: error
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh android "android, run ${{ github.run_id }} (${{ job.status }})"
+
+  ios:
+    needs: select
+    if: contains(needs.select.outputs.list, ' ios ')
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_ios
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
+      - name: Set up vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          xcodebuild -version | tee results/xcode.txt
+      - name: Build for the Simulator
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+      - name: Pack the app
+        run: |
+          app=$(find "$PROJECT_DIR/build/ios" -name '*.app' -path '*iphonesimulator*' | head -1)
+          [ -n "$app" ] || { echo "::error::no .app"; exit 1; }
+          echo "$app" | tee results/app.txt
+          ls "$app" | tee -a results/app.txt
+          ditto -c -k --keepParent "$app" kagex-ios-simulator.zip
+          echo "APP=$app" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-ios-simulator
+          path: kagex-ios-simulator.zip
+          if-no-files-found: error
+      - name: Smoke test in the Simulator
+        timeout-minutes: 30
+        run: |
+          dev=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          print(next(x['udid'] for k, v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']))")
+          echo "device $dev" | tee results/simulator.txt
+          xcrun simctl boot "$dev" || true
+          xcrun simctl bootstatus "$dev" -b > /dev/null
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep || s=$?
+          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
+          exit $s
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh ios "ios, run ${{ github.run_id }} (${{ job.status }})"
+
+  macos:
+    needs: select
+    if: contains(needs.select.outputs.list, ' macos ')
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kirikiri/kagex
+      - name: Clone the engine
+        run: kirikiri/kagex/.github/platforms/setup.sh
+      - name: Set up vcpkg and ninja
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          command -v ninja || brew install ninja
+          { sw_vers; xcodebuild -version; cmake --version | head -1; } | tee results/toolchain.txt
+      - name: Configure
+        working-directory: kirikiri/krkrz_dev
+        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh configure cmake --preset arm64-osx -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - name: Build the engine and its plugins
+        working-directory: kirikiri/krkrz_dev
+        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh build cmake --build build/arm64-osx --config Release -- -k 0
+      - name: Install
+        working-directory: kirikiri/krkrz_dev
+        run: |
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh install cmake --install build/arm64-osx --config Release --prefix "$GITHUB_WORKSPACE/stage"
+          find "$GITHUB_WORKSPACE/stage" -maxdepth 4 | sort | tee "$GITHUB_WORKSPACE/results/install.txt"
+      - name: Put the game in the app
+        run: |
+          built=$(find stage -maxdepth 3 -name '*.app' | head -1)
+          [ -n "$built" ] || { echo "::error::no .app in the install"; exit 1; }
+          app=stage/KAGEX.app
+          mv "$built" "$app"
+          res="$app/Contents/Resources"
+          mkdir -p "$res"
+          rsync -a --exclude '*.bak' --exclude '*.psd' "$PROJECT_DIR/data/" "$res/data/"
+          rsync -a "$PROJECT_DIR/template/system/" "$res/data/system/"
+          cp "$PROJECT_DIR/krkrz.cf" "$res/"
+          cp "$PROJECT_DIR/krkrz.cf" "$app/Contents/MacOS/"
+          # the sample's name, bundle id, version and icon (platform/icon-1024.png, drawn by
+          # tools/assets/make_ui.py icons)
+          plist="$app/Contents/Info.plist"
+          set_plist() { /usr/libexec/PlistBuddy -c "Set :$1 $2" "$plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :$1 string $2" "$plist"; }
+          set_plist CFBundleName KAGEX
+          set_plist CFBundleDisplayName KAGEX
+          set_plist CFBundleIdentifier io.github.krkren.kagex
+          set_plist CFBundleShortVersionString "$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/ios-config.json'))['version'])")"
+          set_plist CFBundleVersion "$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/ios-config.json'))['build'])")"
+          iconset="$RUNNER_TEMP/kagex.iconset"
+          mkdir -p "$iconset"
+          for s in 16 32 128 256 512; do
+            sips -z $s $s "$PROJECT_DIR/platform/icon-1024.png" --out "$iconset/icon_${s}x${s}.png" > /dev/null
+            sips -z $((s * 2)) $((s * 2)) "$PROJECT_DIR/platform/icon-1024.png" --out "$iconset/icon_${s}x${s}@2x.png" > /dev/null
+          done
+          iconutil -c icns "$iconset" -o "$res/kagex.icns"
+          set_plist CFBundleIconFile kagex
+          # Adding files and changing Info.plist broke the build's ad-hoc signature, which macOS
+          # reports as a damaged app: sign it again, still ad hoc (there's no Developer ID)
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          /usr/libexec/PlistBuddy -c Print "$plist" > results/Info.plist.txt
+          find "$app" -maxdepth 3 | sort | tee results/app.txt
+          echo "APP=$GITHUB_WORKSPACE/$app" >> "$GITHUB_ENV"
+      - name: Pack the app
+        run: ditto -c -k --keepParent "$APP" kagex-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-macos
+          path: kagex-macos.zip
+          if-no-files-found: error
+      - name: Smoke test
+        timeout-minutes: 20
+        run: |
+          exe="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          # the game as the app holds it (the app has no template/). SDL's offscreen driver has
+          # no OpenGL ES here (the engine draws through ANGLE), but the runners have a desktop
+          cd "$APP/Contents/Resources"
+          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh macos "macos, run ${{ github.run_id }} (${{ job.status }})"

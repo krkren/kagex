@@ -1,0 +1,36 @@
+{
+    "comment": "krkrz_android: a debug-signed APK of the sample. PROJECT_DIR is this repository; the engine resources and data/ (with the framework copied in as data/system) go into the APK's assets. No \"a11y\" plugin: it turns on the engine's KRKRZ_USE_A11Y, and at engine 2.6.5 (krkrz_dev 21d20e9) the engine's AccessKit setup can't find its Android library (find_library under the NDK's find root), so libkrkrz.so failed to link",
+    "applicationId": "io.github.krkren.kagex",
+    "versionCode": 200,
+    "versionName": "0.2.0",
+    "compileSdk": 36,
+    "targetSdk": 36,
+    "minSdk": 29,
+    "ndkVersion": "28.2.13676358",
+    "apk": { "baseName": "kagex" },
+    "cmake": {
+        "pluginFolders": [
+            "${BUILD_SYSTEM_DIR}/app/src/main/cpp",
+            "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+        ],
+        "plugins": [
+            "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
+            "layerExImage", "layerExRaster", "saveStruct", "scriptsEx", "shrinkCopy",
+            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig"
+        ],
+        "staticPlugins": [
+            "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
+            "layerExImage", "layerExRaster", "saveStruct", "scriptsEx", "shrinkCopy",
+            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig"
+        ]
+    },
+    "assetPack": {
+        "baseFolder": "${PROJECT_DIR}",
+        "resOverride": "platform/android-res",
+        "sources": [
+            { "type": "mirror", "from": "${KRKRZ_BASE}/krkrz_dev/src/core/resource", "to": "" },
+            { "type": "mirror", "from": "data", "to": "data", "exclude": ["**/*.bak", "**/*.psd"] },
+            { "type": "mirror", "from": "template/system", "to": "data/system" }
+        ]
+    }
+}

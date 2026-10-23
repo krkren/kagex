@@ -652,6 +652,78 @@ def make_thumbs():
     print("wrote", os.path.relpath(path, REPO), (208, 117), flush=True)
 
 
+# --- app icons for the platform builds (platform/) -------------------------------------
+PLATFORM = os.path.join(REPO, "platform")
+
+
+def k_outline():
+    """the K of the Black subset font as an SVG path in font units (y up), with its bounds"""
+    try:
+        from fontTools.ttLib import TTFont
+        from fontTools.pens.svgPathPen import SVGPathPen
+        from fontTools.pens.boundsPen import BoundsPen
+    except ImportError:
+        raise SystemExit("the icons group needs fontTools (pip install fonttools)")
+    f = TTFont(os.path.join(HERE, "fonts", "NotoSansCJKjp-Black-Latin.otf"))
+    gs = f.getGlyphSet()
+    name = f.getBestCmap()[ord("K")]
+    pen = SVGPathPen(gs)
+    gs[name].draw(pen)
+    bpen = BoundsPen(gs)
+    gs[name].draw(bpen)
+    return pen.getCommands(), bpen.bounds
+
+
+def k_transform(bounds, cx, cy, height):
+    """scale and offset that put the K's bounding box centred on cx, cy, height tall, y down"""
+    x0, y0, x1, y1 = bounds
+    k = height / (y1 - y0)
+    return k, cx - (x0 + x1) / 2 * k, cy + (y0 + y1) / 2 * k
+
+
+def make_icons():
+    os.makedirs(PLATFORM, exist_ok=True)
+    path, bounds = k_outline()
+    violet = "#%02x%02x%02x" % VIOLET
+
+    # Linux desktop entry (linux-config.json): a rounded badge
+    k, tx, ty = k_transform(bounds, 128, 128, 150)
+    svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">\n'
+           '  <rect x="8" y="8" width="240" height="240" rx="52" fill="%s"/>\n'
+           '  <path transform="translate(%.3f %.3f) scale(%.5f %.5f)" fill="#ffffff" d="%s"/>\n'
+           '</svg>\n' % (violet, tx, ty, k, -k, path))
+    with open(os.path.join(PLATFORM, "icon.svg"), "w") as f:
+        f.write(svg)
+    print("wrote platform/icon.svg", flush=True)
+
+    # iOS (ios-config.json) and the macOS .icns: square and opaque; the system rounds it
+    c = Canvas(1024, 1024)
+    c.rrect((0, 0, 1024, 1024), 0, fill=rgba(VIOLET))
+    c.text((512 + 28, 512 + 28), "K", font("Black", 640), rgba(NAVY), anchor="mm")
+    c.text((512, 512), "K", font("Black", 640), rgba(WHITE), anchor="mm")
+    c.save(os.path.join(PLATFORM, "icon-1024.png"), opaque=True)
+
+    # Android adaptive icon (app-config.json's resOverride): the K inside the 66 dp safe zone
+    # of a 108 dp foreground, on the violet background colour (values/colors.xml)
+    res = os.path.join(PLATFORM, "android-res", "drawable")
+    os.makedirs(res, exist_ok=True)
+    k, tx, ty = k_transform(bounds, 54, 54, 40)
+    for name, colour in (("ic_launcher_foreground", "#FFFFFFFF"), ("ic_launcher_monochrome", "#FF000000")):
+        xml = ('<?xml version="1.0" encoding="utf-8"?>\n'
+               '<!-- drawn by tools/assets/make_ui.py icons -->\n'
+               '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
+               '    android:width="108dp" android:height="108dp"\n'
+               '    android:viewportWidth="108" android:viewportHeight="108">\n'
+               '    <group android:translateX="%.3f" android:translateY="%.3f"\n'
+               '        android:scaleX="%.5f" android:scaleY="%.5f">\n'
+               '        <path android:fillColor="%s" android:pathData="%s"/>\n'
+               '    </group>\n'
+               '</vector>\n' % (tx, ty, k, -k, colour, path))
+        with open(os.path.join(res, name + ".xml"), "w") as f:
+            f.write(xml)
+        print("wrote platform/android-res/drawable/%s.xml" % name, flush=True)
+
+
 # --- the star in the World demo --------------------------------------------------------
 def make_star():
     w, h = 371, 351
@@ -670,7 +742,7 @@ def make_star():
 
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
           "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
-          "thumbs": make_thumbs}
+          "thumbs": make_thumbs, "icons": make_icons}
 
 
 def main():

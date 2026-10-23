@@ -7591,19 +7591,9 @@ class KAGWindow extends Window
 
 					{
 
-						// Save thumbnail
+						// Save thumbnail and data
 
-						tmp.saveLayerImage(fn, "png");
-
-
-
-						// Save data
-
-						var mode = saveDataMode;
-
-						mode += "o" + size.size; // Specify write offset in mode string
-
-						(Dictionary.saveStruct incontextof data)(fn, mode);
+						saveThumbnailAndData(fn, tmp, data, size.size, saveDataMode);
 
 					}
 
@@ -7807,13 +7797,21 @@ class KAGWindow extends Window
 
 			var sz = calcThumbnailSize().size;
 
-			mode += "o" + sz;
-
 			// Use file truncation if same target file and size truncation is possible
+
+			// (it throws for storage that isn't a local file)
+
+			var truncated = false;
 
 			if (typeof Storages.truncateFile == "Object" && fn == thumbfile) {
 
-				/**/   Storages.truncateFile(fn, sz);
+				try { truncated = Storages.truncateFile(fn, sz); } catch (e) {}
+
+			}
+
+			if (truncated) {
+
+				mode += "o" + sz;
 
 			} else {
 
@@ -7825,7 +7823,7 @@ class KAGWindow extends Window
 
 					tmp.loadImages(thumbfile);
 
-					tmp.saveLayerImage(fn, "png");
+					saveThumbnailAndData(fn, tmp, data, sz, mode);
 
 				} catch (e) {
 
@@ -7837,11 +7835,89 @@ class KAGWindow extends Window
 
 				invalidate tmp;
 
+				return;
+
 			}
 
 		}
 
 		(Dictionary.saveStruct incontextof data)(fn, mode);
+
+	}
+
+
+
+	// Saves the thumbnail layer as a PNG at the start of fn and the save data at offset after
+
+	// it. The PNG is shorter than the room calcThumbnailSize() keeps for it, and seeking past the
+
+	// end of a file fails on some storage ("Seek error"), so the file is grown to the offset
+
+	// first. Storage that isn't a local file (user:// in the browser, iOS and Android builds)
+
+	// can't be grown in place: there the file is put together in a local temporary file and
+
+	// copied over.
+
+	function saveThumbnailAndData(fn, thumb, data, offset, mode) {
+
+		mode += "o" + offset; // Specify write offset in mode string
+
+		thumb.saveLayerImage(fn, "png");
+
+		var grown = false;
+
+		if (typeof Storages.truncateFile == "Object") {
+
+			try { grown = Storages.truncateFile(fn, offset); } catch (e) {}
+
+		}
+
+		if (grown || typeof Storages.truncateFile != "Object") {
+
+			(Dictionary.saveStruct incontextof data)(fn, mode);
+
+			return;
+
+		}
+
+		var work = localStorageName(Storages.getTemporaryName());
+
+		try {
+
+			thumb.saveLayerImage(work, "png");
+
+			if (!Storages.truncateFile(work, offset)) throw new Exception("cannot grow " + work);
+
+			(Dictionary.saveStruct incontextof data)(work, mode);
+
+			Storages.copyFile(work, fn);
+
+		} catch (e) {
+
+			Storages.deleteFile(work);
+
+			throw e;
+
+		}
+
+		Storages.deleteFile(work);
+
+	}
+
+
+
+	// A native path ("/tmp/x", or "C:\\x" on Windows) as a storage name ("file://./tmp/x")
+
+	function localStorageName(path) {
+
+		path = path.replace(/\\/g, "/");
+
+		if (path.length > 1 && path.charAt(1) == ":") path = path.charAt(0).toLowerCase() + path.substring(2);
+
+		else if (path.charAt(0) == "/") path = path.substring(1);
+
+		return "file://./" + path;
 
 	}
 
