@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.0.6
+
+### Fixed
+
+- Japanese text no longer needs a Japanese font on the player's computer. Noto Sans JP ships in `template/system` (SIL OFL 1.1, `notosansjp-OFL.txt`) and is registered at start-up; before, without Noto Sans CJK installed, Japanese showed as boxes on Linux. Yu Gothic still comes first where it's installed, and saves holding the old default font list get the new one.
+- Games made from the template were still laid out for 640x480 in places: the message history's buttons were 20 px tall with arrow glyphs for captions on Linux, and choices without images defaulted to 400x50. The history now has 48 px buttons in the game font, and choices default to 720x90.
+- The template's `Config.tjs` had an empty `config_version`, so `UpdateConfig.tjs` ran at every start-up. When it does carry settings over, it writes them to `Config.tjs.merged`, since the SDL engine has no Pad window to show them in.
+- The KAGEX log mode (Debug menu) threw `Pad` not found on the SDL engine, including at start-up when it had been left on. It now logs to the console only.
+- The Standing Sprite window (a second OS window) no longer reopens at every start-up on the SDL engine because it was open last time.
+- Loading an `.emf`/`.wmf` image without GDI+ says it needs the layerExDraw plugin, instead of `GdiPlus` not found.
+
+### Added
+
+- Controller: Y switches auto mode, R1 skips to the next choice or unread text, holding R2 skips like Ctrl, and the left stick moves like the D-pad. In the sample, START opens the config screen, BACK the save screen and L1 the load screen. `-padbtn11` and `-padbtn12` work.
+- Debug builds: Shift+F12 shows the debug window and Shift+F11 switches the debug level, since the SDL engine has no Debug menu.
+
+## 0.0.5
+
+### Fixed
+
+- A game made from `template/` stopped at start-up with `Member "menu" does not exist` on the SDL engine.
+- Games made from the template now get the in-window Yes/No prompts and About screen too; they used to open a separate OS window for every prompt, and the old About window crashed on Linux.
+- Esc and a right-click on a Yes/No prompt answer No. They used to close it without calling either answer's function.
+- `[button group=...]` with a group name never set up the radio group.
+- Switching to a bitmap font set the default face to `MS Gothic`, which draws as arrows on Linux once the bitmap font is cleared.
+- `[mapselopt buttonwidth=...]` never applied (it was checked as `btnwidth`).
+- Stand images from `.psd` files didn't load: the plugin is `psdfile` now, not `psd.dll`. The TLG export in `psdlayer.tjs` passed a misspelled file name.
+
+### Changed
+
+- Extras unlock once all five demos have been played to the end. The sample used to force them on at every start-up.
+- On Linux, saves go to `~/.local/share/krkren/kagex/` (`krkrz.cf` next to the engine sets `orgname`/`appname`) instead of the `~/.local/share/wamsoft/krkrz/` every game on the stock engine shares. To keep 0.0.4 saves, move them from the old folder. Windows still saves to `savedata/`.
+- The Yes/No and About code and the four dialog images moved from the sample (`data/main/MyYesNoDialog.tjs`, `Override.tjs`, `data/image`) to `template/system/YesNoDialogLayer.tjs`. The About screen also shows the engine version. `aboutInWindow = false` brings back the old About window.
+- `tools/smoketest.py` runs the sample and the template headless and checks the title, the demos, save and load, the system and Extras screens, the prompts and the controller; GitHub Actions runs it on every pull request with the engine from the newest release.
+
 ## 0.0.4
 
 ### Fixed

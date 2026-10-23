@@ -12,15 +12,18 @@ An English translation of KAGEX, Wamsoft's extension of the Kirikiri KAG3 visual
 Download a package from [Releases](https://github.com/krkren/kagex/releases), unzip it, and run:
 
 - **Windows:** `krkrz.exe`. The engine needs OpenGL ES: a graphics driver that supports it, or ANGLE's `libEGL.dll` and `libGLESv2.dll` next to `krkrz.exe`.
-- **Linux:** `./krkrz`. Saves go to `~/.local/share/wamsoft/krkrz/` unless you pass `-datapath=savedata/`. Japanese text needs Noto Sans CJK JP (`noto-fonts-cjk` on Arch, `fonts-noto-cjk` on Debian and Ubuntu); English text works without it.
+- **Linux:** `./krkrz`. Saves go to `~/.local/share/krkren/kagex/` (set by `krkrz.cf` next to the engine) unless you pass `-datapath=savedata/`. Up to 0.0.4 they went to `~/.local/share/wamsoft/krkrz/`; move them over to keep them.
 
-The game starts full screen the first time; after that it remembers whether you left it in a window (F5 switches). The `_release` and `_debug` packages hold the same game files with a release or a debug build of the engine.
+The game starts full screen the first time; after that it remembers whether you left it in a window (F5 switches). The `_release` and `_debug` packages hold the same game files with a release or a debug build of the engine. The game font (Noto Sans JP) comes with it, so no fonts need installing.
+
+With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 
 ## Layout
 
 - `data/`: the sample game. It loads the framework from `../template/system`.
-- `template/`: the KAGEX framework (`template/system`) and empty folders for a new game, with `template/main/` holding empty versions of the game-side hooks (`Override.tjs`, `AfterInit.tjs`, `Storages.tjs`). To ship a game, copy `template/system` and `template/startup.tjs` into `data/`. On Linux, give your game its own `dataName` in `Config.tjs`: every game on the stock engine saves to the same `~/.local/share/wamsoft/krkrz/` folder.
+- `template/`: the KAGEX framework (`template/system`) and empty folders for a new game, with `template/main/` holding empty versions of the game-side hooks (`Override.tjs`, `AfterInit.tjs`, `Storages.tjs`). To ship a game, copy `template/system` and `template/startup.tjs` into `data/`, and `krkrz.cf` next to the engine with your own `orgname`/`appname`: without it, every game on the stock engine saves to the same `~/.local/share/wamsoft/krkrz/` folder on Linux.
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
+- `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release.
 
 The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](https://github.com/wamsoft/krkrz_dev); `CLAUDE.md` has the build steps and the outputs to copy next to `data/`.
 
@@ -28,12 +31,13 @@ The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](ht
 
 These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. The scripts load without them; using one either falls back to something simpler or stops with an error:
 
-- The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8) and buttons instead.
+- The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8), buttons and the controller instead; in a debug build, Shift+F12 shows the debug window and Shift+F11 switches the debug level.
 - Scene playback with `[scenestart]` (`psbfile.dll`).
 - The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`).
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
 - Native Windows dialogs (`win32dialog.dll`), used by the stand-picture viewer tool.
+- `.emf`/`.wmf` vector images (`layerExDraw.dll`).
 
 ## License
 
-KAGEX is licensed under the same terms as Kirikiri 2 and KAG3 (`doc/license.txt`). The release packages include the engine's `license.txt` and the licenses of the libraries it uses in `licenses/`.
+KAGEX is licensed under the same terms as Kirikiri 2 and KAG3 (`doc/license.txt`). The release packages include the engine's `license.txt` and the licenses of the libraries it uses in `licenses/`. Noto Sans JP is under the SIL Open Font License 1.1 (`template/system/notosansjp-OFL.txt`).
