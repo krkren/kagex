@@ -3,8 +3,10 @@
 # plus macOS from krkrz_dev's own presets. Each job smoke-tests what it built where it can
 # and keeps its logs on branch ci/platform-results-<job>.
 #
-# Runs on pushes to platforms/** branches and by hand. A commit message with
-# "[platforms: linux web]" builds only those.
+# Runs on pushes to platforms/** branches, by hand, and from the release workflow
+# (workflow_call, with the release commit as `ref`); each job keeps what it built as an
+# artifact (kagex-linux, kagex-web, kagex-android, kagex-ios-simulator, kagex-macos). A pushed
+# commit message with "[platforms: linux web]" builds only those.
 name: Platform builds
 
 on:
@@ -14,6 +16,15 @@ on:
     inputs:
       platforms:
         description: "Platforms to build"
+        default: "linux web android ios macos"
+  workflow_call:
+    inputs:
+      ref:
+        description: "The kagex commit to build"
+        type: string
+        required: true
+      platforms:
+        type: string
         default: "linux web android ios macos"
 
 permissions:
@@ -40,12 +51,15 @@ jobs:
     steps:
       - id: pick
         env:
-          INPUT: ${{ github.event.inputs.platforms }}
+          INPUT: ${{ inputs.platforms }}
+          CALLED: ${{ inputs.ref }}
           MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           list="linux web android ios macos"
           [ -n "$INPUT" ] && list="$INPUT"
-          m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
+          # a called run gets the caller's push event: its message is the release branch's
+          m=""
+          [ -z "$CALLED" ] && m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
           [ -n "$m" ] && list="$m"
           echo "list= $list " >> "$GITHUB_OUTPUT"
           echo "building: $list"
@@ -61,6 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
       - name: Clone the engine and krkrz_linux
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_linux "$KRKRZ_LINUX_SHA"
@@ -117,6 +132,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
       - name: Clone the engine and krkrz_web
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
@@ -181,6 +197,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
       - name: Clone the engine and krkrz_android
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
@@ -252,6 +269,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
       - name: Clone the engine and krkrz_ios
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
@@ -306,6 +324,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
       - name: Clone the engine
         run: kirikiri/kagex/.github/platforms/setup.sh

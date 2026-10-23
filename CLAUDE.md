@@ -27,7 +27,7 @@ python3 tools/smoketest.py    # headless smoke test of the sample and the templa
 ## Layout and load order
 
 - `template/` — the reusable KAGEX framework. `template/system/*.tjs` is the whole runtime (~60 files); the other `template/*` folders are empty placeholders for a new game.
-- `data/` — the sample game. `data/startup.tjs` does **not** have its own `system/`; it adds `../template/system/` to the auto path and executes `../template/system/Initialize.tjs`. Shipping a real game means copying `template/system` + `template/startup.tjs` into `data/`.
+- `data/` — the sample game. In this repository it has no `system/` of its own: `data/startup.tjs` runs `data/system/Initialize.tjs` when there is one, and otherwise adds `../template/system/` to the auto path and executes `../template/system/Initialize.tjs`. The platform builds copy `template/system` into the package as `data/system` (a browser or phone build has nothing outside `data/`); the zip packages keep `template/` next to `data/`. Shipping a real game means copying `template/system` + `template/startup.tjs` into `data/`.
 - `doc/` — the KAGEX reference, in English: `kagex.txt` (new/changed tags vs. stock KAG3), `action.txt` (action system), `world.txt` / `world_inst.txt` / `world_use.txt` (World extension: `envinit.tjs` schema, character/stage/time tags). Read these before changing tag behavior; stock KAG3 knowledge alone is not enough.
 
 `template/system/Initialize.tjs` drives everything, in this order:
