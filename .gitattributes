@@ -1,0 +1,7 @@
+# Keep every file byte for byte: the scripts mix UTF-8 with and without a BOM, and LF with
+# CRLF, and the engine reads them as they are
+* -text
+
+# GitHub's language bar: .ks is KAG scenario script (not KerboScript), .tjs is TJS2
+*.ks linguist-language=Text
+*.tjs linguist-language=JavaScript

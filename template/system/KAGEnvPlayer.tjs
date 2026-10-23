@@ -1,4 +1,18 @@
-Plugins.link("plugin/psbfile.dll") if (typeof global.PSBFile == "undefined");
+// Scene playback ([scenestart] and the compiled-scene player) reads .psb files through the
+// psbfile plugin, which the SDL3 engine build doesn't include. Without it, using the player
+// throws a message that says so instead of failing on the missing plugin at load time
+class PSBFileUnavailable {
+	function PSBFileUnavailable() {
+		throw new Exception("Scene playback is unavailable: it needs the psbfile plugin, which this engine build doesn't include");
+	}
+}
+if (typeof global.PSBFile == "undefined") {
+	try {
+		Plugins.link("plugin/psbfile.dll");
+	} catch {
+		global.PSBFile = PSBFileUnavailable;
+	}
+}
 
 /**
  * KAGEnv for parsing/snapshot processing

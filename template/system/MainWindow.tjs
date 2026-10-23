@@ -60,15 +60,21 @@ class KAGWindow extends Window
 
 	// is generated to be automatically copied to the bookmark by the terminal perl script.
 
-	var wrapNum = 0;
-	var wrapPos = 0;
-	var wrapPosHist = 0;
-	var wrapOldLine = void;
-	var wrapSplitLine = void;
-	var wrapBreakWrap = 0;
-	var wrapNewPage = 0;
-	var wrapLabel = void;
-	var wrapComp = void;
+	// English word wrap. needsToBeWrapped() runs from the ch handler before each character
+	// is drawn. It splits the current scenario line (tags stripped) into words, and when the
+	// next word won't fit on the message line or the history line, it breaks the line before
+	// the word. The space the line broke at is dropped: the ch handler checks wrapDropSpace
+	// and wrapDropSpaceHist (assigning to text inside this function has no effect there).
+	var wrapKey = void;             // "storage:line" of the scenario line the state below is for
+	var wrapSplitLine = void;       // its words; a word gets the space before it appended when that space is reached
+	var wrapNum = 0;                // index of the current word
+	var wrapBreakWrap = 0;          // 1: no spaces outside tags on this line, so no word wrap
+	var wrapPos = 0;                // message line position where the current word starts
+	var wrapPosHist = 0;            // history line width where the current word starts
+	var wrapWordWidth = void;       // msgTextWidth() of the current word, cached
+	var wrapWordWidthHist = void;   // histTextWidth() of the current word, cached
+	var wrapResume = false;         // a page break returned from this ch: the conductor runs it again on the new page
+	var wrapResumeDropHist = false; // whether the history line was broken at that ch
 	var spaceChar = " ";
 	var newlineTag = "[r]";
 	var wrapDropSpace = false;     // the space the word wrap broke the line at is not drawn...
@@ -82,92 +88,108 @@ class KAGWindow extends Window
 	function histTextWidth(text) {
 		return typeof historyLayer.textWidth != "undefined" ? historyLayer.textWidth(text) : historyLayer.font.getTextWidth(text);
 	}
+	// Forget the line the word wrap was in (internalRestoreFlags calls this on a load)
+	function resetWordWrap() {
+		wrapKey = wrapSplitLine = wrapWordWidth = wrapWordWidthHist = void;
+		wrapNum = wrapBreakWrap = 0;
+		wrapResume = wrapResumeDropHist = false;
+	}
+	// The scenario line as the player reads it: no [tags], no \ escapes, no leading 【name】
+	function wrapCleanLine(line) {
+		var clean = "";
+		for (var i = 0; i < line.length; i++) {
+			var c = line[i];
+			if (c == "[") {
+				for (var depth = 0; i < line.length; i++) {
+					if (line[i] == "[") depth++;
+					else if (line[i] == "]" && --depth <= 0) break;
+				}
+			} else if (c != "\\") {
+				clean += c;
+			}
+		}
+		if (clean.length > 0 && clean[0] == "【") {
+			var nameEnd = clean.indexOf("】");
+			if (nameEnd >= 0) clean = clean.substring(nameEnd + 1);
+		}
+		return clean;
+	}
+	function wrapLinePos() {
+		return current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
+	}
 	function needsToBeWrapped(text) {
-		var textHist = text;
 		wrapDropSpace = wrapDropSpaceHist = false;
-		if(conductor.curLineStr[0] == "*" || conductor.curLineStr[0] == "[" || conductor.curLineStr[0] == ";" || 
-       conductor.curLineStr[0] == "\t") return false;
-		if(conductor.curLineStr.indexOf(newlineTag)!=-1) return false;
-    
-		if(conductor.curLineStr.indexOf(spaceChar)!=-1)
-		{
-			var cleanStr = void;
+		var line = conductor.curLineStr;
+		if (line === void || line == "") return false;
+		var c0 = line[0];
+		if (c0 == "*" || c0 == "[" || c0 == ";" || c0 == "\t") return false;
+		if (line.indexOf(newlineTag) != -1 || line.indexOf(spaceChar) == -1) return false;
 
-			for(var i=0,depth=0; i<conductor.curLineStr.length; i++)
-			{
-				if(conductor.curLineStr[i]!='[')
-				{
-					if(conductor.curLineStr[i]!='\\')
-					cleanStr += conductor.curLineStr[i];
-				} else {
-					for(var depth=0; i<conductor.curLineStr.length; i++)
-					{
-						if(conductor.curLineStr[i]=='[')
-						{
-							depth++;
-						}
-						else if(conductor.curLineStr[i]==']')
-						{
-							depth--;
-							if(depth<=0) break;
-						}
-					}
-				}
-			}
+		// A new scenario line: split it into words. Lines are told apart by position, not
+		// by content, so two identical lines in a row each get their own pass
+		var key = conductor.curStorage + ":" + conductor.curLine;
+		if (key != wrapKey) {
+			wrapKey = key;
+			wrapResume = false;
+			var clean = wrapCleanLine(line);
+			wrapBreakWrap = clean.indexOf(spaceChar) == -1 ? 1 : 0;
+			wrapSplitLine = wrapBreakWrap ? void : clean.split(spaceChar);
+			wrapNum = 0;
+			wrapWordWidth = wrapWordWidthHist = void;
+			wrapPos = wrapLinePos();
+			wrapPosHist = histTextWidth(historyLayer.currentLine);
+		}
+		if (wrapBreakWrap) return false;
 
-			if(wrapLabel != currentLabel || wrapComp != cleanStr)
-			{
-				wrapLabel = currentLabel;
-				wrapOldLine = conductor.curLineStr;
-				wrapBreakWrap = 0;
-
-				if(cleanStr===void || cleanStr.indexOf(spaceChar)==-1)
-				{
-					wrapBreakWrap = 1;
-				} else {
-					wrapSplitLine = cleanStr.split(spaceChar);
-					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
-					wrapPosHist = histTextWidth(historyLayer.currentLine);
-					wrapNum = 0;
-				}
-				wrapComp = wrapSplitLine.join(spaceChar);
-			}
-
-			if(!wrapBreakWrap)
-			{
-				if(text==spaceChar)
-				{
-					if(wrapNewPage != 1) wrapNum++;
-					wrapSplitLine[wrapNum] += spaceChar;
-					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
-					wrapPosHist = histTextWidth(historyLayer.currentLine);
-				}
-
-				if(historyWriteEnabled && wrapPosHist+histTextWidth(wrapSplitLine[wrapNum]) >= historyLayer.relinePos)
-				{
-					if(histTextWidth(wrapSplitLine[wrapNum])<=historyLayer.relinePos)
-					{
-						textHist = "";
-						wrapDropSpaceHist = true;
-						historyLayer.reline();
-						wrapPosHist = histTextWidth(historyLayer.currentLine);
-					}
-				}
-
-				if(wrapPos+msgTextWidth(wrapSplitLine[wrapNum])>=current.relinexpos)
-				{
-					if(msgTextWidth(wrapSplitLine[wrapNum])<=current.relinexpos)
-					{
-						text = "";
-						wrapDropSpace = true;
-						if(current.processReturn()) wrapNewPage = 1;
-					}
-					wrapPos = current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
-					if(wrapNewPage==1) return true;
-				}
+		if (wrapResume) {
+			// The conductor runs this ch again after a page break (-3/-5 re-queue the tag).
+			// Measure from the new page, and if it is the space the line broke at, neither
+			// count it as a new word again nor draw it at the top of the new page
+			wrapResume = false;
+			wrapPos = wrapLinePos();
+			wrapPosHist = histTextWidth(historyLayer.currentLine);
+			if (text == spaceChar) {
+				wrapDropSpace = true;
+				wrapDropSpaceHist = wrapResumeDropHist;
+				return false;
 			}
 		}
 
+		if (text == spaceChar) {
+			// The next word starts after this space
+			wrapNum++;
+			if (wrapNum < wrapSplitLine.count) wrapSplitLine[wrapNum] += spaceChar;
+			wrapWordWidth = wrapWordWidthHist = void;
+			wrapPos = wrapLinePos();
+			wrapPosHist = histTextWidth(historyLayer.currentLine);
+		}
+		// More spaces than the line has (text from [emb] or a macro): leave it to the character wrap
+		if (wrapNum >= wrapSplitLine.count) return false;
+		var word = wrapSplitLine[wrapNum];
+
+		if (historyWriteEnabled) {
+			if (wrapWordWidthHist === void) wrapWordWidthHist = histTextWidth(word);
+			if (wrapPosHist + wrapWordWidthHist >= historyLayer.relinePos && wrapWordWidthHist <= historyLayer.relinePos) {
+				wrapDropSpaceHist = true;
+				historyLayer.reline();
+				wrapPosHist = histTextWidth(historyLayer.currentLine);
+			}
+		}
+
+		// Nothing is drawn under [notextmode], so the message line doesn't move
+		if (!textWriteEnabled) return false;
+		if (wrapWordWidth === void) wrapWordWidth = msgTextWidth(word);
+		if (wrapPos + wrapWordWidth >= current.relinexpos) {
+			if (wrapWordWidth <= current.relinexpos) {
+				wrapDropSpace = true;
+				if (current.processReturn()) {
+					// The page is full: break it here, and handle the re-run on the new page
+					wrapResume = true, wrapResumeDropHist = wrapDropSpaceHist;
+					return true;
+				}
+			}
+			wrapPos = wrapLinePos();
+		}
 		return false;
 	}
 
@@ -4685,15 +4707,27 @@ class KAGWindow extends Window
 
 		if ( !fullScreened == !isfull) return;
 
+		var switched = true;
+
 		try { fullScreen   =   isfull; }
 
 		catch(e) {
+
+			switched = false;
 
 			Debug.notice("Failed to transition to " + (isfull ? "full-screen" : "window") + " mode: " + e.message);
 
 		}
 
-		var  menu = ((fullScreened = fullScreen) != 0) ? "fullScreenMenuItem" : "windowedMenuItem";
+		// The SDL engine switches asynchronously (the window manager confirms it later), so
+
+		// reading fullScreen back here still gives the old mode: the Config screen highlighted
+
+		// the wrong button until a second click, and the start-up switch to full screen was
+
+		// recorded, and saved, as windowed. Record the mode asked for unless the switch failed
+
+		var  menu = ((fullScreened = switched ? !!isfull : fullScreen) != 0) ? "fullScreenMenuItem" : "windowedMenuItem";
 
 		this[menu].checked = true if (typeof this[menu] == "Object");
 
@@ -6202,6 +6236,8 @@ class KAGWindow extends Window
 		// If se, bgm are true, reflect that information as well
 
 		// If backlay is true, load things that should be loaded to the fore screen into the back screen
+
+		resetWordWrap(); // a restored position may be on the line the word wrap was in
 
 
 
@@ -14841,7 +14877,6 @@ class KAGWindow extends Window
 
     ch : function(elm)
     {
-		if (needsToBeWrapped(elm.text)) return showPageBreakAndClear();
 		if (skipNoDisp) { return 0;	}
 
 		if (lineMode && textWriteEnabled) {
@@ -14867,11 +14902,15 @@ class KAGWindow extends Window
 			}
 		}
 		@endif
+		// Word wrap after every early return above: -3 and -5 run this tag again, and a
+		// space counted twice would put the wrap one word out
+		if (needsToBeWrapped(text)) return showPageBreakAndClear();
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			if(currentWithBack) current.comp.processCh(text);
 			repage = current.processCh(text, chUserMode ? acs : 0);
 			if(repage)
 			{
+				wrapResume = true, wrapResumeDropHist = false; // this ch runs again on the next page
 				return showPageBreakAndClear();
 			}
 		}

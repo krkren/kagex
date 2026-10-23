@@ -5,7 +5,7 @@
 function keyFunc(key, shift)
 {
     if (key == VK_F1 && shift < 1) {
-        kag.onHelpAboutMenuItemClick();
+        showAbout(); // in the game window (Override.tjs), not the engine's separate About window
         return true;
     } else if (key == VK_F2 && shift == 0 ) {
         startSave();
@@ -35,6 +35,9 @@ function keyFunc(key, shift)
     }
     return false;
 }
+
+// The engine's About opens a second, modal OS window; use the in-game one everywhere
+kag.onHelpAboutMenuItemClick = function(sender) { showAbout(); } incontextof kag;
 
 // Register key binds
 kag.keyDownHook.add(keyFunc);

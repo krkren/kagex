@@ -8,6 +8,260 @@
 
 
 
+// Yes/No dialogs, designed at 1920x1080. Each frame image is a full-screen overlay with
+
+// the panel drawn on it: dialog_base, or dialog_wide_base for a message longer than two
+
+// lines. The button images (dialog_button_normal/over) are only the shape. The message and
+
+// the button labels are drawn at run time with the game's face list, through krkr_richtext
+
+// when the message window uses it, so they stay sharp and the wording can change freely.
+
+// Coordinates are in the frame image (= the 1920x1080 screen).
+
+var yesnoFrames = [
+
+    %[ storage:"dialog_base",      centerX:960, textTop:408, textBottom:572, textWidth:680, lines:2, buttonY:584 ],
+
+    %[ storage:"dialog_wide_base", centerX:960, textTop:358, textBottom:622, textWidth:980, lines:5, buttonY:634 ] ];
+
+var yesnoButtonWidth = 220, yesnoButtonGap = 48;
+
+var yesnoFontSize = 40, yesnoLabelSize = 32, yesnoLineGap = 10;
+
+var yesnoLabelColor = 0x5025ff, yesnoLabelOverColor = 0xffffff;
+
+// White message text with a navy outline; the labels are plain
+
+var yesnoTextBase  = %[ edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, shadow:false ];
+
+var yesnoLabelBase = %[ edge:false, shadow:false ];
+
+var yesnoRichTextApp; // RichTextFontApp shared by the dialogs, created on first use
+
+/**
+
+ * krkr_richtext for layer's font when the message window draws with it, else void
+
+ */
+
+function getYesNoRichText(layer)
+
+{
+
+    if (typeof global.RichText == "undefined") return;
+
+    var msg = kag.fore.messages[0];
+
+    if (msg === void || typeof msg.useRichText == "undefined" || !msg.useRichText) return;
+
+    if (yesnoRichTextApp === void) yesnoRichTextApp = new global.MessageLayer.RichTextFontApp();
+
+    if (yesnoRichTextApp.ready(layer.font)) return yesnoRichTextApp;
+
+}
+
+function measureYesNoText(layer, text)
+
+{
+
+    var rta = getYesNoRichText(layer);
+
+    return rta !== void ? int(Math.round(rta.measure(text))) : layer.font.getTextWidth(text);
+
+}
+
+/**
+
+ * Draws text with its top-left at x, y, like Layer.drawText
+
+ */
+
+function drawYesNoString(layer, x, y, text, color, base)
+
+{
+
+    var rta = getYesNoRichText(layer);
+
+    if (rta !== void) rta.drawText(base, layer, x, y, text, color);
+
+    else if (base.edge) layer.drawText(x, y, text, color, 255, true, 1024, base.edgeColor, base.edgeExtent, 0, 0);
+
+    else layer.drawText(x, y, text, color, 255, true);
+
+}
+
+/**
+
+ * The face list: an empty or unknown face draws as arrows on the SDL engine
+
+ */
+
+function setYesNoFont(layer, size)
+
+{
+
+    var font = layer.font;
+
+    font.face = kag.chDefaultFace;
+
+    font.height = size;
+
+    font.bold = true;
+
+    font.italic = false;
+
+}
+
+/**
+
+ * Word-wraps text to width (characters are broken only for a word wider than the line)
+
+ */
+
+function wrapYesNoText(layer, text, width)
+
+{
+
+    var lines = [], line = "";
+
+    var words = text.split(" ");
+
+    for (var i = 0; i < words.count; i++) {
+
+        var word = words[i];
+
+        var next = line == "" ? word : line + " " + word;
+
+        if (measureYesNoText(layer, next) <= width) { line = next; continue; }
+
+        if (line != "") lines.add(line);
+
+        // A word wider than the line (or text without spaces): break it between characters
+
+        while (measureYesNoText(layer, word) > width && word.length > 1) {
+
+            var n = word.length - 1;
+
+            while (n > 1 && measureYesNoText(layer, word.substring(0, n)) > width) n--;
+
+            lines.add(word.substring(0, n));
+
+            word = word.substring(n);
+
+        }
+
+        line = word;
+
+    }
+
+    if (line != "") lines.add(line);
+
+    return lines;
+
+}
+
+/**
+
+ * Sets layer's font for the message and picks the smallest frame it fits in.
+
+ * Returns %[ frame, lines ]
+
+ */
+
+function chooseYesNoFrame(layer, text)
+
+{
+
+    setYesNoFont(layer, yesnoFontSize);
+
+    var frame, lines;
+
+    for (var i = 0; i < yesnoFrames.count; i++) {
+
+        frame = yesnoFrames[i];
+
+        lines = wrapYesNoText(layer, text, frame.textWidth);
+
+        if (lines.count <= frame.lines) break;
+
+    }
+
+    return %[ frame:frame, lines:lines ];
+
+}
+
+/**
+
+ * Draws the wrapped message onto layer, whose frame image has its top-left at ox, oy
+
+ */
+
+function drawYesNoText(layer, ox, oy, choice)
+
+{
+
+    var frame = choice.frame, lines = choice.lines;
+
+    var lh = layer.font.getTextHeight("Ag") + yesnoLineGap;
+
+    var y = oy + ((frame.textTop + frame.textBottom - (lh * lines.count - yesnoLineGap)) >> 1);
+
+    for (var i = 0; i < lines.count; i++) {
+
+        var w = measureYesNoText(layer, lines[i]);
+
+        drawYesNoString(layer, ox + frame.centerX - (w >> 1), y, lines[i], 0xffffff, yesnoTextBase);
+
+        y += lh;
+
+    }
+
+}
+
+/**
+
+ * Left edge of button n (0: Yes, 1: No) in the frame
+
+ */
+
+function yesNoButtonX(frame, n)
+
+{
+
+    return n == 0 ? frame.centerX - (yesnoButtonGap >> 1) - yesnoButtonWidth : frame.centerX + (yesnoButtonGap >> 1);
+
+}
+
+/**
+
+ * Draws a label into each state of a button loaded with ButtonLayer.loadButtons
+
+ * (its image holds the states side by side: 0 normal, 1 pressed, 2 mouse over)
+
+ */
+
+function drawYesNoLabel(button, text)
+
+{
+
+    setYesNoFont(button, yesnoLabelSize);
+
+    var w = button.width, h = button.height;
+
+    var x = (w - measureYesNoText(button, text)) >> 1;
+
+    var y = (h - button.font.getTextHeight(text)) >> 1;
+
+    drawYesNoString(button, x,         y, text, yesnoLabelColor,     yesnoLabelBase);
+
+    drawYesNoString(button, x + w,     y, text, yesnoLabelOverColor, yesnoLabelBase);
+
+    drawYesNoString(button, x + w * 2, y, text, yesnoLabelOverColor, yesnoLabelBase);
+
+}
+
 /**
 
  * Window Version
@@ -66,15 +320,11 @@ class MyYesNoDialogWindow extends Window
 
     
 
-    function MyYesNoDialogWindow(baseStorage)
+    function MyYesNoDialogWindow(text)
 
 	{
 
         super.Window();
-
-
-
-        this.baseStorage = baseStorage;
 
         
 
@@ -138,15 +388,21 @@ class MyYesNoDialogWindow extends Window
 
 		
 
+		var choice = chooseYesNoFrame(primaryLayer, text);
+
+		baseStorage = choice.frame.storage;
+
 		primaryLayer.loadImages(baseStorage);
 
 		primaryLayer.setSizeToImageSize();
+
+		drawYesNoText(primaryLayer, 0, 0, choice);
 
 		setInnerSize(primaryLayer.width * zoomNumer / zoomDenom,
 
 					 primaryLayer.height * zoomNumer / zoomDenom);
 
-        setMaskRegion();
+        setMaskRegion() if typeof this.setMaskRegion != "undefined"; // shaped windows may not exist on the SDL engine
 
         
 
@@ -190,11 +446,13 @@ class MyYesNoDialogWindow extends Window
 
         add(yesButton = new ButtonLayer(this, primaryLayer));
 
-		yesButton.loadButtons("dialog_yes_normal", "dialog_yes_over", "dialog_yes_over");
+		yesButton.loadButtons("dialog_button_normal", "dialog_button_over", "dialog_button_over");
 
-		yesButton.top  = (primaryLayer.height >> 1) + 5;
+		yesButton.top  = choice.frame.buttonY;
 
-		yesButton.left = (primaryLayer.width  >> 1) - 75;
+		yesButton.left = yesNoButtonX(choice.frame, 0);
+
+		drawYesNoLabel(yesButton, "Yes");
 
 		yesButton.visible = true;
 
@@ -204,11 +462,13 @@ class MyYesNoDialogWindow extends Window
 
 		add(noButton = new ButtonLayer(this, primaryLayer));
 
-        noButton.loadButtons("dialog_no_normal", "dialog_no_over", "dialog_no_over");
+        noButton.loadButtons("dialog_button_normal", "dialog_button_over", "dialog_button_over");
 
-        noButton.top  = (primaryLayer.height >> 1) + 5;
+        noButton.top  = choice.frame.buttonY;
 
-		noButton.left = (primaryLayer.width  >> 1) + 11;
+		noButton.left = yesNoButtonX(choice.frame, 1);
+
+		drawYesNoLabel(noButton, "No");
 
 		noButton.visible = true;
 
@@ -392,9 +652,9 @@ class MyYesNoDialogLayer extends DialogLayer
 
     
 
-    function MyYesNoDialogLayer(baseStorage, yesFunc, noFunc, param, doneFunc) {
+    function MyYesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc) {
 
-        super.DialogLayer(kag, kag.primaryLayer, baseStorage + "Dialog");
+        super.DialogLayer(kag, kag.primaryLayer, "YesNoDialog");
 
 
 
@@ -406,15 +666,13 @@ class MyYesNoDialogLayer extends DialogLayer
 
         this.doneFunc = doneFunc;
 
-        this.baseStorage = baseStorage;
+        var choice = chooseYesNoFrame(this, text);
 
+        this.baseStorage = choice.frame.storage;
 
+        // The frame images are full-screen overlays with the panel drawn on them, so centre
 
-        // The frame images are a full-screen overlay with the box drawn in the
-
-        // middle, so centre the image on the screen whatever size it is and place
-
-        // the buttons relative to the image centre (800x600 layout: 325,305/411,305).
+        // the image on the screen and place the text and buttons in its coordinates
 
         var temp = kag.temporaryLayer;
 
@@ -422,15 +680,21 @@ class MyYesNoDialogLayer extends DialogLayer
 
         var fw = temp.imageWidth, fh = temp.imageHeight;
 
-        setOption(%[frame : baseStorage, left : (width - fw) >> 1, top : (height - fh) >> 1]);
+        var fx = (width - fw) >> 1, fy = (height - fh) >> 1;
 
+        setOption(%[frame : baseStorage, left : fx, top : fy]);
 
+        drawYesNoText(this, fx, fy, choice);
 
-        var bx = fw >> 1, by = fh >> 1;
+        var frame = choice.frame;
 
-        addButton(%[ x : bx - 75, y : by + 5, normal:"dialog_yes_normal", over:"dialog_yes_over", on:"dialog_yes_over"]);
+        addButton(%[ name:"yes", x:yesNoButtonX(frame, 0), y:frame.buttonY, normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
 
-        addButton(%[ x : bx + 11, y : by + 5, normal:"dialog_no_normal", over:"dialog_no_over",  on:"dialog_no_over"]);
+        addButton(%[ name:"no",  x:yesNoButtonX(frame, 1), y:frame.buttonY, normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+
+        drawYesNoLabel(names.yes, "Yes");
+
+        drawYesNoLabel(names.no,  "No");
 
     }
 
@@ -508,17 +772,23 @@ var origAskYesNo = askYesNo;
 
 
 
+// Shorter wording for the prompts the system and the sample ask. Any other message is shown
+
+// as it is, word-wrapped (a long one gets the wide frame)
+
 var yesnoMap = %[
 
-    "Returning to title. Are you sure?" => "dialog_title_base",
+    "Returning to title. Are you sure?" => "Return to the title screen?",
 
-    "Do you want to exit?" => "dialog_exit_base",
+    "Do you want to exit?" => "Quit the game?",
 
-    "Overwrite?" => "dialog_overwrite_base",
+    "Overwrite?" => "Overwrite this save?",
 
-    "Load?" => "dialog_load_base",
+    "Load?" => "Load this save?",
 
-    "Initialize" => "dialog_configini_base"
+    "Quick Load?" => "Quick load?",
+
+    "Initialize" => "Restore defaults?"
 
     ];
 
@@ -530,33 +800,17 @@ var askYesNo = function(message, caption = "Confirmation", yesFunc, noFunc, para
 
 {
 
+    // Every prompt uses these frames, so none falls back to the stock YesNoDialogWindow
+
+    var text = yesnoMap[message];
+
+    if (text === void) text = message;
+
+    if (text.substring(0, 6) == "error:") text = text.substring(6); // KAGEnvPlayer's error prompts
+
     if (kag.isMoviePlaying()) {
 
-
-
-        var win;
-
-        if (message.indexOf("Return to") >= 0) {
-
-            win = new MyYesNoDialogWindow("dialogprev");
-
-        } else {
-
-            var msg = yesnoMap[message];
-
-            if (msg !== void) {
-
-                win = new MyYesNoDialogWindow(msg);
-
-            } else {
-
-                win = new YesNoDialogWindow(message, caption);
-
-            }
-
-        }
-
-
+        var win = new MyYesNoDialogWindow(text);
 
         win.showModal();
 
@@ -594,31 +848,9 @@ var askYesNo = function(message, caption = "Confirmation", yesFunc, noFunc, para
 
     } else {
 
+        var dialog = new MyYesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc);
 
-
-        if (message.indexOf("Return to") >= 0) {
-
-            var dialog = new MyYesNoDialogLayer("dialogprev", yesFunc, noFunc, param, doneFunc);
-
-            dialog.open();
-
-        } else {
-
-            var msg = yesnoMap[message];
-
-            if (msg !== void) {
-
-                var dialog = new MyYesNoDialogLayer(msg, yesFunc, noFunc, param, doneFunc);
-
-                dialog.open();
-
-            } else {
-
-                origAskYesNo(message, caption, yesFunc, noFunc, param, doneFunc);
-
-            }
-
-        }
+        dialog.open();
 
     }
 

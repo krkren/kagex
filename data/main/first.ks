@@ -26,25 +26,25 @@ sf.clear = true;
 
 // Version
 
-sf.software_version = "1.00";
+sf.software_version = "0.0.4";
 
 
 
 // Maker
 
-sf.software_maker = "Mystery";
+sf.software_maker = "krkren";
 
 
 
 // Software Title
 
-sf.software_title = "Mystery Game";
+sf.software_title = "KAGEX Sample";
 
 
 
 // Year
 
-sf.software_year = "2006";
+sf.software_year = "2026";
 
 
 

@@ -144,7 +144,7 @@ function KAGWindow_config()
 // Specify the width in pixels. The height is automatically calculated using 
 // the same ratio as scWidth and scHeight.
 
-;thumbnailWidth = 133;
+;thumbnailWidth = 234;
 
 
 
@@ -166,7 +166,7 @@ function KAGWindow_config()
 // Bookmark-related files will be created starting with the name specified here.
 // This affects files that save system variables and settings even in Free Save mode.
 
-;dataName = "data";
+;dataName = "data"; // On Linux every game on the stock engine saves to ~/.local/share/wamsoft/krkrz/, so give yours its own name
 
 
 
@@ -365,11 +365,11 @@ function KAGWindow_config()
 // Specifies the horizontal center (x-coordinate) for position names used in [image]
 // or [img] tags (left, left_center, etc.). Use ;scPositionX.name = x;
 
-;scPositionX.left = 160;
-;scPositionX.left_center = 240;
-;scPositionX.center = 320;
-;scPositionX.right_center = 400;
-;scPositionX.right = 480;
+;scPositionX.left = 480;
+;scPositionX.left_center = 720;
+;scPositionX.center = 960;
+;scPositionX.right_center = 1200;
+;scPositionX.right = 1440;
 
 
 
@@ -483,17 +483,15 @@ function KAGWindow_config()
 
 //[start-window-additionals]
 
-// ◆ Always Start Full-Screen
+// ◆ Start Full-Screen the First Time
 
 // Shadows KAGWindow.getInitialFullScreenState, which the constructor calls before
 
-// showing the window. Without this, full-screen at startup depends on the persisted
+// showing the window. The first launch is full-screen, whatever the display; after
 
-// scflags.fullScreen preference, or on the window happening to exceed the monitor
+// that the player's last choice (the persisted scflags.fullScreen) is kept.
 
-// (the "forcefull" fallback), which varies by display.
-
-;getInitialFullScreenState = function() { return true; };
+;getInitialFullScreenState = function() { return scflags.fullScreen !== void ? !!scflags.fullScreen : true; };
 
 
 
@@ -774,10 +772,10 @@ function MessageLayer_config()
 // ◆ Initial Position
 // Equivalent to left, top, width, height in [position] tag.
 
-;ml = 16;  // Left position
-;mt = 16;  // Top position
-;mw = 640-32;   // Width
-;mh = 480-32;   // Height
+;ml = 60;  // Left position
+;mt = 1080-330-36;  // Top position
+;mw = 1920-120;   // Width
+;mh = 330;   // Height
 
 
 
@@ -806,7 +804,7 @@ function MessageLayer_config()
 // ◆ Font Size
 // Default character size (height) in pixels.
 
-;defaultFontSize = 24;  // Equivalent to 'size' attribute in [deffont] tag
+;defaultFontSize = 39;  // Equivalent to 'size' attribute in [deffont] tag
 
 
 
@@ -815,7 +813,7 @@ function MessageLayer_config()
 // ◆ Line Spacing
 // Line spacing in pixels.
 
-;defaultLineSpacing = 6; // Equivalent to 'linespacing' attribute in [defstyle] tag
+;defaultLineSpacing = 5; // Equivalent to 'linespacing' attribute in [defstyle] tag
 
 
 
@@ -835,7 +833,7 @@ function MessageLayer_config()
 // "chdefaultFace" line in ?????sc.* or delete the system variable file.
 // Can specify multiple fonts separated by commas (priority order).
 
-;userFace = "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto"; // Equivalent to 'face' attribute in [deffont] tag
+;userFace = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto"; // Equivalent to 'face' attribute in [deffont] tag
 
 
 
@@ -861,7 +859,7 @@ function MessageLayer_config()
 // ◆ Ruby Size
 // Ruby size in pixels.
 
-;defaultRubySize = 10; // Equivalent to 'rubysize' in [deffont] tag
+;defaultRubySize = 15; // Equivalent to 'rubysize' in [deffont] tag
 
 
 
@@ -870,7 +868,7 @@ function MessageLayer_config()
 // ◆ Ruby Display Offset
 // Negative values bring ruby closer to main text.
 
-;defaultRubyOffset = -2; // Equivalent to 'rubyoffset' in [deffont] tag
+;defaultRubyOffset = -3; // Equivalent to 'rubyoffset' in [deffont] tag
 
 
 
@@ -1043,7 +1041,7 @@ function BGM_config()
 // "MIDI"  : MIDISoundBuffer (mid, smf)
 // "CDDA"  : CDDASoundBuffer (cda)
 
-;type = "MIDI";
+;type = "Wave"; // Ogg/WAV streams, as the sample uses
 
 
 
@@ -1120,7 +1118,7 @@ function HistoryLayer_config()
 
 // ◆ Font Name
 
-;fontName = "MS PMincho,Noto Serif CJK JP,Noto Serif CJK JP Medium,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Roboto";
+;fontName = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
 
 
 
@@ -1136,7 +1134,7 @@ function HistoryLayer_config()
 
 // ◆ Font Size (pixels)
 
-;fontHeight = 24;
+;fontHeight = 36;
 
 
 
@@ -1144,7 +1142,7 @@ function HistoryLayer_config()
 
 // ◆ Line Height
 
-;lineHeight = 26;
+;lineHeight = 42;
 
 
 
