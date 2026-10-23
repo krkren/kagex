@@ -163,9 +163,8 @@ jobs:
           html = open(p, encoding="utf-8").read()
           open(p, "w", encoding="utf-8").write(inject_coi(html, "coi-serviceworker.js"))
           PY
-          # The engine reads the file list from gamedata/krkrz_files.json; serve.py answers
-          # that with gamedata.krkrz_files.json, a static host (GitHub Pages) needs the file
-          cp "$site/gamedata.krkrz_files.json" "$site/gamedata/krkrz_files.json"
+          # the file list where a static host serves it, and coi's reload after its worker is ready
+          python3 kirikiri/kagex/.github/platforms/web-static-host.py "$site" | tee results/web-static-host.txt
           (cd "$site" && find . -type f | sort) > results/site-files.txt
           du -sh "$site" | tee -a results/site-files.txt
       - uses: actions/upload-artifact@v4
