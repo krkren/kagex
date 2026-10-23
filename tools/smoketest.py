@@ -434,6 +434,8 @@ class WebEngine(Engine):
         self.console = open(self.log_path, "w", encoding="utf-8")
         self.page.on("console", lambda m: self._line(m.text))
         self.page.on("pageerror", lambda e: self._line("pageerror: %s" % e))
+        # the browser's console names no URL for a failed load
+        self.page.on("response", lambda r: r.status >= 400 and self._line("HTTP %d %s" % (r.status, r.url)))
         # audiogate=0: start without waiting for a click (Chromium may play audio anyway here)
         self.page.goto(url + ("&" if "?" in url else "?") + "audiogate=0")
         end = time.time() + 180
