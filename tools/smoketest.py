@@ -86,7 +86,10 @@ class Engine:
 
     def where(self):
         try:
-            return self.tjs('return kag.conductor.curStorage + ":" + kag.conductor.curLine;', 5)
+            return self.tjs('return kag.conductor.curStorage + ":" + kag.conductor.curLine'
+                            ' + " status " + kag.conductor.status + " inStable " + kag.inStable'
+                            ' + " inSleep " + kag.inSleep + " transCount " + kag.transCount'
+                            ' + " moveCount " + kag.moveCount;', 5)
         except SmokeError as e:
             return "(unknown: %s)" % e
 
@@ -121,6 +124,12 @@ class Engine:
 
     def output(self):
         return ""
+
+    def alive(self):
+        return True
+
+    def snapshot(self, path):
+        """Saves what the screen shows, where the target can (for failed steps)."""
 
     def stop(self):
         pass
@@ -296,6 +305,9 @@ class SimulatorEngine(Engine):
             f.write(text)
         return text
 
+    def snapshot(self, path):
+        subprocess.run(["xcrun", "simctl", "io", self.device, "screenshot", path], capture_output=True)
+
     def stop(self):
         subprocess.run(["xcrun", "simctl", "terminate", self.device, self.bundle_id], capture_output=True)
 
@@ -316,6 +328,10 @@ class AndroidEngine(Engine):
         self.run_adb("install", "-r", "-g", apk)
         self.run_adb("shell", "pm", "clear", package)
         self.run_adb("logcat", "-c")
+        # a sleeping or locked screen pauses the app
+        for cmd in (["input", "keyevent", "KEYCODE_WAKEUP"], ["wm", "dismiss-keyguard"],
+                    ["svc", "power", "stayon", "true"]):
+            subprocess.run([self.adb, "shell"] + cmd, capture_output=True)
         self.run_adb("shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1")
         self.run_adb("forward", "tcp:%d" % port, "localabstract:%s.repl" % package)
         end = time.time() + 120
@@ -356,6 +372,16 @@ class AndroidEngine(Engine):
         with open(self.log_path, "w", encoding="utf-8") as f:
             f.write(text)
         return text
+
+    def alive(self):
+        r = subprocess.run([self.adb, "shell", "pidof", self.package], capture_output=True)
+        if r.returncode:
+            raise SmokeError("%s is not running" % self.package)
+        return True
+
+    def snapshot(self, path):
+        with open(path, "wb") as f:
+            subprocess.run([self.adb, "exec-out", "screencap", "-p"], stdout=f)
 
     def stop(self):
         subprocess.run([self.adb, "shell", "am", "force-stop", self.package], capture_output=True)
@@ -405,6 +431,12 @@ class WebEngine(Engine):
         with open(self.log_path, "w", encoding="utf-8") as f:
             f.write(text)
         return text
+
+    def snapshot(self, path):
+        try:
+            self.page.screenshot(path=path)
+        except Exception:
+            pass
 
     def stop(self):
         try:
@@ -571,7 +603,12 @@ def run_steps(eng, steps):
         except SmokeError as e:
             failures += 1
             print("FAIL %s\n     %s" % (name, str(e).replace("\n", "\n     ")), flush=True)
-            if eng.proc.poll() is not None:
+            if failures <= 3 and eng.workdir:
+                eng.snapshot(os.path.join(eng.workdir, "fail-%d.png" % failures))
+            try:
+                eng.alive()
+            except SmokeError as e:
+                print("     " + str(e), flush=True)
                 break
             try:
                 eng.clicker(False)
@@ -602,14 +639,15 @@ def run_project(opts, label, data, make_steps):
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
-    except SmokeError as e:
+    except Exception as e:  # a bug here still gets the engine's log printed
         failures += 1
-        print("FAIL", e)
+        print("FAIL %s: %s" % (type(e).__name__, e))
     finally:
         try:
             eng.tjs('if (typeof global.__smokeClicker == "Object") __smokeClicker.enabled = false; return 1;', 3)
-        except SmokeError:
+        except Exception:
             pass
+        eng.snapshot(os.path.join(workdir, "last.png"))
         eng.stop()
 
     text = eng.output()

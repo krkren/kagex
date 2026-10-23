@@ -172,7 +172,7 @@ jobs:
           sleep 3
           s=0
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --keep || s=$?
-          cp /tmp/kagex-smoke-*/console.txt results/ 2>/dev/null || true
+          cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - uses: actions/upload-artifact@v4
         with:
@@ -247,7 +247,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-android
@@ -301,7 +301,7 @@ jobs:
           xcrun simctl bootstatus "$dev" -b > /dev/null
           s=0
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep || s=$?
-          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log results/ 2>/dev/null || true
+          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - uses: actions/upload-artifact@v4
         with:
