@@ -28,6 +28,9 @@ env:
   KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
   KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
   STEAMDEV_SHA: e39d1d9dddc741a1c343dc6c653dc303515a0204
+  # CMake 4 (the macOS runners) refuses the old cmake_minimum_required of some engine
+  # dependencies (krkrz_vorbis)
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
   select:
@@ -122,7 +125,8 @@ jobs:
       - name: kagex's plugins in the shared binary
         run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
       - name: Build the shared binary
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build \
+            CMAKEOPT="-DCMAKE_PROJECT_minikin_INCLUDE=$PROJECT_DIR/.github/platforms/web-minikin.cmake"
       - name: Stage the site
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh stage python3 kirikiri/krkrz_web/tools/stage_web.py "$PROJECT_DIR"

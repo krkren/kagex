@@ -16,4 +16,5 @@ if n != 1:
     sys.exit("no shrinkCopy line to add krkr_richtext after")
 open(path, "w", encoding="utf-8").write(s)
 start = s.index("LIST(APPEND TVP_PLUGINS_STATIC")
-print(s[start:s.index(")", start) + 1])
+end = re.compile(r"^[ \t]*\)", re.M).search(s, start).end()
+print(s[start:end])
