@@ -280,6 +280,29 @@ def sample_steps(eng):
             eng.key("VK_ESCAPE")
             eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
 
+    @step("controller: Y switches auto mode, X shows the history, B closes it")
+    def _():
+        eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.key("VK_PAD4")
+        eng.wait("auto mode on", "kag.autoMode", timeout=5)
+        eng.key("VK_PAD4")
+        eng.wait("auto mode off", "!kag.autoMode", timeout=5)
+        eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.key("VK_PAD3")
+        eng.wait("the history", "kag.historyShowing", timeout=5)
+        eng.key("VK_PAD2")
+        eng.wait("the history to close", "!kag.historyShowing", timeout=5)
+
+    for button, screen in (("START", "config.ks"), ("BACK", "save.ks"), ("L1", "load.ks")):
+        @step("controller: " + button + " opens " + screen + " and B closes it")
+        def _(button=button, screen=screen):
+            key = {"START": "VK_PAD10", "BACK": "VK_PAD9", "L1": "VK_PAD5"}[button]
+            eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+            eng.key(key)
+            eng.wait(screen, 'kag.conductor.curStorage == "%s" && kag.inStable' % screen, timeout=20)
+            eng.key("VK_PAD2")
+            eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
     prompt_steps(eng, step)
 
     @step("back to the title through the Yes/No prompt")

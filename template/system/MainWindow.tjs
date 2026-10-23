@@ -2855,13 +2855,17 @@ class KAGWindow extends Window
 
 		// Mapping of pad input and its corresponding actions.
 
-		// By default, the D-pad is mapped to keyboard arrow keys,
+		// The D-pad (and, on the SDL engine, the left stick) moves like the arrow keys. The face
 
-		// Button 1 to Return, Button 2 to ESC, and Button 3 to Message History display.
+		// buttons go by their label (SDL engine): A (PlayStation ✕) is Return, B (○) is Esc,
+
+		// X (□) shows the message history and Y (△) switches auto mode. R1 skips to the next
+
+		// choice or unread text, and holding R2 skips like Ctrl. createPadKeyMap adds the stick.
 
 		// If a function is specified, that function is called when the button is pressed.
 
-		// Rewrite in Config.tjs as needed.
+		// Rewrite in Config.tjs or AfterInit.tjs as needed (padKeyMap, then recreatePadKeyMap()).
 
 		VK_PADLEFT =>		VK_LEFT,
 
@@ -2877,6 +2881,12 @@ class KAGWindow extends Window
 
 		VK_PAD3 =>			showHistoryByKey, //#'R',
 
+		VK_PAD4 =>			switchAutoModeByKey, // Y
+
+		VK_PAD6 =>			skipToNextStopByKey, // R1
+
+		VK_PAD8 =>			VK_CONTROL, // R2: held, skips like Ctrl (getKeyState reads it through padKeyMapReverse)
+
 		];
 
 	function createPadKeyMap()
@@ -2887,9 +2897,23 @@ class KAGWindow extends Window
 
 		(Dictionary.assign incontextof padKeyMap)(initialPadKeyMap, true);
 
-		// Rewrite if options are specified
+		// The left stick's directions (SDL engine; older engines don't have these keys)
 
-		for (var i = 1; i <= 10; i++) {
+		if (typeof global.VK_PAD_L_LEFT == "Integer") {
+
+			padKeyMap[VK_PAD_L_LEFT]  = VK_LEFT;
+
+			padKeyMap[VK_PAD_L_RIGHT] = VK_RIGHT;
+
+			padKeyMap[VK_PAD_L_UP]    = VK_UP;
+
+			padKeyMap[VK_PAD_L_DOWN]  = VK_DOWN;
+
+		}
+
+		// Rewrite if options are specified (-padbtn1 to -padbtn12)
+
+		for (var i = 1; i <= 12; i++) {
 
 			if (typeof global["VK_PAD"+i] != "Integer") continue;
 

@@ -39,6 +39,14 @@ function keyFunc(key, shift)
 // Register key binds
 kag.keyDownHook.add(keyFunc);
 
+// Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
+// screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1 and R2
+// (initialPadKeyMap in MainWindow.tjs).
+kag.padKeyMap[VK_PAD10] = VK_F4;
+kag.padKeyMap[VK_PAD9]  = VK_F2;
+kag.padKeyMap[VK_PAD5]  = VK_F3;
+kag.recreatePadKeyMap();
+
 // Restrict save and load
 kag.origCanStore   = kag.canStore;
 kag.origCanRestore = kag.canRestore;
