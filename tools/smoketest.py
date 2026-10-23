@@ -202,7 +202,7 @@ class DesktopEngine(FileChannel):
         env = dict(os.environ)
         env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
         env.setdefault("SDL_AUDIO_DRIVER", "dummy")
-        args = [exe, data, "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
+        args = [exe, os.path.abspath(data), "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
                 "-replmodaltimeout=0"]
         self.log = open(self.log_path, "wb")
         self.proc = subprocess.Popen(args, stdout=self.log, stderr=subprocess.STDOUT, env=env)
