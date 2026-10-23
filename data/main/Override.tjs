@@ -376,9 +376,9 @@ function fileDataButton(name, work)
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = kag.getBookMarkPageName(savedatanum);
         target.font.height=36;
-        // Yu Gothic on Windows. The SDL engine draws an unknown face with an icon font (arrows),
-        // so list fonts it does register; it skips names it doesn't know.
-        target.font.face = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+        // Yu Gothic on Windows, else the bundled Noto Sans JP. The SDL engine draws an unknown
+        // face with an icon font (arrows), so list fonts it does register; it skips the others.
+        target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
         // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
         while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
             savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
@@ -710,7 +710,7 @@ function setCGImage(target, filename)
     target.operateRect(target.width*2+b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
 
     if (tf.viewcgfilename) {
-	    target.font.face = "Yu Gothic Medium,Yu Gothic,MS Gothic,Noto Sans CJK JP,Noto Sans CJK JP DemiLight,Noto Sans CJK JP Light,Roboto";
+	    target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
 	    target.font.height = 14;
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }

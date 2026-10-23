@@ -525,6 +525,17 @@ KAGLinkPlugin("plugin/extrans.dll");
 KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined";
 
 
+// The game font. Since engine 2.5.0 the engine embeds only a Latin font (Roboto), so Japanese
+// text depended on the fonts installed on the player's computer (Noto Sans CJK on Linux) and
+// showed as boxes without them. Noto Sans JP (SIL OFL 1.1, notosansjp-OFL.txt) ships next to
+// this file and is registered by name; the file is read the first time a face list uses it.
+// A game can drop the file and the name from its face lists to use system fonts instead.
+if (typeof global.Font.registerFontFile != "undefined" && Storages.isExistentStorage("notosansjp-regular.otf")) {
+	try { Font.registerFontFile(Storages.getPlacedPath("notosansjp-regular.otf"), "Noto Sans JP"); }
+	catch (e) { dm("Could not register notosansjp-regular.otf (" + e.message + ")"); }
+}
+
+
 
 /*
 
