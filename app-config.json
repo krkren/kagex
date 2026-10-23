@@ -1,5 +1,5 @@
 {
-    "comment": "krkrz_android: a debug-signed APK of the sample. PROJECT_DIR is this repository; the engine resources and data/ (with the framework copied in as data/system) go into the APK's assets",
+    "comment": "krkrz_android: a debug-signed APK of the sample. PROJECT_DIR is this repository; the engine resources and data/ (with the framework copied in as data/system) go into the APK's assets. No \"a11y\" plugin: it turns on the engine's KRKRZ_USE_A11Y, which needs an Android AccessKit library engine 2.6.5 (krkrz_dev 21d20e9) doesn't provide yet",
     "applicationId": "io.github.krkren.kagex",
     "versionCode": 200,
     "versionName": "0.2.0",
@@ -16,12 +16,12 @@
         "plugins": [
             "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
             "layerExImage", "layerExRaster", "saveStruct", "scriptsEx", "shrinkCopy",
-            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig", "a11y"
+            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig"
         ],
         "staticPlugins": [
             "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
             "layerExImage", "layerExRaster", "saveStruct", "scriptsEx", "shrinkCopy",
-            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig", "a11y"
+            "krkr_richtext", "extrans", "virtualpad", "license", "androidconfig"
         ]
     },
     "assetPack": {
