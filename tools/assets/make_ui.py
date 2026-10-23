@@ -6,8 +6,8 @@ shadows of the Yes/No dialogs in template/system.
 usage: python3 tools/assets/make_ui.py [group ...]    (no groups: all of them)
 
 Needs NumPy and Pillow. Labels use the Noto Sans CJK JP subsets in tools/assets/fonts. The
-title screen is drawn over data/bgimage/bg01_01.png and data/fgimage/ch_0_0_1.png, so run
-upscale.py first when those change. Everything is drawn 4x and averaged down, so edges are
+title screen and the Replay thumbnail are drawn from data/bgimage/bg01_01.png and
+data/fgimage/ch_0_0_1.png, so run upscale.py first when those change. Everything is drawn 4x and averaged down, so edges are
 smooth; sizes and positions below are in screen pixels and match the .ks files that place
 the images (title.ks, config.ks, save.ks, load.ks, cgmode.ks, replay.ks, musicmode.ks,
 macro.ks's [initscene]) and MyHistoryLayer.tjs.
@@ -78,10 +78,18 @@ class Canvas:
         self.comp(lay, x0, y0)
 
     def panel(self, box, r=14, fill=LAV, border=VIOLET, bw=5, shadow=12, shadow_color=VIOLET):
-        """the dialog's panel: a border and a hard shadow down and to the right"""
+        """the dialog's panel: a border and a hard shadow down and to the right. The shadow
+        is only drawn outside the panel, so a translucent panel doesn't show it through."""
         x0, y0, x1, y1 = box
         if shadow:
-            self.rrect((x0 + shadow, y0 + shadow, x1 + shadow, y1 + shadow), r, fill=rgba(shadow_color))
+            sx0, sy0, sx1, sy1 = (px(v) for v in (x0, y0, x1 + shadow, y1 + shadow))
+            lay = Image.new("RGBA", (sx1 - sx0, sy1 - sy0))
+            d = ImageDraw.Draw(lay)
+            o = px(shadow)
+            d.rounded_rectangle([o, o, sx1 - sx0 - 1, sy1 - sy0 - 1], radius=px(r), fill=rgba(shadow_color))
+            # cut the panel's own shape out of it (ImageDraw replaces pixels, so this erases)
+            d.rounded_rectangle([0, 0, px(x1) - px(x0) - 1, px(y1) - px(y0) - 1], radius=px(r), fill=(0, 0, 0, 0))
+            self.comp(lay, sx0, sy0)
         self.rrect(box, r, fill=rgba(fill) if len(fill) == 3 else fill,
                    outline=rgba(border) if border else None, width=bw if border else 0)
 
@@ -175,8 +183,9 @@ class Canvas:
             full[:, :, 3] = (full[:, :, 3] * k[None, :] + 0.5).astype(np.uint8)
         self.comp(Image.fromarray(np.ascontiguousarray(full), "RGBA"), x0, y0)
 
-    def gradient(self, box, c0, c1, horizontal=False, ease=False):
-        """a linear gradient between two RGBA colours"""
+    def gradient(self, box, c0, c1, horizontal=False, ease=False, clip=None):
+        """a linear gradient between two RGBA colours; clip=(box, radius) keeps it inside a
+        rounded rectangle"""
         x0, y0, x1, y1 = (px(v) for v in box)
         n = (x1 - x0) if horizontal else (y1 - y0)
         t = np.linspace(0, 1, n, dtype=np.float32)
@@ -188,7 +197,14 @@ class Canvas:
             arr = np.broadcast_to(cols[None, :, :], (y1 - y0, n, 4))
         else:
             arr = np.broadcast_to(cols[:, None, :], (n, x1 - x0, 4))
-        self.comp(Image.fromarray(np.ascontiguousarray(arr), "RGBA"), x0, y0)
+        arr = np.ascontiguousarray(arr)
+        if clip:
+            (cx0, cy0, cx1, cy1), r = clip
+            mask = Image.new("L", (x1 - x0, y1 - y0))
+            ImageDraw.Draw(mask).rounded_rectangle([px(cx0) - x0, px(cy0) - y0, px(cx1) - x0 - 1, px(cy1) - y0 - 1],
+                                                   radius=px(r), fill=255)
+            arr[:, :, 3] = (arr[:, :, 3].astype(np.uint16) * np.asarray(mask) // 255).astype(np.uint8)
+        self.comp(Image.fromarray(arr, "RGBA"), x0, y0)
 
     def paste(self, other, x, y):
         """composites another Canvas at 1x position x, y"""
@@ -393,7 +409,8 @@ def make_message():
     w, h = 1800, 330
     c = Canvas(w, h)
     c.panel((0, 0, w - 12, h - 12), r=18, fill=rgba(LAV, 228), border=VIOLET, bw=5, shadow=12)
-    c.gradient((5, 5, w - 17, 90), (255, 255, 255, 60), (255, 255, 255, 0))
+    # a highlight along the top, inside the border (its inner edge is rounded too: 18 - 5)
+    c.gradient((5, 5, w - 17, 90), (255, 255, 255, 60), (255, 255, 255, 0), clip=((5, 5, w - 17, h - 17), 13))
     c.save(os.path.join(IMAGE, "messagewindow.png"))
 
     # the speaker's name, behind NameLayer's text ([position nameframe=namebox])
@@ -571,6 +588,13 @@ def make_extras():
         c.rrect((3, 3, 211, 120), 2, fill=rgba(LAV_PALE))
         c.text((107, 62), "?", font("Black", 56), rgba(LAV_SOFT), anchor="mm")
         c.save(os.path.join(IMAGE, "cgmode_thum_%s.png" % st))
+        # an unlocked Replay scene that has no thumbnail (replaylist.csv): playable, so not a "?"
+        c = Canvas(214, 123)
+        c.rrect((0, 0, 214, 123), 4, fill=rgba(border))
+        c.rrect((3, 3, 211, 120), 2, fill=rgba(LAV_PALE))
+        c.ellipse((107 - 30, 61.5 - 30, 107 + 30, 61.5 + 30), fill=rgba(VIOLET))
+        ic_play(c, 110, 61.5, 26, rgba(WHITE))
+        c.save(os.path.join(IMAGE, "replay_thum_%s.png" % st))
 
     for i in range(12):
         for st in ("normal", "over"):
@@ -617,6 +641,17 @@ def make_history():
         p.save(os.path.join(IMAGE, "log_play_%s.png" % st))
 
 
+# --- thumbnails drawn from the upscaled art --------------------------------------------
+def make_thumbs():
+    """the Character demo's Replay thumbnail (replaylist.csv): its first scene, Ai in the
+    middle of the street (char.ks puts her at 690, 180), shrunk to setCGImage's 208x117"""
+    scene = Image.open(os.path.join(REPO, "data", "bgimage", "bg01_01.png")).convert("RGBA")
+    scene.alpha_composite(Image.open(os.path.join(REPO, "data", "fgimage", "ch_0_0_1.png")).convert("RGBA"), (690, 180))
+    path = os.path.join(REPO, "data", "thum", "thum_replay_char.png")
+    scene.convert("RGB").resize((208, 117), Image.LANCZOS, reducing_gap=3.0).save(path, optimize=True)
+    print("wrote", os.path.relpath(path, REPO), (208, 117), flush=True)
+
+
 # --- the star in the World demo --------------------------------------------------------
 def make_star():
     w, h = 371, 351
@@ -634,7 +669,8 @@ def make_star():
 
 
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
-          "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star}
+          "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
+          "thumbs": make_thumbs}
 
 
 def main():

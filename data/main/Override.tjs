@@ -855,7 +855,9 @@ function setReplaymodePageButton(work=void)
                     if (info.thum != "") {
                         setCGImage(button, info.thum);
                     } else {
-                        button.loadButtons("cgmode_thum_normal");
+                        // No thumbnail: a play tile, since the locked "?" tile would hide
+                        // that the scene can be played
+                        button.loadButtons("replay_thum_normal", "replay_thum_over");
                     }
                     tf.replaylist[cgnum] = info;
                     button.enabled = true;
