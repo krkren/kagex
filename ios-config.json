@@ -1,5 +1,5 @@
 {
-  "comment": "krkrz_ios: the sample for the iOS Simulator (a device build needs an Apple Developer team). PROJECT_DIR is this repository; data/ (with the framework copied in as data/system) goes into the app bundle",
+  "comment": "krkrz_ios: the sample for the iOS Simulator (a device build needs an Apple Developer team). PROJECT_DIR is this repository; data/ (with the framework copied in as data/system) goes into the app bundle. a11y is off: it turns on the engine's KRKRZ_USE_A11Y, and the AccessKit library engine 2.6.5 (krkrz_dev 21d20e9) downloads has no iOS build",
   "bundleId": "io.github.krkren.kagex",
   "displayName": "KAGEX",
   "version": "0.2.0",
@@ -9,7 +9,7 @@
   "orientations": ["landscapeLeft", "landscapeRight"],
   "graphics": "gles",
   "repl": true,
-  "a11y": true,
+  "a11y": false,
   "icon": "platform/icon-1024.png",
   "ipa": { "baseName": "kagex" },
   "cmake": {
