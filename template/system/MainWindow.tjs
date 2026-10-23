@@ -12731,7 +12731,8 @@ class KAGWindow extends Window
 
 	function processKeys(key, shift)
 	{
-		// Debug keys (debug builds, -debugwin): the SDL engine has no menu bar for the Debug menu.
+		// Debug keys, while KAG's debug mode is on (it is unless -debugwin=no: set that for a
+		// release). The SDL engine has no menu bar for the Debug menu.
 		// Shift+F12 shows the debug window (the running line at the bottom of the screen), and
 		// Shift+F11 switches the debug level (none, simple, verbose).
 		if (debugWindowEnabled && shift == ssShift && (key == VK_F12 || key == VK_F11)) {

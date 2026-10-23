@@ -956,7 +956,9 @@ class PSDInfo {
 
 		if (typeof global.PSD == "undefined") {
 
-			try { Plugins.link("plugin/psdfile.dll"); } catch (e) { Plugins.link("plugin/psd.dll"); }
+			try { Plugins.link("plugin/psdfile.dll"); }
+
+			catch (e) { try { Plugins.link("plugin/psd.dll"); } catch { throw e; } }
 
 		}
 

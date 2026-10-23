@@ -114,6 +114,7 @@ function KAGWindow_createMenus()
     // Polyfill missing window menu property for SDL3
     if (typeof this.menu == "undefined") {
         this.menu = new global.Menu();
+        this.menuBarStandIn = true; // no real menu bar (Menus.tjs, standview.tjs)
     }
     if (typeof menu == "undefined") {
         var menu = this.menu;
