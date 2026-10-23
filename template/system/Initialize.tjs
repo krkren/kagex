@@ -667,6 +667,8 @@ if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[
 
 property askYesNo { getter() { KAGLoadScript("YesNoDialog.tjs"); return global.askYesNo; } }
 
+property showAbout { getter() { KAGLoadScript("YesNoDialog.tjs"); return global.showAbout; } }
+
 property CheckBoxLayer { getter() { KAGLoadScript("CheckBoxLayer.tjs"); return global.CheckBoxLayer; } }
 
 //property ButtonLayer { getter() { KAGLoadScript("ButtonLayer.tjs"); return global.ButtonLayer; } }

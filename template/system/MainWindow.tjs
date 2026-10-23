@@ -209,6 +209,8 @@ class KAGWindow extends Window
 
 	var aboutStorage = "about.ks";
 
+	var aboutInWindow = true; // Show About in the game window (false: the separate window above)
+
 
 
     var defaultName   = "Name"; // Default name - Used by world extensions for voice switching
@@ -4776,6 +4778,12 @@ class KAGWindow extends Window
 	function onHelpAboutMenuItemClick(sender)
 
 	{
+
+		// The About screen in the game window (YesNoDialogLayer.tjs). Set aboutInWindow to
+
+		// false for the old separate window running about.ks, which crashed on Linux.
+
+		if (aboutInWindow) { global.showAbout(); return; }
 
 		// Display "About this software" window
 

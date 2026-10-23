@@ -1,14 +1,20 @@
-﻿//
-
-// Modification of YesNoDialog
-
-// Enable processing with Layer Dialog
+﻿// YesNoDialogLayer.tjs - Yes/No prompts and the About screen, drawn in the game window
 
 //
 
+// askYesNo shows its prompt as a layer dialog (YesNoDialogLayer) in the game window. The SDL
 
+// engine handles a second OS window badly (the old About window crashed on Linux), so no
 
-// Yes/No dialogs, designed at 1920x1080. Each frame image is a full-screen overlay with
+// prompt opens one, except while a movie plays (YesNoFrameDialogWindow, see askYesNo).
+
+// YesNoDialog.tjs loads this file; before the game window exists, askYesNo falls back to
+
+// its stock YesNoDialogWindow (askYesNoWindow).
+
+//
+
+// Designed at 1920x1080. Each frame image is a full-screen overlay with
 
 // the panel drawn on it: dialog_base, or dialog_wide_base for a message longer than two
 
@@ -18,7 +24,11 @@
 
 // when the message window uses it, so they stay sharp and the wording can change freely.
 
-// Coordinates are in the frame image (= the 1920x1080 screen).
+// Coordinates are in the frame image (= the 1920x1080 screen). A game can replace the four
+
+// images (same names, in data/image) and adjust yesnoFrames in Override.tjs.
+
+
 
 var yesnoFrames = [
 
@@ -270,7 +280,7 @@ function drawYesNoLabel(button, text)
 
  */
 
-class MyYesNoDialogWindow extends Window
+class YesNoFrameDialogWindow extends Window
 
 {
 
@@ -320,7 +330,7 @@ class MyYesNoDialogWindow extends Window
 
     
 
-    function MyYesNoDialogWindow(text)
+    function YesNoFrameDialogWindow(text)
 
 	{
 
@@ -632,7 +642,7 @@ class MyYesNoDialogWindow extends Window
 
  */
 
-class MyYesNoDialogLayer extends DialogLayer
+class YesNoDialogLayer extends DialogLayer
 
 {
 
@@ -652,7 +662,7 @@ class MyYesNoDialogLayer extends DialogLayer
 
     
 
-    function MyYesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc) {
+    function YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc) {
 
         super.DialogLayer(kag, kag.primaryLayer, "YesNoDialog");
 
@@ -720,6 +730,32 @@ class MyYesNoDialogLayer extends DialogLayer
 
     }
 
+
+
+    /**
+
+     * Esc and a right-click answer No, like the window version. DialogLayer would only
+
+     * close the dialog, skipping noFunc and doneFunc.
+
+     */
+
+    function onKeyDown(key, shift) {
+
+        if (enabled && key == VK_ESCAPE) { processLink(1); return; }
+
+        return super.onKeyDown(...);
+
+    }
+
+    function rightClickHook() {
+
+        if (enabled) processLink(1);
+
+        return true;
+
+    }
+
     
 
     function processLink(num) {
@@ -764,14 +800,6 @@ class MyYesNoDialogLayer extends DialogLayer
 
 
 
-KAGLoadScript("YesNoDialog.tjs");
-
-
-
-var origAskYesNo = askYesNo;
-
-
-
 // Shorter wording for the prompts the system and the sample ask. Any other message is shown
 
 // as it is, word-wrapped (a long one gets the wide frame)
@@ -794,13 +822,43 @@ var yesnoMap = %[
 
 
 
-// Hijack the function that clarifies Yes or No
+/**
 
-var askYesNo = function(message, caption = "Confirmation", yesFunc, noFunc, param, doneFunc)
+ * Whether the game window exists, so a layer dialog can be shown in it
+
+ */
+
+function yesNoCanUseLayer()
 
 {
 
-    // Every prompt uses these frames, so none falls back to the stock YesNoDialogWindow
+    return typeof global.kag == "Object" && global.kag !== void && global.kag isvalid &&
+
+        typeof global.kag.primaryLayer == "Object" && global.kag.primaryLayer !== void;
+
+}
+
+
+
+/**
+
+ * Asks Yes or No in the game window. The callbacks run after the player answers (Esc and
+
+ * a right-click answer No); the function itself returns at once.
+
+ */
+
+function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, doneFunc, defaultFocus)
+
+{
+
+    if (!yesNoCanUseLayer()) {
+
+        // Too early for a layer dialog (e.g. an error during start-up)
+
+        return askYesNoWindow(...);
+
+    }
 
     var text = yesnoMap[message];
 
@@ -810,7 +868,9 @@ var askYesNo = function(message, caption = "Confirmation", yesFunc, noFunc, para
 
     if (kag.isMoviePlaying()) {
 
-        var win = new MyYesNoDialogWindow(text);
+        // An overlay movie covers the layers, so this one uses a separate window
+
+        var win = new YesNoFrameDialogWindow(text);
 
         win.showModal();
 
@@ -848,10 +908,153 @@ var askYesNo = function(message, caption = "Confirmation", yesFunc, noFunc, para
 
     } else {
 
-        var dialog = new MyYesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc);
+        var dialog = new YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc);
 
         dialog.open();
 
     }
 
-};
+}
+
+
+
+// --------------------------------------------------------
+
+// About screen (F1)
+
+// --------------------------------------------------------
+
+
+
+/**
+
+ * The About screen, in the Yes/No frame: the game's title, version and copyright, and the
+
+ * engine's version. KAGWindow.onHelpAboutMenuItemClick shows it; the old separate window
+
+ * running about.ks crashed the game on Linux.
+
+ *
+
+ * The game's details come from sf.software_title / software_version / software_year /
+
+ * software_maker (the sample sets them in first.ks); without a title, System.title is used.
+
+ */
+
+class AboutDialogLayer extends DialogLayer
+
+{
+
+    function AboutDialogLayer() {
+
+        super.DialogLayer(kag, kag.primaryLayer, "AboutDialog");
+
+        var lines = [];
+
+        var title = (typeof sf.software_title == "String" && sf.software_title != "") ? sf.software_title : System.title;
+
+        lines.add([ title, yesnoFontSize ]);
+
+        if (typeof sf.software_version == "String" && sf.software_version != "")
+
+            lines.add([ "Version " + sf.software_version, yesnoLabelSize ]);
+
+        if (typeof sf.software_maker == "String" && sf.software_maker != "") {
+
+            var year = (typeof sf.software_year != "undefined" && sf.software_year !== void && sf.software_year != "") ? sf.software_year + " " : "";
+
+            lines.add([ "(c) " + year + sf.software_maker, yesnoLabelSize ]);
+
+        }
+
+        lines.add([ "Kirikiri Z " + System.versionString, yesnoLabelSize ]);
+
+        // The smallest frame whose text area holds every line
+
+        var total = -yesnoLineGap;
+
+        for (var i = 0; i < lines.count; i++) {
+
+            setYesNoFont(this, lines[i][1]);
+
+            total += font.getTextHeight("Ag") + yesnoLineGap;
+
+        }
+
+        var frame;
+
+        for (var i = 0; i < yesnoFrames.count; i++) {
+
+            frame = yesnoFrames[i];
+
+            if (total <= frame.textBottom - frame.textTop) break;
+
+        }
+
+        var temp = kag.temporaryLayer;
+
+        temp.loadImages(frame.storage);
+
+        var fx = (width - temp.imageWidth) >> 1, fy = (height - temp.imageHeight) >> 1;
+
+        setOption(%[frame : frame.storage, left : fx, top : fy]);
+
+        var y = fy + ((frame.textTop + frame.textBottom - total) >> 1);
+
+        for (var i = 0; i < lines.count; i++) {
+
+            setYesNoFont(this, lines[i][1]);
+
+            var w = measureYesNoText(this, lines[i][0]);
+
+            drawYesNoString(this, fx + frame.centerX - (w >> 1), y, lines[i][0], 0xffffff, yesnoTextBase);
+
+            y += font.getTextHeight("Ag") + yesnoLineGap;
+
+        }
+
+        addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
+
+                     normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+
+        drawYesNoLabel(names.close, "Close");
+
+    }
+
+    function onOpen() {
+
+        setFocusToLink(0, true);
+
+    }
+
+    function processLink(num) {
+
+        super.processLink(num);
+
+        close() if (this isvalid);
+
+    }
+
+}
+
+
+
+/**
+
+ * Shows the About screen, unless another dialog is open
+
+ */
+
+function showAbout()
+
+{
+
+    if (!yesNoCanUseLayer() || kag.currentDialog !== void) return;
+
+    var dialog = new AboutDialogLayer();
+
+    dialog.open();
+
+}
+
