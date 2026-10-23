@@ -39,4 +39,14 @@ jobs:
           chmod +x krkrz
 
       - name: Smoke test
-        run: python3 tools/smoketest.py
+        run: |
+          set +e
+          python3 tools/smoketest.py 2>&1 | tee "$RUNNER_TEMP/smoke.txt"
+          status=${PIPESTATUS[0]}
+          if [ "$status" != 0 ]; then
+            # One annotation with the failures and the end of the engine log, so they show on
+            # the pull request without opening the job log
+            report=$( { grep -E '^(==|FAIL|     )' "$RUNNER_TEMP/smoke.txt"; echo '--- end of the engine log ---'; sed -n '/^--- end of the engine log/,$p' "$RUNNER_TEMP/smoke.txt" | tail -n 40; } | head -c 30000 | sed -e 's/%/%25/g' -e 's/\r//g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=Smoke test failed::$report"
+          fi
+          exit "$status"
