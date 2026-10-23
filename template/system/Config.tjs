@@ -2,7 +2,7 @@
 
 // Copyright (C) 2001-2004 W.Dee and contributors  Free to modify and distribute
 
-;global.config_version = ""; // Please do not delete this line
+;global.config_version = "EX 3.27-dev.20070519"; // Please do not delete this line
 
 
 
@@ -446,7 +446,8 @@ function KAGWindow_config()
 
 
 // ◆ Window Display Size for "Help > About This Software"
-// about.ks will run within this window size.
+// about.ks will run within this window size. Only used with aboutInWindow = false
+// (MainWindow.tjs): About normally shows in the game window (YesNoDialogLayer.tjs).
 
 ;aboutWidth = 320; // Width
 ;aboutHeight = 200; // Height
