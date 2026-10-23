@@ -140,18 +140,25 @@ class Engine:
         self.tjs("Agent.keyUp(%s); return 1;" % name)
         time.sleep(0.12)
 
-    def clicker(self, on):
-        """Clicks the middle of the screen every 50 ms, to read through scenes."""
+    def clicker(self, on, until=None):
+        """Clicks the middle of the screen every 50 ms, to read through scenes. With until (a
+        scenario file name), the clicking stops by itself once the game gets there, so it
+        can't click on into whatever that screen shows (the demo menu's choices)."""
         if on:
             self.tjs("""
+                global.__smokeStopAt = "%s";
                 if (typeof global.__smokeClicker != "Object") {
                     global.__smokeClicker = new Timer(function() {
+                        if (global.__smokeStopAt != "" && kag.conductor.curStorage == global.__smokeStopAt) {
+                            global.__smokeClicker.enabled = false;
+                            return;
+                        }
                         Agent.click(kag.innerWidth \\ 2, kag.innerHeight \\ 2);
                     }, "");
                     __smokeClicker.interval = 50;
                 }
                 __smokeClicker.enabled = true;
-                return 1;""")
+                return 1;""" % (until or ""))
         else:
             self.tjs('if (typeof global.__smokeClicker == "Object") __smokeClicker.enabled = false; return 1;')
 
@@ -232,7 +239,7 @@ def sample_steps(eng):
     @step("start-up reaches the title screen")
     def _():
         eng.wait("the REPL", "1", timeout=60)
-        eng.clicker(True)  # clicks through the logo
+        eng.clicker(True, until="title.ks")  # clicks through the logo
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
         eng.clicker(False)
 
@@ -246,7 +253,7 @@ def sample_steps(eng):
         def _(demo=demo):
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
-            eng.clicker(True)
+            eng.clicker(True, until="s0001.ks")
             eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
             eng.clicker(False)
 
