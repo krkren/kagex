@@ -10922,7 +10922,8 @@ class KAGWindow extends Window
 	function setBitmapFont(name)
 	{
 		chBitmapFont  = name;
-		chDefaultFace = "MS Gothic"; // XXX
+		// chDefaultFace stays as it is: it isn't used while a bitmap font is set, and a single
+		// face here ("MS Gothic") drew as arrows on the SDL engine once the bitmap font was cleared
 		setMessageLayerUserFont();
 		saveSystemVariables();
 		callHook("onSetBitmapFontHook", chBitmapFont);

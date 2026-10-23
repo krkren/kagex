@@ -952,9 +952,11 @@ class PSDInfo {
 
 		// Load plugin
 
+		// The plugin is psdfile (libpsdfile.so on Linux); older Windows packages called it psd.dll
+
 		if (typeof global.PSD == "undefined") {
 
-			Plugins.link("plugin/psd.dll");
+			try { Plugins.link("plugin/psdfile.dll"); } catch (e) { Plugins.link("plugin/psd.dll"); }
 
 		}
 
@@ -1480,7 +1482,7 @@ class PSDInfo {
 
 							savelayer.assignImages(info.layer);
 
-							savelayer.saveLayerImageTlg5(filaname);
+							savelayer.saveLayerImageTlg5(filename);
 
 						}
 

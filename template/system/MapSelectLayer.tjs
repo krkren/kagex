@@ -400,7 +400,7 @@ class MapSelectLayer extends KAGLayer {
 
         baseInterval = elm.interval if elm.interval !== void;
 
-        buttonWidth  = elm.buttonwidth if elm.btnwidth !== void;
+        buttonWidth  = elm.buttonwidth if elm.buttonwidth !== void; // was tested as btnwidth, so never applied
 
         
 
