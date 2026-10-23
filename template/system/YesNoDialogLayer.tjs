@@ -1068,6 +1068,24 @@ class AboutDialogLayer extends DialogLayer
 
     }
 
+    // Return and Space close it even without the keyboard focus on Close: on Android the button
+
+    // lost the focus (keyLink went back to -1) as soon as onOpen gave it, so they did nothing
+
+    function onKeyDown(key, shift) {
+
+        if ((key == VK_RETURN || key == VK_SPACE) && keyLink == -1 && numLinks > 0) {
+
+            processLink(0);
+
+            return;
+
+        }
+
+        return super.onKeyDown(...);
+
+    }
+
     function processLink(num) {
 
         super.processLink(num);

@@ -532,8 +532,6 @@ def prompt_steps(eng, step):
         eng.tjs("kag.onHelpAboutMenuItemClick(kag); return 1;")
         eng.wait("About", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void',
                  timeout=10)
-        # the dialog takes the keyboard (its Close button) once it has opened
-        eng.wait("the Close button to have the focus", "kag.currentDialog.keyLink == 0", timeout=10)
         eng.key("VK_RETURN")
         eng.wait("About to close", "kag.currentDialog === void", timeout=10)
 
