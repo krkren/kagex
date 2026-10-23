@@ -81,6 +81,12 @@ class Engine:
             f.write(answer)
         os.replace(os.path.join(self.chan, "modalresp.tmp"), os.path.join(self.chan, "modalresp"))
         print("  ! the engine opened a native dialog:", req.strip(), flush=True)
+        # The engine deletes modal and modalresp once it has read the answer; wait for that,
+        # so the next poll doesn't answer the same request again
+        end = time.time() + 5
+        while time.time() < end and (os.path.exists(path) or
+                                     os.path.exists(os.path.join(self.chan, "modalresp"))):
+            time.sleep(0.02)
 
     def tjs(self, body, timeout=30.0):
         """Runs TJS statements on the main thread; 'return x;' gives the result."""
@@ -122,7 +128,7 @@ class Engine:
         last = None
         while time.time() < end:
             last = self.tjs("return " + expr + ";")
-            if last not in (0, "0", "", None, "void"):
+            if last not in (0, "0", "", None, "void", "(void)"):  # the REPL prints void as (void)
                 return last
             time.sleep(interval)
         raise SmokeError("timed out waiting for %s (%s); now at %s" % (what, expr, self.where()))
@@ -259,7 +265,7 @@ def sample_steps(eng):
 
     @step("finishing every demo unlocks Extras")
     def _():
-        eng.wait("sf.clear", "sf.clear", timeout=5)
+        eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
     @step("save and load a bookmark")
     def _():
