@@ -31,7 +31,7 @@ The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](ht
 
 These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. The scripts load without them; using one either falls back to something simpler or stops with an error:
 
-- The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8), buttons and the controller instead; in a debug build, Shift+F12 shows the debug window and Shift+F11 switches the debug level.
+- The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8), buttons and the controller instead; in KAG's debug mode (on unless the engine gets `-debugwin=no`), Shift+F12 shows the debug window and Shift+F11 switches the debug level.
 - Scene playback with `[scenestart]` (`psbfile.dll`).
 - The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`).
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
