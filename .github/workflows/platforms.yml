@@ -378,6 +378,7 @@ jobs:
           set_plist CFBundleDisplayName KAGEX
           set_plist CFBundleIdentifier io.github.krkren.kagex
           set_plist CFBundleShortVersionString "$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/ios-config.json'))['version'])")"
+          set_plist CFBundleVersion "$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/ios-config.json'))['build'])")"
           iconset="$RUNNER_TEMP/kagex.iconset"
           mkdir -p "$iconset"
           for s in 16 32 128 256 512; do
