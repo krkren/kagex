@@ -235,15 +235,15 @@ jobs:
           unzip -l "$apk" | grep -E 'lib/|assets/data/(startup|system/Initialize)' | tee -a results/apk.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: kagex-android
-          path: kirikiri/kagex/build/android/app/outputs/apk/**/*.apk
+          name: kagex-android-debug
+          path: kirikiri/kagex/build/android/app/outputs/apk/debug/*.apk
           if-no-files-found: error
       - name: Enable KVM for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-          echo "APK=$(find "$PROJECT_DIR/build/android" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
+          echo "APK=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
       - name: Smoke test on an emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -253,6 +253,17 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
           script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
+      # The smoke test needs the debug build (only it has the REPL); the package is the
+      # optimized release build, signed with the same debug key (the kit's release-debug)
+      - name: Build the release APK
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug
+          find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee -a results/apk.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-android
+          path: kirikiri/kagex/build/android/app/outputs/apk/releaseDebugSigned/*.apk
+          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
