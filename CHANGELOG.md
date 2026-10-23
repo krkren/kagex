@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The web demo on GitHub Pages didn't start: the engine reads its file list from `gamedata/krkrz_files.json`, which only the kit's `serve.py` answered. The web build now has the file there too, so it runs from any static host, and the Pages deploy adds it to 0.2.0's site. The browser smoke test serves the site with a plain static server, as Pages does.
+
 ## 0.2.0
 
 ### Added

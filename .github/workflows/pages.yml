@@ -40,6 +40,10 @@ jobs:
           mkdir site
           unzip -q kagex_sdl3_web.zip -d site
           test -f site/index.html
+          # The engine reads the file list (web://) from gamedata/krkrz_files.json, which
+          # serve.py answers with gamedata.krkrz_files.json: a static host needs the file
+          # there. 0.2.0's zip doesn't have it.
+          [ -f site/gamedata/krkrz_files.json ] || cp site/gamedata.krkrz_files.json site/gamedata/krkrz_files.json
           # serve.py is for running the site locally
           rm -f site/serve.py
           du -sh site
