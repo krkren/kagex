@@ -16,9 +16,9 @@ The sample's images are generated here rather than edited by hand.
 ```bash
 python3 tools/assets/upscale.py          # sprites, backgrounds, CG thumbnail
 python3 tools/assets/make_ui.py          # all UI images; or name groups: title logo message
-                                         # config saveload extras history star
+                                         # config saveload extras history star thumbs
 ```
 
-Run `upscale.py` first: the title screen is drawn over the upscaled background and sprite.
-Both need NumPy and Pillow. The labels use the subset Noto Sans CJK JP fonts in `fonts/`
-(SIL OFL 1.1, `fonts/OFL.txt`); the game doesn't load them.
+Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the
+upscaled background and sprite. Both need NumPy and Pillow. The labels use the subset Noto
+Sans CJK JP fonts in `fonts/` (SIL OFL 1.1, `fonts/OFL.txt`); the game doesn't load them.
