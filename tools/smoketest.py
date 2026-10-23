@@ -101,9 +101,11 @@ class Engine:
         time.sleep(0.12)
 
     def clicker(self, on, until=None):
-        """Clicks the middle of the screen every 50 ms, to read through scenes. With until (a
-        scenario file name), the clicking stops by itself once the game gets there, so it
-        can't click on into whatever that screen shows (the demo menu's choices)."""
+        """Clicks every 50 ms, to read through scenes. With until (a scenario file name), the
+        clicking stops by itself once the game gets there, so it can't click on into whatever
+        that screen shows (the demo menu's choices). The clicks go to KAG's click handler
+        (onPrimaryClick, what a left click on the game calls): Agent.click takes window
+        coordinates, and the game's position in the window differs on every platform."""
         if on:
             self.tjs("""
                 global.__smokeStopAt = "%s";
@@ -113,7 +115,7 @@ class Engine:
                             global.__smokeClicker.enabled = false;
                             return;
                         }
-                        Agent.click(kag.innerWidth \\ 2, kag.innerHeight \\ 2);
+                        kag.onPrimaryClick();
                     }, "");
                     __smokeClicker.interval = 50;
                 }
