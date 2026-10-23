@@ -24,6 +24,7 @@ With a controller: the D-pad or left stick moves between buttons, A confirms and
 - `template/`: the KAGEX framework (`template/system`) and empty folders for a new game, with `template/main/` holding empty versions of the game-side hooks (`Override.tjs`, `AfterInit.tjs`, `Storages.tjs`). To ship a game, copy `template/system` and `template/startup.tjs` into `data/`, and `krkrz.cf` next to the engine with your own `orgname`/`appname`: without it, every game on the stock engine saves to the same `~/.local/share/wamsoft/krkrz/` folder on Linux.
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
 - `TODO.md`: planned features.
+- `tools/assets/`: the scripts that make the sample's images (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds), with the original art they start from.
 - `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release.
 
 The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](https://github.com/wamsoft/krkrz_dev); `CLAUDE.md` has the build steps and the outputs to copy next to `data/`.
@@ -41,4 +42,4 @@ These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. 
 
 ## License
 
-KAGEX is licensed under the same terms as Kirikiri 2 and KAG3 (`doc/license.txt`). The release packages include the engine's `license.txt` and the licenses of the libraries it uses in `licenses/`. Noto Sans JP is under the SIL Open Font License 1.1 (`template/system/notosansjp-OFL.txt`).
+KAGEX is licensed under the same terms as Kirikiri 2 and KAG3 (`doc/license.txt`). The release packages include the engine's `license.txt` and the licenses of the libraries it uses in `licenses/`. Noto Sans JP is under the SIL Open Font License 1.1 (`template/system/notosansjp-OFL.txt`), as are the Noto Sans CJK JP subsets in `tools/assets/fonts` (`tools/assets/fonts/OFL.txt`) that the image scripts draw labels with. `tools/assets/upscale.py` downloads the Real-ESRGAN weights (BSD 3-Clause) when it runs; they aren't in this repository.
