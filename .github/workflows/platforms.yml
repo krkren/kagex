@@ -223,6 +223,8 @@ jobs:
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          # libvpx for x86_64 (the emulator's ABI) assembles with nasm
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 nasm > results/apt.log 2>&1
           mkdir -p kirikiri/krkrz_android/app/libs
           (cd kirikiri/krkrz_android && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
       - name: Build the debug APK
