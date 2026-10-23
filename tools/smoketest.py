@@ -428,8 +428,10 @@ class WebEngine(Engine):
         self.pw = sync_playwright().start()
         self.browser = self.pw.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
-        self.page.on("console", lambda m: self.lines.append(m.text))
-        self.page.on("pageerror", lambda e: self.lines.append("pageerror: %s" % e))
+        # written as it comes, so a page that hangs still leaves its console behind
+        self.console = open(self.log_path, "w", encoding="utf-8")
+        self.page.on("console", lambda m: self._line(m.text))
+        self.page.on("pageerror", lambda e: self._line("pageerror: %s" % e))
         # audiogate=0: start without waiting for a click (Chromium may play audio anyway here)
         self.page.goto(url + ("&" if "?" in url else "?") + "audiogate=0")
         end = time.time() + 180
@@ -481,11 +483,14 @@ class WebEngine(Engine):
             time.sleep(0.02)
         raise SmokeError("no answer from the engine within %ss:\n%s" % (timeout, cmd))
 
+    def _line(self, text):
+        self.lines.append(text)
+        if not self.console.closed:
+            self.console.write(text + "\n")
+            self.console.flush()
+
     def output(self):
-        text = "\n".join(self.lines)
-        with open(self.log_path, "w", encoding="utf-8") as f:
-            f.write(text)
-        return text
+        return "\n".join(self.lines)
 
     def snapshot(self, path):
         try:
@@ -498,6 +503,7 @@ class WebEngine(Engine):
             self.browser.close()
         finally:
             self.pw.stop()
+            self.console.close()
 
 
 DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks"]

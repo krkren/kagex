@@ -107,6 +107,7 @@ jobs:
           path: kirikiri/kagex/build/linux/dist/*.tar.gz
           if-no-files-found: error
       - name: Smoke test
+        timeout-minutes: 20
         working-directory: kirikiri/kagex/build/linux/package/krkrz
         run: |
           # the engine draws with OpenGL ES through EGL, which the runner image lacks (Mesa's
@@ -170,6 +171,7 @@ jobs:
           path: kirikiri/kagex/build/web/site
           if-no-files-found: error
       - name: Smoke test in headless Chromium
+        timeout-minutes: 20
         run: |
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium > results/playwright.log 2>&1
@@ -245,6 +247,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           echo "APK=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
       - name: Smoke test on an emulator
+        timeout-minutes: 45
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -307,6 +310,7 @@ jobs:
           path: kagex-ios-simulator.zip
           if-no-files-found: error
       - name: Smoke test in the Simulator
+        timeout-minutes: 30
         run: |
           dev=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
@@ -402,6 +406,7 @@ jobs:
           path: kagex-macos.zip
           if-no-files-found: error
       - name: Smoke test
+        timeout-minutes: 20
         run: |
           exe="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
           # the game as the app holds it (the app has no template/). SDL's offscreen driver has

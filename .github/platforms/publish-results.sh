@@ -4,6 +4,13 @@
 set -e
 name=$1; msg=$2
 cd "$GITHUB_WORKSPACE/results"
+# what the smoke test kept (--keep), also when its step was cut off
+for d in /tmp/kagex-smoke-* "${TMPDIR:-/tmp}"/kagex-smoke-*; do
+  [ -d "$d" ] || continue
+  for f in "$d"/*.png "$d"/console.txt "$d"/logcat.txt "$d"/simulator.log "$d"/engine.log; do
+    [ -f "$f" ] && cp "$f" . 2>/dev/null || true
+  done
+done
 for f in *.log; do
   [ -f "$f" ] || continue
   # The error lines of every log, with some context, before long logs lose their middle
