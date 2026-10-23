@@ -4,6 +4,8 @@
 # creates doesn't fire the release event: GitHub doesn't start workflows for events its own
 # token caused). A release published by hand fires it directly, and it can be run by hand
 # with a tag. Pages has to be set to deploy from GitHub Actions (Settings > Pages > Source).
+# The check job then runs the smoke test on the live site (results in
+# ci/platform-results-pages).
 name: Web demo
 
 on:
@@ -30,7 +32,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/platforms
       - name: Download the site
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,6 +47,9 @@ jobs:
           mkdir site
           unzip -q kagex_sdl3_web.zip -d site
           test -f site/index.html
+          # the file list where a static host serves it, and coi's reload after its worker is
+          # ready (0.2.0's zip has neither)
+          python3 .github/platforms/web-static-host.py site
           # serve.py is for running the site locally
           rm -f site/serve.py
           du -sh site
@@ -48,3 +58,30 @@ jobs:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  # The deployed site in headless Chrome, as a first-time visitor: a fresh browser, so the
+  # page goes through coi-serviceworker's reload and loads every file from Pages
+  check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            tools/smoketest.py
+            .github/platforms
+          sparse-checkout-cone-mode: false
+      - name: Smoke test of the live site
+        timeout-minutes: 15
+        env:
+          URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          python3 -m pip install --quiet playwright
+          .github/platforms/run-logged.sh smoke python3 -B tools/smoketest.py --target web --url "$URL" --channel chrome --keep
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/platforms/publish-results.sh pages "web demo, run ${{ github.run_id }} (${{ job.status }})"
