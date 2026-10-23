@@ -264,8 +264,9 @@ class SimulatorEngine(Engine):
         self.log_path = os.path.join(workdir, "simulator.log")
         self.simctl("install", device, app)
         self.container = self.simctl("get_app_container", device, bundle_id, "data").strip()
+        self.started = time.time()
         self.simctl("launch", "--terminate-running-process", device, bundle_id,
-                    "-replweb=%d" % port, "-replwebidle=no", "-replmodaltimeout=0")
+                    "-replweb=%d" % port, "-replwebidle=no", "-replmodaltimeout=0", "-forcelog=yes")
         end = time.time() + 120
         last = None
         while time.time() < end:
@@ -305,12 +306,28 @@ class SimulatorEngine(Engine):
                 if name == "krkr.console.log":
                     with open(os.path.join(root, name), "rb") as f:
                         text += f.read().decode("utf-16-le", "replace")
+        if not text:
+            # the system log has the engine's output too
+            minutes = int((time.time() - self.started) / 60) + 2
+            r = subprocess.run(["xcrun", "simctl", "spawn", self.device, "log", "show", "--style", "compact",
+                                "--last", "%dm" % minutes, "--predicate", 'process == "krkrz"'],
+                               capture_output=True, text=True)
+            text = r.stdout
         with open(self.log_path, "w", encoding="utf-8") as f:
             f.write(text)
         return text
 
     def snapshot(self, path):
-        subprocess.run(["xcrun", "simctl", "io", self.device, "screenshot", path], capture_output=True)
+        # simctl's screenshot comes out black for the engine's OpenGL ES view: ask the engine
+        try:
+            self.tjs('Agent.captureScreen(System.dataPath + "smoke-shot.png"); return 1;', 5)
+            time.sleep(1.0)
+        except SmokeError:
+            return
+        for root, dirs, files in os.walk(self.container):
+            if "smoke-shot.png" in files:
+                shutil.move(os.path.join(root, "smoke-shot.png"), path)
+                return
 
     def stop(self):
         subprocess.run(["xcrun", "simctl", "terminate", self.device, self.bundle_id], capture_output=True)
