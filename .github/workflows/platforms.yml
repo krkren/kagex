@@ -188,8 +188,14 @@ jobs:
           ndk=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/app-config.json'))['ndkVersion'])")
           sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          # The kit asks for the SDK's CMake 3.22.1, but krkr_richtext makes the engine download
+          # ICU with an option CMake 3.24 added (DOWNLOAD_EXTRACT_TIMESTAMP): use the newest 3.x
+          cmake=$("$sdk/cmdline-tools/latest/bin/sdkmanager" --list 2>/dev/null | grep -oE 'cmake;3\.[0-9]+\.[0-9]+' | sort -u -t. -k2,2n -k3,3n | tail -1)
+          echo "using $cmake" | tee results/cmake.txt
           kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
-            "ndk;$ndk" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0"
+            "ndk;$ndk" "$cmake" "platforms;android-36" "build-tools;36.0.0"
+          sed -i -E "s/version = \"3\.22\.1\"/version = \"${cmake#cmake;}\"/" kirikiri/krkrz_android/app/build.gradle
+          grep -n "version = \"${cmake#cmake;}\"" kirikiri/krkrz_android/app/build.gradle
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           chmod +x kirikiri/krkrz_android/gradlew
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
