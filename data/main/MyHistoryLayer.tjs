@@ -294,17 +294,17 @@ class HistoryLayer extends Layer
         topPageButton.visible = true;
         
         prevPageButton.left    = 1766;
-        prevPageButton.top     = 115;
+        prevPageButton.top     = 116;
         prevPageButton.loadButtons("log_uppage_normal", "log_uppage_over");
         prevPageButton.visible = true;
         
         nextPageButton.left    = 1766;
-        nextPageButton.top     = 907;
+        nextPageButton.top     = 909;
         nextPageButton.loadButtons("log_downpage_normal", "log_downpage_over");
         nextPageButton.visible = true;
 
-        endPageButton.left    = 1769;
-        endPageButton.top     = 965;
+        endPageButton.left    = 1766;
+        endPageButton.top     = 967;
         endPageButton.loadButtons("log_last_normal", "log_last_over");
         endPageButton.visible = true;
         
@@ -315,10 +315,10 @@ class HistoryLayer extends Layer
         closeButton.hint      = "Close Message History";
 */
 
-        scrollSlider.left     = 1821;
-        scrollSlider.top      = 173;
+        scrollSlider.left     = 1802; // centred under the buttons; its track is drawn in log_base
+        scrollSlider.top      = 178;
         scrollSlider.width    =  43;
-        scrollSlider.height   = 734;
+        scrollSlider.height   = 727;
         scrollSlider.loadTabs("log_bar_normal", "log_bar_over");
         scrollSlider.visible = true;
         scrollSlider.bgOpacity = 0;
@@ -450,6 +450,13 @@ class HistoryLayer extends Layer
 	{
 		endAction();
 		currentActionExp = void;
+	}
+
+	// The speaker's name at the start of a line (KAGWindow.drawName). The message window shows
+	// it in the name box, without brackets; here it gets them, to stand apart from the text.
+	function storeName(name)
+	{
+		if (name != "") store("[" + name + "] ");
 	}
 
 	function store(ch)

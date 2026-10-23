@@ -9,7 +9,7 @@
 @current page=back
 [laycount layers=1]
 [image layer=base storage="white" page=back]
-[image layer=0 storage="logo.png" page=back visible=true top=0 left=0]
+[image layer=0 storage="about_logo" page=back visible=true top=0 left=0]
 [r]
 [r]
 [r]

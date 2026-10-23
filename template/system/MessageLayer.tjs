@@ -1540,6 +1540,10 @@ class NameLayer extends RelativeLayer
 
 	var valign = -1;
 
+	// Image drawn behind the name ([position nameframe=...]); the layer takes its size
+
+	var frameGraphic = "";
+
 
 
 	/**
@@ -1568,7 +1572,9 @@ class NameLayer extends RelativeLayer
 
 		if (text != "") {
 
-			fillRect(0, 0, width, height, 0);
+			if (frameGraphic != "") loadImages(frameGraphic);
+
+			else                    fillRect(0, 0, width, height, 0);
 
 			var x = 0, y = 0;
 
@@ -1646,6 +1652,8 @@ class NameLayer extends RelativeLayer
 
 		dic.valign = valign;
 
+		dic.frameGraphic = frameGraphic;
+
 		return dic;
 
 	}
@@ -1655,6 +1663,8 @@ class NameLayer extends RelativeLayer
 		align  = dic.align  if (dic.align  !== void);
 
 		valign = dic.valign if (dic.valign !== void);
+
+		frameGraphic = dic.frameGraphic !== void ? dic.frameGraphic : ""; // saves from before nameframe have none
 
 		return super.restore(dic);
 
@@ -3231,6 +3241,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 			nameLayer.align    = +elm.namealign  if elm.namealign   !== void;
 
 			nameLayer.valign   = +elm.namevalign if elm.namevalign  !== void;
+
+			nameLayer.frameGraphic = elm.nameframe if elm.nameframe !== void;
 
         } else {
 
@@ -9359,6 +9371,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 				.align  = src.nameLayer.align;
 
 				.valign = src.nameLayer.valign;
+
+				.frameGraphic = src.nameLayer.frameGraphic;
 
 			}
 

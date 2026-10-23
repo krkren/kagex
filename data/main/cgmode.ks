@@ -15,13 +15,13 @@
 [current layer=message0 page=back]
 
 ; Buttons for transition
-[locate x=886 y=74]
-[button name="extra_cgmode" disabled]
-[locate x=1119 y=74]
+[locate x=870 y=78]
+[button name="extra_cgmode" normal="extra_cgmode_over" disabled]
+[locate x=1060 y=78]
 [button name="extra_replaymode" storage="replay.ks"]
-[locate x=1309 y=74]
+[locate x=1250 y=78]
 [button name="extra_musicmode" storage="musicmode.ks"]
-[locate x=1476 y=74]
+[locate x=1450 y=78]
 [button name="return" target=*backtotitle]
 
 ; Character Selection

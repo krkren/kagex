@@ -4,7 +4,7 @@
 
 ; Specification of selection placement area
 
-[selopt normal=select_normal over=select_over left=510 top=198 width=900 height=540 size=36]
+[selopt normal=select_normal over=select_over left=510 top=198 width=900 height=540 size=36 bold=true edge=true edgecolor=0x010062]
 
 
 
@@ -26,7 +26,7 @@
 
 // Version
 
-sf.software_version = "0.0.5";
+sf.software_version = "0.1.0";
 
 
 
