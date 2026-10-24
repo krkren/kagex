@@ -427,7 +427,8 @@ class Easing(_Base):
     middle: tuple = F(None, _rvec(3))   # None: no middle point
     ease: int = EASE_SPEED
     params: tuple = F((0.0, 0.0, 1.0), _floats(3))   # used when ease == EASE_SPEED
-    channels: int = 0                # random group per axis, 8 bits each
+    channels: int = 0x020100         # random channel per axis, 8 bits each (x 0, y 1, z 2:
+                                     # independent; 0: all axes share one random number)
     individual: tuple = None         # per-axis ease types (3), or None
     ref_start: tuple = F(_REF, _irange)
     ref_end: tuple = F(_REF, _irange)
@@ -1165,11 +1166,9 @@ def _l_fcurve(c, f):
     n = c.i32(len(f.keys) if not c.reading else 0)
     if 0 <= n <= 65536 and f.freq > 0:
         f.keys = [c.f32(f.keys[i] if not c.reading else 0) for i in range(n)]
-    elif c.reading:
-        f.keys = []
-        f.freq_note = n
-    elif f.keys:
-        raise ValueError("an FCurve with keys needs freq > 0")
+    elif n != 0:
+        # the loader skips the keys then, and reads the rest of the file from there
+        c.fail(f"F-curve with {n} keys and sampling interval {f.freq}")
     return f
 
 
@@ -1255,7 +1254,8 @@ def _l_fixed(c, o, default):
     def body():
         o.ref = c.i32(o.ref)
         o.value = c.f32s(_d(o.value, default), 3)
-    return c.sized(body, "fixed")
+    c.sized(body, "fixed")
+    return o
 
 
 def _l_pva(c, o, default):
@@ -1268,7 +1268,8 @@ def _l_pva(c, o, default):
         o.value = c.rv(_d(o.value, default), 3)
         o.velocity = c.rv(o.velocity, 3)
         o.acceleration = c.rv(o.acceleration, 3)
-    return c.sized(body, "pva")
+    c.sized(body, "pva")
+    return o
 
 
 _ZERO3 = (0.0, 0.0, 0.0)
@@ -1681,8 +1682,8 @@ def _l_alpha_cutoff(c, a):
     a.edge_color = c.rgba(a.edge_color)
     if c.version >= 1606:
         a.edge_color_scaling = c.f32(a.edge_color_scaling)
-    else:
-        a.edge_color_scaling = c.i32(int(a.edge_color_scaling) if not c.reading else 0)
+    else:   # an int before 1606
+        a.edge_color_scaling = float(c.i32(int(a.edge_color_scaling) if not c.reading else 0))
     return a
 
 
@@ -2035,7 +2036,12 @@ def _l_effect(c, e):
         e.lod_distances = c.f32s(e.lod_distances, 3)
     # root node
     if c.i32(NODE_ROOT) != NODE_ROOT:
-        c.fail("the first node is not the root")
+        hint = ""
+        if c.reading and v < 1702 and c.buf[c.pos - 4:c.pos + 8] == bytes(12) and \
+                c.buf[c.pos + 8:c.pos + 12] == b"\xff\xff\xff\xff":
+            hint = (" - 12 zero bytes and then a root node: LOD distances, which the 1.7 editor"
+                    " also writes into its 1500 fallback binary; the runtime cannot load that either")
+        c.fail("the first node is not the root" + hint)
     counter = iter(range(_LIST_MAX))
     e.nodes = c.list(e.nodes, lambda ch: _l_node(c, ch, next(counter)))
     return e
@@ -2145,6 +2151,9 @@ def _convert(effect, version=VERSION, warn=True):
                 n.force_fields[3] = ForceField(type=FF_ATTRACTIVE, power=a.force, control=a.control,
                                                min_range=a.min_range, max_range=a.max_range)
             n.location_abs = None
+        if version < 1602 and isinstance(n, Model) and n.model_mode != 0:
+            dropped.add("procedural/external model references")
+            n.model_mode, n.model = 0, -1
         if version >= 1602 and isinstance(n, Model) and n.legacy_falloff is not None:
             if n.falloff is None:
                 n.falloff = n.legacy_falloff
@@ -2266,12 +2275,18 @@ def _without(effect, names):
     return e
 
 
-def _first_difference(a, b, path="effect"):
+def _first_difference(a, b, path="effect", tol=False):
+    """Where two parsed values differ (None if equal).  With ``tol``, numbers
+    only need to agree to 32-bit float precision."""
+    if tol and b is None and path.rsplit(".", 1)[-1] in ("value", "start", "end"):
+        return None     # left to its context default (0 or 1)
+    if tol and _isnum(a) and _isnum(b):
+        return None if math.isclose(a, b, rel_tol=1e-6, abs_tol=1e-30) else f"{path}: {a!r} != {b!r}"
     if type(a) is not type(b):
         return f"{path}: {type(a).__name__} != {type(b).__name__}"
     if dataclasses.is_dataclass(a):
         for f in dataclasses.fields(a):
-            d = _first_difference(getattr(a, f.name), getattr(b, f.name), f"{path}.{f.name}")
+            d = _first_difference(getattr(a, f.name), getattr(b, f.name), f"{path}.{f.name}", tol)
             if d:
                 return d
         return None
@@ -2279,11 +2294,171 @@ def _first_difference(a, b, path="effect"):
         if len(a) != len(b):
             return f"{path}: length {len(a)} != {len(b)}"
         for i, (x, y) in enumerate(zip(a, b)):
-            d = _first_difference(x, y, f"{path}[{i}]")
+            d = _first_difference(x, y, f"{path}[{i}]", tol)
             if d:
                 return d
         return None
     return None if a == b else f"{path}: {a!r} != {b!r}"
+
+
+def _synthetic_effect(v17=False):
+    """An effect that uses every variant the codec knows (for the self-test)."""
+    fc = lambda k: FCurve(keys=[0.5 * k, 1.0, 2.0], start=FCURVE_LOOP, offset=(-0.5, 0.5),  # noqa: E731
+                          offset_frame=k, length=20, freq=10)
+    ease3 = Easing(start=((0, 1), 2, 3), end=4, middle=((5, 6), 7, 8), ease=EASE_OUT_BACK,
+                   individual=(EASE_IN_QUAD, EASE_LINEAR, EASE_OUT_CUBIC), ref_start=(0, 1))
+    fease = FloatEasing(start=(1, 2), end=3, middle=4, ease=EASE_SPEED, params=speed(10, -20),
+                        channels=0, individual=EASE_IN_BOUNCE, ref_end=(1, 0))
+    translations = [Fixed((1, 2, 3), ref=0), PVA(value=1, velocity=((-1, 1), 0, 2), ref_velocity=(0, 1)),
+                    ease3, FCurve3(x=fc(1), y=fc(2), z=fc(3), timeline=TIMELINE_PERCENT),
+                    NurbsCurve(index=0, scale=2, move_speed=0.5, loop_type=1), ViewOffset((2, 4))]
+    rotations = [Fixed(deg((0, 0, 90))), PVA(velocity=deg(((0, 10), 0, 0))), ease3,
+                 AxisPVA(rotation=(0, 1), velocity=0.25), AxisEasing(easing=fease),
+                 FCurve3(x=fc(4)), RotateToViewpoint(), RotateToVelocity(axis=3)]
+    scales = [Fixed(2), PVA(acceleration=((0, 0.5), 0, 0)), Easing(end=((2, 3), 2, 1)),
+              SinglePVA((0.5, 1.5), 0.25), FloatEasing(start=1, end=(2, 3)), FCurve3(y=fc(5)),
+              FCurve1(s=fc(6), timeline=TIMELINE_PERCENT)]
+    spawns = [Point(((-1, 1), 0, 0)), Sphere(radius=(1, 2), rotation_x=(0, 1)),
+              Circle(division=12, radius=3, order=SPAWN_ORDER, axis=AXIS_Y, angle_noise=(0, 0.5)),
+              Line(division=4, start=((0, 1), 0, 0), end=(5, 0, 0), noise=(0, 1), order=SPAWN_ORDER),
+              ModelSpawn(reference=1, index=0, mode=3)]
+    colors = [(255, 0, 0, 128), ColorRandom((0, 0, 0, 0), (255, 255, 255, 255), hsv=True),
+              ColorEasing(start=(255, 255, 255), end=ColorRandom((0, 0, 0, 0), (9, 9, 9, 9)),
+                          params=speed(-10, 10)),
+              FCurveRGBA(r=fc(7), a=fc(8), timeline=TIMELINE_PERCENT),
+              Gradient(colors=[(0, (1, 0.5, 0), 1), (1, (0, 0, 1), 2)], alphas=[(0, 1), (0.5, 0)])]
+    uvs = [None, UVFixed((0, 0, 0.5, 0.5)),
+           UVAnimation(rect=(0, 0, 0.25, 0.25), frame_length=2, frames_x=4, frames_y=4, loop=UV_LOOP,
+                       start_frame=(0, 3), interpolation=1),
+           UVScroll(speed=((0, 0.5), 0)), UVFCurve(position=FCurve2(x=fc(9)), size=FCurve2(y=fc(10)))]
+    uvs_more = [dataclasses.replace(u, interpolation=0) if isinstance(u, UVAnimation) else u for u in uvs]
+    customs = [None, CustomData(CUSTOM_FIXED2D, (1, 2)), CustomData(CUSTOM_RANDOM2D, ((0, 1), (2, 3))),
+               CustomData(CUSTOM_EASING2D, (((0, 1), (2, 3)), ((4, 5), (6, 7)), (0, 0, 1))),
+               CustomData(CUSTOM_FCURVE2D, FCurve2(x=fc(11))), CustomData(CUSTOM_FIXED4D, (1, 2, 3, 4)),
+               CustomData(CUSTOM_FCURVE_COLOR, FCurveRGBA(g=fc(12))), CustomData(CUSTOM_DYNAMIC_INPUT, None)]
+    cutoffs = [None, AlphaCutoff(0.25, ref=1, edge_threshold=0.5, edge_color=(255, 0, 0), edge_color_scaling=2),
+               AlphaCutoff(AlphaCutoffFourPoint(begin=(0, 0.25), transition_frames=(5, 10), end=1)),
+               AlphaCutoff(FloatEasing(start=0, end=1, middle=0.5)), AlphaCutoff(FCurve1(s=fc(13)))]
+    fields_ = [ForceField(FF_FORCE, power=2, gravitation=True, falloff=FALLOFF_SPHERE, falloff_power=2,
+                          falloff_max_distance=5, falloff_min_distance=1),
+               ForceField(FF_WIND, position=(1, 2, 3), rotation=(0, 0.5, 0), falloff=FALLOFF_TUBE,
+                          falloff_shape=(2, 3, 1)),
+               ForceField(FF_VORTEX, subtype=0, falloff=FALLOFF_CONE, falloff_shape=(1, 0.5, 0.25)),
+               ForceField(FF_TURBULENCE, power=3, subtype=0, seed=7, scale=4, octave=2),
+               ForceField(FF_DRAG, power=0.5), ForceField(FF_GRAVITY, gravity=(0, -1, 0)),
+               ForceField(FF_ATTRACTIVE, power=2, control=0.5, min_range=1, max_range=10), ForceField()]
+    nodes = []
+    for i in range(8):
+        pick = lambda lst: lst[i % len(lst)]  # noqa: E731
+        kw = dict(translation=pick(translations), rotation=pick(rotations), scale=pick(scales),
+                  spawn=pick(spawns), spawn_rotation=bool(i & 1), uv=pick(uvs), alpha_uv=pick(uvs_more[1:]),
+                  blend_uv=pick(uvs_more[2:]), custom_data1=pick(customs), custom_data2=pick(customs[3:]),
+                  alpha_cutoff=pick(cutoffs), force_fields=[fields_[i], fields_[(i + 3) % 8]][: 1 + i % 2],
+                  max_generation=INFINITE if i == 0 else i, life=(i, 2 * i + 1), generation_time=(1, 1.5),
+                  generation_offset=i, bind_translation=[2, 4, 5, 1][i % 4], bind_rotation=i % 3,
+                  remove_when_parent_removed=bool(i & 2), drawing_priority=[0, -1, 2, 0][i % 4],
+                  depth_offset=0.5, zsort=ZSORT_NORMAL, texture=i % 2, blend=i % 5, filter=NEAREST, wrap=CLAMP,
+                  zwrite=True, fade_in=Fade(5, speed(10, 0)) if i % 2 else None,
+                  fade_out=Fade(3, mode=FADEOUT_AFTER_REMOVED) if i % 3 else None,
+                  falloff=Falloff(blend=1, pow=2) if i % 2 else None, color_bind=BIND_WHEN_CREATING,
+                  sound=Sound(wave=0, volume=(0.5, 1), delay=(0, 10)) if i == 3 else None,
+                  soft_particle_far=1, soft_particle_near=0.5, soft_particle_near_offset=0.25)
+        if kw["bind_translation"] in (4, 5):
+            kw.update(steering_max_follow_speed=(1, 2), steering_speed=(3, 4))
+        if v17:
+            kw.update(trigger_start=(1, 0) if i % 2 else None, trigger_remove=(2, 1) if i % 3 else None,
+                      lod_matching=0b0101, lod_behaviour=1,
+                      kill_rules=[None, KillRules(1, center=(1, 2, 3), size=(4, 5, 6), kill_inside=True),
+                                  KillRules(2, plane_offset=2), KillRules(3, radius=2, scale_and_rotation_applied=False)
+                                  ][i % 4])
+        nodes.append(Sprite(color=pick(colors), billboard=i % 5, vertex_colors=((1, 2, 3, 4),) * 4 if i % 2 else None,
+                            position_type=i % 2, **kw))
+    material = dict(material=MATERIAL_FILE, material_file=MaterialFile(
+        index=0, textures=[(0, 1), (1, 0)], uniforms=[(1, 2, 3, 4)],
+        gradients=[Gradient(colors=[(0, (1, 1, 1), 1)])] if v17 else []))
+    nodes[0].children = [
+        Node(visible=False, children=[
+            Ribbon(color=pick_c, vertex_colors=((1, 1, 1, 1), (2, 2, 2, 2)), viewpoint_dependent=True,
+                   spline_division=3, texture_uv=TextureUV(UV_TILE, tile_length=2),
+                   time_type=1 if v17 else 0, **material)
+            for pick_c in colors[:2]]),
+        Ring(shape=Crescent(starting_fade=10, ending_fade=20, starting_angle=(0, 30), ending_angle=fease),
+             viewing_angle=FloatEasing(start=360, end=(180, 270), params=speed(0, 10)),
+             outer=RingPVA(location=((1, 2), 0), velocity=((0, 0.5), 0)),
+             inner=RingEasing(start=((0, 1), 0), end=(1, 1), params=speed(5, 5)),
+             center_ratio=(0.25, 0.75), outer_color=colors[2], inner_color=colors[3],
+             material=MATERIAL_DISTORTION, distortion_intensity=0.5),
+        Ring(center_ratio=fease, vertex_count=32, material=MATERIAL_LIGHTING, emissive=2, normal_texture=1),
+        Track(texture_uv=TextureUV(UV_TILE_PER_PARTICLE, edge_head=1, edge_tail=2, loop_area=(0.25, 0.75)),
+              size_front=2, size_middle=1.5, size_back=0.5, spline_division=4, color_left=colors[4],
+              color_center_middle=colors[2], smoothing=1 if v17 else 0, time_type=1 if v17 else 0),
+        Model(model=0, model_magnification=2, culling=CULL_DOUBLE, color=colors[1]),
+        Model(model_mode=1, model=0, billboard=BILLBOARD),
+        Model(model_mode=2),
+    ]
+    pm = [ProceduralModel(), ProceduralModel(type=1, shape=(1, 0.5, 3, 1, 2, 0, 90, 0.5, 0.25, 4), primitive=1,
+                                             primitive_params=(1, 2)),
+          ProceduralModel(primitive=2, primitive_params=(1, 2, 3), colors=tuple((i, i, i, 255) for i in range(9))),
+          ProceduralModel(primitive=3, primitive_params=tuple(range(8)), uv_size=(2, 2))]
+    return Effect(nodes=nodes, textures=["a.png", "Texture/b.png"], normal_textures=["n.png"],
+                  distortion_textures=["d.png"], sounds=["s.wav"], models=["m.efkmodel"],
+                  materials=["x.efkmat"], curves=["c.efkcurve"], procedural_models=pm,
+                  dynamic_inputs=[1, 2, 3, 4], dynamic_equations=[b"\x01\x02\x03", b""],
+                  magnification=2, random_seed=1234, culling=CullingSphere(5, (1, 2, 3)),
+                  lod_distances=(10, 20, 30) if v17 else (0.0, 0.0, 0.0))
+
+
+def _synthetic_checks():
+    """Round trips of the synthetic effect; returns a list of problems."""
+    problems = []
+    e = _synthetic_effect()
+    prio, e.rendering_node_count, e.rendering_node_threshold = _render_order(e)
+    for n in _walk(e.nodes):
+        n.rendering_priority = prio[id(n)]
+    try:
+        back = read_efk(write_efk(e))
+        d = _first_difference(back, e, tol=True)
+        if d:
+            problems.append(f"1610 write/read: {d}")
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"1610 write/read: {type(ex).__name__}: {ex}")
+    e17 = _synthetic_effect(v17=True)
+    e17.rendering_node_count, e17.rendering_node_threshold = e.rendering_node_count, e.rendering_node_threshold
+    for n, m in zip(_walk(e17.nodes), _walk(e.nodes)):
+        n.rendering_priority = m.rendering_priority
+    e17.version = 1710
+    try:
+        back = read_efk(_encode(e17, 1710))
+        d = _first_difference(back, e17, tol=True)
+        if d:
+            problems.append(f"1710 write/read: {d}")
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"1710 write/read: {type(ex).__name__}: {ex}")
+    # a 1.5 file: location abs and old force fields become 1.6 force fields
+    e15 = _convert(e17, 1500, warn=False)
+    e15.nodes[1].location_abs = LocationAbs(1, gravity=(0, -0.5, 0))
+    e15.nodes[2].location_abs = LocationAbs(2, force=1, control=0.5, max_range=3)
+    try:
+        r15 = read_efk(_encode(e15, 1500))
+        d = _first_difference(r15.nodes[1].location_abs, e15.nodes[1].location_abs, "location_abs", tol=True)
+        back = read_efk(write_efk(r15))
+        d = d or _first_difference(back, _convert(r15, VERSION, warn=False))
+        if d:
+            problems.append(f"1500 to 1610: {d}")
+        if back.nodes[1].force_fields[3].type != FF_GRAVITY:
+            problems.append("1500 to 1610: location abs did not become a gravity field")
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"1500 to 1610: {type(ex).__name__}: {ex}")
+    for ver in (1500, 1600, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1610, 1700, 1702, 1703, 1704, 1705):
+        try:
+            old = _convert(e17, ver, warn=False)
+            data = _encode(old, ver)
+            again = _encode(read_efk(data), ver)
+            if again != data:
+                problems.append(f"{ver}: re-encoding differs")
+        except Exception as ex:  # noqa: BLE001
+            problems.append(f"{ver}: {type(ex).__name__}: {ex}")
+    return problems
 
 
 def selftest(folder, verbose=False):
@@ -2305,6 +2480,11 @@ def selftest(folder, verbose=False):
                 print(f"{label}: v{ver} skipped ({ex})")
                 continue
             except FormatError as ex:
+                if k > 0 and "1500 fallback" in str(ex):
+                    # the runtime only loads the first BIN_ chunk; this one is
+                    # the 1.7 editor's broken 1.5 fallback
+                    print(f"{label}: v{ver} not loadable by the runtime loader either, ignored: {ex}")
+                    continue
                 print(f"{label}: v{ver} READ FAILED: {ex}")
                 failures += 1
                 continue
@@ -2349,8 +2529,13 @@ def selftest(folder, verbose=False):
             print(f"{label}: v{ver} {'OK' if ok else 'FAIL'}: " + "; ".join(results))
             if verbose:
                 print("\n".join(_tree(e.nodes)))
+    problems = _synthetic_checks()
+    for p in problems:
+        print(f"synthetic effect: FAIL: {p}")
+    if not problems:
+        print("synthetic effect (every variant, versions 1500-1710): OK")
     print(f"{checked} binaries checked, {failures} failed")
-    return failures == 0
+    return failures == 0 and not problems
 
 
 if __name__ == "__main__":
