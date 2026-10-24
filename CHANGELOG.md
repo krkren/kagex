@@ -2,8 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Web builds offer Add to Home Screen on phones and tablets, where the game then opens full screen: a bar with an Add button where the browser can install the page (Chrome, Edge, Samsung Internet, Opera on Android) and the steps everywhere else (Share, then Add to Home Screen on every iPhone and iPad browser; the browser menu in Firefox and other Android browsers). Closing it hides it for 30 days. The manifest gained an id, a description, `display_override` and separate maskable icons, and the page a favicon.
+- Link previews for web builds in Discord, Slack, X, iMessage and the like: Open Graph and Twitter card tags with the title, a description and a 1200x630 preview image (the sample's is its title screen, drawn by `make_ui.py preview`). kagex-release has *Site address*, *Description* and *Preview image* settings for them.
+
 ### Fixed
 
+- Web builds kept showing players the old game after an update. The engine caches every game file in the browser (OPFS) for good, and the page and its scripts could come from the browser's cache too. Each build now has an id (in `kagex-build.json` and the page, whose scripts load with it), and `kagex-web.js` checks it before the game starts: a stale page reloads, a new build empties the engine's file cache, and the game's files are checked with the server.
 - Buttons didn't highlight in games packaged by kagex-release with images converted to TLG or JPEG: the framework looked for a button's hover, pressed and focus images (`<name>_over`, `_on`, `_focus`) as `.png`, `.tlg5`, `.tlg6` or `.bmp` only, and converted images are `.tlg` or `.jpg`. It now tries every image format the engine reads. kagex-release refuses TLG and JPEG for a game whose framework (`data/system`) predates this.
 - The sample's CG screen shrank the whole CG instead of using its prepared thumbnail once the thumbnail had been converted.
 

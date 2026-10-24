@@ -112,6 +112,9 @@ const PLATFORM_FIELDS = {
 	],
 	web: [
 		{ path: 'data', label: 'Data', type: 'select', options: [['files', 'Files, each loaded when the game needs it (recommended)'], ['xp3', 'data.xp3, loaded before the game starts']] },
+		{ path: 'url', label: 'Site address', type: 'text', help: 'Where the game will be, like https://studio.example/game/: link previews (Discord, Slack, X) need it for their image' },
+		{ path: 'description', label: 'Description', type: 'text', help: 'One or two sentences under the title in link previews and search results' },
+		{ path: 'preview', label: 'Preview image', type: 'file', help: 'The picture in link previews: a PNG or JPEG, 1200x630 is best. Empty: the icon' },
 	],
 	android: [
 		{ path: 'format', label: 'Package', type: 'select', options: [['apk', 'APK (install directly)'], ['aab', 'App bundle (.aab, for Google Play)']] },

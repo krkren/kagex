@@ -22,6 +22,8 @@ struct Project {
 	std::string orgName, appName;
 	/// a 1024x1024 icon, when the project has one (platform/icon-1024.png)
 	std::filesystem::path icon;
+	/// a link-preview image for the web build (platform/web/preview.jpg or .png), when it has one
+	std::filesystem::path preview;
 	/// the engine next to data/ (krkrz.exe or krkrz), when there is one
 	std::filesystem::path engine;
 };

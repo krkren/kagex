@@ -17,6 +17,7 @@
 #include "krt/app/Progress.h"
 #include "krt/app/Text.h"
 #include "krt/xp3/Xp3.h"
+#include "KagexWebJs.h"
 
 #ifdef KR_HAVE_RELEASE_LIB
 #include "krt/release/Release.h"
@@ -1035,13 +1036,48 @@ private:
 		licensesInto(engine, dir);
 	}
 
-	// index.html: the title, coi-serviceworker's reload once its worker is ready, and the
-	// home-screen manifest and icons (as .github/platforms/web-static-host.py does for the sample)
+	// width and height of a PNG or JPEG (for og:image:width/height); false when it can't tell
+	static bool imageSize(const fs::path& file, int& w, int& h)
+	{
+		std::string d;
+		if (!krt::readFile(file, d) || d.size() < 24) return false;
+		auto u8 = [&](size_t i) { return (unsigned)(unsigned char)d[i]; };
+		auto be16 = [&](size_t i) { return (int)(u8(i) << 8 | u8(i + 1)); };
+		if (d.compare(0, 8, "\x89PNG\r\n\x1a\n") == 0) {
+			w = (int)(u8(16) << 24 | u8(17) << 16 | u8(18) << 8 | u8(19));
+			h = (int)(u8(20) << 24 | u8(21) << 16 | u8(22) << 8 | u8(23));
+			return w > 0 && h > 0;
+		}
+		if (u8(0) != 0xff || u8(1) != 0xd8) return false;
+		for (size_t i = 2; i + 9 < d.size();) {
+			if (u8(i) != 0xff) return false;
+			const unsigned m = u8(i + 1);
+			if (m == 0xff) { ++i; continue; }
+			if (m >= 0xc0 && m <= 0xcf && m != 0xc4 && m != 0xc8 && m != 0xcc) {
+				h = be16(i + 5);
+				w = be16(i + 7);
+				return w > 0 && h > 0;
+			}
+			if (m == 0xd8 || (m >= 0xd0 && m <= 0xd7) || m == 0x01) { i += 2; continue; }
+			i += 2 + (size_t)be16(i + 2);
+		}
+		return false;
+	}
+
+	// index.html and what goes with it, as .github/platforms/web-static-host.py does for the
+	// sample: the title; coi-serviceworker's reload once its worker is ready; the home-screen
+	// manifest and icons; link previews (Open Graph, Twitter card); kagex-web.js (updates and Add
+	// to Home Screen, from platform/web, built into this tool) and the build's id, in
+	// kagex-build.json and in the page (<meta name=kagex-build>, ?v=<id> on its scripts). The
+	// added head tags sit between <!--kagex-head--> and <!--/kagex-head-->.
 	void webPage(const fs::path& dir)
 	{
 		std::string html;
 		if (!krt::readFile(dir / "index.html", html)) throw Failure{ "The web engine has no index.html" };
 		const std::string title = str(s_, "identity.title"), shortName = str(s_, "identity.shortName");
+		const std::string description = str(s_, "platforms.web.description"), preview = str(s_, "platforms.web.preview");
+		std::string url = str(s_, "platforms.web.url");
+		if (!url.empty() && url.back() != '/') url += '/';
 		auto esc = [](const std::string& v) {
 			std::string o;
 			for (char c : v) {
@@ -1049,44 +1085,10 @@ private:
 			}
 			return o;
 		};
-		const std::string coiTag = "<script src=\"coi-serviceworker.js\"></script>";
-		if (html.find("window.coi=") == std::string::npos && html.find(coiTag) != std::string::npos)
-			html.replace(html.find(coiTag), 0, "<script>window.coi={doReload:function(){navigator.serviceWorker.ready.then(function(){window.location.reload();});}};</script>");
-		const size_t t0 = html.find("<title>"), t1 = html.find("</title>");
-		if (t0 != std::string::npos && t1 != std::string::npos && t1 > t0) html.replace(t0 + 7, t1 - t0 - 7, esc(title));
-		if (html.find("apple-mobile-web-app-capable") == std::string::npos) {
-			const std::string head = "<link rel=manifest href=manifest.webmanifest><meta name=theme-color content=\"#000000\">"
-				"<meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-capable content=yes>"
-				"<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>"
-				"<meta name=apple-mobile-web-app-title content=\"" + esc(shortName) + "\"><link rel=apple-touch-icon href=apple-touch-icon.png>";
-			const size_t at = html.find("</title>");
-			if (at != std::string::npos) html.insert(at + 8, head);
-		} else {
-			static const std::regex re(R"re(<meta name=apple-mobile-web-app-title content="[^"]*">)re");
-			html = std::regex_replace(html, re, "<meta name=apple-mobile-web-app-title content=\"" + esc(shortName) + "\">");
-		}
-		writeText(dir / "index.html", html);
+		std::error_code ec;
 
-		Json app = Json::object();
-		app.set("name", Json(title));
-		app.set("short_name", Json(shortName));
-		app.set("start_url", Json("./"));
-		app.set("scope", Json("./"));
-		app.set("display", Json("fullscreen"));
-		app.set("orientation", Json("landscape"));
-		app.set("background_color", Json("#000000"));
-		app.set("theme_color", Json("#000000"));
-		Json icons = Json::array();
-		for (int size : { 192, 512 }) {
-			Json i = Json::object();
-			i.set("src", Json("icon-" + std::to_string(size) + ".png"));
-			i.set("sizes", Json(std::to_string(size) + "x" + std::to_string(size)));
-			i.set("type", Json("image/png"));
-			i.set("purpose", Json("any maskable"));
-			icons.push(std::move(i));
-		}
-		app.set("icons", std::move(icons));
-		writeText(dir / "manifest.webmanifest", app.dump(2) + "\n");
+		// the files the page uses
+		writeText(dir / "kagex-web.js", std::string(reinterpret_cast<const char*>(kKagexWebJs), sizeof(kKagexWebJs)));
 		if (icons_.loaded()) {
 			for (const auto& [file, size] : std::vector<std::pair<std::string, int>>{ { "icon-192.png", 192 }, { "icon-512.png", 512 }, { "apple-touch-icon.png", 180 } }) {
 				std::string png, err;
@@ -1094,6 +1096,106 @@ private:
 				writeText(dir / krt::toPath(file), png);
 			}
 		}
+		for (const char* old : { "preview.jpg", "preview.jpeg", "preview.png", "kagex-build.json" }) fs::remove(dir / old, ec);
+		std::string image = "icon-512.png";
+		int iw = 512, ih = 512;
+		if (!preview.empty()) {
+			const fs::path src = p_.root / krt::toPath(preview);
+			std::string ext = krt::fromPath(src.extension());
+			for (auto& c : ext) c = (char)std::tolower((unsigned char)c);
+			image = "preview" + std::string(ext == ".png" ? ".png" : ".jpg");
+			copyFile(src, dir / krt::toPath(image));
+			if (!imageSize(src, iw, ih)) iw = ih = 0;
+		}
+
+		Json app = Json::object();
+		app.set("id", Json("./"));
+		app.set("name", Json(title));
+		app.set("short_name", Json(shortName));
+		if (!description.empty()) app.set("description", Json(description));
+		app.set("start_url", Json("./"));
+		app.set("scope", Json("./"));
+		app.set("display", Json("fullscreen"));
+		app.set("display_override", Json::array({ "fullscreen", "standalone" }));
+		app.set("orientation", Json("landscape"));
+		app.set("background_color", Json("#000000"));
+		app.set("theme_color", Json("#000000"));
+		Json icons = Json::array();
+		for (const char* purpose : { "any", "maskable" }) {
+			for (int size : { 192, 512 }) {
+				Json i = Json::object();
+				i.set("src", Json("icon-" + std::to_string(size) + ".png"));
+				i.set("sizes", Json(std::to_string(size) + "x" + std::to_string(size)));
+				i.set("type", Json("image/png"));
+				i.set("purpose", Json(purpose));
+				icons.push(std::move(i));
+			}
+		}
+		app.set("icons", std::move(icons));
+		writeText(dir / "manifest.webmanifest", app.dump(2) + "\n");
+
+		// the build's id: a hash of every file the page uses
+		std::vector<std::string> names;
+		for (fs::recursive_directory_iterator it(dir, ec), end; it != end; it.increment(ec)) {
+			if (ec || !it->is_regular_file(ec)) continue;
+			const std::string n = krt::fromPath(fs::relative(it->path(), dir, ec));
+			if (n != "index.html" && n != "kagex-build.json" && n != "serve.py") names.push_back(n);
+		}
+		std::sort(names.begin(), names.end());
+		Sha256 all;
+		for (const auto& n : names) {
+			std::string hex, err;
+			if (!sha256File(dir / krt::toPath(n), hex, err)) throw Failure{ err };
+			all.update(n.data(), n.size() + 1);   // the name, its NUL, the file's hash
+			all.update(hex.data(), hex.size());
+		}
+		const std::string build = all.hex().substr(0, 16);
+		Json bj = Json::object();
+		bj.set("build", Json(build));
+		writeText(dir / "kagex-build.json", bj.dump() + "\n");
+
+		// index.html
+		const std::string coiTag = "<script src=\"coi-serviceworker.js\"></script>";
+		if (html.find("window.coi=") == std::string::npos && html.find(coiTag) != std::string::npos)
+			html.replace(html.find(coiTag), 0, "<script>window.coi={doReload:function(){navigator.serviceWorker.ready.then(function(){window.location.reload();});}};</script>");
+		const size_t t0 = html.find("<title>"), t1 = html.find("</title>");
+		if (t0 == std::string::npos || t1 == std::string::npos || t1 < t0) throw Failure{ "The web engine's index.html has no <title>" };
+		html.replace(t0 + 7, t1 - t0 - 7, esc(title));
+		static const std::regex block(R"re(<!--kagex-head-->[\s\S]*?<!--/kagex-head-->)re");
+		static const std::regex legacy(R"re(<link rel=manifest [^>]*>|<link rel=apple-touch-icon [^>]*>|<meta name=(?:theme-color|mobile-web-app-capable|apple-mobile-web-app-[a-z-]+) [^>]*>)re");
+		html = std::regex_replace(html, block, "");
+		html = std::regex_replace(html, legacy, "");
+		std::string head = "<!--kagex-head--><meta name=kagex-build content=\"" + build + "\">";
+		if (!description.empty()) head += "<meta name=description content=\"" + esc(description) + "\">";
+		head += "<link rel=manifest href=manifest.webmanifest><link rel=icon href=icon-192.png><meta name=theme-color content=\"#000000\">"
+			"<meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-capable content=yes>"
+			"<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>"
+			"<meta name=apple-mobile-web-app-title content=\"" + esc(shortName) + "\"><link rel=apple-touch-icon href=apple-touch-icon.png>"
+			"<meta property=og:type content=website><meta property=og:site_name content=\"" + esc(title) + "\">"
+			"<meta property=og:title content=\"" + esc(title) + "\">";
+		if (!description.empty()) head += "<meta property=og:description content=\"" + esc(description) + "\">";
+		if (!url.empty()) head += "<meta property=og:url content=\"" + esc(url) + "\">";
+		head += "<meta property=og:image content=\"" + esc(url + image) + "\">";
+		if (iw > 0) head += "<meta property=og:image:width content=" + std::to_string(iw) + "><meta property=og:image:height content=" + std::to_string(ih) + ">";
+		head += "<meta property=og:image:alt content=\"" + esc(title) + "\">";
+		head += std::string("<meta name=twitter:card content=") + (preview.empty() ? "summary" : "summary_large_image") + "><!--/kagex-head-->";
+		const size_t at = html.find("</title>") + 8;
+		html.insert(at, head);
+
+		// kagex-web.js right before webconfig.js (after the page's Module, before krkrz.js), and
+		// the scripts with the build's id
+		static const std::regex oldTag(R"re(<script src=["']?kagex-web\.js[^"'\s>]*["']?></script>)re");
+		html = std::regex_replace(html, oldTag, "");
+		static const std::regex configTag(R"re(<script src=["']?webconfig\.js)re");
+		std::smatch m;
+		if (!std::regex_search(html, m, configTag)) throw Failure{ "The web engine's index.html doesn't load webconfig.js" };
+		html.insert((size_t)m.position(0), "<script src=\"kagex-web.js\"></script>");
+		for (const char* script : { "webconfig.js", "krkrz.js", "kagex-web.js" }) {
+			std::string name = script;
+			const std::regex re(std::string(R"re(src=(["']?))re") + std::regex_replace(name, std::regex(R"(\.)"), R"(\.)") + R"re((?:\?v=[0-9a-f]*)?\1(?=[\s>]))re");
+			html = std::regex_replace(html, re, "src=\"" + name + "?v=" + build + "\"");
+		}
+		writeText(dir / "index.html", html);
 	}
 
 	//-----------------------------------------------------------------------

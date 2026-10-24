@@ -114,6 +114,9 @@ bool findProject(const fs::path& start, Project& out, std::string& error)
 			for (const char* icon : { "platform/icon-1024.png", "icon-1024.png", "icon.png" }) {
 				if (fs::is_regular_file(p.root / icon, ec)) { p.icon = p.root / icon; break; }
 			}
+			for (const char* preview : { "platform/web/preview.jpg", "platform/web/preview.png" }) {
+				if (fs::is_regular_file(p.root / preview, ec)) { p.preview = p.root / preview; break; }
+			}
 			for (const char* exe : { "krkrz.exe", "krkrz" }) {
 				if (fs::is_regular_file(p.root / exe, ec)) { p.engine = p.root / exe; break; }
 			}
