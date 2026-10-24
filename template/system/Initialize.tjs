@@ -530,8 +530,18 @@ KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefine
 // showed as boxes without them. Noto Sans JP (SIL OFL 1.1, notosansjp-OFL.txt) ships next to
 // this file and is registered by name; the file is read the first time a face list uses it.
 // A game can drop the file and the name from its face lists to use system fonts instead.
+// Where the engine bundles a font of that name itself (the browser build), it is loaded now
+// instead: the engine finds a bundled font only in the exact style asked for, so text that was
+// bold when the font was first used (the [select] choices) fell back to the icon font, and every
+// text in that face came out as arrows. A loaded font is also found for bold and italic.
 if (typeof global.Font.registerFontFile != "undefined" && Storages.isExistentStorage("notosansjp-regular.otf")) {
-	try { Font.registerFontFile(Storages.getPlacedPath("notosansjp-regular.otf"), "Noto Sans JP"); }
+	try {
+		var notoPath = Storages.getPlacedPath("notosansjp-regular.otf");
+		if (typeof global.Font.getVarAxes != "undefined" && Font.getVarAxes("Noto Sans JP") !== void)
+			Font.addFont(notoPath);
+		else
+			Font.registerFontFile(notoPath, "Noto Sans JP");
+	}
 	catch (e) { dm("Could not register notosansjp-regular.otf (" + e.message + ")"); }
 }
 

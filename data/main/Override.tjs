@@ -668,9 +668,14 @@ function setCGImage(target, filename)
         layer2.operateStretch(0,0,pw,ph,layer,0,0,sw,sh,omAuto,255,stLinear);
     }
 
+    // holdAlpha keeps the frame's alpha, as in fileDataButton: without it the browser build
+    // (whose omPs* blends write alpha 0) left the picture transparent, so the tile looked empty
+    var hold = target.holdAlpha;
+    target.holdAlpha = true;
     target.operateRect(               b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
     target.operateRect(target.width  +b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
     target.operateRect(target.width*2+b,  b,layer2,0,0,layer2.imageWidth,layer2.imageHeight,omPsNormal);
+    target.holdAlpha = hold;
 
     if (tf.viewcgfilename) {
 	    target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";

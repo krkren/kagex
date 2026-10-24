@@ -587,6 +587,18 @@ def sample_steps(eng):
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
+    @step("the demo menu's choices are drawn in a text font")
+    def _():
+        # A face the engine can't draw falls back to its icon font, which measures 0 and
+        # draws arrows (the browser build did that to all bold text)
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks" && kag.inStable', timeout=20)
+        w = eng.tjs('var s = kag._selectLayer; if (s === void || s.selects.count == 0) return -1;'
+                    ' return s.selects[0].font.getTextWidth("KAGEX");')
+        if w == -1:
+            raise SmokeError("the demo menu shows no choices")
+        if w <= 0:
+            raise SmokeError("the choices' font measures %s: the text is drawn with the icon font" % w)
+
     @step("save and load a bookmark")
     def _():
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
@@ -652,6 +664,15 @@ def sample_steps(eng):
         def _(screen=screen, mode=mode):
             eng.tjs('tf.extramode = %d; kag.process("title.ks", "*extra"); return 1;' % mode)
             eng.wait(screen, 'kag.conductor.curStorage == "%s" && kag.inStable' % screen, timeout=20)
+            if screen != "musicmode.ks":
+                # The demos unlock the first CG and Replay entry, whose tile shows a picture;
+                # the browser build once drew it transparent (an empty frame)
+                a = eng.tjs('var b = kag.current.names["cg0"]; if (b === void || !b.visible || !b.enabled)'
+                            ' return -1; return b.getMaskPixel(b.width >> 1, b.height >> 1);')
+                if a == -1:
+                    raise SmokeError("the first entry is still locked")
+                if a != 255:
+                    raise SmokeError("the first entry's picture is transparent (alpha %s)" % a)
             eng.key("VK_ESCAPE")
             eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
