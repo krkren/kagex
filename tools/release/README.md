@@ -4,9 +4,6 @@ Packages a KAGEX game for Windows, Linux, Linux for Steam, macOS, the web, Andro
 It opens a settings window (a local page in a browser app window, like the engine's own
 tools), and everything it does can also run from the command line (`--cli`), for CI.
 
-**Work in progress for 0.3.0.** This version builds every platform's package and converts the
-media.
-
 ## Using it
 
 A KAGEX package keeps the tool in `tools/`. Start it, and it opens the game in the folder above
