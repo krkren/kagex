@@ -442,6 +442,8 @@ Attributes
 
 				fire: Unspecified
 
+				efk: .efk .efkefc .efkzip (Effekseer effects)
+
     movie   Equivalent to flip specification + fliptype:movie  * For compatibility
 
     fire    Equivalent to flip specification + fliptype:fire   * For compatibility
@@ -531,6 +533,62 @@ Attributes
 		genratio
 
 		ptidx
+
+	Optional parameters for efk (Effekseer effects, template/system/GFX_Effekseer.tjs)
+
+		The krkreffekseer plugin draws the effect with OpenGL ES into a canvas that is
+
+		read back into the layer every frame. The effect sits at the canvas centre.
+
+		The layer is drawn additively: ltAlpha and ltOpaque, which can't show an effect,
+
+		become ltAdditive; other blend modes given with mode= are kept.
+
+		Without the plugin or OpenGL ES, the effect shows nothing and ends at once
+
+		(the console says why). When every effect has ended, the trigger efkdone is sent
+
+		([waittrig name=efkdone]).
+
+		efkmag      Pixels per effect unit. Default 50.
+
+		efkwidth    Canvas width. Default: the screen's.
+
+		efkheight   Canvas height. Default: the screen's.
+
+		efkx        Horizontal position from the canvas centre, in pixels (right is +).
+
+		efky        Vertical position from the canvas centre, in pixels (down is +).
+
+		efkrot      Rotation in the screen plane, in degrees (clockwise).
+
+		efkrotx     Tilt about the horizontal axis, in degrees: a ring made flat on the
+
+		            ground faces the viewer at an angle with about -65.
+
+		efkroty     Turn about the vertical axis, in degrees.
+
+		efkzoom     Size in % (100: as efkmag gives).
+
+		efkspeed    Playback speed (1.0: as made).
+
+		efkcolor    Colour multiplied over the effect: 0xRRGGBB or 0xAARRGGBB.
+
+		efkinput    Dynamic inputs: index:value[,index:value...]. With an .efkzip,
+
+		            names from its effect.json work in place of the indexes.
+
+		efktrigger  Sends triggers (index[,index...]) to the effect, once.
+
+		efkstop     Stops making particles; the flip ends once the last one is gone.
+
+		loop        Plays the effect again each time it ends (until efkstop).
+
+		efkmag, efkwidth and efkheight count when the effect starts; the others can be
+
+		changed while it plays ([layopt layer=0 efkstop=true]).
+
+
 
 
 
