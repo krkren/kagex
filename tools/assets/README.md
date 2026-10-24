@@ -5,7 +5,7 @@ The sample's images are generated here rather than edited by hand.
 - `make_ui.py` draws the UI in `data/image` (title, logo, message window and its buttons,
   choices, config, save/load, Extras, history), the click-wait glyphs in `template/system`,
   the World demo's star and the app icons in `platform/` (the Linux desktop entry's SVG, the
-  iOS and macOS icon, Android's adaptive icon layers). Every screen uses the look of the Yes/No dialogs in
+  iOS and macOS icon, Android's adaptive icon layers, the web build's home-screen icons in `platform/web`). Every screen uses the look of the Yes/No dialogs in
   `template/system`: lavender panels, violet borders, hard violet shadows, white buttons that
   turn violet when hovered or selected. The colours, sizes and labels are at the top of each
   function; the positions match the `.ks` files that place the images, so a layout change

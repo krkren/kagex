@@ -5340,13 +5340,15 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
-	// The line layer only reaches lineLayerPadding below the text cell. krkr_richtext's
+	// The line layer only reaches lineLayerPadding below the text cell. Descenders (g, j, p,
 
-	// descenders (g, j, p, q, y) and the shadow or edge under them can reach further, and
+	// q, y) and the shadow or edge under them can reach further, with krkr_richtext or with
 
-	// were cut off at the bottom of the line, so widen the padding for a new line when they
+	// Layer.drawText, and were cut off at the bottom of the line, so widen the padding for a
 
-	// need it. The padding is symmetric and every offset uses it, so the text doesn't move
+	// new line when they need it. The padding is symmetric and every offset uses it, so the
+
+	// text doesn't move
 
 	var lineLayerPaddingConfig; // lineLayerPadding as configured
 
@@ -5364,13 +5366,25 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var rta = vertical ? void : getRichTextApp(lineLayer);
 
+		var over = 0;
+
 		if (rta !== void) {
 
-			var over = rta.bottomOverhang(this, fontSize);
+			over = rta.bottomOverhang(this, fontSize);
 
-			if (over > pad) pad = over;
+		} else if (!vertical && typeof lineLayer.font.getGlyphDrawRect != "undefined") {
+
+			// Layer.drawText (the browser and iOS builds have no krkr_richtext): its descenders
+
+			// reach as far below the cell, and its shadow or edge with them
+
+			var reach = edge ? edgeExtent * 2 : shadow ? Math.max(Math.abs(shadowOffsetX), Math.abs(shadowOffsetY)) + shadowWidth : 0;
+
+			over = int(Math.ceil(lineLayer.font.getGlyphDrawRect("gjpqy").bottom + reach - fontSize)) + 1;
 
 		}
+
+		if (over > pad) pad = over;
 
 		lineLayerPadding = pad;
 
