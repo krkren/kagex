@@ -1,0 +1,127 @@
+# Builds kagex-release (tools/release) for Windows, Linux and macOS (Apple Silicon) and runs
+# its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium).
+# Each job uploads the tool (kagex-release-<os>) and force-pushes its results to
+# ci/platform-results-release-tool-<os>.
+name: Release tool
+
+on:
+  push:
+    branches: ['release-tool/**', main]
+    paths: ['tools/release/**', '.github/workflows/release-tool.yml']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, preset: windows, name: windows, exe: kagex-release.exe }
+          - { os: ubuntu-22.04, preset: linux, name: linux, exe: kagex-release }
+          - { os: macos-15, preset: macos, name: macos, exe: kagex-release }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kagex
+      - name: Clone krkrz_tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p results
+          sha=$(gh api "repos/wamsoft/krkrz_dev/contents/src/tools/krkrz_tools?ref=$ENGINE_SHA" --jq .sha)
+          git clone -q https://github.com/wamsoft/krkrz_tools.git krkrz_tools
+          git -C krkrz_tools checkout -q "$sha"
+          git -C krkrz_tools submodule update -q --init --recursive
+          ws=$(pwd -W 2>/dev/null || pwd)
+          echo "KRKRZ_TOOLS_DIR=$ws/krkrz_tools" >> "$GITHUB_ENV"
+          PY=python3; [ "$RUNNER_OS" = Windows ] && PY=python
+          echo "PY=$PY" >> "$GITHUB_ENV"
+          # the oldest macOS the tool runs on (also for the vcpkg libraries)
+          [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
+          { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Set up vcpkg
+        id: vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          if [ "$RUNNER_OS" = Windows ]; then "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics; else "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics; fi
+          ws=$(pwd -W 2>/dev/null || pwd)
+          mkdir -p vcpkg-archives
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$ws/vcpkg-archives,readwrite" >> "$GITHUB_ENV"
+          echo "sha=$(git -C "$RUNNER_TEMP/vcpkg" rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          { cmake --version | head -1; ninja --version; } | tee results/toolchain.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-release-tool-${{ matrix.name }}-${{ hashFiles('kagex/tools/release/vcpkg.json') }}-${{ steps.vcpkg.outputs.sha }}
+          restore-keys: vcpkg-release-tool-${{ matrix.name }}-
+      - name: Configure
+        working-directory: kagex/tools/release
+        run: ../../.github/platforms/run-logged.sh configure cmake --preset ${{ matrix.preset }} "-DKRKRZ_TOOLS_DIR=$KRKRZ_TOOLS_DIR"
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: vcpkg-archives
+          key: vcpkg-release-tool-${{ matrix.name }}-${{ hashFiles('kagex/tools/release/vcpkg.json') }}-${{ steps.vcpkg.outputs.sha }}
+      - name: Build
+        working-directory: kagex/tools/release
+        run: ../../.github/platforms/run-logged.sh build cmake --build --preset ${{ matrix.preset }}-rel
+      - name: Smoke test
+        run: |
+          exe=kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.exe }}
+          ls -l "$exe" | tee results/exe.txt
+          case "$RUNNER_OS" in
+            Linux) ldd "$exe" >> results/exe.txt; objdump -T "$exe" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1 >> results/exe.txt ;;
+            macOS) otool -L "$exe" >> results/exe.txt; vtool -show-build "$exe" >> results/exe.txt 2>&1 || true ;;
+          esac
+          browser=""
+          if [ "$RUNNER_OS" = Linux ]; then
+            $PY -m pip install --quiet playwright
+            $PY -m playwright install --with-deps chromium > /dev/null
+            browser=--browser
+          fi
+          kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke
+      - name: Pack the tool
+        if: always()
+        run: |
+          mkdir -p out
+          cp kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.exe }} out/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kagex-release-${{ matrix.name }}
+          path: out
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        # the libraries, for building the tool where vcpkg can't download its sources
+        if: runner.os == 'Linux'
+        with:
+          name: vcpkg-installed-linux
+          path: kagex/tools/release/build/linux/vcpkg_installed/x64-linux
+          retention-days: 7
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kagex/.github/platforms/publish-results.sh release-tool-${{ matrix.name }} "release tool ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"

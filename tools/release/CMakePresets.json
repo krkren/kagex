@@ -1,0 +1,45 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "default",
+            "hidden": true,
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        },
+        {
+            "name": "windows",
+            "description": "Windows x64 / MSVC (from a Developer Command Prompt)",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "cl",
+                "CMAKE_CXX_COMPILER": "cl",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+            },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+        },
+        {
+            "name": "linux",
+            "description": "Linux x64",
+            "inherits": "default",
+            "cacheVariables": { "VCPKG_TARGET_TRIPLET": "x64-linux" },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+        },
+        {
+            "name": "macos",
+            "description": "macOS arm64 (Apple Silicon)",
+            "inherits": "default",
+            "cacheVariables": { "VCPKG_TARGET_TRIPLET": "arm64-osx", "CMAKE_OSX_DEPLOYMENT_TARGET": "12.0" },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+        }
+    ],
+    "buildPresets": [
+        { "name": "windows",     "configurePreset": "windows", "configuration": "Debug" },
+        { "name": "windows-rel", "configurePreset": "windows", "configuration": "Release" },
+        { "name": "linux",       "configurePreset": "linux",   "configuration": "Debug" },
+        { "name": "linux-rel",   "configurePreset": "linux",   "configuration": "Release" },
+        { "name": "macos",       "configurePreset": "macos",   "configuration": "Debug" },
+        { "name": "macos-rel",   "configurePreset": "macos",   "configuration": "Release" }
+    ]
+}
