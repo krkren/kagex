@@ -1,0 +1,485 @@
+# Builds the SDL3 packages for a kagex release on Windows and Linux, unzips and
+# smoke-tests each one, and only when all of them pass (and KAGEX_SHA has reached main)
+# creates the release tag at KAGEX_SHA and publishes the zips. The platform builds (Linux for
+# Steam, web, Android, iOS Simulator, macOS) come from platforms.yml, copied here from the
+# release commit and called with it. After publishing, the web build goes on GitHub Pages
+# (pages.yml on main). Zip package layout, like 0.0.4:
+#   krkrz(.exe), SDL3.dll / libSDL3.so.0, plugin/, license.txt, licenses/ (cmake --install of
+#   the engine) + data/, template/, doc/, "KAGEX Initial Setup.txt" and krkrz.cf (the
+#   engine's options: the Linux/macOS save folder) from the kagex commit.
+name: Release packages
+
+on:
+  push:
+    branches: [ci/windows-release]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-packages
+  cancel-in-progress: true
+
+env:
+  RELEASE_TAG: "0.2.2"
+  KAGEX_SHA: ab16f01702e45a8af4b74197c515d9cc3f6520e9
+  # "true" tags and publishes after every package passed; anything else is a dry run
+  PUBLISH: "true"
+  ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
+  # the engine commit the Windows tests ran against
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+
+jobs:
+  release-commit:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - id: sha
+        run: echo "sha=$KAGEX_SHA" >> "$GITHUB_OUTPUT"
+
+  platforms:
+    needs: release-commit
+    uses: ./.github/workflows/platforms.yml
+    with:
+      ref: ${{ needs.release-commit.outputs.sha }}
+    permissions:
+      contents: write
+
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Debug]
+    env:
+      CONFIG: ${{ matrix.config }}
+      VSLANG: "1033"
+    steps:
+      - name: Check out kagex at the release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.KAGEX_SHA }}
+          path: kagex
+
+      - name: Check out the CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci
+
+      - name: Clone engine (recursive)
+        shell: bash
+        run: |
+          mkdir -p results
+          git clone --depth 1 --recursive --shallow-submodules -j 8 -b master "$ENGINE_REPO" krkrz_dev
+          if [ "$(git -C krkrz_dev rev-parse HEAD)" != "$ENGINE_SHA" ]; then
+            rm -rf krkrz_dev
+            git clone --recursive -j 8 "$ENGINE_REPO" krkrz_dev
+            git -C krkrz_dev checkout "$ENGINE_SHA"
+            git -C krkrz_dev submodule update --init --recursive
+          fi
+          {
+            echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
+            echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
+            echo "windows $CONFIG, runner $ImageOS $ImageVersion"
+          } | tee results/versions.txt
+
+      - name: Set up vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$env:RUNNER_TEMP\vcpkg"
+          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\vcpkg-archives" | Out-Null
+          "VCPKG_ROOT=$env:RUNNER_TEMP\vcpkg" >> $env:GITHUB_ENV
+          "VCPKG_BINARY_SOURCES=clear;files,$env:GITHUB_WORKSPACE\vcpkg-archives,readwrite" >> $env:GITHUB_ENV
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-x64-windows-static-${{ hashFiles('krkrz_dev/src/core/vcpkg.json', 'krkrz_dev/src/plugins/*/vcpkg.json', 'krkrz_dev/src/core/external/*/vcpkg.json') }}
+          restore-keys: vcpkg-x64-windows-static-
+
+      - name: MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure engine (preset x64-windows = SDL3)
+        shell: pwsh
+        working-directory: krkrz_dev
+        run: |
+          $ErrorActionPreference = 'Continue'
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { python -m pip install --quiet ninja }
+          # quoted: PowerShell splits an unquoted -DNAME=3.5 at the dot
+          cmake --preset x64-windows '-DKRKRZ_BUILD_TOOLS=OFF' '-DCMAKE_POLICY_VERSION_MINIMUM=3.5' 2>&1 |
+            Tee-Object -FilePath "$env:GITHUB_WORKSPACE\results\configure.log" | Select-Object -Last 20
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Build engine and all plugins
+        shell: pwsh
+        working-directory: krkrz_dev
+        run: |
+          $ErrorActionPreference = 'Continue'
+          cmake --build build/x64-windows --config $env:CONFIG 2>&1 |
+            Tee-Object -FilePath "$env:GITHUB_WORKSPACE\results\build.log" | Select-String -Pattern ' error |FAILED:|fatal error' | Select-Object -Last 200
+          if ($LASTEXITCODE) { Get-Content "$env:GITHUB_WORKSPACE\results\build.log" -Tail 80; exit $LASTEXITCODE }
+
+      - name: Install and package
+        shell: pwsh
+        run: |
+          $name = "kagex_sdl3_windows_$($env:CONFIG.ToLower()).zip"
+          "PKG_NAME=$name" >> $env:GITHUB_ENV
+          cmake --install krkrz_dev/build/x64-windows --config $env:CONFIG --prefix stage
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory pkg | Out-Null
+          Copy-Item -Recurse stage\* pkg\
+          foreach ($exe in 'krkrz64.exe', 'krkrz64d.exe') {
+            if (Test-Path "pkg\$exe") { Move-Item "pkg\$exe" pkg\krkrz.exe -Force }
+          }
+          if (Test-Path pkg\plugin64) { Move-Item pkg\plugin64 pkg\plugin }
+          foreach ($p in 'data', 'template', 'doc', 'KAGEX Initial Setup.txt', 'krkrz.cf') { Copy-Item -Recurse "kagex\$p" pkg\ }
+          foreach ($need in 'krkrz.exe', 'SDL3.dll', 'license.txt', 'licenses', 'data\startup.tjs', 'krkrz.cf',
+                            'template\system\notosansjp-regular.otf', 'template\system\YesNoDialogLayer.tjs',
+                            'plugin\KAGParserEx.dll', 'plugin\csvParser.dll', 'plugin\layerExBTOA.dll', 'plugin\layerExImage.dll',
+                            'plugin\layerExRaster.dll', 'plugin\scriptsEx.dll', 'plugin\shrinkCopy.dll', 'plugin\extrans.dll',
+                            'plugin\krkr_richtext.dll') {
+            if (-not (Test-Path "pkg\$need")) { throw "package is missing $need" }
+          }
+          Push-Location pkg
+          7z a -tzip -mx=9 "..\$name" * | Select-Object -Last 3
+          Pop-Location
+          Get-ChildItem -Recurse pkg -File | Where-Object { $_.FullName -notmatch '\\(data|template)\\' } |
+            ForEach-Object { "{0,12} {1}" -f $_.Length, $_.FullName.Substring((Resolve-Path pkg).Path.Length + 1) } |
+            Set-Content results\package-files.txt
+          "$name $((Get-Item $name).Length) bytes, SHA256 $((Get-FileHash $name).Hash)" | Tee-Object -FilePath results\package.txt
+
+      - name: Smoke-test the package
+        shell: pwsh
+        run: |
+          New-Item -Force 'HKCU:\Software\Microsoft\Windows\Windows Error Reporting' | Out-Null
+          Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\Windows Error Reporting' DontShowUI 1
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { "Set-DisplayResolution: $_" }
+          Expand-Archive $env:PKG_NAME smoke
+          # The VM has no GPU driver: give the engine GLES through Edge's ANGLE (test only, not packaged)
+          $angle = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft\EdgeCore", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application" -Recurse -Filter libGLESv2.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          foreach ($n in 'libEGL.dll', 'libGLESv2.dll', 'd3dcompiler_47.dll') {
+            $f = Join-Path $angle.DirectoryName $n; if (Test-Path $f) { Copy-Item $f smoke\ }
+          }
+          & ci\.github\windows-test\run-kagex.ps1 -Kagex smoke -Out results\smoke -Mode "windows-$env:CONFIG" -Plan smoke -BootTimeout 300
+          Get-Process krkrz -ErrorAction SilentlyContinue | Stop-Process -Force
+          & ci\.github\windows-test\check-smoke.ps1 results\smoke\steps.md
+
+      - name: Keep the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG_NAME }}
+          path: ${{ env.PKG_NAME }}
+          compression-level: 0
+          retention-days: 7
+
+      - name: Publish results branch
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci/.github/windows-test/publish-results.sh "release-results-windows-${CONFIG,,}" "Windows $CONFIG package, run ${{ github.run_id }} (${{ job.status }})"
+
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [Release, Debug]
+    env:
+      CONFIG: ${{ matrix.config }}
+      CC: gcc-12
+      CXX: g++-12
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out kagex at the release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.KAGEX_SHA }}
+          path: kagex
+
+      - name: Check out the CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci
+
+      - name: Build dependencies
+        timeout-minutes: 40
+        run: |
+          mkdir -p results
+          exec > >(tee -a results/apt.log) 2>&1
+          # 0.0.5's first run hung here for 20 minutes on both jobs: bound each apt call, wait
+          # for a dpkg lock instead of failing, and retry a stalled download
+          apt_opts="-o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 -o DPkg::Lock::Timeout=600"
+          for try in 1 2 3; do
+            echo "$(date -u +%T) apt-get update ($try)"
+            sudo timeout 300 apt-get update -q $apt_opts && break
+          done
+          # vcpkg ports, SDL3 (X11 + Wayland + audio backends), and Xvfb/Mesa for the smoke test.
+          # No system CJK fonts: the game ships Noto Sans JP (template/system), and the smoke test
+          # should show that it draws with it.
+          echo "$(date -u +%T) apt-get install"
+          sudo -E timeout 1500 apt-get install -y -q --no-install-recommends $apt_opts \
+            -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold \
+            ninja-build nasm autoconf autoconf-archive automake libtool pkg-config bison flex gcc-12 g++-12 \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl1-mesa-dev libgles2-mesa-dev \
+            libgl1-mesa-dev libdrm-dev libgbm-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev \
+            libibus-1.0-dev libudev-dev \
+            xvfb libgl1-mesa-dri libegl-mesa0 zip
+          echo "$(date -u +%T) installed"
+          mkdir -p results
+          { gcc-12 --version | head -1; cmake --version | head -1; ldd --version | head -1; } | tee results/toolchain.txt
+
+      - name: Clone engine (recursive)
+        run: |
+          git clone --depth 1 --recursive --shallow-submodules -j 8 -b master "$ENGINE_REPO" krkrz_dev
+          if [ "$(git -C krkrz_dev rev-parse HEAD)" != "$ENGINE_SHA" ]; then
+            rm -rf krkrz_dev
+            git clone --recursive -j 8 "$ENGINE_REPO" krkrz_dev
+            git -C krkrz_dev checkout "$ENGINE_SHA"
+            git -C krkrz_dev submodule update --init --recursive
+          fi
+          {
+            echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
+            echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
+            echo "linux $CONFIG, runner $ImageOS $ImageVersion"
+          } | tee results/versions.txt
+
+      - name: Set up vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          mkdir -p "$GITHUB_WORKSPACE/vcpkg-archives"
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$GITHUB_WORKSPACE/vcpkg-archives,readwrite" >> "$GITHUB_ENV"
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-x64-linux-${{ hashFiles('krkrz_dev/src/core/vcpkg.json', 'krkrz_dev/src/plugins/*/vcpkg.json', 'krkrz_dev/src/core/external/*/vcpkg.json') }}
+          restore-keys: vcpkg-x64-linux-
+
+      - name: Configure engine (preset x64-linux)
+        working-directory: krkrz_dev
+        env:
+          # tp_stub.h uses ptrdiff_t without <cstddef>; GCC 12's headers don't pull it in for
+          # the plugins that include tp_stub.h first (layerExSave, sigcheck, krkreffekseer, ...)
+          CXXFLAGS: -include cstddef
+        run: |
+          set -o pipefail
+          cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 2>&1 | tee "$GITHUB_WORKSPACE/results/configure.log" | tail -20
+
+      - name: Save vcpkg binary cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-x64-linux-${{ hashFiles('krkrz_dev/src/core/vcpkg.json', 'krkrz_dev/src/plugins/*/vcpkg.json', 'krkrz_dev/src/core/external/*/vcpkg.json') }}-${{ github.run_id }}-${{ matrix.config }}
+
+      - name: Build engine and all plugins
+        working-directory: krkrz_dev
+        env:
+          CXXFLAGS: -include cstddef
+        run: |
+          # Keep going past failures, then drop any plugin that does not build on this
+          # toolchain (CLAUDE.md: krkrthreepp with newer GCC) and build again without it
+          if ! cmake --build build/x64-linux --config "$CONFIG" -- -k 0 > "$GITHUB_WORKSPACE/results/build.log" 2>&1; then
+            grep -E 'FAILED: ' "$GITHUB_WORKSPACE/results/build.log" | head -20
+            failed=$(grep -oE 'FAILED: (\[code=[0-9]+\] )?core/plugins/[^/ ]+' "$GITHUB_WORKSPACE/results/build.log" | sed 's|.*/||' | sort -u)
+            [ -n "$failed" ] || { tail -80 "$GITHUB_WORKSPACE/results/build.log"; exit 1; }
+            for t in $failed; do
+              dir=$(grep -lE "krkrz_plugin\(\s*$t\b|add_library\(\s*$t\b" src/plugins/*/CMakeLists.txt | head -1 | xargs -r dirname | xargs -r basename)
+              dir=${dir:-$t}
+              echo "dropping plugin $dir (target $t)" | tee -a "$GITHUB_WORKSPACE/results/dropped-plugins.txt"
+              sed -i -E "s/^($dir)$/#\1/" CMakeLists.txt
+            done
+            cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 > /dev/null
+            cmake --build build/x64-linux --config "$CONFIG" > "$GITHUB_WORKSPACE/results/build2.log" 2>&1 || { tail -80 "$GITHUB_WORKSPACE/results/build2.log"; exit 1; }
+          fi
+
+      - name: krkr_richtext must load on its own (relink if needed)
+        working-directory: krkrz_dev/build/x64-linux
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/results/richtext-link.log") 2>&1
+          so="core/plugins/krkr_richtext/$CONFIG/libkrkr_richtext.so"
+          check() { python3 -c "import ctypes, os, sys; ctypes.CDLL(sys.argv[1], mode=os.RTLD_NOW | os.RTLD_LOCAL)" "$so"; }
+          if check; then echo "loads as built"; exit 0; fi
+          # CLAUDE.md: its link line repeats libfreetype.a after harfbuzz, past the
+          # png/zlib/bzip2/brotli archives freetype needs. Relink with them at the end.
+          cmd=$(ninja -f "build-$CONFIG.ninja" -t commands "$so" | tail -1)
+          cmd=${cmd% && :}
+          ft=$(grep -oE '[^ ]*vcpkg_installed/x64-linux/[^ ]*libfreetype[^ ]*\.a' <<<"$cmd" | head -1)
+          dir=$(dirname "$ft")
+          extra=""
+          for n in png16 z bz2 brotlidec brotlicommon; do
+            f=""
+            for c in "$dir/lib${n}d.a" "$dir/lib${n}.a"; do [ -f "$c" ] && { f=$c; break; }; done
+            if [ -n "$f" ]; then extra="$extra $f"; else echo "no lib$n in $dir"; fi
+          done
+          echo "relinking with:$extra -lm"
+          eval "$cmd $extra -lm"
+          check
+          echo "loads after relink"
+
+      - name: Install and package
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/results/package.log") 2>&1
+          set -x
+          name="kagex_sdl3_linux_${CONFIG,,}.zip"
+          echo "PKG_NAME=$name" >> "$GITHUB_ENV"
+          cmake --install krkrz_dev/build/x64-linux --config "$CONFIG" --prefix stage
+          mkdir pkg
+          # krkrz finds libSDL3.so.0 next to it ($ORIGIN); ship that one file, dereferenced, like 0.0.2
+          sdl=$(ls stage/libSDL3.so.0 stage/libSDL3.so.0.* stage/libSDL3.so 2>/dev/null | head -1)
+          [ -n "$sdl" ] || { ls -la stage; echo "no libSDL3 in the install"; exit 1; }
+          cp -L "$sdl" pkg/libSDL3.so.0
+          for f in stage/*; do
+            case "$(basename "$f")" in libSDL3.so*) ;; *) cp -a "$f" pkg/ ;; esac
+          done
+          cp -a kagex/data kagex/template kagex/doc "kagex/KAGEX Initial Setup.txt" kagex/krkrz.cf pkg/
+          # libkrkr_richtext.so has linked without libpng & co. on some toolchains (CLAUDE.md);
+          # it must load on its own
+          python3 - <<'EOF'
+          import ctypes, glob, os, sys
+          bad = []
+          for so in sorted(glob.glob("pkg/plugin/*.so")):
+              try: ctypes.CDLL(so, mode=os.RTLD_NOW | os.RTLD_LOCAL)
+              except OSError as e: bad.append(f"{so}: {e}")
+          print("\n".join(bad) or "all plugins load")
+          sys.exit(1 if any("krkr_richtext" in b for b in bad) else 0)
+          EOF
+          for need in krkrz libSDL3.so.0 license.txt licenses data/startup.tjs krkrz.cf template/system/notosansjp-regular.otf \
+                      template/system/YesNoDialogLayer.tjs plugin/libKAGParserEx.so plugin/libcsvParser.so \
+                      plugin/liblayerExBTOA.so plugin/liblayerExImage.so plugin/liblayerExRaster.so plugin/libscriptsEx.so \
+                      plugin/libshrinkCopy.so plugin/libextrans.so plugin/libkrkr_richtext.so; do
+            [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
+          done
+          ldd pkg/krkrz | tee results/ldd.txt
+          (cd pkg && zip -q -9 -r "../$name" .)
+          (cd pkg && find . -type f ! -path './data/*' ! -path './template/*' -printf '%12s %P\n' | sort -k2) > results/package-files.txt
+          echo "$name $(stat -c%s "$name") bytes, SHA256 $(sha256sum "$name" | cut -d' ' -f1)" | tee results/package.txt
+
+      - name: Smoke-test the package
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/results/smoke.log") 2>&1
+          mkdir smoke && (cd smoke && unzip -q "../$PKG_NAME")
+          Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp > results/xvfb.log 2>&1 &
+          sleep 2
+          export DISPLAY=:99 SDL_VIDEO_DRIVER=x11 SDL_AUDIO_DRIVER=dummy
+          pwsh -NoProfile -File ci/.github/windows-test/run-kagex.ps1 -Kagex smoke -Out results/smoke -Mode "linux-$CONFIG" -Plan smoke -BootTimeout 300
+          pkill -9 krkrz || true
+          pwsh -NoProfile -File ci/.github/windows-test/check-smoke.ps1 results/smoke/steps.md
+
+      - name: Keep the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG_NAME }}
+          path: ${{ env.PKG_NAME }}
+          compression-level: 0
+          retention-days: 7
+
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci/.github/windows-test/publish-results.sh "release-results-linux-${CONFIG,,}" "Linux $CONFIG package, run ${{ github.run_id }} (${{ job.status }})"
+
+  publish:
+    needs: [windows, linux, platforms]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Check out the CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci
+
+      - name: Collect the packages
+        if: env.PUBLISH == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: kagex_sdl3_*.zip
+          merge-multiple: true
+          path: dist
+
+      - name: Collect the platform builds
+        if: env.PUBLISH == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: kagex-*
+          path: platforms
+
+      - name: Name the platform packages
+        if: env.PUBLISH == 'true'
+        run: |
+          find platforms -maxdepth 3 | sort
+          one() { n=$(find "$1" -maxdepth 1 -type f -name "$2" | wc -l); [ "$n" = 1 ] || { echo "::error::expected one $2 in $1, found $n"; exit 1; }; find "$1" -maxdepth 1 -type f -name "$2"; }
+          cp "$(one platforms/kagex-linux '*.tar.gz')" dist/kagex_sdl3_linux_steam.tar.gz
+          cp "$(one platforms/kagex-android '*.apk')" dist/kagex_sdl3_android.apk
+          cp "$(one platforms/kagex-ios-simulator '*.zip')" dist/kagex_sdl3_ios_simulator.zip
+          cp "$(one platforms/kagex-macos '*.zip')" dist/kagex_sdl3_macos.zip
+          test -f platforms/kagex-web/index.html
+          (cd platforms/kagex-web && zip -q -9 -r "$GITHUB_WORKSPACE/dist/kagex_sdl3_web.zip" .)
+          ls -l dist
+
+      - name: Wait for the release commit to reach main
+        if: env.PUBLISH == 'true'
+        timeout-minutes: 240
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          # The release commit comes in through a pull request; the tag must be on main.
+          # Merge it with a merge commit (a squash would leave this commit off main).
+          while :; do
+            status=$(gh api "repos/$REPO/compare/$KAGEX_SHA...main" --jq .status || echo error)
+            case "$status" in
+              identical|ahead) echo "$KAGEX_SHA is on main"; break ;;
+            esac
+            merged=$(gh api "repos/$REPO/commits/$KAGEX_SHA/pulls" --jq '[.[] | select(.merged_at != null)] | length' || echo 0)
+            if [ "$merged" != 0 ]; then
+              echo "::error::The pull request with $KAGEX_SHA was merged, but main doesn't contain that commit (squashed or rebased?). Publish this run's packages with publish-release.yml after tagging the right commit."
+              exit 1
+            fi
+            echo "$(date -u +%H:%M) main doesn't have $KAGEX_SHA yet ($status); waiting"
+            sleep 60
+          done
+
+      - name: Tag and publish the release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          ls -l dist
+          [ "$(ls dist/* | wc -l)" = 9 ] || { echo "expected 9 packages"; exit 1; }
+          sha256sum dist/*
+          if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "tag $RELEASE_TAG already exists"; exit 1
+          fi
+          gh api "repos/$REPO/git/refs" -f ref="refs/tags/$RELEASE_TAG" -f sha="$KAGEX_SHA" > /dev/null
+          gh release create "$RELEASE_TAG" dist/* --repo "$REPO" --title "$RELEASE_TAG" \
+            --notes-file "ci/.github/release-notes/$RELEASE_TAG.md" --prerelease --verify-tag
+          gh release view "$RELEASE_TAG" --repo "$REPO" --json tagName,isPrerelease,assets \
+            --jq '"\(.tagName) prerelease=\(.isPrerelease)", (.assets[] | "\(.name) \(.size)")'
+
+      # A release made with this token doesn't fire pages.yml's release event: start it
+      - name: Put the web build on GitHub Pages
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh workflow run pages.yml --repo "$REPO" --ref main -f tag="$RELEASE_TAG"

@@ -1,0 +1,314 @@
+// Helpers the Windows CI driver (run-kagex.ps1) sends through the REPL file channel.
+// Clicks are scheduled on a Timer so a modal window opened by the click cannot stall
+// the channel.
+
+// Game (primary layer) coordinates -> window client coordinates, assuming the engine
+// letterboxes the game into the window (full screen) or shows it 1:1 scaled (window).
+function __ci_map(gx, gy)
+{
+	var cw, ch;
+	if (kag.fullScreen) { cw = System.screenWidth; ch = System.screenHeight; }
+	else { cw = kag.innerWidth; ch = kag.innerHeight; }
+	var sw = kag.scWidth, sh = kag.scHeight;
+	var s = cw / sw;
+	if (ch / sh < s) s = ch / sh;
+	return [ (int)((cw - sw * s) / 2 + gx * s), (int)((ch - sh * s) / 2 + gy * s) ];
+}
+
+function __ci_shown(l)
+{
+	for (var p = l; p !== null && p !== void; p = p.parent) if (!p.visible) return false;
+	return true;
+}
+
+function __ci_abs(l)
+{
+	var x = 0, y = 0;
+	for (var p = l; p !== null && p !== void; p = p.parent) { x += p.left; y += p.top; }
+	return [ x, y ];
+}
+
+function __ci_find(root, name)
+{
+	if (root === null || root === void) return void;
+	try { if (root.name == name && __ci_shown(root)) return root; } catch {}
+	var ch = root.children;
+	for (var i = ch.count - 1; i >= 0; i--) {
+		var r = __ci_find(ch[i], name);
+		if (r !== void) return r;
+	}
+	return void;
+}
+
+var __ci_queue = [];
+var __ci_timer;
+function __ci_tick()
+{
+	if (__ci_queue.count == 0) { __ci_timer.enabled = false; return; }
+	var c = __ci_queue[0];
+	__ci_queue.erase(0);
+	if (c[0] == "click") Agent.click(c[1], c[2], c[3]);
+	else if (c[0] == "key") Agent.keyPress(c[1]);
+}
+function __ci_schedule(cmd)
+{
+	if (__ci_timer === void) {
+		__ci_timer = new Timer(__ci_tick, "");
+		__ci_timer.interval = 60;
+	}
+	__ci_queue.add(cmd);
+	__ci_timer.enabled = true;
+}
+
+function __ci_clickLayer(l, button = 0)
+{
+	var a = __ci_abs(l);
+	var gx = (int)(a[0] + l.width / 2), gy = (int)(a[1] + l.height / 2);
+	var w = __ci_map(gx, gy);
+	__ci_schedule([ "click", w[0], w[1], button ]);
+	return "game " + gx + "," + gy + " -> window " + w[0] + "," + w[1];
+}
+function __ci_click(name, button = 0)
+{
+	var l = __ci_find(kag.primaryLayer, name);
+	if (l === void) throw new Exception("no visible layer named " + name + " (visible buttons: " + __ci_buttons() + ")");
+	return __ci_clickLayer(l, button);
+}
+function __ci_clickAt(gx, gy, button = 0)
+{
+	var w = __ci_map(gx, gy);
+	__ci_schedule([ "click", w[0], w[1], button ]);
+	return "window " + w[0] + "," + w[1];
+}
+function __ci_key(vk) { __ci_schedule([ "key", vk ]); return "key " + vk; }
+
+function __ci_collect(l, out)
+{
+	if (l === null || l === void || !l.visible) return;
+	try {
+		if (l instanceof "ButtonLayer") {
+			var a = __ci_abs(l);
+			out.add(l.name + "@" + a[0] + "," + a[1] + "/" + l.width + "x" + l.height);
+		}
+	} catch {}
+	var ch = l.children;
+	for (var i = 0; i < ch.count; i++) __ci_collect(ch[i], out);
+}
+function __ci_buttons()
+{
+	var out = [];
+	__ci_collect(kag.primaryLayer, out);
+	return out.join(" ");
+}
+
+function __ci_state()
+{
+	var c = kag.conductor;
+	return [
+		"storage=" + c.curStorage,
+		"line=" + c.curLine,
+		"stable=" + (kag.inStable ? 1 : 0),
+		"select=" + (kag.selectShowing ? 1 : 0),
+		"history=" + (kag.historyShowing ? 1 : 0),
+		"trans=" + kag.transCount,
+		"move=" + kag.moveCount,
+		"sleep=" + (kag.inSleep ? 1 : 0),
+		"queue=" + __ci_queue.count
+	].join("|");
+}
+
+function __ci_selectCount() { return kag.selectShowing ? kag.selectLayer.selects.count : 0; }
+function __ci_selectText(i) { return kag.selectLayer.selects[i].text; }
+function __ci_clickSelect(i) { return __ci_clickLayer(kag.selectLayer.selects[i]); }
+function __ci_forceSelect(i) { kag.selectLayer.selects[i].onButtonClick(); return "onButtonClick"; }
+
+function __ci_eval(exprs)
+{
+	var out = [];
+	for (var i = 0; i < exprs.count; i++) {
+		var v;
+		try {
+			v = Scripts.eval(exprs[i]);
+			if (v === void) v = "void";
+			else if (typeof v == "Object") v = "(object)";
+			else v = (string)v;
+		} catch (e) {
+			v = "EXCEPTION " + e.message;
+		}
+		out.add(exprs[i] + " => " + v);
+	}
+	return out.join("\n");
+}
+
+function __ci_info()
+{
+	var out = [ __ci_eval([
+		"System.platformTag", "System.versionString", "System.exePath", "System.dataPath",
+		"System.screenWidth + 'x' + System.screenHeight",
+		"kag.fullScreen", "kag.innerWidth + 'x' + kag.innerHeight", "kag.scWidth + 'x' + kag.scHeight",
+		"kag.zoomNumer + '/' + kag.zoomDenom",
+		"System.getArgument('-drawdevice')", "System.getArgument('-forceegl')",
+		"Scripts.getClassNames(kag.drawDevice).join(',')",
+		"typeof global.KAGParser", "typeof global.CSVParser",
+		"typeof global.Layer.copyBottomBlueToTopAlpha", "typeof global.Layer.copyRaster",
+		"typeof global.Layer.shrinkCopy", "typeof global.RichText", "typeof global.Scripts.getObjectKeys",
+		"typeof global.registerExEvent", "typeof kag.registerExEvent", "typeof global.Window.exSystemMenu",
+		"kag.chDefaultFace", "kag.fore.messages[0].useRichText", "kag.fore.messages[0].userFace",
+		"kag.saveDataLocation"
+	]) ];
+	// Faces from the Config.tjs lists: does the engine resolve them, and draw with them?
+	var names = [ "MS Gothic", "ＭＳ ゴシック", "MS Mincho", "Noto Sans CJK JP", "Noto Sans CJK JP DemiLight",
+		"Noto Sans CJK JP Light", "Noto Sans JP", "Roboto", "Yu Gothic", "Meiryo" ];
+	var f = new global.Font();
+	f.height = 20;
+	for (var i = 0; i < names.count; i++) {
+		var r;
+		try {
+			var axes = global.Font.getVarAxes(names[i]);
+			if (axes === void) r = "unresolved";
+			else { f.face = names[i]; r = "resolved, width('Hあ')=" + f.getTextWidth("Hあ"); }
+		} catch (e) { r = "EXCEPTION " + e.message; }
+		out.add("font " + names[i] + " => " + r);
+	}
+	invalidate f;
+	return out.join("\n");
+}
+
+// Which faces krkr_richtext actually registered for the message layer
+function __ci_richtext()
+{
+	var m = kag.fore.messages[0];
+	var app = m.richTextApp;
+	if (app === void) return "richTextApp not created (useRichText=" + m.useRichText + ", RichText " + typeof global.RichText + ")";
+	var out = [];
+	var keys = Scripts.getObjectKeys(app.faceFonts);
+	for (var i = 0; i < keys.count; i++) out.add("'" + keys[i] + "' -> [" + app.faceFonts[keys[i]].join(", ") + "]");
+	return "richTextApp ready; faces: " + out.join("; ");
+}
+
+// The composited layer tree, as the layers hold it (independent of the draw device)
+function __ci_piled(path)
+{
+	var src = kag.primaryLayer;
+	var l = new global.Layer(kag, src);
+	l.setImageSize(src.width, src.height);
+	l.piledCopy(0, 0, src, 0, 0, src.width, src.height);
+	l.saveLayerImage(path, "png");
+	invalidate l;
+	return path;
+}
+
+function __ci_bookmarkFile(n)
+{
+	var f = kag.getBookMarkFileNameAtNum(n);
+	return f + " exists=" + (Storages.isExistentStorage(f) ? 1 : 0);
+}
+
+// TJS functions don't see the caller's locals, so the layout helper takes them
+function __ci_lw(L, st, s) { L.layout(s, st); return L.width; }
+
+// Font candidates: does the engine resolve the face, is its Latin proportional, does
+// krkr_richtext kern it? Renders engine drawText and richtext drawTextEx rows to a PNG.
+function __ci_fontprobe(path)
+{
+	var names = [ "MS Gothic", "MS PGothic", "ＭＳ Ｐゴシック", "MS UI Gothic", "MS PMincho", "Yu Gothic", "Yu Gothic UI",
+		"Yu Gothic Medium", "Meiryo", "Meiryo UI", "Segoe UI", "Arial", "Roboto",
+		"MS PGothic,MS Gothic,Noto Sans CJK JP DemiLight,Roboto", "Yu Gothic,MS Gothic,Noto Sans CJK JP DemiLight,Roboto",
+		"Roboto,MS Gothic,Noto Sans CJK JP DemiLight" ];
+	var sample = "AVATAR To Ty overlap Relative WAVE file. 日本語、テキスト。";
+	var rt = global.RichText, out = [];
+	var f = new global.Font();
+	var lay = new global.Layer(kag, kag.primaryLayer);
+	lay.setImageSize(1900, names.count * 104 + 20);
+	lay.fillRect(0, 0, lay.imageWidth, lay.imageHeight, 0xff404070);
+	var app = new rt.Appearance();
+	app.addShadow(0xff000000, 2, 2);
+	app.addFill(0xffffffff);
+	var y = 10;
+	for (var i = 0; i < names.count; i++) {
+		var name = names[i], list = [].split(",", name, , true), ok = [];
+		for (var j = 0; j < list.count; j++) {
+			var n = list[j].trim();
+			if (global.Font.getVarAxes(n) === void) continue;
+			f.face = n; f.height = 20;
+			if (f.getTextWidth("Hあ") > 0 && rt.registerFont(n, n)) ok.add(n);
+		}
+		if (ok.count == 0) { out.add(name + " => unresolved"); continue; }
+		f.face = name; f.height = 39;
+		var st = new rt.Style();
+		st.setFonts(ok);
+		st.fontSize = 39;
+		var L = new rt.Layout();
+		var kAV = __ci_lw(L, st, "AV") - (__ci_lw(L, st, "A") + __ci_lw(L, st, "V"));
+		var kTo = __ci_lw(L, st, "To") - (__ci_lw(L, st, "T") + __ci_lw(L, st, "o"));
+		out.add(name + " => faces [" + ok.join(", ") + "]"
+			+ " engine il=" + f.getTextWidth("il") + " WM=" + f.getTextWidth("WM")
+			+ " | richtext AV kern=" + "%.2f".sprintf(kAV) + " To kern=" + "%.2f".sprintf(kTo));
+		lay.font.face = name; lay.font.height = 39;
+		lay.drawText(10, y, "E " + name.substr(0, 12) + ": " + sample, 0xffffff, 255, true, 255, 0x000000, 0, 2, 2);
+		f.face = name;
+		var base = f.getGlyphDrawRect("H").bottom;
+		lay.drawTextEx("R " + name.substr(0, 12) + ": " + sample, 10, y + 50 + base, st, app);
+		invalidate L;
+		invalidate st;
+		y += 104;
+	}
+	lay.saveLayerImage(path, "png");
+	invalidate lay;
+	invalidate app;
+	invalidate f;
+	return out.join("\n");
+}
+
+// Every history line (stored lines, then the one being written), joined by "\n"
+function __ci_histlines()
+{
+	var h = kag.historyLayer, out = [];
+	if (h.everypage) {
+		for (var p = 0; p <= h.dataPages; p++) {
+			var pg = h.getPage(p);
+			if (pg !== void) for (var i = 0; i < pg.count; i++) if (pg[i] !== void && pg[i] != "") out.add(pg[i]);
+		}
+	} else {
+		for (var i = 0; i < h.dataLines; i++) {
+			var l = h.getLine(i);
+			if (l !== void && l != "") out.add(l);
+		}
+	}
+	if (h.currentLine != "") out.add(h.currentLine);
+	return out.join("\n");
+}
+
+// Edge and shadow settings drawn by Layer.drawText (E rows) and by krkr_richtext through
+// MessageLayer.RichTextFontApp (R rows), in the default face
+function __ci_effectprobe(path)
+{
+	var rows = [
+		%[ label:"shadow 2,2 blur 0 (sample)", shadow:true, shadowWidth:0, shadowOffsetX:2, shadowOffsetY:2 ],
+		%[ label:"shadow 3,3 blur 3", shadow:true, shadowWidth:3, shadowOffsetX:3, shadowOffsetY:3 ],
+		%[ label:"edge 1 emphasis 512", edge:true, edgeExtent:1, edgeEmphasis:512 ],
+		%[ label:"edge 3 emphasis 512", edge:true, edgeExtent:3, edgeEmphasis:512 ],
+		%[ label:"edge 2 emphasis 128", edge:true, edgeExtent:2, edgeEmphasis:128 ] ];
+	var app = new global.MessageLayer.RichTextFontApp();
+	var lay = new global.Layer(kag, kag.primaryLayer);
+	lay.setImageSize(1900, rows.count * 112 + 20);
+	lay.fillRect(0, 0, lay.imageWidth, lay.imageHeight, 0xff9090c0);
+	lay.font.face = kag.chDefaultFace;
+	lay.font.height = 39;
+	var y = 10, out = [];
+	for (var i = 0; i < rows.count; i++) {
+		var base = %[ edge:false, edgeColor:0, edgeExtent:0, edgeEmphasis:255,
+			shadow:false, shadowColor:0, shadowWidth:0, shadowOffsetX:0, shadowOffsetY:0 ];
+		(Dictionary.assign incontextof base)(rows[i], false);
+		var txt = "Overlap AVATAR To Ty 日本語 - " + base.label;
+		if (base.edge) lay.drawText(10, y, "E " + txt, 0xffffff, 255, true, base.edgeEmphasis, 0x000000, base.edgeExtent, 0, 0);
+		else lay.drawText(10, y, "E " + txt, 0xffffff, 255, true, 255, 0x000000, base.shadowWidth, base.shadowOffsetX, base.shadowOffsetY);
+		if (app.ready(lay.font)) app.drawText(base, lay, 10, y + 54, "R " + txt, 0xffffff);
+		else out.add("richtext not ready for " + lay.font.face);
+		y += 112;
+	}
+	lay.saveLayerImage(path, "png");
+	invalidate lay;
+	invalidate app;
+	return out.count ? out.join("\n") : "ok";
+}
