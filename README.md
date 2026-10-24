@@ -25,6 +25,14 @@ On the desktop the game starts full screen the first time; after that it remembe
 
 With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 
+## Releasing a game
+
+`tools/kagex-release` packages a game for Windows, Linux, Linux for Steam, macOS, the web, Android and iOS. It's in the Windows and Linux packages (`tools/kagex-release.exe`, `tools/kagex-release`), and each system's tool is also a download of its own (`kagex-release-windows.zip`, `-linux.tar.gz`, `-macos.zip`). Run it next to (or in `tools/` below) the folder with your game's `data/`: it opens a window with the settings, saves them to `release.json`, shows what this computer can build, and builds each platform's package into `release/`. It can convert the game's WAV and FLAC sounds to Opus or Ogg Vorbis and its PNG, BMP and TLG images to TLG6, TLG5, PNG or JPEG on the way (lossy files are never converted again). `kagex-release --cli build` does the same without the window, for CI.
+
+Windows, Linux, Steam and the web build on any of the three systems; macOS and iOS need a Mac (iOS also Xcode, and your certificate and provisioning profile for devices); Android needs a JDK 17 and the Android SDK, no NDK. The engines come from the KAGEX release of the tool's version and are downloaded once. [`tools/release/README.md`](tools/release/README.md) describes every setting and what each package holds.
+
+The macOS tool isn't notarized: after unzipping, run `xattr -d com.apple.quarantine kagex-release` (or allow it under System Settings > Privacy & Security).
+
 ## Layout
 
 - `data/`: the sample game. It loads the framework from `../template/system`, or from `data/system` where a package puts a copy there.
@@ -33,6 +41,7 @@ With a controller: the D-pad or left stick moves between buttons, A confirms and
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
 - `TODO.md`: planned features.
 - `tools/assets/`: the scripts that make the sample's images (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds), with the original art they start from.
+- `tools/release/`: kagex-release (above): its source, `scripts/` that make the engine packages it uses from the release builds, and its smoke test. `.github/workflows/release-tool.yml` builds it for all three systems.
 - `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release. `--target android|ios-sim|web` runs the sample's part in the platform builds: on an emulator, the iOS Simulator or headless Chromium.
 
 The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](https://github.com/wamsoft/krkrz_dev); `CLAUDE.md` has the build steps and the outputs to copy next to `data/`.

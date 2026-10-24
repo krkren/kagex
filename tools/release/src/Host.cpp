@@ -2,6 +2,7 @@
 
 #include <regex>
 
+#include "Engine.h"
 #include "Subprocess.h"
 #include "krt/app/Text.h"
 
@@ -117,11 +118,16 @@ Requirement checkIdentity(const std::string& identity, const std::string& label)
 	return req(label, ok, ok ? identity : "\"" + identity + "\" isn't in the keychain (security find-identity -v -p codesigning)");
 }
 
-Requirement checkEngine(const std::string& platform)
+Requirement checkEngine(const std::string& platform, bool debug)
 {
 	std::error_code ec;
-	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / platform;
-	if (fs::is_directory(cached, ec))
+	const std::string asset = engineAssetName(platform, debug && hasDebugEngine(platform));
+	const std::string stem = asset.substr(0, asset.size() - 4);
+	const std::string local = getEnv("KAGEX_RELEASE_ENGINES");
+	if (!local.empty() && (fs::is_regular_file(krt::toPath(local) / asset, ec) || fs::is_regular_file(krt::toPath(local) / stem / "engine.json", ec)))
+		return req("Engine", true, "From " + local);
+	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / stem;
+	if (fs::is_regular_file(cached / "engine.json", ec))
 		return req("Engine", true, "Downloaded before (" + krt::fromPath(cached) + ")");
 #ifdef _WIN32
 	const bool canDownload = !findProgram("curl").empty() || !findProgram("powershell").empty();
@@ -180,7 +186,7 @@ PlatformStatus checkPlatform(const std::string& id, const Json& s, const Project
 	const std::string base = "platforms." + id + ".";
 	const std::string host = hostId();
 	auto& rq = st.requirements;
-	rq.push_back(checkEngine(id));
+	rq.push_back(checkEngine(id, flag(s, "engine.debug")));
 
 	if (id == "windows") {
 		if (host != "windows")
