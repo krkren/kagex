@@ -733,6 +733,20 @@ def make_icons():
         print("wrote platform/android-res/drawable/%s.xml" % name, flush=True)
 
 
+def make_preview():
+    """The web build's link-preview image (web-static-host.py: og:image): the title screen,
+    1200x630 as Discord, Slack and X show it. Run after title (it reads data/image/title.png)."""
+    src = Image.open(os.path.join(IMAGE, "title.png")).convert("RGB")
+    w, h = 1200, 630
+    k = max(w / src.width, h / src.height)
+    sw, sh = round(src.width * k), round(src.height * k)
+    img = src.resize((sw, sh), Image.LANCZOS, reducing_gap=3.0)
+    x, y = (sw - w) // 2, (sh - h) // 2
+    out = os.path.join(PLATFORM, "web", "preview.jpg")
+    img.crop((x, y, x + w, y + h)).save(out, quality=88, optimize=True, progressive=True)
+    print("wrote platform/web/preview.jpg", (w, h), flush=True)
+
+
 # --- the star in the World demo --------------------------------------------------------
 def make_star():
     w, h = 371, 351
@@ -751,7 +765,7 @@ def make_star():
 
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
           "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
-          "thumbs": make_thumbs, "icons": make_icons}
+          "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview}
 
 
 def main():

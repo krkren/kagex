@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import platform as hostplatform
+import re
 import tarfile
 import zipfile
 import shutil
@@ -364,6 +365,9 @@ def web_tests(exe, proj, args):
     s["output"]["archive"] = "zip"
     s["output"]["check"] = False
     site = proj / "release" / ("kagex-sample-%s-web" % s["identity"]["version"])
+    s["platforms"]["web"]["url"] = "https://studio.example/game"
+    s["platforms"]["web"]["description"] = "A test & a <preview>"
+    builds = {}
     for mode in ("files", "xp3"):
         s["platforms"]["web"]["data"] = mode
         rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
@@ -382,6 +386,17 @@ def web_tests(exe, proj, args):
         step("web (%s): engine options" % mode, "-appname=kagex-sample" in cfg and "-debugwin=no" in cfg and "-bitmappoolsize=" in cfg, cfg.replace("\n", " | ")[-300:])
         step("web (%s): title, manifest and icons" % mode, "<title>KAGEX Sample</title>" in html and "window.coi=" in html and "manifest.webmanifest" in html
              and json.loads((site / "manifest.webmanifest").read_text())["name"] == "KAGEX Sample" and (site / "icon-512.png").exists())
+        build = json.loads((site / "kagex-build.json").read_text())["build"] if (site / "kagex-build.json").exists() else ""
+        builds[mode] = build
+        scripts = re.findall(r'<script src="?([^" >]+)', html)
+        step("web (%s): the build's id in the page and its scripts" % mode,
+             len(build) == 16 and ('<meta name=kagex-build content="%s">' % build) in html and (site / "kagex-web.js").exists()
+             and scripts[-3:] == ["kagex-web.js?v=" + build, "webconfig.js?v=" + build, "krkrz.js?v=" + build], "%s %s" % (build, scripts))
+        step("web (%s): link previews" % mode,
+             '<meta property=og:image content="https://studio.example/game/preview.jpg">' in html and (site / "preview.jpg").exists()
+             and '<meta property=og:description content="A test &amp; a &lt;preview&gt;">' in html
+             and "<meta name=twitter:card content=summary_large_image>" in html and html.count("<!--kagex-head-->") == 1
+             and html.count("apple-mobile-web-app-capable") == 1)
         step("web (%s): krkrz.data is what krkrz.js expects" % mode, ("end:%d}],remote_package_size:%d" % (data_size, data_size)) in js, "%d bytes" % data_size)
         if mode == "files":
             files = json.loads((site / "gamedata.krkrz_files.json").read_text())
@@ -418,6 +433,8 @@ def web_tests(exe, proj, args):
                     shutil.copyfile(eng.log_path, Path(args.out) / ("web-%s-console.txt" % mode))
                 eng.stop()
             httpd.shutdown()
+    step("web: another build, another id (players' pages and caches update)", builds.get("files") and builds.get("xp3") and builds["files"] != builds["xp3"],
+         "%s / %s" % (builds.get("files"), builds.get("xp3")))
 
 
 def android_tests(exe, proj, args):

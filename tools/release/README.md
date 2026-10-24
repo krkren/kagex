@@ -46,6 +46,21 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   (an empty `krkrz.data` in the files mode). It runs from any web server (GitHub Pages works:
   `coi-serviceworker.js` supplies the headers SharedArrayBuffer needs); `serve.py` serves it
   locally.
+  - **Updates reach players.** Each build has an id (a hash of its files), in
+    `kagex-build.json` and in the page, whose scripts load with `?v=<id>`. `kagex-web.js` checks
+    it before the game starts: a page older than the site reloads, and a new build empties the
+    engine's file cache (which otherwise keeps the old files for good); the game's files are
+    always checked with the server. Upload the whole folder and players get the new version on
+    their next visit.
+  - **Add to Home Screen.** On phones and tablets a bar offers it until the player closes it
+    (for 30 days) or adds the game: a button where the browser can install the page (Chrome,
+    Edge, Samsung Internet, Opera on Android), the steps on iPhone and iPad (every browser
+    there: Share, then Add to Home Screen) and in Firefox and other Android browsers (their
+    menu). From the home screen the game opens full screen, which iPhone browsers otherwise
+    can't do; the manifest, icons and Apple tags cover every browser's own way of adding it.
+  - **Link previews.** Open Graph and Twitter card tags: the title, the description, and the
+    preview image (1200x630 is best; without one, the icon). Discord, Slack, X and others need
+    the site's address for the image: set *Site address*.
 - **Android**: an APK, or an app bundle (`.aab`) for Google Play, with the game's application
   ID, version (the version code is 1.2.3 -> 10203 unless set), name (in every language) and icon
   (an adaptive icon with the game's icon in its visible square). `data.xp3` or the `data/` folder
@@ -113,7 +128,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards) |
-| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
+| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
 `sf.software_version` and `sf.software_maker` in its `first.ks`, and `krkrz.cf`. Passwords

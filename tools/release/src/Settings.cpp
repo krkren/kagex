@@ -158,7 +158,10 @@ Json defaultSettings(const Project& p)
 		{ "signing", Json("adhoc") }, { "identity", Json("") }, { "notarize", Json(false) },
 		{ "notaryProfile", Json("") }, { "format", Json("zip") },
 	}));
-	pl.set("web", obj({ { "enabled", Json(false) }, { "data", Json("files") } }));
+	pl.set("web", obj({
+		{ "enabled", Json(false) }, { "data", Json("files") }, { "url", Json("") }, { "description", Json("") },
+		{ "preview", Json(p.preview.empty() ? std::string() : relativeTo(p.preview, p.root)) },
+	}));
 	pl.set("android", obj({
 		{ "enabled", Json(false) }, { "format", Json("apk") }, { "data", Json("xp3") },
 		{ "applicationId", Json(bundle) }, { "versionCode", Json(0) },
@@ -343,6 +346,18 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if ((id == "macos" || id == "android" || id == "ios") && !oneOf(data, { "xp3", "folder" }))
 			error(base + "data", std::string(pl.title) + " data is \"xp3\" or \"folder\"");
 		if (id == "web" && !oneOf(data, { "files", "xp3" })) error(base + "data", "Web data is \"files\" (loaded as needed) or \"xp3\"");
+		if (id == "web") {
+			static const std::regex urlRe(R"(https?://[^\s"<>]+)");
+			const std::string url = str(s, base + "url"), preview = str(s, base + "preview");
+			if (!url.empty() && !std::regex_match(url, urlRe)) error(base + "url", "The site's address starts with https:// (like https://studio.example/game/)");
+			if (url.empty()) warn(base + "url", "Without the site's address, link previews (Discord, Slack, X) show no image");
+			if (!preview.empty()) {
+				std::string ext = krt::fromPath(krt::toPath(preview).extension());
+				for (auto& c : ext) c = (char)std::tolower((unsigned char)c);
+				if (!exists(preview)) error(base + "preview", "The preview image " + preview + " doesn't exist");
+				else if (ext != ".png" && ext != ".jpg" && ext != ".jpeg") error(base + "preview", "The preview image is a PNG or JPEG (1200x630 is best)");
+			}
+		}
 		if (id == "macos") {
 			if (!std::regex_match(str(s, base + "bundleId"), bundleRe)) error(base + "bundleId", "The bundle ID looks like com.studio.game (letters, digits and '-')");
 			const std::string signing = str(s, base + "signing");

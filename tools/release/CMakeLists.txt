@@ -68,6 +68,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(kagex-release PRIVATE -static-libstdc++ -static-libgcc)
 endif()
 
+# The web build's page script (platform/web/kagex-web.js: updates and Add to Home Screen),
+# written into each web build, so it doesn't depend on the engine package having it
+set(_webjs "${_kagex_root}/platform/web/kagex-web.js")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_webjs}")
+file(READ "${_webjs}" _webjs_hex HEX)
+string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," _webjs_bytes "${_webjs_hex}")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/KagexWebJs.h.tmp"
+    "// generated from platform/web/kagex-web.js by CMakeLists.txt\n#pragma once\n"
+    "static const unsigned char kKagexWebJs[] = { ${_webjs_bytes} };\n")
+# copied only when it changed, so a configure doesn't rebuild Build.cpp for nothing
+configure_file("${CMAKE_CURRENT_BINARY_DIR}/KagexWebJs.h.tmp" "${CMAKE_CURRENT_BINARY_DIR}/generated/KagexWebJs.h" COPYONLY)
+target_include_directories(kagex-release PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 # The screen: appserve's client library and web/, zipped into the exe
 set(_stage "${CMAKE_CURRENT_BINARY_DIR}/web")
 file(REMOVE_RECURSE "${_stage}")

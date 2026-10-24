@@ -9,7 +9,7 @@ package: the engine, its plugins and its licenses, without the sample game.
   linux    kagex_sdl3_linux_{release,debug}.zip    krkrz, libSDL3.so.0, plugin/
   steam    kagex_sdl3_linux_steam.tar.gz           the same, from the Steam Runtime build
   macos    kagex_sdl3_macos.zip                    KAGEX.app without data, signature and .cf files
-  web      kagex_sdl3_web.zip                      the site without gamedata/ and its lists
+  web      kagex_sdl3_web.zip                      the site without gamedata/, its lists, the build id and preview
 
 Symbolic links are stored as the files they point to (only libSDL3.so.0 is needed by name).
 The macOS app and the web site have no license files of their own: --licenses-from takes them
@@ -70,7 +70,9 @@ def keep(platform, name):
     if platform in ("linux", "steam"):
         return name == "krkrz" or name == "libSDL3.so.0" or parts[0] == "plugin"
     if platform == "web":
-        return parts[0] != "gamedata" and name not in ("gamedata.krkrz_files.json", "krkrz_prefetch.json", "README.md")
+        # the game's files and lists, and what belongs to the sample's build (its id and preview)
+        return parts[0] != "gamedata" and name not in ("gamedata.krkrz_files.json", "krkrz_prefetch.json", "README.md",
+                                                       "kagex-build.json", "preview.jpg")
     if platform == "macos":
         if not parts[0].endswith(".app"):
             return False
