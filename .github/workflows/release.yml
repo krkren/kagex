@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.3.0"
-  KAGEX_SHA: bd2cb1a4a96b7dc3c7fb8cddfc7fc0e1d8a2ac9d
+  RELEASE_TAG: "0.3.1"
+  KAGEX_SHA: 14edb837e5445bd15a205ea253e617ebba3f3305
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -462,6 +462,12 @@ jobs:
         run: |
           tool=platforms/kagex-release-linux/kagex-release
           chmod +x "$tool"
+          # the tool downloads its engines from the release of its own version
+          v=$("$tool" --version)
+          if [ "$v" != "kagex-release $RELEASE_TAG" ]; then
+            echo "::error title=Tool version::kagex-release says '$v': raise the version in tools/release/CMakeLists.txt and vcpkg.json to $RELEASE_TAG"
+            exit 1
+          fi
           mkdir -p game/template
           cp -r kagex/data kagex/platform kagex/krkrz.cf game/
           cp -r kagex/template/system game/template/
