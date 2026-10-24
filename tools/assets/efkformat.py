@@ -122,14 +122,21 @@ Node-specific
 max, hsv=False)``, ``ColorEasing(start, end, params)``, ``FCurveRGBA(...)``
 or ``Gradient(colors, alphas)``.
 
+The rendering order (``Node.rendering_priority``,
+``Effect.rendering_node_count`` / ``rendering_node_threshold``) is left at
+``None`` and computed by ``write_efk`` the way the editor does (tree order,
+sorted by ``drawing_priority``); if any node lacks one, all are recomputed.
+The runtime indexes an array with it, so stale values would crash it.
+
 Reading
 =======
 ``read_efk`` returns the same classes, with every field filled in.  Fields of
 newer or older versions than the file's keep their defaults.  ``describe(x)``
 prints an object's non-default fields.  ``write_efk`` writes 1610: it turns
-the 1.5 "location abs" setting into a force field (as the runtime does), and
-drops the 1.7-only settings (triggers, LODs, kill rules, material gradients)
-with a warning when they are set.
+the 1.5 "location abs" setting into a force field and rescales pre-1601
+vortex/turbulence powers (as the runtime does), and drops the 1.7-only
+settings (triggers, LODs, kill rules, material gradients) with a warning when
+they are set.
 
 Not supported: versions below 1500 and from 1800 (GPU particles, collisions),
 and node fields that only exist there.
@@ -145,7 +152,7 @@ import struct
 import sys
 import warnings
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 __all__ = [
     # API
@@ -154,7 +161,7 @@ __all__ = [
     # containers
     "Effect", "Node", "Sprite", "Ribbon", "Ring", "Track", "Model",
     # values
-    "Fixed", "PVA", "Easing", "FloatEasing", "SinglePVA", "AxisPVA", "AxisEasing",
+    "Fixed", "PVA", "Easing", "FloatEasing", "SingleEasing", "SinglePVA", "AxisPVA", "AxisEasing",
     "RotateToViewpoint", "RotateToVelocity", "NurbsCurve", "ViewOffset",
     "FCurve", "FCurve1", "FCurve2", "FCurve3", "FCurveRGBA",
     "Point", "Sphere", "Circle", "Line", "ModelSpawn",
@@ -2266,13 +2273,6 @@ def _tree(nodes, depth=0):
         lines.append("    " + "  " * depth + f"{what} ({', '.join(extra)})")
         lines += _tree(n.children, depth + 1)
     return lines
-
-
-def _without(effect, names):
-    e = copy.deepcopy(effect)
-    for n in names:
-        setattr(e, n, None)
-    return e
 
 
 def _first_difference(a, b, path="effect", tol=False):

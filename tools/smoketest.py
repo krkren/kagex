@@ -511,7 +511,7 @@ class WebEngine(Engine):
             self.console.close()
 
 
-DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks"]
+DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks"]
 
 
 def collector():
@@ -588,12 +588,21 @@ def sample_steps(eng):
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
-    @step("Effekseer effects can be drawn (--effekseer required) or say why not")
+    @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
         why = eng.tjs('var s = KAGEffekseerOf(kag); return s.available ? "" : "unavailable: " + s.reason;')
         print("     Effekseer:", why or "available", flush=True)
-        if why and eng.opts.effekseer == "required":
-            raise SmokeError("Effekseer effects are " + why)
+        if why:
+            if eng.opts.effekseer == "required":
+                raise SmokeError("Effekseer effects are " + why)
+            return
+        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"sparkle.efk", visible:"true"]); return 1;')
+        time.sleep(1.5)
+        n = eng.tjs('var l = kag.fore.layers[0], n = 0; for (var y = 0; y < l.height; y += 8)'
+                    ' for (var x = 0; x < l.width; x += 8) if (l.getMainPixel(x, y)) n++;'
+                    ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return n;')
+        if n <= 0:
+            raise SmokeError("sparkle.efk drew nothing")
 
     @step("the demo menu's choices are drawn in a text font")
     def _():

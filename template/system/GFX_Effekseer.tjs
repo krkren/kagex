@@ -226,7 +226,9 @@ class EffekseerFlip extends GenericFlip, Layer
 		system.flips.add(this);
 
 		setStateOptions(elm);
-		player.play(0);
+		// efkframe: start that far in (an effect that fills the screen over time can start full)
+		frames = elm.efkframe !== void ? (int)+elm.efkframe : 0;
+		player.play((int)frames);
 		flipSetOptions(elm);
 	}
 
@@ -334,11 +336,8 @@ class EffekseerFlip extends GenericFlip, Layer
 		elm.efkmag    = dic.mag;
 		elm.efkwidth  = dic.width;
 		elm.efkheight = dic.height;
+		elm.efkframe  = dic.frame < restoreFrames ? dic.frame : restoreFrames;
 		flipStart(dic.file, elm);
-		if (player !== void && dic.frame > 0) {
-			frames = dic.frame < restoreFrames ? dic.frame : restoreFrames;
-			player.play((int)frames);
-		}
 	}
 }
 
@@ -349,7 +348,7 @@ GenericFlip.Entry(
 		"class"    => EffekseerFlip,                  // Controller class
 		"trigger"  => "efkdone",                      // Trigger sent when every effect has ended
 		"ext"      => [ "efkefc", "efk", "efkzip" ],  // Extensions
-		"options"  => [ "loop", "efkmag", "efkwidth", "efkheight", "efkx", "efky",
+		"options"  => [ "loop", "efkmag", "efkwidth", "efkheight", "efkframe", "efkx", "efky",
 						"efkrotx", "efkroty", "efkrot", "efkzoom", "efkspeed", "efkcolor",
 						"efkinput", "efktrigger", "efkstop" ], // Option values (for KAGEnvLayer)
 		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
