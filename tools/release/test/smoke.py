@@ -208,6 +208,7 @@ def browser_tests(port, proj, args):
                 # build this computer's platform from the window
                 ver.fill(saved["identity"]["version"])
                 page.locator("#pl-web").uncheck()
+                page.locator("#pl-android").uncheck()
                 page.wait_for_function("!document.querySelector('#sec-game .issue.error')", timeout=10000)
                 page.wait_for_timeout(500)
                 page.click("#build")
@@ -317,9 +318,10 @@ def build_tests(exe, proj, args):
         data = z.read(n + "kagex-sample.exe")
         with zipfile.ZipFile(Path(args.engines) / "kagex_engine_windows.zip") as ez:
             original = ez.getinfo("krkrz.exe").file_size
-        at = data.find(XP3_MARK, original)
-        step("windows: data bound into the exe", at >= original and at % 16 == 0 and n + "data.xp3" not in z.namelist(),
-             "exe %d bytes, xp3 at %d" % (original, at))
+        # the exe's own size changes with its icon and version info: the xp3 is the last mark
+        at = data.rfind(XP3_MARK)
+        step("windows: data bound into the exe", at > original // 2 and at % 16 == 0 and n + "data.xp3" not in z.namelist(),
+             "engine %d bytes, xp3 at %d of %d" % (original, at, len(data)))
         plugins = [x for x in z.namelist() if x.startswith(n + "plugin/") and not x.endswith("/")]
         step("windows: only the linked plugins", 0 < len(plugins) < 27, "%d plugins" % len(plugins))
     lz = outdir / (base + "steam.zip")

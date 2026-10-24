@@ -461,8 +461,9 @@ function showJob(st) {
 	}
 	if (r.check) {
 		const c = r.check;
-		d.results.append(el('div', { class: 'result ' + (!c.ran ? '' : c.ok ? 'ok' : 'bad') },
-			el('span', { class: 'mark' }, !c.ran ? 'i' : c.ok ? '✓' : '✗'),
+		const tested = c.ran && !c.inconclusive;
+		d.results.append(el('div', { class: 'result ' + (!tested ? '' : c.ok ? 'ok' : 'bad') },
+			el('span', { class: 'mark' }, !tested ? 'i' : c.ok ? '✓' : '✗'),
 			el('div', { class: 'what' }, el('b', {}, 'Test run'), ' ', c.message, (c.errors || []).map((e) => [el('br'), el('code', {}, e)])),
 			c.log ? el('button', { onclick: () => app.post('/api/release/reveal', { path: c.log }).catch(() => {}) }, 'Log') : null));
 	}

@@ -766,12 +766,20 @@ private:
 		writeText(out_ / "test-run.log", log);
 		r.set("ran", Json(true));
 		r.set("started", Json(started));
-		r.set("ok", Json(started && errors.empty()));
 		r.set("errors", Json::array(errors));
 		r.set("log", Json(krt::fromPath(out_ / "test-run.log")));
-		if (!started) r.set("message", Json(rr.started ? "The game didn't get going within a minute (see test-run.log)" : "The engine couldn't be started: " + rr.output));
-		else if (!errors.empty()) r.set("message", Json("Script errors (see test-run.log)"));
-		else r.set("message", Json("The game started without script errors"));
+		// a computer without an OpenGL ES driver (a virtual machine) can't run the engine: that
+		// says nothing about the build
+		const bool noGraphics = !started && log.find("GLES context is unavailable") != std::string::npos;
+		if (noGraphics) {
+			r.set("inconclusive", Json(true));
+			r.set("message", Json("Not tested: the engine found no OpenGL ES driver on this computer (a virtual machine?), so the game couldn't start here"));
+		} else {
+			r.set("ok", Json(started && errors.empty()));
+			if (!started) r.set("message", Json(rr.started ? "The game didn't get going within a minute (see test-run.log)" : "The engine couldn't be started: " + rr.output));
+			else if (!errors.empty()) r.set("message", Json("Script errors (see test-run.log)"));
+			else r.set("message", Json("The game started without script errors"));
+		}
 		pr.log("Test run: " + r["message"].asStr());
 		return r;
 	}
