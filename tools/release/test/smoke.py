@@ -455,6 +455,66 @@ def android_tests(exe, proj, args):
                      and "application-label:'KAGEX Sample'" in badging, badging.splitlines()[0] if badging else "no output")
 
 
+def ios_tests(exe, proj, args):
+    """The Simulator app (installed and started in a Simulator) and a device .ipa, signed ad hoc
+    with a stand-in profile (an unsigned plist), on a Mac with Xcode"""
+    if host_id() != "macos" or not shutil.which("xcrun"):
+        return
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == "ios"
+    s["output"]["check"] = False
+    profile = proj / "test.mobileprovision"
+    import plistlib
+    profile.write_bytes(plistlib.dumps({"Name": "kagex-release test", "Entitlements": {
+        "application-identifier": "ABCDE12345.com.example.kagexsample", "get-task-allow": True}}))
+    i = s["platforms"]["ios"]
+    i.update({"bundleId": "com.example.kagexsample", "buildNumber": 0, "identity": "-", "profile": "test.mobileprovision", "data": "xp3"})
+    version = s["identity"]["version"]
+    for target in ("simulator", "device"):
+        i["target"] = target
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            r = json.loads(out[out.index("{"):])
+        except ValueError:
+            r = {"ok": False, "error": out[-2000:], "outputs": []}
+        step("ios (%s): build" % target, r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]))
+        pkg = proj / "release" / (("kagex-sample-%s-ios-simulator.zip" % version) if target == "simulator" else ("kagex-sample-%s.ipa" % version))
+        if not pkg.exists():
+            continue
+        work = Path(tempfile.mkdtemp())
+        subprocess.run(["ditto", "-x", "-k", str(pkg), str(work)], check=False)
+        app = work / ("Payload" if target == "device" else "") / "kagex-sample.app"
+        info = plistlib.loads((app / "Info.plist").read_bytes()) if (app / "Info.plist").exists() else {}
+        step("ios (%s): Info.plist" % target, info.get("CFBundleIdentifier") == "com.example.kagexsample" and info.get("CFBundleShortVersionString") == version
+             and info.get("CFBundleDisplayName") == s["identity"]["shortName"], str({k: info.get(k) for k in ("CFBundleIdentifier", "CFBundleDisplayName", "CFBundleVersion")}))
+        step("ios (%s): data.xp3 and the icon" % target, (app / "data.xp3").exists() and (app / "Assets.car").exists() and "CFBundleIcons" in info)
+        v = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], capture_output=True, text=True)
+        step("ios (%s): the signature verifies" % target, v.returncode == 0, v.stderr.strip()[:300])
+        if target == "device":
+            ents = subprocess.run(["codesign", "-d", "--entitlements", ":-", str(app)], capture_output=True, text=True).stdout
+            step("ios (device): the profile and its entitlements", (app / "embedded.mobileprovision").exists() and "ABCDE12345.com.example.kagexsample" in ents)
+            continue
+        # the Simulator app starts
+        devs = json.loads(subprocess.run(["xcrun", "simctl", "list", "devices", "available", "-j"], capture_output=True, text=True).stdout)["devices"]
+        udid = next((d["udid"] for k, v in devs.items() if "iOS" in k for d in v if "iPhone" in d["name"]), None)
+        if not udid:
+            step("ios (simulator): a Simulator to run it in", False)
+            continue
+        subprocess.run(["xcrun", "simctl", "boot", udid], capture_output=True)
+        subprocess.run(["xcrun", "simctl", "bootstatus", udid, "-b"], capture_output=True, timeout=600)
+        inst = subprocess.run(["xcrun", "simctl", "install", udid, str(app)], capture_output=True, text=True)
+        launch = subprocess.run(["xcrun", "simctl", "launch", udid, "com.example.kagexsample"], capture_output=True, text=True)
+        time.sleep(15)
+        running = subprocess.run(["xcrun", "simctl", "spawn", udid, "launchctl", "list"], capture_output=True, text=True).stdout
+        alive = any("com.example.kagexsample" in l and l.split()[0] != "-" for l in running.splitlines())
+        step("ios (simulator): installs and keeps running", inst.returncode == 0 and launch.returncode == 0 and alive,
+             (inst.stderr + launch.stdout + launch.stderr).strip()[:300])
+        subprocess.run(["xcrun", "simctl", "shutdown", udid], capture_output=True)
+
+
 def write_wav(path, frames, rate=44100):
     import math
     import struct
@@ -601,6 +661,8 @@ def main():
                 web_tests(exe, proj, args)
             if (Path(args.engines) / "kagex_engine_android.zip").exists():
                 android_tests(exe, proj, args)
+            if (Path(args.engines) / "kagex_engine_ios.zip").exists():
+                ios_tests(exe, proj, args)
             media_tests(exe, proj, args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)

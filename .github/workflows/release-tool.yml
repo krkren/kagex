@@ -25,6 +25,8 @@ env:
   ENGINES_FROM: "0.2.2"
   # krkrz_android, as in platforms.yml
   KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
+  # the run of tools-check.yml whose kagex-ios-device-unsigned artifact the iOS tests use
+  IOS_DEVICE_RUN: "40057830047"
 
 jobs:
   build:
@@ -94,6 +96,15 @@ jobs:
             $PY -I kagex/tools/release/scripts/android-engine.py kit pkgs/kagex_sdl3_android.apk engines/kagex_engine_android.zip \
               --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip --app-config kagex/app-config.json
             rm -rf kit
+          fi
+          if [ "$RUNNER_OS" = macOS ]; then
+            # iOS: the Simulator app from the release, and an unsigned device build (Release) that
+            # tools-check.yml made, until platforms.yml builds one for the release
+            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_ios_simulator.zip
+            gh run download "$IOS_DEVICE_RUN" --repo "$GITHUB_REPOSITORY" -n kagex-ios-device-unsigned -D pkgs/ios-device
+            $PY -I kagex/tools/release/scripts/ios-engine.py --device pkgs/ios-device/kagex-ios-device-unsigned.ipa \
+              --simulator pkgs/kagex_sdl3_ios_simulator.zip engines/kagex_engine_ios.zip \
+              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
           fi
           rm -rf pkgs
       - uses: actions/setup-java@v4
