@@ -116,7 +116,7 @@ jobs:
           # software renderer stands in for a GPU)
           sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
             libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri > "$GITHUB_WORKSPACE/results/apt.log" 2>&1
-          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz --effekseer required
       - name: Publish results branch
         if: always()
         env:
@@ -187,7 +187,7 @@ jobs:
           (cd "$PROJECT_DIR/build/web/site" && exec python3 -m http.server 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
           sleep 3
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep || s=$?
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep --effekseer required || s=$?
           cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - name: Publish results branch
@@ -266,7 +266,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --effekseer required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
       # The smoke test needs the debug build (only it has the REPL); the package is the
       # optimized release build, signed with the same debug key (the kit's release-debug)
       - name: Build the release APK
@@ -461,7 +461,7 @@ jobs:
           # the game as the app holds it (the app has no template/). SDL's offscreen driver has
           # no OpenGL ES here (the engine draws through ANGLE), but the runners have a desktop
           cd "$APP/Contents/Resources"
-          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample
+          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample --effekseer required
       - name: Publish results branch
         if: always()
         env:

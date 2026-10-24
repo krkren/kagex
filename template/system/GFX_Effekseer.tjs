@@ -147,6 +147,8 @@ class EffekseerFlip extends GenericFlip, Layer
 	var options = %[];        // the options in effect (flipStore keeps them)
 	var frames = 0.0;         // frames played (at 60 a second), for flipStore
 	var lastTick;
+	var empty = false;        // the last frame drawn had no particles
+	var startOptions;         // the options it started with: a World layer's own (its flipInfo)
 
 	// options kept as the effect's state; efkstop and efktrigger are actions
 	var stateOptions = [ "loop", "efkx", "efky", "efkrotx", "efkroty", "efkrot", "efkzoom",
@@ -200,9 +202,10 @@ class EffekseerFlip extends GenericFlip, Layer
 		file = storage;
 		name = "Effekseer:" + storage;
 		(Dictionary.clear incontextof options)();
-		loop = stopped = false;
+		loop = stopped = empty = false;
 		frames = 0.0;
 		lastTick = void;
+		startOptions = elm;
 
 		var prim = window.primaryLayer;
 		var w = elm.efkwidth  !== void ? (int)+elm.efkwidth  : prim.width;
@@ -229,6 +232,7 @@ class EffekseerFlip extends GenericFlip, Layer
 		// efkframe: start that far in (an effect that fills the screen over time can start full)
 		frames = elm.efkframe !== void ? (int)+elm.efkframe : 0;
 		player.play((int)frames);
+		// play() puts the effect's dynamic inputs back to its defaults: the options go after it
 		flipSetOptions(elm);
 	}
 
@@ -265,11 +269,11 @@ class EffekseerFlip extends GenericFlip, Layer
 		}
 	}
 
-	// 0xAARRGGBB, or 0xRRGGBB (opaque)
+	// 0xAARRGGBB, or 0xRRGGBB (opaque: an alpha of 0 would hide the effect)
 	function colorOf(v) {
 		if (v === void) return 0xffffffff;
 		var c = (int)+v;
-		c |= 0xff000000 if (typeof v == "String" && v.length <= 8 && c <= 0xffffff);
+		c |= 0xff000000 if (c >= 0 && c <= 0xffffff);
 		return c;
 	}
 
@@ -283,7 +287,8 @@ class EffekseerFlip extends GenericFlip, Layer
 			if (key == "") continue;
 			var c = key.charAt(0);
 			if (c >= "0" && c <= "9") player.setDynamicInput(+key, +pair[1]);
-			else player.setDynamicInputByName(key, +pair[1]);
+			else try { player.setDynamicInputByName(key, +pair[1]); }
+			catch (e) { dm(@"Effekseer effect ${file}: no dynamic input named ${key}"); }
 		}
 	}
 
@@ -302,11 +307,21 @@ class EffekseerFlip extends GenericFlip, Layer
 			frames += dt * 0.06 * player.speed;
 			if (!player.playing) {
 				if (!loop) {
+					// over: a World layer redrawn later (a colour change) doesn't play it again
+					startOptions.efkstop = true if (startOptions !== void && isvalid startOptions);
 					finish();
 					return;
 				}
 				player.play(0);
 				frames = 0.0;
+				setStateOptions(options);   // play() reset the dynamic inputs
+			}
+			// nothing to draw twice in a row: the canvas is still clear
+			if (player.instanceCount == 0) {
+				if (empty) return;
+				empty = true;
+			} else {
+				empty = false;
 			}
 			system.render(this, player);
 		} catch (e) {
@@ -352,4 +367,5 @@ GenericFlip.Entry(
 						"efkrotx", "efkroty", "efkrot", "efkzoom", "efkspeed", "efkcolor",
 						"efkinput", "efktrigger", "efkstop" ], // Option values (for KAGEnvLayer)
 		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
+		"keepOnRedraw" => true,                       // Plays on through a World layer's redraw
 		]);

@@ -564,6 +564,12 @@ def template_steps(eng):
     return steps
 
 
+def effekseer_framework(eng):
+    """Whether the framework plays Effekseer effects (0.4.0 and later): pages.yml runs this test
+    on a release's site, which may be older"""
+    return eng.tjs('return typeof global.KAGEffekseerOf != "undefined" ? 1 : 0;') == 1
+
+
 def sample_steps(eng):
     steps, step = collector()
 
@@ -582,6 +588,9 @@ def sample_steps(eng):
     for demo in DEMOS:
         @step("demo " + demo + " plays to the end")
         def _(demo=demo):
+            if demo == "effect.ks" and not effekseer_framework(eng):
+                print("     (skipped: this build's framework predates the Effekseer demo)", flush=True)
+                return
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
             eng.clicker(True, until="s0001.ks")
@@ -594,6 +603,9 @@ def sample_steps(eng):
 
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
+        if not effekseer_framework(eng):
+            print("     (skipped: this build's framework predates Effekseer effects)", flush=True)
+            return
         why = eng.tjs('var s = KAGEffekseerOf(kag); return s.available ? "" : "unavailable: " + s.reason;')
         print("     Effekseer:", why or "available", flush=True)
         if why:

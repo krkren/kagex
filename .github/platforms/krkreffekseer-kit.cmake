@@ -11,6 +11,9 @@
 #   duplicate symbols. The plugin's own copies are renamed for its sources.
 # - krkreffekseer-odr.cpp defines static members Effekseer declares in its classes, which an
 #   unoptimized build (the debug APK) needs.
+# - Web: Effekseer maps its vertex buffers unsynchronized, which WebGL can't (Emscripten's
+#   glMapBufferRange returned 0, so nothing drew): krkreffekseer-webgl.cpp maps them with
+#   INVALIDATE_RANGE instead, through a renamed glad pointer in efk_renderer_gl.
 if(TARGET efk_renderer_gl)
   target_compile_definitions(efk_renderer_gl PRIVATE __egl_h_=1)
   message(STATUS "kagex: <EGL/egl.h> skipped in efk_renderer_gl")
@@ -26,4 +29,9 @@ endif()
 if(TARGET efk_core)
   target_sources(efk_core PRIVATE "${CMAKE_CURRENT_LIST_DIR}/krkreffekseer-odr.cpp")
   message(STATUS "kagex: Effekseer's static const members defined for unoptimized builds")
+endif()
+if(EMSCRIPTEN AND TARGET efk_renderer_gl AND TARGET krkreffekseer)
+  target_compile_definitions(efk_renderer_gl PRIVATE glad_glMapBufferRange=kagex_efk_glMapBufferRange)
+  target_sources(krkreffekseer PRIVATE "${CMAKE_CURRENT_LIST_DIR}/krkreffekseer-webgl.cpp")
+  message(STATUS "kagex: Effekseer's buffer maps go through krkreffekseer-webgl.cpp")
 endif()

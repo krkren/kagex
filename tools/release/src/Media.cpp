@@ -534,9 +534,9 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		j.ext = f.ext;
 		const std::string leaf = lower(f.leaf);
 		const bool referenced = referencedBy.count(leaf) > 0;
-		if ((isAudioSource(f.ext) || isImageSource(f.ext)) && forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 		if (isAudioSource(f.ext)) {
 			if (audioTo == "keep" && f.ext == ".wav") continue;
+			if (forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 			// FLAC can't be played, so it is converted (and its references rewritten) either way
 			if (referenced && !rewrite && f.ext != ".flac") { ++result.keptByReference; continue; }
 			j.audio = true;
@@ -552,6 +552,7 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 				j.params = "audio|wav";
 			}
 		} else if (isImageSource(f.ext) && !imagesKept) {
+			if (forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 			if (referenced && !rewrite) { ++result.keptByReference; continue; }
 			const std::string stem = lower(stemOf(f.leaf));
 			j.mask = stem.size() > 2 && stem.compare(stem.size() - 2, 2, "_m") == 0 && imageStems.count(stem.substr(0, stem.size() - 2));

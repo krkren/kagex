@@ -60,6 +60,10 @@ class KAGEnvLayer extends KAGEnvImage {
 
 	var flipUpdateFlag;
 
+	// The flip file was just given (a redraw starts its flip afresh)
+
+	var flipNew;
+
 
 
 	// Tile rendering processing
@@ -632,6 +636,8 @@ class KAGEnvLayer extends KAGEnvImage {
 
 		(Dictionary.assign incontextof flipInfo)(elm);
 
+		flipNew = true;
+
 
 
 		initPosAndShow(elm);
@@ -977,6 +983,20 @@ class KAGEnvLayer extends KAGEnvImage {
 	function drawLayer(layer) {
 
 		layer.clearTile();
+
+		// A flip whose type keeps it through a redraw (keepOnRedraw: Effekseer effects) plays on
+
+		// when the layer is only redrawn, as for a colour change; it starts afresh for a new file
+
+		if (!flipNew && flipFile !== void && flipRestore === void && isShowBU() && layer.flip !== void &&
+
+			layer.flipType == flipType && _genericFlipGetEntry(flipType, "keepOnRedraw")) {
+
+			return;
+
+		}
+
+		flipNew = void;
 
 		layer.stopFlip();
 
