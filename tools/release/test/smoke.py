@@ -11,7 +11,8 @@
 - --engines: builds with those engine packages (kagex_engine_*.zip): Windows, Linux and Steam
   (and macOS on a Mac), with the test run; then data bound into the exe, a data folder and only
   the linked plugins; the packages are checked. Then the media: WAV, FLAC (with loop points) and
-  images converted, files the scripts name kept and then rewritten, the conversion cache
+  images converted, files the scripts name kept and then rewritten, the conversion cache, and on
+  Linux the converted build in the engine (a button's hover image found, the button highlighted)
 """
 import argparse
 import hashlib
@@ -111,6 +112,18 @@ def cli_tests(exe, proj):
     fields = [i["field"] for i in json.loads(out)["issues"] if i["level"] == "error"]
     step("check: reports a bad version and reserved names", code == 1 and "identity.version" in fields and "identity.appName" in fields, ", ".join(fields))
     bad_file.unlink()
+
+    # a framework from before 0.3.0 (no .opus) and 0.3.1 (button images found as .png, .tlg5,
+    # .tlg6 and .bmp only) is told to keep its sounds and images in formats it finds
+    fw = proj / "template" / "system"
+    saved = {n: (fw / n).read_bytes() for n in ("BGM.tjs", "MessageLayer.tjs")}
+    (fw / "BGM.tjs").write_bytes(saved["BGM.tjs"].replace(b'"opus", ', b""))
+    (fw / "MessageLayer.tjs").write_bytes(saved["MessageLayer.tjs"].replace(b"global.Layer.SupportedExtensions", b'[ "png", "tlg5", "tlg6", "bmp" ]'))
+    code, out = run(exe, "--cli", "check", str(rel), "--json")
+    for n, b in saved.items():
+        (fw / n).write_bytes(b)
+    fields = [i["field"] for i in json.loads(out)["issues"] if i["level"] == "error"]
+    step("check: an older framework refuses Opus and TLG", code == 1 and "media.audio.convert" in fields and "media.images.alpha" in fields, ", ".join(fields))
 
     code, out = run(exe, "--cli", "plan", str(rel), "--json", "--platform=windows,linux,web,android,ios")
     plan = json.loads(out)
@@ -574,6 +587,69 @@ def write_flac(path, frames, rate=44100):
     path.write_bytes(bytes(out))
 
 
+def converted_game_tests(game, args):
+    """The build with converted images, in the engine here (headless): a button finds its hover
+    image (start_over is a .tlg now; up to 0.3.0 the framework looked for .png, .tlg5, .tlg6 and
+    .bmp only, so no button highlighted), hovering changes the button, and the CG screen finds
+    its prepared thumbnails"""
+    sys.path.insert(0, str(REPO / "tools"))
+    import smoketest
+
+    class Built(smoketest.FileChannel):
+        def __init__(self, exe, work):
+            self.chan = str(work / "repl")
+            self.modals = []
+            os.makedirs(self.chan)
+            os.makedirs(work / "save")
+            env = dict(os.environ)
+            env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+            env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+            self.log_path = str(work / "engine.log")
+            self.log = open(self.log_path, "wb")
+            self.proc = subprocess.Popen([str(exe), "-datapath=%s/" % (work / "save"), "-replfile=" + self.chan, "-replmodaltimeout=0"],
+                                         cwd=str(exe.parent), stdout=self.log, stderr=subprocess.STDOUT, env=env)
+
+        def alive(self):
+            if self.proc.poll() is not None:
+                raise smoketest.SmokeError("the engine exited (code %s)" % self.proc.returncode)
+            return True
+
+        def stop(self):
+            if self.proc.poll() is None:
+                self.proc.kill()  # a hung engine ignores SIGTERM
+                self.proc.wait()
+            self.log.close()
+
+    work = Path(tempfile.mkdtemp())
+    eng = None
+    try:
+        eng = Built(game, work)
+        eng.wait("the title screen", 'typeof global.kag != "undefined" && global.kag !== void && kag.conductor.curStorage == "title.ks" && kag.inStable', 120)
+        found = eng.tjs('var m = kag.fore.messages[0]; return m.getExistName("start_over") + "|" + getExistImageName("thum_event1");')
+        step("converted game: a button finds its hover image, the CG screen its thumbnail", found == "start_over.tlg|thum_event1.tlg", str(found))
+        # the button's look before and after the pointer enters it
+        look = """
+            var b = kag.fore.messages[0].names["start"], l = new Layer(kag, kag.primaryLayer), sum = 0;
+            l.setImageSize(b.width, b.height);
+            l.piledCopy(0, 0, kag.primaryLayer, b.left, b.top, b.width, b.height);
+            for (var y = 0; y < b.height; y += 4) for (var x = 0; x < b.width; x += 4) sum += l.getMainPixel(x, y) & 0xffffff;
+            invalidate l;
+            %s
+            return sum;"""
+        before = eng.tjs(look % "b.onMouseEnter();")
+        time.sleep(1)
+        after = eng.tjs(look % "")
+        hover = "changed" if before != after else "unchanged"
+        step("converted game: hovering a button highlights it", hover == "changed", str(hover))
+    except Exception as e:
+        step("converted game: the title screen", False, str(e)[:1500])
+    finally:
+        if eng:
+            eng.stop()
+            if args.out:
+                shutil.copyfile(eng.log_path, Path(args.out) / "converted-game.log")
+
+
 def media_tests(exe, proj, args):
     d = proj / "data"
     for sub in ("voice", "sound", "bgm", "scenario"):
@@ -624,6 +700,8 @@ def media_tests(exe, proj, args):
     if args.out and (proj / "release" / "test-run.log").exists():
         shutil.copyfile(proj / "release" / "test-run.log", Path(args.out) / "test-run-media.log")
     step("media: the test run with converted media", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+    if host == "linux":
+        converted_game_tests(base / "kagex-sample", args)
 
     s["media"]["references"] = "rewrite"
     s["output"]["check"] = False

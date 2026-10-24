@@ -81,6 +81,11 @@ Before packing, lossless media in the staged data are converted (the sources are
 - **Images**: PNG, BMP and TLG become TLG6 (or TLG5, PNG, JPEG) when opaque, TLG6 (or TLG5, PNG,
   or a JPEG plus a lossless `<name>_m.png` mask) when transparent. The mask of a main/mask pair
   (`<name>_m.*`) only goes to lossless formats.
+  The framework finds a button's converted hover, pressed and focus images from KAGEX 0.3.1 on;
+  a game with an older `data/system` is told to convert images to PNG, keep them, or update it.
+  A script of your own that looks for an image by adding an extension to its name
+  (`Storages.isExistentStorage(name + ".png")`) won't find a converted one: use the framework's
+  `getExistImageName(name)`, which tries every image format.
 - **Never converted**: Ogg, Opus and JPEG (lossy already), and files the scripts (`.ks`, `.tjs`,
   `.csv`, `.txt`, `.asd`, `.json`, `.func`) name with their extension, including printf patterns
   like `"ai%s%06d.wav"`, unless *Names with extensions* is set to rewrite them; then the staged

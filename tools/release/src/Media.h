@@ -42,4 +42,9 @@ bool convertMedia(const Json& settings, const std::filesystem::path& stage, krt:
 /// Whether a framework folder (data/system or template/system) finds .opus files
 bool frameworkPlaysOpus(const std::filesystem::path& framework);
 
+/// Whether a framework folder finds a button's state images (<name>_over etc.) in every image
+/// format: up to 0.3.0, MessageLayer.getExistName tried .png, .tlg5, .tlg6 and .bmp only, so
+/// converted (.tlg, .jpg) hover, pressed and focus images never showed
+bool frameworkFindsConvertedImages(const std::filesystem::path& framework);
+
 } // namespace kr

@@ -6450,29 +6450,21 @@ class MessageLayer extends AnimKAGLayerTransMove
 
     function getExistName(storage) {
 
-        var test;
+        // Tries every image extension the engine reads (Layer.SupportedExtensions, Utils.tjs):
+
+        // kagex-release converts images to .tlg or .jpg, and a button's _over/_on/_focus images
+
+        // that weren't found here never showed
 
         if(!Storages.isExistentStorage(storage)) {
 
-            if (test = storage + ".png", Storages.isExistentStorage(test))
+            var exts = global.Layer.SupportedExtensions, found;
 
-                storage = test;
+            for (var i = 0; i < exts.count && found === void; i++)
 
-            else if (test = storage + ".tlg5", Storages.isExistentStorage(test))
+                if (Storages.isExistentStorage(storage + "." + exts[i])) found = storage + "." + exts[i];
 
-                storage = test;
-
-            else if (test = storage + ".tlg6", Storages.isExistentStorage(test))
-
-                storage = test;
-
-            else if (test = storage + ".bmp", Storages.isExistentStorage(test))
-
-                storage = test;
-
-            else
-
-                storage = void;
+            storage = found;
 
         }
 

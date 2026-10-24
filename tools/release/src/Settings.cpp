@@ -302,6 +302,16 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	if (vq < 0 || vq > 10) error("media.audio.vorbisQuality", "The Vorbis quality is 0 to 10");
 	if (!oneOf(str(s, "media.images.opaque"), { "tlg6", "tlg5", "png", "jpeg", "keep" })) error("media.images.opaque", "Opaque images become \"tlg6\", \"tlg5\", \"png\" or \"jpeg\", or are kept (\"keep\")");
 	if (!oneOf(str(s, "media.images.alpha"), { "tlg6", "tlg5", "png", "jpeg-mask", "keep" })) error("media.images.alpha", "Transparent images become \"tlg6\", \"tlg5\", \"png\" or \"jpeg-mask\", or are kept (\"keep\")");
+	{
+		const std::string opaque = str(s, "media.images.opaque"), alpha = str(s, "media.images.alpha");
+		const bool opaqueConverts = opaque != "png" && opaque != "keep", alphaConverts = alpha != "png" && alpha != "keep";
+		if ((opaqueConverts || alphaConverts) && !p.framework.empty() && !frameworkFindsConvertedImages(p.framework))
+			error(alphaConverts ? "media.images.alpha" : "media.images.opaque",
+			      "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+			      ") looks for buttons' hover, pressed and focus images as .png, .tlg5, .tlg6 or .bmp only: it predates KAGEX 0.3.1, "
+			      "and with images converted to TLG or JPEG its buttons wouldn't highlight. Convert images to PNG or keep them, "
+			      "or update it from KAGEX 0.3.1's template/system");
+	}
 	const long long jq = at(s, "media.images.jpegQuality").asInt(90);
 	if (jq < 1 || jq > 100) error("media.images.jpegQuality", "The JPEG quality is 1 to 100");
 	if (!oneOf(str(s, "media.references"), { "keep", "rewrite" })) error("media.references", "references is \"keep\" or \"rewrite\"");
