@@ -54,7 +54,7 @@ Requirement checkJava()
 	return req("Java 17 or newer (JDK)", ok, "Java " + std::to_string(major) + " (" + java + ")" + (ok ? "" : ": too old"));
 }
 
-fs::path findAndroidSdk()
+fs::path findAndroidSdkImpl()
 {
 	std::error_code ec;
 	for (const char* var : { "ANDROID_HOME", "ANDROID_SDK_ROOT" }) {
@@ -159,6 +159,19 @@ fs::path cacheDir()
 #endif
 }
 
+fs::path androidSdk() { return findAndroidSdkImpl(); }
+
+fs::path javaHome()
+{
+	const std::string env = getEnv("JAVA_HOME");
+	if (!env.empty()) return krt::toPath(env);
+	fs::path java = findProgram("java");
+	std::error_code ec;
+	if (java.empty()) return {};
+	java = fs::canonical(java, ec);   // /usr/bin/java is usually a link into the JDK
+	return java.parent_path().parent_path();
+}
+
 PlatformStatus checkPlatform(const std::string& id, const Json& s, const Project& project)
 {
 	PlatformStatus st;
@@ -191,7 +204,7 @@ PlatformStatus checkPlatform(const std::string& id, const Json& s, const Project
 		st.notes.push_back("The site needs a web server (GitHub Pages works); it doesn't run from a local folder opened in a browser");
 	} else if (id == "android") {
 		rq.push_back(checkJava());
-		const fs::path sdk = findAndroidSdk();
+		const fs::path sdk = findAndroidSdkImpl();
 		rq.push_back(req("Android SDK", !sdk.empty(), sdk.empty()
 			? "Not found. Install Android Studio (or the command line tools) and set ANDROID_HOME" : krt::fromPath(sdk)));
 		st.notes.push_back("The first build downloads Gradle and the Android build tools it needs (several hundred MB)");

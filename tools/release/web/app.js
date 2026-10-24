@@ -408,8 +408,17 @@ async function startBuild() {
 		return;
 	}
 	if (dirty() || !state.exists) await save();
+	// keystore passwords are asked for each build and never saved
+	const secrets = {};
+	const android = settings.platforms.android;
+	if (android.enabled && android.keystore) {
+		const pw = await passwordBox('Android signing', `The passwords of ${android.keystore} (key "${android.keyAlias}"). They aren't saved.`,
+			[['androidStorePassword', 'Keystore password'], ['androidKeyPassword', 'Key password (empty: the same)']]);
+		if (!pw) return;
+		Object.assign(secrets, pw);
+	}
 	try {
-		await app.post('/api/release/build', { settings });
+		await app.post('/api/release/build', { settings, secrets });
 	} catch (e) {
 		alertBox('Could not start the build', String(e.message || e));
 		return;
@@ -495,6 +504,23 @@ function alertBox(title, text) {
 	ok.addEventListener('click', () => dlg.remove());
 	document.body.append(dlg);
 	ok.focus();
+}
+
+function passwordBox(title, text, fields) {
+	return new Promise((resolve) => {
+		const inputs = fields.map(([key, label]) => [key, el('input', { type: 'password', autocomplete: 'off', 'aria-label': label })]);
+		const cancel = el('button', {}, 'Cancel');
+		const go = el('button', { class: 'primary' }, 'Build');
+		const grid = el('div', { class: 'grid' }, inputs.map(([key, input], i) => [el('label', {}, fields[i][1]), el('div', { class: 'field' }, input)]));
+		const dlg = el('div', { class: 'modal' }, el('div', { class: 'dialog' },
+			el('div', { class: 'dialog-title' }, title), el('div', { class: 'muted' }, text), grid, el('div', { class: 'dialog-buttons' }, cancel, go)));
+		const done = (v) => { dlg.remove(); resolve(v); };
+		cancel.addEventListener('click', () => done(null));
+		go.addEventListener('click', () => done(Object.fromEntries(inputs.map(([k, i]) => [k, i.value]))));
+		for (const [, i] of inputs) i.addEventListener('keydown', (e) => { if (e.key === 'Enter') go.click(); });
+		document.body.append(dlg);
+		inputs[0][1].focus();
+	});
 }
 
 function confirmBox(title, text, yes) {

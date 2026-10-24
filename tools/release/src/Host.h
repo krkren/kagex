@@ -29,6 +29,11 @@ const char* hostId();
 /// Where downloaded engines and converted media are kept (KAGEX_RELEASE_CACHE overrides it)
 std::filesystem::path cacheDir();
 
+/// The Android SDK (ANDROID_HOME, ANDROID_SDK_ROOT or Android Studio's default place), or empty
+std::filesystem::path androidSdk();
+/// The JDK java runs from (JAVA_HOME, else the java in PATH), or empty
+std::filesystem::path javaHome();
+
 /// The status of one platform for these settings (signing identities and keystores come from
 /// them). Runs a few programs (java -version, xcrun, security), so it takes a moment
 PlatformStatus checkPlatform(const std::string& id, const Json& settings, const Project& project);

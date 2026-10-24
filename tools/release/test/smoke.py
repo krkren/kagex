@@ -407,6 +407,54 @@ def web_tests(exe, proj, args):
             httpd.shutdown()
 
 
+def android_tests(exe, proj, args):
+    """An APK (debug-signed, data.xp3) and an app bundle (data folder), with the JDK and SDK here"""
+    sdk = os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")
+    if not sdk or not shutil.which("java"):
+        print("skip android: no JDK or Android SDK here")
+        return
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == "android"
+    s["output"]["check"] = False
+    a = s["platforms"]["android"]
+    a.update({"format": "apk", "data": "xp3", "applicationId": "com.example.kagexsample", "versionCode": 0, "keystore": "", "keyAlias": ""})
+    version = s["identity"]["version"]
+    for fmt, data in (("apk", "xp3"), ("aab", "folder")):
+        a["format"], a["data"] = fmt, data
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            r = json.loads(out[out.index("{"):])
+        except ValueError:
+            r = {"ok": False, "error": out[-2000:], "outputs": []}
+        if args.out and (proj / "release" / "android-build.log").exists():
+            shutil.copyfile(proj / "release" / "android-build.log", Path(args.out) / ("android-%s.log" % fmt))
+        step("android (%s): build" % fmt, r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]))
+        pkg = proj / "release" / ("kagex-sample-%s.%s" % (version, fmt))
+        if not pkg.exists():
+            continue
+        with zipfile.ZipFile(pkg) as z:
+            names = set(z.namelist())
+            prefix = "base/" if fmt == "aab" else ""
+            libs = [n for n in names if n.startswith(prefix + "lib/") and n.endswith("libkrkrz.so")]
+            if data == "xp3":
+                info = z.getinfo(prefix + "assets/data.xp3") if prefix + "assets/data.xp3" in names else None
+                step("android (%s): data.xp3, stored uncompressed, and the engine" % fmt, info is not None and info.compress_type == zipfile.ZIP_STORED and len(libs) == 2,
+                     "%s; %s" % (info and info.compress_type, libs))
+            else:
+                step("android (%s): the data folder and the engine" % fmt, prefix + "assets/data/startup.tjs" in names and len(libs) == 2, "; ".join(libs))
+        if fmt == "apk":
+            tools = sorted(Path(sdk, "build-tools").glob("*"))
+            aapt2 = next((t / "aapt2" for t in reversed(tools) if (t / "aapt2").exists()), None)
+            if aapt2:
+                badging = subprocess.run([str(aapt2), "dump", "badging", str(pkg)], capture_output=True, text=True).stdout
+                step("android: package name, version and label", "name='com.example.kagexsample'" in badging and "versionCode='%d'" % (
+                    int(version.split(".")[0]) * 10000 + int(version.split(".")[1]) * 100 + int((version.split(".") + ["0"])[2])) in badging
+                     and "application-label:'KAGEX Sample'" in badging, badging.splitlines()[0] if badging else "no output")
+
+
 def write_wav(path, frames, rate=44100):
     import math
     import struct
@@ -551,6 +599,8 @@ def main():
             build_tests(exe, proj, args)
             if (Path(args.engines) / "kagex_engine_web.zip").exists():
                 web_tests(exe, proj, args)
+            if (Path(args.engines) / "kagex_engine_android.zip").exists():
+                android_tests(exe, proj, args)
             media_tests(exe, proj, args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)

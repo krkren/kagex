@@ -11,6 +11,7 @@
 //---------------------------------------------------------------------------
 #pragma once
 #include <filesystem>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,8 @@ struct BuildOptions {
 	std::vector<std::string> only;        ///< these platforms (empty: the enabled ones)
 	std::filesystem::path    engines;     ///< a folder of engine packages (--engines)
 	bool                     keepWork = false;
+	/// passwords for this build only (never saved): androidStorePassword, androidKeyPassword
+	std::map<std::string, std::string> secrets;
 };
 
 /// { ok, error, outputs: [{ platform, title, ok, error, folder, package, bytes }], notes: [], check: {...} }
