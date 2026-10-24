@@ -1,0 +1,173 @@
+# Throwaway: can krkrz_tools be built and run on each desktop OS (Apple Silicon is unconfirmed
+# upstream), and can krkrz_ios build an unsigned device app? Results go to
+# ci/platform-results-tools-<os> and ci/platform-results-ios-device.
+name: Tools check
+
+on:
+  push:
+    branches: [ci/tools-check]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  KRKRZ_TOOLS_SHA: 703b0c84ad97db28fffcf01a1eb450ec066e5e9f
+  KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
+jobs:
+  tools:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, preset: macos, name: macos }
+          - { os: ubuntu-22.04, preset: linux, name: linux }
+          - { os: windows-2022, preset: windows, name: windows }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kagex
+      - name: Clone krkrz_tools
+        run: |
+          mkdir -p results
+          git clone -q https://github.com/wamsoft/krkrz_tools.git krkrz_tools
+          git -C krkrz_tools checkout -q "$KRKRZ_TOOLS_SHA"
+          git -C krkrz_tools submodule update -q --init --recursive
+          git -C krkrz_tools submodule status | tee results/versions.txt
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Set up vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          if [ "$RUNNER_OS" = Windows ]; then "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics; else "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics; fi
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          PY=python3; [ "$RUNNER_OS" = Windows ] && PY=python
+          echo "PY=$PY" >> "$GITHUB_ENV"
+          { uname -a; cmake --version | head -1; ninja --version; } | tee results/toolchain.txt
+      - name: Configure
+        working-directory: krkrz_tools
+        run: ../kagex/.github/platforms/run-logged.sh configure cmake --preset ${{ matrix.preset }}
+      - name: Build
+        working-directory: krkrz_tools
+        run: ../kagex/.github/platforms/run-logged.sh build cmake --build --preset ${{ matrix.preset }}-rel
+      - name: Run the tools
+        run: |
+          set -x
+          bin=krkrz_tools/build/${{ matrix.preset }}/tools
+          ext=""; [ "$RUNNER_OS" = Windows ] && ext=.exe
+          mkdir -p t/img t/aud t/xp3
+          cp kagex/data/image/title.png kagex/data/fgimage/ch_0_0_1.png t/
+          $PY - <<'EOF'
+          import math, struct, wave
+          with wave.open("t/tone.wav", "wb") as w:
+              w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100)
+              w.writeframes(b"".join(struct.pack("<hh", int(8000*math.sin(i/20)), int(8000*math.sin(i/30))) for i in range(44100*2)))
+          EOF
+          printf 'Link { From=88200; To=0; Smooth=False; Condition=no; RefValue=0; CondVar=0; }\n' > t/tone.wav.sli
+          s=0
+          {
+            for t in xp3 img audio loop sign; do "$bin/$t/Release/krkr$t$ext" --help | head -40 || s=1; done
+            "$bin/image/Release/krkrimg$ext" --cli convert t/title.png --opaque=tlg6 --out=t/img || s=1
+            "$bin/image/Release/krkrimg$ext" --cli convert t/ch_0_0_1.png --alpha=tlg6 --out=t/img || s=1
+            mkdir -p t/sep && "$bin/image/Release/krkrimg$ext" --cli convert t/ch_0_0_1.png --opaque=jpg --alpha=sep --quality=90 --out=t/sep || s=1
+            "$bin/audio/Release/krkraudio$ext" --cli convert t/tone.wav --to=opus --bitrate=96 --out=t/aud || s=1
+            "$bin/audio/Release/krkraudio$ext" --cli convert t/tone.wav --to=ogg --quality=5 --out=t/aud || s=1
+            "$bin/xp3/Release/krkrxp3$ext" --cli pack kagex/data --out=t/xp3/data.xp3 || s=1
+            "$bin/xp3/Release/krkrxp3$ext" --cli list t/xp3/data.xp3 | head -20 || s=1
+            "$bin/xp3/Release/krkrxp3$ext" --cli verify t/xp3/data.xp3 || s=1
+            ls -lR t
+            cat t/aud/*.sli || true
+            file "$bin"/*/Release/* 2>/dev/null | grep -v ':.*directory' || true
+            [ "$RUNNER_OS" = Linux ] && ldd "$bin/xp3/Release/krkrxp3" || true
+            [ "$RUNNER_OS" = macOS ] && otool -L "$bin/xp3/Release/krkrxp3" || true
+            echo "status $s"
+          } 2>&1 | tee results/run.log
+          grep -q "status 0" results/run.log
+      - name: Pack the tools
+        if: always()
+        run: |
+          mkdir -p out
+          cp krkrz_tools/build/${{ matrix.preset }}/tools/*/Release/krkr* out/ 2>/dev/null || true
+          ls -l out | tee results/out.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: krkrz-tools-${{ matrix.name }}
+          path: out
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          kagex/.github/platforms/publish-results.sh tools-${{ matrix.name }} "tools ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"
+
+  ios-device:
+    runs-on: macos-15
+    timeout-minutes: 300
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - name: Clone the engine and krkrz_ios
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
+      - name: Set up vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          xcodebuild -version | tee results/xcode.txt
+      - name: Configure the distribution build (device, Release)
+        run: kirikiri/kagex/.github/platforms/run-logged.sh configure make -C kirikiri/krkrz_ios dist-configure
+      - name: Build without signing
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh build xcodebuild -project "$PROJECT_DIR/build/ios/dist/krkrz_ios.xcodeproj" \
+            -target krkrz -configuration Release -sdk iphoneos -arch arm64 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Inspect the app
+        if: always()
+        run: |
+          app=$(find "$PROJECT_DIR/build/ios/dist" -name '*.app' -path '*iphoneos*' | head -1)
+          {
+            echo "app: $app"
+            [ -n "$app" ] || exit 0
+            ls -la "$app"
+            du -sh "$app" "$app"/* | sort -h | tail -20
+            plutil -p "$app/Info.plist"
+            file "$app/krkrz"
+            lipo -info "$app/krkrz"
+            codesign -dv "$app" 2>&1 || true
+            ls "$app/data" | head
+            [ -d "$app/Frameworks" ] && ls -la "$app/Frameworks"
+            otool -L "$app/krkrz"
+          } 2>&1 | tee results/app.txt
+          if [ -n "$app" ]; then
+            # ad hoc signing, as a stand-in for the developer's own identity
+            cp -R "$app" "$RUNNER_TEMP/resign.app"
+            rm -rf "$RUNNER_TEMP/resign.app/data"
+            { codesign --force --sign - --timestamp=none "$RUNNER_TEMP/resign.app" && codesign -dv --verbose=2 "$RUNNER_TEMP/resign.app"; } 2>&1 | tee results/resign.txt
+            mkdir -p Payload && cp -R "$app" Payload/ && rm -rf Payload/*.app/data
+            zip -qry kagex-ios-device-unsigned.ipa Payload
+            ls -l kagex-ios-device-unsigned.ipa | tee -a results/app.txt
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kagex-ios-device-unsigned
+          path: kagex-ios-device-unsigned.ipa
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: kirikiri/kagex/.github/platforms/publish-results.sh ios-device "ios device, run ${{ github.run_id }} (${{ job.status }})"
