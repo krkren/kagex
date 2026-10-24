@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- The web demo can be added to a phone's home screen and then opens without the browser's bars: a web app manifest (full screen, landscape) for Android and the home-screen tags for iPhones, whose browsers can't put a page in full screen. Icons drawn by `tools/assets/make_ui.py icons` into `platform/web`; the page is titled with the game's name.
+
+### Fixed
+
+- In the browser and iOS builds the bottoms of g, j, p, q and y (and the shadow under them) were cut off in the message window: the line layer's padding only grew for krkr_richtext's text. It now also grows for the engine's own text drawing.
+
 ## 0.2.1
 
 ### Fixed

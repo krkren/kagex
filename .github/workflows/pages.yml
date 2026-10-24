@@ -37,7 +37,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: .github/platforms
+          # web-static-host.py and what it adds: the home-screen icons and the game's names
+          sparse-checkout: |
+            .github/platforms
+            platform/web
+            /linux-config.json
+            /ios-config.json
+          sparse-checkout-cone-mode: false
       - name: Download the site
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,8 +53,8 @@ jobs:
           mkdir site
           unzip -q kagex_sdl3_web.zip -d site
           test -f site/index.html
-          # the file list where a static host serves it, and coi's reload after its worker is
-          # ready (0.2.0's zip has neither)
+          # the file list where a static host serves it, coi's reload after its worker is ready
+          # and the home-screen manifest and icons (each for zips built before it had them)
           python3 .github/platforms/web-static-host.py site
           # serve.py is for running the site locally
           rm -f site/serve.py

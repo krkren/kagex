@@ -703,6 +703,15 @@ def make_icons():
     c.text((512, 512), "K", font("Black", 640), rgba(WHITE), anchor="mm")
     c.save(os.path.join(PLATFORM, "icon-1024.png"), opaque=True)
 
+    # The web build's home-screen icons (web-static-host.py): the same square, which iOS rounds
+    # and Android masks (the K stays inside a maskable icon's safe zone)
+    web = os.path.join(PLATFORM, "web")
+    os.makedirs(web, exist_ok=True)
+    full = Image.open(os.path.join(PLATFORM, "icon-1024.png")).convert("RGB")
+    for name, size in (("apple-touch-icon.png", 180), ("icon-192.png", 192), ("icon-512.png", 512)):
+        full.resize((size, size), Image.LANCZOS, reducing_gap=3.0).save(os.path.join(web, name), optimize=True)
+        print("wrote platform/web/%s" % name, (size, size), flush=True)
+
     # Android adaptive icon (app-config.json's resOverride): the K inside the 66 dp safe zone
     # of a 108 dp foreground, on the violet background colour (values/colors.xml)
     res = os.path.join(PLATFORM, "android-res", "drawable")
