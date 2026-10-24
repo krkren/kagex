@@ -1,0 +1,400 @@
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:183:22: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:183:35: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:183:48: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:183:61: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:183:74: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:184:22: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:184:35: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psddata.h:184:48: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psdfile.h:135:38: warning: multi-character character constant [-Wmultichar]
+  135 |                   int blendModeKey = 'norm', int opacity = 255, int destIndex = -1);
+      |                                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/external/psdparse/psdparse/psdfile.h:147:60: warning: multi-character character constant [-Wmultichar]
+  147 |                    bool closed = false, int blendModeKey = 'pass',
+      |                                                            ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:15:52: warning: multi-character character constant [-Wmultichar]
+   15 |         case psd::BLEND_MODE_NORMAL:        return 'norm';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:16:52: warning: multi-character character constant [-Wmultichar]
+   16 |         case psd::BLEND_MODE_DISSOLVE:      return 'diss';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:17:52: warning: multi-character character constant [-Wmultichar]
+   17 |         case psd::BLEND_MODE_DARKEN:        return 'dark';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:18:52: warning: multi-character character constant [-Wmultichar]
+   18 |         case psd::BLEND_MODE_MULTIPLY:      return 'mul ';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:19:52: warning: multi-character character constant [-Wmultichar]
+   19 |         case psd::BLEND_MODE_COLOR_BURN:    return 'idiv';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:20:52: warning: multi-character character constant [-Wmultichar]
+   20 |         case psd::BLEND_MODE_LINEAR_BURN:   return 'lbrn';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:21:52: warning: multi-character character constant [-Wmultichar]
+   21 |         case psd::BLEND_MODE_DARKER_COLOR:  return 'dkCl';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:22:52: warning: multi-character character constant [-Wmultichar]
+   22 |         case psd::BLEND_MODE_LIGHTEN:       return 'lite';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:23:52: warning: multi-character character constant [-Wmultichar]
+   23 |         case psd::BLEND_MODE_SCREEN:        return 'scrn';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:24:52: warning: multi-character character constant [-Wmultichar]
+   24 |         case psd::BLEND_MODE_COLOR_DODGE:   return 'div ';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:25:52: warning: multi-character character constant [-Wmultichar]
+   25 |         case psd::BLEND_MODE_LINEAR_DODGE:  return 'lddg';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:26:52: warning: multi-character character constant [-Wmultichar]
+   26 |         case psd::BLEND_MODE_LIGHTER_COLOR: return 'ltCl';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:27:52: warning: multi-character character constant [-Wmultichar]
+   27 |         case psd::BLEND_MODE_OVERLAY:       return 'over';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:28:52: warning: multi-character character constant [-Wmultichar]
+   28 |         case psd::BLEND_MODE_SOFT_LIGHT:    return 'sLit';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:29:52: warning: multi-character character constant [-Wmultichar]
+   29 |         case psd::BLEND_MODE_HARD_LIGHT:    return 'hLit';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:30:52: warning: multi-character character constant [-Wmultichar]
+   30 |         case psd::BLEND_MODE_VIVID_LIGHT:   return 'vLit';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:31:52: warning: multi-character character constant [-Wmultichar]
+   31 |         case psd::BLEND_MODE_LINEAR_LIGHT:  return 'lLit';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:32:52: warning: multi-character character constant [-Wmultichar]
+   32 |         case psd::BLEND_MODE_PIN_LIGHT:     return 'pLit';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:33:52: warning: multi-character character constant [-Wmultichar]
+   33 |         case psd::BLEND_MODE_HARD_MIX:      return 'hMix';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:34:52: warning: multi-character character constant [-Wmultichar]
+   34 |         case psd::BLEND_MODE_DIFFERENCE:    return 'diff';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:35:52: warning: multi-character character constant [-Wmultichar]
+   35 |         case psd::BLEND_MODE_EXCLUSION:     return 'smud';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:36:52: warning: multi-character character constant [-Wmultichar]
+   36 |         case psd::BLEND_MODE_SUBTRACT:      return 'fsub';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:37:52: warning: multi-character character constant [-Wmultichar]
+   37 |         case psd::BLEND_MODE_DIVIDE:        return 'fdiv';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:38:52: warning: multi-character character constant [-Wmultichar]
+   38 |         case psd::BLEND_MODE_HUE:           return 'hue ';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:39:52: warning: multi-character character constant [-Wmultichar]
+   39 |         case psd::BLEND_MODE_SATURATION:    return 'sat ';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:40:52: warning: multi-character character constant [-Wmultichar]
+   40 |         case psd::BLEND_MODE_COLOR:         return 'colr';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:41:52: warning: multi-character character constant [-Wmultichar]
+   41 |         case psd::BLEND_MODE_LUMINOSITY:    return 'lum ';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:42:52: warning: multi-character character constant [-Wmultichar]
+   42 |         case psd::BLEND_MODE_PASS_THROUGH:  return 'pass';
+      |                                                    ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/psdfile/psdclass.cpp:43:52: warning: multi-character character constant [-Wmultichar]
+   43 |         default:                            return 'norm';
+      |                                                    ^~~~~~
+[2038/2153] Building CXX object core/plugins/saveStruct/CMakeFiles/saveStruct.dir/Debug/__/ncbind/ncbind.cpp.o
+[2039/2153] Building CXX object core/plugins/saveStruct/CMakeFiles/saveStruct.dir/Debug/Main.cpp.o
+[2040/2153] Building CXX object core/plugins/scriptsEx/CMakeFiles/scriptsEx.dir/Debug/Main.cpp.o
+[2041/2153] Building CXX object core/plugins/shrinkCopy/CMakeFiles/shrinkCopy.dir/Debug/main.cpp.o
+[2042/2153] Building CXX object core/plugins/scriptsEx/CMakeFiles/scriptsEx.dir/Debug/__/ncbind/ncbind.cpp.o
+[2043/2153] Building CXX object core/plugins/shrinkCopy/CMakeFiles/shrinkCopy.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2044/2153] Building CXX object core/plugins/shrinkCopy/CMakeFiles/shrinkCopy.dir/Debug/__/ncbind/ncbind.cpp.o
+[2045/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/src/LicensesGen.cpp.o
+[2046/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/src/EscapeConverter.cpp.o
+[2047/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/src/HostFontBackend.cpp.o
+[2048/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2049/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/__/ncbind/ncbind.cpp.o
+[2050/2153] Linking CXX static library core/plugins/krkr_richtext/richtext/Debug/librichtext_lib.a
+[2051/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/turntrans_table.cpp.o
+[2052/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/Main.cpp.o
+[2053/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/mosaic.cpp.o
+[2054/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/wave.cpp.o
+[2055/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/turn.cpp.o
+[2056/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/rotatebase.cpp.o
+[2057/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/rotatetrans.cpp.o
+[2058/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2059/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/__/simplebinder/v2link.cpp.o
+[2060/2153] Building CXX object core/plugins/extrans/CMakeFiles/extrans.dir/Debug/ripple.cpp.o
+[2061/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/3duniversal.cpp.o
+[2062/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/Main.cpp.o
+[2063/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/zoomfade.cpp.o
+[2064/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/scanline.cpp.o
+[2065/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/rgbfade.cpp.o
+[2066/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/blurfade.cpp.o
+[2067/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/flutter.cpp.o
+[2068/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/spin.cpp.o
+[2069/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/imagewipe.cpp.o
+[2070/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/book.cpp.o
+[2071/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/honeyturn.cpp.o
+[2072/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/morphing.cpp.o
+[2073/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/__/simplebinder/v2link.cpp.o
+[2074/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/multiripple.cpp.o
+[2075/2153] Building CXX object core/plugins/extNagano/CMakeFiles/extNagano.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2076/2153] Building CXX object core/plugins/AlphaMovie/CMakeFiles/AlphaMovie.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2077/2153] Building CXX object core/plugins/expat/CMakeFiles/expat.dir/Debug/LicensesGen.cpp.o
+[2078/2153] Building CXX object core/plugins/AlphaMovie/CMakeFiles/AlphaMovie.dir/Debug/__/ncbind/ncbind.cpp.o
+[2079/2153] Building CXX object core/plugins/AlphaMovie/CMakeFiles/AlphaMovie.dir/Debug/AlphaMovie.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_dev/src/plugins/AlphaMovie/AlphaMovie.cpp:33:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<AlphaMovie, void (AlphaMovie::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<AlphaMovie, void (AlphaMovie::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (AlphaMovie::*)(); IMPL = ncbRegistNativeClass<AlphaMovie>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1940:47:   required from ‘void ncbRegistClass<IMPL>::Constructor(int) [with IMPL = ncbRegistNativeClass<AlphaMovie>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/AlphaMovie/AlphaMovie.cpp:846:13:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<AlphaMovie, void (AlphaMovie::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+ 1472 |                 if (!_method && CommandT::InvokeSelect == doInvokeBase::ivsFactory)
+      |                                           ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2080/2153] Building CXX object core/plugins/expat/CMakeFiles/expat.dir/Debug/Main.cpp.o
+[2081/2153] Building CXX object core/plugins/krkr_richtext/CMakeFiles/krkr_richtext.dir/Debug/src/main.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:13:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyle, void (RichTextStyle::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyle, void (RichTextStyle::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextStyle::*)(); IMPL = ncbRegistSubClass<RichTextStyle>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1383:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyle, void (RichTextStyle::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+ 1472 |                 if (!_method && CommandT::InvokeSelect == doInvokeBase::ivsFactory)
+      |                                           ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextAppearance, void (RichTextAppearance::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextAppearance, void (RichTextAppearance::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextAppearance::*)(); IMPL = ncbRegistSubClass<RichTextAppearance>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1400:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextAppearance, void (RichTextAppearance::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextLayout, void (RichTextLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextLayout, void (RichTextLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextLayout::*)(); IMPL = ncbRegistSubClass<RichTextLayout>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1417:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextLayout, void (RichTextLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextParagraphLayout, void (RichTextParagraphLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextParagraphLayout, void (RichTextParagraphLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextParagraphLayout::*)(); IMPL = ncbRegistSubClass<RichTextParagraphLayout>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1429:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextParagraphLayout, void (RichTextParagraphLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyledLayout, void (RichTextStyledLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyledLayout, void (RichTextStyledLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextStyledLayout::*)(); IMPL = ncbRegistSubClass<RichTextStyledLayout>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1443:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextStyledLayout, void (RichTextStyledLayout::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextTextureAtlas, void (RichTextTextureAtlas::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextTextureAtlas, void (RichTextTextureAtlas::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (RichTextTextureAtlas::*)(krkrz_plugin::tTJSVariant); IMPL = ncbRegistSubClass<RichTextTextureAtlas>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkr_richtext/src/main.cpp:1459:5:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<RichTextTextureAtlas, void (RichTextTextureAtlas::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+[2082/2153] Building CXX object core/plugins/expat/CMakeFiles/expat.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2083/2153] Building CXX object core/plugins/expat/CMakeFiles/expat.dir/Debug/__/ncbind/ncbind.cpp.o
+[2084/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/tlg5/slide.cpp.o
+[2085/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/LodePNG/lodepng.cpp.o
+[2086/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/savetlg5.cpp.o
+[2087/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/LicensesGen.cpp.o
+[2088/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/utils.cpp.o
+[2089/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/savepng.cpp.o
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/layerExSave/savepng.cpp:296:36: note: ‘#pragma message: : LodePNG used.’
+  296 | #pragma message( ": LodePNG used." )
+      |                                    ^
+[2090/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2091/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/__/ncbind/ncbind.cpp.o
+[2092/2153] Building CXX object core/plugins/layerExSave/CMakeFiles/layerExSave.dir/Debug/Main.cpp.o
+[2093/2153] Linking CXX static library core/plugins/krkreffekseer/Debug/libefk_renderer_gl.a
+[2094/2153] Building CXX object core/plugins/sigcheck/CMakeFiles/sigcheck.dir/Debug/LicensesGen.cpp.o
+[2095/2153] Building CXX object core/plugins/sigcheck/CMakeFiles/sigcheck.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2096/2153] Building CXX object core/plugins/sigcheck/CMakeFiles/sigcheck.dir/Debug/__/ncbind/ncbind.cpp.o
+[2097/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/GLHook.cpp.o
+[2098/2153] Building CXX object core/plugins/sigcheck/CMakeFiles/sigcheck.dir/Debug/main.cpp.o
+[2099/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/LicensesGen.cpp.o
+[2100/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2101/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/utils.cpp.o
+[2102/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/EffectZip.cpp.o
+[2103/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/EffectFile.cpp.o
+[2104/2153] Building CXX object core/plugins/krkrthreepp/CMakeFiles/krkrthreepp.dir/Debug/src/LicensesGen.cpp.o
+[2105/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/__/ncbind/ncbind.cpp.o
+[2106/2153] Building CXX object core/plugins/krkrthreepp/CMakeFiles/krkrthreepp.dir/Debug/__/tp_stub/tp_stub.cpp.o
+[2107/2153] Building CXX object core/plugins/krkrthreepp/CMakeFiles/krkrthreepp.dir/Debug/__/ncbind/ncbind.cpp.o
+[2108/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_assert.c.o
+[2109/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_compare.c.o
+[2110/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_common.c.o
+[2111/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_crc32.c.o
+[2112/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_font.c.o
+[2113/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_fuzzer.c.o
+[2114/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_harness.c.o
+[2115/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_log.c.o
+[2116/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_md5.c.o
+[2117/2153] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/Debug/src/test/SDL_test_memory.c.o
+[2118/2153] Linking CXX static library _deps/harfbuzz_source-build/Debug/libharfbuzz-icu.a
+[2119/2153] Linking C static library _deps/harfbuzz_source-build/Debug/libharfbuzz-vector.a
+[2120/2153] Linking C static library _deps/harfbuzz_source-build/Debug/libharfbuzz-raster.a
+[2121/2153] Linking CXX shared library core/plugins/KAGParserEx/Debug/libKAGParserEx.so
+[2122/2153] Linking CXX shared library core/plugins/clipfile/Debug/libclipfile.so
+[2123/2153] Linking CXX shared library core/plugins/csvParser/Debug/libcsvParser.so
+[2124/2153] Linking CXX shared library core/plugins/getSample/Debug/libgetSample.so
+[2125/2153] Linking CXX shared library core/plugins/json/Debug/libjson.so
+[2126/2153] Linking CXX shared library core/plugins/layerExAreaAverage/Debug/liblayerExAreaAverage.so
+[2127/2153] Linking CXX shared library core/plugins/layerExBTOA/Debug/liblayerExBTOA.so
+[2128/2153] Linking CXX shared library core/plugins/layerExImage/Debug/liblayerExImage.so
+[2129/2153] Linking CXX shared library core/plugins/layerExLongExposure/Debug/liblayerExLongExposure.so
+[2130/2153] Linking CXX shared library core/plugins/layerExRaster/Debug/liblayerExRaster.so
+[2131/2153] Building CXX object core/plugins/krkreffekseer/CMakeFiles/krkreffekseer.dir/Debug/src/Effect.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkreffekseer/src/Effect.cpp:21:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerDevice, void (EffekseerDevice::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerDevice, void (EffekseerDevice::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (EffekseerDevice::*)(krkrz_plugin::tTJSVariant); IMPL = ncbRegistNativeClass<EffekseerDevice>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkreffekseer/src/Effect.cpp:1224:3:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerDevice, void (EffekseerDevice::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+ 1472 |                 if (!_method && CommandT::InvokeSelect == doInvokeBase::ivsFactory)
+      |                                           ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerEffect, void (EffekseerEffect::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerEffect, void (EffekseerEffect::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (EffekseerEffect::*)(krkrz_plugin::tTJSVariant); IMPL = ncbRegistNativeClass<EffekseerEffect>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkreffekseer/src/Effect.cpp:1263:3:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerEffect, void (EffekseerEffect::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerPlayer, void (EffekseerPlayer::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerPlayer, void (EffekseerPlayer::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (EffekseerPlayer::*)(krkrz_plugin::tTJSVariant); IMPL = ncbRegistNativeClass<EffekseerPlayer>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkreffekseer/src/Effect.cpp:1285:3:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<EffekseerPlayer, void (EffekseerPlayer::*)(krkrz_plugin::tTJSVariant), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+[2132/2153] Linking CXX shared library core/plugins/lineParser/Debug/liblineParser.so
+[2133/2153] Linking CXX shared library core/plugins/layerExVector/Debug/liblayerExVector.so
+[2134/2153] Linking CXX shared library core/plugins/minizip/Debug/libminizip.so
+[2135/2153] Linking CXX shared library core/plugins/psdfile/Debug/libpsdfile.so
+[2136/2153] Linking CXX shared library core/plugins/saveStruct/Debug/libsaveStruct.so
+[2137/2153] Linking CXX shared library core/plugins/scriptsEx/Debug/libscriptsEx.so
+[2138/2153] Linking CXX shared library core/plugins/shrinkCopy/Debug/libshrinkCopy.so
+[2139/2153] Linking CXX shared library core/plugins/extrans/Debug/libextrans.so
+[2140/2153] Linking CXX shared library core/plugins/extNagano/Debug/libextNagano.so
+[2141/2153] Linking CXX shared library core/plugins/AlphaMovie/Debug/libAlphaMovie.so
+[2142/2153] Linking CXX shared library core/plugins/expat/Debug/libexpat.so
+[2143/2153] Linking CXX shared library core/plugins/layerExSave/Debug/liblayerExSave.so
+[2144/2153] Linking CXX shared library core/plugins/sigcheck/Debug/libsigcheck.so
+[2145/2153] Linking CXX static library core/plugins/krkrthreepp/external/threepp/src/Debug/libthreepp.a
+[2146/2153] Linking C static library _deps/sdl3-build/Debug/libSDL3_test.a
+[2147/2153] Linking CXX shared library core/plugins/krkr_richtext/Debug/libkrkr_richtext.so
+[2148/2153] Linking CXX shared library core/plugins/krkreffekseer/Debug/libkrkreffekseer.so
+[2149/2153] Linking CXX executable core/Debug/krkrz
+[2150/2153] Building CXX object core/plugins/krkrthreepp/CMakeFiles/krkrthreepp.dir/Debug/src/vrm/VRM.cpp.o
+[2151/2153] Building CXX object core/plugins/krkrthreepp/CMakeFiles/krkrthreepp.dir/Debug/src/main.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:6:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector2, void (threepp::Vector2::*)(float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector2, void (threepp::Vector2::*)(float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Vector2::*)(float, float); IMPL = ncbRegistSubClass<threepp::Vector2>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:377:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector2, void (threepp::Vector2::*)(float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+ 1472 |                 if (!_method && CommandT::InvokeSelect == doInvokeBase::ivsFactory)
+      |                                           ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector3, void (threepp::Vector3::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector3, void (threepp::Vector3::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Vector3::*)(float, float, float); IMPL = ncbRegistSubClass<threepp::Vector3>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:437:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Vector3, void (threepp::Vector3::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Color, void (threepp::Color::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Color, void (threepp::Color::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Color::*)(float, float, float); IMPL = ncbRegistSubClass<threepp::Color>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:531:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Color, void (threepp::Color::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Euler, void (threepp::Euler::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Euler, void (threepp::Euler::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Euler::*)(float, float, float); IMPL = ncbRegistSubClass<threepp::Euler>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:565:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Euler, void (threepp::Euler::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Quaternion, void (threepp::Quaternion::*)(float, float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Quaternion, void (threepp::Quaternion::*)(float, float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Quaternion::*)(float, float, float, float); IMPL = ncbRegistSubClass<threepp::Quaternion>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:581:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Quaternion, void (threepp::Quaternion::*)(float, float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix4, void (threepp::Matrix4::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix4, void (threepp::Matrix4::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Matrix4::*)(); IMPL = ncbRegistSubClass<threepp::Matrix4>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:616:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix4, void (threepp::Matrix4::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix3, void (threepp::Matrix3::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix3, void (threepp::Matrix3::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Matrix3::*)(); IMPL = ncbRegistSubClass<threepp::Matrix3>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:653:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Matrix3, void (threepp::Matrix3::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box3, void (threepp::Box3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box3, void (threepp::Box3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Box3::*)(const threepp::Vector3&, const threepp::Vector3&); IMPL = ncbRegistSubClass<threepp::Box3>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:681:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box3, void (threepp::Box3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Sphere, void (threepp::Sphere::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Sphere, void (threepp::Sphere::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Sphere::*)(const threepp::Vector3&, float); IMPL = ncbRegistSubClass<threepp::Sphere>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:709:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Sphere, void (threepp::Sphere::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Ray, void (threepp::Ray::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Ray, void (threepp::Ray::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Ray::*)(const threepp::Vector3&, const threepp::Vector3&); IMPL = ncbRegistSubClass<threepp::Ray>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:734:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Ray, void (threepp::Ray::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Plane, void (threepp::Plane::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Plane, void (threepp::Plane::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Plane::*)(const threepp::Vector3&, float); IMPL = ncbRegistSubClass<threepp::Plane>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:762:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Plane, void (threepp::Plane::*)(const threepp::Vector3&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box2, void (threepp::Box2::*)(const threepp::Vector2&, const threepp::Vector2&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box2, void (threepp::Box2::*)(const threepp::Vector2&, const threepp::Vector2&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Box2::*)(const threepp::Vector2&, const threepp::Vector2&); IMPL = ncbRegistSubClass<threepp::Box2>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:787:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Box2, void (threepp::Box2::*)(const threepp::Vector2&, const threepp::Vector2&), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Line3, void (threepp::Line3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Line3, void (threepp::Line3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Line3::*)(const threepp::Vector3&, const threepp::Vector3&); IMPL = ncbRegistSubClass<threepp::Line3>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:825:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Line3, void (threepp::Line3::*)(const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Triangle, void (threepp::Triangle::*)(const threepp::Vector3&, const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Triangle, void (threepp::Triangle::*)(const threepp::Vector3&, const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Triangle::*)(const threepp::Vector3&, const threepp::Vector3&, const threepp::Vector3&); IMPL = ncbRegistSubClass<threepp::Triangle>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:854:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Triangle, void (threepp::Triangle::*)(const threepp::Vector3&, const threepp::Vector3&, const threepp::Vector3&), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Spherical, void (threepp::Spherical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Spherical, void (threepp::Spherical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Spherical::*)(float, float, float); IMPL = ncbRegistSubClass<threepp::Spherical>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:870:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Spherical, void (threepp::Spherical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Cylindrical, void (threepp::Cylindrical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Cylindrical, void (threepp::Cylindrical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Cylindrical::*)(float, float, float); IMPL = ncbRegistSubClass<threepp::Cylindrical>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:883:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Cylindrical, void (threepp::Cylindrical::*)(float, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Fog, void (threepp::Fog::*)(const threepp::Color&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Fog, void (threepp::Fog::*)(const threepp::Color&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Fog::*)(const threepp::Color&, float, float); IMPL = ncbRegistSubClass<threepp::Fog>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:3674:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Fog, void (threepp::Fog::*)(const threepp::Color&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::FogExp2, void (threepp::FogExp2::*)(const threepp::Color&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::FogExp2, void (threepp::FogExp2::*)(const threepp::Color&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::FogExp2::*)(const threepp::Color&, float); IMPL = ncbRegistSubClass<threepp::FogExp2>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:3685:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::FogExp2, void (threepp::FogExp2::*)(const threepp::Color&, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Raycaster, void (threepp::Raycaster::*)(const threepp::Vector3&, const threepp::Vector3&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Raycaster, void (threepp::Raycaster::*)(const threepp::Vector3&, const threepp::Vector3&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (threepp::Raycaster::*)(const threepp::Vector3&, const threepp::Vector3&, float, float); IMPL = ncbRegistSubClass<threepp::Raycaster>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:3790:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<threepp::Raycaster, void (threepp::Raycaster::*)(const threepp::Vector3&, const threepp::Vector3&, float, float), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp: In instantiation of ‘ncbNativeClassConstructor<CommandT>::ncbNativeClassConstructor(MethodT) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<ThreeWebApi, void (ThreeWebApi::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; MethodT = void*]’:
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1494:80:   required from ‘static const ncbIMethodObject* ncbNativeClassConstructor<CommandT>::Create(MethodT, bool) [with CommandT = ncbNativeClassMethodBase::InvokeType::InvokeCommand<ThreeWebApi, void (ThreeWebApi::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>; ncbNativeClassMethodBase::iMethodT = const ncbIMethodObject*; MethodT = void*]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1937:34:   required from ‘void ncbRegistClass<IMPL>::Constructor(TypeWrap<MethodT>) [with MethodT = void (ThreeWebApi::*)(); IMPL = ncbRegistNativeClass<ThreeWebApi>]’
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/krkrthreepp/src/main.cpp:6059:2:   required from here
+/home/runner/work/kagex/kagex/krkrz_dev/src/plugins/ncbind/ncbind.hpp:1472:56: warning: comparison between ‘enum ncbNativeClassMethodBase::InvokeType::InvokeCommand<ThreeWebApi, void (ThreeWebApi::*)(), ncbNativeClassMethodBase::InvokeType::ivtCtor>::<unnamed>’ and ‘enum ncbNativeClassMethodBase::doInvokeBase::<unnamed>’ [-Wenum-compare]
+[2152/2153] Linking CXX shared library core/plugins/krkrthreepp/Debug/libkrkrthreepp.so

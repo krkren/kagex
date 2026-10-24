@@ -1,0 +1,36 @@
+System.platformTag => linux
+System.versionString => 2.6.5.0
+System.exePath => file://./home/runner/work/kagex/kagex/smoke/
+System.dataPath => file://./home/runner/work/kagex/kagex/smoke/savedata/
+System.screenWidth + 'x' + System.screenHeight => 1920x1080
+kag.fullScreen => 0
+kag.innerWidth + 'x' + kag.innerHeight => 1440x810
+kag.scWidth + 'x' + kag.scHeight => 1920x1080
+kag.zoomNumer + '/' + kag.zoomDenom => 3/4
+System.getArgument('-drawdevice') => void
+System.getArgument('-forceegl') => void
+Scripts.getClassNames(kag.drawDevice).join(',') => SDLOGLDrawDevice
+typeof global.KAGParser => Object
+typeof global.CSVParser => Object
+typeof global.Layer.copyBottomBlueToTopAlpha => Object
+typeof global.Layer.copyRaster => Object
+typeof global.Layer.shrinkCopy => Object
+typeof global.RichText => Object
+typeof global.Scripts.getObjectKeys => Object
+typeof global.registerExEvent => undefined
+typeof kag.registerExEvent => Object
+typeof global.Window.exSystemMenu => undefined
+kag.chDefaultFace => Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto
+kag.fore.messages[0].useRichText => 1
+kag.fore.messages[0].userFace => Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto
+kag.saveDataLocation => file://./home/runner/work/kagex/kagex/smoke/savedata/
+font MS Gothic => unresolved
+font ＭＳ ゴシック => unresolved
+font MS Mincho => unresolved
+font Noto Sans CJK JP => unresolved
+font Noto Sans CJK JP DemiLight => unresolved
+font Noto Sans CJK JP Light => unresolved
+font Noto Sans JP => resolved, width('Hあ')=35
+font Roboto => resolved, width('Hあ')=35
+font Yu Gothic => unresolved
+font Meiryo => unresolved

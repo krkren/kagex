@@ -1,0 +1,752 @@
+13:29:46 TVP Log system initialized with level: 1
+13:29:46 App name: SDL Application
+13:29:46 App version: <unspecified>
+13:29:46 App ID: <unspecified>
+13:29:46 SDL revision: SDL-3.4.0-release-3.4.0
+13:29:46 SDL chose video backend 'x11'
+13:29:46 SDL chose audio backend 'dummy'
+13:29:46 Found resource: SysInitScript.tjs
+13:29:46 Found resource: config.cf
+13:29:46 Found resource: elements_basic.ttf
+13:29:46 Found resource: gamecontrollerdb.txt
+13:29:46 Found resource: messages-chs.json
+13:29:46 Found resource: messages-cht.json
+13:29:46 Found resource: messages-en.json
+13:29:46 Found resource: messages.json
+13:29:46 Found resource: optiondesc-chs.json
+13:29:46 Found resource: optiondesc-cht.json
+13:29:46 Found resource: optiondesc-en.json
+13:29:46 Found resource: optiondesc.json
+13:29:46 Found resource: roboto-regular.ttf
+13:29:46 Total resources loaded: 13
+13:29:46 [stdapp.cpp:InitPath:234] data/startup.tjs found, using data/ as project path
+13:29:46 [stdapp.cpp:InitPath:262] appPath: /home/runner/work/kagex/kagex/smoke/
+13:29:46 ! [stdapp.cpp:InitPath:263] projectPath: /home/runner/work/kagex/kagex/smoke/data/
+13:29:46 [stdapp.cpp:InitPath:298] pluginPath: /home/runner/work/kagex/kagex/smoke/plugin/
+13:29:46 [Application.cpp:LoadMessageResource:209] message file: resource://./messages.json (language tag: unknown)
+13:29:46 Audio stream created with channels: 2, sample rate: 48000
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+13:29:46 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/config.cf" failed (ignoring) : file not found.
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/krkrz.cf ext:.cf
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/krkrz.cf with mode: rb
+13:29:46 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/krkrz.cf" succeeded.
+13:29:46 SDL chose user_storage backend 'generic'
+13:29:46 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/savedata/krkrz.cfu" failed (ignoring) : file not found.
+13:29:46 ! (info) Data path : file://./home/runner/work/kagex/kagex/smoke/savedata/
+13:29:46 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+13:29:46 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x7f4456fff010
+13:29:46 [AudioStream.cpp:InitMiniAudio:138] miniaudio engine initialized: 2 channels, 48000 Hz
+13:29:46 ! Linux 6.8.0-1064-azure (Linux) 上で実行が開始されました
+13:29:46 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x7f4436ffe010
+13:29:46 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x7f4426ffd010
+13:29:46 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:584] StorageCache: budget set to FileAllocator capacity=256MB
+13:29:46 ! (info) Total physical memory : 16764633088
+13:29:46 ! (info) Selected project directory : file://./home/runner/work/kagex/kagex/smoke/data/
+13:29:46 ! 吉里吉里[きりきり] Z 実行コア/2.6.5.0 (Compiled on Oct 24 2026 13:25:26) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+13:29:46 ! バージョン情報の詳細は -about を付けて起動すると閲覧できます
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+13:29:46 system fonts: 20 name(s) registered (loaded on first use)
+13:29:46 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:resource://./elements_basic.ttf size=24576
+13:29:46 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:resource://./elements_basic.ttf
+13:29:46 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:resource://./roboto-regular.ttf size=168260
+13:29:46 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:resource://./roboto-regular.ttf
+13:29:46 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+13:29:46 [FileImpl.cpp:ExistentFolder:146] Checking if folder exists: /home/runner/work/kagex/kagex/smoke/savedata/
+13:29:46 [FileImpl.cpp:ExistentFolder:146] Checking if folder exists: /home/runner/work/kagex/kagex/smoke/savedata
+13:29:46 [FileImpl.cpp:ExistentFolder:146] Checking if folder exists: /home/runner/work/kagex/kagex/smoke/
+13:29:46 [FileImpl.cpp:MakeDirectory:117] Creating directory: /home/runner/work/kagex/kagex/smoke/savedata
+13:29:46 ! (info) Data path does not exist, trying to make it ... 成功。
+13:29:46 [SysInitImpl.cpp:TVPAfterSystemInit:337] ImageCache enabled: limit=512MB (physmem=15988MB, source=BitmapPool)
+13:29:46 ! (info) Specified option(s) (earlier item has more priority) : -datapath=savedata/ -replfile=/home/runner/work/kagex/kagex/smoke/ci-chan -orgname=krkren -appname=kagex -padinterval=70
+13:29:46 [SysInitImpl.cpp:TVPAfterSystemInit:445] CPU SIMD: MMX SSE SSE2 SSE3 SSSE3 SSE4.1 SSE4.2 AVX AVX2 FMA3 (TVPCPUType=0xffdbf120)
+13:29:46 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x7f4413ff9010
+13:29:46 [GlobalAllocStats.cpp:Initialize:526] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+13:29:46 ! ReplFileChannel: watching /home/runner/work/kagex/kagex/smoke/ci-chan
+13:29:46 (info) 起動スクリプト読込み中 : startup.tjs
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/startup.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/startup.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/startup.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/startup.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Initialize.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Initialize.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Initialize.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Initialize.tjs with mode: rb
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 73 file(s) found, 73 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 73 file(s) found, 73 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 74 file(s) found, 74 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 74 file(s) found, 74 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 74 file(s) found, 74 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 74 file(s) found, 74 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 75 file(s) found, 75 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 81 file(s) found, 81 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 85 file(s) found, 85 file(s) activated. (1ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 93 file(s) found, 93 file(s) activated. (2ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 255 file(s) found, 255 file(s) activated. (3ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 255 file(s) found, 255 file(s) activated. (3ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 256 file(s) found, 256 file(s) activated. (4ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 256 file(s) found, 256 file(s) activated. (3ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 256 file(s) found, 256 file(s) activated. (4ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 256 file(s) found, 256 file(s) activated. (4ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 276 file(s) found, 275 file(s) activated. (3ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 276 file(s) found, 275 file(s) activated. (3ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:46 (info) 自動検索パステーブルを再構築しています ...
+13:29:46 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Storages.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Storages.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Storages.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Storages.tjs with mode: rb
+13:29:46 ! OS : Linux 6.8.0-1064-azure (Linux)
+13:29:46 ! KAG : EX 3.27-dev.20070519
+13:29:46 ! Kirikiri : 2.6.5.0
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 ! RichText: using the engine's font service
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Config.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Config.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Config.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Config.tjs with mode: rb
+13:29:46 Config.tjs loaded (5ms)
+13:29:46 Loading KAG System scripts...
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/LayerEx.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/LayerEx.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/LayerEx.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/LayerEx.tjs with mode: rb
+13:29:46 LayerEx.tjs loaded (4ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Utils.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Utils.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Utils.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Utils.tjs with mode: rb
+13:29:46 Utils.tjs loaded (14ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGLayer.tjs with mode: rb
+13:29:46 KAGLayer.tjs loaded (5ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AnimKAGLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AnimKAGLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AnimKAGLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AnimKAGLayer.tjs with mode: rb
+13:29:46 AnimKAGLayer.tjs loaded (2ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/ButtonLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/ButtonLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/ButtonLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/ButtonLayer.tjs with mode: rb
+13:29:46 ButtonLayer.tjs loaded (12ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/TransLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/TransLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/TransLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/TransLayer.tjs with mode: rb
+13:29:46 TransLayer.tjs loaded (4ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SelectLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SelectLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SelectLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SelectLayer.tjs with mode: rb
+13:29:46 SelectLayer.tjs loaded (15ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MapSelectLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MapSelectLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MapSelectLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MapSelectLayer.tjs with mode: rb
+13:29:46 MapSelectLayer.tjs loaded (8ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/DialogLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/DialogLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/DialogLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/DialogLayer.tjs with mode: rb
+13:29:46 DialogLayer.tjs loaded (19ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/HistoryLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/HistoryLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/HistoryLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/HistoryLayer.tjs with mode: rb
+13:29:46 HistoryLayer.tjs loaded (19ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/BGM.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/BGM.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/BGM.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/BGM.tjs with mode: rb
+13:29:46 BGM.tjs loaded (9ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SE.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SE.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SE.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SE.tjs with mode: rb
+13:29:46 SE.tjs loaded (4ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Movie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Movie.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Movie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Movie.tjs with mode: rb
+13:29:46 Movie.tjs loaded (12ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Conductor.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Conductor.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Conductor.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Conductor.tjs with mode: rb
+13:29:46 Conductor.tjs loaded (16ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/UpdateRegion.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/UpdateRegion.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/UpdateRegion.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/UpdateRegion.tjs with mode: rb
+13:29:46 UpdateRegion.tjs loaded (2ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AffineLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AffineLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AffineLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AffineLayer.tjs with mode: rb
+13:29:46 ==== An exception occured at Initialize.tjs(47)[(function expression) (anonymous)], VM ip = 33 ====
+13:29:46 -- Disassembled VM code --
+13:29:46 #(47) 		return origPluginsLink(name);
+13:29:46 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+13:29:46 -- Register dump --
+13:29:46 %-3=(string)"layerExDraw.dll"  %-2=(object)(object 0x7ffce7c24260:0x0)
+13:29:46 %-1=(object)(object 0x55d1339e9df0:0x55d1339e9df0)  %0=(void)  %1=(void)
+13:29:46 %2=(string)"layerExDraw.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+13:29:46 ---------------------------------------------------------------------------------------------------
+13:29:46 AffineLayer.tjs loaded (44ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AnimationLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AnimationLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/AnimationLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/AnimationLayer.tjs with mode: rb
+13:29:46 AnimationLayer.tjs loaded (16ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GraphicLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GraphicLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GraphicLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GraphicLayer.tjs with mode: rb
+13:29:46 GraphicLayer.tjs loaded (25ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Fire.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Fire.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Fire.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Fire.tjs with mode: rb
+13:29:46 ==== An exception occured at Initialize.tjs(47)[(function expression) (anonymous)], VM ip = 33 ====
+13:29:46 -- Disassembled VM code --
+13:29:46 #(47) 		return origPluginsLink(name);
+13:29:46 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+13:29:46 -- Register dump --
+13:29:46 %-3=(string)"gfxEffect.dll"  %-2=(object)(object 0x7ffce7c24260:0x0)
+13:29:46 %-1=(object)(object 0x55d1339e9df0:0x55d1339e9df0)  %0=(void)  %1=(void)
+13:29:46 %2=(string)"gfxEffect.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+13:29:46 ---------------------------------------------------------------------------------------------------
+13:29:46 GFX_Fire.tjs loaded (7ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Movie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Movie.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Movie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Movie.tjs with mode: rb
+13:29:46 GFX_Movie.tjs loaded (2ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Flash.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Flash.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Flash.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Flash.tjs with mode: rb
+13:29:46 ==== An exception occured at Initialize.tjs(47)[(function expression) (anonymous)], VM ip = 33 ====
+13:29:46 -- Disassembled VM code --
+13:29:46 #(47) 		return origPluginsLink(name);
+13:29:46 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+13:29:46 -- Register dump --
+13:29:46 %-3=(string)"flashPlayer.dll"  %-2=(object)(object 0x7ffce7c24260:0x0)
+13:29:46 %-1=(object)(object 0x55d1339e9df0:0x55d1339e9df0)  %0=(void)  %1=(void)
+13:29:46 %2=(string)"flashPlayer.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+13:29:46 ---------------------------------------------------------------------------------------------------
+13:29:46 GFX_Flash.tjs loaded (3ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Particle.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Particle.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_Particle.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_Particle.tjs with mode: rb
+13:29:46 GFX_Particle.tjs loaded (8ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_AMovie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_AMovie.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/GFX_AMovie.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/GFX_AMovie.tjs with mode: rb
+13:29:46 TVP_PLUGIN_NAME
+13:29:46 GFX_AMovie.tjs loaded (2ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MessageLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MessageLayer.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MessageLayer.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MessageLayer.tjs with mode: rb
+13:29:46 MessageLayer.tjs loaded (99ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Menus.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Menus.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Menus.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Menus.tjs with mode: rb
+13:29:46 Menus.tjs loaded (14ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/DefaultMover.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/DefaultMover.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/DefaultMover.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/DefaultMover.tjs with mode: rb
+13:29:46 DefaultMover.tjs loaded (5ms)
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Action.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Action.tjs with mode: rb
+13:29:46 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Action.tjs ext:.tjs
+13:29:46 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Action.tjs with mode: rb
+13:29:47 Action.tjs loaded (24ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MainWindow.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MainWindow.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/MainWindow.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/MainWindow.tjs with mode: rb
+13:29:47 MainWindow.tjs loaded (225ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/world.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/world.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/world.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/world.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/YAML.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/YAML.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/YAML.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/YAML.tjs with mode: rb
+13:29:47 YAML.tjs loaded (6ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBase.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBase.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBase.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBase.tjs with mode: rb
+13:29:47 KAGEnvBase.tjs loaded (1ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvImage.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvImage.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvImage.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvImage.tjs with mode: rb
+13:29:47 警告: 論理値が求められている場所で = 演算子が使用されています(== 演算子の間違いですか？代入した上でゼロと値を比較したい場合は、(A=B) != 0 の形式を使うことをお勧めします) at KAGEnvImage.tjs line 2509
+13:29:47 KAGEnvImage.tjs loaded (48ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLayer.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLayer.tjs with mode: rb
+13:29:47 KAGEnvLayer.tjs loaded (10ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvEvent.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvEvent.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvEvent.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvEvent.tjs with mode: rb
+13:29:47 KAGEnvEvent.tjs loaded (2ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvStage.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvStage.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvStage.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvStage.tjs with mode: rb
+13:29:47 KAGEnvStage.tjs loaded (5ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLevelLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLevelLayer.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLevelLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvLevelLayer.tjs with mode: rb
+13:29:47 KAGEnvLevelLayer.tjs loaded (3ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSimpleLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSimpleLayer.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSimpleLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSimpleLayer.tjs with mode: rb
+13:29:47 KAGEnvSimpleLayer.tjs loaded (1ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvCharacter.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvCharacter.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvCharacter.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvCharacter.tjs with mode: rb
+13:29:47 KAGEnvCharacter.tjs loaded (30ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBGM.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBGM.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBGM.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvBGM.tjs with mode: rb
+13:29:47 KAGEnvBGM.tjs loaded (5ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSE.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSE.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSE.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvSE.tjs with mode: rb
+13:29:47 KAGEnvSE.tjs loaded (3ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvironment.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvironment.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/KAGEnvironment.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/KAGEnvironment.tjs with mode: rb
+13:29:47 KAGEnvironment.tjs loaded (54ms)
+13:29:47 world.tjs loaded (182ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Override.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Override.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/Override.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/Override.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/MyHistoryLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/MyHistoryLayer.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/MyHistoryLayer.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/MyHistoryLayer.tjs with mode: rb
+13:29:47 MyHistoryLayer.tjs loaded (20ms)
+13:29:47 Override.tjs loaded (39ms)
+13:29:47 Script loading took 854ms
+13:29:47 [form.cpp:TVPUpdateBaselineTextInput:118] BaselineTextInput: driver=x11 screenKB=0 hasKB=1 steamdeck=0 imeMode=0 -> start
+13:29:47 [OpenGLError.cpp:InitGLES:49] Loaded GLES 3.2
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/savecheck with mode: wb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/savedata/savecheck ext:
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/savecheck with mode: rb
+13:29:47 Save data storage location: file://./home/runner/work/kagex/kagex/smoke/savedata/
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/notosansjp-regular.otf with mode: rb
+13:29:47 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:file://./home/runner/work/kagex/kagex/smoke/template/system/notosansjp-regular.otf size=4548148
+13:29:47 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:file://./home/runner/work/kagex/kagex/smoke/template/system/notosansjp-regular.otf
+13:29:47 (info) 自動検索パステーブルを再構築しています ...
+13:29:47 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/datasc.ksd with mode: wb
+13:29:47 (info) 自動検索パステーブルを再構築しています ...
+13:29:47 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/datasu.ksd with mode: wb
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/datasc.ksd with mode: wb
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/datasu.ksd with mode: wb
+13:29:47 (info) 自動検索パステーブルを再構築しています ...
+13:29:47 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Plugin.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Plugin.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/Plugin.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/Plugin.tjs with mode: rb
+13:29:47 Plugin.tjs loaded (5ms)
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/envinit.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/envinit.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/envinit.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/envinit.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/standview.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/standview.tjs with mode: rb
+13:29:47 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/standview.tjs ext:.tjs
+13:29:47 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/standview.tjs with mode: rb
+13:29:48 standview.tjs loaded (44ms)
+13:29:48 KAGMainWindow constructor took 568ms
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/AfterInit.tjs ext:.tjs
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/AfterInit.tjs with mode: rb
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/AfterInit.tjs ext:.tjs
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/AfterInit.tjs with mode: rb
+13:29:48 AfterInit.tjs loaded (1ms)
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/first.ks ext:.ks
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/first.ks with mode: rb
+13:29:48 (info) 起動スクリプト実行終了。
+13:29:48 Window shown: KAGEX Sample
+13:29:48 window show:No gamepads connected
+13:29:48 [form.cpp:AppEvent:1511] Window resized: 1440x810
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/scenario/macro.ks ext:.ks
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/scenario/macro.ks with mode: rb
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/logo.ks ext:.ks
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/logo.ks with mode: rb
+13:29:48 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/logo.png ext:.png
+13:29:48 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/logo.png with mode: rb
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_ANDROID_extension_pack_es31a
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_ANGLE_pack_reverse_row_order
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_ANGLE_texture_compression_dxt3
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_ANGLE_texture_compression_dxt5
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_APPLE_texture_max_level
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_ARM_shader_framebuffer_fetch_depth_stencil
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_EGL_image_storage
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_base_instance
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_blend_func_extended
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_blend_minmax
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_buffer_storage
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_clear_texture
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_clip_control
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_clip_cull_distance
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_color_buffer_float
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_color_buffer_half_float
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_compressed_ETC1_RGB8_sub_texture
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_copy_image
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_debug_label
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_depth_clamp
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_discard_framebuffer
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_disjoint_timer_query
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_draw_buffers
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_draw_buffers_indexed
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_draw_elements_base_vertex
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_draw_instanced
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_float_blend
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_frag_depth
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_geometry_point_size
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_geometry_shader
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_gpu_shader5
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_instanced_arrays
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_map_buffer_range
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_memory_object
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_memory_object_fd
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_multi_draw_arrays
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_occlusion_query_boolean
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_polygon_offset_clamp
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_primitive_bounding_box
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_read_format_bgra
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_render_snorm
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_robustness
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_sRGB_write_control
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_separate_shader_objects
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_framebuffer_fetch
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_framebuffer_fetch_non_coherent
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_group_vote
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_implicit_conversions
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_integer_mix
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_shader_io_blocks
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_tessellation_point_size
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_tessellation_shader
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_border_clamp
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_buffer
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_bptc
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_dxt1
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_rgtc
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_s3tc
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_s3tc_srgb
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_cube_map_array
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_filter_anisotropic
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_filter_minmax
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_format_BGRA8888
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_mirror_clamp_to_edge
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_norm16
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_query_lod
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_rg
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_sRGB_R8
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_sRGB_RG8
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_sRGB_decode
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_shadow_lod
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_type_2_10_10_10_REV
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_texture_view
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_EXT_unpack_subimage
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_blend_equation_advanced
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_blend_equation_advanced_coherent
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_context_flush_control
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_debug
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_no_error
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_parallel_shader_compile
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_robust_buffer_access_behavior
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_robustness
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_texture_compression_astc_ldr
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_KHR_texture_compression_astc_sliced_3d
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_MESA_bgra
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_MESA_framebuffer_flip_y
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_MESA_shader_integer_functions
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_conditional_render
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_draw_buffers
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_fbo_color_attachments
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_generate_mipmap_sRGB
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_image_formats
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_pack_subimage
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_pixel_buffer_object
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_read_buffer
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_read_depth
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_read_depth_stencil
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_read_stencil
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_NV_shader_noperspective_interpolation
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_EGL_image
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_EGL_image_external
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_EGL_image_external_essl3
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_EGL_sync
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC1_RGB8_texture
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_copy_image
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_depth24
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_depth_texture
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_depth_texture_cube_map
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_draw_buffers_indexed
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_draw_elements_base_vertex
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_element_index_uint
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_fbo_render_mipmap
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_geometry_point_size
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_geometry_shader
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_get_program_binary
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_gpu_shader5
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_mapbuffer
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_packed_depth_stencil
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_primitive_bounding_box
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_required_internalformat
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_rgb8_rgba8
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_sample_shading
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_sample_variables
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_shader_image_atomic
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_shader_io_blocks
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_shader_multisample_interpolation
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_standard_derivatives
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_stencil8
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_surfaceless_context
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_tessellation_point_size
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_tessellation_shader
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_3D
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_border_clamp
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_buffer
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_cube_map_array
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_float
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_float_linear
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_half_float
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_half_float_linear
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_npot
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_stencil8
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_storage_multisample_2d_array
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_texture_view
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_vertex_array_object
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_vertex_half_float
+13:29:48 [GLTexture.cpp:InitSupported:660] OpenGL Extension:GL_OES_viewport_array
+13:29:48 [GLTexture.cpp:InitSupported:685] GLES: Texture Swizzle Supported
+13:29:48 [GLTexture.cpp:InitSupported:688] GLES: Copy Image Extension Supported
+13:29:48 [GLTexture.cpp:InitSupported:691] GLES: sRGB Write Control Supported
+13:29:48 [GLTexture.cpp:create:270] GLES: Create Texture && Set Swizzle
+13:29:49 [form.cpp:AppEvent:1511] Window resized: 1440x810
+13:29:49 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/ci-helper.tjs ext:.tjs
+13:29:49 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-helper.tjs with mode: rb
+13:29:49 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/ci-helper.tjs ext:.tjs
+13:29:49 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-helper.tjs with mode: rb
+13:29:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/main/title.ks ext:.ks
+13:29:53 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/main/title.ks with mode: rb
+13:29:53 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/data_anchor.ksd with mode: wb
+13:29:53 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/savedata/data_anchor.ksd with mode: rb+
+13:29:53 (info) 自動検索パステーブルを再構築しています ...
+13:29:53 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/title.png ext:.png
+13:29:53 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/title.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/start_normal.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/start_normal.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/start_over.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/start_over.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/continue_normal.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/continue_normal.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/continue_over.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/continue_over.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/extra_normal.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/extra_normal.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/extra_over.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/extra_over.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/config_normal.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/config_normal.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/config_over.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/config_over.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/exit_normal.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/exit_normal.png with mode: rb
+13:29:54 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/exit_over.png ext:.png
+13:29:54 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/exit_over.png with mode: rb
+13:29:55 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/01-title.png with mode: wb
+13:29:55 (info) 自動検索パステーブルを再構築しています ...
+13:29:56 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:56 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/title-layers.png with mode: wb
+13:29:57 (info) 自動検索パステーブルを再構築しています ...
+13:29:57 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/scenario/s0001.ks ext:.ks
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/scenario/s0001.ks with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/messagewindow.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/messagewindow.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_save_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_save_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_save_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_save_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_load_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_load_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_load_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_load_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_skip_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_skip_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_skip_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_skip_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_skip_on.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_skip_on.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_auto_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_auto_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_auto_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_auto_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_auto_on.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_auto_on.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_log_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_log_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_log_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_log_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_config_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_config_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_config_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_config_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_auto_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_auto_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/msg_skip_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/msg_skip_over.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/select_normal.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/select_normal.png with mode: rb
+13:29:57 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/select_over.png ext:.png
+13:29:57 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/select_over.png with mode: rb
+13:29:58 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/02-demo-menu.png with mode: wb
+13:30:00 (info) 自動検索パステーブルを再構築しています ...
+13:30:00 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:30:00 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/scenario/transition.ks ext:.ks
+13:30:00 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/scenario/transition.ks with mode: rb
+13:30:02 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/PageBreak.asd ext:.asd
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/PageBreak.asd with mode: rb
+13:30:02 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/PageBreak.png ext:.png
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/PageBreak.png with mode: rb
+13:30:02 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/PageBreak.asd ext:.asd
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/PageBreak.asd with mode: rb
+13:30:02 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/PageBreak_a.png ext:.png
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/PageBreak_a.png with mode: rb
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/03-transition-00.png with mode: wb
+13:30:02 (info) 自動検索パステーブルを再構築しています ...
+13:30:02 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:30:02 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/bgimage/bg01_01.png ext:.png
+13:30:02 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/bgimage/bg01_01.png with mode: rb
+13:30:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/fgimage/ch_0_0_1.png ext:.png
+13:30:04 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/fgimage/ch_0_0_1.png with mode: rb
+13:30:07 ==== An exception occured at KAGEnvironment.tjs(1870)[(function) loadBGFromCache], VM ip = 114 ====
+13:30:07 -- Disassembled VM code --
+13:30:07 #(1870) 		lay.loadImages(storage);
+13:30:07 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+13:30:07 -- Register dump --
+13:30:07 %-6=(object)(object 0x7f4416137260:0x7f4416137260)
+13:30:07 %-5=(object)(object 0x7f441611d5f0:0x7f441611d5f0)  %-4=(string)"bg01_02"
+13:30:07 %-3=(object)(object 0x7f44162457d0:0x7f44162457d0)  %-2=(object)(object 0x7ffce7c21fe0:0x0)
+13:30:07 %-1=(object)(object 0x7f441564bf30:0x7f441564bf30)  %0=(void)
+13:30:07 %1=(object)(object 0x7f441611d5f0:0x7f441611d5f0)
+13:30:07 %2=(object)(object 0x7f44157350b0:0x7f44157350b0)
+13:30:07 %3=(object)(object 0x7f4414e5fa90:0x7f4414e5fa90)
+13:30:07 %4=(object)(object 0x7f44157350b0:0x7f44157350b0)  %5=(object)(object 0x55d1339e9df0:0x0)
+13:30:07 %6=(object)(object 0x55d1339c9c10:0x0)
+13:30:07 ---------------------------------------------------------------------------------------------------
+13:30:09 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/04-transition-04.png with mode: wb
+13:30:10 (info) 自動検索パステーブルを再構築しています ...
+13:30:10 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:30:16 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/05-transition-08.png with mode: wb
+13:30:17 (info) 自動検索パステーブルを再構築しています ...
+13:30:17 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:30:23 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/scenario/char.ks ext:.ks
+13:30:23 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/scenario/char.ks with mode: rb
+13:30:23 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/bgm/bgm01.ogg ext:.ogg
+13:30:23 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/bgm/bgm01.ogg with mode: rb
+13:30:29 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/06-ingame.png with mode: wb
+13:30:30 (info) 自動検索パステーブルを再構築しています ...
+13:30:30 (info) Total 280 file(s) found, 279 file(s) activated. (6ms)
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_base.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_base.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_play_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_play_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_play_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_play_over.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SliderLayer.tjs ext:.tjs
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SliderLayer.tjs with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/template/system/SliderLayer.tjs ext:.tjs
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/template/system/SliderLayer.tjs with mode: rb
+13:30:30 SliderLayer.tjs loaded (11ms)
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_first_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_first_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_first_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_first_over.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_uppage_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_uppage_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_uppage_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_uppage_over.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_downpage_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_downpage_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_downpage_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_downpage_over.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_last_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_last_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_last_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_last_over.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_bar_normal.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_bar_normal.png with mode: rb
+13:30:30 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./home/runner/work/kagex/kagex/smoke/data/image/log_bar_over.png ext:.png
+13:30:30 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/data/image/log_bar_over.png with mode: rb
+13:30:31 [FileImpl.cpp:Open:237] Opening file: /home/runner/work/kagex/kagex/smoke/ci-out/07-history.png with mode: wb
+13:30:31 (info) 自動検索パステーブルを再構築しています ...
+13:30:31 (info) Total 280 file(s) found, 279 file(s) activated. (4ms)
+13:30:32 ! ReplFileChannel: stopped
+13:30:32 [GraphicsLoaderIntf.cpp:TVPClearGraphicCache:1487] ImageCache:clearAll: dropped=48 bytes=41389508
+13:30:32 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [FileAllocator] tag=FileCache alloc=3 free=0 current=4.52MB total_alloc=4.52MB total_freed=0B
+13:30:32 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [BitmapAllocator] tag=BitmapBits alloc=1025 free=969 current=163.94MB total_alloc=5.16GB total_freed=5.00GB
+13:30:32 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [SoundAllocator] tag=Sound alloc=622 free=176 current=170.23KB total_alloc=1.43MB total_freed=1.26MB
+13:30:32 Leaked thread (0x55d133abc470)
+13:30:32 Leaked thread (0x55d133a6b060)
+13:30:32 Leaked thread (0x55d133a7fcc0)
+13:30:32 Leaked thread (0x55d13390c0b0)
+13:30:32 Leaked thread (0x55d1346c1e50)
