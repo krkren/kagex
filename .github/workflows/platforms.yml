@@ -230,7 +230,7 @@ jobs:
           grep -n "version = \"${cmake#cmake;}\"" kirikiri/krkrz_android/app/build.gradle
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
-          echo "include(\"$PROJECT_DIR/.github/platforms/effekseer-egl.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
+          echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
           chmod +x kirikiri/krkrz_android/gradlew
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
