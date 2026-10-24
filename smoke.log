@@ -1,0 +1,26 @@
+== sample (data, android)
+ok   start-up reaches the title screen                                2.8s
+ok   Extras start locked                                              0.0s
+ok   demo layer.ks plays to the end                                   9.4s
+ok   demo char.ks plays to the end                                   15.7s
+ok   demo envlayer.ks plays to the end                                3.1s
+ok   demo transition.ks plays to the end                              6.3s
+ok   demo action.ks plays to the end                                  3.0s
+ok   finishing every demo unlocks Extras                              0.0s
+ok   the demo menu's choices are drawn in a text font                 0.0s
+ok   save and load a bookmark                                         5.5s
+ok   the save.ks screen opens from the game and closes with Esc       1.4s
+ok   the load.ks screen opens from the game and closes with Esc       1.7s
+ok   the config.ks screen opens from the game and closes with Esc     1.4s
+ok   controller: Y switches auto mode, X shows the history, B closes it   1.2s
+ok   controller: START opens config.ks and B closes it                1.2s
+ok   controller: BACK opens save.ks and B closes it                   1.4s
+ok   controller: L1 opens load.ks and B closes it                     1.2s
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.5s
+ok   the About screen opens in the game window and closes             0.5s
+ok   back to the title through the Yes/No prompt                      1.1s
+ok   Extras: cgmode.ks opens and returns to the title                 1.7s
+ok   Extras: replay.ks opens and returns to the title                 1.6s
+ok   Extras: musicmode.ks opens and returns to the title              2.6s
+kept /tmp/kagex-smoke-v7jizk4b
+smoke test: passed
