@@ -169,4 +169,5 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        run: kagex/.github/platforms/publish-results.sh release-tool-${{ matrix.name }} "release tool ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"
+        # per branch, so runs of several branches don't overwrite each other's results
+        run: kagex/.github/platforms/publish-results.sh "release-tool-${{ matrix.name }}${{ github.ref_name != 'main' && format('-{0}', github.ref_name) || '' }}" "release tool ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"

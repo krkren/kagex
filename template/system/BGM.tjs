@@ -224,7 +224,7 @@ class KAGWaveSoundBuffer extends WaveSoundBuffer, KAGSoundBuffer
 
 // List of extensions supported by WaveSoundBuffer
 
-KAGSoundBuffer.SupportedExtensions = [ "wav", "ogg", "tcw" ];
+KAGSoundBuffer.SupportedExtensions = [ "wav", "ogg", "opus", "tcw" ];
 
 class KAGCDDASoundBuffer extends CDDASoundBuffer, KAGSoundBuffer
 

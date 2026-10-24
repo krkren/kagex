@@ -11,6 +11,7 @@
 #include "Engine.h"
 #include "Host.h"
 #include "Icons.h"
+#include "Media.h"
 #include "Plan.h"
 #include "Subprocess.h"
 #include "krt/app/Progress.h"
@@ -236,8 +237,9 @@ public:
 			mustRemove(work_);
 			mustMkdirs(work_);
 
-			stage(PartProgress(pr_, 0.0, 0.15));
-			if (needsXp3()) packXp3(PartProgress(pr_, 0.15, 0.35));
+			stage(PartProgress(pr_, 0.0, 0.05));
+			media(PartProgress(pr_, 0.05, 0.25));
+			if (needsXp3()) packXp3(PartProgress(pr_, 0.25, 0.35));
 			prepareIcons();
 
 			const double span = 0.6 / chosen_.size();
@@ -293,6 +295,7 @@ public:
 		result.set("outputFolder", Json(krt::fromPath(out_)));
 		result.set("outputs", std::move(outputs));
 		result.set("notes", Json::array(notes_));
+		if (media_.isObj()) result.set("media", media_);
 		return result;
 	}
 
@@ -320,6 +323,28 @@ private:
 		}
 		pr.log("Game files: " + std::to_string(files.size()));
 		linked_ = linkedPlugins();
+	}
+
+	void media(krt::Progress&& pr)
+	{
+		MediaResult m;
+		std::string err;
+		if (!convertMedia(s_, stage_, pr, m, err)) throw Failure{ err };
+		if (m.images || m.sounds) {
+			const auto mb = [](uint64_t b) { return std::to_string((b + 524288) / 1048576) + " MB"; };
+			pr.log("Converted " + std::to_string(m.images) + " images and " + std::to_string(m.sounds) + " sounds (" +
+			       std::to_string(m.fromCache) + " from the cache): " + mb(m.bytesBefore) + " -> " + mb(m.bytesAfter));
+		}
+		if (m.rewrittenScripts) pr.log("Rewrote the file names in " + std::to_string(m.rewrittenScripts) + " scripts");
+		for (const auto& n : m.notes) { pr.log(n); notes_.push_back(n); }
+		media_ = Json::object();
+		media_.set("images", Json(m.images));
+		media_.set("sounds", Json(m.sounds));
+		media_.set("fromCache", Json(m.fromCache));
+		media_.set("bytesBefore", Json((long long)m.bytesBefore));
+		media_.set("bytesAfter", Json((long long)m.bytesAfter));
+		media_.set("keptByReference", Json(m.keptByReference));
+		media_.set("rewrittenScripts", Json(m.rewrittenScripts));
 	}
 
 	// The plugins the scripts name ("plugin/foo.dll", KAGLinkPlugin("foo")), lower case
@@ -794,6 +819,7 @@ private:
 	IconSource icons_;
 	std::vector<fs::path> packages_;
 	std::map<std::string, fs::path> built_;
+	Json media_;
 };
 
 } // namespace

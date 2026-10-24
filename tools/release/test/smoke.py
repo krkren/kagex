@@ -10,7 +10,8 @@
   the check filled in, a setting changed and saved with Ctrl+S; screenshots go to --out
 - --engines: builds with those engine packages (kagex_engine_*.zip): Windows, Linux and Steam
   (and macOS on a Mac), with the test run; then data bound into the exe, a data folder and only
-  the linked plugins; the packages are checked
+  the linked plugins; the packages are checked. Then the media: WAV, FLAC (with loop points) and
+  images converted, files the scripts name kept and then rewritten, the conversion cache
 """
 import argparse
 import hashlib
@@ -338,6 +339,131 @@ def build_tests(exe, proj, args):
         step("test run with the data bound into the executable", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
 
 
+def write_wav(path, frames, rate=44100):
+    import math
+    import struct
+    import wave
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"".join(struct.pack("<hh", int(6000 * math.sin(i / 17)), int(6000 * math.sin(i / 23))) for i in range(frames)))
+
+
+def write_flac(path, frames, rate=44100):
+    """A 16-bit stereo FLAC with verbatim subframes (enough to test the decoder)"""
+    import math
+    import struct
+
+    def crc8(data):
+        c = 0
+        for b in data:
+            c ^= b
+            for _ in range(8):
+                c = ((c << 1) ^ 0x07) & 0xFF if c & 0x80 else (c << 1) & 0xFF
+        return c
+
+    def crc16(data):
+        c = 0
+        for b in data:
+            c ^= b << 8
+            for _ in range(8):
+                c = ((c << 1) ^ 0x8005) & 0xFFFF if c & 0x8000 else (c << 1) & 0xFFFF
+        return c
+
+    left = [int(6000 * math.sin(i / 19)) for i in range(frames)]
+    right = [int(6000 * math.sin(i / 29)) for i in range(frames)]
+    block = 4096
+    out = bytearray(b"fLaC")
+    info = struct.pack(">HH", block, block) + b"\0\0\0" + b"\0\0\0"
+    v = (rate << 44) | (1 << 41) | (15 << 36) | frames   # rate 20 bits, channels-1 3, bps-1 5, samples 36
+    info += v.to_bytes(8, "big") + b"\0" * 16
+    out += bytes([0x80, 0, 0, 34]) + info
+    for n, start in enumerate(range(0, frames, block)):
+        size = min(block, frames - start)
+        h = bytearray([0xFF, 0xF8])
+        bs_code = 0b1100 if size == block else 0b0111
+        h.append((bs_code << 4) | 0b1001)          # block size, 44.1 kHz
+        h.append((0b0001 << 4) | (0b100 << 1))     # two channels, 16 bits
+        h += bytes([n]) if n < 0x80 else bytes([0xC0 | (n >> 6), 0x80 | (n & 63)])
+        if bs_code == 0b0111:
+            h += struct.pack(">H", size - 1)
+        h.append(crc8(h))
+        frame = bytearray(h)
+        for ch in (left, right):
+            frame.append(0x02)                     # verbatim
+            frame += b"".join(struct.pack(">h", x) for x in ch[start:start + size])
+        frame += struct.pack(">H", crc16(frame))
+        out += frame
+    path.write_bytes(bytes(out))
+
+
+def media_tests(exe, proj, args):
+    d = proj / "data"
+    for sub in ("voice", "sound", "bgm", "scenario"):
+        (d / sub).mkdir(exist_ok=True)
+    write_wav(d / "sound" / "kr_tone.wav", 44100 * 3)
+    (d / "sound" / "kr_tone.wav.sli").write_text("#2.00\nLink { From=88200; To=44100; Smooth=False; Condition=no; RefValue=0; CondVar=0; }\n")
+    write_wav(d / "sound" / "kr_ref.wav", 22050)
+    write_wav(d / "voice" / "tv001.wav", 22050)
+    write_wav(d / "voice" / "tv002.wav", 22050)
+    write_flac(d / "bgm" / "kr_flac.flac", 44100 * 2)
+    (d / "scenario" / "kr_test.ks").write_text('*start\n[playse storage="kr_ref.wav"]\n[eval exp="tf.v = \'tv%03d.wav\'"]\n[s]\n', encoding="utf-8")
+
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    host = host_id()
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == host
+    s["platforms"][host]["data"] = "folder"
+    s["output"]["archive"] = "none"
+    s["output"]["check"] = True
+    s["contents"]["plugins"] = "all"
+    s["media"]["references"] = "keep"
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+
+    def build():
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            return json.loads(out[out.index("{"):])
+        except ValueError:
+            return {"ok": False, "error": out[-2000:], "outputs": []}
+
+    r = build()
+    step("media: build", r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]) + " " + json.dumps(r.get("media")))
+    base = proj / "release" / ("kagex-sample-%s-%s" % (s["identity"]["version"], host))
+    data = base / "KAGEX Sample.app" / "Contents" / "Resources" / "data" if host == "macos" else base / "data"
+    have = lambda rel_: (data / rel_).exists()
+    step("media: WAV to Opus, its loop points at 48 kHz", have("sound/kr_tone.opus") and not have("sound/kr_tone.wav") and have("sound/kr_tone.opus.sli")
+         and "From=96000" in (data / "sound/kr_tone.opus.sli").read_text() and "To=48000" in (data / "sound/kr_tone.opus.sli").read_text(),
+         (data / "sound/kr_tone.opus.sli").read_text().strip() if have("sound/kr_tone.opus.sli") else "no .sli")
+    step("media: FLAC to Opus", have("bgm/kr_flac.opus") and not have("bgm/kr_flac.flac"))
+    step("media: a file the scripts name is kept", have("sound/kr_ref.wav") and not have("sound/kr_ref.opus"))
+    step("media: files a name pattern covers are kept", have("voice/tv001.wav") and have("voice/tv002.wav"))
+    step("media: images to TLG", have("image/title.tlg") and not have("image/title.png") and have("fgimage/ch_0_0_1.tlg"))
+    step("media: the framework's images too", have("system/LineBreak.tlg") or have("system/linebreak.tlg") or any((data / "system").glob("*.tlg")))
+    m = r.get("media", {})
+    step("media: sizes", m.get("bytesAfter", 0) < m.get("bytesBefore", 0), "%s -> %s bytes" % (m.get("bytesBefore"), m.get("bytesAfter")))
+    chk = r.get("check", {})
+    if args.out and (proj / "release" / "test-run.log").exists():
+        shutil.copyfile(proj / "release" / "test-run.log", Path(args.out) / "test-run-media.log")
+    step("media: the test run with converted media", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+
+    s["media"]["references"] = "rewrite"
+    s["output"]["check"] = False
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r = build()
+    step("media: build with the names rewritten", r["ok"], r.get("error", ""))
+    ks = (data / "scenario" / "kr_test.ks").read_text(encoding="utf-8") if have("scenario/kr_test.ks") else ""
+    step("media: the script names the new files", 'storage="kr_ref.opus"' in ks and "tv%03d.opus" in ks, ks.replace("\n", " | "))
+    step("media: the source script is untouched", "kr_ref.wav" in (d / "scenario" / "kr_test.ks").read_text(encoding="utf-8"))
+    step("media: those files converted", have("sound/kr_ref.opus") and have("voice/tv001.opus"))
+    m = r.get("media", {})
+    # all but the files the scripts name (converted for the first time now) come from the cache
+    step("media: the cache", m.get("images", 0) > 100 and m.get("fromCache", 0) >= m.get("images", 0) + m.get("sounds", 0) - 6,
+         "%s from the cache, of %s images and %s sounds" % (m.get("fromCache"), m.get("images"), m.get("sounds")))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe")
@@ -353,7 +479,9 @@ def main():
         cli_tests(exe, proj)
         server_tests(exe, proj, args)
         if args.engines:
+            os.environ["KAGEX_RELEASE_CACHE"] = str(Path(t) / "cache")
             build_tests(exe, proj, args)
+            media_tests(exe, proj, args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)
 

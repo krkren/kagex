@@ -1566,6 +1566,8 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 				return test;
 			} else if(test = voicename + ".ogg", Storages.isExistentStorage(test)) {
 				return test;
+			} else if(test = voicename + ".opus", Storages.isExistentStorage(test)) {
+				return test;
 			} else {
 				env.errorVoice(name + ":Voice cannot be loaded:" + voicename);
 				return void;

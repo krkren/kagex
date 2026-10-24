@@ -1,0 +1,45 @@
+//---------------------------------------------------------------------------
+// Converting the game's lossless media in the staged data
+//
+//   sounds:  WAV and FLAC -> Opus (bitrate by the folder under data/) or Ogg Vorbis, or FLAC ->
+//            WAV when sounds are kept. <file>.sli (loop points) goes along, rescaled to 48 kHz
+//            for Opus.
+//   images:  PNG, BMP and TLG -> TLG6, TLG5, PNG or JPEG for opaque images; TLG6, TLG5, PNG, or a
+//            JPEG with a lossless mask (<name>_m.png) for transparent ones. Masks of separate
+//            main/mask pairs (<name>_m.*) are only converted to lossless formats.
+//   never:   Ogg, Opus, JPEG (lossy already), and files whose names the scripts write with their
+//            extension, unless the references are rewritten.
+//
+// Results are cached by content and settings (cacheDir()/media), so unchanged files are converted
+// once. Staged files are hard links to the sources: they are replaced, never written to.
+//---------------------------------------------------------------------------
+#pragma once
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include "Settings.h"
+
+namespace krt {
+class Progress;
+}
+
+namespace kr {
+
+struct MediaResult {
+	int images = 0, sounds = 0;      ///< converted
+	int fromCache = 0;
+	int keptByReference = 0;         ///< named with their extension in a script
+	int rewrittenScripts = 0;
+	uint64_t bytesBefore = 0, bytesAfter = 0;
+	std::vector<std::string> notes;
+};
+
+/// Converts the files in stage (the staged data/). false only on errors that stop the build
+bool convertMedia(const Json& settings, const std::filesystem::path& stage, krt::Progress& progress,
+                  MediaResult& result, std::string& error);
+
+/// Whether a framework folder (data/system or template/system) finds .opus files
+bool frameworkPlaysOpus(const std::filesystem::path& framework);
+
+} // namespace kr
