@@ -399,6 +399,17 @@ bool frameworkPlaysOpus(const fs::path& framework)
 	return text.find("\"opus\"") != std::string::npos;
 }
 
+bool frameworkFindsConvertedImages(const fs::path& framework)
+{
+	std::string text;
+	if (!krt::readFile(framework / "MessageLayer.tjs", text)) return true;   // not KAGEX's framework: can't tell
+	const size_t at = text.find("function getExistName");
+	if (at == std::string::npos) return true;
+	const size_t next = text.find("function ", at + 1);
+	const std::string body = text.substr(at, next == std::string::npos ? std::string::npos : next - at);
+	return body.find("global.Layer.SupportedExtensions") != std::string::npos || body.find("\".tlg\"") != std::string::npos;
+}
+
 bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress, MediaResult& result, std::string& error)
 {
 	const std::string audioTo = str(s, "media.audio.convert");

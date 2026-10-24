@@ -653,9 +653,10 @@ function setCGImage(target, filename)
     // Picture area inside the thumbnail frame's 3px border; the whole source image is fitted into it
     var b = 3, pw = target.width - b*2, ph = target.height - b*2;
 
-    // A prepared thumbnail (data/thum/thum_<name>.png, the picture area's size) avoids decoding
-    // the full CG on every page; without one the CG is shrunk here
-    layer.loadImages(Storages.isExistentStorage("thum_"+filename+".png") ? "thum_"+filename : filename);
+    // A prepared thumbnail (data/thum/thum_<name>, the picture area's size, in any image format:
+    // kagex-release converts it) avoids decoding the full CG on every page; without one the CG is
+    // shrunk here
+    layer.loadImages(getExistImageName("thum_"+filename) !== void ? "thum_"+filename : filename);
     layer2.loadImages("cgmode_thum_normal");
     layer2.imageWidth=pw;
     layer2.imageHeight=ph;
