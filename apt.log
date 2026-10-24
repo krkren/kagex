@@ -1,0 +1,43 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+fontconfig is already the newest version (2.13.1-4.2ubuntu5).
+fontconfig set to manually installed.
+libgl1-mesa-dri is already the newest version (23.2.1-1ubuntu3.1~22.04.4).
+libgl1-mesa-dri set to manually installed.
+libgomp1 is already the newest version (12.3.0-1ubuntu1~22.04.3).
+libgomp1 set to manually installed.
+The following NEW packages will be installed:
+  libegl-mesa0 libegl1 libgles2
+0 upgraded, 3 newly installed, 0 to remove and 87 not upgraded.
+Need to get 165 kB of archives.
+After this operation, 593 kB of additional disk space will be used.
+Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Get:2 http://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libegl-mesa0 amd64 23.2.1-1ubuntu3.1~22.04.4 [118 kB]
+Get:3 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 libegl1 amd64 1.4.0-1 [28.6 kB]
+Get:4 http://azure.archive.ubuntu.com/ubuntu jammy/main amd64 libgles2 amd64 1.4.0-1 [18.0 kB]
+Fetched 165 kB in 0s (997 kB/s)
+Selecting previously unselected package libegl-mesa0:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 261642 files and directories currently installed.)
+Preparing to unpack .../libegl-mesa0_23.2.1-1ubuntu3.1~22.04.4_amd64.deb ...
+Unpacking libegl-mesa0:amd64 (23.2.1-1ubuntu3.1~22.04.4) ...
+Selecting previously unselected package libegl1:amd64.
+Preparing to unpack .../libegl1_1.4.0-1_amd64.deb ...
+Unpacking libegl1:amd64 (1.4.0-1) ...
+Selecting previously unselected package libgles2:amd64.
+Preparing to unpack .../libgles2_1.4.0-1_amd64.deb ...
+Unpacking libgles2:amd64 (1.4.0-1) ...
+Setting up libegl-mesa0:amd64 (23.2.1-1ubuntu3.1~22.04.4) ...
+Setting up libgles2:amd64 (1.4.0-1) ...
+Setting up libegl1:amd64 (1.4.0-1) ...
+Processing triggers for libc-bin (2.35-0ubuntu3.15) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
