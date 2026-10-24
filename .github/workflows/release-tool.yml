@@ -1,6 +1,6 @@
 # Builds kagex-release (tools/release) for Windows, Linux and macOS (Apple Silicon) and runs
 # its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium),
-# with the engine packages of the release ENGINES_FROM names.
+# with the engine packages of the newest release that has them.
 # Each job uploads the tool (kagex-release-<os>) and force-pushes its results to
 # ci/platform-results-release-tool-<os>.
 name: Release tool
@@ -22,9 +22,6 @@ permissions:
 env:
   # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
-  # the release whose engine packages the build tests use (a tool newer than its engines only
-  # notes it); the engine-package scripts run in the release workflow and platforms.yml
-  ENGINES_FROM: "0.3.0"
 
 jobs:
   build:
@@ -61,11 +58,20 @@ jobs:
           # the oldest macOS the tool runs on (also for the vcpkg libraries)
           [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
           { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
-      # The engine packages for the build tests (kagex_engine_*.zip), from a published release
+      # The engine packages for the build tests (kagex_engine_*.zip), from the newest release that
+      # has them (the releases are pre-releases, so there's no "latest" to ask for; a tool newer
+      # than its engines only notes it). The scripts that make them run in the release workflow
+      # and platforms.yml.
       - name: Engine packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name == "kagex_engine_linux.zip"))][0].tag_name')
+          if [ -z "$tag" ] || [ "$tag" = null ]; then
+            echo "::error title=No engine packages::No release has kagex_engine_linux.zip"
+            exit 1
+          fi
+          echo "engine packages from $tag" | tee results/engines-from.txt
           platforms="windows linux steam macos web"
           case "$RUNNER_OS" in
             Linux) platforms="$platforms android" ;;
@@ -73,8 +79,8 @@ jobs:
           esac
           patterns=()
           for p in $platforms; do patterns+=(--pattern "kagex_engine_$p.zip"); done
-          gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D engines "${patterns[@]}"
-          for p in $platforms; do test -f "engines/kagex_engine_$p.zip" || { echo "::error::$ENGINES_FROM has no kagex_engine_$p.zip"; exit 1; }; done
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" -D engines "${patterns[@]}"
+          for p in $platforms; do test -f "engines/kagex_engine_$p.zip" || { echo "::error::$tag has no kagex_engine_$p.zip"; exit 1; }; done
           ls -l engines | tee results/engines.txt
       - uses: actions/setup-java@v4
         if: runner.os == 'Linux'
