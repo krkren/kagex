@@ -5,7 +5,10 @@
 //   kagex-release --cli init  [<project folder>] [--force]    writes release.json with the defaults
 //   kagex-release --cli check [<release.json>] [--json]       the settings, and what this computer can build
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
+//   kagex-release --cli build [<release.json>] [--json]       builds the packages
 //
+// check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
+// (engine packages to use instead of downloading them) and --keep-work.
 // Without a path it uses the current folder, or else the folder above the tool (a KAGEX
 // package keeps the tool in tools/). CLI exit codes: 0 = fine, 1 = problems found, 2 = failed.
 //---------------------------------------------------------------------------
@@ -15,11 +18,14 @@
 #include <memory>
 #include <mutex>
 
+#include "Build.h"
 #include "Host.h"
 #include "Plan.h"
 #include "Project.h"
 #include "Settings.h"
+#include "Subprocess.h"
 #include "krt/app/JobRunner.h"
+#include "krt/app/Progress.h"
 #include "krt/app/Text.h"
 
 #ifdef _WIN32
@@ -36,6 +42,8 @@ struct Options {
 	bool cli = false;
 	bool force = false;
 	bool json = false;
+	bool keepWork = false;
+	std::string engines;             // --engines=DIR
 	std::vector<std::string> only;   // --platform=a,b
 };
 
@@ -231,7 +239,33 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return 0;
 	}
 
-	std::fprintf(stderr, "error: unknown command %s (init, check or plan)\n", cmd.c_str());
+	if (cmd == "build") {
+		BuildOptions bo;
+		bo.only = o.only;
+		bo.engines = krt::toPath(o.engines);
+		bo.keepWork = o.keepWork;
+		krt::ConsoleProgress progress(o.json);
+		const Json r = build(s, t.project, bo, progress);
+		progress.finish();
+		if (o.json) { std::printf("%s\n", r.dump(1).c_str()); return r["ok"].asBool() ? 0 : 1; }
+		if (r.has("error")) std::fprintf(stderr, "error: %s\n", r["error"].asStr().c_str());
+		for (const auto& out : r["outputs"].elements()) {
+			if (out["ok"].asBool())
+				std::printf("%s: %s\n", out["title"].asStr().c_str(),
+				            (out["package"].asStr().empty() ? out["folder"] : out["package"]).asStr().c_str());
+			else
+				std::printf("%s: FAILED: %s\n", out["title"].asStr().c_str(), out["error"].asStr().c_str());
+		}
+		for (const auto& n : r["notes"].elements()) std::printf("note: %s\n", n.asStr().c_str());
+		if (r.has("check")) {
+			const Json& c = r["check"];
+			std::printf("Test run: %s\n", c["message"].asStr().c_str());
+			for (const auto& e : c["errors"].elements()) std::printf("  %s\n", e.asStr().c_str());
+		}
+		return r["ok"].asBool() ? 0 : 1;
+	}
+
+	std::fprintf(stderr, "error: unknown command %s (init, check, plan or build)\n", cmd.c_str());
 	return 2;
 }
 
@@ -288,6 +322,38 @@ public:
 			for (const auto& pl : platforms())
 				if (only.empty() || only == pl.id) out.push(statusToJson(checkPlatform(pl.id, s, p)));
 			return appserve::Response::json(out);
+		});
+
+		// Builds (body: { settings, platforms }): a job; GET /api/job and the job/joblog events
+		// report on it
+		reg.route("/api/release/build", [this](const appserve::Request& req) {
+			if (!have_) return appserve::Response::error(400, targetError_);
+			const Json s = withDefaults(req.json()["settings"], defaultSettings(target_.project));
+			BuildOptions bo;
+			for (const auto& p : req.json()["platforms"].elements()) bo.only.push_back(p.asStr());
+			const Project project = target_.project;
+			const bool started = jobs_.start("build", [s, project, bo](krt::Progress& p) {
+				return build(s, project, bo, p);
+			});
+			if (!started) return appserve::Response::error(409, "A build is running");
+			return appserve::Response::json(jobs_.status());
+		});
+
+		// Shows a folder in the file manager (body: { path })
+		reg.route("/api/release/reveal", appserve::Affinity::Any, [](const appserve::Request& req) {
+			const std::string path = req.json()["path"].asStr();
+			std::error_code ec;
+			if (path.empty() || !fs::exists(krt::toPath(path), ec)) return appserve::Response::error(400, "Not found: " + path);
+			RunOptions opt;
+			opt.timeoutSeconds = 30;
+#if defined(_WIN32)
+			run("explorer", { fs::is_directory(krt::toPath(path), ec) ? path : "/select," + path }, opt);
+#elif defined(__APPLE__)
+			run("open", fs::is_directory(krt::toPath(path), ec) ? std::vector<std::string>{ path } : std::vector<std::string>{ "-R", path }, opt);
+#else
+			run("xdg-open", { fs::is_directory(krt::toPath(path), ec) ? path : krt::fromPath(krt::toPath(path).parent_path()) }, opt);
+#endif
+			return appserve::Response::json(Json::object());
 		});
 
 		// Saves release.json (body: { settings })
@@ -350,13 +416,17 @@ int main(int argc, char** argv)
 	app.options().appName = "kagex-release";
 	app.options().appVersion = KAGEX_RELEASE_VERSION;
 	Options o;
-	app.addOption({ "cli", "", "Run a command (init, check, plan) instead of opening the window",
+	app.addOption({ "cli", "", "Run a command (init, check, plan, build) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
 	app.addOption({ "force", "", "init: replace an existing release.json",
 	                [&o](const std::string&) { o.force = true; return true; } });
-	app.addOption({ "json", "", "check, plan: print JSON",
+	app.addOption({ "json", "", "check, plan, build: print JSON",
 	                [&o](const std::string&) { o.json = true; return true; } });
-	app.addOption({ "platform", "LIST", "check, plan: only these platforms (windows,linux,steam,macos,web,android,ios)",
+	app.addOption({ "engines", "DIR", "build: engine packages (kagex_engine_*.zip, or unpacked) to use instead of downloading them",
+	                [&o](const std::string& v) { o.engines = v; return true; } });
+	app.addOption({ "keep-work", "", "build: keep the staged files (<output>/.work)",
+	                [&o](const std::string&) { o.keepWork = true; return true; } });
+	app.addOption({ "platform", "LIST", "check, plan, build: only these platforms (windows,linux,steam,macos,web,android,ios)",
 	                [&o](const std::string& v) {
 		                size_t start = 0;
 		                while (start <= v.size()) {

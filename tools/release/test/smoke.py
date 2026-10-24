@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """Smoke test of kagex-release on a copy of the sample game.
 
-  smoke.py <kagex-release executable> [--browser] [--out DIR]
+  smoke.py <kagex-release executable> [--browser] [--out DIR] [--engines DIR]
 
 - the CLI: init, check, plan (and --json), on a copy of data/, template/system, krkrz.cf and
   platform/ in a temporary folder
 - the window's server, without a browser: the page and the API (state, check, host, save)
 - --browser: the screen in headless Chromium (Playwright): no script errors, the sections and
   the check filled in, a setting changed and saved with Ctrl+S; screenshots go to --out
+- --engines: builds with those engine packages (kagex_engine_*.zip): Windows, Linux and Steam
+  (and macOS on a Mac), with the test run; then data bound into the exe, a data folder and only
+  the linked plugins; the packages are checked
 """
 import argparse
+import hashlib
 import json
 import os
+import platform as hostplatform
+import tarfile
+import zipfile
 import shutil
 import socket
 import subprocess
@@ -118,8 +125,11 @@ def cli_tests(exe, proj):
 
 def server_tests(exe, proj, args):
     port = free_port()
+    env = dict(os.environ)
+    if args.engines:
+        env["KAGEX_RELEASE_ENGINES"] = str(Path(args.engines).resolve())
     proc = subprocess.Popen([str(exe), str(proj), "--no-browser", "--no-token", "--port=%d" % port, "--idle-timeout=0"],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace", env=env)
     try:
         for _ in range(100):
             try:
@@ -194,8 +204,136 @@ def browser_tests(port, proj, args):
             page.wait_for_selector("#sec-game .issue.error", timeout=10000)
             step("screen: a bad version is shown at its field", "numbers" in page.locator("#sec-game .issue.error").first.text_content())
             page.screenshot(path=str(out / "screen-error.png"), full_page=False)
+            if args.engines:
+                # build this computer's platform from the window
+                ver.fill(saved["identity"]["version"])
+                page.locator("#pl-web").uncheck()
+                page.wait_for_function("!document.querySelector('#sec-game .issue.error')", timeout=10000)
+                page.wait_for_timeout(500)
+                page.click("#build")
+                page.wait_for_function("(document.querySelector('.build-dialog .dialog-title') || {}).textContent?.startsWith('Built')", timeout=600000)
+                page.screenshot(path=str(out / "screen-build.png"), full_page=False)
+                title = page.locator(".build-dialog .dialog-title").text_content()
+                results = page.locator(".build-dialog .results").text_content()
+                step("screen: build from the window", title == "Built" and "Linux" in results and "Test run" in results, title + ": " + results[:300])
             page.close()
         b.close()
+
+
+XP3_MARK = b"XP3\r\n \n\x1a\x8b\x67\x01"
+
+
+def host_id():
+    return {"Windows": "windows", "Darwin": "macos"}.get(hostplatform.system(), "linux")
+
+
+def build_tests(exe, proj, args):
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    names = ["windows", "linux", "steam"] + (["macos"] if host_id() == "macos" else [])
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p in names
+    s["output"]["check"] = True
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+    try:
+        r = json.loads(out[out.index("{"):])
+    except ValueError:
+        step("build", False, out[-2000:])
+        return
+    if args.out:
+        (Path(args.out) / "build.json").write_text(json.dumps(r, indent=1), encoding="utf-8")
+    outs = {o["platform"]: o for o in r["outputs"]}
+    step("build: every platform", all(outs.get(n, {}).get("ok") for n in names),
+         "; ".join("%s=%s" % (n, outs.get(n, {}).get("ok") or outs.get(n, {}).get("error")) for n in names) + (" " + r.get("error", "")))
+    base = "kagex-sample-%s-" % s["identity"]["version"]
+    outdir = proj / "release"
+    cf_ok = lambda t: "orgname=krkren\n" in t and "appname=kagex-sample\n" in t and "debugwin=no\n" in t
+
+    w = outdir / (base + "windows.zip")
+    if w.exists():
+        z = zipfile.ZipFile(w)
+        n = base + "windows/"
+        step("windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3",
+             z.testzip() is None and {n + "kagex-sample.exe", n + "kagex-sample.cf", n + "SDL3.dll", n + "data.xp3"} <= set(z.namelist())
+             and any(x.startswith(n + "plugin/") for x in z.namelist()))
+        step("windows: the .cf", cf_ok(z.read(n + "kagex-sample.cf").decode()), z.read(n + "kagex-sample.cf").decode().replace("\n", " | "))
+        if host_id() == "windows":
+            exe_data = z.read(n + "kagex-sample.exe")
+            step("windows: the icon and version info", "KAGEX Sample".encode("utf-16-le") in exe_data)
+    for p in ("linux", "steam"):
+        t = outdir / (base + p + ".tar.gz")
+        if not t.exists():
+            continue
+        with tarfile.open(t) as tf:
+            m = {x.name: x for x in tf.getmembers()}
+            n = base + p + "/"
+            step(p + ": tar.gz with an executable engine", n + "kagex-sample" in m and m[n + "kagex-sample"].mode & 0o111 != 0
+                 and n + "libSDL3.so.0" in m and n + "data.xp3" in m, oct(m[n + "kagex-sample"].mode) if n + "kagex-sample" in m else "missing")
+            step(p + ": the .cf", cf_ok(tf.extractfile(n + "kagex-sample.cf").read().decode()))
+            if p == "linux":
+                step("linux: menu entry and icon", n + "kagex-sample.desktop" in m and n + "kagex-sample.png" in m)
+    if "macos" in names:
+        mz = outdir / (base + "macos.zip")
+        if mz.exists():
+            z = zipfile.ZipFile(mz)
+            app = "KAGEX Sample.app/Contents/"
+            nl = set(z.namelist())
+            plist = z.read(app + "Info.plist").decode() if app + "Info.plist" in nl else ""
+            step("macos: the app with data.xp3, its icon and .cf",
+                 {app + "Resources/data.xp3", app + "Resources/AppIcon.icns", app + "MacOS/krkrz.cf", app + "MacOS/krkrz"} <= nl)
+            step("macos: Info.plist", "com.krkren.kagexsample" in plist and "<string>KAGEX Sample</string>" in plist)
+            app_dir = outdir / (base + "macos") / "KAGEX Sample.app"
+            c, o = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app_dir)], capture_output=True, text=True).returncode, ""
+            step("macos: the signature verifies", c == 0)
+    sums = (outdir / "SHA256SUMS").read_text().splitlines() if (outdir / "SHA256SUMS").exists() else []
+    good = all(hashlib.sha256((outdir / l.split("  ", 1)[1]).read_bytes()).hexdigest() == l.split("  ", 1)[0] for l in sums)
+    step("SHA256SUMS", len(sums) == len(names) and good, "%d lines" % len(sums))
+    if args.out and (outdir / "test-run.log").exists():
+        shutil.copyfile(outdir / "test-run.log", Path(args.out) / "test-run.log")
+    chk = r.get("check", {})
+    step("test run of this computer's build", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+
+    # variants: data bound into the executables (the test run shows the engine finds it), a data
+    # folder in a zip, only the linked plugins
+    s["platforms"]["windows"]["data"] = "bind"
+    s["platforms"]["linux"]["data"] = "bind"
+    s["platforms"]["steam"]["data"] = "folder"
+    s["platforms"]["macos"]["enabled"] = False
+    s["output"]["archive"] = "zip"
+    s["contents"]["plugins"] = "linked"
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--platform=windows,linux,steam", "--json")
+    try:
+        r = json.loads(out[out.index("{"):])
+    except ValueError:
+        step("build variants", False, out[-2000:])
+        return
+    step("build variants", r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]))
+    w = outdir / (base + "windows.zip")
+    if w.exists():
+        z = zipfile.ZipFile(w)
+        n = base + "windows/"
+        data = z.read(n + "kagex-sample.exe")
+        with zipfile.ZipFile(Path(args.engines) / "kagex_engine_windows.zip") as ez:
+            original = ez.getinfo("krkrz.exe").file_size
+        at = data.find(XP3_MARK, original)
+        step("windows: data bound into the exe", at >= original and at % 16 == 0 and n + "data.xp3" not in z.namelist(),
+             "exe %d bytes, xp3 at %d" % (original, at))
+        plugins = [x for x in z.namelist() if x.startswith(n + "plugin/") and not x.endswith("/")]
+        step("windows: only the linked plugins", 0 < len(plugins) < 27, "%d plugins" % len(plugins))
+    lz = outdir / (base + "steam.zip")
+    if lz.exists():
+        z = zipfile.ZipFile(lz)
+        n = base + "steam/"
+        info = z.getinfo(n + "kagex-sample")
+        step("steam: zip with a data folder and the executable flag", n + "data/startup.tjs" in z.namelist() and n + "data/system/Initialize.tjs" in z.namelist()
+             and (info.external_attr >> 16) & 0o111 != 0)
+    if args.out and (outdir / "test-run.log").exists():
+        shutil.copyfile(outdir / "test-run.log", Path(args.out) / "test-run-bound.log")
+    if host_id() in ("windows", "linux"):
+        chk = r.get("check", {})
+        step("test run with the data bound into the executable", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
 
 
 def main():
@@ -203,6 +341,7 @@ def main():
     ap.add_argument("exe")
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
+    ap.add_argument("--engines")
     args = ap.parse_args()
     exe = Path(args.exe).resolve()
     if args.out:
@@ -211,6 +350,8 @@ def main():
         proj = make_project(Path(t))
         cli_tests(exe, proj)
         server_tests(exe, proj, args)
+        if args.engines:
+            build_tests(exe, proj, args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)
 

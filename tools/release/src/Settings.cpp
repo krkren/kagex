@@ -324,7 +324,9 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		const std::string id = pl.id;
 		const std::string data = str(s, base + "data");
 		if (id == "windows" && !oneOf(data, { "xp3", "folder", "bind" })) error(base + "data", "Windows data is \"xp3\", \"folder\" or \"bind\" (into the exe)");
-		if ((id == "linux" || id == "steam" || id == "macos" || id == "android" || id == "ios") && !oneOf(data, { "xp3", "folder" }))
+		if ((id == "linux" || id == "steam") && !oneOf(data, { "xp3", "folder", "bind" }))
+			error(base + "data", std::string(pl.title) + " data is \"xp3\", \"folder\" or \"bind\" (into the executable)");
+		if ((id == "macos" || id == "android" || id == "ios") && !oneOf(data, { "xp3", "folder" }))
 			error(base + "data", std::string(pl.title) + " data is \"xp3\" or \"folder\"");
 		if (id == "web" && !oneOf(data, { "files", "xp3" })) error(base + "data", "Web data is \"files\" (loaded as needed) or \"xp3\"");
 		if (id == "macos") {

@@ -196,7 +196,7 @@ Json makePlan(const Json& s, const Project& p)
 			dataEntry();
 			package = archived("zip");
 		} else if (id == "linux" || id == "steam") {
-			add(exe);
+			add(exe + (dataMode == "bind" ? " (with the data bound in)" : ""));
 			add(exe + ".cf");
 			add("libSDL3.so.0");
 			add("plugin/");

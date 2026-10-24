@@ -82,7 +82,7 @@ const SECTIONS = [
 			{ path: 'output.folder', label: 'Output folder', type: 'folder', help: 'Each build goes to <file name>-<version>-<platform> in here' },
 			{ path: 'output.archive', label: 'Archive', type: 'select', options: [['auto', 'zip, or tar.gz for Linux (keeps the executable flag)'], ['zip', 'zip'], ['tar.gz', 'tar.gz'], ['none', 'None (folders only)']] },
 			{ path: 'output.checksums', label: 'Checksums', type: 'check', text: 'Write SHA256SUMS next to the packages' },
-			{ path: 'output.check', label: 'Test run', type: 'check', text: 'Start this computer\'s build without a window afterwards and look for script errors' },
+			{ path: 'output.check', label: 'Test run', type: 'check', text: 'Start this computer\'s build for a few seconds afterwards (without a window where it can) and look for script errors' },
 			{ path: 'engine.debug', label: 'Engine', type: 'check', text: 'Debug engine (keeps the console and debug keys; for testers, not for players)' },
 		],
 	},
@@ -95,11 +95,11 @@ const PLATFORM_FIELDS = {
 		{ path: 'versionInfo', label: 'Icon and version', type: 'check', text: 'Put the icon, title, version and copyright into the exe (when this tool runs on Windows)' },
 	],
 	linux: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER, ['bind', 'Bound into the executable (one file)']] },
 		{ path: 'desktopEntry', label: 'Menu entry', type: 'check', text: 'Include a .desktop file and the icon' },
 	],
 	steam: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER, ['bind', 'Bound into the executable (one file)']] },
 	],
 	macos: [
 		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER] },
@@ -398,6 +398,86 @@ window.addEventListener('keydown', (e) => {
 window.addEventListener('beforeunload', (e) => { if (settings && dirty()) { e.preventDefault(); e.returnValue = ''; } });
 
 //---------------------------------------------------------------------------
+// Building
+//---------------------------------------------------------------------------
+let buildDialog = null;
+
+async function startBuild() {
+	if (issues.some((i) => i.level === 'error')) {
+		alertBox('Can\'t build yet', 'Fix the errors the Check section lists first.');
+		return;
+	}
+	if (dirty() || !state.exists) await save();
+	try {
+		await app.post('/api/release/build', { settings });
+	} catch (e) {
+		alertBox('Could not start the build', String(e.message || e));
+		return;
+	}
+	openBuildDialog();
+}
+
+function openBuildDialog() {
+	if (buildDialog) return;
+	const bar = el('div', { class: 'progress indeterminate' }, el('div'));
+	const message = el('div', {}, 'Starting…');
+	const log = el('pre', { class: 'build-log' });
+	const results = el('div', { class: 'results' });
+	const cancel = el('button', {}, 'Cancel');
+	const close = el('button', { class: 'primary', hidden: true }, 'Close');
+	const title = el('div', { class: 'dialog-title' }, 'Building');
+	const dlg = el('div', { class: 'modal' }, el('div', { class: 'dialog build-dialog' },
+		title, bar, message, results, log, el('div', { class: 'dialog-buttons' }, cancel, close)));
+	document.body.append(dlg);
+	cancel.addEventListener('click', () => app.post('/api/job/cancel', {}).catch(() => {}));
+	close.addEventListener('click', () => { dlg.remove(); buildDialog = null; });
+	buildDialog = { bar, message, log, results, cancel, close, title, shown: false };
+}
+
+function showJob(st) {
+	if (!st || st.name !== 'build') return;
+	if (st.state === 'running') openBuildDialog();
+	const d = buildDialog;
+	if (!d) return;
+	const running = st.state === 'running';
+	d.bar.className = 'progress' + (running && !(st.ratio >= 0) ? ' indeterminate' : '');
+	d.bar.firstChild.style.width = (st.ratio >= 0 ? st.ratio * 100 : running ? 30 : 100) + '%';
+	d.message.textContent = st.message || '';
+	if (running || d.shown) return;
+	d.shown = true;
+	d.cancel.hidden = true;
+	d.close.hidden = false;
+	const r = st.result || {};
+	const ok = st.state === 'done' && r.ok;
+	d.title.textContent = st.state === 'canceled' ? 'Build canceled' : ok ? 'Built' : 'Built with problems';
+	if (st.error || r.error) d.results.append(el('div', { class: 'result bad' }, el('span', { class: 'mark' }, '✗'), el('div', { class: 'what' }, st.error || r.error)));
+	for (const o of r.outputs || []) {
+		const where = o.package || o.folder;
+		d.results.append(el('div', { class: 'result ' + (o.ok ? 'ok' : 'bad') },
+			el('span', { class: 'mark' }, o.ok ? '✓' : '✗'),
+			el('div', { class: 'what' }, el('b', {}, o.title), ' ',
+				o.ok ? [el('span', { class: 'muted' }, formatSize(o.bytes)), el('br'), el('code', {}, where)] : [el('br'), o.error]),
+			o.ok ? el('button', { onclick: () => app.post('/api/release/reveal', { path: where }).catch(() => {}) }, 'Show') : null));
+	}
+	if (r.check) {
+		const c = r.check;
+		d.results.append(el('div', { class: 'result ' + (!c.ran ? '' : c.ok ? 'ok' : 'bad') },
+			el('span', { class: 'mark' }, !c.ran ? 'i' : c.ok ? '✓' : '✗'),
+			el('div', { class: 'what' }, el('b', {}, 'Test run'), ' ', c.message, (c.errors || []).map((e) => [el('br'), el('code', {}, e)])),
+			c.log ? el('button', { onclick: () => app.post('/api/release/reveal', { path: c.log }).catch(() => {}) }, 'Log') : null));
+	}
+	for (const n of r.notes || []) d.results.append(el('div', { class: 'result' }, el('span', { class: 'mark' }, 'i'), el('div', { class: 'what' }, n)));
+	if (r.outputFolder) d.results.append(el('div', {}, el('button', { onclick: () => app.post('/api/release/reveal', { path: r.outputFolder }).catch(() => {}) }, 'Open the output folder')));
+}
+
+function jobLog(line) {
+	const d = buildDialog;
+	if (!d) return;
+	d.log.append(String(line) + '\n');
+	d.log.scrollTop = d.log.scrollHeight;
+}
+
+//---------------------------------------------------------------------------
 // Dialogs
 //---------------------------------------------------------------------------
 function alertBox(title, text) {
@@ -518,8 +598,10 @@ async function load() {
 		$('#fatal').textContent = (state.error || 'No game found') + '\nUse Open… to choose the folder that holds your game\'s data folder.';
 		$('#projectPath').textContent = '';
 		$('#save').disabled = true;
+		$('#build').disabled = true;
 		return;
 	}
+	$('#build').disabled = false;
 	$('#fatal').hidden = !state.error;
 	$('#fatal').textContent = state.error || '';
 	// cut from the start when it doesn't fit (the end of a path says the most)
@@ -538,6 +620,7 @@ async function load() {
 }
 
 $('#save').addEventListener('click', save);
+$('#build').addEventListener('click', startBuild);
 $('#openProject').addEventListener('click', async () => {
 	if (settings && dirty() && !(await confirmBox('Unsaved changes', 'Open another game without saving these settings?', 'Open'))) return;
 	const dir = await pickPath(state?.project?.root || '.', false);
@@ -553,3 +636,7 @@ $('#openProject').addEventListener('click', async () => {
 
 await app.ready();
 await load();
+app.on('job', showJob);
+app.on('joblog', jobLog);
+// a build that was running when the window was opened again
+app.get('/api/job').then(showJob).catch(() => {});
