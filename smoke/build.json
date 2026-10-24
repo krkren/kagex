@@ -1,0 +1,59 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-windows",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-windows.zip",
+   "bytes": 50060061
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-linux",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-linux.tar.gz",
+   "bytes": 65290257
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-steam",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-steam.tar.gz",
+   "bytes": 72685991
+  },
+  {
+   "platform": "macos",
+   "title": "macOS",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-macos",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpswktrxv8/My Game/release/kagex-sample-0.2.2-macos.zip",
+   "bytes": 52449267
+  }
+ ],
+ "notes": [
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 181,
+  "sounds": 0,
+  "fromCache": 1,
+  "bytesBefore": 7690557,
+  "bytesAfter": 6477110,
+  "keptByReference": 3,
+  "rewrittenScripts": 0
+ }
+}

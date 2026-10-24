@@ -1,0 +1,475 @@
+-- Running vcpkg install
+Detecting compiler hash for triplet arm64-osx...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+The following packages will be built and installed:
+    drlibs:arm64-osx@2026-03-03
+    libebur128:arm64-osx@1.2.6#3
+    libjpeg-turbo:arm64-osx@3.2.0#1
+    libogg:arm64-osx@1.3.6#1
+    libopusenc:arm64-osx@0.3
+    libpng:arm64-osx@1.6.59
+  * libspng:arm64-osx@0.7.4#1
+    libtomcrypt:arm64-osx@1.18.2#4
+    libtommath:arm64-osx@1.3.0#3
+    libvorbis:arm64-osx@1.3.7#4
+    opus:arm64-osx@1.6.1
+    opusfile:arm64-osx@0.12+20221121#1
+  * vcpkg-cmake:arm64-osx@2025-08-07
+  * vcpkg-cmake-config:arm64-osx@2026-07-21
+    zlib:arm64-osx@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 0 package(s) from /Users/runner/work/kagex/kagex/vcpkg-archives in 56 us. Use --debug to see more details.
+Installing 1/15 drlibs:arm64-osx@2026-03-03...
+drlibs:arm64-osx@2026-03-03 package ABI: 8def6d0520b11e7ab36495eb76c5fda918cb955f637d3bbbb7103f4e30347f98
+Building drlibs:arm64-osx@2026-03-03...
+Downloading https://github.com/mackron/dr_libs/archive/fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz -> mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+Successfully downloaded mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/drlibs/src/e1951e7ea6-0953893a9c.clean
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/drlibs_arm64-osx/share/drlibs/copyright
+-- Performing post-build validation
+Starting submission of drlibs:arm64-osx@2026-03-03 to 1 binary cache(s) in the background
+Elapsed time to handle drlibs:arm64-osx: 526 ms
+Installing 2/15 vcpkg-cmake:arm64-osx@2025-08-07...
+vcpkg-cmake:arm64-osx@2025-08-07 package ABI: 59cdb61e64fd70592ce2cca4a0458d9c87eac6db8ce6d0b17daf8c297625615c
+Building vcpkg-cmake:arm64-osx@2025-08-07...
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_configure.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_build.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_install.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg-port-config.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/copyright
+-- Performing post-build validation
+Starting submission of vcpkg-cmake:arm64-osx@2025-08-07 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake:arm64-osx: 37.4 ms
+Installing 3/15 libebur128:arm64-osx@1.2.6#3...
+libebur128:arm64-osx@1.2.6#3 package ABI: 58b26d2a743c07555ce31b63e6331c0eca27b8a8cd29e09adcf7085f1431adf6
+Building libebur128:arm64-osx@1.2.6#3...
+Downloading https://github.com/jiixyj/libebur128/archive/v1.2.6.tar.gz -> jiixyj-libebur128-v1.2.6.tar.gz
+Successfully downloaded jiixyj-libebur128-v1.2.6.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/jiixyj-libebur128-v1.2.6.tar.gz
+-- Applying patch 0001-remove-warning-message.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libebur128/src/v1.2.6-4d7c659a29.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libebur128_arm64-osx/lib/pkgconfig/libebur128.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libebur128_arm64-osx/debug/lib/pkgconfig/libebur128.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libebur128_arm64-osx/share/libebur128/copyright
+-- Performing post-build validation
+Starting submission of libebur128:arm64-osx@1.2.6#3 to 1 binary cache(s) in the background
+Elapsed time to handle libebur128:arm64-osx: 3.3 s
+Completed submission of drlibs:arm64-osx@2026-03-03 to 1 binary cache(s) in 46.5 ms
+Completed submission of vcpkg-cmake:arm64-osx@2025-08-07 to 1 binary cache(s) in 10.6 ms
+Installing 4/15 vcpkg-cmake-config:arm64-osx@2026-07-21...
+vcpkg-cmake-config:arm64-osx@2026-07-21 package ABI: e5d9fb70bccb278b145bd4b166914483974ee56172e4766b50e8621b4b5561d6
+Building vcpkg-cmake-config:arm64-osx@2026-07-21...
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/vcpkg_cmake_config_fixup.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/vcpkg-port-config.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/copyright
+-- Skipping post-build validation due to VCPKG_POLICY_EMPTY_PACKAGE
+Starting submission of vcpkg-cmake-config:arm64-osx@2026-07-21 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake-config:arm64-osx: 30.2 ms
+Completed submission of libebur128:arm64-osx@1.2.6#3 to 1 binary cache(s) in 20.6 ms
+Installing 5/15 zlib:arm64-osx@1.3.2#2...
+zlib:arm64-osx@1.3.2#2 package ABI: b4b4517e4395e5e471ebaf74604b8f086806906a6fb0b6f978fbca1c39dfea7f
+Building zlib:arm64-osx@1.3.2#2...
+Downloading https://github.com/madler/zlib/archive/v1.3.2.tar.gz -> madler-zlib-v1.3.2.tar.gz
+Successfully downloaded madler-zlib-v1.3.2.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/madler-zlib-v1.3.2.tar.gz
+-- Applying patch 0001-no-version-script-on-ohos.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/zlib/src/v1.3.2-c19a0bfd23.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-osx/lib/pkgconfig/zlib.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-osx/debug/lib/pkgconfig/zlib.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-osx/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-osx/share/zlib/copyright
+-- Performing post-build validation
+Starting submission of zlib:arm64-osx@1.3.2#2 to 1 binary cache(s) in the background
+Elapsed time to handle zlib:arm64-osx: 4.6 s
+Completed submission of vcpkg-cmake-config:arm64-osx@2026-07-21 to 1 binary cache(s) in 8.95 ms
+Installing 6/15 libspng:arm64-osx@0.7.4#1...
+libspng:arm64-osx@0.7.4#1 package ABI: c1186e00233aeeaeb0fb9cab84dd29b4989d8db1891de5531aef1a74ec864c57
+Building libspng:arm64-osx@0.7.4#1...
+Downloading https://github.com/randy408/libspng/archive/v0.7.4.tar.gz -> randy408-libspng-v0.7.4.tar.gz
+Successfully downloaded randy408-libspng-v0.7.4.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/randy408-libspng-v0.7.4.tar.gz
+-- Applying patch fix-spngconfig-cmake.patch
+-- Applying patch libspng-pr-286.diff
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libspng/src/v0.7.4-2d78cb2862.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libspng_arm64-osx/lib/pkgconfig/spng.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libspng_arm64-osx/debug/lib/pkgconfig/spng.pc
+-- Performing post-build validation
+Starting submission of libspng:arm64-osx@0.7.4#1 to 1 binary cache(s) in the background
+Elapsed time to handle libspng:arm64-osx: 2.6 s
+Completed submission of zlib:arm64-osx@1.3.2#2 to 1 binary cache(s) in 67.1 ms
+Installing 7/15 libjpeg-turbo:arm64-osx@3.2.0#1...
+libjpeg-turbo:arm64-osx@3.2.0#1 package ABI: c90cee3e272a940c7a2ea85154880b8ad4f0e91a21259ab538cfc730057d1689
+Building libjpeg-turbo:arm64-osx@3.2.0#1...
+Downloading https://github.com/libjpeg-turbo/libjpeg-turbo/archive/3.2.0.tar.gz -> libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+Successfully downloaded libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+-- Applying patch add-options-for-docs-headers.patch
+-- Applying patch workaround_cmake_system_processor.patch
+-- Applying patch system-dependency-fixes-pr-901.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libjpeg-turbo/src/3.2.0-6292819c57.clean
+-- Configuring arm64-osx
+CMake Warning at /Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/share/vcpkg-cmake/vcpkg_cmake_configure.cmake:346 (message):
+  The following variables are not used in CMakeLists.txt:
+
+      NEON_INTRINSICS
+
+  Please recheck them and remove the unnecessary options from the
+  `vcpkg_cmake_configure` call.
+
+  If these options should still be passed for whatever reason, please use the
+  `MAYBE_UNUSED_VARIABLES` argument.
+Call Stack (most recent call first):
+  ports/libjpeg-turbo/portfile.cmake:51 (vcpkg_cmake_configure)
+  scripts/ports.cmake:209 (include)
+
+
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libjpeg-turbo_arm64-osx/lib/pkgconfig/libjpeg.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libjpeg-turbo_arm64-osx/lib/pkgconfig/libturbojpeg.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libjpeg-turbo_arm64-osx/debug/lib/pkgconfig/libjpeg.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libjpeg-turbo_arm64-osx/debug/lib/pkgconfig/libturbojpeg.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libjpeg-turbo_arm64-osx/share/libjpeg-turbo/copyright
+-- Performing post-build validation
+Starting submission of libjpeg-turbo:arm64-osx@3.2.0#1 to 1 binary cache(s) in the background
+Elapsed time to handle libjpeg-turbo:arm64-osx: 23 s
+Completed submission of libspng:arm64-osx@0.7.4#1 to 1 binary cache(s) in 40.1 ms
+Installing 8/15 libogg:arm64-osx@1.3.6#1...
+libogg:arm64-osx@1.3.6#1 package ABI: a19bea9fd288e6f6bc3ce05578ca829e6c736361618c552bce1094db407779f5
+Building libogg:arm64-osx@1.3.6#1...
+Downloading https://github.com/xiph/ogg/archive/v1.3.6.tar.gz -> xiph-ogg-v1.3.6.tar.gz
+Successfully downloaded xiph-ogg-v1.3.6.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/xiph-ogg-v1.3.6.tar.gz
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libogg/src/v1.3.6-4ad11a7327.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libogg_arm64-osx/lib/pkgconfig/ogg.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libogg_arm64-osx/debug/lib/pkgconfig/ogg.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libogg_arm64-osx/share/libogg/copyright
+-- Performing post-build validation
+Starting submission of libogg:arm64-osx@1.3.6#1 to 1 binary cache(s) in the background
+Elapsed time to handle libogg:arm64-osx: 6.2 s
+Completed submission of libjpeg-turbo:arm64-osx@3.2.0#1 to 1 binary cache(s) in 567 ms
+Installing 9/15 opus:arm64-osx@1.6.1...
+opus:arm64-osx@1.6.1 package ABI: 7d05478d8e6f8c0ac5d33569056924ba87ce4abad8877bd36313b3e412d266f3
+Building opus:arm64-osx@1.6.1...
+Downloading https://github.com/xiph/opus/archive/v1.6.1.tar.gz -> xiph-opus-v1.6.1.tar.gz
+Successfully downloaded xiph-opus-v1.6.1.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/xiph-opus-v1.6.1.tar.gz
+-- Applying patch fix-pkgconfig-version.patch
+-- Applying patch fix-arm64-windows-compile.diff
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/opus/src/v1.6.1-12462bbd92.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/opus_arm64-osx/lib/pkgconfig/opus.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/opus_arm64-osx/debug/lib/pkgconfig/opus.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/opus_arm64-osx/share/opus/copyright
+-- Performing post-build validation
+Starting submission of opus:arm64-osx@1.6.1 to 1 binary cache(s) in the background
+Elapsed time to handle opus:arm64-osx: 17 s
+Completed submission of libogg:arm64-osx@1.3.6#1 to 1 binary cache(s) in 16.2 ms
+Installing 10/15 libopusenc:arm64-osx@0.3...
+libopusenc:arm64-osx@0.3 package ABI: 28754dba0f12f81ad9e8fec930a57a1f60f99e2507ce5f14736c264730ffab03
+Building libopusenc:arm64-osx@0.3...
+Downloading https://github.com/xiph/libopusenc/archive/v0.3.tar.gz -> xiph-libopusenc-v0.3.tar.gz
+Successfully downloaded xiph-libopusenc-v0.3.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/xiph-libopusenc-v0.3.tar.gz
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libopusenc/src/v0.3-f195b51fa2.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libopusenc_arm64-osx/share/libopusenc/copyright
+-- Performing post-build validation
+Starting submission of libopusenc:arm64-osx@0.3 to 1 binary cache(s) in the background
+Elapsed time to handle libopusenc:arm64-osx: 1.9 s
+Completed submission of opus:arm64-osx@1.6.1 to 1 binary cache(s) in 127 ms
+Installing 11/15 libpng:arm64-osx@1.6.59...
+libpng:arm64-osx@1.6.59 package ABI: 8acc8106bd939ac88665ab069e0f892c99df1bda5a2e1e5f06d5ac72395cb0d7
+Building libpng:arm64-osx@1.6.59...
+Downloading https://github.com/pnggroup/libpng/archive/v1.6.59.tar.gz -> pnggroup-libpng-v1.6.59.tar.gz
+Successfully downloaded pnggroup-libpng-v1.6.59.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/pnggroup-libpng-v1.6.59.tar.gz
+-- Applying patch cmake.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libpng/src/v1.6.59-47af3e6fae.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/share/png/vcpkg-cmake-wrapper.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/share/libpng/libpng-config.cmake
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/lib/pkgconfig/libpng16.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/debug/lib/pkgconfig/libpng16.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/debug/lib/pkgconfig/libpng.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/lib/pkgconfig/libpng.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/share/libpng/usage
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-osx/share/libpng/copyright
+-- Performing post-build validation
+Starting submission of libpng:arm64-osx@1.6.59 to 1 binary cache(s) in the background
+Elapsed time to handle libpng:arm64-osx: 4.2 s
+Completed submission of libopusenc:arm64-osx@0.3 to 1 binary cache(s) in 21.4 ms
+Installing 12/15 libtommath:arm64-osx@1.3.0#3...
+libtommath:arm64-osx@1.3.0#3 package ABI: 4a026b840614f73caada524d6e29db9d49e6bdf00c99d1e0dcfffc9d1a2fc4a2
+Building libtommath:arm64-osx@1.3.0#3...
+Downloading https://github.com/libtom/libtommath/archive/v1.3.0.tar.gz -> libtom-libtommath-v1.3.0.tar.gz
+Successfully downloaded libtom-libtommath-v1.3.0.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/libtom-libtommath-v1.3.0.tar.gz
+-- Applying patch pkgconfig.diff
+-- Applying patch bcrypt.patch
+-- Applying patch import-lib.patch
+-- Applying patch has-set-double.patch
+-- Applying patch msvc-dce.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libtommath/src/v1.3.0-fc7d67d771.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libtommath_arm64-osx/lib/pkgconfig/libtommath.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libtommath_arm64-osx/debug/lib/pkgconfig/libtommath.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libtommath_arm64-osx/share/libtommath/copyright
+-- Performing post-build validation
+Starting submission of libtommath:arm64-osx@1.3.0#3 to 1 binary cache(s) in the background
+Elapsed time to handle libtommath:arm64-osx: 8.1 s
+Completed submission of libpng:arm64-osx@1.6.59 to 1 binary cache(s) in 93.8 ms
+Installing 13/15 libtomcrypt:arm64-osx@1.18.2#4...
+libtomcrypt:arm64-osx@1.18.2#4 package ABI: ecbc107300742109129d08d8b6383d6c6fe35c99d45d1598bd062e6a65261d54
+Building libtomcrypt:arm64-osx@1.18.2#4...
+Downloading https://github.com/libtom/libtomcrypt/archive/v1.18.2.tar.gz -> libtom-libtomcrypt-v1.18.2.tar.gz
+Successfully downloaded libtom-libtomcrypt-v1.18.2.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/libtom-libtomcrypt-v1.18.2.tar.gz
+-- Applying patch fix-windows-arm.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libtomcrypt/src/v1.18.2-3c00e3b922.clean
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:71 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:75 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:81 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:85 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libtomcrypt_arm64-osx/share/libtomcrypt/copyright
+-- Performing post-build validation
+Starting submission of libtomcrypt:arm64-osx@1.18.2#4 to 1 binary cache(s) in the background
+Elapsed time to handle libtomcrypt:arm64-osx: 23 s
+Completed submission of libtommath:arm64-osx@1.3.0#3 to 1 binary cache(s) in 57.4 ms
+Installing 14/15 libvorbis:arm64-osx@1.3.7#4...
+libvorbis:arm64-osx@1.3.7#4 package ABI: be57fb37b272c9012f28162a9e12bdf37ba354824b28c253c1e9e40de497ba65
+Building libvorbis:arm64-osx@1.3.7#4...
+Downloading https://github.com/xiph/vorbis/archive/v1.3.7.tar.gz -> xiph-vorbis-v1.3.7.tar.gz
+Successfully downloaded xiph-vorbis-v1.3.7.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/xiph-vorbis-v1.3.7.tar.gz
+-- Applying patch 0001-Dont-export-vorbisenc-functions.patch
+-- Applying patch 0002-Fixup-pkgconfig-libs.patch
+-- Applying patch 0003-def-mingw-compat.patch
+-- Applying patch 0004-ogg-find-dependency.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libvorbis/src/v1.3.7-c32164610e.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/lib/pkgconfig/vorbisfile.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/debug/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/debug/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/debug/lib/pkgconfig/vorbisfile.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/share/libvorbis/usage
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libvorbis_arm64-osx/share/libvorbis/copyright
+-- Performing post-build validation
+Starting submission of libvorbis:arm64-osx@1.3.7#4 to 1 binary cache(s) in the background
+Elapsed time to handle libvorbis:arm64-osx: 4.8 s
+Completed submission of libtomcrypt:arm64-osx@1.18.2#4 to 1 binary cache(s) in 228 ms
+Installing 15/15 opusfile:arm64-osx@0.12+20221121#1...
+opusfile:arm64-osx@0.12+20221121#1 package ABI: cebc9f120a1c17d065fb41ac78ef1fa2b8b0f1c0fe8fffc28599eb65d62069d9
+Building opusfile:arm64-osx@0.12+20221121#1...
+Downloading https://github.com/xiph/opusfile/archive/9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz -> xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+Successfully downloaded xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/opusfile/src/c69ab2b166-6cc7de23ec.clean
+-- Configuring arm64-osx
+-- Building arm64-osx-dbg
+-- Building arm64-osx-rel
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/opusfile_arm64-osx/lib/pkgconfig/opusfile.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/opusfile_arm64-osx/debug/lib/pkgconfig/opusfile.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/opusfile_arm64-osx/share/opusfile/copyright
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/opusfile_arm64-osx/share/opusfile/usage
+-- Performing post-build validation
+Starting submission of opusfile:arm64-osx@0.12+20221121#1 to 1 binary cache(s) in the background
+Elapsed time to handle opusfile:arm64-osx: 2.5 s
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+Completed submission of libvorbis:arm64-osx@1.3.7#4 to 1 binary cache(s) in 118 ms
+Waiting for 1 remaining binary cache submissions...
+Completed submission of opusfile:arm64-osx@0.12+20221121#1 to 1 binary cache(s) in 24.5 ms (1/1)
+All requested installations completed successfully in: 1.7 min
+-- Running vcpkg install - done
+-- The C compiler identification is AppleClang 17.0.0.17000013
+-- The CXX compiler identification is AppleClang 17.0.0.17000013
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+CMake Warning (author) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  /Users/runner/work/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Found ZLIB: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libz.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libz.a (found version "1.3.2")
+-- Found PNG: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libpng16.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libpng16d.a (found version "1.6.59")
+-- Found JPEG: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libjpeg.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libjpeg.a (found version "62")
+-- Configuring done (111.2s)
+-- Generating done (0.8s)
+-- Build files have been written to: /Users/runner/work/kagex/kagex/kagex/tools/release/build/macos
