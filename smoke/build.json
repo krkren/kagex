@@ -1,0 +1,51 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/tmp/tmpq76ep36a/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/tmp/tmpq76ep36a/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-windows",
+   "package": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-windows.zip",
+   "bytes": 50060061
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-linux",
+   "package": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-linux.tar.gz",
+   "bytes": 65290209
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-steam",
+   "package": "/tmp/tmpq76ep36a/My Game/release/kagex-sample-0.3.0-steam.tar.gz",
+   "bytes": 72686072
+  }
+ ],
+ "notes": [
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 181,
+  "sounds": 0,
+  "fromCache": 1,
+  "bytesBefore": 7690557,
+  "bytesAfter": 6477110,
+  "keptByReference": 3,
+  "rewrittenScripts": 0
+ }
+}
