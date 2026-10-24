@@ -50,9 +50,12 @@ add_executable(kagex-release
     src/Icons.cpp
     src/Engine.cpp
     src/Build.cpp
+    src/Media.cpp
 )
 find_package(ZLIB REQUIRED)
-target_include_directories(kagex-release PRIVATE src)
+# dr_flac (FLAC sources; header only)
+find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h" REQUIRED)
+target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS})
 target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop ZLIB::ZLIB)
 target_compile_definitions(kagex-release PRIVATE KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
 if(WIN32)

@@ -4,6 +4,7 @@
 #include <regex>
 #include <set>
 
+#include "Media.h"
 #include "krt/app/Text.h"
 
 namespace fs = std::filesystem;
@@ -291,6 +292,9 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if (!exists(e.asStr())) error("contents.extraFiles", e.asStr() + " doesn't exist");
 
 	if (!oneOf(str(s, "media.audio.convert"), { "opus", "vorbis", "keep" })) error("media.audio.convert", "Audio is converted to \"opus\" or \"vorbis\", or kept (\"keep\")");
+	if (str(s, "media.audio.convert") == "opus" && !p.framework.empty() && !frameworkPlaysOpus(p.framework))
+		error("media.audio.convert", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+		      ") doesn't look for .opus files: it predates KAGEX 0.3.0. Choose Ogg Vorbis, or update it from KAGEX 0.3.0's template/system");
 	const Json& opusKbps = at(s, "media.audio.opusKbps");
 	for (const auto& [folder, kbps] : opusKbps.members())
 		if (kbps.asInt() < 6 || kbps.asInt() > 510) error("media.audio.opusKbps", "Opus bitrates are 6 to 510 kbps (" + folder + ": " + std::to_string(kbps.asInt()) + ")");

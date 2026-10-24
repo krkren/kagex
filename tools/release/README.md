@@ -5,7 +5,7 @@ It opens a settings window (a local page in a browser app window, like the engin
 tools), and everything it does can also run from the command line (`--cli`), for CI.
 
 **Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam and macOS
-packages; media conversion, the web, Android and iOS come in the next steps.
+packages and converts the media; the web, Android and iOS come in the next steps.
 
 ## Using it
 
@@ -45,6 +45,26 @@ The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus
 licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
 starts this computer's build for a few seconds (headless where it can, through the engine's REPL)
 and reports script errors; its log is `<output>/test-run.log`.
+
+### Media
+
+Before packing, lossless media in the staged data are converted (the sources are never touched):
+
+- **Sounds**: WAV and FLAC become Opus (by default 128 kbps in `bgm/`, 96 in `sound/`, 64 in
+  `voice/`, 96 elsewhere) or Ogg Vorbis. FLAC is only a source (the engine can't play it): it
+  becomes WAV when sounds are kept. A `<file>.sli` (loop points) follows its sound, moved to 48 kHz
+  for Opus. The framework finds `.opus` files from KAGEX 0.3.0 on; a game with an older
+  `data/system` is told to use Vorbis or update it.
+- **Images**: PNG, BMP and TLG become TLG6 (or TLG5, PNG, JPEG) when opaque, TLG6 (or TLG5, PNG,
+  or a JPEG plus a lossless `<name>_m.png` mask) when transparent. The mask of a main/mask pair
+  (`<name>_m.*`) only goes to lossless formats.
+- **Never converted**: Ogg, Opus and JPEG (lossy already), and files the scripts (`.ks`, `.tjs`,
+  `.csv`, `.txt`, `.asd`, `.json`, `.func`) name with their extension, including printf patterns
+  like `"ai%s%06d.wav"`, unless *Names with extensions* is set to rewrite them; then the staged
+  scripts get the new names (UTF-8, UTF-16 and Shift_JIS scripts alike).
+
+Results are cached by content and settings (in the cache folder below), so a later build only
+converts what changed.
 
 ### Engine packages
 

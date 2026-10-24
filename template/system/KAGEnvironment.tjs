@@ -2149,6 +2149,7 @@ class KAGEnvironment extends KAGEnvTrans {
 				if (voice != "" && !isExist(voice))  {
 					if (isExist(voice + ".wav")) ext = ".wav";
 					else if (isExist(voice + ".ogg")) ext = ".ogg";
+					else if (isExist(voice + ".opus")) ext = ".opus";
 					else {
 						errorVoice(name + ": Voice cannot be loaded:" + voice);
 						voice = void;

@@ -467,6 +467,13 @@ function showJob(st) {
 			el('div', { class: 'what' }, el('b', {}, 'Test run'), ' ', c.message, (c.errors || []).map((e) => [el('br'), el('code', {}, e)])),
 			c.log ? el('button', { onclick: () => app.post('/api/release/reveal', { path: c.log }).catch(() => {}) }, 'Log') : null));
 	}
+	if (r.media && (r.media.images || r.media.sounds)) {
+		const m = r.media;
+		d.results.append(el('div', { class: 'result ok' }, el('span', { class: 'mark' }, '✓'),
+			el('div', { class: 'what' }, el('b', {}, 'Media'), ` ${m.images} images and ${m.sounds} sounds converted`,
+				m.fromCache ? ` (${m.fromCache} from earlier builds)` : '', `: ${formatSize(m.bytesBefore)} → ${formatSize(m.bytesAfter)}`,
+				m.rewrittenScripts ? `; names rewritten in ${m.rewrittenScripts} scripts` : '')));
+	}
 	for (const n of r.notes || []) d.results.append(el('div', { class: 'result' }, el('span', { class: 'mark' }, 'i'), el('div', { class: 'what' }, n)));
 	if (r.outputFolder) d.results.append(el('div', {}, el('button', { onclick: () => app.post('/api/release/reveal', { path: r.outputFolder }).catch(() => {}) }, 'Open the output folder')));
 }
