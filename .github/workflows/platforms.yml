@@ -229,6 +229,7 @@ jobs:
           sed -i -E "s/version = \"3\.22\.1\"/version = \"${cmake#cmake;}\"/" kirikiri/krkrz_android/app/build.gradle
           grep -n "version = \"${cmake#cmake;}\"" kirikiri/krkrz_android/app/build.gradle
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
+          python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
           chmod +x kirikiri/krkrz_android/gradlew
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
