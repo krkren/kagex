@@ -1,0 +1,16 @@
+5-ok   defaults from first.ks: KAGEX Sample / 0.2.2 / kagex-sample
+6-ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+7-ok   icon found: platform/icon-1024.png
+8:ok   init refuses to replace: error: /tmp/tmpsbcl8zi6/My Game/release.json is already there (--force replaces it)
+9-ok   check: the defaults have no errors
+10-ok   check: the host platform is listed: linux
+11-ok   check: reports a bad version and reserved names: identity.version, identity.appName
+12-ok   plan: the chosen platforms: windows, linux, web, android, ios
+13-ok   plan: exclusions (work/ isn't excluded by default, *.psd is): 283 files, 1 excluded
+14-ok   plan: images and sounds to convert: 184 images, 0 sounds
+15-ok   plan: framework copied in: template/system, copied in as data/system
+16-ok   an unknown platform is refused: unknown platform: nowhere
+17-ok   the page is served
+18-ok   the client library is embedded
+19-ok   state: /tmp/tmpsbcl8zi6/My Game/release.json
+20-ok   check from the screen: platforms.android.applicationId; platforms.android.keystore

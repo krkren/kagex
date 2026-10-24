@@ -1,0 +1,365 @@
+Preset CMake variables:
+
+  CMAKE_TOOLCHAIN_FILE:FILEPATH="/home/runner/work/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_TARGET_TRIPLET="x64-linux"
+
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.3).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.3/cmake-4.4.3-linux-x86_64.tar.gz -> cmake-4.4.3-linux-x86_64.tar.gz
+Successfully downloaded cmake-4.4.3-linux-x86_64.tar.gz
+Extracting cmake...
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+The following packages will be built and installed:
+    drlibs:x64-linux@2026-03-03
+    libebur128:x64-linux@1.2.6#3
+    libjpeg-turbo:x64-linux@3.2.0#1
+    libogg:x64-linux@1.3.6#1
+    libopusenc:x64-linux@0.3
+    libpng:x64-linux@1.6.59
+  * libspng:x64-linux@0.7.4#1
+    libtomcrypt:x64-linux@1.18.2#4
+    libtommath:x64-linux@1.3.0#3
+    libvorbis:x64-linux@1.3.7#4
+    opus:x64-linux@1.6.1
+    opusfile:x64-linux@0.12+20221121#1
+  * vcpkg-cmake:x64-linux@2025-08-07
+  * vcpkg-cmake-config:x64-linux@2026-07-21
+    zlib:x64-linux@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 8 package(s) from /home/runner/work/kagex/kagex/vcpkg-archives in 95.8 ms. Use --debug to see more details.
+Installing 1/15 drlibs:x64-linux@2026-03-03...
+drlibs:x64-linux@2026-03-03 package ABI: 14a84c518acd1ee45ead6bd2ee0a1f7d16c24edab856fe705a5923515f0d8c1d
+Elapsed time to handle drlibs:x64-linux: 1.18 ms
+Installing 2/15 vcpkg-cmake:x64-linux@2025-08-07...
+vcpkg-cmake:x64-linux@2025-08-07 package ABI: d90a2d27eaf2ef65d07ea4b5e5aae3a11ab0c7949572adee491fa968ff7f6fcd
+Elapsed time to handle vcpkg-cmake:x64-linux: 854 us
+Installing 3/15 libebur128:x64-linux@1.2.6#3...
+libebur128:x64-linux@1.2.6#3 package ABI: 4925134c4bbe874bcc9a12c0f5f5f7be244a73fed7e16e5bcd5575ee8e5fcd85
+Elapsed time to handle libebur128:x64-linux: 1.09 ms
+Installing 4/15 vcpkg-cmake-config:x64-linux@2026-07-21...
+vcpkg-cmake-config:x64-linux@2026-07-21 package ABI: 8d466dac6b00c57578b0ff3ca895ecf856411cf3d05467153e76fd13d21e24fd
+Elapsed time to handle vcpkg-cmake-config:x64-linux: 861 us
+Installing 5/15 zlib:x64-linux@1.3.2#2...
+zlib:x64-linux@1.3.2#2 package ABI: 02f9cea216dd9e528fc4d571d56a4919440b126833221dda44a220b8366a4d9e
+Elapsed time to handle zlib:x64-linux: 1.43 ms
+Installing 6/15 libspng:x64-linux@0.7.4#1...
+libspng:x64-linux@0.7.4#1 package ABI: bd7e6b3f8f3bfbea1a1972d4293b55a62f8239779a15f56ba07566fe781fc0f5
+Elapsed time to handle libspng:x64-linux: 1.15 ms
+Installing 7/15 libjpeg-turbo:x64-linux@3.2.0#1...
+libjpeg-turbo:x64-linux@3.2.0#1 package ABI: 09578a581111ffcccc35cb87ad191c6f88a4f00f3586f6e09335678a488c9baa
+Elapsed time to handle libjpeg-turbo:x64-linux: 1.29 ms
+Installing 8/15 libogg:x64-linux@1.3.6#1...
+libogg:x64-linux@1.3.6#1 package ABI: fa87898c37f25563e5dba47ad72a8e8892da7f09b4dbdb3725f3a77080784bbe
+Elapsed time to handle libogg:x64-linux: 1.23 ms
+Installing 9/15 opus:x64-linux@1.6.1...
+opus:x64-linux@1.6.1 package ABI: cc6523bdebee6f1807e9515f08530eb738cd0b91c93f29fa35e7747f353df3c6
+Building opus:x64-linux@1.6.1...
+Downloading https://github.com/xiph/opus/archive/v1.6.1.tar.gz -> xiph-opus-v1.6.1.tar.gz
+Successfully downloaded xiph-opus-v1.6.1.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/xiph-opus-v1.6.1.tar.gz
+-- Applying patch fix-pkgconfig-version.patch
+-- Applying patch fix-arm64-windows-compile.diff
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/opus/src/v1.6.1-12462bbd92.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/opus_x64-linux/lib/pkgconfig/opus.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/opus_x64-linux/debug/lib/pkgconfig/opus.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/opus_x64-linux/share/opus/copyright
+-- Performing post-build validation
+Starting submission of opus:x64-linux@1.6.1 to 1 binary cache(s) in the background
+Elapsed time to handle opus:x64-linux: 13 s
+Installing 10/15 libopusenc:x64-linux@0.3...
+libopusenc:x64-linux@0.3 package ABI: 8f0a29e6e55aefa232fbf877b5f91b70540f8d6fdb41cd8a88d074a2371bbf52
+Building libopusenc:x64-linux@0.3...
+Downloading https://github.com/xiph/libopusenc/archive/v0.3.tar.gz -> xiph-libopusenc-v0.3.tar.gz
+Successfully downloaded xiph-libopusenc-v0.3.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/xiph-libopusenc-v0.3.tar.gz
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libopusenc/src/v0.3-f195b51fa2.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libopusenc_x64-linux/share/libopusenc/copyright
+-- Performing post-build validation
+Starting submission of libopusenc:x64-linux@0.3 to 1 binary cache(s) in the background
+Elapsed time to handle libopusenc:x64-linux: 1.3 s
+Completed submission of opus:x64-linux@1.6.1 to 1 binary cache(s) in 258 ms
+Installing 11/15 libpng:x64-linux@1.6.59...
+libpng:x64-linux@1.6.59 package ABI: 7a66fd78971655daf465997c7403e6179fae4c65b0ef06633044970f868046c6
+Building libpng:x64-linux@1.6.59...
+Downloading https://github.com/pnggroup/libpng/archive/v1.6.59.tar.gz -> pnggroup-libpng-v1.6.59.tar.gz
+Successfully downloaded pnggroup-libpng-v1.6.59.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/pnggroup-libpng-v1.6.59.tar.gz
+-- Applying patch cmake.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libpng/src/v1.6.59-47af3e6fae.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/share/png/vcpkg-cmake-wrapper.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/share/libpng/libpng-config.cmake
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/lib/pkgconfig/libpng16.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/debug/lib/pkgconfig/libpng16.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/debug/lib/pkgconfig/libpng.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/lib/pkgconfig/libpng.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/share/libpng/usage
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libpng_x64-linux/share/libpng/copyright
+-- Performing post-build validation
+Starting submission of libpng:x64-linux@1.6.59 to 1 binary cache(s) in the background
+Elapsed time to handle libpng:x64-linux: 4.2 s
+Completed submission of libopusenc:x64-linux@0.3 to 1 binary cache(s) in 16.5 ms
+Installing 12/15 libtommath:x64-linux@1.3.0#3...
+libtommath:x64-linux@1.3.0#3 package ABI: c88f24e82c9e8d3d0a52b384241bf35efcc1ab7eba9058ede6bf5ddfce8b2a3e
+Building libtommath:x64-linux@1.3.0#3...
+Downloading https://github.com/libtom/libtommath/archive/v1.3.0.tar.gz -> libtom-libtommath-v1.3.0.tar.gz
+Successfully downloaded libtom-libtommath-v1.3.0.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/libtom-libtommath-v1.3.0.tar.gz
+-- Applying patch pkgconfig.diff
+-- Applying patch bcrypt.patch
+-- Applying patch import-lib.patch
+-- Applying patch has-set-double.patch
+-- Applying patch msvc-dce.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libtommath/src/v1.3.0-fc7d67d771.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libtommath_x64-linux/lib/pkgconfig/libtommath.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libtommath_x64-linux/debug/lib/pkgconfig/libtommath.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libtommath_x64-linux/share/libtommath/copyright
+-- Performing post-build validation
+Starting submission of libtommath:x64-linux@1.3.0#3 to 1 binary cache(s) in the background
+Elapsed time to handle libtommath:x64-linux: 6.1 s
+Completed submission of libpng:x64-linux@1.6.59 to 1 binary cache(s) in 87.7 ms
+Installing 13/15 libtomcrypt:x64-linux@1.18.2#4...
+libtomcrypt:x64-linux@1.18.2#4 package ABI: b190deddbd303d0d80a64e2affc26ec550767e427f1a86e064243442d0d963a1
+Building libtomcrypt:x64-linux@1.18.2#4...
+Downloading https://github.com/libtom/libtomcrypt/archive/v1.18.2.tar.gz -> libtom-libtomcrypt-v1.18.2.tar.gz
+Successfully downloaded libtom-libtomcrypt-v1.18.2.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/libtom-libtomcrypt-v1.18.2.tar.gz
+-- Applying patch fix-windows-arm.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libtomcrypt/src/v1.18.2-3c00e3b922.clean
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:71 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:75 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:81 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+CMake Warning at scripts/cmake/vcpkg_execute_build_process.cmake:33 (message):
+  LOGNAME should be specified.
+Call Stack (most recent call first):
+  ports/libtomcrypt/portfile.cmake:85 (vcpkg_execute_build_process)
+  scripts/ports.cmake:209 (include)
+
+
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libtomcrypt_x64-linux/share/libtomcrypt/copyright
+-- Performing post-build validation
+Starting submission of libtomcrypt:x64-linux@1.18.2#4 to 1 binary cache(s) in the background
+Elapsed time to handle libtomcrypt:x64-linux: 20 s
+Completed submission of libtommath:x64-linux@1.3.0#3 to 1 binary cache(s) in 1.2 s
+Installing 14/15 libvorbis:x64-linux@1.3.7#4...
+libvorbis:x64-linux@1.3.7#4 package ABI: 61a75979ee02037e829e1f407da6e7cf68c82ef3f264db95d4c75ad40b09d6e0
+Building libvorbis:x64-linux@1.3.7#4...
+Downloading https://github.com/xiph/vorbis/archive/v1.3.7.tar.gz -> xiph-vorbis-v1.3.7.tar.gz
+Successfully downloaded xiph-vorbis-v1.3.7.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/xiph-vorbis-v1.3.7.tar.gz
+-- Applying patch 0001-Dont-export-vorbisenc-functions.patch
+-- Applying patch 0002-Fixup-pkgconfig-libs.patch
+-- Applying patch 0003-def-mingw-compat.patch
+-- Applying patch 0004-ogg-find-dependency.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libvorbis/src/v1.3.7-c32164610e.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/lib/pkgconfig/vorbisfile.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/debug/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/debug/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/debug/lib/pkgconfig/vorbisfile.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/share/libvorbis/usage
+-- Installing: /home/runner/work/_temp/vcpkg/packages/libvorbis_x64-linux/share/libvorbis/copyright
+-- Performing post-build validation
+Starting submission of libvorbis:x64-linux@1.3.7#4 to 1 binary cache(s) in the background
+Elapsed time to handle libvorbis:x64-linux: 5.4 s
+Completed submission of libtomcrypt:x64-linux@1.18.2#4 to 1 binary cache(s) in 3 s
+Installing 15/15 opusfile:x64-linux@0.12+20221121#1...
+opusfile:x64-linux@0.12+20221121#1 package ABI: 95ab9913fdb1fe738bf072efd8395620b9eca528c4bdbc95698a80f5f917f2be
+Building opusfile:x64-linux@0.12+20221121#1...
+Downloading https://github.com/xiph/opusfile/archive/9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz -> xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+Successfully downloaded xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/opusfile/src/c69ab2b166-6cc7de23ec.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/opusfile_x64-linux/lib/pkgconfig/opusfile.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/opusfile_x64-linux/debug/lib/pkgconfig/opusfile.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/opusfile_x64-linux/share/opusfile/copyright
+-- Installing: /home/runner/work/_temp/vcpkg/packages/opusfile_x64-linux/share/opusfile/usage
+-- Performing post-build validation
+Starting submission of opusfile:x64-linux@0.12+20221121#1 to 1 binary cache(s) in the background
+Elapsed time to handle opusfile:x64-linux: 1.8 s
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+Completed submission of libvorbis:x64-linux@1.3.7#4 to 1 binary cache(s) in 113 ms
+Waiting for 1 remaining binary cache submissions...
+Completed submission of opusfile:x64-linux@0.12+20221121#1 to 1 binary cache(s) in 18.2 ms (1/1)
+All requested installations completed successfully in: 52 s
+-- Running vcpkg install - done
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+CMake Warning (dev) at /usr/local/share/cmake-3.31/Modules/FetchContent.cmake:1373 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  /home/runner/work/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found ZLIB: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libz.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libz.a (found version "1.3.2")
+-- Found PNG: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libpng16.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libpng16d.a (found version "1.6.59")
+-- Found JPEG: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libjpeg.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libjpeg.a (found version "62")
+-- Configuring done (57.4s)
+-- Generating done (0.1s)
+-- Build files have been written to: /home/runner/work/kagex/kagex/kagex/tools/release/build/linux
