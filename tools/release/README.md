@@ -137,8 +137,8 @@ python3 test/smoke.py build/linux/Release/kagex-release --browser   # --browser 
 
 `.github/workflows/release-tool.yml` builds it on all three systems and runs the smoke test.
 
-The smoke test also builds when given engine packages (`--engines DIR`; the CI makes them from a
-published release with `scripts/engine-package.py`).
+The smoke test also builds when given engine packages (`--engines DIR`; the CI downloads a
+release's `kagex_engine_*.zip`).
 
 Source: `src/main.cpp` (CLI and the window's API), `Settings` (release.json: defaults,
 validation), `Project` (finding the game, reading its defaults), `Host` (what this computer can
