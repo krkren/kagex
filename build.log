@@ -1,0 +1,601 @@
+[0/2] Re-checking globbed directories...
+[1/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/options.cpp.o
+[2/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/taskqueue.cpp.o
+[3/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/session.cpp.o
+[4/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/log.cpp.o
+[5/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/socket.cpp.o
+[6/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/util.cpp.o
+/home/runner/work/kagex/kagex/krkrz_tools/external/appserve/src/core/util.cpp: In function ‘std::string appserve::util::timestamp()’:
+/home/runner/work/kagex/kagex/krkrz_tools/external/appserve/src/core/util.cpp:206:61: warning: ‘:’ directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+  206 |         snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d",
+      |                                                             ^
+In file included from /usr/include/stdio.h:894,
+                 from /usr/include/c++/11/cstdio:42,
+                 from /usr/include/c++/11/ext/string_conversions.h:43,
+                 from /usr/include/c++/11/bits/basic_string.h:6608,
+                 from /usr/include/c++/11/string:55,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/external/appserve/src/core/util.h:6,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/external/appserve/src/core/util.cpp:4:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:71:35: note: ‘__builtin___snprintf_chk’ output between 20 and 72 bytes into a destination of size 32
+   71 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   72 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   73 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+[7/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/mime.cpp.o
+[8/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/json/json.cpp.o
+[9/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/parse.cpp.o
+[10/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/webroot/zip.cpp.o
+[11/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/browser/launcher.cpp.o
+[12/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/server.cpp.o
+[13/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/webroot/webroot.cpp.o
+[14/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/repl.cpp.o
+[15/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/stdin_channel.cpp.o
+[16/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/browser/channel.cpp.o
+[17/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/app.cpp.o
+[18/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/file_channel.cpp.o
+[19/96] Building CXX object krkrz_tools/external/psdparse/psdparse/CMakeFiles/psdparse.dir/Release/bmp.cpp.o
+[20/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/plugin/registry.cpp.o
+[21/96] Building CXX object krkrz_tools/external/appserve/CMakeFiles/appserve_core.dir/Release/src/plugin/loader.cpp.o
+[22/96] Building CXX object krkrz_tools/external/psdparse/psdparse/CMakeFiles/psdparse.dir/Release/psddesc.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.cpp:2:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:18:27: warning: multi-character character constant [-Wmultichar]
+   18 |     TYPE_REFERENCE      = 'obj ',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:19:27: warning: multi-character character constant [-Wmultichar]
+   19 |     TYPE_DESCRIPTOR     = 'Objc',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:20:27: warning: multi-character character constant [-Wmultichar]
+   20 |     TYPE_LIST           = 'VlLs',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:21:27: warning: multi-character character constant [-Wmultichar]
+   21 |     TYPE_DOUBLE         = 'doub',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:22:27: warning: multi-character character constant [-Wmultichar]
+   22 |     TYPE_UNIT_FLOAT     = 'UntF',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:23:27: warning: multi-character character constant [-Wmultichar]
+   23 |     TYPE_STRING         = 'TEXT',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:24:27: warning: multi-character character constant [-Wmultichar]
+   24 |     TYPE_ENUMERATED     = 'enum',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:25:27: warning: multi-character character constant [-Wmultichar]
+   25 |     TYPE_INTEGER        = 'long',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:26:27: warning: multi-character character constant [-Wmultichar]
+   26 |     TYPE_BOOLEAN        = 'bool',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:27:27: warning: multi-character character constant [-Wmultichar]
+   27 |     TYPE_GLOBAL_OBJECT  = 'GlbO',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:28:27: warning: multi-character character constant [-Wmultichar]
+   28 |     TYPE_CLASS1         = 'type',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:29:27: warning: multi-character character constant [-Wmultichar]
+   29 |     TYPE_CLASS2         = 'GlbC',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:30:27: warning: multi-character character constant [-Wmultichar]
+   30 |     TYPE_ALIAS          = 'alis',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:31:27: warning: multi-character character constant [-Wmultichar]
+   31 |     TYPE_RAW_DATA       = 'tdta',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:32:27: warning: multi-character character constant [-Wmultichar]
+   32 |     TYPE_LARGE_INTEGER  = 'comp',   // 64bit 整数
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:33:27: warning: multi-character character constant [-Wmultichar]
+   33 |     TYPE_UNIT_FLOATS    = 'UnFl',   // 単位付き実数の配列
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:34:27: warning: multi-character character constant [-Wmultichar]
+   34 |     TYPE_OBJECT_ARRAY   = 'ObAr',   // オブジェクト配列 (件数 + descriptor 本体)
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:38:25: warning: multi-character character constant [-Wmultichar]
+   38 |     UNIT_POINTS       = '#Pnt',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:39:25: warning: multi-character character constant [-Wmultichar]
+   39 |     UNIT_MILLIMETERS  = '#Mlm',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:40:25: warning: multi-character character constant [-Wmultichar]
+...
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:30:27: warning: multi-character character constant [-Wmultichar]
+   30 |     TYPE_ALIAS          = 'alis',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:31:27: warning: multi-character character constant [-Wmultichar]
+   31 |     TYPE_RAW_DATA       = 'tdta',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:32:27: warning: multi-character character constant [-Wmultichar]
+   32 |     TYPE_LARGE_INTEGER  = 'comp',   // 64bit 整数
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:33:27: warning: multi-character character constant [-Wmultichar]
+   33 |     TYPE_UNIT_FLOATS    = 'UnFl',   // 単位付き実数の配列
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:34:27: warning: multi-character character constant [-Wmultichar]
+   34 |     TYPE_OBJECT_ARRAY   = 'ObAr',   // オブジェクト配列 (件数 + descriptor 本体)
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:38:25: warning: multi-character character constant [-Wmultichar]
+   38 |     UNIT_POINTS       = '#Pnt',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:39:25: warning: multi-character character constant [-Wmultichar]
+   39 |     UNIT_MILLIMETERS  = '#Mlm',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:40:25: warning: multi-character character constant [-Wmultichar]
+   40 |     UNIT_ANGLE        = '#Ang', // degrees
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:41:25: warning: multi-character character constant [-Wmultichar]
+   41 |     UNIT_DENSITY      = '#Rsl', // base per inch
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:42:25: warning: multi-character character constant [-Wmultichar]
+   42 |     UNIT_DISTANCE     = '#Rlt', // base 72ppi
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:43:25: warning: multi-character character constant [-Wmultichar]
+   43 |     UNIT_NONE         = '#Nne',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:44:25: warning: multi-character character constant [-Wmultichar]
+   44 |     UNIT_PERCENT      = '#Prc',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:45:25: warning: multi-character character constant [-Wmultichar]
+   45 |     UNIT_PIXELS       = '#Pxl',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:50:29: warning: multi-character character constant [-Wmultichar]
+   50 |     REF_TYPE_PROPERTY     = 'prop',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:51:29: warning: multi-character character constant [-Wmultichar]
+   51 |     REF_TYPE_CLASS        = 'Clss',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:52:29: warning: multi-character character constant [-Wmultichar]
+   52 |     REF_TYPE_ENUM_REF     = 'Enmr',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:53:29: warning: multi-character character constant [-Wmultichar]
+   53 |     REF_TYPE_OFFSET       = 'rele',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:54:29: warning: multi-character character constant [-Wmultichar]
+   54 |     REF_TYPE_IDENTIFIER   = 'Idnt',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:55:29: warning: multi-character character constant [-Wmultichar]
+   55 |     REF_TYPE_INDEX        = 'indx',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:56:29: warning: multi-character character constant [-Wmultichar]
+   56 |     REF_TYPE_NAME         = 'name',
+      |                             ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Psd.cpp:8:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:117:10: warning: multi-character character constant [-Wmultichar]
+  117 |     case 'norm': return BLEND_MODE_NORMAL;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:118:10: warning: multi-character character constant [-Wmultichar]
+  118 |     case 'diss': return BLEND_MODE_DISSOLVE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:119:10: warning: multi-character character constant [-Wmultichar]
+  119 |     case 'dark': return BLEND_MODE_DARKEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:120:10: warning: multi-character character constant [-Wmultichar]
+  120 |     case 'mul ': return BLEND_MODE_MULTIPLY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:121:10: warning: multi-character character constant [-Wmultichar]
+  121 |     case 'idiv': return BLEND_MODE_COLOR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:122:10: warning: multi-character character constant [-Wmultichar]
+  122 |     case 'lbrn': return BLEND_MODE_LINEAR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:123:10: warning: multi-character character constant [-Wmultichar]
+  123 |     case 'dkCl': return BLEND_MODE_DARKER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:124:10: warning: multi-character character constant [-Wmultichar]
+  124 |     case 'lite': return BLEND_MODE_LIGHTEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:125:10: warning: multi-character character constant [-Wmultichar]
+  125 |     case 'scrn': return BLEND_MODE_SCREEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:126:10: warning: multi-character character constant [-Wmultichar]
+  126 |     case 'div ': return BLEND_MODE_COLOR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:127:10: warning: multi-character character constant [-Wmultichar]
+  127 |     case 'lddg': return BLEND_MODE_LINEAR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:130:10: warning: multi-character character constant [-Wmultichar]
+  130 |     case 'lgCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:131:10: warning: multi-character character constant [-Wmultichar]
+  131 |     case 'ltCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:132:10: warning: multi-character character constant [-Wmultichar]
+  132 |     case 'over': return BLEND_MODE_OVERLAY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:133:10: warning: multi-character character constant [-Wmultichar]
+  133 |     case 'sLit': return BLEND_MODE_SOFT_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:134:10: warning: multi-character character constant [-Wmultichar]
+  134 |     case 'hLit': return BLEND_MODE_HARD_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:135:10: warning: multi-character character constant [-Wmultichar]
+  135 |     case 'vLit': return BLEND_MODE_VIVID_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:136:10: warning: multi-character character constant [-Wmultichar]
+  136 |     case 'lLit': return BLEND_MODE_LINEAR_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:137:10: warning: multi-character character constant [-Wmultichar]
+  137 |     case 'pLit': return BLEND_MODE_PIN_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:138:10: warning: multi-character character constant [-Wmultichar]
+  138 |     case 'hMix': return BLEND_MODE_HARD_MIX;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:139:10: warning: multi-character character constant [-Wmultichar]
+  139 |     case 'diff': return BLEND_MODE_DIFFERENCE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:140:10: warning: multi-character character constant [-Wmultichar]
+  140 |     case 'smud': return BLEND_MODE_EXCLUSION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:141:10: warning: multi-character character constant [-Wmultichar]
+  141 |     case 'fsub': return BLEND_MODE_SUBTRACT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:142:10: warning: multi-character character constant [-Wmultichar]
+  142 |     case 'fdiv': return BLEND_MODE_DIVIDE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:143:10: warning: multi-character character constant [-Wmultichar]
+  143 |     case 'hue ': return BLEND_MODE_HUE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:144:10: warning: multi-character character constant [-Wmultichar]
+  144 |     case 'sat ': return BLEND_MODE_SATURATION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:145:10: warning: multi-character character constant [-Wmultichar]
+  145 |     case 'colr': return BLEND_MODE_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:146:10: warning: multi-character character constant [-Wmultichar]
+  146 |     case 'lum ': return BLEND_MODE_LUMINOSITY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:147:10: warning: multi-character character constant [-Wmultichar]
+  147 |     case 'pass': return BLEND_MODE_PASS_THROUGH;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:22: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:35: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:48: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:61: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:74: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:22: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:35: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:48: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:61: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:74: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:22: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:35: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:48: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:22: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:35: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:48: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:61: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:74: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:22: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:35: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:48: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                                ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Psd.cpp:8:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:135:38: warning: multi-character character constant [-Wmultichar]
+  135 |                   int blendModeKey = 'norm', int opacity = 255, int destIndex = -1);
+      |                                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:147:60: warning: multi-character character constant [-Wmultichar]
+  147 |                    bool closed = false, int blendModeKey = 'pass',
+      |                                                            ^~~~~~
+[76/96] Building CXX object krkrz_tools/libs/image/CMakeFiles/krt_image.dir/Release/src/Clip.cpp.o
+[77/96] Building CXX object krkrz_tools/libs/image/CMakeFiles/krt_image.dir/Release/src/Layers.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:18:27: warning: multi-character character constant [-Wmultichar]
+   18 |     TYPE_REFERENCE      = 'obj ',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:19:27: warning: multi-character character constant [-Wmultichar]
+   19 |     TYPE_DESCRIPTOR     = 'Objc',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:20:27: warning: multi-character character constant [-Wmultichar]
+   20 |     TYPE_LIST           = 'VlLs',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:21:27: warning: multi-character character constant [-Wmultichar]
+   21 |     TYPE_DOUBLE         = 'doub',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:22:27: warning: multi-character character constant [-Wmultichar]
+   22 |     TYPE_UNIT_FLOAT     = 'UntF',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:23:27: warning: multi-character character constant [-Wmultichar]
+   23 |     TYPE_STRING         = 'TEXT',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:24:27: warning: multi-character character constant [-Wmultichar]
+   24 |     TYPE_ENUMERATED     = 'enum',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:25:27: warning: multi-character character constant [-Wmultichar]
+   25 |     TYPE_INTEGER        = 'long',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:26:27: warning: multi-character character constant [-Wmultichar]
+   26 |     TYPE_BOOLEAN        = 'bool',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:27:27: warning: multi-character character constant [-Wmultichar]
+   27 |     TYPE_GLOBAL_OBJECT  = 'GlbO',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:28:27: warning: multi-character character constant [-Wmultichar]
+   28 |     TYPE_CLASS1         = 'type',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:29:27: warning: multi-character character constant [-Wmultichar]
+   29 |     TYPE_CLASS2         = 'GlbC',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:30:27: warning: multi-character character constant [-Wmultichar]
+   30 |     TYPE_ALIAS          = 'alis',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:31:27: warning: multi-character character constant [-Wmultichar]
+   31 |     TYPE_RAW_DATA       = 'tdta',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:32:27: warning: multi-character character constant [-Wmultichar]
+   32 |     TYPE_LARGE_INTEGER  = 'comp',   // 64bit 整数
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:33:27: warning: multi-character character constant [-Wmultichar]
+   33 |     TYPE_UNIT_FLOATS    = 'UnFl',   // 単位付き実数の配列
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:34:27: warning: multi-character character constant [-Wmultichar]
+   34 |     TYPE_OBJECT_ARRAY   = 'ObAr',   // オブジェクト配列 (件数 + descriptor 本体)
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:38:25: warning: multi-character character constant [-Wmultichar]
+   38 |     UNIT_POINTS       = '#Pnt',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:39:25: warning: multi-character character constant [-Wmultichar]
+   39 |     UNIT_MILLIMETERS  = '#Mlm',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:40:25: warning: multi-character character constant [-Wmultichar]
+   40 |     UNIT_ANGLE        = '#Ang', // degrees
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:41:25: warning: multi-character character constant [-Wmultichar]
+   41 |     UNIT_DENSITY      = '#Rsl', // base per inch
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:42:25: warning: multi-character character constant [-Wmultichar]
+   42 |     UNIT_DISTANCE     = '#Rlt', // base 72ppi
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:43:25: warning: multi-character character constant [-Wmultichar]
+   43 |     UNIT_NONE         = '#Nne',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:44:25: warning: multi-character character constant [-Wmultichar]
+   44 |     UNIT_PERCENT      = '#Prc',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:45:25: warning: multi-character character constant [-Wmultichar]
+   45 |     UNIT_PIXELS       = '#Pxl',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:50:29: warning: multi-character character constant [-Wmultichar]
+   50 |     REF_TYPE_PROPERTY     = 'prop',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:51:29: warning: multi-character character constant [-Wmultichar]
+   51 |     REF_TYPE_CLASS        = 'Clss',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:52:29: warning: multi-character character constant [-Wmultichar]
+   52 |     REF_TYPE_ENUM_REF     = 'Enmr',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:53:29: warning: multi-character character constant [-Wmultichar]
+   53 |     REF_TYPE_OFFSET       = 'rele',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:54:29: warning: multi-character character constant [-Wmultichar]
+   54 |     REF_TYPE_IDENTIFIER   = 'Idnt',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:55:29: warning: multi-character character constant [-Wmultichar]
+   55 |     REF_TYPE_INDEX        = 'indx',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:56:29: warning: multi-character character constant [-Wmultichar]
+   56 |     REF_TYPE_NAME         = 'name',
+      |                             ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:117:10: warning: multi-character character constant [-Wmultichar]
+  117 |     case 'norm': return BLEND_MODE_NORMAL;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:118:10: warning: multi-character character constant [-Wmultichar]
+  118 |     case 'diss': return BLEND_MODE_DISSOLVE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:119:10: warning: multi-character character constant [-Wmultichar]
+  119 |     case 'dark': return BLEND_MODE_DARKEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:120:10: warning: multi-character character constant [-Wmultichar]
+  120 |     case 'mul ': return BLEND_MODE_MULTIPLY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:121:10: warning: multi-character character constant [-Wmultichar]
+  121 |     case 'idiv': return BLEND_MODE_COLOR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:122:10: warning: multi-character character constant [-Wmultichar]
+  122 |     case 'lbrn': return BLEND_MODE_LINEAR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:123:10: warning: multi-character character constant [-Wmultichar]
+  123 |     case 'dkCl': return BLEND_MODE_DARKER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:124:10: warning: multi-character character constant [-Wmultichar]
+  124 |     case 'lite': return BLEND_MODE_LIGHTEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:125:10: warning: multi-character character constant [-Wmultichar]
+  125 |     case 'scrn': return BLEND_MODE_SCREEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:126:10: warning: multi-character character constant [-Wmultichar]
+  126 |     case 'div ': return BLEND_MODE_COLOR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:127:10: warning: multi-character character constant [-Wmultichar]
+  127 |     case 'lddg': return BLEND_MODE_LINEAR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:130:10: warning: multi-character character constant [-Wmultichar]
+  130 |     case 'lgCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:131:10: warning: multi-character character constant [-Wmultichar]
+  131 |     case 'ltCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:132:10: warning: multi-character character constant [-Wmultichar]
+  132 |     case 'over': return BLEND_MODE_OVERLAY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:133:10: warning: multi-character character constant [-Wmultichar]
+  133 |     case 'sLit': return BLEND_MODE_SOFT_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:134:10: warning: multi-character character constant [-Wmultichar]
+  134 |     case 'hLit': return BLEND_MODE_HARD_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:135:10: warning: multi-character character constant [-Wmultichar]
+  135 |     case 'vLit': return BLEND_MODE_VIVID_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:136:10: warning: multi-character character constant [-Wmultichar]
+  136 |     case 'lLit': return BLEND_MODE_LINEAR_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:137:10: warning: multi-character character constant [-Wmultichar]
+  137 |     case 'pLit': return BLEND_MODE_PIN_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:138:10: warning: multi-character character constant [-Wmultichar]
+  138 |     case 'hMix': return BLEND_MODE_HARD_MIX;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:139:10: warning: multi-character character constant [-Wmultichar]
+  139 |     case 'diff': return BLEND_MODE_DIFFERENCE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:140:10: warning: multi-character character constant [-Wmultichar]
+  140 |     case 'smud': return BLEND_MODE_EXCLUSION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:141:10: warning: multi-character character constant [-Wmultichar]
+  141 |     case 'fsub': return BLEND_MODE_SUBTRACT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:142:10: warning: multi-character character constant [-Wmultichar]
+  142 |     case 'fdiv': return BLEND_MODE_DIVIDE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:143:10: warning: multi-character character constant [-Wmultichar]
+  143 |     case 'hue ': return BLEND_MODE_HUE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:144:10: warning: multi-character character constant [-Wmultichar]
+  144 |     case 'sat ': return BLEND_MODE_SATURATION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:145:10: warning: multi-character character constant [-Wmultichar]
+  145 |     case 'colr': return BLEND_MODE_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:146:10: warning: multi-character character constant [-Wmultichar]
+  146 |     case 'lum ': return BLEND_MODE_LUMINOSITY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:147:10: warning: multi-character character constant [-Wmultichar]
+  147 |     case 'pass': return BLEND_MODE_PASS_THROUGH;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:22: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:35: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:48: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:61: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:74: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:22: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:35: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:48: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:61: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:74: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:22: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:35: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:48: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:22: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:35: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:48: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:61: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:74: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:22: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:35: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:48: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                                ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:135:38: warning: multi-character character constant [-Wmultichar]
+  135 |                   int blendModeKey = 'norm', int opacity = 255, int destIndex = -1);
+      |                                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:147:60: warning: multi-character character constant [-Wmultichar]
+  147 |                    bool closed = false, int blendModeKey = 'pass',
+      |                                                            ^~~~~~
+[78/96] Building C object krkrz_tools/external/clipparse/clipparse/CMakeFiles/sqlite3_static.dir/Release/__/__/__/__/_deps/sqlite3_amalg-src/sqlite3.c.o
+[79/96] Linking C static library krkrz_tools/external/clipparse/clipparse/Release/libsqlite3_static.a
+[80/96] Linking CXX static library krkrz_tools/external/clipparse/clipparse/Release/libclipparse.a
+[81/96] Linking CXX static library krkrz_tools/libs/image/Release/libkrt_image.a
+[82/96] appserve: packing /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/web -> web.zip
+[83/96] appserve: embedding web.zip into kagex_release_web.cpp
+-- bin2c: /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/appserve_embed/kagex-release/web.zip -> /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/appserve_embed/kagex-release/kagex_release_web.cpp (19340 bytes)
+[84/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Subprocess.cpp.o
+[85/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/main.cpp.o
+[86/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Icons.cpp.o
+[87/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Plan.cpp.o
+[88/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Archive.cpp.o
+[89/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Project.cpp.o
+[90/96] Building CXX object CMakeFiles/kagex-release.dir/Release/appserve_embed/kagex-release/kagex_release_web.cpp.o
+[91/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Host.cpp.o
+[92/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Engine.cpp.o
+[93/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Settings.cpp.o
+[94/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Build.cpp.o
+[95/96] Building CXX object CMakeFiles/kagex-release.dir/Release/src/Media.cpp.o
+[96/96] Linking CXX executable Release/kagex-release

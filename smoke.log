@@ -1,0 +1,129 @@
+ok   --help: kagex-release 0.3.0
+ok   --version: kagex-release 0.3.0
+ok   plan before init (defaults): Game files: 283 (30.9 MB), 1 excluded; framework: template/system, copied in as data/system
+ok   init writes release.json: Wrote /tmp/tmpq17bt427/My Game/release.json
+ok   defaults from first.ks: KAGEX Sample / 0.2.2 / kagex-sample
+ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+ok   icon found: platform/icon-1024.png
+ok   init refuses to replace: error: /tmp/tmpq17bt427/My Game/release.json is already there (--force replaces it)
+ok   check: the defaults have no errors
+ok   check: the host platform is listed: linux
+ok   check: reports a bad version and reserved names: identity.version, identity.appName
+ok   plan: the chosen platforms: windows, linux, web, android, ios
+ok   plan: exclusions (work/ isn't excluded by default, *.psd is): 283 files, 1 excluded
+ok   plan: images and sounds to convert: 184 images, 0 sounds
+ok   plan: framework copied in: template/system, copied in as data/system
+ok   an unknown platform is refused: unknown platform: nowhere
+ok   the page is served
+ok   the client library is embedded
+ok   state: /tmp/tmpq17bt427/My Game/release.json
+ok   check from the screen: platforms.android.applicationId; platforms.android.keystore
+ok   host status for every platform: windows=True, linux=True, steam=True, macos=False, web=True, android=True, ios=False
+ok   save
+ok   screen (light): no script errors
+ok   screen: every section
+ok   screen: the title field
+ok   screen: a platform turned on and saved
+ok   screen: a bad version is shown at its field
+ok   screen: build from the window: Built: ✓Linux 62.3 MB/tmp/tmpq17bt427/My Game/release/kagex-sample-0.2.2-linux.tar.gzShow✓Test run The game started without script errorsLog✓Media 181 images and 0 sounds converted (1 from earlier builds): 7.3 MB → 6.2 MBi3 files weren't converted because scripts name them with their extension (Media > Nam
+ok   screen (dark): no script errors
+ok   build: every platform: windows=True; linux=True; steam=True 
+ok   windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3
+ok   windows: the .cf: ; KAGEX Sample 0.2.2: engine options (each line is a command-line option without its "-") | orgname=krkren | appname=kagex-sample | debugwin=no | 
+ok   linux: tar.gz with an executable engine: 0o755
+ok   linux: the .cf
+ok   linux: menu entry and icon
+ok   steam: tar.gz with an executable engine: 0o755
+ok   steam: the .cf
+ok   SHA256SUMS: 3 lines
+ok   test run of this computer's build: The game started without script errors 
+ok   build variants: ; ; 
+ok   windows: data bound into the exe: engine 15457792 bytes, xp3 at 15457792 of 45308893
+ok   windows: only the linked plugins: 14 plugins
+ok   steam: zip with a data folder and the executable flag
+ok   test run with the data bound into the executable: The game started without script errors 
+ok   web (files): build
+ok   web (files): engine options:  false; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = "gamedata/"; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (files): title, manifest and icons
+ok   web (files): krkrz.data is what krkrz.js expects: 0 bytes
+ok   web (files): the files, in lower case: 283 files
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 53572)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.10/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.10/http/server.py", line 668, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.10/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib/python3.10/http/server.py", line 433, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.10/http/server.py", line 421, in handle_one_request
+    method()
+  File "/usr/lib/python3.10/http/server.py", line 675, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.10/http/server.py", line 875, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.10/shutil.py", line 198, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.10/socketserver.py", line 826, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+ok   web (files): the game starts in the browser: "logo.ks" 
+ok   web (xp3): build
+ok   web (xp3): engine options: DATA_XP3 = true; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = ""; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (xp3): title, manifest and icons
+ok   web (xp3): krkrz.data is what krkrz.js expects: 29851101 bytes
+ok   web (xp3): data.xp3 preloaded
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57964)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.10/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.10/http/server.py", line 668, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.10/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib/python3.10/http/server.py", line 433, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.10/http/server.py", line 421, in handle_one_request
+    method()
+  File "/usr/lib/python3.10/http/server.py", line 675, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.10/http/server.py", line 875, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.10/shutil.py", line 198, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.10/socketserver.py", line 826, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+ok   web (xp3): the game starts in the browser: "logo.ks" 
+ok   android (apk): build
+ok   android (apk): data.xp3, stored uncompressed, and the engine: 0; ['lib/arm64-v8a/libkrkrz.so', 'lib/x86_64/libkrkrz.so']
+ok   android: package name, version and label: package: name='com.example.kagexsample' versionCode='202' versionName='0.2.2' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+ok   android (aab): build
+ok   android (aab): the data folder and the engine: base/lib/arm64-v8a/libkrkrz.so; base/lib/x86_64/libkrkrz.so
+ok   media: build:  {"images": 181, "sounds": 2, "fromCache": 181, "bytesBefore": 8572865, "bytesAfter": 6548709, "keptByReference": 6, "rewrittenScripts": 0}
+ok   media: WAV to Opus, its loop points at 48 kHz: #2.00
+# Sound Loop Information (utf-8)
+# Generated by krkrz_tools
+Link { From=96000;            To=48000;            Smooth=False; Condition=no; RefValue=0;          CondVar=0;  }
+ok   media: FLAC to Opus
+ok   media: a file the scripts name is kept
+ok   media: files a name pattern covers are kept
+ok   media: images to TLG
+ok   media: the framework's images too
+ok   media: sizes: 8572865 -> 6548709 bytes
+ok   media: the test run with converted media: The game started without script errors 
+ok   media: build with the names rewritten
+ok   media: the script names the new files: *start | [playse storage="kr_ref.opus"] | [eval exp="tf.v = 'tv%03d.opus'"] | [s] | 
+ok   media: the source script is untouched
+ok   media: those files converted
+ok   media: the cache: 183 from the cache, of 184 images and 5 sounds
+all passed
