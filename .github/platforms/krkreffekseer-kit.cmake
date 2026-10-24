@@ -7,18 +7,23 @@
 #   'TVPEffekseerGLGetProcAddressGeneric'"). The file uses no other EGL symbol, so the header's
 #   include guard is defined for that target and the header is skipped.
 # - krkreffekseer's src/utils.cpp defines TVPUtf8ToUtf16 and TVPUtf16ToUtf8 for the plugin DLL,
-#   which the engine itself defines (CharacterSet.cpp): linked into the engine, they were
-#   duplicate symbols. The plugin is built without that file and uses the engine's.
+#   which the engine itself defines too (CharacterSet.cpp): linked into the engine they were
+#   duplicate symbols. The plugin's own copies are renamed for its sources.
+# - krkreffekseer-odr.cpp defines static members Effekseer declares in its classes, which an
+#   unoptimized build (the debug APK) needs.
 if(TARGET efk_renderer_gl)
   target_compile_definitions(efk_renderer_gl PRIVATE __egl_h_=1)
   message(STATUS "kagex: <EGL/egl.h> skipped in efk_renderer_gl")
 endif()
 if(TARGET krkreffekseer)
   get_target_property(_kagex_efk_type krkreffekseer TYPE)
-  get_target_property(_kagex_efk_dir krkreffekseer SOURCE_DIR)
   if(_kagex_efk_type STREQUAL "STATIC_LIBRARY")
-    set_source_files_properties("${_kagex_efk_dir}/src/utils.cpp" TARGET_DIRECTORY krkreffekseer
-                                PROPERTIES HEADER_FILE_ONLY ON)
-    message(STATUS "kagex: krkreffekseer uses the engine's TVPUtf8ToUtf16/TVPUtf16ToUtf8")
+    target_compile_definitions(krkreffekseer PRIVATE
+      TVPUtf8ToUtf16=kagex_efk_TVPUtf8ToUtf16 TVPUtf16ToUtf8=kagex_efk_TVPUtf16ToUtf8)
+    message(STATUS "kagex: krkreffekseer's own TVPUtf8ToUtf16/TVPUtf16ToUtf8 renamed")
   endif()
+endif()
+if(TARGET efk_core)
+  target_sources(efk_core PRIVATE "${CMAKE_CURRENT_LIST_DIR}/krkreffekseer-odr.cpp")
+  message(STATUS "kagex: Effekseer's static const members defined for unoptimized builds")
 endif()
