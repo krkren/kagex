@@ -1,0 +1,499 @@
+Preset CMake variables:
+
+  CMAKE_CXX_COMPILER="cl"
+  CMAKE_C_COMPILER="cl"
+  CMAKE_TOOLCHAIN_FILE:FILEPATH="D:\a\_temp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_TARGET_TRIPLET="x64-windows-static"
+
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.3).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.3/cmake-4.4.3-windows-x86_64.zip -> cmake-4.4.3-windows-x86_64.zip
+Successfully downloaded cmake-4.4.3-windows-x86_64.zip
+Extracting cmake...
+Detecting compiler hash for triplet x64-windows-static...
+Compiler found: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+Detecting compiler hash for triplet x64-windows...
+Compiler found: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+The following packages will be built and installed:
+    drlibs:x64-windows-static@2026-03-03
+    libebur128:x64-windows-static@1.2.6#3
+    libjpeg-turbo:x64-windows-static@3.2.0#1
+    libogg:x64-windows-static@1.3.6#1
+    libopusenc:x64-windows-static@0.3
+    libpng:x64-windows-static@1.6.59
+  * libspng:x64-windows-static@0.7.4#1
+    libtomcrypt:x64-windows-static@1.18.2#4
+    libtommath:x64-windows-static@1.3.0#3
+    libvorbis:x64-windows-static@1.3.7#4
+    opus:x64-windows-static@1.6.1
+    opusfile:x64-windows-static@0.12+20221121#1
+  * vcpkg-cmake:x64-windows@2025-08-07
+  * vcpkg-cmake-config:x64-windows@2026-07-21
+    zlib:x64-windows-static@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 0 package(s) from D:/a/kagex/kagex/vcpkg-archives in 103 us. Use --debug to see more details.
+Installing 1/15 drlibs:x64-windows-static@2026-03-03...
+drlibs:x64-windows-static@2026-03-03 package ABI: a5fc9a4c3290c3a48d2ce70b7a0d83fdbbfdbd7a1b4b10b19a8d7849a2b8ebc1
+Building drlibs:x64-windows-static@2026-03-03...
+Downloading https://github.com/mackron/dr_libs/archive/fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz -> mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+Successfully downloaded mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/mackron-dr_libs-fa931f3285ced10ace628f7f1ac951e1951e7ea6.tar.gz
+-- Using source at D:/a/_temp/vcpkg/buildtrees/drlibs/src/e1951e7ea6-0953893a9c.clean
+-- Installing: D:/a/_temp/vcpkg/packages/drlibs_x64-windows-static/share/drlibs/copyright
+-- Performing post-build validation
+Starting submission of drlibs:x64-windows-static@2026-03-03 to 1 binary cache(s) in the background
+Elapsed time to handle drlibs:x64-windows-static: 504 ms
+Installing 2/15 vcpkg-cmake:x64-windows@2025-08-07...
+vcpkg-cmake:x64-windows@2025-08-07 package ABI: 1dea2faa63c511d31faaa9d4be41cbe755061f2065699a232a3c22b24e0e6623
+Building vcpkg-cmake:x64-windows@2025-08-07...
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake_x64-windows/share/vcpkg-cmake/vcpkg_cmake_configure.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake_x64-windows/share/vcpkg-cmake/vcpkg_cmake_build.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake_x64-windows/share/vcpkg-cmake/vcpkg_cmake_install.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake_x64-windows/share/vcpkg-cmake/vcpkg-port-config.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake_x64-windows/share/vcpkg-cmake/copyright
+-- Performing post-build validation
+Starting submission of vcpkg-cmake:x64-windows@2025-08-07 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake:x64-windows: 34.8 ms
+Installing 3/15 libebur128:x64-windows-static@1.2.6#3...
+libebur128:x64-windows-static@1.2.6#3 package ABI: 5018d27f62bffee6fd095079e831f8b5077bc6ceb679487d6faa99e465776e8e
+Building libebur128:x64-windows-static@1.2.6#3...
+Downloading https://github.com/jiixyj/libebur128/archive/v1.2.6.tar.gz -> jiixyj-libebur128-v1.2.6.tar.gz
+Successfully downloaded jiixyj-libebur128-v1.2.6.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/jiixyj-libebur128-v1.2.6.tar.gz
+-- Applying patch 0001-remove-warning-message.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libebur128/src/v1.2.6-4d7c659a29.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libebur128_x64-windows-static/lib/pkgconfig/libebur128.pc
+Downloading msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst, trying https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+Successfully downloaded msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+Downloading msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst, trying https://mirror.msys2.org/msys/x86_64/msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+Successfully downloaded msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libebur128_x64-windows-static/debug/lib/pkgconfig/libebur128.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libebur128_x64-windows-static/share/libebur128/copyright
+-- Performing post-build validation
+Starting submission of libebur128:x64-windows-static@1.2.6#3 to 1 binary cache(s) in the background
+Elapsed time to handle libebur128:x64-windows-static: 14 s
+Completed submission of drlibs:x64-windows-static@2026-03-03 to 1 binary cache(s) in 102 ms
+Completed submission of vcpkg-cmake:x64-windows@2025-08-07 to 1 binary cache(s) in 35.2 ms
+Installing 4/15 vcpkg-cmake-config:x64-windows@2026-07-21...
+vcpkg-cmake-config:x64-windows@2026-07-21 package ABI: 3f0e06982b5f2696bae04acd8a5ef7e21cf7b52f99c8a91049806e0dd156490b
+Building vcpkg-cmake-config:x64-windows@2026-07-21...
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake-config_x64-windows/share/vcpkg-cmake-config/vcpkg_cmake_config_fixup.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake-config_x64-windows/share/vcpkg-cmake-config/vcpkg-port-config.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/vcpkg-cmake-config_x64-windows/share/vcpkg-cmake-config/copyright
+-- Skipping post-build validation due to VCPKG_POLICY_EMPTY_PACKAGE
+Starting submission of vcpkg-cmake-config:x64-windows@2026-07-21 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake-config:x64-windows: 41.9 ms
+Installing 5/15 zlib:x64-windows-static@1.3.2#2...
+zlib:x64-windows-static@1.3.2#2 package ABI: fa1de9cceb13c828b60b7a97a4b41f4fa72ea8300541be541323b0da849d9aec
+Building zlib:x64-windows-static@1.3.2#2...
+Downloading https://github.com/madler/zlib/archive/v1.3.2.tar.gz -> madler-zlib-v1.3.2.tar.gz
+Successfully downloaded madler-zlib-v1.3.2.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/madler-zlib-v1.3.2.tar.gz
+-- Applying patch 0001-no-version-script-on-ohos.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/zlib/src/v1.3.2-c19a0bfd23.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/zlib_x64-windows-static/lib/pkgconfig/zlib.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/zlib_x64-windows-static/debug/lib/pkgconfig/zlib.pc
+-- Installing: D:/a/_temp/vcpkg/packages/zlib_x64-windows-static/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/zlib_x64-windows-static/share/zlib/copyright
+-- Performing post-build validation
+Starting submission of zlib:x64-windows-static@1.3.2#2 to 1 binary cache(s) in the background
+Elapsed time to handle zlib:x64-windows-static: 4.9 s
+Completed submission of libebur128:x64-windows-static@1.2.6#3 to 1 binary cache(s) in 47.3 ms
+Completed submission of vcpkg-cmake-config:x64-windows@2026-07-21 to 1 binary cache(s) in 35.7 ms
+Installing 6/15 libspng:x64-windows-static@0.7.4#1...
+libspng:x64-windows-static@0.7.4#1 package ABI: 1dab4d3fbee347af54f95aea18d95dce420699ea66938ce723596935fe44e483
+Building libspng:x64-windows-static@0.7.4#1...
+Downloading https://github.com/randy408/libspng/archive/v0.7.4.tar.gz -> randy408-libspng-v0.7.4.tar.gz
+Successfully downloaded randy408-libspng-v0.7.4.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/randy408-libspng-v0.7.4.tar.gz
+-- Applying patch fix-spngconfig-cmake.patch
+-- Applying patch libspng-pr-286.diff
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libspng/src/v0.7.4-2d78cb2862.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libspng_x64-windows-static/lib/pkgconfig/spng.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libspng_x64-windows-static/debug/lib/pkgconfig/spng.pc
+-- Performing post-build validation
+Starting submission of libspng:x64-windows-static@0.7.4#1 to 1 binary cache(s) in the background
+Elapsed time to handle libspng:x64-windows-static: 2.2 s
+Completed submission of zlib:x64-windows-static@1.3.2#2 to 1 binary cache(s) in 74.5 ms
+Installing 7/15 libjpeg-turbo:x64-windows-static@3.2.0#1...
+libjpeg-turbo:x64-windows-static@3.2.0#1 package ABI: df6bc0392dc191ad193e17660f040392c25889278eefb38f68f799fe26a66ebd
+Building libjpeg-turbo:x64-windows-static@3.2.0#1...
+Downloading https://github.com/libjpeg-turbo/libjpeg-turbo/archive/3.2.0.tar.gz -> libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+Successfully downloaded libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/libjpeg-turbo-libjpeg-turbo-3.2.0.tar.gz
+-- Applying patch add-options-for-docs-headers.patch
+-- Applying patch workaround_cmake_system_processor.patch
+-- Applying patch system-dependency-fixes-pr-901.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libjpeg-turbo/src/3.2.0-6292819c57.clean
+Downloading nasm-3.01-win64.zip, trying https://www.nasm.us/pub/nasm/releasebuilds/3.01/win64/nasm-3.01-win64.zip
+Successfully downloaded nasm-3.01-win64.zip
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libjpeg-turbo_x64-windows-static/lib/pkgconfig/libjpeg.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libjpeg-turbo_x64-windows-static/lib/pkgconfig/libturbojpeg.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libjpeg-turbo_x64-windows-static/debug/lib/pkgconfig/libjpeg.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libjpeg-turbo_x64-windows-static/debug/lib/pkgconfig/libturbojpeg.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libjpeg-turbo_x64-windows-static/share/libjpeg-turbo/copyright
+-- Performing post-build validation
+Starting submission of libjpeg-turbo:x64-windows-static@3.2.0#1 to 1 binary cache(s) in the background
+Elapsed time to handle libjpeg-turbo:x64-windows-static: 43 s
+Completed submission of libspng:x64-windows-static@0.7.4#1 to 1 binary cache(s) in 76.1 ms
+Installing 8/15 libogg:x64-windows-static@1.3.6#1...
+libogg:x64-windows-static@1.3.6#1 package ABI: 81032d55dd1d654a5c717ce3b0b0ff1840e7122d672d19dbd9cb11a228dcf787
+Building libogg:x64-windows-static@1.3.6#1...
+Downloading https://github.com/xiph/ogg/archive/v1.3.6.tar.gz -> xiph-ogg-v1.3.6.tar.gz
+Successfully downloaded xiph-ogg-v1.3.6.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/xiph-ogg-v1.3.6.tar.gz
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libogg/src/v1.3.6-4ad11a7327.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libogg_x64-windows-static/lib/pkgconfig/ogg.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libogg_x64-windows-static/debug/lib/pkgconfig/ogg.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libogg_x64-windows-static/share/libogg/copyright
+-- Performing post-build validation
+Starting submission of libogg:x64-windows-static@1.3.6#1 to 1 binary cache(s) in the background
+Elapsed time to handle libogg:x64-windows-static: 8 s
+Completed submission of libjpeg-turbo:x64-windows-static@3.2.0#1 to 1 binary cache(s) in 692 ms
+Installing 9/15 opus:x64-windows-static@1.6.1...
+opus:x64-windows-static@1.6.1 package ABI: 763c4f7b912626dcee3d14ce910e42dc6d7934b4680893738d145eddbafe1f0c
+Building opus:x64-windows-static@1.6.1...
+Downloading https://github.com/xiph/opus/archive/v1.6.1.tar.gz -> xiph-opus-v1.6.1.tar.gz
+Successfully downloaded xiph-opus-v1.6.1.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/xiph-opus-v1.6.1.tar.gz
+-- Applying patch fix-pkgconfig-version.patch
+-- Applying patch fix-arm64-windows-compile.diff
+-- Using source at D:/a/_temp/vcpkg/buildtrees/opus/src/v1.6.1-12462bbd92.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/opus_x64-windows-static/lib/pkgconfig/opus.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/opus_x64-windows-static/debug/lib/pkgconfig/opus.pc
+-- Installing: D:/a/_temp/vcpkg/packages/opus_x64-windows-static/share/opus/copyright
+-- Performing post-build validation
+Starting submission of opus:x64-windows-static@1.6.1 to 1 binary cache(s) in the background
+Elapsed time to handle opus:x64-windows-static: 16 s
+Completed submission of libogg:x64-windows-static@1.3.6#1 to 1 binary cache(s) in 46.5 ms
+Installing 10/15 libopusenc:x64-windows-static@0.3...
+libopusenc:x64-windows-static@0.3 package ABI: a5c696796b30fec5b5866f5c1de43c700ddd1be650bade9ad1916f5f829584c0
+Building libopusenc:x64-windows-static@0.3...
+Downloading https://github.com/xiph/libopusenc/archive/v0.3.tar.gz -> xiph-libopusenc-v0.3.tar.gz
+Successfully downloaded xiph-libopusenc-v0.3.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/xiph-libopusenc-v0.3.tar.gz
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libopusenc/src/v0.3-f195b51fa2.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Installing: D:/a/_temp/vcpkg/packages/libopusenc_x64-windows-static/share/libopusenc/copyright
+-- Performing post-build validation
+Starting submission of libopusenc:x64-windows-static@0.3 to 1 binary cache(s) in the background
+Elapsed time to handle libopusenc:x64-windows-static: 6.4 s
+Completed submission of opus:x64-windows-static@1.6.1 to 1 binary cache(s) in 278 ms
+Installing 11/15 libpng:x64-windows-static@1.6.59...
+libpng:x64-windows-static@1.6.59 package ABI: d4b8b8d3d34f28587f5b0c1f629f5d8f9b17e7d5e215102bb932a54b66c04adc
+Building libpng:x64-windows-static@1.6.59...
+Downloading https://github.com/pnggroup/libpng/archive/v1.6.59.tar.gz -> pnggroup-libpng-v1.6.59.tar.gz
+Successfully downloaded pnggroup-libpng-v1.6.59.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/pnggroup-libpng-v1.6.59.tar.gz
+-- Applying patch cmake.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libpng/src/v1.6.59-47af3e6fae.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/share/png/vcpkg-cmake-wrapper.cmake
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/share/libpng/libpng-config.cmake
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/lib/pkgconfig/libpng16.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/debug/lib/pkgconfig/libpng16.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/debug/lib/pkgconfig/libpng.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/lib/pkgconfig/libpng.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/share/libpng/usage
+-- Installing: D:/a/_temp/vcpkg/packages/libpng_x64-windows-static/share/libpng/copyright
+-- Performing post-build validation
+Starting submission of libpng:x64-windows-static@1.6.59 to 1 binary cache(s) in the background
+Elapsed time to handle libpng:x64-windows-static: 4.6 s
+Completed submission of libopusenc:x64-windows-static@0.3 to 1 binary cache(s) in 59.6 ms
+Installing 12/15 libtommath:x64-windows-static@1.3.0#3...
+libtommath:x64-windows-static@1.3.0#3 package ABI: 2a9f92ea94284157b334010e0441a371ca41bb4b6069069e41634270296426a4
+Building libtommath:x64-windows-static@1.3.0#3...
+Downloading https://github.com/libtom/libtommath/archive/v1.3.0.tar.gz -> libtom-libtommath-v1.3.0.tar.gz
+Successfully downloaded libtom-libtommath-v1.3.0.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/libtom-libtommath-v1.3.0.tar.gz
+-- Applying patch pkgconfig.diff
+-- Applying patch bcrypt.patch
+-- Applying patch import-lib.patch
+-- Applying patch has-set-double.patch
+-- Applying patch msvc-dce.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libtommath/src/v1.3.0-fc7d67d771.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libtommath_x64-windows-static/lib/pkgconfig/libtommath.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libtommath_x64-windows-static/debug/lib/pkgconfig/libtommath.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libtommath_x64-windows-static/share/libtommath/copyright
+-- Performing post-build validation
+Starting submission of libtommath:x64-windows-static@1.3.0#3 to 1 binary cache(s) in the background
+Elapsed time to handle libtommath:x64-windows-static: 6.5 s
+Completed submission of libpng:x64-windows-static@1.6.59 to 1 binary cache(s) in 203 ms
+Installing 13/15 libtomcrypt:x64-windows-static@1.18.2#4...
+libtomcrypt:x64-windows-static@1.18.2#4 package ABI: 6a99264047abadde17a0171eeb438ec06efa2830a79d5d3bde7d5275c1206515
+Building libtomcrypt:x64-windows-static@1.18.2#4...
+Downloading https://github.com/libtom/libtomcrypt/archive/v1.18.2.tar.gz -> libtom-libtomcrypt-v1.18.2.tar.gz
+Successfully downloaded libtom-libtomcrypt-v1.18.2.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/libtom-libtomcrypt-v1.18.2.tar.gz
+-- Applying patch fix-windows-arm.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libtomcrypt/src/v1.18.2-3c00e3b922.clean
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/debug/lib/tomcrypt.lib
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/lib/tomcrypt.lib
+-- Up-to-date: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_argchk.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_cfg.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_cipher.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_custom.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_hash.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_mac.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_macros.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_math.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_misc.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_pk.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_pkcs.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/include/tomcrypt_prng.h
+-- Installing: D:/a/_temp/vcpkg/packages/libtomcrypt_x64-windows-static/share/libtomcrypt/copyright
+-- Performing post-build validation
+Starting submission of libtomcrypt:x64-windows-static@1.18.2#4 to 1 binary cache(s) in the background
+Elapsed time to handle libtomcrypt:x64-windows-static: 57 s
+Completed submission of libtommath:x64-windows-static@1.3.0#3 to 1 binary cache(s) in 105 ms
+Installing 14/15 libvorbis:x64-windows-static@1.3.7#4...
+libvorbis:x64-windows-static@1.3.7#4 package ABI: 9aa8cc6c261f4a8543ee21a21623a47d83e038b0ede3c0e05869b2d2210c3fd2
+Building libvorbis:x64-windows-static@1.3.7#4...
+Downloading https://github.com/xiph/vorbis/archive/v1.3.7.tar.gz -> xiph-vorbis-v1.3.7.tar.gz
+Successfully downloaded xiph-vorbis-v1.3.7.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/xiph-vorbis-v1.3.7.tar.gz
+-- Applying patch 0001-Dont-export-vorbisenc-functions.patch
+-- Applying patch 0002-Fixup-pkgconfig-libs.patch
+-- Applying patch 0003-def-mingw-compat.patch
+-- Applying patch 0004-ogg-find-dependency.patch
+-- Using source at D:/a/_temp/vcpkg/buildtrees/libvorbis/src/v1.3.7-c32164610e.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/lib/pkgconfig/vorbisfile.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/debug/lib/pkgconfig/vorbis.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/debug/lib/pkgconfig/vorbisenc.pc
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/debug/lib/pkgconfig/vorbisfile.pc
+-- Installing: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/share/libvorbis/usage
+-- Installing: D:/a/_temp/vcpkg/packages/libvorbis_x64-windows-static/share/libvorbis/copyright
+-- Performing post-build validation
+Starting submission of libvorbis:x64-windows-static@1.3.7#4 to 1 binary cache(s) in the background
+Elapsed time to handle libvorbis:x64-windows-static: 4.3 s
+Completed submission of libtomcrypt:x64-windows-static@1.18.2#4 to 1 binary cache(s) in 194 ms
+Installing 15/15 opusfile:x64-windows-static@0.12+20221121#1...
+opusfile:x64-windows-static@0.12+20221121#1 package ABI: ec60910c5e0a3d91401a2c33ad24c4b68672b5f9f6d65f0ecf88f2ca02ac25ac
+Building opusfile:x64-windows-static@0.12+20221121#1...
+Downloading https://github.com/xiph/opusfile/archive/9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz -> xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+Successfully downloaded xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Extracting source D:/a/_temp/vcpkg/downloads/xiph-opusfile-9d718345ce03b2fad5d7d28e0bcd1cc69ab2b166.tar.gz
+-- Using source at D:/a/_temp/vcpkg/buildtrees/opusfile/src/c69ab2b166-6cc7de23ec.clean
+-- Configuring x64-windows-static
+-- Building x64-windows-static-dbg
+-- Building x64-windows-static-rel
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/opusfile_x64-windows-static/lib/pkgconfig/opusfile.pc
+-- Using cached msys2-mingw-w64-x86_64-pkgconf-1~3.0.7-1-any.pkg.tar.zst
+-- Using cached msys2-msys2-runtime-3.6.10-4-x86_64.pkg.tar.zst
+-- Using msys root at D:/a/_temp/vcpkg/downloads/tools/msys2/d5586eb050429df1
+-- Fixing pkgconfig file: D:/a/_temp/vcpkg/packages/opusfile_x64-windows-static/debug/lib/pkgconfig/opusfile.pc
+-- Installing: D:/a/_temp/vcpkg/packages/opusfile_x64-windows-static/share/opusfile/copyright
+-- Installing: D:/a/_temp/vcpkg/packages/opusfile_x64-windows-static/share/opusfile/usage
+-- Performing post-build validation
+Starting submission of opusfile:x64-windows-static@0.12+20221121#1 to 1 binary cache(s) in the background
+Elapsed time to handle opusfile:x64-windows-static: 2.4 s
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+Completed submission of libvorbis:x64-windows-static@1.3.7#4 to 1 binary cache(s) in 194 ms
+Waiting for 1 remaining binary cache submissions...
+Completed submission of opusfile:x64-windows-static@0.12+20221121#1 to 1 binary cache(s) in 60.7 ms (1/1)
+All requested installations completed successfully in: 2.8 min
+-- Running vcpkg install - done
+-- The C compiler identification is MSVC 19.44.35229.0
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+CMake Warning (dev) at C:/Program Files/CMake/share/cmake-3.31/Modules/FetchContent.cmake:1373 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  D:/a/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found ZLIB: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/zs.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/zsd.lib (found version "1.3.2")
+-- Found PNG: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/libpng16.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/libpng16d.lib (found version "1.6.59")
+-- Found JPEG: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/jpeg.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/jpeg.lib (found version "62")
+-- Configuring done (196.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/a/kagex/kagex/kagex/tools/release/build/windows
