@@ -1,0 +1,1018 @@
+13:38:01 TVP Log system initialized with level: 1
+13:38:01 App name: SDL Application
+13:38:01 App version: <unspecified>
+13:38:01 App ID: <unspecified>
+13:38:01 SDL revision: SDL-3.4.0-release-3.4.0
+13:38:01 SDL chose video backend 'windows'
+13:38:01 SDL chose audio backend 'wasapi'
+13:38:01 [stdapp.cpp:MySDL3Application::InitPath:234] data/startup.tjs found, using data/ as project path
+13:38:01 [stdapp.cpp:MySDL3Application::InitPath:262] appPath: D:\a\kagex\kagex\smoke\
+13:38:01 ! [stdapp.cpp:MySDL3Application::InitPath:263] projectPath: D:\a\kagex\kagex\smoke\data/
+13:38:01 [stdapp.cpp:MySDL3Application::InitPath:298] pluginPath: D:\a\kagex\kagex\smoke\plugin64/
+13:38:01 [Application.cpp:tTVPApplication::LoadMessageResource:210] message file: resource://./messages-en.json (language tag: en-US)
+13:38:01 SDL_OpenAudioDeviceStream failed: No default audio device available
+13:38:01 ! Program started on Windows 6.2 (Build 9200) (Windows)
+13:38:01 (info) Rebuilding Auto Path Table ...
+13:38:01 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+13:38:01 ! (info) Loading configuration file "D:\a\kagex\kagex\smoke\config.cf" failed (ignoring) : file not found.
+13:38:01 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/krkrz.cf ext:.cf
+13:38:01 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\krkrz.cf with mode: rb
+13:38:01 ! (info) Loading configuration file "D:\a\kagex\kagex\smoke\krkrz.cf" succeeded.
+13:38:01 SDL chose user_storage backend 'generic'
+13:38:01 ! (info) Loading configuration file "D:\a\kagex\kagex\smoke\savedata\krkrz.cfu" failed (ignoring) : file not found.
+13:38:01 ! (info) Data path : file://./d/a/kagex/kagex/smoke/savedata/
+13:38:01 [PooledAllocator.cpp:TVPPooledAllocator::TVPPooledAllocator:438] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 000001FB4DECD070
+13:38:01 [PooledAllocator.cpp:TVPPooledAllocator::TVPPooledAllocator:438] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 000001FB6DED1070
+13:38:01 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:585] StorageCache: budget set to FileAllocator capacity=256MB
+13:38:01 [PooledAllocator.cpp:TVPPooledAllocator::TVPPooledAllocator:438] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 000001FB7DEEB070
+13:38:01 ! (info) Total physical memory : 17174360064
+13:38:01 ! (info) Selected project directory : file://./d/a/kagex/kagex/smoke/data/
+13:38:01 ! Kirikiri Z Executable core /2.6.5.0 (Compiled on Oct 24 2026 13:33:45) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+13:38:01 ! The details of version information can be perused if -about is attached and started. 
+13:38:01 (info) Rebuilding Auto Path Table ...
+13:38:01 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+13:38:03 system fonts: 99 name(s) registered (loaded on first use)
+13:38:03 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:resource://./elements_basic.ttf size=24576
+13:38:03 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:resource://./elements_basic.ttf
+13:38:03 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:resource://./roboto-regular.ttf size=168260
+13:38:03 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:resource://./roboto-regular.ttf
+13:38:03 [app.cpp:SDL3Application::GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+13:38:03 [FileImpl.cpp:SDL3FileSystem::ExistentFolder:146] Checking if folder exists: D:\a\kagex\kagex\smoke\savedata\
+13:38:03 [FileImpl.cpp:SDL3FileSystem::ExistentFolder:146] Checking if folder exists: D:\a\kagex\kagex\smoke\savedata
+13:38:03 [FileImpl.cpp:SDL3FileSystem::ExistentFolder:146] Checking if folder exists: D:\a\kagex\kagex\smoke\
+13:38:03 [FileImpl.cpp:SDL3FileSystem::MakeDirectory:117] Creating directory: D:\a\kagex\kagex\smoke\savedata
+13:38:03 ! (info) Data path does not exist, trying to make it ... ok.
+13:38:03 [SysInitImpl.cpp:TVPAfterSystemInit:340] ImageCache enabled: limit=512MB (physmem=16378MB, source=BitmapPool)
+13:38:03 ! (info) Specified option(s) (earlier item has more priority) : -datapath=savedata/ -replfile=D:\a\kagex\kagex\smoke\ci-chan -orgname=krkren -appname=kagex -padinterval=70
+13:38:03 [SysInitImpl.cpp:TVPAfterSystemInit:446] CPU SIMD: MMX SSE SSE2 SSE3 SSSE3 SSE4.1 SSE4.2 AVX AVX2 FMA3 (TVPCPUType=0xffdbf120)
+13:38:03 [PooledAllocator.cpp:TVPPooledAllocator::TVPPooledAllocator:438] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 000001FB01D38070
+13:38:03 [GlobalAllocStats.cpp:TVPGlobalAllocStats::Initialize:527] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+13:38:03 (info) Loading startup script : startup.tjs
+13:38:03 ! ReplFileChannel: watching D:\a\kagex\kagex\smoke\ci-chan
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/startup.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\startup.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/startup.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\startup.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/initialize.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\initialize.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/initialize.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\initialize.tjs with mode: rb
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 73 file(s) found, 73 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 73 file(s) found, 73 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 74 file(s) found, 74 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 74 file(s) found, 74 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 74 file(s) found, 74 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 74 file(s) found, 74 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 75 file(s) found, 75 file(s) activated. (3ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 81 file(s) found, 81 file(s) activated. (4ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 85 file(s) found, 85 file(s) activated. (4ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 93 file(s) found, 93 file(s) activated. (4ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 255 file(s) found, 255 file(s) activated. (13ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 255 file(s) found, 255 file(s) activated. (9ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 256 file(s) found, 256 file(s) activated. (10ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 256 file(s) found, 256 file(s) activated. (11ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 256 file(s) found, 256 file(s) activated. (10ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 256 file(s) found, 256 file(s) activated. (10ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 276 file(s) found, 275 file(s) activated. (10ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 276 file(s) found, 275 file(s) activated. (10ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:03 (info) Rebuilding Auto Path Table ...
+13:38:03 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/storages.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\storages.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/storages.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\storages.tjs with mode: rb
+13:38:03 ! OS : Windows 6.2 (Build 9200) (Windows)
+13:38:03 ! KAG : EX 3.27-dev.20070519
+13:38:03 ! Kirikiri : 2.6.5.0
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 AllRegist:1
+13:38:03   RegistItem: fillToProvince
+13:38:03   RegistItem: fillByProvince
+13:38:03   RegistItem: overwrapRect
+13:38:03   RegistItem: clipAlphaRect
+13:38:03   RegistItem: copyAlphaToProvince
+13:38:03   RegistItem: fillAlpha
+13:38:03   RegistItem: copyBottomBlueToTopAlpha
+13:38:03   RegistItem: copyRightBlueToLeftAlpha
+13:38:03 AllRegist:2
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 AllRegist:1
+13:38:03 BeginAttachTJS2Class: layerExImage
+13:38:03   ID: 46
+13:38:03   RegistItem: light
+13:38:03   RegistItem: colorize
+13:38:03   RegistItem: modulate
+13:38:03   RegistItem: noise
+13:38:03   RegistItem: generateWhiteNoise
+13:38:03   RegistItem: gaussianBlur
+13:38:03 EndAttachClass: layerExImage
+13:38:03 AllRegist:2
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 AllRegist:1
+13:38:03 BeginAttachTJS2Class: layerExRaster
+13:38:03   ID: 47
+13:38:03   RegistItem: copyRaster
+13:38:03 EndAttachClass: layerExRaster
+13:38:03 AllRegist:2
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 AllRegist:1
+13:38:03   RegistItem: rehash
+13:38:03 BeginAttachTJS2Class: ScriptsAdd
+13:38:03   ID: 48
+13:38:03   RegistItem: getObjectKeys
+13:38:03   RegistItem: getObjectCount
+13:38:03   RegistItem: getObjectContext
+13:38:03   RegistItem: isNullContext
+13:38:03   RegistItem: equalStruct
+13:38:03   RegistItem: equalStructNumericLoose
+13:38:03   RegistItem: foreach
+13:38:03   RegistItem: getMD5HashString
+13:38:03   RegistItem: clone
+13:38:03   RegistItem: propSet
+13:38:03   RegistItem: propGet
+13:38:03   RegistItem: safeEvalStorage
+13:38:03   RegistItem: stringFuzzySearch
+13:38:03 EndAttachClass: ScriptsAdd
+13:38:03 AllRegist:2
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 AllRegist:1
+13:38:03   RegistItem: shrinkCopyFast
+13:38:03   RegistItem: shrinkCopy
+13:38:03 AllRegist:2
+13:38:03 V2Link
+13:38:03 TVP_PLUGIN_NAME
+13:38:03 AllRegist:0
+13:38:03 ! RichText: using the engine's font service
+13:38:03 AllRegist:1
+13:38:03 BeginRegistClass: RichTextRenderBase
+13:38:03   RegistItem: RichTextRenderBase
+13:38:03   RegistItem: setRenderSize
+13:38:03   RegistItem: setDefault
+13:38:03   RegistItem: setOption
+13:38:03   RegistItem: setFont
+13:38:03   RegistItem: resetFont
+13:38:03   RegistItem: setStyle
+13:38:03   RegistItem: resetStyle
+13:38:03   RegistItem: clear
+13:38:03   RegistItem: render
+13:38:03   RegistItem: newline
+13:38:03   RegistItem: done
+13:38:03   RegistItem: renderOver
+13:38:03   RegistItem: renderLines
+13:38:03   RegistItem: renderCount
+13:38:03   RegistItem: renderDelay
+13:38:03   RegistItem: renderLeft
+13:38:03   RegistItem: renderTop
+13:38:03   RegistItem: renderRight
+13:38:03   RegistItem: renderBottom
+13:38:03   RegistItem: renderText
+13:38:03   RegistItem: timeScale
+13:38:03   RegistItem: fontScale
+13:38:03   RegistItem: defaultFace
+13:38:03   RegistItem: defaultFontSize
+13:38:03   RegistItem: defaultBigFontSize
+13:38:03   RegistItem: defaultSmallFontSize
+13:38:03   RegistItem: defaultLineSize
+13:38:03   RegistItem: defaultLineSpacing
+13:38:03   RegistItem: defaultPitch
+13:38:03   RegistItem: defaultAlign
+13:38:03   RegistItem: defaultValign
+13:38:03   RegistItem: defaultRubySize
+13:38:03   RegistItem: defaultColor
+13:38:03   RegistItem: defaultShadow
+13:38:03   RegistItem: defaultShadowColor
+13:38:03   RegistItem: defaultEdge
+13:38:03   RegistItem: defaultEdgeColor
+13:38:03   RegistItem: defaultBold
+13:38:03   RegistItem: defaultItalic
+13:38:03   RegistItem: drawToLayer
+13:38:03   RegistItem: getCharacters
+13:38:03   RegistItem: getKeyWaits
+13:38:03   RegistItem: getResolvedTimings
+13:38:03   RegistItem: calcShowCount
+13:38:03   RegistItem: calcLineOffset
+13:38:03   RegistItem: getLinkNames
+13:38:03   RegistItem: getLinkRects
+13:38:03   RegistItem: getLinkCharacters
+13:38:03   RegistItem: isLinkContains
+13:38:03   RegistItem: getLinkOfPosition
+13:38:03 EndRegistClass: RichTextRenderBase
+13:38:03 BeginAttachTJS2Class: LayerExRichText
+13:38:03   ID: 50
+13:38:03   RegistItem: drawTextEx
+13:38:03   RegistItem: drawParagraph
+13:38:03   RegistItem: drawStyledText
+13:38:03   RegistItem: drawTextLayout
+13:38:03   RegistItem: drawParagraphLayout
+13:38:03   RegistItem: drawStyledLayout
+13:38:03   RegistItem: drawRectEx
+13:38:03   RegistItem: useCache
+13:38:03   RegistItem: clearCache
+13:38:03   RegistItem: setCacheMaxSize
+13:38:03 EndAttachClass: LayerExRichText
+13:38:03 BeginRegistClass: RichText
+13:38:03   RegistItem: registerFont
+13:38:03   RegistItem: registerVariableFont
+13:38:03   RegistItem: unregisterFont
+13:38:03   RegistItem: registerCollection
+13:38:03   RegistItem: unregisterCollection
+13:38:03   RegistItem: registerLocale
+13:38:03 BeginRegistClass: Style
+13:38:03   RegistItem: Style
+13:38:03   RegistItem: setFonts
+13:38:03   RegistItem: fontSize
+13:38:03   RegistItem: fontWeight
+13:38:03   RegistItem: italic
+13:38:03   RegistItem: letterSpacing
+13:38:03   RegistItem: wordSpacing
+13:38:03   RegistItem: scaleX
+13:38:03   RegistItem: skewX
+13:38:03   RegistItem: fontWidth
+13:38:03   RegistItem: bidi
+13:38:03   RegistItem: setLocale
+13:38:03   RegistItem: clone
+13:38:03 EndSubClass: Style
+13:38:03   RegistItem: Style
+13:38:03 BeginRegistClass: Appearance
+13:38:03   RegistItem: Appearance
+13:38:03   RegistItem: addFill
+13:38:03   RegistItem: addStroke
+13:38:03   RegistItem: addShadow
+13:38:03   RegistItem: setColor
+13:38:03   RegistItem: addColor
+13:38:03   RegistItem: setOutline
+13:38:03   RegistItem: addOutline
+13:38:03   RegistItem: setShadow
+13:38:03   RegistItem: clear
+13:38:03   RegistItem: isEmpty
+13:38:03   RegistItem: count
+13:38:03   RegistItem: clone
+13:38:03 EndSubClass: Appearance
+13:38:03   RegistItem: Appearance
+13:38:03 BeginRegistClass: Layout
+13:38:03   RegistItem: Layout
+13:38:03   RegistItem: layout
+13:38:03   RegistItem: width
+13:38:03   RegistItem: height
+13:38:03   RegistItem: ascent
+13:38:03   RegistItem: descent
+13:38:03   RegistItem: charCount
+13:38:03   RegistItem: clone
+13:38:03 EndSubClass: Layout
+13:38:03   RegistItem: Layout
+13:38:03 BeginRegistClass: ParagraphLayout
+13:38:03   RegistItem: ParagraphLayout
+13:38:03   RegistItem: layout
+13:38:03   RegistItem: lineCount
+13:38:03   RegistItem: totalHeight
+13:38:03   RegistItem: maxWidth
+13:38:03   RegistItem: totalCharCount
+13:38:03   RegistItem: lineSpacing
+13:38:03   RegistItem: breakStrategy
+13:38:03   RegistItem: getLineInfo
+13:38:03   RegistItem: clone
+13:38:03 EndSubClass: ParagraphLayout
+13:38:03   RegistItem: ParagraphLayout
+13:38:03 BeginRegistClass: StyledLayout
+13:38:03   RegistItem: StyledLayout
+13:38:03   RegistItem: layout
+13:38:03   RegistItem: lineCount
+13:38:03   RegistItem: totalCharCount
+13:38:03   RegistItem: maxWidth
+13:38:03   RegistItem: maxHeight
+13:38:03   RegistItem: isValid
+13:38:03   RegistItem: resolveAllTimings
+13:38:03   RegistItem: totalRenderDelay
+13:38:03   RegistItem: calcShowCount
+13:38:03   RegistItem: getKeyWaits
+13:38:03   RegistItem: getResolvedTimings
+13:38:03 EndSubClass: StyledLayout
+13:38:03   RegistItem: StyledLayout
+13:38:03 BeginRegistClass: TextureAtlas
+13:38:03   RegistItem: TextureAtlas
+13:38:03   RegistItem: clear
+13:38:03   RegistItem: addLayout
+13:38:03   RegistItem: addParagraphLayout
+13:38:03   RegistItem: addStyledLayout
+13:38:03   RegistItem: commit
+13:38:03   RegistItem: getCopyRects
+13:38:03 EndSubClass: TextureAtlas
+13:38:03   RegistItem: TextureAtlas
+13:38:03 EndRegistClass: RichText
+13:38:03 AllRegist:2
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/config.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\config.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/config.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\config.tjs with mode: rb
+13:38:03 Config.tjs loaded (7ms)
+13:38:03 Loading KAG System scripts...
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/layerex.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\layerex.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/layerex.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\layerex.tjs with mode: rb
+13:38:03 LayerEx.tjs loaded (8ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/utils.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\utils.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/utils.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\utils.tjs with mode: rb
+13:38:03 Utils.tjs loaded (27ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kaglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kaglayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kaglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kaglayer.tjs with mode: rb
+13:38:03 KAGLayer.tjs loaded (11ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/animkaglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\animkaglayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/animkaglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\animkaglayer.tjs with mode: rb
+13:38:03 AnimKAGLayer.tjs loaded (5ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/buttonlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\buttonlayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/buttonlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\buttonlayer.tjs with mode: rb
+13:38:03 ButtonLayer.tjs loaded (22ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/translayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\translayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/translayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\translayer.tjs with mode: rb
+13:38:03 TransLayer.tjs loaded (9ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/selectlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\selectlayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/selectlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\selectlayer.tjs with mode: rb
+13:38:03 SelectLayer.tjs loaded (30ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/mapselectlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\mapselectlayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/mapselectlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\mapselectlayer.tjs with mode: rb
+13:38:03 MapSelectLayer.tjs loaded (17ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/dialoglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\dialoglayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/dialoglayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\dialoglayer.tjs with mode: rb
+13:38:03 DialogLayer.tjs loaded (40ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/historylayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\historylayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/historylayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\historylayer.tjs with mode: rb
+13:38:03 HistoryLayer.tjs loaded (37ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/bgm.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\bgm.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/bgm.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\bgm.tjs with mode: rb
+13:38:03 BGM.tjs loaded (19ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/se.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\se.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/se.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\se.tjs with mode: rb
+13:38:03 SE.tjs loaded (10ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/movie.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\movie.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/movie.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\movie.tjs with mode: rb
+13:38:03 Movie.tjs loaded (24ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/conductor.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\conductor.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/conductor.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\conductor.tjs with mode: rb
+13:38:03 Conductor.tjs loaded (33ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/updateregion.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\updateregion.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/updateregion.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\updateregion.tjs with mode: rb
+13:38:03 UpdateRegion.tjs loaded (4ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/affinelayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\affinelayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/affinelayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\affinelayer.tjs with mode: rb
+13:38:03 ==== An exception occured at affinelayer.tjs(13)[(top level script) global], VM ip = 108 ====
+13:38:03 -- Disassembled VM code --
+13:38:03 #(13) 		Plugins.link("plugin/layerExDraw.dll");
+13:38:03 00000101 const %1, *7	// *7 = (string)"plugin/layerExDraw.dll"
+13:38:03 00000104 gpd %2, %-2.*4	// *4 = (string)"Plugins"
+13:38:03 00000108 calld %0, %2.*5(%1)	// *5 = (string)"link"
+13:38:03 -- Register dump --
+13:38:03 %-3=(void)  %-2=(object)(object 0x9cfd34ad78:0x0)
+13:38:03 %-1=(object)(object 0x1fb4d09b550:0x1fb4d09b550)  %0=(void)
+13:38:03 %1=(string)"plugin/layerExDraw.dll"  %2=(object)(object 0x1fb4d0e91f0:0x0)
+13:38:03 %3=(string)"undefined"  %4=(string)"undefined"
+13:38:03 ---------------------------------------------------------------------------------------------
+13:38:03 AffineLayer.tjs loaded (90ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/animationlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\animationlayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/animationlayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\animationlayer.tjs with mode: rb
+13:38:03 AnimationLayer.tjs loaded (33ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/graphiclayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\graphiclayer.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/graphiclayer.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\graphiclayer.tjs with mode: rb
+13:38:03 GraphicLayer.tjs loaded (48ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_fire.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_fire.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_fire.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_fire.tjs with mode: rb
+13:38:03 ==== An exception occured at gfx_fire.tjs(9)[(top level script) global], VM ip = 40 ====
+13:38:03 -- Disassembled VM code --
+13:38:03 #(9) 		Plugins.link("plugin/gfxEffect.dll");
+13:38:03 00000033 const %1, *4	// *4 = (string)"plugin/gfxEffect.dll"
+13:38:03 00000036 gpd %2, %-2.*5	// *5 = (string)"Plugins"
+13:38:03 00000040 calld %0, %2.*6(%1)	// *6 = (string)"link"
+13:38:03 -- Register dump --
+13:38:03 %-5=(object)(object 0x1fb022d75c0:0x0)  %-4=(void)
+13:38:03 %-3=(object)(object 0x1fb4d09b550:0x1fb4d09b550)  %-2=(object)(object 0x9cfd34ad78:0x0)
+13:38:03 %-1=(object)(object 0x1fb4d09b550:0x1fb4d09b550)  %0=(void)
+13:38:03 %1=(string)"plugin/gfxEffect.dll"  %2=(object)(object 0x1fb4d0e91f0:0x0)
+13:38:03 %3=(string)"undefined"  %4=(void)  %5=(object)(object 0x0:0x0)
+13:38:03 ----------------------------------------------------------------------------------------
+13:38:03 GFX_Fire.tjs loaded (18ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_movie.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_movie.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_movie.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_movie.tjs with mode: rb
+13:38:03 GFX_Movie.tjs loaded (7ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_flash.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_flash.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_flash.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_flash.tjs with mode: rb
+13:38:03 ==== An exception occured at gfx_flash.tjs(9)[(top level script) global], VM ip = 40 ====
+13:38:03 -- Disassembled VM code --
+13:38:03 #(9) 		Plugins.link("plugin/flashPlayer.dll");
+13:38:03 00000033 const %1, *4	// *4 = (string)"plugin/flashPlayer.dll"
+13:38:03 00000036 gpd %2, %-2.*5	// *5 = (string)"Plugins"
+13:38:03 00000040 calld %0, %2.*6(%1)	// *6 = (string)"link"
+13:38:03 -- Register dump --
+13:38:03 %-3=(object)(object 0x1fb02309470:0x1fb02308e30)  %-2=(object)(object 0x9cfd34ad78:0x0)
+13:38:03 %-1=(object)(object 0x1fb4d09b550:0x1fb4d09b550)  %0=(void)
+13:38:03 %1=(string)"plugin/flashPlayer.dll"  %2=(object)(object 0x1fb4d0e91f0:0x0)
+13:38:03 %3=(string)"undefined"  %4=(int)2  %5=(string)"alpha"
+13:38:03 -----------------------------------------------------------------------------------------
+13:38:03 GFX_Flash.tjs loaded (10ms)
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_particle.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_particle.tjs with mode: rb
+13:38:03 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_particle.tjs ext:.tjs
+13:38:03 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_particle.tjs with mode: rb
+13:38:04 GFX_Particle.tjs loaded (15ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_amovie.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_amovie.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/gfx_amovie.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\gfx_amovie.tjs with mode: rb
+13:38:04 V2Link
+13:38:04 TVP_PLUGIN_NAME
+13:38:04 AllRegist:0
+13:38:04 AllRegist:1
+13:38:04 BeginRegistClass: AlphaMovie
+13:38:04   RegistItem: AlphaMovie
+13:38:04   RegistItem: open
+13:38:04   RegistItem: clear
+13:38:04   RegistItem: isPlaying
+13:38:04   RegistItem: play
+13:38:04   RegistItem: stop
+13:38:04   RegistItem: setPosition
+13:38:04   RegistItem: setNextMovieFile
+13:38:04   RegistItem: showNextImage
+13:38:04   RegistItem: numOfFrame
+13:38:04   RegistItem: frame
+13:38:04   RegistItem: loop
+13:38:04   RegistItem: nextLoop
+13:38:04   RegistItem: preloadSamples
+13:38:04   RegistItem: left
+13:38:04   RegistItem: top
+13:38:04   RegistItem: screenWidth
+13:38:04   RegistItem: screenHeight
+13:38:04   RegistItem: FPSScale
+13:38:04   RegistItem: FPSRate
+13:38:04 EndRegistClass: AlphaMovie
+13:38:04 AllRegist:2
+13:38:04 GFX_AMovie.tjs loaded (18ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/messagelayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\messagelayer.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/messagelayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\messagelayer.tjs with mode: rb
+13:38:04 MessageLayer.tjs loaded (207ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/menus.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\menus.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/menus.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\menus.tjs with mode: rb
+13:38:04 Menus.tjs loaded (27ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/defaultmover.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\defaultmover.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/defaultmover.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\defaultmover.tjs with mode: rb
+13:38:04 DefaultMover.tjs loaded (9ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/action.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\action.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/action.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\action.tjs with mode: rb
+13:38:04 Action.tjs loaded (48ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/mainwindow.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\mainwindow.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/mainwindow.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\mainwindow.tjs with mode: rb
+13:38:04 MainWindow.tjs loaded (436ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/world.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\world.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/world.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\world.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/yaml.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\yaml.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/yaml.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\yaml.tjs with mode: rb
+13:38:04 YAML.tjs loaded (15ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvbase.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvbase.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvbase.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvbase.tjs with mode: rb
+13:38:04 KAGEnvBase.tjs loaded (4ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvimage.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvimage.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvimage.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvimage.tjs with mode: rb
+13:38:04 Warning: Substitution in boolean context (use form of '(A=B)!=0' to compare to zero) at kagenvimage.tjs line 2509
+13:38:04 KAGEnvImage.tjs loaded (92ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvlayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvlayer.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvlayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvlayer.tjs with mode: rb
+13:38:04 KAGEnvLayer.tjs loaded (30ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvevent.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvevent.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvevent.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvevent.tjs with mode: rb
+13:38:04 KAGEnvEvent.tjs loaded (3ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvstage.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvstage.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvstage.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvstage.tjs with mode: rb
+13:38:04 KAGEnvStage.tjs loaded (13ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvlevellayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvlevellayer.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvlevellayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvlevellayer.tjs with mode: rb
+13:38:04 KAGEnvLevelLayer.tjs loaded (6ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvsimplelayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvsimplelayer.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvsimplelayer.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvsimplelayer.tjs with mode: rb
+13:38:04 KAGEnvSimpleLayer.tjs loaded (5ms)
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvcharacter.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvcharacter.tjs with mode: rb
+13:38:04 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvcharacter.tjs ext:.tjs
+13:38:04 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvcharacter.tjs with mode: rb
+13:38:05 KAGEnvCharacter.tjs loaded (59ms)
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvbgm.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvbgm.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvbgm.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvbgm.tjs with mode: rb
+13:38:05 KAGEnvBGM.tjs loaded (11ms)
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvse.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvse.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvse.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvse.tjs with mode: rb
+13:38:05 KAGEnvSE.tjs loaded (8ms)
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvironment.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvironment.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/kagenvironment.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\kagenvironment.tjs with mode: rb
+13:38:05 KAGEnvironment.tjs loaded (110ms)
+13:38:05 world.tjs loaded (392ms)
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/override.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\override.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/override.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\override.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/myhistorylayer.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\myhistorylayer.tjs with mode: rb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/myhistorylayer.tjs ext:.tjs
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\myhistorylayer.tjs with mode: rb
+13:38:05 MyHistoryLayer.tjs loaded (40ms)
+13:38:05 Override.tjs loaded (79ms)
+13:38:05 Script loading took 1877ms
+13:38:05 [form.cpp:TVPUpdateBaselineTextInput:121] BaselineTextInput: driver=windows screenKB=0 hasKB=1 steamdeck=0 imeMode=0 -> start
+13:38:05 [form.cpp:SDL3WindowForm::checkTouchDevice:242] Touch Device ID: 18446744073709551614, Name: pen_input
+13:38:05 ! [form.cpp:TVPCreateGLContextWithFallback:294] SDL_GL_CreateContext failed (Could not create EGL context (call to eglCreateContext failed, reporting an error of EGL_BAD_ATTRIBUTE)); retrying with GLES 3.1
+13:38:05 [OpenGLError.cpp:InitGLES:49] Loaded GLES 3.1
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\savecheck with mode: wb
+13:38:05 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/savedata/savecheck ext:
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\savecheck with mode: rb
+13:38:05 Save data storage location: file://./d/a/kagex/kagex/smoke/savedata/
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: c:\windows\fonts\yugothm.ttc with mode: rb
+13:38:05 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:file://./c/windows/fonts/yugothm.ttc size=13923436
+13:38:05 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:file://./c/windows/fonts/yugothm.ttc
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: c:\windows\fonts\yugothr.ttc with mode: rb
+13:38:05 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:file://./c/windows/fonts/yugothr.ttc size=13851052
+13:38:05 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:file://./c/windows/fonts/yugothr.ttc
+13:38:05 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\notosansjp-regular.otf with mode: rb
+13:38:05 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:file://./d/a/kagex/kagex/smoke/template/system/notosansjp-regular.otf size=4548148
+13:38:05 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:file://./d/a/kagex/kagex/smoke/template/system/notosansjp-regular.otf
+13:38:05 (info) Rebuilding Auto Path Table ...
+13:38:05 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\datasc.ksd with mode: wb
+13:38:06 (info) Rebuilding Auto Path Table ...
+13:38:06 (info) Total 280 file(s) found, 279 file(s) activated. (18ms)
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\datasu.ksd with mode: wb
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\datasc.ksd with mode: wb
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\datasu.ksd with mode: wb
+13:38:06 (info) Rebuilding Auto Path Table ...
+13:38:06 (info) Total 280 file(s) found, 279 file(s) activated. (14ms)
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/plugin.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\plugin.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/plugin.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\plugin.tjs with mode: rb
+13:38:06 Plugin.tjs loaded (18ms)
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/envinit.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\envinit.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/envinit.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\envinit.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/standview.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\standview.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/standview.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\standview.tjs with mode: rb
+13:38:06 standview.tjs loaded (92ms)
+13:38:06 KAGMainWindow constructor took 926ms
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/afterinit.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\afterinit.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/afterinit.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\afterinit.tjs with mode: rb
+13:38:06 AfterInit.tjs loaded (4ms)
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/first.ks ext:.ks
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\first.ks with mode: rb
+13:38:06 (info) Startup script ended.
+13:38:06 Window shown: KAGEX Sample
+13:38:06 window show:No gamepads connected
+13:38:06 [form.cpp:SDL3WindowForm::AppEvent:1511] Window resized: 1920x1080
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/scenario/macro.ks ext:.ks
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\scenario\macro.ks with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/logo.ks ext:.ks
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\logo.ks with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/logo.png ext:.png
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\logo.png with mode: rb
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_AMD_performance_monitor
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_base_vertex_base_instance_shader_builtin
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_blob_cache
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_client_arrays
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_clip_cull_distance
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_copy_texture_3d
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_depth_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_framebuffer_blit
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_framebuffer_multisample
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_get_serialized_context_string
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_get_tex_level_parameter
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_instanced_arrays
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_lossy_etc_decode
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_memory_size
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_multiview_multisample
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_pack_reverse_row_order
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_polygon_mode
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_program_binary_readiness_query
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_program_cache_control
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_provoking_vertex
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_renderability_validation
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_request_extension
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_robust_client_memory
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_shader_pixel_local_storage
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_shader_pixel_local_storage_coherent
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_stencil_texturing
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_texture_compression_dxt3
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_texture_compression_dxt5
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_texture_multisample
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_texture_usage
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_ANGLE_translated_shader_source
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_APPLE_clip_distance
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_bind_generates_resource
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_bind_uniform_location
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_copy_compressed_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_copy_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_lose_context
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_CHROMIUM_sync_query
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_EGL_image_external_wrap_modes
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_blend_func_extended
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_blend_minmax
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_clip_control
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_clip_cull_distance
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_color_buffer_float
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_color_buffer_half_float
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_conservative_depth
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_debug_label
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_debug_marker
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_depth_clamp
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_discard_framebuffer
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_disjoint_timer_query
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_draw_buffers
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_draw_buffers_indexed
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_draw_elements_base_vertex
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_float_blend
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_frag_depth
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_instanced_arrays
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_map_buffer_range
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_multisampled_render_to_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_occlusion_query_boolean
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_polygon_offset_clamp
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_read_format_bgra
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_render_snorm
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_robustness
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_sRGB
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_shader_texture_lod
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_border_clamp
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_buffer
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_bptc
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_dxt1
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_rgtc
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_compression_s3tc_srgb
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_filter_anisotropic
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_format_BGRA8888
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_mirror_clamp_to_edge
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_norm16
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_rg
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_storage
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_texture_type_2_10_10_10_REV
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_EXT_unpack_subimage
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_KHR_debug
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_KHR_parallel_shader_compile
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_KHR_robustness
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_EGL_stream_consumer_external
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_fence
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_framebuffer_blit
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_pack_subimage
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_pixel_buffer_object
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_NV_shader_noperspective_interpolation
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_EGL_image
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_EGL_image_external
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_EGL_image_external_essl3
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_EAC_R11_signed_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_EAC_R11_unsigned_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_EAC_RG11_signed_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_EAC_RG11_unsigned_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_RGB8_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_RGBA8_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_punchthroughA_RGBA8_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_punchthroughA_sRGB8_alpha_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_sRGB8_alpha8_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_compressed_ETC2_sRGB8_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_depth24
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_depth32
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_draw_buffers_indexed
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_draw_elements_base_vertex
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_element_index_uint
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_fbo_render_mipmap
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_get_program_binary
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_mapbuffer
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_packed_depth_stencil
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_rgb8_rgba8
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_sample_variables
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_shader_multisample_interpolation
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_standard_derivatives
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_surfaceless_context
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_border_clamp
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_buffer
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_float
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_float_linear
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_half_float
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_half_float_linear
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_npot
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_stencil8
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_texture_storage_multisample_2d_array
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OES_vertex_array_object
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OVR_multiview
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_OVR_multiview2
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:660] OpenGL Extension:GL_WEBGL_video_texture
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:682] GLES: BGRA Texture Supported
+13:38:06 [GLTexture.cpp:GLTexture::InitSupported:685] GLES: Texture Swizzle Supported
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/ci-helper.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-helper.tjs with mode: rb
+13:38:06 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/ci-helper.tjs ext:.tjs
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-helper.tjs with mode: rb
+13:38:06 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: c:\windows\fonts\msgothic.ttc with mode: rb
+13:38:06 [StorageCache.cpp:EntryStorageCache:214] StorageCache:entry:file://./c/windows/fonts/msgothic.ttc size=8990160
+13:38:06 [StorageCache.cpp:TVPGetStorageCacheBuffer:292] StorageCache:getbuf:file://./c/windows/fonts/msgothic.ttc
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/main/title.ks ext:.ks
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\main\title.ks with mode: rb
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\data_anchor.ksd with mode: wb
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\savedata\data_anchor.ksd with mode: rb+
+13:38:11 (info) Rebuilding Auto Path Table ...
+13:38:11 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/title.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\title.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/start_normal.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\start_normal.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/start_over.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\start_over.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/continue_normal.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\continue_normal.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/continue_over.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\continue_over.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/extra_normal.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\extra_normal.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/extra_over.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\extra_over.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/config_normal.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\config_normal.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/config_over.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\config_over.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/exit_normal.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\exit_normal.png with mode: rb
+13:38:11 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/exit_over.png ext:.png
+13:38:11 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\exit_over.png with mode: rb
+13:38:13 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\01-title.png with mode: wb
+13:38:14 (info) Rebuilding Auto Path Table ...
+13:38:14 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:14 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\title-layers.png with mode: wb
+13:38:16 (info) Rebuilding Auto Path Table ...
+13:38:16 (info) Total 280 file(s) found, 279 file(s) activated. (12ms)
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/scenario/s0001.ks ext:.ks
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\scenario\s0001.ks with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/messagewindow.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\messagewindow.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_save_normal.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_save_normal.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_save_over.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_save_over.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_load_normal.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_load_normal.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_load_over.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_load_over.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_skip_normal.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_skip_normal.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_skip_over.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_skip_over.png with mode: rb
+13:38:16 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_skip_on.png ext:.png
+13:38:16 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_skip_on.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_auto_normal.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_auto_normal.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_auto_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_auto_over.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_auto_on.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_auto_on.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_log_normal.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_log_normal.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_log_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_log_over.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_config_normal.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_config_normal.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_config_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_config_over.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_auto_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_auto_over.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/msg_skip_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\msg_skip_over.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/select_normal.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\select_normal.png with mode: rb
+13:38:17 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/select_over.png ext:.png
+13:38:17 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\select_over.png with mode: rb
+13:38:18 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\02-demo-menu.png with mode: wb
+13:38:19 (info) Rebuilding Auto Path Table ...
+13:38:19 (info) Total 280 file(s) found, 279 file(s) activated. (12ms)
+13:38:19 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/scenario/transition.ks ext:.ks
+13:38:19 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\scenario\transition.ks with mode: rb
+13:38:21 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/pagebreak.asd ext:.asd
+13:38:21 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\pagebreak.asd with mode: rb
+13:38:21 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/pagebreak.png ext:.png
+13:38:21 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\pagebreak.png with mode: rb
+13:38:21 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/pagebreak.asd ext:.asd
+13:38:21 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\pagebreak.asd with mode: rb
+13:38:21 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/pagebreak_a.png ext:.png
+13:38:21 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\pagebreak_a.png with mode: rb
+13:38:22 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\03-transition-00.png with mode: wb
+13:38:22 (info) Rebuilding Auto Path Table ...
+13:38:22 (info) Total 280 file(s) found, 279 file(s) activated. (12ms)
+13:38:22 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/bgimage/bg01_01.png ext:.png
+13:38:22 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\bgimage\bg01_01.png with mode: rb
+13:38:24 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/fgimage/ch_0_0_1.png ext:.png
+13:38:24 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\fgimage\ch_0_0_1.png with mode: rb
+13:38:27 ==== An exception occured at kagenvironment.tjs(1870)[(function) loadBGFromCache], VM ip = 114 ====
+13:38:27 -- Disassembled VM code --
+13:38:27 #(1870) 		lay.loadImages(storage);
+13:38:27 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+13:38:27 -- Register dump --
+13:38:27 %-6=(object)(object 0x1fb044d0390:0x1fb044d0390)  %-5=(object)(object 0x1fb0455d0f0:0x1fb0455d0f0)
+13:38:27 %-4=(string)"bg01_02"  %-3=(object)(object 0x1fb0455c9a0:0x1fb0455c9a0)
+13:38:27 %-2=(object)(object 0x9cfd3433b8:0x0)  %-1=(object)(object 0x1fb032659d0:0x1fb032659d0)  %0=(void)
+13:38:27 %1=(object)(object 0x1fb0455d0f0:0x1fb0455d0f0)  %2=(object)(object 0x1fb030a02f0:0x1fb030a02f0)
+13:38:27 %3=(object)(object 0x1fb02f709c0:0x1fb02f709c0)  %4=(object)(object 0x1fb030a02f0:0x1fb030a02f0)
+13:38:27 %5=(object)(object 0x1fb4d09b550:0x0)  %6=(object)(object 0x1fb4d0e60f0:0x0)
+13:38:27 ---------------------------------------------------------------------------------------------------
+13:38:29 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\04-transition-04.png with mode: wb
+13:38:30 (info) Rebuilding Auto Path Table ...
+13:38:30 (info) Total 280 file(s) found, 279 file(s) activated. (14ms)
+13:38:37 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\05-transition-08.png with mode: wb
+13:38:38 (info) Rebuilding Auto Path Table ...
+13:38:38 (info) Total 280 file(s) found, 279 file(s) activated. (11ms)
+13:38:44 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/scenario/char.ks ext:.ks
+13:38:44 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\scenario\char.ks with mode: rb
+13:38:44 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/bgm/bgm01.ogg ext:.ogg
+13:38:44 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\bgm\bgm01.ogg with mode: rb
+13:38:44 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+13:38:44 ! [AudioStream.cpp:InitMiniAudio:134] failed to initialize miniaudio engine: Invalid argument
+13:38:51 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\06-ingame.png with mode: wb
+13:38:53 (info) Rebuilding Auto Path Table ...
+13:38:53 (info) Total 280 file(s) found, 279 file(s) activated. (13ms)
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_base.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_base.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_play_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_play_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_play_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_play_over.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/sliderlayer.tjs ext:.tjs
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\sliderlayer.tjs with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/template/system/sliderlayer.tjs ext:.tjs
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\template\system\sliderlayer.tjs with mode: rb
+13:38:53 SliderLayer.tjs loaded (24ms)
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_first_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_first_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_first_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_first_over.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_uppage_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_uppage_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_uppage_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_uppage_over.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_downpage_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_downpage_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_downpage_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_downpage_over.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_last_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_last_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_last_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_last_over.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_bar_normal.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_bar_normal.png with mode: rb
+13:38:53 [StorageIntf.cpp:_TVPCreateStream:2029] _TVPCreateStream: file://./d/a/kagex/kagex/smoke/data/image/log_bar_over.png ext:.png
+13:38:53 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\data\image\log_bar_over.png with mode: rb
+13:38:54 [FileImpl.cpp:tTVPLocalFileStream::Open:237] Opening file: d:\a\kagex\kagex\smoke\ci-out\07-history.png with mode: wb
+13:38:54 (info) Rebuilding Auto Path Table ...
+13:38:54 (info) Total 280 file(s) found, 279 file(s) activated. (14ms)
+13:38:55 ! ReplFileChannel: stopped
+13:38:55 [GraphicsLoaderIntf.cpp:TVPClearGraphicCache:1487] ImageCache:clearAll: dropped=48 bytes=41389508
+13:38:55 V2Unlink
+13:38:55 AllUnregist:0
+13:38:55 AllUnregist:1
+13:38:55 BeginUnregistClass: AlphaMovie
+13:38:55   RemoveClassInfo: AlphaMovie
+13:38:55 EndUnregistClass: AlphaMovie
+13:38:55 AllUnregist:2
+13:38:55 V2Unlink ...failed
+13:38:55 V2Unlink
+13:38:55 AllUnregist:0
+13:38:55 AllUnregist:1
+13:38:55 AllUnregist:2
+13:38:55 V2Unlink
+13:38:55 AllUnregist:0
+13:38:55 AllUnregist:1
+13:38:55 BeginDetach: ScriptsAdd
+13:38:55 DetachItem: getObjectKeys
+13:38:55 DetachItem: getObjectCount
+13:38:55 DetachItem: getObjectContext
+13:38:55 DetachItem: isNullContext
+13:38:55 DetachItem: equalStruct
+13:38:55 DetachItem: equalStructNumericLoose
+13:38:55 DetachItem: foreach
+13:38:55 DetachItem: getMD5HashString
+13:38:55 DetachItem: clone
+13:38:55 DetachItem: propSet
+13:38:55 DetachItem: propGet
+13:38:55 DetachItem: pfMemberEnsure
+13:38:55 DetachItem: pfMemberMustExist
+13:38:55 DetachItem: pfIgnoreProp
+13:38:55 DetachItem: pfHiddenMember
+13:38:55 DetachItem: pfStaticMember
+13:38:55 DetachItem: safeEvalStorage
+13:38:55 DetachItem: stringFuzzySearch
+13:38:55 EndDetach: ScriptsAdd
+13:38:55 AllUnregist:2
+13:38:55 V2Unlink ...failed
+13:38:55 V2Unlink ...failed
+13:38:55 V2Unlink
+13:38:55 AllUnregist:0
+13:38:55 AllUnregist:1
+13:38:55 AllUnregist:2
+13:38:55 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:321] MemoryAllocator leak [FileAllocator] tag=FileCache alloc=6 free=0 current=39.58MB total_alloc=39.58MB total_freed=0B
+13:38:55 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:321] MemoryAllocator leak [SoundAllocator] tag=Sound alloc=618 free=172 current=169.80KB total_alloc=427.36KB total_freed=257.56KB
+13:38:55 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:321] MemoryAllocator leak [BitmapAllocator] tag=BitmapBits alloc=1036 free=980 current=163.71MB total_alloc=5.24GB total_freed=5.08GB
