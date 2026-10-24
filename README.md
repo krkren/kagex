@@ -23,6 +23,8 @@ Or download a package from [Releases](https://github.com/krkren/kagex/releases):
 
 On the desktop the game starts full screen the first time; after that it remembers whether you left it in a window (F5 switches). The `_release` and `_debug` zips hold the same game files with a release or a debug build of the engine. The game font (Noto Sans JP) comes with it, so no fonts need installing. The web and iOS builds draw text with the engine's own renderer instead of krkr_richtext, which doesn't build for them yet, so lines aren't kerned there.
 
+The demo menu's Effekseer Effects plays [Effekseer](https://effekseer.github.io/) particle effects (petals, sparkles, fireworks, a magic circle, a shockwave) with the krkreffekseer plugin and OpenGL ES, on Windows, Linux, macOS, Android and the web. The iOS build doesn't have the plugin yet, so the demo says so there. A game plays them on World or KAG layers (`efk` in `doc/world.txt` and `doc/kagex.txt`).
+
 With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 
 ## Releasing a game
@@ -40,7 +42,7 @@ The macOS tool isn't notarized: after unzipping, run `xattr -d com.apple.quarant
 - `linux-config.json`, `web-config.json`, `app-config.json`, `ios-config.json`: the settings for Wamsoft's platform kits ([krkrz_linux](https://github.com/wamsoft/krkrz_linux), [krkrz_web](https://github.com/wamsoft/krkrz_web), [krkrz_android](https://github.com/wamsoft/krkrz_android), [krkrz_ios](https://github.com/wamsoft/krkrz_ios)), which build the Linux (Steam), web, Android and iOS packages from krkrz_dev without changing it. `.github/workflows/platforms.yml` shows the steps, and `platform/` holds the icons and the Android app name.
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
 - `TODO.md`: planned features.
-- `tools/assets/`: the scripts that make the sample's images (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds), with the original art they start from.
+- `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`), with the original art they start from.
 - `tools/release/`: kagex-release (above): its source, `scripts/` that make the engine packages it uses from the release builds, and its smoke test. `.github/workflows/release-tool.yml` builds it for all three systems.
 - `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release. `--target android|ios-sim|web` runs the sample's part in the platform builds: on an emulator, the iOS Simulator or headless Chromium.
 
@@ -52,7 +54,7 @@ These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. 
 
 - The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8), buttons and the controller instead; in KAG's debug mode (on unless the engine gets `-debugwin=no`), Shift+F12 shows the debug window and Shift+F11 switches the debug level.
 - Scene playback with `[scenestart]` (`psbfile.dll`).
-- The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`).
+- The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`). Effekseer effects (`efk`) can take the fire effect's place.
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
 - Native Windows dialogs (`win32dialog.dll`), used by the stand-picture viewer tool.
 - `.emf`/`.wmf` vector images (`layerExDraw.dll`).

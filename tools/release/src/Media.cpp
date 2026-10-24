@@ -98,6 +98,58 @@ std::string utf16ToUtf8(const std::string& in, size_t from)
 	return out;
 }
 
+//---------------------------------------------------------------------------
+// Effekseer effects (.efk, and .efkefc, whose first BIN_ chunk is the same binary) name their
+// textures, sounds, models and materials at the start of the binary, and the runtime opens them
+// by those names (relative to the effect, or by the bare name on the auto path)
+//---------------------------------------------------------------------------
+bool isEffect(const std::string& ext) { return ext == ".efk" || ext == ".efkefc"; }
+
+uint32_t le32(const std::string& s, size_t at)
+{
+	return (unsigned char)s[at] | ((unsigned char)s[at + 1] << 8) | ((unsigned char)s[at + 2] << 16) | ((uint32_t)(unsigned char)s[at + 3] << 24);
+}
+
+std::vector<std::string> effectResources(const std::string& raw)
+{
+	std::string body;
+	if (raw.size() >= 8 && raw.compare(0, 4, "EFKE") == 0) {
+		for (size_t at = 8; at + 8 <= raw.size();) {
+			const size_t size = le32(raw, at + 4);
+			if (raw.compare(at, 4, "BIN_") == 0) {
+				if (at + 8 + size <= raw.size()) body = raw.substr(at + 8, size);
+				break;
+			}
+			at += 8 + size;
+		}
+	} else {
+		body = raw;
+	}
+	std::vector<std::string> names;
+	if (body.size() < 8 || body.compare(0, 4, "SKFE") != 0) return names;
+	const int32_t version = (int32_t)le32(body, 4);
+	// colour images, then normal and distortion images (9+), sounds (1+), models (6+), materials (15+)
+	const int lists = 1 + (version >= 9 ? 2 : 0) + (version >= 1 ? 1 : 0) + (version >= 6 ? 1 : 0) + (version >= 15 ? 1 : 0);
+	size_t at = 8;
+	for (int l = 0; l < lists; ++l) {
+		if (at + 4 > body.size()) break;
+		const uint32_t count = le32(body, at);
+		at += 4;
+		if (count > 1024) break;
+		for (uint32_t i = 0; i < count; ++i) {
+			if (at + 4 > body.size()) return names;
+			const uint32_t chars = le32(body, at);   // with the terminating 0
+			at += 4;
+			if (chars > 1024 || at + chars * 2 > body.size()) return names;
+			std::string name = utf16ToUtf8(body.substr(at, chars ? (chars - 1) * 2 : 0), 0);
+			std::replace(name.begin(), name.end(), '\\', '/');
+			if (!name.empty()) names.push_back(name);
+			at += chars * 2;
+		}
+	}
+	return names;
+}
+
 std::string utf8ToUtf16(const std::string& s)
 {
 	std::string out = "\xFF\xFE";
@@ -463,6 +515,16 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		if (any) scripts.push_back(&f);
 	}
 
+	// files Effekseer effects name: an effect can't be rewritten, so they always keep their format
+	// (by leaf, as the runtime also looks a name up on the auto path)
+	std::set<std::string> forEffects;   // lower leaves
+	for (const auto& f : files) {
+		if (!isEffect(f.ext)) continue;
+		std::string raw;
+		if (!krt::readFile(f.path, raw)) continue;
+		for (const auto& name : effectResources(raw)) forEffects.insert(lower(leafOf(name)));
+	}
+
 	// the jobs
 	std::vector<Job> jobs;
 	for (const auto& f : files) {
@@ -474,6 +536,7 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		const bool referenced = referencedBy.count(leaf) > 0;
 		if (isAudioSource(f.ext)) {
 			if (audioTo == "keep" && f.ext == ".wav") continue;
+			if (forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 			// FLAC can't be played, so it is converted (and its references rewritten) either way
 			if (referenced && !rewrite && f.ext != ".flac") { ++result.keptByReference; continue; }
 			j.audio = true;
@@ -489,6 +552,7 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 				j.params = "audio|wav";
 			}
 		} else if (isImageSource(f.ext) && !imagesKept) {
+			if (forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 			if (referenced && !rewrite) { ++result.keptByReference; continue; }
 			const std::string stem = lower(stemOf(f.leaf));
 			j.mask = stem.size() > 2 && stem.compare(stem.size() - 2, 2, "_m") == 0 && imageStems.count(stem.substr(0, stem.size() - 2));
@@ -501,6 +565,8 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 	}
 	if (result.keptByReference)
 		result.notes.push_back(std::to_string(result.keptByReference) + " files weren't converted because scripts name them with their extension (Media > Names with extensions)");
+	if (result.keptForEffects)
+		result.notes.push_back(std::to_string(result.keptForEffects) + " files weren't converted because Effekseer effects use them");
 	if (jobs.empty()) return true;
 
 	// convert, in parallel

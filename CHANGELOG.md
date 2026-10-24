@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Effekseer effects**: the `efk` flip type plays [Effekseer](https://effekseer.github.io/) effects (`.efk`, `.efkefc`, `.efkzip`) on World layers (`[newlay name=fx efk=sparkle show]`) and KAG layers (`[image layer=0 flip=sparkle.efk]`), drawn by the krkreffekseer plugin with OpenGL ES. Options set the size (`efkmag`), canvas, start frame, position, tilt and rotation, zoom, speed, colour, looping, triggers and dynamic inputs; `efkstop` lets an effect wind down, and the `efkdone` trigger goes when every effect has ended (`doc/world.txt`, `doc/kagex.txt`). Effects are kept in save data. Without the plugin or OpenGL ES an effect shows nothing (the console says why). `data/effect` is searched for them.
+- The sample's Effects demo (in the demo menu) with five effects of its own: glowing petals, sparkles, fireworks, a magic circle and a shockwave. `tools/assets/make_effects.py` makes them, drawing the textures and writing the effects with `efkformat.py`, a Python reader and writer for Effekseer's runtime format. It replaces the fire effect demo, which needed a plugin the SDL engine doesn't have.
+- kagex-release keeps the textures and sounds an effect names in their own format, since the effect can't be rewritten to name converted files.
+- The Android and web builds include krkreffekseer, as the desktop builds do. The iOS build doesn't yet (Xcode's project generator fails with it, as with krkr_richtext), so effects show nothing there.
+
+### Changed
+
+- A World layer's redraw (a colour change such as `[env grayscale=true]`) no longer restarts a flip whose type says so (`keepOnRedraw`); effects play on through it.
+
 ## 0.3.1
 
 ### Added

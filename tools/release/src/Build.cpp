@@ -345,6 +345,7 @@ private:
 		media_.set("bytesBefore", Json((long long)m.bytesBefore));
 		media_.set("bytesAfter", Json((long long)m.bytesAfter));
 		media_.set("keptByReference", Json(m.keptByReference));
+		media_.set("keptForEffects", Json(m.keptForEffects));
 		media_.set("rewrittenScripts", Json(m.rewrittenScripts));
 	}
 

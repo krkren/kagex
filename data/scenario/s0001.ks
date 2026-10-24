@@ -12,6 +12,8 @@
 
 [seladd text="World Extension: Extended Action" storage=action.ks]
 
+[seladd text="Effekseer Effects" storage=effect.ks]
+
 [select]
 
 [jump target=*start]

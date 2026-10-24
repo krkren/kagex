@@ -30,6 +30,7 @@ struct MediaResult {
 	int images = 0, sounds = 0;      ///< converted
 	int fromCache = 0;
 	int keptByReference = 0;         ///< named with their extension in a script
+	int keptForEffects = 0;          ///< textures and sounds of Effekseer effects (.efk, .efkefc)
 	int rewrittenScripts = 0;
 	uint64_t bytesBefore = 0, bytesAfter = 0;
 	std::vector<std::string> notes;

@@ -1,0 +1,371 @@
+// GFX_Effekseer.tjs - Effekseer effects as a flip type ("efk")
+//
+//   [image layer=0 page=fore flip=Laser02.efkefc visible=true]       (KAG layers)
+//   [newlay name=fx efk=Laser02 efkmag=40 show]                      (World layers)
+//
+// The krkreffekseer plugin (EffekseerDevice, EffekseerEffect, EffekseerPlayer) draws an effect
+// with OpenGL ES into an offscreen buffer (the engine's GLCompositor) the size of the flip's
+// canvas, which is read back into this layer every frame and copied to the layers showing it.
+// The effect sits at the canvas centre (moved by efkx/efky); the canvas is the screen's size
+// unless efkwidth/efkheight say otherwise, and the layer showing it is placed like any other.
+//
+// The read-back holds the effect's colours over black. Its alpha is no coverage mask (Effekseer
+// blends alpha with GL_MAX, and premultiplied output would need ltAddAlpha, which skips pixels of
+// alpha 0), so a layer showing an effect is drawn additively: ltAlpha and ltOpaque, which can't
+// show one, become ltAdditive, and other blend modes asked for (type= / mode=) are kept. Additive
+// effects look as in Effekseer's editor; the dark parts of normally blended ones don't darken
+// what's behind them.
+//
+// Without the plugin or OpenGL ES (the browser build at engine 2.6.5, a GPU draw device), the
+// first effect logs why, and every effect ends at once without showing anything.
+
+// The window's Effekseer device: a GLCompositor and an EffekseerDevice shared by every effect,
+// made when the first one plays. It's a KAG plugin so that the window releases the GL objects
+// while its OpenGL context still exists.
+class KAGEffekseer extends KAGPlugin
+{
+	var window;
+	var compositor;
+	var device;
+	var available = false;
+	var reason = "";     // why not, when not available
+	var effects = %[];   // "<placed path>|<magnification>" => %[ effect, count ]
+	var flips = [];      // EffekseerFlip instances holding a player
+
+	function KAGEffekseer(win) {
+		super.KAGPlugin();
+		window = win;
+		try {
+			if (typeof global.GLCompositor == "undefined")
+				throw new Exception("this engine has no GLCompositor");
+			KAGLinkPlugin("plugin/krkreffekseer.dll") if (typeof global.EffekseerDevice == "undefined");
+			if (typeof global.EffekseerDevice == "undefined")
+				throw new Exception("the krkreffekseer plugin isn't there");
+			compositor = new GLCompositor(win);
+			if (!compositor.GLGetProcAddress)
+				throw new Exception("the draw device has no OpenGL ES context");
+			compositor.makeCurrent();
+			device = new EffekseerDevice(compositor);
+			available = true;
+		} catch (e) {
+			reason = e.message;
+			dm("Effekseer effects are unavailable: " + reason);
+			release();
+		}
+	}
+
+	function finalize() {
+		for (var i = flips.count - 1; i >= 0; i--) {
+			try { flips[i].releasePlayer(); } catch {}
+		}
+		flips.clear();
+		release();
+		super.finalize(...);
+	}
+
+	function release() {
+		var list = [];
+		list.assign(effects);
+		for (var i = 1; i < list.count; i += 2) {
+			try { invalidate list[i].effect; } catch {}
+		}
+		(Dictionary.clear incontextof effects)();
+		try { invalidate device if (device !== void); } catch {}
+		try { invalidate compositor if (compositor !== void); } catch {}
+		device = compositor = void;
+		available = false;
+	}
+
+	// a loaded effect for a placed path and magnification, shared while in use: returns its key
+	function acquire(path, mag) {
+		var key = path + "|" + mag;
+		var ent = effects[key];
+		if (ent === void) {
+			var effect = new EffekseerEffect(device);
+			try {
+				effect.load(path, mag);
+			} catch (e) {
+				invalidate effect;
+				throw e;
+			}
+			ent = effects[key] = %[ effect:effect, count:0 ];
+		}
+		ent.count++;
+		return key;
+	}
+	function effectOf(key) {
+		var ent = effects[key];
+		return ent !== void ? ent.effect : void;
+	}
+	function unacquire(key) {
+		var ent = effects[key];
+		if (ent === void) return;
+		if (--ent.count <= 0) {
+			delete effects[key];
+			try { invalidate ent.effect; } catch {}
+		}
+	}
+
+	// draws a player into layer (the compositor calls back with this = the compositor)
+	function drawPlayer(w, h, player) {
+		var dev = player.device;
+		dev.onBeginScene(w, h);
+		player.render();
+		dev.onEndScene();
+	}
+	function render(layer, player) {
+		compositor.capture(layer, drawPlayer, player, 0);
+	}
+}
+
+// the window's KAGEffekseer, made on first use
+function KAGEffekseerOf(win) {
+	if (typeof win.effekseerSystem == "undefined" || win.effekseerSystem === void) {
+		var sys = new KAGEffekseer(win);
+		win.effekseerSystem = sys;
+		win.addPlugin(sys) if (typeof win.addPlugin != "undefined");
+	}
+	return win.effekseerSystem;
+}
+
+class EffekseerFlip extends GenericFlip, Layer
+{
+	var FLIP  = global.GenericFlip;
+	var SUPER = global.Layer;
+
+	var defaultMag    = 50;   // pixels per effect unit, unless efkmag says
+	var frameInterval = 15;   // ms between the frames drawn (about 60 a second)
+	var restoreFrames = 600;  // a restored effect starts at most this far in (play() replays them all)
+
+	var system;
+	var player;
+	var effectKey;
+	var file = "";
+	var mag;
+	var loop = false;
+	var stopped = false;
+	var options = %[];        // the options in effect (flipStore keeps them)
+	var frames = 0.0;         // frames played (at 60 a second), for flipStore
+	var lastTick;
+	var empty = false;        // the last frame drawn had no particles
+	var startOptions;         // the options it started with: a World layer's own (its flipInfo)
+
+	// options kept as the effect's state; efkstop and efktrigger are actions
+	var stateOptions = [ "loop", "efkx", "efky", "efkrotx", "efkroty", "efkrot", "efkzoom",
+						 "efkspeed", "efkcolor", "efkinput" ];
+
+	function EffekseerFlip(win) {
+		FLIP.GenericFlip(win);
+		SUPER.Layer(win, win.primaryLayer);
+		name = "EffekseerFlip";
+		system = KAGEffekseerOf(win);
+	}
+
+	function finalize() {
+		releasePlayer();
+		SUPER.finalize(...);
+		FLIP.finalize();
+	}
+
+	function releasePlayer() {
+		if (player !== void) {
+			try { invalidate player; } catch {}
+			player = void;
+		}
+		if (system !== void && isvalid system) {
+			system.unacquire(effectKey) if (effectKey !== void);
+			system.flips.remove(this, true);
+		}
+		effectKey = void;
+	}
+
+	// ends the flip with nothing showing
+	function finish() {
+		releasePlayer();
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		showFrame();
+		flipStop();
+	}
+
+	function showFrame() {
+		for (var i = flipLayers.count - 1; i >= 0; i--) {
+			var lay = flipLayers[i];
+			lay.assignImagesForMovie(this);
+			var t = lay.type;
+			lay.type = ltAdditive if (t == ltAlpha || t == ltOpaque);
+		}
+	}
+
+	function flipStart(storage, elm) {
+		releasePlayer();
+		elm = %[] if (elm === void);
+		file = storage;
+		name = "Effekseer:" + storage;
+		(Dictionary.clear incontextof options)();
+		loop = stopped = empty = false;
+		frames = 0.0;
+		lastTick = void;
+		startOptions = elm;
+
+		var prim = window.primaryLayer;
+		var w = elm.efkwidth  !== void ? (int)+elm.efkwidth  : prim.width;
+		var h = elm.efkheight !== void ? (int)+elm.efkheight : prim.height;
+		setImageSize(w, h);
+		setSizeToImageSize();
+		fillRect(0, 0, w, h, 0);
+
+		// stopped before (a World layer redrawn after efkstop), or no way to draw: nothing to show
+		if ((elm.efkstop !== void && +elm.efkstop) || !system.available) {
+			finish();
+			return;
+		}
+
+		var fn = getExistFileNameAutoExtFill(storage, "efkefc", "efk", "efkzip");
+		if (fn == "") throw new Exception(@"Effekseer effect ${storage} not found");
+		mag = elm.efkmag !== void ? +elm.efkmag : defaultMag;
+		effectKey = system.acquire(Storages.getPlacedPath(fn), mag);
+		player = new EffekseerPlayer(system.device);
+		player.loadEffect(system.effectOf(effectKey));
+		system.flips.add(this);
+
+		setStateOptions(elm);
+		// efkframe: start that far in (an effect that fills the screen over time can start full)
+		frames = elm.efkframe !== void ? (int)+elm.efkframe : 0;
+		player.play((int)frames);
+		// play() puts the effect's dynamic inputs back to its defaults: the options go after it
+		flipSetOptions(elm);
+	}
+
+	function flipSetOptions(elm) {
+		if (elm === void || player === void) return;
+		setStateOptions(elm);
+		if (elm.efktrigger !== void) {
+			var list = ((string)elm.efktrigger).split(",");
+			for (var i = 0; i < list.count; i++) player.sendTrigger(+list[i]);
+			// a World layer passes every option it was given each time: send a trigger once
+			delete elm.efktrigger;
+		}
+		if (elm.efkstop !== void && +elm.efkstop && !stopped) {
+			player.stopRoot();
+			stopped = true;
+			loop = false;
+		}
+	}
+
+	function setStateOptions(elm) {
+		for (var i = stateOptions.count - 1; i >= 0; i--) {
+			var key = stateOptions[i];
+			options[key] = elm[key] if (elm[key] !== void);
+		}
+		with (options) {
+			player.setCoord(+.efkx, +.efky);
+			player.setRotate(+.efkrotx, +.efkroty, +.efkrot);
+			var zoom = .efkzoom !== void ? +.efkzoom / 100 : 1.0;
+			player.setZoom(zoom, zoom);
+			player.speed = .efkspeed !== void ? +.efkspeed : 1.0;
+			player.color = colorOf(.efkcolor);
+			setInputs(.efkinput) if (.efkinput !== void);
+			loop = .loop !== void && +.loop && !stopped;
+		}
+	}
+
+	// 0xAARRGGBB, or 0xRRGGBB (opaque: an alpha of 0 would hide the effect)
+	function colorOf(v) {
+		if (v === void) return 0xffffffff;
+		var c = (int)+v;
+		c |= 0xff000000 if (c >= 0 && c <= 0xffffff);
+		return c;
+	}
+
+	// "index:value,..." (an index, or a name from an .efkzip's effect.json)
+	function setInputs(v) {
+		var list = ((string)v).split(",");
+		for (var i = 0; i < list.count; i++) {
+			var pair = list[i].split(":");
+			if (pair.count < 2) continue;
+			var key = pair[0].trim();
+			if (key == "") continue;
+			var c = key.charAt(0);
+			if (c >= "0" && c <= "9") player.setDynamicInput(+key, +pair[1]);
+			else try { player.setDynamicInputByName(key, +pair[1]); }
+			catch (e) { dm(@"Effekseer effect ${file}: no dynamic input named ${key}"); }
+		}
+	}
+
+	function flipUpdate(tick) {
+		if (player === void) {
+			finish();
+			return;
+		}
+		lastTick = tick - frameInterval if (lastTick === void);
+		var dt = tick - lastTick;
+		if (dt < frameInterval) return;
+		lastTick = tick;
+		dt = 100 if (dt > 100);
+		try {
+			player.progress(dt);
+			frames += dt * 0.06 * player.speed;
+			if (!player.playing) {
+				if (!loop) {
+					// over: a World layer redrawn later (a colour change) doesn't play it again
+					startOptions.efkstop = true if (startOptions !== void && isvalid startOptions);
+					finish();
+					return;
+				}
+				player.play(0);
+				frames = 0.0;
+				setStateOptions(options);   // play() reset the dynamic inputs
+			}
+			// nothing to draw twice in a row: the canvas is still clear
+			if (player.instanceCount == 0) {
+				if (empty) return;
+				empty = true;
+			} else {
+				empty = false;
+			}
+			system.render(this, player);
+		} catch (e) {
+			dm(@"Effekseer effect ${file} stopped: ${e.message}");
+			finish();
+			return;
+		}
+		showFrame();
+	}
+
+	function flipStore(dic) {
+		// an effect fading out after efkstop isn't kept
+		if (dic === void || player === void || stopped) return;
+		dic.file    = file;
+		dic.mag     = mag;
+		dic.width   = imageWidth;
+		dic.height  = imageHeight;
+		dic.frame   = (int)frames;
+		dic.options = %[];
+		(Dictionary.assign incontextof dic.options)(options);
+	}
+
+	function flipRestore(dic) {
+		if (dic === void || dic.file == "") return; // flipUpdate ends it
+		var elm = %[];
+		(Dictionary.assign incontextof elm)(dic.options) if (dic.options !== void);
+		elm.efkmag    = dic.mag;
+		elm.efkwidth  = dic.width;
+		elm.efkheight = dic.height;
+		elm.efkframe  = dic.frame < restoreFrames ? dic.frame : restoreFrames;
+		flipStart(dic.file, elm);
+	}
+}
+
+// Registration
+GenericFlip.Entry(
+	%[
+		"type"     => "efk",                          // Registration tag ([newlay efk=...])
+		"class"    => EffekseerFlip,                  // Controller class
+		"trigger"  => "efkdone",                      // Trigger sent when every effect has ended
+		"ext"      => [ "efkefc", "efk", "efkzip" ],  // Extensions
+		"options"  => [ "loop", "efkmag", "efkwidth", "efkheight", "efkframe", "efkx", "efky",
+						"efkrotx", "efkroty", "efkrot", "efkzoom", "efkspeed", "efkcolor",
+						"efkinput", "efktrigger", "efkstop" ], // Option values (for KAGEnvLayer)
+		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
+		"keepOnRedraw" => true,                       // Plays on through a World layer's redraw
+		]);

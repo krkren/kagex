@@ -12,6 +12,7 @@ It then runs template/ as a game of its own, the way a new game starts out, and 
 it starts and that its prompts are drawn in the game window too.
 
 usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [--keep] [--verbose]
+                                 [--effekseer required|optional]
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
@@ -448,8 +449,12 @@ class WebEngine(Engine):
             except SmokeError as e:
                 last = e
             time.sleep(2)
-        raise SmokeError("the engine didn't start in the page (%s); console:\n%s"
+        err = SmokeError("the engine didn't start in the page (%s); console:\n%s"
                          % (last, "\n".join(self.lines[-40:])))
+        # a Playwright left running made the next WebEngine fail ("Sync API inside the
+        # asyncio loop"), hiding whether that page would have started
+        self.stop()
+        raise err
 
     def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
@@ -510,7 +515,7 @@ class WebEngine(Engine):
             self.console.close()
 
 
-DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks"]
+DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks"]
 
 
 def collector():
@@ -559,6 +564,12 @@ def template_steps(eng):
     return steps
 
 
+def effekseer_framework(eng):
+    """Whether the framework plays Effekseer effects (0.4.0 and later): pages.yml runs this test
+    on a release's site, which may be older"""
+    return eng.tjs('return typeof global.KAGEffekseerOf != "undefined" ? 1 : 0;') == 1
+
+
 def sample_steps(eng):
     steps, step = collector()
 
@@ -577,6 +588,9 @@ def sample_steps(eng):
     for demo in DEMOS:
         @step("demo " + demo + " plays to the end")
         def _(demo=demo):
+            if demo == "effect.ks" and not effekseer_framework(eng):
+                print("     (skipped: this build's framework predates the Effekseer demo)", flush=True)
+                return
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
             eng.clicker(True, until="s0001.ks")
@@ -586,6 +600,25 @@ def sample_steps(eng):
     @step("finishing every demo unlocks Extras")
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
+
+    @step("an Effekseer effect draws (--effekseer required), or the build says why not")
+    def _():
+        if not effekseer_framework(eng):
+            print("     (skipped: this build's framework predates Effekseer effects)", flush=True)
+            return
+        why = eng.tjs('var s = KAGEffekseerOf(kag); return s.available ? "" : "unavailable: " + s.reason;')
+        print("     Effekseer:", why or "available", flush=True)
+        if why:
+            if eng.opts.effekseer == "required":
+                raise SmokeError("Effekseer effects are " + why)
+            return
+        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"sparkle.efk", visible:"true"]); return 1;')
+        time.sleep(1.5)
+        n = eng.tjs('var l = kag.fore.layers[0], n = 0; for (var y = 0; y < l.height; y += 8)'
+                    ' for (var x = 0; x < l.width; x += 8) if (l.getMainPixel(x, y)) n++;'
+                    ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return n;')
+        if n <= 0:
+            raise SmokeError("sparkle.efk drew nothing")
 
     @step("the demo menu's choices are drawn in a text font")
     def _():
@@ -722,6 +755,7 @@ def run_project(opts, label, data, make_steps):
         print("FAIL starting the engine:", e)
         print("kept", workdir)
         return 1
+    eng.opts = opts
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
@@ -774,6 +808,9 @@ def main():
     ap.add_argument("--url", help="web: the page that runs the game")
     ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
                     "instead of its own Chromium")
+    ap.add_argument("--effekseer", choices=["required", "optional"], default="optional",
+                    help="whether the build must draw Effekseer effects (the krkreffekseer plugin "
+                    "and OpenGL ES): required fails when it can't; optional reports it")
     opts = ap.parse_args()
     if opts.target != "desktop":
         opts.only = "sample"  # the platform packages hold the sample only

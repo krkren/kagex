@@ -605,7 +605,7 @@ def write_flac(path, frames, rate=44100):
 
 
 def converted_game_tests(game, args):
-    """The build with converted images, in the engine here (headless): a button finds its hover
+    """The build with converted images, in the engine here (headless on Linux): a button finds its hover
     image (start_over is a .tlg now; up to 0.3.0 the framework looked for .png, .tlg5, .tlg6 and
     .bmp only, so no button highlighted), hovering changes the button, and the CG screen finds
     its prepared thumbnails"""
@@ -619,7 +619,8 @@ def converted_game_tests(game, args):
             os.makedirs(self.chan)
             os.makedirs(work / "save")
             env = dict(os.environ)
-            env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+            if os.name != "nt":   # Windows: a real window, GLES from ANGLE (as the tool's own test run)
+                env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
             env.setdefault("SDL_AUDIO_DRIVER", "dummy")
             self.log_path = str(work / "engine.log")
             self.log = open(self.log_path, "wb")
@@ -658,6 +659,24 @@ def converted_game_tests(game, args):
         after = eng.tjs(look % "")
         hover = "changed" if before != after else "unchanged"
         step("converted game: hovering a button highlights it", hover == "changed", str(hover))
+        # Effekseer effects name their textures (effect/Texture/*.png) inside the effect file,
+        # which can't be rewritten, so those keep their format; and where this engine draws
+        # effects, one plays
+        kept = eng.tjs('var dir = Storages.extractStoragePath(Storages.getPlacedPath("sparkle.efk"));'
+                       ' return Storages.isExistentStorage(dir + "Texture/glow.png") ? "png" : "missing";')
+        step("converted game: an effect's textures stay PNG", kept == "png", str(kept))
+        drawn = eng.tjs("""
+            var s = KAGEffekseerOf(kag);
+            if (!s.available) return "unavailable: " + s.reason;
+            kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"sparkle.efk", visible:"true"]);
+            return "started";""")
+        if drawn == "started":
+            time.sleep(1.5)
+            drawn = eng.tjs('var l = kag.fore.layers[0], n = 0; for (var y = 0; y < l.height; y += 8)'
+                            ' for (var x = 0; x < l.width; x += 8) if (l.getMainPixel(x, y)) n++; return n > 0 ? "drawn" : "empty";')
+            step("converted game: an effect draws", drawn == "drawn", str(drawn))
+        else:
+            print("  (effects: %s)" % drawn)
     except Exception as e:
         step("converted game: the title screen", False, str(e)[:1500])
     finally:
@@ -711,14 +730,16 @@ def media_tests(exe, proj, args):
     step("media: files a name pattern covers are kept", have("voice/tv001.wav") and have("voice/tv002.wav"))
     step("media: images to TLG", have("image/title.tlg") and not have("image/title.png") and have("fgimage/ch_0_0_1.tlg"))
     step("media: the framework's images too", have("system/LineBreak.tlg") or have("system/linebreak.tlg") or any((data / "system").glob("*.tlg")))
+    step("media: textures an Effekseer effect names are kept", have("effect/Texture/glow.png") and not have("effect/Texture/glow.tlg")
+         and r.get("media", {}).get("keptForEffects", 0) >= 6, "kept for effects: %s" % r.get("media", {}).get("keptForEffects"))
     m = r.get("media", {})
     step("media: sizes", m.get("bytesAfter", 0) < m.get("bytesBefore", 0), "%s -> %s bytes" % (m.get("bytesBefore"), m.get("bytesAfter")))
     chk = r.get("check", {})
     if args.out and (proj / "release" / "test-run.log").exists():
         shutil.copyfile(proj / "release" / "test-run.log", Path(args.out) / "test-run-media.log")
     step("media: the test run with converted media", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
-    if host == "linux":
-        converted_game_tests(base / "kagex-sample", args)
+    if host in ("linux", "windows"):
+        converted_game_tests(base / ("kagex-sample.exe" if host == "windows" else "kagex-sample"), args)
 
     s["media"]["references"] = "rewrite"
     s["output"]["check"] = False

@@ -362,6 +362,8 @@ Storages.addAutoPath("data/"); // data folder
 
 		"uipsd",    // user interface part images
 
+		"effect",   // Effekseer effects (their textures and models in subfolders beside them)
+
 		];
 
 	for (var i = 0; i < subfolders.count; i++) {
@@ -791,6 +793,8 @@ KAGLoadScript("GFX_Flash.tjs")    if (KAGConfigEnabled("gfxFlashEnabled",    tru
 KAGLoadScript("GFX_Particle.tjs") if (KAGConfigEnabled("gfxParticleEnabled", true));
 
 KAGLoadScript("GFX_AMovie.tjs")   if (KAGConfigEnabled("gfxAlphaMovieEnabled", true));
+
+KAGLoadScript("GFX_Effekseer.tjs") if (KAGConfigEnabled("gfxEffekseerEnabled", true));
 
 
 

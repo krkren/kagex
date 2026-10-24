@@ -1111,6 +1111,36 @@ Clicking cancels the wait and proceeds to the next conversation.
 
 
 
+    efk         Effekseer effect (.efk, .efkefc, .efkzip; the extension can be left out).
+                Drawn by the krkreffekseer plugin with OpenGL ES (template/system/GFX_Effekseer.tjs).
+                The effect sits at the centre of a canvas the screen's size, and the layer is
+                placed like any other (xpos/ypos, actions); efkx/efky move the effect in the canvas.
+                The layer is drawn additively unless `type` names a blend mode other than
+                ltAlpha/ltOpaque. Without the plugin or OpenGL ES nothing shows (the console
+                says why). Options are given with `efk`, or later with `flipupdate`:
+                [fx flipupdate efkstop]
+    efkmag      Pixels per effect unit. Default 50.
+    efkwidth    Canvas width. Default: the screen's.
+    efkheight   Canvas height. Default: the screen's.
+    efkframe    Starts the effect this many frames in (60 a second): one that fills the
+                screen over time can start full.
+    efkx        Horizontal position in the canvas, from its centre (right is +).
+    efky        Vertical position in the canvas, from its centre (down is +).
+    efkrot      Rotation in the screen plane, in degrees (clockwise).
+    efkrotx     Tilt about the horizontal axis, in degrees.
+    efkroty     Turn about the vertical axis, in degrees.
+    efkzoom     Size in % (100: as efkmag gives).
+    efkspeed    Playback speed (1.0: as made).
+    efkcolor    Colour multiplied over the effect: 0xRRGGBB or 0xAARRGGBB.
+    efkinput    Dynamic inputs: index:value[,index:value...].
+    efktrigger  Sends triggers (index[,index...]) to the effect, once.
+    efkstop     Stops making particles; the effect ends once the last one is gone.
+    loop        Plays the effect again each time it ends (until efkstop).
+    efkmag, efkwidth, efkheight and efkframe count when the effect starts.
+    When every effect has ended, the trigger efkdone is sent ([waittrig name=efkdone]).
+
+
+
 
 
 ◆ Properties
