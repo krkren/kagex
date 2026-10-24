@@ -12,7 +12,7 @@ The sample's images are generated here rather than edited by hand.
   touches both.
 - `make_effects.py` makes the Effekseer effects in `data/effect` (sparkle, petals, fireworks,
   shockwave, magiccircle) and their textures in `data/effect/Texture` (a glow, a sparkle, a dot,
-  a ring band, a trail, a petal and a magic circle, drawn in NumPy). Each effect is a function
+  a ring band, a petal and a magic circle, drawn in NumPy). Each effect is a function
   that describes its particle nodes with `efkformat.py`, which writes Effekseer's runtime format
   (`.efk`, version 1.6) without the Effekseer editor; its docstring describes the classes.
   Sizes are in Effekseer units, which the game shows at `efkmag` pixels each (50 by default).

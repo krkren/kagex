@@ -84,16 +84,6 @@ def tex_band():
     save("band.png", (1, 1, 1), a)
 
 
-def tex_streak():
-    """a trail: U runs along it (0 at the tail, 1 at the head), V across it"""
-    w, h = 128, 32
-    u = (np.arange(w) + 0.5) / w
-    v = (np.arange(h) + 0.5) / h
-    along = smooth(u / 0.9) * smooth((1 - u) / 0.1)
-    across = np.exp(-((v - 0.5) / 0.22) ** 2) * 0.7 + np.exp(-((v - 0.5) / 0.07) ** 2) * 0.3
-    save("streak.png", (1, 1, 1), across[:, None] * along[None, :])
-
-
 def tex_petal():
     """a cherry blossom petal, pale pink with a white base and a notch at its tip"""
     n = 96
@@ -159,7 +149,7 @@ def tex_circle():
     save("circle.png", (1, 1, 1), a)
 
 
-TEXTURES = [tex_glow, tex_spark, tex_dot, tex_band, tex_streak, tex_petal, tex_circle]
+TEXTURES = [tex_glow, tex_spark, tex_dot, tex_band, tex_petal, tex_circle]
 
 
 # --------------------------------------------------------------------------------------------
@@ -167,8 +157,8 @@ TEXTURES = [tex_glow, tex_spark, tex_dot, tex_band, tex_streak, tex_petal, tex_c
 # --------------------------------------------------------------------------------------------
 
 TEX = ["Texture/glow.png", "Texture/spark.png", "Texture/dot.png", "Texture/band.png",
-       "Texture/streak.png", "Texture/petal.png", "Texture/circle.png"]
-GLOW, SPARK, DOT, BAND, STREAK, PETAL, CIRCLE = range(len(TEX))
+       "Texture/petal.png", "Texture/circle.png"]
+GLOW, SPARK, DOT, BAND, PETAL, CIRCLE = range(len(TEX))
 
 
 def fx_sparkle(e):
@@ -350,11 +340,29 @@ EFFECTS = {"sparkle": fx_sparkle, "petals": fx_petals, "fireworks": fx_fireworks
            "shockwave": fx_shockwave, "magiccircle": fx_magiccircle}
 
 
+def only_used_textures(effect):
+    """keeps the textures the nodes use (the runtime loads every one listed), renumbered"""
+    nodes = []
+    def walk(n):
+        nodes.append(n)
+        for c in n.children:
+            walk(c)
+    for n in effect.nodes:
+        walk(n)
+    used = sorted({n.texture for n in nodes if n.texture >= 0})
+    index = {old: new for new, old in enumerate(used)}
+    for n in nodes:
+        if n.texture >= 0:
+            n.texture = index[n.texture]
+    effect.textures = [effect.textures[i] for i in used]
+    return effect
+
+
 def make_effects():
     import efkformat as e
     os.makedirs(EFFECT, exist_ok=True)
     for name, make in EFFECTS.items():
-        data = e.write_efk(make(e))
+        data = e.write_efk(only_used_textures(make(e)))
         e.read_efk(data)   # it reads back
         with open(os.path.join(EFFECT, name + ".efk"), "wb") as f:
             f.write(data)
