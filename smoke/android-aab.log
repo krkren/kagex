@@ -1,0 +1,119 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+[build-layout] BUILD_SYSTEM_DIR=/tmp/tmp3mg4490_/My Game/release/.work/android
+[build-layout] PROJECT_DIR     =/tmp/tmp3mg4490_/My Game/release/.work/android
+[playGames] disabled (from app-config.json cmake.plugins)
+[a11y] disabled (from app-config.json cmake.plugins)
+[playGames] disabled: stripped Play Games manifest entries -> /tmp/tmp3mg4490_/My Game/release/.work/android/build/android/app/generated/manifest/AndroidManifest.xml
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+
+> Task :app:generatePadRes
+[generatePadRes] 0 fetch pack(s): []
+
+> Task :app:generateMyappCmake
+[generateMyappCmake] wrote /tmp/tmp3mg4490_/My Game/release/.work/android/build/android/app/generated/cmake/myapp.cmake
+
+> Task :app:packAssets
+[assetPack] 298 file(s) total: 298 copied, 0 unchanged, 0 removed
+
+> Task :app:preBuild
+> Task :app:preReleaseDebugSignedBuild
+> Task :app:generateReleaseDebugSignedResValues
+> Task :app:mapReleaseDebugSignedSourceSetPaths
+> Task :app:processReleaseDebugSignedNavigationResources
+> Task :app:generateReleaseDebugSignedResources
+> Task :app:compileReleaseDebugSignedNavigationResources
+> Task :app:createReleaseDebugSignedCompatibleScreenManifests
+> Task :app:extractDeepLinksReleaseDebugSigned
+> Task :app:processReleaseDebugSignedMainManifest
+> Task :app:mergeReleaseDebugSignedResources
+> Task :app:processReleaseDebugSignedManifest
+> Task :app:processApplicationManifestReleaseDebugSignedForBundle
+> Task :app:checkReleaseDebugSignedAarMetadata
+> Task :app:packageReleaseDebugSignedResources
+> Task :app:extractReleaseDebugSignedVersionControlInfo
+> Task :app:parseReleaseDebugSignedLocalResources
+> Task :app:javaPreCompileReleaseDebugSigned
+> Task :app:processReleaseDebugSignedManifestForPackage
+> Task :app:checkReleaseDebugSignedDuplicateClasses
+> Task :app:mergeReleaseDebugSignedStartupProfile
+> Task :app:generateReleaseDebugSignedAssets UP-TO-DATE
+> Task :app:mergeReleaseDebugSignedAssets
+> Task :app:processReleaseDebugSignedJavaRes NO-SOURCE
+> Task :app:mergeReleaseDebugSignedJniLibFolders
+> Task :app:processReleaseDebugSignedResources
+> Task :app:mergeReleaseDebugSignedNativeLibs
+> Task :app:mergeReleaseDebugSignedJavaResource
+> Task :app:bundleReleaseDebugSignedResources
+> Task :app:desugarReleaseDebugSignedFileDependencies
+
+> Task :app:compileReleaseDebugSignedJavaWithJavac
+Note: /tmp/tmp3mg4490_/My Game/release/.work/android/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:dexBuilderReleaseDebugSigned
+> Task :app:mergeReleaseDebugSignedGlobalSynthetics
+> Task :app:writeReleaseDebugSignedAppMetadata
+
+> Task :app:stripReleaseDebugSignedDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libSDL3.so, libc++_shared.so, libkrkrz.so, libomp.so. Run with --info option to learn more.
+
+> Task :app:mergeReleaseDebugSignedArtProfile
+> Task :app:collectReleaseDebugSignedDependencies
+> Task :app:configureReleaseDebugSignedDependencies
+> Task :app:extractReleaseDebugSignedNativeSymbolTables
+> Task :app:parseReleaseDebugSignedIntegrityConfig
+> Task :app:validateSigningReleaseDebugSigned
+> Task :app:mergeExtDexReleaseDebugSigned
+> Task :app:mergeDexReleaseDebugSigned
+> Task :app:buildReleaseDebugSignedPreBundle
+> Task :app:compileReleaseDebugSignedArtProfile
+> Task :app:packageReleaseDebugSignedBundle
+> Task :app:signReleaseDebugSignedBundle
+> Task :app:produceReleaseDebugSignedBundleIdeListingFile
+> Task :app:createReleaseDebugSignedBundleListingFileRedirect
+> Task :app:bundleReleaseDebugSigned
+
+[Incubating] Problems report is available at: file:///tmp/tmp3mg4490_/My%20Game/release/.work/android/build/android/root/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 31s
+48 actionable tasks: 48 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html
