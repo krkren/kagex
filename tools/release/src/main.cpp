@@ -22,6 +22,10 @@
 #include "krt/app/JobRunner.h"
 #include "krt/app/Text.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 using appserve::Json;
 using namespace kr;

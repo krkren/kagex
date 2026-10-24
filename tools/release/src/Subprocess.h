@@ -1,5 +1,6 @@
 //---------------------------------------------------------------------------
-// Running other programs (curl, java, gradle, xcodebuild, codesign, the engine for the check)
+// Running other programs (curl, java, gradle, xcodebuild, codesign, the engine for the check).
+// Not named Process.h: on Windows that would shadow the C runtime's <process.h>
 //---------------------------------------------------------------------------
 #pragma once
 #include <filesystem>

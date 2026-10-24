@@ -64,5 +64,5 @@ python3 test/smoke.py build/linux/Release/kagex-release --browser   # --browser 
 
 Source: `src/main.cpp` (CLI and the window's API), `Settings` (release.json: defaults,
 validation), `Project` (finding the game, reading its defaults), `Host` (what this computer can
-build), `Plan` (the game's files and the outputs), `Process` (running other programs);
+build), `Plan` (the game's files and the outputs), `Subprocess` (running other programs);
 `web/` is the window.

@@ -44,7 +44,7 @@ add_executable(kagex-release
     src/Settings.cpp
     src/Project.cpp
     src/Host.cpp
-    src/Process.cpp
+    src/Subprocess.cpp
     src/Plan.cpp
 )
 target_include_directories(kagex-release PRIVATE src)
