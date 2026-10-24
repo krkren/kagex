@@ -1,0 +1,267 @@
++ for t in xp3 img audio loop sign
++ krkrz_tools/build/linux/tools/xp3/Release/krkrxp3 --help
++ head -40
+krkrxp3 0.1.0
+
+Usage: krkrxp3 [options] [args...]
+
+Network:
+  --host=ADDR           bind address (default 127.0.0.1; "0.0.0.0" for all)
+  --port=N              port (default 0 = let the OS pick a free one)
+  --listen=HOST:PORT    shorthand for the two above
+
+UI:
+  --web-root=PATH       UI directory or .zip to serve
+  --no-embedded         ignore the embedded UI (development: serve ./web)
+  --spa                 fall back to index.html for unknown paths
+
+Browser:
+  --browser=MODE        app | default | none   (default app)
+  --browser-arg=ARG     extra argument for the browser (repeatable)
+  --no-browser          same as --browser=none
+
+Lifecycle (seconds, 0 disables):
+  --idle-timeout=SEC    exit after no browser for SEC (default 10)
+  --startup-grace=SEC   grace period after start (default 30)
+  --session-ttl=SEC     session liveness timeout (default 20)
+
+REPL:
+  --repl                interactive REPL on stdin
+  --replfile=DIR        file-channel REPL (for agents / CI)
+
+Files:
+  --root=DIR            restrict file API to DIR (repeatable)
+  --allow-write         enable write/mkdir/remove APIs
+
+Security:
+  --token=STR           use a fixed token instead of a random one
+  --no-token            disable token checks (development only)
+
+Misc:
+  --plugin-dir=DIR      plugin search directory (default <exe>/plugins)
+  --no-plugins          do not load dynamic plugins
+  --log-level=LEVEL     verbose | debug | info | warn | error | off
++ for t in xp3 img audio loop sign
++ krkrz_tools/build/linux/tools/img/Release/krkrimg --help
+/home/runner/work/_temp/ec37788e-effb-4742-9de7-a2a146843e23.sh: line 15: krkrz_tools/build/linux/tools/img/Release/krkrimg: No such file or directory
++ head -40
++ s=1
++ for t in xp3 img audio loop sign
++ krkrz_tools/build/linux/tools/audio/Release/krkraudio --help
++ head -40
+krkraudio 0.1.0
+
+Usage: krkraudio [options] [args...]
+
+Network:
+  --host=ADDR           bind address (default 127.0.0.1; "0.0.0.0" for all)
+  --port=N              port (default 0 = let the OS pick a free one)
+  --listen=HOST:PORT    shorthand for the two above
+
+UI:
+  --web-root=PATH       UI directory or .zip to serve
+  --no-embedded         ignore the embedded UI (development: serve ./web)
+  --spa                 fall back to index.html for unknown paths
+
+Browser:
+  --browser=MODE        app | default | none   (default app)
+  --browser-arg=ARG     extra argument for the browser (repeatable)
+  --no-browser          same as --browser=none
+
+Lifecycle (seconds, 0 disables):
+  --idle-timeout=SEC    exit after no browser for SEC (default 10)
+  --startup-grace=SEC   grace period after start (default 30)
+  --session-ttl=SEC     session liveness timeout (default 20)
+
+REPL:
+  --repl                interactive REPL on stdin
+  --replfile=DIR        file-channel REPL (for agents / CI)
+
+Files:
+  --root=DIR            restrict file API to DIR (repeatable)
+  --allow-write         enable write/mkdir/remove APIs
+
+Security:
+  --token=STR           use a fixed token instead of a random one
+  --no-token            disable token checks (development only)
+
+Misc:
+  --plugin-dir=DIR      plugin search directory (default <exe>/plugins)
+  --no-plugins          do not load dynamic plugins
+  --log-level=LEVEL     verbose | debug | info | warn | error | off
++ for t in xp3 img audio loop sign
++ krkrz_tools/build/linux/tools/loop/Release/krkrloop --help
++ head -40
+krkrloop 0.1.0
+
+Usage: krkrloop [options] [args...]
+
+Network:
+  --host=ADDR           bind address (default 127.0.0.1; "0.0.0.0" for all)
+  --port=N              port (default 0 = let the OS pick a free one)
+  --listen=HOST:PORT    shorthand for the two above
+
+UI:
+  --web-root=PATH       UI directory or .zip to serve
+  --no-embedded         ignore the embedded UI (development: serve ./web)
+  --spa                 fall back to index.html for unknown paths
+
+Browser:
+  --browser=MODE        app | default | none   (default app)
+  --browser-arg=ARG     extra argument for the browser (repeatable)
+  --no-browser          same as --browser=none
+
+Lifecycle (seconds, 0 disables):
+  --idle-timeout=SEC    exit after no browser for SEC (default 10)
+  --startup-grace=SEC   grace period after start (default 30)
+  --session-ttl=SEC     session liveness timeout (default 20)
+
+REPL:
+  --repl                interactive REPL on stdin
+  --replfile=DIR        file-channel REPL (for agents / CI)
+
+Files:
+  --root=DIR            restrict file API to DIR (repeatable)
+  --allow-write         enable write/mkdir/remove APIs
+
+Security:
+  --token=STR           use a fixed token instead of a random one
+  --no-token            disable token checks (development only)
+
+Misc:
+  --plugin-dir=DIR      plugin search directory (default <exe>/plugins)
+  --no-plugins          do not load dynamic plugins
+  --log-level=LEVEL     verbose | debug | info | warn | error | off
++ for t in xp3 img audio loop sign
++ krkrz_tools/build/linux/tools/sign/Release/krkrsign --help
++ head -40
+krkrsign 0.1.0
+
+Usage: krkrsign [options] [args...]
+
+Network:
+  --host=ADDR           bind address (default 127.0.0.1; "0.0.0.0" for all)
+  --port=N              port (default 0 = let the OS pick a free one)
+  --listen=HOST:PORT    shorthand for the two above
+
+UI:
+  --web-root=PATH       UI directory or .zip to serve
+  --no-embedded         ignore the embedded UI (development: serve ./web)
+  --spa                 fall back to index.html for unknown paths
+
+Browser:
+  --browser=MODE        app | default | none   (default app)
+  --browser-arg=ARG     extra argument for the browser (repeatable)
+  --no-browser          same as --browser=none
+
+Lifecycle (seconds, 0 disables):
+  --idle-timeout=SEC    exit after no browser for SEC (default 10)
+  --startup-grace=SEC   grace period after start (default 30)
+  --session-ttl=SEC     session liveness timeout (default 20)
+
+REPL:
+  --repl                interactive REPL on stdin
+  --replfile=DIR        file-channel REPL (for agents / CI)
+
+Files:
+  --root=DIR            restrict file API to DIR (repeatable)
+  --allow-write         enable write/mkdir/remove APIs
+
+Security:
+  --token=STR           use a fixed token instead of a random one
+  --no-token            disable token checks (development only)
+
+Misc:
+  --plugin-dir=DIR      plugin search directory (default <exe>/plugins)
+  --no-plugins          do not load dynamic plugins
+  --log-level=LEVEL     verbose | debug | info | warn | error | off
++ krkrz_tools/build/linux/tools/image/Release/krkrimg --cli convert t/title.png --opaque=tlg6 --out=t/img
+変換	t/title.png	→ /home/runner/work/kagex/kagex/t/img/title.tlg	(opaque)
++ krkrz_tools/build/linux/tools/image/Release/krkrimg --cli convert t/ch_0_0_1.png --alpha=tlg6 --out=t/img
+変換	t/ch_0_0_1.png	→ /home/runner/work/kagex/kagex/t/img/ch_0_0_1.tlg	(alpha)
++ mkdir -p t/sep
++ krkrz_tools/build/linux/tools/image/Release/krkrimg --cli convert t/ch_0_0_1.png --opaque=jpg --alpha=sep --quality=90 --out=t/sep
+変換	t/ch_0_0_1.png	→ /home/runner/work/kagex/kagex/t/sep/ch_0_0_1.jpg /home/runner/work/kagex/kagex/t/sep/ch_0_0_1_m.jpg	(alpha)
++ krkrz_tools/build/linux/tools/audio/Release/krkraudio --cli convert t/tone.wav --to=opus --bitrate=96 --out=t/aud
+変換	t/tone.wav	→ t/aud/tone.opus
++ krkrz_tools/build/linux/tools/audio/Release/krkraudio --cli convert t/tone.wav --to=ogg --quality=5 --out=t/aud
+変換	t/tone.wav	→ t/aud/tone.ogg
++ krkrz_tools/build/linux/tools/xp3/Release/krkrxp3 --cli pack kagex/data --out=t/xp3/data.xp3
+t/xp3/data.xp3: 209 ファイル (圧縮 27 / 共有 1 / 除外 0) 26148265 → 26049319 bytes
++ krkrz_tools/build/linux/tools/xp3/Release/krkrxp3 --cli list t/xp3/data.xp3
++ head -20
+     1703472      1703472 -- bgimage/bg01_01.png
+        6108         6108 -- bgimage/black.png
+      292538       292538 -- bgimage/event1.jpg
+        8593         8593 -- bgimage/white.png
+     1474958      1474958 -- bgm/bgm01.ogg
+      668411       668411 -- fgimage/ch_0_0_1.png
+      660159       660159 -- fgimage/ch_0_0_2.png
+      657790       657790 -- fgimage/ch_0_0_3.png
+      322622       322622 -- fgimage/ch_1_0_1.png
+     1272829      1272829 -- fgimage/ch_2_0_1.png
+        6889         6889 -- fgimage/star.png
+        8968         8968 -- image/about_logo.png
+       28212        28212 -- image/cgmode_base.png
+        3636         3636 -- image/cgmode_page0_normal.png
+        3461         3461 -- image/cgmode_page0_over.png
+        3886         3886 -- image/cgmode_page1_normal.png
+        3728         3728 -- image/cgmode_page1_over.png
+        3998         3998 -- image/cgmode_page2_normal.png
+        3813         3813 -- image/cgmode_page2_over.png
+        3803         3803 -- image/cgmode_page3_normal.png
++ krkrz_tools/build/linux/tools/xp3/Release/krkrxp3 --cli verify t/xp3/data.xp3
+正常 209 / 破損 0
++ ls -lR t
+t:
+total 2604
+drwxr-xr-x 2 runner runner    4096 Oct 24 03:21 aud
+-rw-r--r-- 1 runner runner  668411 Oct 24 03:21 ch_0_0_1.png
+drwxr-xr-x 2 runner runner    4096 Oct 24 03:21 img
+drwxr-xr-x 2 runner runner    4096 Oct 24 03:21 sep
+-rw-r--r-- 1 runner runner 1617297 Oct 24 03:21 title.png
+-rw-r--r-- 1 runner runner  352844 Oct 24 03:21 tone.wav
+-rw-r--r-- 1 runner runner      78 Oct 24 03:21 tone.wav.sli
+drwxr-xr-x 2 runner runner    4096 Oct 24 03:21 xp3
+
+t/aud:
+total 72
+-rw-r--r-- 1 runner runner 42082 Oct 24 03:21 tone.ogg
+-rw-r--r-- 1 runner runner 25607 Oct 24 03:21 tone.opus
+
+t/img:
+total 1700
+-rw-r--r-- 1 runner runner  497887 Oct 24 03:21 ch_0_0_1.tlg
+-rw-r--r-- 1 runner runner 1237120 Oct 24 03:21 title.tlg
+
+t/sep:
+total 192
+-rw-r--r-- 1 runner runner 154934 Oct 24 03:21 ch_0_0_1.jpg
+-rw-r--r-- 1 runner runner  37108 Oct 24 03:21 ch_0_0_1_m.jpg
+
+t/xp3:
+total 25440
+-rw-r--r-- 1 runner runner 26049319 Oct 24 03:21 data.xp3
++ cat 't/aud/*.sli'
+cat: 't/aud/*.sli': No such file or directory
++ true
++ grep -v ':.*directory'
++ file krkrz_tools/build/linux/tools/audio/Release/krkraudio krkrz_tools/build/linux/tools/filecheck/Release/krkrcheck krkrz_tools/build/linux/tools/image/Release/krkrimg krkrz_tools/build/linux/tools/loop/Release/krkrloop krkrz_tools/build/linux/tools/sign/Release/krkrsign krkrz_tools/build/linux/tools/xp3/Release/krkrxp3
+krkrz_tools/build/linux/tools/audio/Release/krkraudio:     ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=3108a658fed880ebca1c240618ab397ced0c6f6d, for GNU/Linux 3.2.0, with debug_info, not stripped
+krkrz_tools/build/linux/tools/filecheck/Release/krkrcheck: ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=38e3d5be0dc8ac2dc87888ae219d865b99c963ca, for GNU/Linux 3.2.0, with debug_info, not stripped
+krkrz_tools/build/linux/tools/image/Release/krkrimg:       ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=b9949bd3bafa562259666379b4c12429be1369c0, for GNU/Linux 3.2.0, not stripped
+krkrz_tools/build/linux/tools/loop/Release/krkrloop:       ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=3cc4b3557e0fa2d42d41adb689b776f94e7457fb, for GNU/Linux 3.2.0, with debug_info, not stripped
+krkrz_tools/build/linux/tools/sign/Release/krkrsign:       ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=62e955868f31070acf1ca88eef5145ea4f7486cf, for GNU/Linux 3.2.0, with debug_info, not stripped
+krkrz_tools/build/linux/tools/xp3/Release/krkrxp3:         ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=5e8717da4745cc06d749b948fe86a562c670dbd0, for GNU/Linux 3.2.0, not stripped
++ '[' Linux = Linux ']'
++ ldd krkrz_tools/build/linux/tools/xp3/Release/krkrxp3
+	linux-vdso.so.1 (0x00007ffc68962000)
+	libstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007f8940e00000)
+	libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f8940de0000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f8940a00000)
+	libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f8940cf9000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007f894110a000)
++ '[' Linux = macOS ']'
++ true
++ echo 'status 1'
+status 1
