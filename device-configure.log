@@ -1,0 +1,601 @@
+DIST=1 OUT_DIR="/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist" python3 -I "/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/scripts/gen-config.py"
+[gen-config] BUILD_SYSTEM_DIR=/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+[gen-config] PROJECT_DIR=/Users/runner/work/kagex/kagex/kirikiri/kagex
+[gen-config] config=/Users/runner/work/kagex/kagex/kirikiri/kagex/ios-config.json
+[gen-config] distribution build: REPL disabled
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist/app.cmake
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist/myapp.cmake
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist/Assets.xcassets/Contents.json
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist/Assets.xcassets/AppIcon.appiconset/Contents.json
+[gen-config] icon: default
+[gen-config] [assetPack] 282 file(s) total: 282 copied, 0 unchanged, 0 removed
+cmake -S "/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios" -B "/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist" -G Xcode \
+		-DCMAKE_SYSTEM_NAME=iOS \
+		-DCMAKE_OSX_SYSROOT=iphoneos \
+		-DCMAKE_OSX_ARCHITECTURES=arm64 \
+		-DCMAKE_TOOLCHAIN_FILE="/Users/runner/work/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+		-DVCPKG_TARGET_TRIPLET=arm64-ios-krkrz \
+		-DMYAPP_DIR="/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated-dist" \
+		
+-- krkrz_merge_vcpkg_manifest: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg.json
+--   + /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: libogg, libvorbis, libvpx
+--   - /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: excluded glew, glfw3
+-- Running vcpkg install
+Detecting compiler hash for triplet arm64-osx...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+Detecting compiler hash for triplet arm64-ios-krkrz...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+The following packages will be built and installed:
+  * brotli:arm64-ios-krkrz@1.2.0
+  * bzip2[core,tool]:arm64-ios-krkrz@1.0.8#6
+    freetype[brotli,bzip2,core,png,zlib]:arm64-ios-krkrz@2.13.3
+    glm:arm64-ios-krkrz@1.0.2
+    libjpeg-turbo:arm64-ios-krkrz@3.1.2
+    libogg:arm64-ios-krkrz@1.3.6#1
+    libpng:arm64-ios-krkrz@1.6.51
+    libvorbis:arm64-ios-krkrz@1.3.7#4
+    libvpx:arm64-ios-krkrz@1.16.0#2 -- /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/vcpkg-ports/libvpx
+    miniaudio:arm64-ios-krkrz@0.11.23
+    oniguruma:arm64-ios-krkrz@6.9.10
+    opus:arm64-ios-krkrz@1.5.2#1
+    picojson:arm64-ios-krkrz@1.3.0#3
+    plog:arm64-ios-krkrz@1.1.11
+  * vcpkg-cmake:arm64-osx@2024-04-23
+  * vcpkg-cmake-config:arm64-osx@2024-05-23
+  * vcpkg-cmake-get-vars:arm64-osx@2025-05-29
+    zlib:arm64-ios-krkrz@1.3.1
+Additional packages (*) will be modified to complete this operation.
+Restored 3 package(s) from /Users/runner/.cache/vcpkg/archives in 27.9 ms. Use --debug to see more details.
+Installing 1/18 vcpkg-cmake:arm64-osx@2024-04-23...
+vcpkg-cmake:arm64-osx@2024-04-23 package ABI: edd707b0771dd0e0cfc8b2f3e1af0388e9f9c914a135971b5ffa242f2be7c4dc
+Elapsed time to handle vcpkg-cmake:arm64-osx: 3.97 ms
+Installing 2/18 zlib:arm64-ios-krkrz@1.3.1...
+zlib:arm64-ios-krkrz@1.3.1 package ABI: 68b0decf0d14285d241aa79a6fc85c0039e407f95c9f684b9eadd55ff84f195e
+Building zlib:arm64-ios-krkrz@1.3.1...
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/triplets/arm64-ios-krkrz.cmake: info: loaded overlay triplet from here
+-- Using cached madler-zlib-v1.3.1.tar.gz
+-- Cleaning sources at /Users/runner/work/_temp/vcpkg/buildtrees/zlib/src/v1.3.1-2e5db616bf.clean. Use --editable to skip cleaning for the packages you specify.
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/madler-zlib-v1.3.1.tar.gz
+-- Applying patch 0001-Prevent-invalid-inclusions-when-HAVE_-is-set-to-0.patch
+-- Applying patch 0002-build-static-or-shared-not-both.patch
+-- Applying patch 0003-android-and-mingw-fixes.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/zlib/src/v1.3.1-2e5db616bf.clean
+-- Configuring arm64-ios-krkrz
+-- Building arm64-ios-krkrz-dbg
+-- Building arm64-ios-krkrz-rel
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-krkrz/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-krkrz/lib/pkgconfig/zlib.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-krkrz/debug/lib/pkgconfig/zlib.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-krkrz/share/zlib/copyright
+-- Performing post-build validation
+Starting submission of zlib:arm64-ios-krkrz@1.3.1 to 1 binary cache(s) in the background
+Elapsed time to handle zlib:arm64-ios-krkrz: 5.5 s
+Installing 3/18 vcpkg-cmake-config:arm64-osx@2024-05-23...
+vcpkg-cmake-config:arm64-osx@2024-05-23 package ABI: 4fbee12f6f4445b5ff470dfcf7918e065b64755b9f3cad17e4f87888933cd025
+Elapsed time to handle vcpkg-cmake-config:arm64-osx: 1.44 ms
+Installing 4/18 libpng:arm64-ios-krkrz@1.6.51...
+libpng:arm64-ios-krkrz@1.6.51 package ABI: 611c8926dde86501d5a0b3325b320949b7de50fdc1e2264375ea9187e99b1087
+Building libpng:arm64-ios-krkrz@1.6.51...
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/triplets/arm64-ios-krkrz.cmake: info: loaded overlay triplet from here
+-- Using cached pnggroup-libpng-v1.6.51.tar.gz
+-- Cleaning sources at /Users/runner/work/_temp/vcpkg/buildtrees/libpng/src/v1.6.51-cfe5eddac0.clean. Use --editable to skip cleaning for the packages you specify.
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/pnggroup-libpng-v1.6.51.tar.gz
+-- Applying patch cmake.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/libpng/src/v1.6.51-cfe5eddac0.clean
+-- Configuring arm64-ios-krkrz
+-- Building arm64-ios-krkrz-dbg
+-- Building arm64-ios-krkrz-rel
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/share/png/vcpkg-cmake-wrapper.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/share/libpng/libpng-config.cmake
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/lib/pkgconfig/libpng16.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/debug/lib/pkgconfig/libpng16.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/debug/lib/pkgconfig/libpng.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/lib/pkgconfig/libpng.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/share/libpng/usage
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/libpng_arm64-ios-krkrz/share/libpng/copyright
+-- Performing post-build validation
+Starting submission of libpng:arm64-ios-krkrz@1.6.51 to 1 binary cache(s) in the background
+Elapsed time to handle libpng:arm64-ios-krkrz: 4.3 s
+Completed submission of zlib:arm64-ios-krkrz@1.3.1 to 1 binary cache(s) in 58 ms
+Installing 5/18 bzip2[core,tool]:arm64-ios-krkrz@1.0.8#6...
+...
+-- Looking for putenv - found
+-- Looking for rindex
+-- Looking for rindex - found
+-- Looking for round
+-- Looking for round - found
+-- Looking for roundf
+-- Looking for roundf - found
+-- Looking for scalbn
+-- Looking for scalbn - found
+-- Looking for scalbnf
+-- Looking for scalbnf - found
+-- Looking for setenv
+-- Looking for setenv - found
+-- Looking for sin
+-- Looking for sin - found
+-- Looking for sinf
+-- Looking for sinf - found
+-- Looking for sqr
+-- Looking for sqr - not found
+-- Looking for sqrt
+-- Looking for sqrt - found
+-- Looking for sqrtf
+-- Looking for sqrtf - found
+-- Looking for sscanf
+-- Looking for sscanf - found
+-- Looking for strchr
+-- Looking for strchr - found
+-- Looking for strcmp
+-- Looking for strcmp - found
+-- Looking for strlcat
+-- Looking for strlcat - found
+-- Looking for strlcpy
+-- Looking for strlcpy - found
+-- Looking for strlen
+-- Looking for strlen - found
+-- Looking for strncmp
+-- Looking for strncmp - found
+-- Looking for strnlen
+-- Looking for strnlen - found
+-- Looking for strpbrk
+-- Looking for strpbrk - found
+-- Looking for strrchr
+-- Looking for strrchr - found
+-- Looking for strstr
+-- Looking for strstr - found
+-- Looking for strnstr
+-- Looking for strnstr - found
+-- Looking for strtod
+-- Looking for strtod - found
+-- Looking for strtok_r
+-- Looking for strtok_r - found
+-- Looking for strtol
+-- Looking for strtol - found
+-- Looking for strtoll
+-- Looking for strtoll - found
+-- Looking for strtoul
+-- Looking for strtoul - found
+-- Looking for strtoull
+-- Looking for strtoull - found
+-- Looking for tan
+-- Looking for tan - found
+-- Looking for tanf
+-- Looking for tanf - found
+-- Looking for trunc
+-- Looking for trunc - found
+-- Looking for truncf
+-- Looking for truncf - found
+-- Looking for unsetenv
+-- Looking for unsetenv - found
+-- Looking for vsnprintf
+-- Looking for vsnprintf - found
+-- Looking for vsscanf
+-- Looking for vsscanf - found
+-- Looking for wcsnlen
+-- Looking for wcsnlen - found
+-- Looking for wcscmp
+-- Looking for wcscmp - found
+-- Looking for wcsdup
+-- Looking for wcsdup - found
+-- Looking for wcslcat
+-- Looking for wcslcat - found
+-- Looking for wcslcpy
+-- Looking for wcslcpy - found
+-- Looking for wcslen
+-- Looking for wcslen - found
+-- Looking for wcsncmp
+-- Looking for wcsncmp - found
+-- Looking for wcsstr
+-- Looking for wcsstr - found
+-- Looking for wcstol
+-- Looking for wcstol - found
+-- Looking for strcasestr
+-- Looking for strcasestr - found
+-- Performing Test LIBC_HAS_ISINF
+-- Performing Test LIBC_HAS_ISINF - Success
+-- Performing Test LIBC_ISINF_HANDLES_FLOAT
+-- Performing Test LIBC_ISINF_HANDLES_FLOAT - Success
+-- Performing Test LIBC_HAS_ISINFF
+-- Performing Test LIBC_HAS_ISINFF - Failed
+-- Performing Test LIBC_HAS_ISNAN
+-- Performing Test LIBC_HAS_ISNAN - Success
+-- Performing Test LIBC_ISNAN_HANDLES_FLOAT
+-- Performing Test LIBC_ISNAN_HANDLES_FLOAT - Success
+-- Performing Test LIBC_HAS_ISNANF
+-- Performing Test LIBC_HAS_ISNANF - Failed
+-- Looking for fdatasync
+-- Looking for fdatasync - not found
+-- Looking for gethostname
+-- Looking for gethostname - found
+-- Looking for getpagesize
+-- Looking for getpagesize - found
+-- Looking for getresgid
+-- Looking for getresgid - not found
+-- Looking for getresuid
+-- Looking for getresuid - not found
+-- Looking for sigaction
+-- Looking for sigaction - found
+-- Looking for sigtimedwait
+-- Looking for sigtimedwait - not found
+-- Looking for setjmp
+-- Looking for setjmp - found
+-- Looking for nanosleep
+-- Looking for nanosleep - found
+-- Looking for gmtime_r
+-- Looking for gmtime_r - found
+-- Looking for localtime_r
+-- Looking for localtime_r - found
+-- Looking for nl_langinfo
+-- Looking for nl_langinfo - found
+-- Looking for sysconf
+-- Looking for sysconf - found
+-- Looking for sysctlbyname
+-- Looking for sysctlbyname - found
+-- Looking for getauxval
+-- Looking for getauxval - not found
+-- Looking for elf_aux_info
+-- Looking for elf_aux_info - not found
+-- Looking for ppoll
+-- Looking for ppoll - not found
+-- Looking for memfd_create
+-- Looking for memfd_create - not found
+-- Looking for posix_fallocate
+-- Looking for posix_fallocate - not found
+-- Looking for posix_spawn_file_actions_addchdir
+-- Looking for posix_spawn_file_actions_addchdir - not found
+-- Looking for posix_spawn_file_actions_addchdir_np
+-- Looking for posix_spawn_file_actions_addchdir_np - not found
+-- Performing Test HAVE_SA_SIGACTION
+-- Performing Test HAVE_SA_SIGACTION - Success
+-- Performing Test HAVE_ST_MTIM
+-- Performing Test HAVE_ST_MTIM - Failed
+-- Looking for dlopen
+-- Looking for dlopen - found
+-- Performing Test HAVE_O_CLOEXEC
+-- Performing Test HAVE_O_CLOEXEC - Success
+-- Checking for module 'libusb-1.0>=1.0.16'
+--   Found libusb-1.0, version 1.0.30
+-- Could NOT find LibUSB (missing: LibUSB_LIBRARY LibUSB_INCLUDE_PATH) (found version "LibUSB_VERSION-NOTFOUND")
+-- Performing Test HAVE_FRAMEWORK_METAL
+-- Performing Test HAVE_FRAMEWORK_METAL - Success
+-- Performing Test HAVE_PTHREADS
+-- Performing Test HAVE_PTHREADS - Success
+-- Performing Test HAVE_RECURSIVE_MUTEXES
+-- Performing Test HAVE_RECURSIVE_MUTEXES - Success
+-- Performing Test HAVE_PTHREADS_SEM
+-- Performing Test HAVE_PTHREADS_SEM - Success
+-- Performing Test COMPILER_HAS_SEM_TIMEDWAIT
+-- Performing Test COMPILER_HAS_SEM_TIMEDWAIT - Failed
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Looking for pthread_np.h
+-- Looking for pthread_np.h - not found
+-- Performing Test HAVE_PTHREAD_SETNAME_NP
+-- Performing Test HAVE_PTHREAD_SETNAME_NP - Success
+-- Performing Test HAVE_POSIX_SPAWN
+-- Performing Test HAVE_POSIX_SPAWN - Success
+-- Performing Test COMPILER_SUPPORTS_FOBJC_ARC
+-- Performing Test COMPILER_SUPPORTS_FOBJC_ARC - Success
+-- 
+-- SDL3 was configured with the following options:
+-- 
+-- Platform: iOS
+-- 64-bit:   TRUE
+-- Compiler: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+-- Revision: SDL-3.4.4-HEAD-HASH-NOTFOUND
+-- Vendor:   
+-- 
+-- Subsystems:
+--   Audio:    ON
+--   Video:    ON
+--   GPU:      ON
+--   Render:   ON
+--   Camera:   ON
+--   Joystick: ON
+--   Haptic:   ON
+--   Hidapi:   ON
+--   Power:    ON
+--   Sensor:   ON
+--   Dialog:   ON
+--   Tray:     ON
+-- 
+-- Options:
+--   SDL_ALSA                    (Wanted: OFF): OFF
+--   SDL_ALSA_SHARED             (Wanted: OFF): OFF
+--   SDL_ALTIVEC                 (Wanted: OFF): OFF
+--   SDL_ARMNEON                 (Wanted: ON): ON
+--   SDL_ASAN                    (Wanted: OFF): OFF
+--   SDL_ASSEMBLY                (Wanted: ON): ON
+--   SDL_ASSERTIONS              (Wanted: auto): auto
+--   SDL_AVX                     (Wanted: OFF): OFF
+--   SDL_AVX2                    (Wanted: OFF): OFF
+--   SDL_AVX512F                 (Wanted: OFF): OFF
+--   SDL_BACKGROUNDING_SIGNAL    (Wanted: OFF): OFF
+--   SDL_CCACHE                  (Wanted: OFF): OFF
+--   SDL_CLANG_TIDY              (Wanted: OFF): OFF
+--   SDL_CLOCK_GETTIME           (Wanted: OFF): OFF
+--   SDL_COCOA                   (Wanted: ON): OFF
+--   SDL_DBUS                    (Wanted: OFF): OFF
+--   SDL_DEPS_SHARED             (Wanted: ON): OFF
+--   SDL_DIRECTX                 (Wanted: OFF): OFF
+--   SDL_DISKAUDIO               (Wanted: ON): ON
+--   SDL_DLOPEN_NOTES            (Wanted: OFF): OFF
+--   SDL_DUMMYAUDIO              (Wanted: ON): ON
+--   SDL_DUMMYCAMERA             (Wanted: ON): ON
+--   SDL_DUMMYVIDEO              (Wanted: ON): ON
+--   SDL_EXAMPLES                (Wanted: OFF): OFF
+--   SDL_EXAMPLES_LINK_SHARED    (Wanted: OFF): OFF
+--   SDL_FOREGROUNDING_SIGNAL    (Wanted: OFF): OFF
+--   SDL_FRIBIDI                 (Wanted: OFF): OFF
+--   SDL_FRIBIDI_SHARED          (Wanted: OFF): OFF
+--   SDL_GCC_ATOMICS             (Wanted: ON): ON
+--   SDL_HIDAPI                  (Wanted: ON): ON
+--   SDL_HIDAPI_JOYSTICK         (Wanted: ON): ON
+--   SDL_HIDAPI_LIBUSB           (Wanted: ON): OFF
+--   SDL_HIDAPI_LIBUSB_SHARED    (Wanted: ON): OFF
+--   SDL_IBUS                    (Wanted: OFF): OFF
+--   SDL_INSTALL                 (Wanted: OFF): OFF
+--   SDL_INSTALL_TESTS           (Wanted: OFF): OFF
+--   SDL_JACK                    (Wanted: OFF): OFF
+--   SDL_JACK_SHARED             (Wanted: OFF): OFF
+--   SDL_KMSDRM                  (Wanted: OFF): OFF
+--   SDL_KMSDRM_SHARED           (Wanted: OFF): OFF
+--   SDL_LASX                    (Wanted: OFF): OFF
+--   SDL_LIBC                    (Wanted: ON): ON
+--   SDL_LIBICONV                (Wanted: OFF): OFF
+--   SDL_LIBTHAI                 (Wanted: OFF): OFF
+--   SDL_LIBTHAI_SHARED          (Wanted: OFF): OFF
+--   SDL_LIBUDEV                 (Wanted: ON): OFF
+--   SDL_LIBURING                (Wanted: OFF): OFF
+--   SDL_LSX                     (Wanted: OFF): OFF
+--   SDL_METAL                   (Wanted: ON): ON
+--   SDL_MMX                     (Wanted: OFF): OFF
+--   SDL_OFFSCREEN               (Wanted: ON): ON
+--   SDL_OPENGL                  (Wanted: OFF): OFF
+--   SDL_OPENGLES                (Wanted: ON): ON
+--   SDL_OPENVR                  (Wanted: OFF): OFF
+--   SDL_OSS                     (Wanted: OFF): OFF
+--   SDL_PIPEWIRE                (Wanted: OFF): OFF
+--   SDL_PIPEWIRE_SHARED         (Wanted: OFF): OFF
+--   SDL_PTHREADS                (Wanted: ON): ON
+--   SDL_PTHREADS_SEM            (Wanted: ON): ON
+--   SDL_PULSEAUDIO              (Wanted: OFF): OFF
+--   SDL_PULSEAUDIO_SHARED       (Wanted: OFF): OFF
+--   SDL_RENDER_D3D              (Wanted: OFF): OFF
+--   SDL_RENDER_D3D11            (Wanted: OFF): OFF
+--   SDL_RENDER_D3D12            (Wanted: OFF): OFF
+--   SDL_RENDER_GPU              (Wanted: ON): ON
+--   SDL_RENDER_METAL            (Wanted: ON): ON
+--   SDL_RENDER_VULKAN           (Wanted: ON): ON
+--   SDL_ROCKCHIP                (Wanted: OFF): OFF
+--   SDL_RPATH                   (Wanted: ON): OFF
+--   SDL_RPI                     (Wanted: OFF): OFF
+--   SDL_SNDIO                   (Wanted: OFF): OFF
+--   SDL_SNDIO_SHARED            (Wanted: OFF): OFF
+--   SDL_SSE                     (Wanted: OFF): OFF
+--   SDL_SSE2                    (Wanted: OFF): OFF
+--   SDL_SSE3                    (Wanted: OFF): OFF
+--   SDL_SSE4_1                  (Wanted: OFF): OFF
+--   SDL_SSE4_2                  (Wanted: OFF): OFF
+--   SDL_SYSTEM_ICONV            (Wanted: OFF): OFF
+--   SDL_TESTS                   (Wanted: OFF): OFF
+--   SDL_TESTS_LINK_SHARED       (Wanted: OFF): OFF
+--   SDL_UNINSTALL               (Wanted: OFF): OFF
+--   SDL_VIRTUAL_JOYSTICK        (Wanted: ON): ON
+--   SDL_VIVANTE                 (Wanted: OFF): OFF
+--   SDL_VULKAN                  (Wanted: ON): ON
+--   SDL_WASAPI                  (Wanted: OFF): OFF
+--   SDL_WAYLAND                 (Wanted: OFF): OFF
+--   SDL_WAYLAND_LIBDECOR        (Wanted: OFF): OFF
+--   SDL_WAYLAND_LIBDECOR_SHARED (Wanted: OFF): OFF
+--   SDL_WAYLAND_SHARED          (Wanted: OFF): OFF
+--   SDL_X11                     (Wanted: OFF): OFF
+--   SDL_X11_SHARED              (Wanted: OFF): OFF
+--   SDL_X11_XCURSOR             (Wanted: OFF): OFF
+--   SDL_X11_XDBE                (Wanted: OFF): OFF
+--   SDL_X11_XFIXES              (Wanted: OFF): OFF
+--   SDL_X11_XINPUT              (Wanted: OFF): OFF
+--   SDL_X11_XRANDR              (Wanted: OFF): OFF
+--   SDL_X11_XSCRNSAVER          (Wanted: OFF): OFF
+--   SDL_X11_XSHAPE              (Wanted: OFF): OFF
+--   SDL_X11_XSYNC               (Wanted: OFF): OFF
+--   SDL_X11_XTEST               (Wanted: OFF): OFF
+--   SDL_XINPUT                  (Wanted: OFF): OFF
+-- 
+--  Build Shared Library: OFF
+--  Build Static Library: ON
+--  Build libraries as Apple Framework: OFF
+-- 
+-- Enabled backends:
+--   Video drivers: dummy offscreen uikit
+--   Render drivers: gpu metal ogl_es2 vulkan
+--   GPU drivers: metal vulkan
+--   Audio drivers: coreaudio disk dummy
+--   Joystick drivers: hidapi mfi virtual
+--   Camera drivers: coremedia dummy
+-- 
+-- If something was not detected, although the libraries
+-- were installed, then make sure you have set the
+-- CMAKE_C_FLAGS and CMAKE_PREFIX_PATH CMake variables correctly.
+-- 
+-- Downloading HarfBuzz 13.1.1 (HB_HAVE_ICU=OFF)...
+CMake Warning at /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/_deps/harfbuzz_source-src/CMakeLists.txt:4 (message):
+  The main build system for HarfBuzz is Meson.  CMake build support is
+  community-maintained and is not actively supported by HarfBuzz developers.
+
+
+-- Found Python3: /opt/homebrew/bin/python3.14 (found version "3.14.7") found components: Interpreter
+-- Looking for atexit
+-- Looking for atexit - found
+-- Looking for mprotect
+-- Looking for mprotect - found
+-- Looking for mmap
+-- Looking for mmap - found
+-- Looking for isatty
+-- Looking for isatty - found
+-- Looking for unistd.h
+-- Looking for unistd.h - found
+-- Looking for sys/mman.h
+-- Looking for sys/mman.h - found
+-- Looking for stdbool.h
+-- Looking for stdbool.h - found
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found Freetype: optimized;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/lib/libfreetype.a;debug;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/debug/lib/libfreetyped.a (found version "2.13.3")
+-- Looking for FT_Get_Var_Blend_Coordinates
+-- Looking for FT_Get_Var_Blend_Coordinates - found
+-- Looking for FT_Set_Var_Blend_Coordinates
+-- Looking for FT_Set_Var_Blend_Coordinates - found
+-- Looking for FT_Done_MM_Var
+-- Looking for FT_Done_MM_Var - found
+-- Looking for FT_Get_Transform
+-- Looking for FT_Get_Transform - found
+-- Performing Test CXX_SUPPORTS_FLAG_BSYMB_FUNCS
+-- Performing Test CXX_SUPPORTS_FLAG_BSYMB_FUNCS - Success
+-- Performing Test COMPILER_SUPPORTS_CXX11
+-- Performing Test COMPILER_SUPPORTS_CXX11 - Success
+-- krkrz_merge_vcpkg_manifest: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg.json
+--   + /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: libogg, libvorbis, libvpx
+--   - /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: excluded glew, glfw3
+-- MASTER build: all stat features forced OFF
+-- krkrz version: 2.6.5.0 (TVP(KIRIKIRI) Z Core Wamsoft Edition / Scripting Platform for SDL3)
+-- static  plugin: json (target: json)
+-- Using tp_stub from: /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/tp_stub
+-- static  plugin: KAGParserEx (target: KAGParserEx)
+-- static  plugin: csvParser (target: csvParser)
+-- static  plugin: getSample (target: getSample)
+-- static  plugin: layerExBTOA (target: layerExBTOA)
+-- static  plugin: layerExImage (target: layerExImage)
+-- static  plugin: layerExRaster (target: layerExRaster)
+-- static  plugin: saveStruct (target: saveStruct)
+-- static  plugin: scriptsEx (target: scriptsEx)
+-- static  plugin: shrinkCopy (target: shrinkCopy)
+-- static  plugin: extrans (target: extrans)
+-- static  plugin: virtualpad (target: virtualpad)
+-- static  plugin: iosconfig (target: iosconfig)
+-- Generated StaticPlugins.cpp with static plugins
+-- Found ZLIB: optimized;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/lib/libz.a;debug;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/debug/lib/libz.a (found version "1.3.1")
+-- Found BZip2: optimized;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/lib/libbz2.a;debug;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/debug/lib/libbz2d.a (found version "1.0.8")
+-- Looking for BZ2_bzCompressInit
+-- Looking for BZ2_bzCompressInit - found
+-- Found PNG: optimized;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/lib/libpng16.a;debug;/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/debug/lib/libpng16d.a (found version "1.6.51")
+CMake Warning (deprecated) at /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/_deps/krkrz_ogg-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- Configuring ogg 1.3.6
+-- Looking for include file inttypes.h
+-- Looking for include file inttypes.h - found
+-- Looking for include file stdint.h
+-- Looking for include file stdint.h - found
+-- Looking for include file sys/types.h
+-- Looking for include file sys/types.h - found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of int16_t
+-- Check size of int16_t - done
+-- Check size of uint16_t
+-- Check size of uint16_t - done
+-- Check size of u_int16_t
+-- Check size of u_int16_t - done
+-- Check size of int32_t
+-- Check size of int32_t - done
+-- Check size of uint32_t
+-- Check size of uint32_t - done
+-- Check size of u_int32_t
+-- Check size of u_int32_t - done
+-- Check size of int64_t
+-- Check size of int64_t - done
+-- Check size of short
+-- Check size of short - done
+-- Check size of int
+-- Check size of int - done
+-- Check size of long
+-- Check size of long - done
+-- Check size of long long
+-- Check size of long long - done
+CMake Warning (deprecated) at /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/_deps/krkrz_vorbis-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.10 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+  to tell CMake that the project requires at least <min> but has been updated
+  to work with policies introduced by <max> or earlier.
+This warning is for project developers.  Use -Wno-author or -Wno-deprecated
+to suppress it.
+
+-- Configuring vorbis 1.3.7
+-- Found Ogg: ogg
+libjpeg-turbo found
+-- CMAKE_C_COMPILER /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+-- CMAKE_C_COMPILER_ID AppleClang
+-- CMAKE_C_COMPILER_VERSION 17.0.0.17000013
+-- CMAKE_CXX_COMPILER /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++
+-- CMAKE_CXX_COMPILER_ID AppleClang
+-- CMAKE_CXX_COMPILER_VERSION 17.0.0.17000013
+-- Link-time optimization disabled for elements
+-- building elements with sdl host UI library
+-- 
+-- ThorVG 1.0.0 Configuration Summary
+-- =======================================
+-- Build Type:        
+-- Library Type:      STATIC
+-- Install Prefix:    /usr/local
+-- 
+-- Options:
+--   File I/O:        OFF
+--   Multi-Tasking:   ON
+--   Partial Render:  ON
+--   SIMD:            ON
+--   Log Message:     OFF
+--   Tests:           OFF
+-- 
+-- Raster Engines:
+--   SW:              ON
+--   GL:              OFF
+--   WG:              OFF
+-- 
+-- Loaders:
+--   SVG:             ON
+--   TTF:             OFF
+--   FT (FT+HB):      OFF
+--   LOTTIE:          OFF
+--   PNG:             ON
+--   JPG:             ON
+--   WEBP:            OFF
+-- 
+-- Savers:
+--   GIF:             OFF
+-- 
+-- Bindings:
+--   CAPI:            OFF
+-- 
+-- Tools:
+--   svg2png:         OFF
+--   lottie2gif:      OFF
+-- 
+-- Extra:
+--   Lottie Expr:     ON
+--   OpenMP:          FALSE
+-- 
+-- Using SDL3 as host UI library
+-- Using SDL3::SDL3 target provided by parent project
+-- Found JPEG: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist/vcpkg_installed/arm64-ios-krkrz/debug/lib/libjpeg.a (found version "62")
+-- resource: exclude notoemoji-regular.ttf (not embedded)
+-- resource: exclude notosansjp-regular.otf (not embedded)
+-- krkrz: -userconf browser UI (appserve)
+-- Configuring done (1261.1s)
+-- Generating done (0.9s)
+-- Build files have been written to: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/dist
