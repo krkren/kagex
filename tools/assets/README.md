@@ -10,6 +10,12 @@ The sample's images are generated here rather than edited by hand.
   turn violet when hovered or selected. The colours, sizes and labels are at the top of each
   function; the positions match the `.ks` files that place the images, so a layout change
   touches both.
+- `make_effects.py` makes the Effekseer effects in `data/effect` (sparkle, petals, fireworks,
+  shockwave, magiccircle) and their textures in `data/effect/Texture` (a glow, a sparkle, a dot,
+  a ring band, a trail, a petal and a magic circle, drawn in NumPy). Each effect is a function
+  that describes its particle nodes with `efkformat.py`, which writes Effekseer's runtime format
+  (`.efk`, version 1.6) without the Effekseer editor; its docstring describes the classes.
+  Sizes are in Effekseer units, which the game shows at `efkmag` pixels each (50 by default).
 - `upscale.py` rebuilds the character sprites and the two backgrounds from the original
   800x600-era art in `src/` with Real-ESRGAN, run in NumPy (no PyTorch). It downloads the
   weights into `.weights/` on first use and takes about half an hour on two cores.
@@ -18,6 +24,7 @@ The sample's images are generated here rather than edited by hand.
 python3 tools/assets/upscale.py          # sprites, backgrounds, CG thumbnail
 python3 tools/assets/make_ui.py          # all UI images; or name groups: title logo message
                                          # config saveload extras history star thumbs icons preview
+python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the

@@ -556,6 +556,10 @@ Attributes
 
 		efkheight   Canvas height. Default: the screen's.
 
+		efkframe    Starts the effect this many frames in (60 a second), e.g. an effect
+
+		            that fills the screen over time can start full.
+
 		efkx        Horizontal position from the canvas centre, in pixels (right is +).
 
 		efky        Vertical position from the canvas centre, in pixels (down is +).
@@ -584,7 +588,7 @@ Attributes
 
 		loop        Plays the effect again each time it ends (until efkstop).
 
-		efkmag, efkwidth and efkheight count when the effect starts; the others can be
+		efkmag, efkwidth, efkheight and efkframe count when the effect starts; the others can be
 
 		changed while it plays ([layopt layer=0 efkstop=true]).
 

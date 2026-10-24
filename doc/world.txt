@@ -1122,6 +1122,8 @@ Clicking cancels the wait and proceeds to the next conversation.
     efkmag      Pixels per effect unit. Default 50.
     efkwidth    Canvas width. Default: the screen's.
     efkheight   Canvas height. Default: the screen's.
+    efkframe    Starts the effect this many frames in (60 a second): one that fills the
+                screen over time can start full.
     efkx        Horizontal position in the canvas, from its centre (right is +).
     efky        Vertical position in the canvas, from its centre (down is +).
     efkrot      Rotation in the screen plane, in degrees (clockwise).
@@ -1134,7 +1136,7 @@ Clicking cancels the wait and proceeds to the next conversation.
     efktrigger  Sends triggers (index[,index...]) to the effect, once.
     efkstop     Stops making particles; the effect ends once the last one is gone.
     loop        Plays the effect again each time it ends (until efkstop).
-    efkmag, efkwidth and efkheight count when the effect starts.
+    efkmag, efkwidth, efkheight and efkframe count when the effect starts.
     When every effect has ended, the trigger efkdone is sent ([waittrig name=efkdone]).
 
 

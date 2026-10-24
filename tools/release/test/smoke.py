@@ -729,6 +729,8 @@ def media_tests(exe, proj, args):
     step("media: files a name pattern covers are kept", have("voice/tv001.wav") and have("voice/tv002.wav"))
     step("media: images to TLG", have("image/title.tlg") and not have("image/title.png") and have("fgimage/ch_0_0_1.tlg"))
     step("media: the framework's images too", have("system/LineBreak.tlg") or have("system/linebreak.tlg") or any((data / "system").glob("*.tlg")))
+    step("media: textures an Effekseer effect names are kept", have("effect/Texture/glow.png") and not have("effect/Texture/glow.tlg")
+         and r.get("media", {}).get("keptForEffects", 0) >= 7, "kept for effects: %s" % r.get("media", {}).get("keptForEffects"))
     m = r.get("media", {})
     step("media: sizes", m.get("bytesAfter", 0) < m.get("bytesBefore", 0), "%s -> %s bytes" % (m.get("bytesBefore"), m.get("bytesAfter")))
     chk = r.get("check", {})
