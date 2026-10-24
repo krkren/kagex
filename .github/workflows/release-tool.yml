@@ -1,5 +1,6 @@
 # Builds kagex-release (tools/release) for Windows, Linux and macOS (Apple Silicon) and runs
-# its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium).
+# its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium),
+# with the engine packages of the release ENGINES_FROM names.
 # Each job uploads the tool (kagex-release-<os>) and force-pushes its results to
 # ci/platform-results-release-tool-<os>.
 name: Release tool
@@ -21,12 +22,9 @@ permissions:
 env:
   # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
-  # the release whose packages the build tests take their engines from
-  ENGINES_FROM: "0.2.2"
-  # krkrz_android, as in platforms.yml
-  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
-  # the run of tools-check.yml whose kagex-ios-device-unsigned artifact the iOS tests use
-  IOS_DEVICE_RUN: "40057830047"
+  # the release whose engine packages the build tests use (a tool newer than its engines only
+  # notes it); the engine-package scripts run in the release workflow and platforms.yml
+  ENGINES_FROM: "0.3.0"
 
 jobs:
   build:
@@ -63,50 +61,21 @@ jobs:
           # the oldest macOS the tool runs on (also for the vcpkg libraries)
           [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
           { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
-      # Engine packages for the build tests, made from a published release's packages until
-      # a release publishes its own (kagex_engine_*.zip)
-      - uses: actions/cache@v4
-        id: engines
-        with:
-          path: engines
-          key: engines-${{ runner.os }}-${{ env.ENGINES_FROM }}-${{ hashFiles('kagex/tools/release/scripts/*.py') }}
+      # The engine packages for the build tests (kagex_engine_*.zip), from a published release
       - name: Engine packages
-        if: steps.engines.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs \
-            --pattern kagex_sdl3_windows_release.zip --pattern kagex_sdl3_linux_release.zip \
-            --pattern kagex_sdl3_linux_steam.tar.gz --pattern kagex_sdl3_macos.zip --pattern kagex_sdl3_web.zip
-          mkdir -p engines
-          ep="$PY -I kagex/tools/release/scripts/engine-package.py"
-          $ep windows pkgs/kagex_sdl3_windows_release.zip engines/kagex_engine_windows.zip --version 0.3.0
-          $ep linux pkgs/kagex_sdl3_linux_release.zip engines/kagex_engine_linux.zip --version 0.3.0
-          $ep steam pkgs/kagex_sdl3_linux_steam.tar.gz engines/kagex_engine_steam.zip --version 0.3.0
-          $ep macos pkgs/kagex_sdl3_macos.zip engines/kagex_engine_macos.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
-          $ep web pkgs/kagex_sdl3_web.zip engines/kagex_engine_web.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
-          if [ "$RUNNER_OS" = Linux ]; then
-            # Android: krkrz_android's Gradle project with the engine from the release's APK
-            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_android.apk
-            git clone -q https://github.com/wamsoft/krkrz_android.git kit
-            git -C kit checkout -q "$KRKRZ_ANDROID_SHA"
-            find kit -maxdepth 2 -type f \( -name Makefile -o -name '*.sh' \) -exec perl -pi -e 's/\r$//' {} +
-            mkdir -p kit/app/libs
-            (cd kit && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
-            $PY -I kagex/tools/release/scripts/android-engine.py kit pkgs/kagex_sdl3_android.apk engines/kagex_engine_android.zip \
-              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip --app-config kagex/app-config.json
-            rm -rf kit
-          fi
-          if [ "$RUNNER_OS" = macOS ]; then
-            # iOS: the Simulator app from the release, and an unsigned device build (Release) that
-            # tools-check.yml made, until platforms.yml builds one for the release
-            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_ios_simulator.zip
-            gh run download "$IOS_DEVICE_RUN" --repo "$GITHUB_REPOSITORY" -n kagex-ios-device-unsigned -D pkgs/ios-device
-            $PY -I kagex/tools/release/scripts/ios-engine.py --device pkgs/ios-device/kagex-ios-device-unsigned.ipa \
-              --simulator pkgs/kagex_sdl3_ios_simulator.zip engines/kagex_engine_ios.zip \
-              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
-          fi
-          rm -rf pkgs
+          platforms="windows linux steam macos web"
+          case "$RUNNER_OS" in
+            Linux) platforms="$platforms android" ;;
+            macOS) platforms="$platforms ios" ;;
+          esac
+          patterns=()
+          for p in $platforms; do patterns+=(--pattern "kagex_engine_$p.zip"); done
+          gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D engines "${patterns[@]}"
+          for p in $platforms; do test -f "engines/kagex_engine_$p.zip" || { echo "::error::$ENGINES_FROM has no kagex_engine_$p.zip"; exit 1; }; done
+          ls -l engines | tee results/engines.txt
       - uses: actions/setup-java@v4
         if: runner.os == 'Linux'
         with:
