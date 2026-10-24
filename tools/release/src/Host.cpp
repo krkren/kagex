@@ -109,6 +109,7 @@ Requirement checkIdentity(const std::string& identity, const std::string& label)
 {
 	if (!isMac()) return req(label, false, "Needs a Mac");
 	if (identity.empty()) return req(label, false, "Not set");
+	if (identity == "-") return req(label, true, "Ad hoc (the app won't install on devices; for checking the package)");
 	RunOptions opt;
 	opt.timeoutSeconds = 30;
 	const RunResult r = run("security", { "find-identity", "-v", "-p", "codesigning" }, opt);
