@@ -46,10 +46,20 @@ add_executable(kagex-release
     src/Host.cpp
     src/Subprocess.cpp
     src/Plan.cpp
+    src/Archive.cpp
+    src/Icons.cpp
+    src/Engine.cpp
+    src/Build.cpp
 )
+find_package(ZLIB REQUIRED)
 target_include_directories(kagex-release PRIVATE src)
-target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop)
+target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop ZLIB::ZLIB)
 target_compile_definitions(kagex-release PRIVATE KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
+if(WIN32)
+    # the exe's icon and version info (Windows resource APIs)
+    target_link_libraries(kagex-release PRIVATE krt_release)
+    target_compile_definitions(kagex-release PRIVATE KR_HAVE_RELEASE_LIB)
+endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # runs on any distribution with the glibc it was built against or newer
     target_link_options(kagex-release PRIVATE -static-libstdc++ -static-libgcc)

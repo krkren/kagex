@@ -127,3 +127,18 @@ code { font-family: ui-monospace, Consolas, monospace; }
 .picker-item:hover { background: var(--accent-soft); }
 .picker-item.dir::before { content: "▸ "; color: var(--muted); }
 .picker-item.selected { background: var(--accent); color: #fff; }
+
+.build-dialog { width: min(820px, 94vw); max-height: 90vh; overflow: auto; }
+.progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.progress.indeterminate > div { width: 30%; animation: slide 1.2s infinite linear; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+.build-log { height: 220px; overflow: auto; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: 6px;
+	font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; background: var(--bg); }
+.results { display: grid; gap: 8px; overflow: auto; }
+.result { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.result .mark { font-weight: 700; width: 1.2em; }
+.result.ok .mark { color: var(--ok); }
+.result.bad .mark { color: var(--bad); }
+.result .what { flex: 1; min-width: 0; }
+.result code { word-break: break-all; font-size: 12px; }

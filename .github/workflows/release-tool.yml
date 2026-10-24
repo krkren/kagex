@@ -21,6 +21,8 @@ permissions:
 env:
   # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # the release whose packages the build tests take their engines from
+  ENGINES_FROM: "0.2.2"
 
 jobs:
   build:
@@ -57,6 +59,42 @@ jobs:
           # the oldest macOS the tool runs on (also for the vcpkg libraries)
           [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
           { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
+      # Engine packages for the build tests, made from a published release's packages until
+      # a release publishes its own (kagex_engine_*.zip)
+      - uses: actions/cache@v4
+        id: engines
+        with:
+          path: engines
+          key: engines-${{ env.ENGINES_FROM }}-${{ hashFiles('kagex/tools/release/scripts/engine-package.py') }}
+      - name: Engine packages
+        if: steps.engines.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs \
+            --pattern kagex_sdl3_windows_release.zip --pattern kagex_sdl3_linux_release.zip \
+            --pattern kagex_sdl3_linux_steam.tar.gz --pattern kagex_sdl3_macos.zip
+          mkdir -p engines
+          ep="$PY -I kagex/tools/release/scripts/engine-package.py"
+          $ep windows pkgs/kagex_sdl3_windows_release.zip engines/kagex_engine_windows.zip --version 0.3.0
+          $ep linux pkgs/kagex_sdl3_linux_release.zip engines/kagex_engine_linux.zip --version 0.3.0
+          $ep steam pkgs/kagex_sdl3_linux_steam.tar.gz engines/kagex_engine_steam.zip --version 0.3.0
+          $ep macos pkgs/kagex_sdl3_macos.zip engines/kagex_engine_macos.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          rm -rf pkgs
+      - name: Libraries for the test run
+        if: runner.os == 'Linux'
+        run: |
+          # the engine draws with OpenGL ES through EGL (Mesa), headless with SDL's offscreen driver
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig > results/apt.log 2>&1
+      - name: OpenGL ES for the test run
+        # the Windows VM has no GPU driver: the engine gets GLES through Edge's ANGLE (in PATH,
+        # not in the packages)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $angle = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft\EdgeCore", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application" -Recurse -Filter libGLESv2.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($angle) { New-Item -ItemType Directory -Force angle | Out-Null; foreach ($n in 'libEGL.dll', 'libGLESv2.dll', 'd3dcompiler_47.dll') { $f = Join-Path $angle.DirectoryName $n; if (Test-Path $f) { Copy-Item $f angle\ } }; "$PWD\angle" >> $env:GITHUB_PATH; Get-ChildItem angle }
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - uses: seanmiddleditch/gha-setup-ninja@v5
@@ -101,7 +139,7 @@ jobs:
             $PY -m playwright install --with-deps chromium > /dev/null
             browser=--browser
           fi
-          kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke
+          kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke --engines engines
       - name: Pack the tool
         if: always()
         run: |
@@ -113,13 +151,20 @@ jobs:
           name: kagex-release-${{ matrix.name }}
           path: out
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
-        # the libraries, for building the tool where vcpkg can't download its sources
-        if: runner.os == 'Linux'
-        with:
-          name: vcpkg-installed-linux
-          path: kagex/tools/release/build/linux/vcpkg_installed/x64-linux
-          retention-days: 7
+      - name: Share the libraries
+        # vcpkg's libraries and clipparse's sqlite source, for building the tool where they can't
+        # be downloaded (ci/dev-libs-linux)
+        if: runner.os == 'Linux' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir devlibs
+          tar czf devlibs/x64-linux.tar.gz -C kagex/tools/release/build/linux vcpkg_installed/x64-linux _deps/sqlite3_amalg-src
+          cd devlibs
+          git init -q -b libs .
+          git add .
+          git -c user.name=kagex-ci -c user.email=kagex-ci@users.noreply.github.com commit -q -m "kagex-release libraries, run ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci/dev-libs-linux
       - name: Publish results branch
         if: always()
         env:
