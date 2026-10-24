@@ -8,6 +8,9 @@
   - The engine reads its file list from `gamedata/krkrz_files.json`, which only the kit's `serve.py` answered. The web build now has the file there too, so it runs from any static host.
   - On a first visit, coi-serviceworker sometimes reloaded the page before its service worker was ready, which left the page without the cross-origin isolation the engine's threads need until the next reload. The reload now waits for the worker.
   - The Pages deploy makes both changes to 0.2.0's site, then runs the browser smoke test on the live site. The smoke test in the platform builds serves the site with a plain static server, as Pages does.
+- In the browser build every text in the game font came out as arrows. The engine bundles Noto Sans JP there and finds a bundled font only in the style asked for, so the bold choices of the demo menu, the first text drawn, left the font on the engine's icon font. Where the engine has a font of that name, `Initialize.tjs` now loads the game's copy of it, which is found for bold text too.
+- In the browser build the CG and Replay thumbnails were empty frames: its Photoshop-style blends (`omPs*`) write alpha 0. `setCGImage` keeps the frame's alpha, as the save slots already did.
+- The smoke test checks that the demo menu's choices measure as text and that the first CG and Replay tiles are opaque.
 
 ## 0.2.0
 
