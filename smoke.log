@@ -1,0 +1,25 @@
+== sample (data, desktop)
+ok   start-up reaches the title screen                                7.1s
+ok   Extras start locked                                              0.4s
+ok   demo layer.ks plays to the end                                   5.7s
+ok   demo char.ks plays to the end                                   10.0s
+ok   demo envlayer.ks plays to the end                                3.1s
+ok   demo transition.ks plays to the end                              3.7s
+ok   demo action.ks plays to the end                                  3.1s
+ok   finishing every demo unlocks Extras                              0.3s
+ok   the demo menu's choices are drawn in a text font                 0.5s
+ok   save and load a bookmark                                         7.4s
+ok   the save.ks screen opens from the game and closes with Esc       2.9s
+ok   the load.ks screen opens from the game and closes with Esc       2.5s
+ok   the config.ks screen opens from the game and closes with Esc     2.9s
+ok   controller: Y switches auto mode, X shows the history, B closes it   6.3s
+ok   controller: START opens config.ks and B closes it                2.7s
+ok   controller: BACK opens save.ks and B closes it                   2.8s
+ok   controller: L1 opens load.ks and B closes it                     2.2s
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      1.8s
+ok   the About screen opens in the game window and closes             1.9s
+ok   back to the title through the Yes/No prompt                      3.1s
+ok   Extras: cgmode.ks opens and returns to the title                 3.1s
+ok   Extras: replay.ks opens and returns to the title                 3.1s
+ok   Extras: musicmode.ks opens and returns to the title              3.8s
+smoke test: passed
