@@ -1,0 +1,348 @@
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /?audiogate=0 HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /webconfig.js HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /coi-serviceworker.js HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /krkrz.js HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /coi-serviceworker.js HTTP/1.1" 304 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /krkrz.data HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /resource/loading.json HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /krkrz.wasm HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:06] "GET /?audiogate=0 HTTP/1.1" 304 -
+127.0.0.1 - - [24/Oct/2026 13:27:07] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /resource/loading.json HTTP/1.1" 404 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 56530)
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 56536)
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /krkrz.data HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /krkrz.wasm HTTP/1.1" 200 -
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+Traceback (most recent call last):
+127.0.0.1 - - [24/Oct/2026 13:27:07] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /favicon.ico HTTP/1.1" 404 -
+  File "/usr/lib/python3.12/http/server.py", line 1311, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/usr/lib/python3.12/http/server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "/usr/lib/python3.12/http/server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.12/http/server.py", line 878, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+  File "/usr/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.12/http/server.py", line 1311, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/usr/lib/python3.12/http/server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "/usr/lib/python3.12/http/server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.12/http/server.py", line 878, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /resource.list HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /resource/SysInitScript.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /resource/config.cf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:07] "GET /resource/elements_basic.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/gamecontrollerdb.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/messages-chs.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/messages-cht.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/messages-en.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/messages.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/notoemoji-regular.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/notosansjp-regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/optiondesc-chs.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/optiondesc-cht.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/optiondesc-en.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/optiondesc.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /resource/roboto-regular.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/krkrz_files.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/startup.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/initialize.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/main/storages.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/notosansjp-regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/main/config.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/layerex.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/utils.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/kaglayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/animkaglayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:08] "GET /gamedata/system/buttonlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/translayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/selectlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/mapselectlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/dialoglayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/historylayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/bgm.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/se.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/movie.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/conductor.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/updateregion.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/affinelayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/animationlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/graphiclayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/gfx_fire.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/gfx_movie.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/gfx_flash.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/gfx_particle.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/gfx_amovie.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/messagelayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/menus.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/defaultmover.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/action.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /krkrz_prefetch.json HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/mainwindow.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/about.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/afterinit.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/cglist.csv HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/cgmode.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/config.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/envinit.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/world.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/first.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/load.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/loadinit.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/yaml.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/logo.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/musiclist.csv HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/musicmode.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvbase.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/myhistorylayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/override.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/replay.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvimage.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/replaylist.csv HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/save.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/main/title.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/autolabel.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/bitmapfont.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/check.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/checkboxlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/config.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvevent.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/dialog_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/dialog_button_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/dialog_button_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/dialog_wide_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvstage.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/editlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/execdialog.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvlevellayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvbgm.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvcharacter.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvcharacterex.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvsimplelayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvironment.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvplayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/kagenvse.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/linebreak.asd HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/linebreak.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/linebreak_a.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:09] "GET /gamedata/system/notosansjp-ofl.txt HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/plugin.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/pagebreak.asd HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/pagebreak.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/pagebreak_a.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/psdlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/sliderlayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/standview.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/textrender.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/uiloader.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/updateconfig.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/win32dialog.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/scenario/macro.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/yesnodialog.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/system/yesnodialoglayer.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:10] "GET /gamedata/image/logo.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/title.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/start_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/start_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/continue_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/continue_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/extra_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/extra_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/config_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/config_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/exit_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:11] "GET /gamedata/image/exit_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:12] "GET /gamedata/scenario/layer.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:12] "GET /gamedata/bgimage/bg01_01.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:12] "GET /gamedata/fgimage/ch_0_0_1.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:15] "GET /gamedata/video/test.webm HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/scenario/s0001.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/messagewindow.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_save_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_save_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_load_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_load_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_skip_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_skip_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_skip_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_auto_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_auto_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_auto_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_log_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_log_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_config_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/msg_config_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/select_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/image/select_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/scenario/char.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /gamedata/bgm/bgm01.ogg HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:16] code 404, message File not found
+127.0.0.1 - - [24/Oct/2026 13:27:16] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [24/Oct/2026 13:27:17] "GET /gamedata/image/namebox.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:17] "GET /gamedata/voice/ai000001.ogg HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:18] "GET /gamedata/fgimage/ch_1_0_1.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:18] "GET /gamedata/fgimage/ch_2_0_1.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:20] "GET /gamedata/bgimage/event1.jpg HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:22] "GET /gamedata/fgimage/ch_0_0_2.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:24] "GET /gamedata/scenario/envlayer.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:25] "GET /gamedata/fgimage/star.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:26] "GET /gamedata/scenario/transition.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:29] "GET /gamedata/scenario/action.ks HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/save_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page1_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page1_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page2_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page2_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page3_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page3_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page4_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page4_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page5_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page5_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page6_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page6_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page7_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page7_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page8_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page8_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page9_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/page9_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/sl_win_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/return_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/return_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/save_win_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:36] "GET /gamedata/image/newdata.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:38] "GET /gamedata/image/load_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:38] "GET /gamedata/image/load_win_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_window_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_window_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_fullscreen_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_fullscreen_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/slidebar.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/slidebar_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_effecton_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_effecton_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_effectoff_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_effectoff_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_skipall_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_skipall_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_skipalrdy_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_skipalrdy_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice0_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice1_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice2_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice3_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice4_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_voice5_on.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_initial_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_initial_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_title_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:39] "GET /gamedata/image/config_title_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_play_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_play_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_first_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_first_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_uppage_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_uppage_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_downpage_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_downpage_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_last_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_last_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_bar_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:42] "GET /gamedata/image/log_bar_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/extra_cgmode_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/extra_replaymode_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/extra_replaymode_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/extra_musicmode_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/extra_musicmode_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page0_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page0_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page1_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page1_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page2_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page2_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page3_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page3_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page4_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page4_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page5_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_page5_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_thum_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/image/cgmode_thum_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:49] "GET /gamedata/thum/thum_event1.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:50] "GET /gamedata/image/replaymode_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:50] "GET /gamedata/image/extra_cgmode_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:50] "GET /gamedata/thum/thum_replay_char.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_play_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_play_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_stop_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_stop_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_repeat_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:52] "GET /gamedata/image/musicmode_repeat_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/musicmode_allrepeat_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/musicmode_allrepeat_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track01_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track01_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track02_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track02_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track03_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track03_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track04_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track04_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track05_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track05_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track06_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track06_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track07_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track07_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track08_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track08_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track09_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track09_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track10_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track10_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track11_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track11_over.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track12_normal.png HTTP/1.1" 200 -
+127.0.0.1 - - [24/Oct/2026 13:27:53] "GET /gamedata/image/track12_over.png HTTP/1.1" 200 -

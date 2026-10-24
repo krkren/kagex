@@ -1,0 +1,17 @@
+[stage_web] 警告: resource が見つかりません (config.cf 無し)。engine 既定を使います。
+[gamedata] 20 duplicate(s) skipped (first wins): main/envinit.tjs, main/cglist.csv, main/logo.ks ほか 17 件
+manifest: 282 file(s) -> /home/runner/work/kagex/kagex/kirikiri/kagex/build/web/site/gamedata.krkrz_files.json
+[stage_web] PROJECT_DIR = /home/runner/work/kagex/kagex/kirikiri/kagex
+[stage_web] name        = KAGEX Sample
+[stage_web] 共有バイナリ = /home/runner/work/kagex/kagex/kirikiri/krkrz_web/build/wasm32-emscripten/Release/krkrz
+[stage_web] resource    = None
+[stage_web] assetPack   = 3 source(s), base=/home/runner/work/kagex/kagex/kirikiri/kagex
+[stage_web] extra args  = -orgname=krkren -appname=kagex -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128
+[stage_web] lowercase   = ON (gamedata の配置先パスを ASCII 小文字化)
+[stage_web] gamedata を構成中 (sources マージ, ハードリンク自動判定)…
+[stage_web] $ /usr/bin/python3 /home/runner/work/kagex/kagex/kirikiri/krkrz_web/tools/gen_manifest.py /home/runner/work/kagex/kagex/kirikiri/kagex/build/web/site/gamedata /home/runner/work/kagex/kagex/kirikiri/kagex/build/web/site/gamedata.krkrz_files.json
+[stage_web] prefetch     = 93 file(s) -> krkrz_prefetch.json
+
+[stage_web] 完了: /home/runner/work/kagex/kagex/kirikiri/kagex/build/web/site
+[stage_web] 転送: 301 hardlink, 0 copy(fallback), 0 unchanged, 0 removed
+[stage_web] 起動: python "/home/runner/work/kagex/kagex/kirikiri/kagex/build/web/site/serve.py"  →  http://localhost:8100/
