@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAGEX Release</title>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<header class="top">
+	<div class="brand">KAGEX Release <span id="version" class="muted"></span></div>
+	<div class="project">
+		<span id="projectPath" class="path"></span>
+		<button id="openProject" title="Open another game">Open…</button>
+	</div>
+	<div class="actions">
+		<span id="saveState" class="muted"></span>
+		<button id="save" class="primary">Save</button>
+	</div>
+</header>
+<div id="fatal" class="fatal" hidden></div>
+<div class="layout">
+	<nav class="side" id="nav"></nav>
+	<main id="main"></main>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
