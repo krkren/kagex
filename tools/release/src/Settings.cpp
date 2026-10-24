@@ -263,10 +263,10 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			warn("identity.version", "first.ks says sf.software_version = \"" + p.version + "\"; the game shows that one in About");
 	}
 
-	static const std::regex nameRe(R"([A-Za-z0-9][A-Za-z0-9 ._-]*)");
+	static const std::regex nameRe(R"([A-Za-z0-9][A-Za-z0-9._-]*)");
 	const std::string org = str(s, "identity.orgName"), app = str(s, "identity.appName");
-	if (!std::regex_match(org, nameRe)) error("identity.orgName", "The organization name names the save folder: letters, digits, spaces, '.', '-' and '_'");
-	if (!std::regex_match(app, nameRe)) error("identity.appName", "The app name names the save folder: letters, digits, spaces, '.', '-' and '_'");
+	if (!std::regex_match(org, nameRe)) error("identity.orgName", "The organization name names the save folder: letters, digits, '.', '-' and '_' (no spaces)");
+	if (!std::regex_match(app, nameRe)) error("identity.appName", "The app name names the save folder: letters, digits, '.', '-' and '_' (no spaces)");
 	if (reservedNames(org, app)) {
 		std::string o = org;
 		for (auto& c : o) c = (char)std::tolower((unsigned char)c);

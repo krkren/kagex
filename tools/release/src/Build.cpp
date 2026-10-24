@@ -422,6 +422,7 @@ private:
 		if (id == "windows") buildWindows(engine, folder);
 		else if (id == "linux" || id == "steam") buildLinux(id, engine, folder);
 		else if (id == "macos") buildMacos(engine, folder);
+		else if (id == "web") buildWeb(engine, folder);
 		else throw Failure{ "Building for " + id + " isn't in this version of the tool yet" };
 
 		for (const auto& e : at(s_, "contents.extraFiles").elements()) {
@@ -638,6 +639,159 @@ private:
 			if (!r.ok() || r.output.find("status: Accepted") == std::string::npos) throw Failure{ "Notarization failed (see the log)" };
 			r = run("xcrun", { "stapler", "staple", krt::fromPath(app) }, opt);
 			if (!r.ok()) throw Failure{ "stapler failed: " + krt::trim(r.output) };
+		}
+	}
+
+	//-----------------------------------------------------------------------
+	// Web: the krkrz_web site with the game's data, title, manifest and icons
+	//-----------------------------------------------------------------------
+	void buildWeb(const fs::path& engine, const fs::path& dir)
+	{
+		std::error_code ec;
+		for (const auto& e : fs::directory_iterator(engine, ec)) {
+			const std::string n = krt::fromPath(e.path().filename());
+			if (n == "engine.json" || n == "license.txt" || n == "licenses") continue;
+			if (e.is_directory(ec)) copyTree(e.path(), dir / e.path().filename());
+			else copyFile(e.path(), dir / e.path().filename());
+		}
+		std::string js;
+		if (!krt::readFile(dir / "krkrz.js", js)) throw Failure{ "The web engine has no krkrz.js" };
+		// krkrz.data is the engine's preloaded /data.xp3 (the files packager's metadata in
+		// krkrz.js says how big it is)
+		static const std::regex pre(R"re(files:\[\{filename:"/data\.xp3",start:0,end:\d+\}\],remote_package_size:\d+)re");
+		const bool xp3 = str(s_, "platforms.web.data") == "xp3";
+		auto preload = [&](uint64_t size) {
+			const std::string n = std::to_string(size);
+			std::string out = std::regex_replace(js, pre, "files:[{filename:\"/data.xp3\",start:0,end:" + n + "}],remote_package_size:" + n,
+			                                     std::regex_constants::format_first_only);
+			if (out == js && !std::regex_search(js, pre)) return false;
+			writeText(dir / "krkrz.js", out);
+			return true;
+		};
+		std::string config;
+		krt::readFile(dir / "webconfig.js", config);
+		std::string args = "-orgname=" + str(s_, "identity.orgName") + " -appname=" + str(s_, "identity.appName");
+		{
+			// the engine's other options (memory pools) stay
+			std::smatch m;
+			static const std::regex argsRe(R"re(KRKRZ_WEB_DEFAULT_ARGS\s*=\s*"([^"]*)")re");
+			if (std::regex_search(config, m, argsRe)) {
+				std::string rest = m[1];
+				size_t pos = 0;
+				while (pos < rest.size()) {
+					size_t end = rest.find(' ', pos);
+					if (end == std::string::npos) end = rest.size();
+					const std::string a = rest.substr(pos, end - pos);
+					pos = end + 1;
+					if (a.empty() || a.rfind("-orgname=", 0) == 0 || a.rfind("-appname=", 0) == 0 || a.rfind("-debugwin=", 0) == 0) continue;
+					args += " " + a;
+				}
+			}
+		}
+		if (!flag(s_, "engine.debug")) args += " -debugwin=no";
+		if (xp3) {
+			copyFile(xp3_, dir / "krkrz.data");
+			if (!preload(fs::file_size(xp3_, ec))) throw Failure{ "This web engine's krkrz.js doesn't load krkrz.data as data.xp3; choose files for the web data" };
+		} else {
+			// the files, in lower case (the site asks for every file in lower case)
+			std::map<std::string, std::string> lowerNames;
+			Json list = Json::array(), prefetch = Json::array();
+			std::vector<std::string> names;
+			for (fs::recursive_directory_iterator it(stage_, ec), end; it != end; it.increment(ec)) {
+				if (ec || !it->is_regular_file(ec)) continue;
+				names.push_back(krt::fromPath(fs::relative(it->path(), stage_, ec)));
+			}
+			std::sort(names.begin(), names.end());
+			for (const auto& n : names) {
+				const std::string l = lower(n);
+				auto [at, fresh] = lowerNames.emplace(l, n);
+				if (!fresh) throw Failure{ "The web needs file names that differ in more than case: " + at->second + " and " + n };
+				copyFile(stage_ / krt::toPath(n), dir / "gamedata" / krt::toPath(l));
+				list.push(Json(l));
+				const std::string ext = l.substr(l.rfind('.') == std::string::npos ? l.size() : l.rfind('.'));
+				const bool script = ext == ".ks" || ext == ".tjs" || ext == ".csv" || ext == ".txt" || ext == ".asd" || ext == ".func" || ext == ".sli";
+				if (script || l.rfind("system/", 0) == 0) prefetch.push(Json(l));
+			}
+			writeText(dir / "gamedata.krkrz_files.json", list.dump());
+			writeText(dir / "gamedata" / "krkrz_files.json", list.dump());   // where static hosts serve it
+			writeText(dir / "krkrz_prefetch.json", prefetch.dump());
+			// the engine's own data.xp3 isn't used: an empty one saves every visitor a download
+			writeText(dir / "krkrz.data", "");
+			if (!preload(0)) notes_.push_back("web: krkrz.data (the engine's sample data) is downloaded but not used");
+		}
+		auto setVar = [&](const std::string& name, const std::string& value) {
+			const std::regex re("var " + name + R"re(\s*=\s*[^;\n]*;)re");
+			const std::string line = "var " + name + " = " + value + ";";
+			if (std::regex_search(config, re)) config = std::regex_replace(config, re, line);
+			else config += line + "\n";
+		};
+		setVar("KRKRZ_WEB_DATA_XP3", xp3 ? "true" : "false");
+		setVar("KRKRZ_WEB_DATA_PRELOAD", "false");
+		setVar("KRKRZ_WEB_DEFAULT_WEBBASE", xp3 ? "\"\"" : "\"gamedata/\"");
+		setVar("KRKRZ_WEB_DEFAULT_ARGS", Json(args).dump());
+		writeText(dir / "webconfig.js", config);
+		webPage(dir);
+		licensesInto(engine, dir);
+	}
+
+	// index.html: the title, coi-serviceworker's reload once its worker is ready, and the
+	// home-screen manifest and icons (as .github/platforms/web-static-host.py does for the sample)
+	void webPage(const fs::path& dir)
+	{
+		std::string html;
+		if (!krt::readFile(dir / "index.html", html)) throw Failure{ "The web engine has no index.html" };
+		const std::string title = str(s_, "identity.title"), shortName = str(s_, "identity.shortName");
+		auto esc = [](const std::string& v) {
+			std::string o;
+			for (char c : v) {
+				if (c == '&') o += "&amp;"; else if (c == '<') o += "&lt;"; else if (c == '>') o += "&gt;"; else if (c == '"') o += "&quot;"; else o += c;
+			}
+			return o;
+		};
+		const std::string coiTag = "<script src=\"coi-serviceworker.js\"></script>";
+		if (html.find("window.coi=") == std::string::npos && html.find(coiTag) != std::string::npos)
+			html.replace(html.find(coiTag), 0, "<script>window.coi={doReload:function(){navigator.serviceWorker.ready.then(function(){window.location.reload();});}};</script>");
+		const size_t t0 = html.find("<title>"), t1 = html.find("</title>");
+		if (t0 != std::string::npos && t1 != std::string::npos && t1 > t0) html.replace(t0 + 7, t1 - t0 - 7, esc(title));
+		if (html.find("apple-mobile-web-app-capable") == std::string::npos) {
+			const std::string head = "<link rel=manifest href=manifest.webmanifest><meta name=theme-color content=\"#000000\">"
+				"<meta name=mobile-web-app-capable content=yes><meta name=apple-mobile-web-app-capable content=yes>"
+				"<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>"
+				"<meta name=apple-mobile-web-app-title content=\"" + esc(shortName) + "\"><link rel=apple-touch-icon href=apple-touch-icon.png>";
+			const size_t at = html.find("</title>");
+			if (at != std::string::npos) html.insert(at + 8, head);
+		} else {
+			static const std::regex re(R"re(<meta name=apple-mobile-web-app-title content="[^"]*">)re");
+			html = std::regex_replace(html, re, "<meta name=apple-mobile-web-app-title content=\"" + esc(shortName) + "\">");
+		}
+		writeText(dir / "index.html", html);
+
+		Json app = Json::object();
+		app.set("name", Json(title));
+		app.set("short_name", Json(shortName));
+		app.set("start_url", Json("./"));
+		app.set("scope", Json("./"));
+		app.set("display", Json("fullscreen"));
+		app.set("orientation", Json("landscape"));
+		app.set("background_color", Json("#000000"));
+		app.set("theme_color", Json("#000000"));
+		Json icons = Json::array();
+		for (int size : { 192, 512 }) {
+			Json i = Json::object();
+			i.set("src", Json("icon-" + std::to_string(size) + ".png"));
+			i.set("sizes", Json(std::to_string(size) + "x" + std::to_string(size)));
+			i.set("type", Json("image/png"));
+			i.set("purpose", Json("any maskable"));
+			icons.push(std::move(i));
+		}
+		app.set("icons", std::move(icons));
+		writeText(dir / "manifest.webmanifest", app.dump(2) + "\n");
+		if (icons_.loaded()) {
+			for (const auto& [file, size] : std::vector<std::pair<std::string, int>>{ { "icon-192.png", 192 }, { "icon-512.png", 512 }, { "apple-touch-icon.png", 180 } }) {
+				std::string png, err;
+				if (!icons_.png(size, png, err)) throw Failure{ "The icon: " + err };
+				writeText(dir / krt::toPath(file), png);
+			}
 		}
 	}
 
