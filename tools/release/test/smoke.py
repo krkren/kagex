@@ -605,7 +605,7 @@ def write_flac(path, frames, rate=44100):
 
 
 def converted_game_tests(game, args):
-    """The build with converted images, in the engine here (headless): a button finds its hover
+    """The build with converted images, in the engine here (headless on Linux): a button finds its hover
     image (start_over is a .tlg now; up to 0.3.0 the framework looked for .png, .tlg5, .tlg6 and
     .bmp only, so no button highlighted), hovering changes the button, and the CG screen finds
     its prepared thumbnails"""
@@ -619,7 +619,8 @@ def converted_game_tests(game, args):
             os.makedirs(self.chan)
             os.makedirs(work / "save")
             env = dict(os.environ)
-            env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+            if os.name != "nt":   # Windows: a real window, GLES from ANGLE (as the tool's own test run)
+                env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
             env.setdefault("SDL_AUDIO_DRIVER", "dummy")
             self.log_path = str(work / "engine.log")
             self.log = open(self.log_path, "wb")
@@ -737,8 +738,8 @@ def media_tests(exe, proj, args):
     if args.out and (proj / "release" / "test-run.log").exists():
         shutil.copyfile(proj / "release" / "test-run.log", Path(args.out) / "test-run-media.log")
     step("media: the test run with converted media", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
-    if host == "linux":
-        converted_game_tests(base / "kagex-sample", args)
+    if host in ("linux", "windows"):
+        converted_game_tests(base / ("kagex-sample.exe" if host == "windows" else "kagex-sample"), args)
 
     s["media"]["references"] = "rewrite"
     s["output"]["check"] = False
