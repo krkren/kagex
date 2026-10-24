@@ -12,6 +12,7 @@ It then runs template/ as a game of its own, the way a new game starts out, and 
 it starts and that its prompts are drawn in the game window too.
 
 usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [--keep] [--verbose]
+                                 [--effekseer required|optional]
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
@@ -587,6 +588,13 @@ def sample_steps(eng):
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
+    @step("Effekseer effects can be drawn (--effekseer required) or say why not")
+    def _():
+        why = eng.tjs('var s = KAGEffekseerOf(kag); return s.available ? "" : "unavailable: " + s.reason;')
+        print("     Effekseer:", why or "available", flush=True)
+        if why and eng.opts.effekseer == "required":
+            raise SmokeError("Effekseer effects are " + why)
+
     @step("the demo menu's choices are drawn in a text font")
     def _():
         # A face the engine can't draw falls back to its icon font, which measures 0 and
@@ -722,6 +730,7 @@ def run_project(opts, label, data, make_steps):
         print("FAIL starting the engine:", e)
         print("kept", workdir)
         return 1
+    eng.opts = opts
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
@@ -774,6 +783,9 @@ def main():
     ap.add_argument("--url", help="web: the page that runs the game")
     ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
                     "instead of its own Chromium")
+    ap.add_argument("--effekseer", choices=["required", "optional"], default="optional",
+                    help="whether the build must draw Effekseer effects (the krkreffekseer plugin "
+                    "and OpenGL ES): required fails when it can't; optional reports it")
     opts = ap.parse_args()
     if opts.target != "desktop":
         opts.only = "sample"  # the platform packages hold the sample only
