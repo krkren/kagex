@@ -331,6 +331,8 @@ public:
 			const Json s = withDefaults(req.json()["settings"], defaultSettings(target_.project));
 			BuildOptions bo;
 			for (const auto& p : req.json()["platforms"].elements()) bo.only.push_back(p.asStr());
+			// passwords typed for this build (keystores): passed on, never saved
+			for (const auto& [k, v] : req.json()["secrets"].members()) bo.secrets[k] = v.asStr();
 			const Project project = target_.project;
 			const bool started = jobs_.start("build", [s, project, bo](krt::Progress& p) {
 				return build(s, project, bo, p);

@@ -23,6 +23,8 @@ env:
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
   # the release whose packages the build tests take their engines from
   ENGINES_FROM: "0.2.2"
+  # krkrz_android, as in platforms.yml
+  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
 
 jobs:
   build:
@@ -65,7 +67,7 @@ jobs:
         id: engines
         with:
           path: engines
-          key: engines-${{ env.ENGINES_FROM }}-${{ hashFiles('kagex/tools/release/scripts/engine-package.py') }}
+          key: engines-${{ runner.os }}-${{ env.ENGINES_FROM }}-${{ hashFiles('kagex/tools/release/scripts/*.py') }}
       - name: Engine packages
         if: steps.engines.outputs.cache-hit != 'true'
         env:
@@ -81,7 +83,30 @@ jobs:
           $ep steam pkgs/kagex_sdl3_linux_steam.tar.gz engines/kagex_engine_steam.zip --version 0.3.0
           $ep macos pkgs/kagex_sdl3_macos.zip engines/kagex_engine_macos.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
           $ep web pkgs/kagex_sdl3_web.zip engines/kagex_engine_web.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          if [ "$RUNNER_OS" = Linux ]; then
+            # Android: krkrz_android's Gradle project with the engine from the release's APK
+            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_android.apk
+            git clone -q https://github.com/wamsoft/krkrz_android.git kit
+            git -C kit checkout -q "$KRKRZ_ANDROID_SHA"
+            find kit -maxdepth 2 -type f \( -name Makefile -o -name '*.sh' \) -exec perl -pi -e 's/\r$//' {} +
+            mkdir -p kit/app/libs
+            (cd kit && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
+            $PY -I kagex/tools/release/scripts/android-engine.py kit pkgs/kagex_sdl3_android.apk engines/kagex_engine_android.zip \
+              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip --app-config kagex/app-config.json
+            rm -rf kit
+          fi
           rm -rf pkgs
+      - uses: actions/setup-java@v4
+        if: runner.os == 'Linux'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK packages
+        if: runner.os == 'Linux'
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > results/sdk.log 2>&1
       - name: Libraries for the test run
         if: runner.os == 'Linux'
         run: |

@@ -4,8 +4,8 @@ Packages a KAGEX game for Windows, Linux, Linux for Steam, macOS, the web, Andro
 It opens a settings window (a local page in a browser app window, like the engine's own
 tools), and everything it does can also run from the command line (`--cli`), for CI.
 
-**Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam, macOS and web
-packages and converts the media; Android and iOS come in the next steps.
+**Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam, macOS, web and
+Android packages and converts the media; iOS comes in the next step.
 
 ## Using it
 
@@ -46,6 +46,16 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   (an empty `krkrz.data` in the files mode). It runs from any web server (GitHub Pages works:
   `coi-serviceworker.js` supplies the headers SharedArrayBuffer needs); `serve.py` serves it
   locally.
+- **Android**: an APK, or an app bundle (`.aab`) for Google Play, with the game's application
+  ID, version (the version code is 1.2.3 -> 10203 unless set), name (in every language) and icon
+  (an adaptive icon with the game's icon in its visible square). `data.xp3` or the `data/` folder
+  goes into the app's assets, stored uncompressed so the engine reads it in place. It's built by
+  Gradle from the Android engine package (krkrz_android's project with the engine prebuilt), so
+  it takes a JDK 17 or newer and the Android SDK, but no NDK; the first build downloads Gradle
+  and the Android build tools. Without a keystore it is signed with a debug key, for testing;
+  with one, the window asks for its passwords (the CLI reads `KAGEX_ANDROID_STORE_PASSWORD` and
+  `KAGEX_ANDROID_KEY_PASSWORD`), which are never saved. Gradle's output goes to
+  `android-build.log`.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
 `appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
@@ -77,7 +87,8 @@ converts what changed.
 
 The engines come from the KAGEX release of the tool's version: `kagex_engine_<platform>.zip`
 (and `_debug` for Windows and Linux), made from the release packages by
-`scripts/engine-package.py`. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
+`scripts/engine-package.py`, and for Android by `scripts/android-engine.py` from krkrz_android
+and the release's APK. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
 them instead (zips, or unpacked into folders of the same names), for working offline;
 `KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from.
 

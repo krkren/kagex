@@ -415,6 +415,11 @@ private:
 		pr.progress(0, "Getting the " + id + " engine");
 		if (!ensureEngine(id, debug, o_.engines, pr, engine, err)) throw Failure{ err };
 
+		if (id == "android") {
+			pr.progress(0.2, "Building the Android app with Gradle");
+			buildAndroid(engine, pr, package);
+			return;
+		}
 		folder = out_ / krt::toPath(packageBaseName(s_, id));
 		mustRemove(folder);
 		mustMkdirs(folder);
@@ -640,6 +645,163 @@ private:
 			r = run("xcrun", { "stapler", "staple", krt::fromPath(app) }, opt);
 			if (!r.ok()) throw Failure{ "stapler failed: " + krt::trim(r.output) };
 		}
+	}
+
+	//-----------------------------------------------------------------------
+	// Android: krkrz_android's Gradle project with the engine prebuilt (the engine package),
+	// given the game's data, names and icon, and built with the developer's JDK and SDK
+	//-----------------------------------------------------------------------
+	static std::string androidString(const std::string& v)
+	{
+		std::string o;
+		for (size_t i = 0; i < v.size(); ++i) {
+			const char c = v[i];
+			if (c == '&') o += "&amp;";
+			else if (c == '<') o += "&lt;";
+			else if (c == '>') o += "&gt;";
+			else if (c == '\'' || c == '"' || c == '\\') { o += '\\'; o += c; }
+			else if (i == 0 && (c == '@' || c == '?')) { o += '\\'; o += c; }
+			else o += c;
+		}
+		return o;
+	}
+
+	static std::string propertiesPath(const fs::path& p)
+	{
+		// java.util.Properties: backslashes and colons escaped
+		std::string o;
+		for (char c : krt::fromPath(p)) {
+			if (c == '\\' || c == ':') o += '\\';
+			o += c;
+		}
+		return o;
+	}
+
+	void buildAndroid(const fs::path& engine, krt::Progress& pr, fs::path& package)
+	{
+		const std::string base = "platforms.android.";
+		std::error_code ec;
+		const fs::path proj = work_ / "android";
+		mustRemove(proj);
+		if (!fs::is_directory(engine / "project", ec)) throw Failure{ "The Android engine package has no Gradle project" };
+		copyTree(engine / "project", proj);
+		makeExecutable(proj / "gradlew");
+
+		// app-config.json: the engine's settings, with the game's
+		Json cfg;
+		std::string text, err;
+		if (!krt::readFile(proj / "app-config.json", text) || !Json::parse(text, cfg, &err)) throw Failure{ "The Android engine package's app-config.json: " + err };
+		const std::string exe = str(s_, "identity.exeName"), version = str(s_, "identity.version");
+		const long long code = at(s_, base + "versionCode").asInt() > 0 ? at(s_, base + "versionCode").asInt() : versionNumber(version);
+		cfg.set("applicationId", Json(str(s_, base + "applicationId")));
+		cfg.set("versionCode", Json(code));
+		cfg.set("versionName", Json(version));
+		Json apk = Json::object();
+		apk.set("baseName", Json(exe));
+		cfg.set("apk", std::move(apk));
+		Json sources = Json::array();
+		auto source = [&](const char* type, const fs::path& from, const char* to, const char* include) {
+			Json o = Json::object();
+			o.set("type", Json(type));
+			o.set("from", Json(krt::fromPath(from)));
+			o.set("to", Json(to));
+			if (include) o.set("include", Json::array({ include }));
+			sources.push(std::move(o));
+		};
+		source("mirror", proj / "engine-assets", "", nullptr);
+		if (str(s_, base + "data") == "xp3") {
+			const fs::path dir = work_ / "android-data";
+			fs::create_directories(dir, ec);
+			fs::remove(dir / "data.xp3", ec);
+			fs::create_hard_link(xp3_, dir / "data.xp3", ec);
+			if (ec) copyFile(xp3_, dir / "data.xp3");
+			source("flatten", dir, "", "data.xp3");
+		} else {
+			source("mirror", stage_, "data", nullptr);
+		}
+		Json pack = Json::object();
+		pack.set("baseFolder", Json(krt::fromPath(proj)));
+		pack.set("resOverride", Json(krt::fromPath(proj / "res-override")));
+		pack.set("sources", std::move(sources));
+		cfg.set("assetPack", std::move(pack));
+		writeText(proj / "app-config.json", cfg.dump(2) + "\n");
+
+		// the name (in every language the kit names it in) and the icon
+		const fs::path res = proj / "res-override";
+		for (const char* values : { "values", "values-ja", "values-zh-rCN", "values-zh-rTW" })
+			writeText(res / values / "strings.xml", "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">" +
+			          androidString(str(s_, "identity.title")) + "</string>\n</resources>\n");
+		if (icons_.loaded()) {
+			writeText(res / "values" / "colors.xml", "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <color name=\"ic_launcher_background\">#FF000000</color>\n</resources>\n");
+			// the adaptive icon's 72dp visible square, inside its 108dp layer
+			const std::string inset = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<inset xmlns:android=\"http://schemas.android.com/apk/res/android\"\n"
+				"    android:drawable=\"@mipmap/kagex_release_icon\" android:inset=\"16.667%\" />\n";
+			writeText(res / "drawable" / "ic_launcher_foreground.xml", inset);
+			writeText(res / "drawable" / "ic_launcher_monochrome.xml", inset);
+			for (const auto& [dir, px] : std::vector<std::pair<const char*, int>>{ { "mipmap-mdpi", 72 }, { "mipmap-hdpi", 108 }, { "mipmap-xhdpi", 144 }, { "mipmap-xxhdpi", 216 }, { "mipmap-xxxhdpi", 288 } }) {
+				std::string png;
+				if (!icons_.png(px, png, err)) throw Failure{ "The icon: " + err };
+				writeText(res / dir / "kagex_release_icon.png", png);
+			}
+		}
+
+		const fs::path sdk = androidSdk();
+		if (sdk.empty()) throw Failure{ "No Android SDK found (set ANDROID_HOME)" };
+		writeText(proj / "local.properties", "sdk.dir=" + propertiesPath(sdk) + "\n");
+
+		RunOptions opt;
+		opt.workDir = proj;
+		opt.timeoutSeconds = 3600;
+		opt.env = { { "PROJECT_DIR", krt::fromPath(proj) }, { "ANDROID_HOME", krt::fromPath(sdk) } };
+		const fs::path jdk = javaHome();
+		if (!jdk.empty()) opt.env.push_back({ "JAVA_HOME", krt::fromPath(jdk) });
+		const std::string ks = str(s_, base + "keystore");
+		if (!ks.empty()) {
+			auto secret = [&](const char* key, const char* env) {
+				auto it = o_.secrets.find(key);
+				return it != o_.secrets.end() ? it->second : getEnv(env);
+			};
+			const std::string storePass = secret("androidStorePassword", "KAGEX_ANDROID_STORE_PASSWORD");
+			std::string keyPass = secret("androidKeyPassword", "KAGEX_ANDROID_KEY_PASSWORD");
+			if (storePass.empty()) throw Failure{ "The keystore's password wasn't given (the window asks for it; on the command line set KAGEX_ANDROID_STORE_PASSWORD)" };
+			if (keyPass.empty()) keyPass = storePass;
+			opt.env.push_back({ "RELEASE_STORE_FILE", krt::fromPath(fs::absolute(p_.root / krt::toPath(ks))) });
+			opt.env.push_back({ "RELEASE_STORE_PASSWORD", storePass });
+			opt.env.push_back({ "RELEASE_KEY_ALIAS", str(s_, base + "keyAlias") });
+			opt.env.push_back({ "RELEASE_KEY_PASSWORD", keyPass });
+		}
+		const bool aab = str(s_, base + "format") == "aab";
+		const std::string task = std::string(":app:") + (aab ? "bundle" : "assemble") + (ks.empty() ? "ReleaseDebugSigned" : "Release");
+		std::string logText;
+		opt.onLine = [&](const std::string& l) {
+			logText += l + "\n";
+			if (l.rfind("> Task", 0) == 0) pr.progress(-1, "Gradle: " + l.substr(7));
+			else if (!l.empty()) pr.log("gradle: " + l);
+		};
+		opt.canceled = [&]() { return pr.canceled(); };
+#ifdef _WIN32
+		const fs::path gradlew = proj / "gradlew.bat";
+#else
+		const fs::path gradlew = proj / "gradlew";
+#endif
+		pr.log("Gradle " + task + " (the first build downloads Gradle and the Android build tools)");
+		const RunResult r = run(krt::fromPath(gradlew), { "--no-daemon", "--console=plain", task }, opt);
+		writeText(out_ / "android-build.log", logText.empty() ? r.output : logText);
+		if (!r.ok()) throw Failure{ std::string(r.timedOut ? "Gradle took over an hour" : "Gradle failed") + " (see android-build.log)" };
+
+		const std::string ext = aab ? ".aab" : ".apk";
+		fs::path found;
+		fs::file_time_type newest{};
+		for (fs::recursive_directory_iterator it(proj / "build", ec), end; it != end; it.increment(ec)) {
+			if (ec || !it->is_regular_file(ec) || lower(krt::fromPath(it->path().extension())) != ext) continue;
+			if (krt::fromPath(it->path()).find("outputs") == std::string::npos) continue;
+			const auto t = it->last_write_time(ec);
+			if (found.empty() || t > newest) { found = it->path(); newest = t; }
+		}
+		if (found.empty()) throw Failure{ "Gradle made no " + ext + " (see android-build.log)" };
+		package = out_ / krt::toPath(exe + "-" + version + ext);
+		copyFile(found, package);
+		if (ks.empty()) notes_.push_back("android: signed with a debug key, for testing (Google Play needs your own key)");
 	}
 
 	//-----------------------------------------------------------------------
