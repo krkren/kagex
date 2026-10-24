@@ -4,8 +4,8 @@ Packages a KAGEX game for Windows, Linux, Linux for Steam, macOS, the web, Andro
 It opens a settings window (a local page in a browser app window, like the engine's own
 tools), and everything it does can also run from the command line (`--cli`), for CI.
 
-**Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam, macOS, web and
-Android packages and converts the media; iOS comes in the next step.
+**Work in progress for 0.3.0.** This version builds every platform's package and converts the
+media.
 
 ## Using it
 
@@ -56,6 +56,12 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   with one, the window asks for its passwords (the CLI reads `KAGEX_ANDROID_STORE_PASSWORD` and
   `KAGEX_ANDROID_KEY_PASSWORD`), which are never saved. Gradle's output goes to
   `android-build.log`.
+- **iOS** (on a Mac with Xcode): the engine's app with the game's bundle ID, name, version
+  (build number from the version unless set) and icon (an asset catalog compiled by `actool`),
+  and `data.xp3` or `data/` in the bundle. For devices it is signed with your certificate
+  (Apple Development or Apple Distribution) and provisioning profile, whose entitlements it
+  takes, as `<file name>-<version>.ipa`; for the Simulator, signed ad hoc, as a zip of the app.
+  Identity `-` signs a device build ad hoc, to check the package.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
 `appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
@@ -87,8 +93,9 @@ converts what changed.
 
 The engines come from the KAGEX release of the tool's version: `kagex_engine_<platform>.zip`
 (and `_debug` for Windows and Linux), made from the release packages by
-`scripts/engine-package.py`, and for Android by `scripts/android-engine.py` from krkrz_android
-and the release's APK. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
+`scripts/engine-package.py`; for Android by `scripts/android-engine.py` from krkrz_android
+and the release's APK; for iOS by `scripts/ios-engine.py` from krkrz_ios's unsigned device build
+and its Simulator build. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
 them instead (zips, or unpacked into folders of the same names), for working offline;
 `KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from.
 

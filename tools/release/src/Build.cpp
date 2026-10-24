@@ -420,6 +420,11 @@ private:
 			buildAndroid(engine, pr, package);
 			return;
 		}
+		if (id == "ios") {
+			pr.progress(0.2, "Assembling the iOS app");
+			buildIos(engine, pr, package);
+			return;
+		}
 		folder = out_ / krt::toPath(packageBaseName(s_, id));
 		mustRemove(folder);
 		mustMkdirs(folder);
@@ -802,6 +807,134 @@ private:
 		package = out_ / krt::toPath(exe + "-" + version + ext);
 		copyFile(found, package);
 		if (ks.empty()) notes_.push_back("android: signed with a debug key, for testing (Google Play needs your own key)");
+	}
+
+	//-----------------------------------------------------------------------
+	// iOS: the engine's app (device or Simulator) given the game's data, names, version and icon,
+	// and signed: ad hoc for the Simulator, with the developer's certificate and provisioning
+	// profile for devices (an .ipa)
+	//-----------------------------------------------------------------------
+	RunResult mustRun(const std::string& what, const std::string& program, const std::vector<std::string>& args, int timeout = 600)
+	{
+		RunOptions opt;
+		opt.timeoutSeconds = timeout;
+		RunResult r = run(program, args, opt);
+		if (!r.ok()) throw Failure{ what + " failed: " + krt::trim(r.output) };
+		return r;
+	}
+
+	void buildIos(const fs::path& engine, krt::Progress& pr, fs::path& package)
+	{
+		const std::string base = "platforms.ios.";
+		const bool device = str(s_, base + "target") == "device";
+		std::error_code ec;
+		fs::path src;
+		for (const auto& e : fs::directory_iterator(engine / (device ? "device" : "simulator"), ec))
+			if (e.is_directory(ec) && e.path().extension() == ".app") src = e.path();
+		if (src.empty()) throw Failure{ std::string("The iOS engine package has no app for ") + (device ? "devices" : "the Simulator") };
+
+		const fs::path dir = work_ / "ios";
+		mustRemove(dir);
+		const std::string exe = str(s_, "identity.exeName"), version = str(s_, "identity.version");
+		const fs::path app = dir / "Payload" / krt::toPath(exe + ".app");
+		copyTree(src, app);
+		for (const char* gone : { "data", "data.xp3", "_CodeSignature", "embedded.mobileprovision" }) fs::remove_all(app / gone, ec);
+
+		// Info.plist (Xcode writes it binary: edited as XML, written back binary)
+		const fs::path plist = app / "Info.plist";
+		mustRun("plutil", "plutil", { "-convert", "xml1", krt::fromPath(plist) });
+		std::string xml;
+		krt::readFile(plist, xml);
+		const long long build = at(s_, base + "buildNumber").asInt() > 0 ? at(s_, base + "buildNumber").asInt() : versionNumber(version);
+		plistSet(xml, "CFBundleIdentifier", str(s_, base + "bundleId"));
+		plistSet(xml, "CFBundleDisplayName", str(s_, "identity.shortName"));
+		plistSet(xml, "CFBundleName", str(s_, "identity.shortName").substr(0, 15));
+		plistSet(xml, "CFBundleShortVersionString", version);
+		plistSet(xml, "CFBundleVersion", std::to_string(build));
+		plistSet(xml, "NSHumanReadableCopyright", str(s_, "identity.copyright"));
+		const std::string minOs = plistGet(xml, "MinimumOSVersion").empty() ? "16.0" : plistGet(xml, "MinimumOSVersion");
+		writeText(plist, xml);
+
+		// the icon: an asset catalog with the 1024 icon, compiled by actool into the app
+		if (icons_.loaded()) {
+			pr.progress(-1, "Compiling the icon");
+			const fs::path set = dir / "Assets.xcassets" / "AppIcon.appiconset";
+			std::string png, err;
+			if (!icons_.png(1024, png, err)) throw Failure{ "The icon: " + err };
+			writeText(set / "icon-1024.png", png);
+			writeText(set / "Contents.json", "{\n  \"images\" : [ { \"filename\" : \"icon-1024.png\", \"idiom\" : \"universal\", \"platform\" : \"ios\", \"size\" : \"1024x1024\" } ],\n"
+			                                 "  \"info\" : { \"author\" : \"xcode\", \"version\" : 1 }\n}\n");
+			writeText(dir / "Assets.xcassets" / "Contents.json", "{\n  \"info\" : { \"author\" : \"xcode\", \"version\" : 1 }\n}\n");
+			for (const auto& e : fs::directory_iterator(app, ec)) {
+				const std::string n = krt::fromPath(e.path().filename());
+				if (n == "Assets.car" || n.rfind("AppIcon", 0) == 0) fs::remove(e.path(), ec);
+			}
+			const fs::path partial = dir / "icon-info.plist";
+			mustRun("actool", "xcrun", { "actool", krt::fromPath(dir / "Assets.xcassets"), "--compile", krt::fromPath(app),
+				"--platform", device ? "iphoneos" : "iphonesimulator", "--minimum-deployment-target", minOs, "--app-icon", "AppIcon",
+				"--target-device", "iphone", "--target-device", "ipad", "--output-partial-info-plist", krt::fromPath(partial),
+				"--output-format", "human-readable-text" }, 300);
+			// the icon entries actool made replace the engine's
+			RunOptions opt;
+			opt.timeoutSeconds = 60;
+			run("/usr/libexec/PlistBuddy", { "-c", "Delete :CFBundleIcons", krt::fromPath(plist) }, opt);
+			run("/usr/libexec/PlistBuddy", { "-c", "Delete :CFBundleIcons~ipad", krt::fromPath(plist) }, opt);
+			mustRun("PlistBuddy", "/usr/libexec/PlistBuddy", { "-c", "Merge " + krt::fromPath(partial), krt::fromPath(plist) });
+		}
+		mustRun("plutil", "plutil", { "-convert", "binary1", krt::fromPath(plist) });
+
+		dataInto("ios", app);
+		licensesInto(engine, app);
+
+		pr.progress(-1, "Signing the app");
+		if (!device) {
+			mustRun("codesign", "codesign", { "--force", "--sign", "-", "--timestamp=none", krt::fromPath(app) });
+			package = out_ / krt::toPath(packageBaseName(s_, "ios") + "-simulator.zip");
+			std::string err;
+			fs::remove(package, ec);
+			if (!zipFolder(dir / "Payload", package, "", err)) throw Failure{ err };
+			return;
+		}
+		const std::string identity = str(s_, base + "identity");
+		const fs::path profile = fs::absolute(p_.root / krt::toPath(str(s_, base + "profile")));
+		copyFile(profile, app / "embedded.mobileprovision");
+		const fs::path decoded = dir / "profile.plist", ents = dir / "entitlements.plist";
+		{
+			RunOptions opt;
+			opt.timeoutSeconds = 60;
+			// a provisioning profile is a signed plist; an unsigned one is taken as it is (tests)
+			if (!run("security", { "cms", "-D", "-i", krt::fromPath(profile), "-o", krt::fromPath(decoded) }, opt).ok())
+				copyFile(profile, decoded);
+		}
+		mustRun("Reading the provisioning profile", "plutil", { "-extract", "Entitlements", "xml1", "-o", krt::fromPath(ents), krt::fromPath(decoded) });
+		{
+			RunOptions opt;
+			opt.timeoutSeconds = 60;
+			const RunResult r = run("plutil", { "-extract", "Entitlements.application-identifier", "raw", "-o", "-", krt::fromPath(decoded) }, opt);
+			const std::string appId = krt::trim(r.output), bundle = str(s_, base + "bundleId");
+			const size_t dot = appId.find('.');
+			const std::string pattern = dot == std::string::npos ? appId : appId.substr(dot + 1);
+			const bool match = pattern == bundle || pattern == "*" ||
+				(pattern.size() > 1 && pattern.back() == '*' && bundle.rfind(pattern.substr(0, pattern.size() - 1), 0) == 0);
+			if (r.ok() && !match) throw Failure{ "The provisioning profile is for " + pattern + ", not " + bundle };
+		}
+		// what's inside the app first, then the app with the profile's entitlements
+		for (fs::recursive_directory_iterator it(app, ec), end; it != end; it.increment(ec)) {
+			const std::string ext = krt::fromPath(it->path().extension());
+			if (ext == ".dylib" || ext == ".framework") {
+				mustRun("codesign", "codesign", { "--force", "--sign", identity, krt::fromPath(it->path()) });
+				if (ext == ".framework") it.disable_recursion_pending();
+			}
+		}
+		mustRun("codesign", "codesign", { "--force", "--sign", identity, "--entitlements", krt::fromPath(ents), krt::fromPath(app) });
+		mustRun("The signature check", "codesign", { "--verify", "--deep", "--strict", krt::fromPath(app) });
+		package = out_ / krt::toPath(exe + "-" + version + ".ipa");
+		fs::remove(package, ec);
+		std::string err;
+		fs::remove_all(dir / "ipa", ec);
+		fs::create_directories(dir / "ipa", ec);
+		fs::rename(dir / "Payload", dir / "ipa" / "Payload", ec);
+		if (!zipFolder(dir / "ipa", package, "", err)) throw Failure{ err };
 	}
 
 	//-----------------------------------------------------------------------
