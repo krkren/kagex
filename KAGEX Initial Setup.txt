@@ -15,5 +15,14 @@ Original: Go Watanabe, 2012/4/29 (updated for the SDL3 port)
 
   Files under data/ load template/system.
 
-  When releasing a game, copy template/system and template/startup.tjs into the data
-  directory. template/main/ has empty versions of the game-side hooks to start from.
+  When releasing a game by hand, copy template/system and template/startup.tjs into the
+  data directory. template/main/ has empty versions of the game-side hooks to start from.
+
+3. Releasing a game
+
+  tools/kagex-release (tools/kagex-release.exe on Windows) packages the game next to it
+  for Windows, Linux, Linux for Steam, macOS, the web, Android and iOS. It opens a window
+  with the settings, which it saves to release.json next to data/, and can convert the
+  game's WAV, FLAC, PNG and BMP files to Opus and TLG6 on the way. tools/release/README.md
+  in the repository describes every option, and `kagex-release --cli build` runs it without
+  the window.

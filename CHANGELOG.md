@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+
+- **kagex-release**, a tool that packages a game for Windows, Linux, Linux for Steam, macOS, the web, Android and iOS (`tools/release`, shipped as `tools/kagex-release` in the Windows and Linux packages and as a download of its own for each system). It opens a window with the settings, which it keeps in `release.json` next to `data/`, and runs from the command line too (`--cli build`).
+  - Identity: title, short name, file name, version, copyright, the save folder's names (`orgname`/`appname`; the sample's and the engine's defaults are refused) and one 1024x1024 icon that each platform gets in its own sizes and formats.
+  - Windows: the exe renamed, with the game's icon and version info (when the tool runs on Windows), and the data as `data.xp3`, a folder, or bound into the exe. Linux and Steam: the same as a tar.gz, with a desktop entry. macOS: `<title>.app` with the game's bundle ID and icon, signed ad hoc or with a Developer ID and notarized, as a zip or a dmg. Web: the site with the game's files fetched on demand, or one preloaded `data.xp3`, titled and with the home-screen manifest and icons. Android: an APK or an app bundle with the game's application ID, name and icon, built by Gradle from a prebuilt engine (a JDK and the Android SDK, no NDK), signed with your keystore. iOS: an `.ipa` signed with your certificate and provisioning profile, or an app for the Simulator.
+  - Media: WAV and FLAC to Opus (by folder: 128 kbps music, 96 sound effects, 64 voices) or Ogg Vorbis, with `.sli` loop points carried over; PNG, BMP and TLG to TLG6, TLG5, PNG or JPEG (with a lossless mask for transparent images). Lossy files are never converted again; files the scripts name with their extension are kept, or their names rewritten. Conversions are cached.
+  - It shows what this computer can build for each platform and why not, writes `SHA256SUMS`, and test-runs this computer's build headless, reporting script errors.
+- Engine packages for it in each release (`kagex_engine_<platform>.zip`), made from the release builds.
+
+### Changed
+
+- The framework also looks for `.opus` sounds where a script names one without its extension (BGM, sound effects and voices). The engine played Opus, but only `.wav` and `.ogg` were looked for.
+
+### Fixed
+
+- The Android app was named "krkrz" on Japanese and Chinese phones: krkrz_android names it in those languages too, and only the default name was replaced.
+
 ## 0.2.2
 
 ### Added
