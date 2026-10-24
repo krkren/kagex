@@ -5,8 +5,10 @@
 #
 # Runs on pushes to platforms/** branches, by hand, and from the release workflow
 # (workflow_call, with the release commit as `ref`); each job keeps what it built as an
-# artifact (kagex-linux, kagex-web, kagex-android, kagex-ios-simulator, kagex-macos). A pushed
-# commit message with "[platforms: linux web]" builds only those.
+# artifact (kagex-linux, kagex-web, kagex-android, kagex-ios-simulator, kagex-macos), and the
+# Android and iOS jobs also kagex-release's engine packages for those (kagex-engine-android, a
+# Gradle project with the engine prebuilt; kagex-engine-ios, unsigned device and Simulator apps).
+# A pushed commit message with "[platforms: linux web]" builds only those.
 name: Platform builds
 
 on:
@@ -280,6 +282,19 @@ jobs:
           name: kagex-android
           path: kirikiri/kagex/build/android/app/outputs/apk/releaseDebugSigned/*.apk
           if-no-files-found: error
+      # kagex-release's Android engine: this Gradle project with the engine just built, prebuilt
+      - name: Engine package for kagex-release
+        run: |
+          apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
+          version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
+          python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$apk" kagex_engine_android.zip \
+            --version "$version" --app-config "$PROJECT_DIR/app-config.json" | tee results/engine-package.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-android
+          path: kagex_engine_android.zip
+          compression-level: 0
+          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
@@ -336,6 +351,25 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep || s=$?
           cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
+      # kagex-release's iOS engine: an unsigned Release build for devices (the developer's
+      # certificate signs it) and the Simulator app, without the game
+      - name: Build for devices, unsigned
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh device-configure make -C kirikiri/krkrz_ios dist-configure
+          kirikiri/kagex/.github/platforms/run-logged.sh device-build xcodebuild -project "$PROJECT_DIR/build/ios/dist/krkrz_ios.xcodeproj" \
+            -target krkrz -configuration Release -sdk iphoneos -arch arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          dapp=$(find "$PROJECT_DIR/build/ios/dist" -name '*.app' -path '*iphoneos*' | head -1)
+          [ -n "$dapp" ] || { echo "::error::no device .app"; exit 1; }
+          ditto -c -k --keepParent "$dapp" ios-device.zip
+          version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
+          python3 -I kirikiri/kagex/tools/release/scripts/ios-engine.py --device ios-device.zip --simulator kagex-ios-simulator.zip \
+            kagex_engine_ios.zip --version "$version" | tee results/engine-package.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-ios
+          path: kagex_engine_ios.zip
+          compression-level: 0
+          if-no-files-found: error
       - name: Publish results branch
         if: always()
         env:
