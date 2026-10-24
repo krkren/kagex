@@ -1,0 +1,601 @@
+make: Entering directory '/home/runner/work/kagex/kagex/kirikiri/krkrz_linux'
+python3 /home/runner/work/kagex/kagex/kirikiri/krkrz_linux/tools/krkrz_linux.py all
+INFO krkrz_linux: run: docker run --rm -v /home/runner/work/kagex/kagex/kirikiri:/home/runner/work/kagex/kagex/kirikiri -v krkrz-linux-build-3d4e4d02bf97:/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake -v deckbuild-cache:/cache -e VCPKG_DEFAULT_BINARY_CACHE=/cache/vcpkg-bincache -e CC=gcc-14 -e CXX=g++-14 -e KRKRZ_BASE=/home/runner/work/kagex/kagex/kirikiri -e PROJECT_DIR=/home/runner/work/kagex/kagex/kirikiri/kagex -e KRKRZ_LINUX_IN_CONTAINER=1 -w /home/runner/work/kagex/kagex/kirikiri/krkrz_linux deckbuild-sniper bash -c mkdir -p /cache/vcpkg-bincache && python3 /home/runner/work/kagex/kagex/kirikiri/krkrz_linux/tools/krkrz_linux.py build; rc=$?; chown -R 1001:1001 /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/generated /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install 2>/dev/null; exit $rc
+INFO krkrz_linux: run: cmake -S /home/runner/work/kagex/kagex/kirikiri/krkrz_linux -B /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake -G Ninja Multi-Config -DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/vcpkg/scripts/toolchains/linux.cmake -DVCPKG_CRT_LINKAGE=dynamic -DVCPKG_LIBRARY_LINKAGE=static -DVCPKG_TARGET_TRIPLET=x64-linux -DVCPKG_TARGET_ARCHITECTURE=x64 -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DKRKRZ_BASE=/home/runner/work/kagex/kagex/kirikiri -DMYAPP_CMAKE_FILE=/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/generated/myapp.cmake -DKRKRZ_EXE_NAME=krkrz -DCMAKE_CXX_STANDARD_LIBRARIES=/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/lib/libpng16.a /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/lib/libz.a /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbz2.a /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbrotlidec.a /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbrotlicommon.a -lm
+-- Including myapp.cmake from /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/generated/myapp.cmake
+-- krkrz_merge_vcpkg_manifest: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg.json
+--   + /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: libogg, libvorbis, libvpx
+--   - /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: excluded glew, glfw3
+--   + /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/minizip: minizip-ng
+--   + /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/expat: expat
+--   + /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/sigcheck: libtomcrypt, libtommath
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.3).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.3/cmake-4.4.3-linux-x86_64.tar.gz -> cmake-4.4.3-linux-x86_64.tar.gz
+Successfully downloaded cmake-4.4.3-linux-x86_64.tar.gz
+Extracting cmake...
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/g++-14
+The following packages will be built and installed:
+  * brotli:x64-linux@1.2.0
+  * bzip2[core,tool]:x64-linux@1.0.8#6
+    expat:x64-linux@2.7.3
+    freetype[brotli,bzip2,core,png,zlib]:x64-linux@2.13.3
+    glm:x64-linux@1.0.2
+    libjpeg-turbo:x64-linux@3.1.2
+  * liblzma:x64-linux@5.8.1
+    libogg:x64-linux@1.3.6#1
+    libpng:x64-linux@1.6.51
+    libtomcrypt:x64-linux@1.18.2#3
+    libtommath:x64-linux@1.3.0#2
+    libvorbis:x64-linux@1.3.7#4
+    libvpx:x64-linux@1.15.2#3
+    miniaudio:x64-linux@0.11.23
+    minizip-ng[bzip2,core,lzma,openssl,pkcrypt,wzaes,zlib,zstd]:x64-linux@4.0.10#1
+    oniguruma:x64-linux@6.9.10
+  * openssl:x64-linux@3.6.0#3
+    opus:x64-linux@1.5.2#1
+    picojson:x64-linux@1.3.0#3
+    plog:x64-linux@1.1.11
+  * vcpkg-cmake:x64-linux@2024-04-23
+  * vcpkg-cmake-config:x64-linux@2024-05-23
+  * vcpkg-cmake-get-vars:x64-linux@2025-05-29
+    zlib:x64-linux@1.3.1
+  * zstd:x64-linux@1.5.7
+Additional packages (*) will be modified to complete this operation.
+Restored 0 package(s) from /cache/vcpkg-bincache in 84.9 us. Use --debug to see more details.
+Installing 1/25 vcpkg-cmake-config:x64-linux@2024-05-23...
+vcpkg-cmake-config:x64-linux@2024-05-23 package ABI: a507b91a1201286ce6a748e66c0ff3f63a21dec24ba41da5a8ea55928f585b55
+Building vcpkg-cmake-config:x64-linux@2024-05-23...
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/vcpkg_cmake_config_fixup.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/vcpkg-port-config.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/copyright
+-- Skipping post-build validation due to VCPKG_POLICY_EMPTY_PACKAGE
+Starting submission of vcpkg-cmake-config:x64-linux@2024-05-23 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake-config:x64-linux: 14.3 ms
+Installing 2/25 vcpkg-cmake:x64-linux@2024-04-23...
+vcpkg-cmake:x64-linux@2024-04-23 package ABI: 51fd32c770d14509f68a4b442e3ab7668a7f6fabf300304712b06ea211d22c34
+Building vcpkg-cmake:x64-linux@2024-04-23...
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_configure.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_build.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_install.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg-port-config.cmake
+-- Installing: /opt/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/copyright
+-- Performing post-build validation
+Starting submission of vcpkg-cmake:x64-linux@2024-04-23 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake:x64-linux: 14 ms
+Completed submission of vcpkg-cmake-config:x64-linux@2024-05-23 to 1 binary cache(s) in 2.32 ms
+Installing 3/25 expat:x64-linux@2.7.3...
+expat:x64-linux@2.7.3 package ABI: 39089e796a627996356f0483317feec6a9fcd0a5c1866f9d453c5f47efc7edff
+Building expat:x64-linux@2.7.3...
+Downloading https://github.com/libexpat/libexpat/archive/R_2_7_3.tar.gz -> libexpat-libexpat-R_2_7_3.tar.gz
+Successfully downloaded libexpat-libexpat-R_2_7_3.tar.gz
+-- Extracting source /opt/vcpkg/downloads/libexpat-libexpat-R_2_7_3.tar.gz
+-- Using source at /opt/vcpkg/buildtrees/expat/src/R_2_7_3-c331528ffe.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Fixing pkgconfig file: /opt/vcpkg/packages/expat_x64-linux/lib/pkgconfig/expat.pc
+-- Fixing pkgconfig file: /opt/vcpkg/packages/expat_x64-linux/debug/lib/pkgconfig/expat.pc
+-- Installing: /opt/vcpkg/packages/expat_x64-linux/share/expat/copyright
+-- Performing post-build validation
+Starting submission of expat:x64-linux@2.7.3 to 1 binary cache(s) in the background
+Elapsed time to handle expat:x64-linux: 3.3 s
+Completed submission of vcpkg-cmake:x64-linux@2024-04-23 to 1 binary cache(s) in 2.51 ms
+Installing 4/25 zlib:x64-linux@1.3.1...
+zlib:x64-linux@1.3.1 package ABI: 67472e9524ef3de38fbda160db34cb3ae1e2688379a7a3598cf610e0a84c6473
+Building zlib:x64-linux@1.3.1...
+Downloading https://github.com/madler/zlib/archive/v1.3.1.tar.gz -> madler-zlib-v1.3.1.tar.gz
+Successfully downloaded madler-zlib-v1.3.1.tar.gz
+-- Extracting source /opt/vcpkg/downloads/madler-zlib-v1.3.1.tar.gz
+-- Applying patch 0001-Prevent-invalid-inclusions-when-HAVE_-is-set-to-0.patch
+-- Applying patch 0002-build-static-or-shared-not-both.patch
+-- Applying patch 0003-android-and-mingw-fixes.patch
+-- Using source at /opt/vcpkg/buildtrees/zlib/src/v1.3.1-2e5db616bf.clean
+-- Configuring x64-linux
+-- Building x64-linux-dbg
+-- Building x64-linux-rel
+-- Installing: /opt/vcpkg/packages/zlib_x64-linux/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Fixing pkgconfig file: /opt/vcpkg/packages/zlib_x64-linux/lib/pkgconfig/zlib.pc
+-- Fixing pkgconfig file: /opt/vcpkg/packages/zlib_x64-linux/debug/lib/pkgconfig/zlib.pc
+...
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/appserve/src/core/util.cpp:206:61: warning: ':' directive output may be truncated writing 1 byte into a region of size between 0 and 16 [-Wformat-truncation=]
+  206 |         snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d",
+      |                                                             ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/appserve/src/core/util.cpp:206:17: note: 'snprintf' output between 20 and 72 bytes into a destination of size 32
+  206 |         snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d",
+      |         ~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  207 |                  tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday,
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  208 |                  tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
+      |                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[1860/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/mime.cpp.o
+[1861/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/parse.cpp.o
+[1862/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/webroot/webroot.cpp.o
+[1863/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/webroot/zip.cpp.o
+[1864/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/http/server.cpp.o
+[1865/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/core/app.cpp.o
+[1866/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/browser/launcher.cpp.o
+[1867/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/repl.cpp.o
+[1868/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/stdin_channel.cpp.o
+[1869/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/browser/channel.cpp.o
+[1870/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/plugin/registry.cpp.o
+[1871/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/file_channel.cpp.o
+[1872/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/plugin/loader.cpp.o
+[1873/2153] Building CXX object core/external/movie-player/extlibs/libyuv/CMakeFiles/yuv.dir/Release/source/row_common.cc.o
+[1874/2153] Linking CXX static library core/external/movie-player/extlibs/libyuv/Release/libyuv.a
+[1875/2153] Linking CXX static library core/external/movie-player/Release/libmovieplayer.a
+[1876/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/src/repl/commands.cpp.o
+[1877/2153] Building CXX object core/external/appserve/CMakeFiles/appserve_core.dir/Release/modules/fs/fs_module.cpp.o
+[1878/2153] Linking CXX static library core/external/appserve/Release/libappserve_core.a
+[1879/2153] Building CXX object core/external/elements/external/elements_modal/CMakeFiles/elements_modal.dir/Release/src/json_layout.cpp.o
+[1880/2153] Linking CXX static library core/external/elements/external/elements_modal/Release/libelements_modal.a
+[1881/2153] appserve: packing /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/core/userconf_web -> web.zip
+[1882/2153] appserve: embedding web.zip into krkrz_userconf_web.cpp
+-- bin2c: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/core/appserve_embed/krkrz/web.zip -> /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/core/appserve_embed/krkrz/krkrz_userconf_web.cpp (11073 bytes)
+[1883/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsCompileControl.cpp.o
+[1884/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDate.cpp.o
+[1885/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjs.tab.cpp.o
+[1886/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsBinarySerializer.cpp.o
+[1887/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsByteCodeLoader.cpp.o
+[1888/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjs.cpp.o
+[1889/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsConfig.cpp.o
+[1890/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsConstArrayData.cpp.o
+[1891/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsdate.tab.cpp.o
+[1892/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDateParser.cpp.o
+[1893/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDebuggerHook.cpp.o
+[1894/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDictionary.cpp.o
+[1895/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDisassemble.cpp.o
+[1896/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDebuggerSymbols.cpp.o
+[1897/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsException.cpp.o
+[1898/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsObjectStats.cpp.o
+[1899/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDebug.cpp.o
+[1900/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsArray.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsArray.cpp: In static member function 'static tjs_error TJS::tTJSArrayClass::tTJSArrayClass()::NCM_save::Process(TJS::tTJSVariant*, tjs_int, TJS::tTJSVariant**, TJS::iTJSDispatch2*)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsArray.cpp:406:32: note: '#pragma message: TextEncode:LF'
+  406 | #pragma message("TextEncode:LF")
+      |                                ^
+[1901/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsGlobalStringMap.cpp.o
+[1902/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsError.cpp.o
+[1903/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsMessage.cpp.o
+[1904/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsInterface.cpp.o
+[1905/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsMath.cpp.o
+[1906/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsDebuggerCore.cpp.o
+[1907/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsNative.cpp.o
+[1908/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsLex.cpp.o
+[1909/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsMT19937ar-cok.cpp.o
+[1910/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsInterCodeGen.cpp.o
+In file included from /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/x86_64-linux-gnu/bits/c++allocator.h:33,
+                 from /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/allocator.h:46,
+                 from /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/vector:63,
+                 from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsCommHead.h:59,
+                 from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsInterCodeGen.cpp:11:
+In member function 'void std::__new_allocator<_Tp>::deallocate(_Tp*, size_type) [with _Tp = unsigned char]',
+    inlined from 'constexpr void std::allocator< <template-parameter-1-1> >::deallocate(_Tp*, std::size_t) [with _Tp = unsigned char]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/allocator.h:208:35,
+    inlined from 'static constexpr void std::allocator_traits<std::allocator<_Up> >::deallocate(allocator_type&, pointer, size_type) [with _Tp = unsigned char]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/alloc_traits.h:550:23,
+    inlined from 'constexpr std::vector<_Tp, _Alloc>::_M_realloc_append(_Args&& ...)::_Guard::~_Guard() [with _Args = {unsigned char}; _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/vector.tcc:616:18,
+    inlined from 'constexpr void std::vector<_Tp, _Alloc>::_M_realloc_append(_Args&& ...) [with _Args = {unsigned char}; _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/vector.tcc:688:7,
+    inlined from 'constexpr std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::emplace_back(_Args&& ...) [with _Args = {unsigned char}; _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/vector.tcc:123:21,
+    inlined from 'constexpr void std::vector<_Tp, _Alloc>::push_back(value_type&&) [with _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/stl_vector.h:1301:21,
+    inlined from 'static void TJS::tTJSInterCodeContext::Add4ByteToVector(std::vector<unsigned char>*, int)' at /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsInterCodeGen.h:574:19,
+    inlined from 'std::vector<unsigned char>* TJS::tTJSInterCodeContext::ExportByteCode(bool, TJS::tTJSScriptBlock*, TJS::tjsConstArrayData&)' at /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsInterCodeGen.cpp:3936:18:
+/usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/new_allocator.h:172:33: warning: 'void operator delete(void*, std::size_t)' called on pointer '<unknown>' with nonzero offset [2, 2147483647] [-Wfree-nonheap-object]
+  172 |         _GLIBCXX_OPERATOR_DELETE(_GLIBCXX_SIZED_DEALLOC(__p, __n));
+      |                                 ^
+In member function '_Tp* std::__new_allocator<_Tp>::allocate(size_type, const void*) [with _Tp = unsigned char]',
+    inlined from 'constexpr _Tp* std::allocator< <template-parameter-1-1> >::allocate(std::size_t) [with _Tp = unsigned char]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/allocator.h:196:40,
+    inlined from 'static constexpr _Tp* std::allocator_traits<std::allocator<_Up> >::allocate(allocator_type&, size_type) [with _Tp = unsigned char]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/alloc_traits.h:515:28,
+    inlined from 'constexpr std::_Vector_base<_Tp, _Alloc>::pointer std::_Vector_base<_Tp, _Alloc>::_M_allocate(std::size_t) [with _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/stl_vector.h:380:33,
+    inlined from 'constexpr void std::vector<_Tp, _Alloc>::reserve(size_type) [with _Tp = unsigned char; _Alloc = std::allocator<unsigned char>]' at /usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/vector.tcc:79:33,
+    inlined from 'std::vector<unsigned char>* TJS::tTJSInterCodeContext::ExportByteCode(bool, TJS::tTJSScriptBlock*, TJS::tjsConstArrayData&)' at /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/tjs2/tjsInterCodeGen.cpp:3934:17:
+/usr/lib/gcc-14/x86_64-linux-gnu/include/c++/14/bits/new_allocator.h:151:55: note: returned from 'void* operator new(std::size_t)'
+  151 |         return static_cast<_Tp*>(_GLIBCXX_OPERATOR_NEW(__n * sizeof(_Tp)));
+      |                                                       ^
+[1911/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjspp.tab.cpp.o
+[1912/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsInterCodeExec.cpp.o
+[1913/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsNamespace.cpp.o
+[1914/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsObjectExtendable.cpp.o
+[1915/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsRandomGenerator.cpp.o
+[1916/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsScriptCache.cpp.o
+[1917/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsObject.cpp.o
+[1918/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsRegExp.cpp.o
+[1919/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsSnprintf.cpp.o
+[1920/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsScriptBlock.cpp.o
+[1921/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsVariant.cpp.o
+[1922/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsUtils.cpp.o
+[1923/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsString.cpp.o
+[1924/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsOctPack.cpp.o
+[1925/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/DisplaySelect.cpp.o
+[1926/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/BinaryStream.cpp.o
+[1927/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/CharacterSet.cpp.o
+[1928/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/tjs2/tjsVariantString.cpp.o
+[1929/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/SoundAllocator.cpp.o
+[1930/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/KrkrzAllocator.cpp.o
+[1931/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/FileAllocator.cpp.o
+[1932/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/PluginIntf.cpp.o
+[1933/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/EventIntf.cpp.o
+[1934/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/TextStream.cpp.o
+[1935/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/SysInitIntf.cpp.o
+[1936/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/PooledAllocator.cpp.o
+[1937/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/BuiltinLicenses.cpp.o
+[1938/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/UtilStreams.cpp.o
+[1939/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/SystemIntf.cpp.o
+[1940/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/ScriptMgnIntf.cpp.o
+[1941/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/ExecutableOverlay.cpp.o
+[1942/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/UserConfigWeb.cpp.o
+[1943/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/environ/PadManager.cpp.o
+[1944/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/StorageIntf.cpp.o
+[1945/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/environ/TouchPoint.cpp.o
+[1946/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/XP3Archive.cpp.o
+[1947/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/msg/MsgLanguage.cpp.o
+[1948/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/LicenseIntf.cpp.o
+[1949/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/environ/HotKeyIntf.cpp.o
+[1950/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/extension/Extension.cpp.o
+[1951/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/msg/MsgIntf.cpp.o
+[1952/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/MathAlgorithms.cpp.o
+[1953/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/PhaseVocoderDSP.cpp.o
+[1954/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/SoundBufferBaseIntf.cpp.o
+[1955/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FontVariations.cpp.o
+[1956/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/PhaseVocoderFilter.cpp.o
+[1957/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/StorageCache.cpp.o
+[1958/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/WaveSegmentQueue.cpp.o
+[1959/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/SoundBufferBaseImpl.cpp.o
+[1960/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/RealFFT.cpp.o
+[1961/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/msg/ReadOptionDescUtil.cpp.o
+[1962/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ClipboardIntf.cpp.o
+[1963/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/VorbisCodecDecoder.cpp.o
+[1964/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/OpusCodecDecoder.cpp.o
+[1965/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/WaveLoopManager.cpp.o
+[1966/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/cp932_uni.cpp.o
+[1967/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/WaveIntf.cpp.o
+[1968/2153] Building C object core/CMakeFiles/krkrz.dir/Release/common/utils/md5.c.o
+[1969/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/LogFormat.cpp.o
+[1970/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/DebugIntf.cpp.o
+[1971/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/MiscUtility.cpp.o
+[1972/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/SystemAllocatorInfo.cpp.o
+[1973/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/MemoryStatPeriodicDump.cpp.o
+[1974/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/AllocTagScope.cpp.o
+[1975/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/DAPServer.cpp.o
+[1976/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ProcessMemory.cpp.o
+[1977/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/AllocSiteStats.cpp.o
+[1978/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/Random.cpp.o
+[1979/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/PadOverlay.cpp.o
+[1980/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/GlobalAllocStats.cpp.o
+[1981/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/TVPTimer.cpp.o
+[1982/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ThreadIntf.cpp.o
+[1983/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/TimerThread.cpp.o
+[1984/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/uni_cp932.cpp.o
+[1985/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/MemoryOverlay.cpp.o
+[1986/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/TimerIntf.cpp.o
+[1987/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/BitmapIntf.cpp.o
+[1988/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/WinConsole.cpp.o
+[1989/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/BitmapInfomation.cpp.o
+[1990/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/VelocityTracker.cpp.o
+[1991/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/ComplexRect.cpp.o
+[1992/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/BitmapLayerTreeOwner.cpp.o
+[1993/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/CharacterData.cpp.o
+[1994/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VideoOverlayPresenter.cpp.o
+[1995/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FontStream.cpp.o
+[1996/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/DrawDevice.cpp.o
+[1997/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/GlyphwareText.cpp.o
+[1998/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VerticalCharClass.cpp.o
+[1999/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FontServiceIntf.cpp.o
+[2000/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VerticalText.cpp.o
+[2001/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VerticalParagraph.cpp.o
+[2002/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VerticalLineBreak.cpp.o
+[2003/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/GlyphwareFontRasterizer.cpp.o
+[2004/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/GlyphwareHost.cpp.o
+[2005/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FontSystem.cpp.o
+[2006/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/SimpleImageLoad.cpp.o
+[2007/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FreeTypeFontRasterizer.cpp.o
+[2008/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/ImageFunction.cpp.o
+[2009/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/FreeType.cpp.o
+[2010/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/OGLDialogRenderer.cpp.o
+[2011/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/GraphicsLoadThread.cpp.o
+[2012/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/GraphicsLoaderIntf.cpp.o
+[2013/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LayerTreeOwnerImpl.cpp.o
+[2014/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LayerBitmapImpl.cpp.o
+[2015/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LayerManager.cpp.o
+[2016/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LoadJPEG.cpp.o
+[2017/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/NullDrawDevice.cpp.o
+[2018/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/SaveTLG5.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/SaveTLG5.cpp: In constructor 'SlideCompressor::SlideCompressor()':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/SaveTLG5.cpp:18:60: warning: iteration 4368 invokes undefined behavior [-Waggressive-loop-optimizations]
+   18 |         for(int i = 0; i < SLIDE_N + SLIDE_M; i++) Text[i] = 0;
+      |                                                    ~~~~~~~~^~~
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/SaveTLG5.cpp:18:26: note: within this loop
+   18 |         for(int i = 0; i < SLIDE_N + SLIDE_M; i++) Text[i] = 0;
+[2019/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LoadTLG.cpp.o
+[2020/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LoadPNG.cpp.o
+[2021/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/BitmapDrawDevice.cpp.o
+[2022/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LayerBitmapIntf.cpp.o
+[2023/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/PrerenderedFont.cpp.o
+[2024/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/cpu_detect.cpp.o
+[2025/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/RectItf.cpp.o
+[2026/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/KeyRepeat.cpp.o
+[2027/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/TransIntf.cpp.o
+[2028/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/VideoOvlIntf.cpp.o
+[2029/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/SaveTLG6.cpp.o
+[2030/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/base/FuncStubs.cpp.o
+[2031/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/LayerIntf.cpp.o
+[2032/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/WindowIntf.cpp.o
+[2033/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/WeightFunctor.cpp.o
+[2034/2153] Building C object core/CMakeFiles/krkrz.dir/Release/common/visual/tvpgl.c.o
+[2035/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplMainQueue.cpp.o
+[2036/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplWatch.cpp.o
+[2037/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/ResampleImage.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/ResampleImage.cpp: In static member function 'static const int AxisParam<TWeight, NAlign>::toAlign(int&)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/ResampleImage.cpp:235:9: warning: no return statement in function returning non-void [-Wreturn-type]
+  235 |         }
+      |         ^
+[2038/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/blend_function.cpp.o
+[2039/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplFileChannel.cpp.o
+[2040/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/REPL.cpp.o
+[2041/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplSocketChannel.cpp.o
+[2042/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplWebIntf.cpp.o
+[2043/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/ScreenCapture.cpp.o
+[2044/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/x86simdutilAVX2.cpp.o
+[2045/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/x86simdutil.cpp.o
+[2046/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplModal.cpp.o
+[2047/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/colorfill_avx2.cpp.o
+[2048/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/blend_function_avx2.cpp.o
+[2049/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/ReplWebServer.cpp.o
+[2050/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/ResampleImageSSE2.cpp.o
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/ResampleImageSSE2.cpp:18:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h: In function '__m256 m256_rcp_22bit_ps(const __m256&)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h:64:50: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   64 | inline __m256 m256_rcp_22bit_ps( const __m256& a ) {
+      |                                                  ^
+[2051/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/adjust_color_sse2.cpp.o
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/adjust_color_sse2.cpp:6:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h: In function '__m256 m256_rcp_22bit_ps(const __m256&)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h:64:50: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   64 | inline __m256 m256_rcp_22bit_ps( const __m256& a ) {
+      |                                                  ^
+[2052/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/ResampleImageAVX2.cpp.o
+[2053/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/boxblur_sse2.cpp.o
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/boxblur_sse2.cpp:6:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h: In function '__m256 m256_rcp_22bit_ps(const __m256&)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/gl/x86simdutil.h:64:50: warning: AVX vector return without AVX enabled changes the ABI [-Wpsabi]
+   64 | inline __m256 m256_rcp_22bit_ps( const __m256& a ) {
+      |                                                  ^
+[2054/2153] Building C object core/CMakeFiles/krkrz.dir/Release/common/visual/IA32/tvpgl_ia32_intf.c.o
+[2055/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/colormap_avx2.cpp.o
+[2056/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/pixelformat_sse2.cpp.o
+[2057/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/colorfill_sse2.cpp.o
+[2058/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/univtrans_sse2.cpp.o
+[2059/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/colormap_sse2.cpp.o
+[2060/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/tlg_sse2.cpp.o
+[2061/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/IA32/detect_cpu.cpp.o
+[2062/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/MathAlgorithms_SSE.cpp.o
+[2063/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/RealFFT_SSE.cpp.o
+[2064/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/xmmlib.cpp.o
+[2065/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/environ/AgentControlIntf.cpp.o
+[2066/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/gl/blend_function_sse2.cpp.o
+[2067/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLVideoPresenter.cpp.o
+[2068/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/EffectCommand.cpp.o
+[2069/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLCompositorIntf.cpp.o
+[2070/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLTexture.cpp.o
+[2071/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/CanvasIntf.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/CanvasIntf.cpp: In member function 'void tTJSNI_Canvas::DrawMesh(tTJSNI_ShaderProgram*, tjs_int, const tTJSNI_VertexBinder*, tjs_int)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/CanvasIntf.cpp:1070:53: warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
+ 1070 |         glDrawElements( primitiveType, count, type, (const GLvoid *)index->GetOffset() );
+      |                                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2072/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLFrameBufferObject.cpp.o
+[2073/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/OGLDrawDevice.cpp.o
+[2074/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLShaderUtil.cpp.o
+[2075/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLClip.cpp.o
+[2076/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/GLEffect.cpp.o
+[2077/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/PadOverlayGL.cpp.o
+[2078/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/Matrix32Intf.cpp.o
+[2079/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/OffscreenIntf.cpp.o
+[2080/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/OpenGLError.cpp.o
+[2081/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/Matrix44Intf.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.cpp: In member function 'void tTJSNI_Matrix44::Inc()':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.cpp:107:35: warning: ignoring return value of 'constexpr glm::mat<4, 4, T, Q> glm::mat<4, 4, T, Q>::operator++(int) [with T = float; glm::qualifier Q = glm::packed_highp]', declared with attribute 'nodiscard' [-Wunused-result]
+  107 | void tTJSNI_Matrix44::Inc() { Mat4++; }
+      |                                   ^~
+In file included from /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/include/glm/detail/type_mat4x4.hpp:188,
+                 from /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/include/glm/ext/matrix_double4x4.hpp:5,
+                 from /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/include/glm/mat4x4.hpp:5,
+                 from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.h:10,
+                 from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.cpp:4:
+/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/include/glm/detail/type_mat4x4.inl:421:58: note: declared here
+  421 |         GLM_FUNC_QUALIFIER GLM_CONSTEXPR mat<4, 4, T, Q> mat<4, 4, T, Q>::operator++(int)
+      |                                                          ^~~~~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.cpp: In member function 'void tTJSNI_Matrix44::Dec()':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/Matrix44Intf.cpp:108:35: warning: ignoring return value of 'constexpr glm::mat<4, 4, T, Q> glm::mat<4, 4, T, Q>::operator--(int) [with T = float; glm::qualifier Q = glm::packed_highp]', declared with attribute 'nodiscard' [-Wunused-result]
+  108 | void tTJSNI_Matrix44::Dec() { Mat4--; }
+      |                                   ^~
+/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake/vcpkg_installed/x64-linux/include/glm/detail/type_mat4x4.inl:429:58: note: declared here
+  429 |         GLM_FUNC_QUALIFIER GLM_CONSTEXPR mat<4, 4, T, Q> mat<4, 4, T, Q>::operator--(int)
+      |                                                          ^~~~~~~~~~~~~~~
+[2082/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/TextureIntf.cpp.o
+[2083/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/MemoryOverlayGL.cpp.o
+[2084/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/ShaderProgramIntf.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/ShaderProgramIntf.cpp: In member function 'void tTVPShaderParameter::SetToShader(tjs_int*, tjs_int*)':
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/opengl/ShaderProgramIntf.cpp:410:173: warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
+  410 |                         glVertexAttribPointer( Id, vtxBind->GetComponentCount(), vtxBuf->GetDataType(), vtxBind->GetNormalize() ? GL_TRUE : GL_FALSE, vtxBind->GetStride(), (const GLvoid *)vtxBind->GetOffset() );
+      |                                                                                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[2085/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/VertexBinderIntf.cpp.o
+[2086/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/VertexBufferIntf.cpp.o
+[2087/2153] Building C object core/CMakeFiles/krkrz.dir/Release/common/glad/src/egl.c.o
+[2088/2153] Building C object core/CMakeFiles/krkrz.dir/Release/common/glad/src/gles2.c.o
+[2089/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/SoundEventThread.cpp.o
+[2090/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/SoundDecodeThread.cpp.o
+[2091/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/DrawDeviceImpl.cpp.o
+[2092/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/opengl/TextureLayerTreeOwner.cpp.o
+[2093/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/EventImpl.cpp.o
+[2094/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/ScriptMgnImpl.cpp.o
+[2095/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/PluginImpl.cpp.o
+[2096/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/QueueSoundBufferImpl.cpp.o
+[2097/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/SystemFontList.cpp.o
+[2098/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/StorageImpl.cpp.o
+[2099/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/FontSystemBase.cpp.o
+[2100/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/SysInitImpl.cpp.o
+[2101/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/JoyPad.cpp.o
+[2102/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/WindowForm.cpp.o
+[2103/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/base/SystemImpl.cpp.o
+[2104/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/msg/MsgImpl.cpp.o
+[2105/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/Application.cpp.o
+[2106/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/visual/LayerImpl.cpp.o
+[2107/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/visual/VideoOvlImpl.cpp.o
+[2108/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/base/SDL3KirikiriIOStream.cpp.o
+[2109/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/msg/MsgLoad.cpp.o
+[2110/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/visual/BitmapBitsAlloc.cpp.o
+[2111/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/msg/ReadOptionDesc.cpp.o
+[2112/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/environ/AgentInput.cpp.o
+[2113/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/base/SDL3KirikiriStorage.cpp.o
+[2114/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/base/storage.cpp.o
+[2115/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/base/FileImpl.cpp.o
+[2116/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/visual/WindowImpl.cpp.o
+[2117/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/key.cpp.o
+[2118/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/pad.cpp.o
+[2119/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/SDLVideoPresenter.cpp.o
+[2120/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/form.cpp.o
+[2121/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/main.cpp.o
+[2122/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/utils/TickCount.cpp.o
+[2123/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/utils/LogImpl.cpp.o
+[2124/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/PostRenderCallback.cpp.o
+[2125/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/MemoryOverlayRender.cpp.o
+[2126/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/app.cpp.o
+[2127/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/PadOverlayRender.cpp.o
+[2128/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/SDLOGLDrawDevice.cpp.o
+[2129/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/SDLDrawDevice.cpp.o
+[2130/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/ElementsSessionBuild.cpp.o
+[2131/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/PanelIntf.cpp.o
+[2132/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/ElementsLayerPanel.cpp.o
+[2133/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/WinElementsModalRunner.cpp.o
+[2134/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/GlyphwareTvgBridge.cpp.o
+[2135/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/DialogPluginService.cpp.o
+[2136/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/BlockTextBackend.cpp.o
+[2137/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/VariantJsonUtil.cpp.o
+[2138/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/StoragesResourceLoader.cpp.o
+[2139/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/sound/audio.cpp.o
+[2140/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/SDLDialogRenderer.cpp.o
+[2141/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/DialogIntf.cpp.o
+[2142/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/utils/ClipboardImpl.cpp.o
+[2143/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/visual/SDLElementsModalRunner.cpp.o
+[2144/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/appserve_embed/krkrz/krkrz_userconf_web.cpp.o
+[2145/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/app/Mpeg1MoviePlayer.cpp.o
+[2146/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/app/objres.cpp.o
+[2147/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/environ/stdapp.cpp.o
+[2148/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/sdl3/utils/ThreadImpl.cpp.o
+[2149/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/generic/app/movie.cpp.o
+[2150/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/visual/elements/ElementsDialogManager.cpp.o
+[2151/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/utils/LogCore.cpp.o
+[2152/2153] Building CXX object core/CMakeFiles/krkrz.dir/Release/common/sound/AudioStream.cpp.o
+[2153/2153] Linking CXX executable core/Release/krkrz
+INFO krkrz_linux: run: cmake --install /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/cmake --config Release --prefix /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libKAGParserEx.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libKAGParserEx.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libclipfile.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libclipfile.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libcsvParser.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libcsvParser.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libgetSample.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libgetSample.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libjson.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libjson.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExAreaAverage.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExAreaAverage.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExBTOA.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExBTOA.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExImage.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExImage.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExLongExposure.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExLongExposure.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExRaster.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExRaster.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExVector.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExVector.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblineParser.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblineParser.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libminizip.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libminizip.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libpsdfile.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libpsdfile.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libsaveStruct.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libsaveStruct.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libscriptsEx.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libscriptsEx.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libshrinkCopy.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libshrinkCopy.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkr_richtext.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkr_richtext.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libextrans.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libextrans.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libextNagano.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libextNagano.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libAlphaMovie.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libAlphaMovie.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libexpat.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libexpat.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExSave.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/liblayerExSave.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libsigcheck.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libsigcheck.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkreffekseer.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkreffekseer.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkrthreepp.so
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/plugin/libkrkrthreepp.so" to "$ORIGIN:$ORIGIN/.."
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/./krkrz
+-- Set non-toolchain portion of runtime path of "/home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/./krkrz" to "$ORIGIN"
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/./libSDL3.so.0.4.0
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/./libSDL3.so.0
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/./license.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/kirikiri-z.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/zlib.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libpng.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libjpeg-turbo.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/oniguruma.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/glm.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plog.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/icline.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/brotli.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/bzip2.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/liblzma-xz-utils.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/glyphware.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/freetype.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/harfbuzz.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/sheenbidi.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/picojson.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libogg.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libvorbis.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/opus.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/miniaudio.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/movie-player.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libvpx.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/libyuv.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/nestegg.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/pl_mpeg.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/elements-cycfi.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/thorvg.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/jerryscript.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/rapidjson.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/sdl3.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/glad.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/sdl_gamecontrollerdb.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/noto-fonts.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/roboto.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/elements_basic-fontello-icons.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/clipparse.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/sqlite.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/cximage.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/thorvg.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/jerryscript.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/rapidjson.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/minizip-ng.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/psdparse.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/richtext.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/minikin.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/expat.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/lodepng.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/libtomcrypt.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/libtommath.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/effekseer.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/threepp.txt
+-- Installing: /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/install/licenses/plugins/vrm-kota-iguchi.txt
+INFO krkrz_linux: staged 461 files into /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/package/krkrz (linked 461 / copied 0 / unchanged 0 / removed 0)
+INFO krkrz_linux: wrote /home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/dist/krkrz-0.3.0-linux-x86_64.tar.gz
+make: Leaving directory '/home/runner/work/kagex/kagex/kirikiri/krkrz_linux'
