@@ -3,7 +3,10 @@
 # creates the release tag at KAGEX_SHA and publishes the zips. The platform builds (Linux for
 # Steam, web, Android, iOS Simulator, macOS) come from platforms.yml, copied here from the
 # release commit and called with it. After publishing, the web build goes on GitHub Pages
-# (pages.yml on main). Zip package layout, like 0.0.4:
+# (pages.yml on main). kagex-release (tools/release) comes from release-tool.yml, also called
+# with the release commit; tool-check makes its engine packages (kagex_engine_*.zip) from this
+# release's packages and builds the sample with them, and publish adds the tool to the Windows
+# and Linux zips (tools/) and as downloads of its own. Zip package layout, like 0.0.4:
 #   krkrz(.exe), SDL3.dll / libSDL3.so.0, plugin/, license.txt, licenses/ (cmake --install of
 #   the engine) + data/, template/, doc/, "KAGEX Initial Setup.txt" and krkrz.cf (the
 #   engine's options: the Linux/macOS save folder) from the kagex commit.
@@ -21,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.2.2"
-  KAGEX_SHA: ab16f01702e45a8af4b74197c515d9cc3f6520e9
+  RELEASE_TAG: "0.3.0"
+  KAGEX_SHA: bd2cb1a4a96b7dc3c7fb8cddfc7fc0e1d8a2ac9d
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -41,6 +44,14 @@ jobs:
   platforms:
     needs: release-commit
     uses: ./.github/workflows/platforms.yml
+    with:
+      ref: ${{ needs.release-commit.outputs.sha }}
+    permissions:
+      contents: write
+
+  release-tool:
+    needs: release-commit
+    uses: ./.github/workflows/release-tool.yml
     with:
       ref: ${{ needs.release-commit.outputs.sha }}
     permissions:
@@ -395,8 +406,104 @@ jobs:
         run: |
           ci/.github/windows-test/publish-results.sh "release-results-linux-${CONFIG,,}" "Linux $CONFIG package, run ${{ github.run_id }} (${{ job.status }})"
 
+  # kagex-release with this release's engines: the engine packages, made from the packages
+  # above, and a build of the sample for what a Linux runner makes, with the test run
+  tool-check:
+    needs: [release-commit, windows, linux, platforms, release-tool]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-commit.outputs.sha }}
+          path: kagex
+      - uses: actions/checkout@v4
+        with:
+          path: ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kagex_sdl3_*.zip
+          merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kagex-*
+          path: platforms
+      - name: Engine packages
+        run: |
+          mkdir -p engines results
+          ep="python3 -I kagex/tools/release/scripts/engine-package.py"
+          lic=dist/kagex_sdl3_linux_release.zip
+          $ep windows dist/kagex_sdl3_windows_release.zip engines/kagex_engine_windows.zip --version "$RELEASE_TAG"
+          $ep windows dist/kagex_sdl3_windows_debug.zip engines/kagex_engine_windows_debug.zip --version "$RELEASE_TAG" --debug
+          $ep linux dist/kagex_sdl3_linux_release.zip engines/kagex_engine_linux.zip --version "$RELEASE_TAG"
+          $ep linux dist/kagex_sdl3_linux_debug.zip engines/kagex_engine_linux_debug.zip --version "$RELEASE_TAG" --debug
+          $ep steam "$(ls platforms/kagex-linux/*.tar.gz)" engines/kagex_engine_steam.zip --version "$RELEASE_TAG"
+          $ep macos "$(ls platforms/kagex-macos/*.zip)" engines/kagex_engine_macos.zip --version "$RELEASE_TAG" --licenses-from "$lic"
+          (cd platforms/kagex-web && zip -q -r ../../web.zip .)
+          $ep web web.zip engines/kagex_engine_web.zip --version "$RELEASE_TAG" --licenses-from "$lic"
+          cp platforms/kagex-engine-android/kagex_engine_android.zip platforms/kagex-engine-ios/kagex_engine_ios.zip engines/
+          # the Android and iOS packages get the engine's licenses from the Linux package
+          mkdir lic && (cd lic && unzip -q "../$lic" license.txt 'licenses/*')
+          for z in kagex_engine_android.zip kagex_engine_ios.zip; do (cd lic && zip -q -r "../engines/$z" license.txt licenses); done
+          ls -l engines | tee results/engines.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK packages and the libraries for the test run
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > results/sdk.log 2>&1
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig > results/apt.log 2>&1
+      - name: Build the sample with this release's engines
+        run: |
+          tool=platforms/kagex-release-linux/kagex-release
+          chmod +x "$tool"
+          mkdir -p game/template
+          cp -r kagex/data kagex/platform kagex/krkrz.cf game/
+          cp -r kagex/template/system game/template/
+          "$tool" --cli init game
+          python3 - <<'EOF'
+          import json
+          p = "game/release.json"
+          s = json.load(open(p))
+          s["identity"]["orgName"] = "kagex-ci"
+          for k in s["platforms"]:
+              s["platforms"][k]["enabled"] = k in ("windows", "linux", "steam", "web", "android")
+          s["platforms"]["android"]["applicationId"] = "com.example.kagexci"
+          s["output"]["check"] = True
+          json.dump(s, open(p, "w"), indent=2)
+          EOF
+          KAGEX_RELEASE_CACHE="$PWD/cache" "$tool" --cli build game/release.json --engines=engines --json > results/build.json || true
+          python3 - <<'EOF'
+          import json, re, sys
+          t = open("results/build.json").read()
+          # the JSON result, after any progress lines
+          r = json.loads(t[re.search(r"^\{", t, re.M).start():])
+          for o in r["outputs"]:
+              print(o["platform"], "ok" if o["ok"] else "FAILED: " + o.get("error", ""), o.get("package") or o.get("folder"))
+          print("test run:", r.get("check", {}).get("message"))
+          sys.exit(0 if r["ok"] else 1)
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-packages
+          path: engines/*.zip
+          compression-level: 0
+          retention-days: 7
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp game/release/test-run.log game/release/android-build.log results/ 2>/dev/null || true
+          ci/.github/windows-test/publish-results.sh release-results-tool-check "kagex-release with $RELEASE_TAG's engines, run ${{ github.run_id }} (${{ job.status }})"
+
   publish:
-    needs: [windows, linux, platforms]
+    needs: [windows, linux, platforms, release-tool, tool-check]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -435,6 +542,34 @@ jobs:
           (cd platforms/kagex-web && zip -q -9 -r "$GITHUB_WORKSPACE/dist/kagex_sdl3_web.zip" .)
           ls -l dist
 
+      - name: Collect the engine packages
+        if: env.PUBLISH == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: kagex-engine-packages
+          path: dist
+
+      - name: The release tool, in the packages and on its own
+        if: env.PUBLISH == 'true'
+        run: |
+          win=platforms/kagex-release-windows/kagex-release.exe
+          lin=platforms/kagex-release-linux/kagex-release
+          mac=platforms/kagex-release-macos/kagex-release
+          ls -l "$win" "$lin" "$mac"
+          chmod 755 "$lin" "$mac"
+          # tools/kagex-release(.exe) in the Windows and Linux zips
+          mkdir -p t/tools
+          cp "$win" t/tools/
+          for z in kagex_sdl3_windows_release.zip kagex_sdl3_windows_debug.zip; do (cd t && zip -q "../dist/$z" tools/kagex-release.exe); done
+          rm t/tools/*
+          cp -p "$lin" t/tools/
+          for z in kagex_sdl3_linux_release.zip kagex_sdl3_linux_debug.zip; do (cd t && zip -q "../dist/$z" tools/kagex-release); done
+          # each on its own
+          (cd "$(dirname "$win")" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-windows.zip" kagex-release.exe)
+          tar czf dist/kagex-release-linux.tar.gz -C "$(dirname "$lin")" kagex-release
+          (cd "$(dirname "$mac")" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-macos.zip" kagex-release)
+          ls -l dist
+
       - name: Wait for the release commit to reach main
         if: env.PUBLISH == 'true'
         timeout-minutes: 240
@@ -465,7 +600,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           ls -l dist
-          [ "$(ls dist/* | wc -l)" = 9 ] || { echo "expected 9 packages"; exit 1; }
+          # 9 packages, 9 engine packages and the tool for 3 systems
+          [ "$(ls dist/* | wc -l)" = 21 ] || { echo "expected 21 files"; exit 1; }
           sha256sum dist/*
           if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
             echo "tag $RELEASE_TAG already exists"; exit 1

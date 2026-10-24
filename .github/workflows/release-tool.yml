@@ -1,0 +1,210 @@
+# Builds kagex-release (tools/release) for Windows, Linux and macOS (Apple Silicon) and runs
+# its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium).
+# Each job uploads the tool (kagex-release-<os>) and force-pushes its results to
+# ci/platform-results-release-tool-<os>.
+name: Release tool
+
+on:
+  push:
+    branches: ['release-tool/**', main]
+    paths: ['tools/release/**', '.github/workflows/release-tool.yml']
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # the release whose packages the build tests take their engines from
+  ENGINES_FROM: "0.2.2"
+  # krkrz_android, as in platforms.yml
+  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
+  # the run of tools-check.yml whose kagex-ios-device-unsigned artifact the iOS tests use
+  IOS_DEVICE_RUN: "40057830047"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, preset: windows, name: windows, exe: kagex-release.exe }
+          - { os: ubuntu-22.04, preset: linux, name: linux, exe: kagex-release }
+          - { os: macos-15, preset: macos, name: macos, exe: kagex-release }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: kagex
+      - name: Clone krkrz_tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p results
+          sha=$(gh api "repos/wamsoft/krkrz_dev/contents/src/tools/krkrz_tools?ref=$ENGINE_SHA" --jq .sha)
+          git clone -q https://github.com/wamsoft/krkrz_tools.git krkrz_tools
+          git -C krkrz_tools checkout -q "$sha"
+          git -C krkrz_tools submodule update -q --init --recursive
+          ws=$(pwd -W 2>/dev/null || pwd)
+          echo "KRKRZ_TOOLS_DIR=$ws/krkrz_tools" >> "$GITHUB_ENV"
+          PY=python3; [ "$RUNNER_OS" = Windows ] && PY=python
+          echo "PY=$PY" >> "$GITHUB_ENV"
+          # the oldest macOS the tool runs on (also for the vcpkg libraries)
+          [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
+          { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
+      # Engine packages for the build tests, made from a published release's packages until
+      # a release publishes its own (kagex_engine_*.zip)
+      - uses: actions/cache@v4
+        id: engines
+        with:
+          path: engines
+          key: engines-${{ runner.os }}-${{ env.ENGINES_FROM }}-${{ hashFiles('kagex/tools/release/scripts/*.py') }}
+      - name: Engine packages
+        if: steps.engines.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs \
+            --pattern kagex_sdl3_windows_release.zip --pattern kagex_sdl3_linux_release.zip \
+            --pattern kagex_sdl3_linux_steam.tar.gz --pattern kagex_sdl3_macos.zip --pattern kagex_sdl3_web.zip
+          mkdir -p engines
+          ep="$PY -I kagex/tools/release/scripts/engine-package.py"
+          $ep windows pkgs/kagex_sdl3_windows_release.zip engines/kagex_engine_windows.zip --version 0.3.0
+          $ep linux pkgs/kagex_sdl3_linux_release.zip engines/kagex_engine_linux.zip --version 0.3.0
+          $ep steam pkgs/kagex_sdl3_linux_steam.tar.gz engines/kagex_engine_steam.zip --version 0.3.0
+          $ep macos pkgs/kagex_sdl3_macos.zip engines/kagex_engine_macos.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          $ep web pkgs/kagex_sdl3_web.zip engines/kagex_engine_web.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          if [ "$RUNNER_OS" = Linux ]; then
+            # Android: krkrz_android's Gradle project with the engine from the release's APK
+            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_android.apk
+            git clone -q https://github.com/wamsoft/krkrz_android.git kit
+            git -C kit checkout -q "$KRKRZ_ANDROID_SHA"
+            find kit -maxdepth 2 -type f \( -name Makefile -o -name '*.sh' \) -exec perl -pi -e 's/\r$//' {} +
+            mkdir -p kit/app/libs
+            (cd kit && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
+            $PY -I kagex/tools/release/scripts/android-engine.py kit pkgs/kagex_sdl3_android.apk engines/kagex_engine_android.zip \
+              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip --app-config kagex/app-config.json
+            rm -rf kit
+          fi
+          if [ "$RUNNER_OS" = macOS ]; then
+            # iOS: the Simulator app from the release, and an unsigned device build (Release) that
+            # tools-check.yml made, until platforms.yml builds one for the release
+            gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs --pattern kagex_sdl3_ios_simulator.zip
+            gh run download "$IOS_DEVICE_RUN" --repo "$GITHUB_REPOSITORY" -n kagex-ios-device-unsigned -D pkgs/ios-device
+            $PY -I kagex/tools/release/scripts/ios-engine.py --device pkgs/ios-device/kagex-ios-device-unsigned.ipa \
+              --simulator pkgs/kagex_sdl3_ios_simulator.zip engines/kagex_engine_ios.zip \
+              --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          fi
+          rm -rf pkgs
+      - uses: actions/setup-java@v4
+        if: runner.os == 'Linux'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Android SDK packages
+        if: runner.os == 'Linux'
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > results/sdk.log 2>&1
+      - name: Libraries for the test run
+        if: runner.os == 'Linux'
+        run: |
+          # the engine draws with OpenGL ES through EGL (Mesa), headless with SDL's offscreen driver
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig > results/apt.log 2>&1
+      - name: OpenGL ES for the test run
+        # the Windows VM has no GPU driver: the engine gets GLES through Edge's ANGLE (in PATH,
+        # not in the packages)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $angle = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft\EdgeCore", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application" -Recurse -Filter libGLESv2.dll -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($angle) { New-Item -ItemType Directory -Force angle | Out-Null; foreach ($n in 'libEGL.dll', 'libGLESv2.dll', 'd3dcompiler_47.dll') { $f = Join-Path $angle.DirectoryName $n; if (Test-Path $f) { Copy-Item $f angle\ } }; "$PWD\angle" >> $env:GITHUB_PATH; Get-ChildItem angle }
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Set up vcpkg
+        id: vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          if [ "$RUNNER_OS" = Windows ]; then "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics; else "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics; fi
+          ws=$(pwd -W 2>/dev/null || pwd)
+          mkdir -p vcpkg-archives
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$ws/vcpkg-archives,readwrite" >> "$GITHUB_ENV"
+          echo "sha=$(git -C "$RUNNER_TEMP/vcpkg" rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          { cmake --version | head -1; ninja --version; } | tee results/toolchain.txt
+      - uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-release-tool-${{ matrix.name }}-${{ hashFiles('kagex/tools/release/vcpkg.json') }}-${{ steps.vcpkg.outputs.sha }}
+          restore-keys: vcpkg-release-tool-${{ matrix.name }}-
+      - name: Configure
+        working-directory: kagex/tools/release
+        run: ../../.github/platforms/run-logged.sh configure cmake --preset ${{ matrix.preset }} "-DKRKRZ_TOOLS_DIR=$KRKRZ_TOOLS_DIR"
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: vcpkg-archives
+          key: vcpkg-release-tool-${{ matrix.name }}-${{ hashFiles('kagex/tools/release/vcpkg.json') }}-${{ steps.vcpkg.outputs.sha }}
+      - name: Build
+        working-directory: kagex/tools/release
+        run: ../../.github/platforms/run-logged.sh build cmake --build --preset ${{ matrix.preset }}-rel
+      - name: Smoke test
+        run: |
+          exe=kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.exe }}
+          ls -l "$exe" | tee results/exe.txt
+          case "$RUNNER_OS" in
+            Linux) ldd "$exe" >> results/exe.txt; objdump -T "$exe" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1 >> results/exe.txt ;;
+            macOS) otool -L "$exe" >> results/exe.txt; vtool -show-build "$exe" >> results/exe.txt 2>&1 || true ;;
+          esac
+          browser=""
+          if [ "$RUNNER_OS" = Linux ]; then
+            $PY -m pip install --quiet playwright
+            $PY -m playwright install --with-deps chromium > /dev/null
+            browser=--browser
+          fi
+          kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke --engines engines
+      - name: Pack the tool
+        if: always()
+        run: |
+          mkdir -p out
+          cp kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.exe }} out/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kagex-release-${{ matrix.name }}
+          path: out
+          if-no-files-found: warn
+      - name: Share the libraries
+        # vcpkg's libraries and clipparse's sqlite source, for building the tool where they can't
+        # be downloaded (ci/dev-libs-linux)
+        if: runner.os == 'Linux' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir devlibs
+          tar czf devlibs/x64-linux.tar.gz -C kagex/tools/release/build/linux vcpkg_installed/x64-linux _deps/sqlite3_amalg-src
+          cd devlibs
+          git init -q -b libs .
+          git add .
+          git -c user.name=kagex-ci -c user.email=kagex-ci@users.noreply.github.com commit -q -m "kagex-release libraries, run ${{ github.run_id }}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci/dev-libs-linux
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # per branch, so runs of several branches don't overwrite each other's results
+        run: kagex/.github/platforms/publish-results.sh "release-tool-${{ matrix.name }}${{ github.ref_name != 'main' && format('-{0}', github.ref_name) || '' }}" "release tool ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"
