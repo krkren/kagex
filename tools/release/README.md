@@ -4,8 +4,8 @@ Packages a KAGEX game for Windows, Linux, Linux for Steam, macOS, the web, Andro
 It opens a settings window (a local page in a browser app window, like the engine's own
 tools), and everything it does can also run from the command line (`--cli`), for CI.
 
-**Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam and macOS
-packages and converts the media; the web, Android and iOS come in the next steps.
+**Work in progress for 0.3.0.** This version builds the Windows, Linux, Steam, macOS and web
+packages and converts the media; Android and iOS come in the next steps.
 
 ## Using it
 
@@ -39,6 +39,13 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
 - **macOS**: `<title>.app` with the game's name, bundle ID, version and icon (`AppIcon.icns`), the
   data in `Contents/Resources`, signed ad hoc or with your Developer ID (and notarized when
   asked); a zip or a dmg.
+- **Web**: the krkrz_web site, with `index.html` titled and given the home-screen manifest and
+  icons, and the game either as `gamedata/` (each file fetched when the game needs it; names in
+  lower case and listed in `gamedata.krkrz_files.json`; scripts and `system/` prefetched) or as
+  one `data.xp3`, preloaded as `krkrz.data`; a zip. The engine's own sample data isn't shipped
+  (an empty `krkrz.data` in the files mode). It runs from any web server (GitHub Pages works:
+  `coi-serviceworker.js` supplies the headers SharedArrayBuffer needs); `serve.py` serves it
+  locally.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
 `appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The

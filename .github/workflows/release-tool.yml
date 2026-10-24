@@ -73,13 +73,14 @@ jobs:
         run: |
           gh release download "$ENGINES_FROM" --repo "$GITHUB_REPOSITORY" -D pkgs \
             --pattern kagex_sdl3_windows_release.zip --pattern kagex_sdl3_linux_release.zip \
-            --pattern kagex_sdl3_linux_steam.tar.gz --pattern kagex_sdl3_macos.zip
+            --pattern kagex_sdl3_linux_steam.tar.gz --pattern kagex_sdl3_macos.zip --pattern kagex_sdl3_web.zip
           mkdir -p engines
           ep="$PY -I kagex/tools/release/scripts/engine-package.py"
           $ep windows pkgs/kagex_sdl3_windows_release.zip engines/kagex_engine_windows.zip --version 0.3.0
           $ep linux pkgs/kagex_sdl3_linux_release.zip engines/kagex_engine_linux.zip --version 0.3.0
           $ep steam pkgs/kagex_sdl3_linux_steam.tar.gz engines/kagex_engine_steam.zip --version 0.3.0
           $ep macos pkgs/kagex_sdl3_macos.zip engines/kagex_engine_macos.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
+          $ep web pkgs/kagex_sdl3_web.zip engines/kagex_engine_web.zip --version 0.3.0 --licenses-from pkgs/kagex_sdl3_linux_release.zip
           rm -rf pkgs
       - name: Libraries for the test run
         if: runner.os == 'Linux'

@@ -339,6 +339,74 @@ def build_tests(exe, proj, args):
         step("test run with the data bound into the executable", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
 
 
+def web_tests(exe, proj, args):
+    """The web build, as files and as one data.xp3; with --browser, each runs in Chromium"""
+    import functools
+    import http.server
+    import threading
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == "web"
+    s["output"]["archive"] = "zip"
+    s["output"]["check"] = False
+    site = proj / "release" / ("kagex-sample-%s-web" % s["identity"]["version"])
+    for mode in ("files", "xp3"):
+        s["platforms"]["web"]["data"] = mode
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            r = json.loads(out[out.index("{"):])
+        except ValueError:
+            r = {"ok": False, "error": out[-2000:], "outputs": []}
+        step("web (%s): build" % mode, r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]))
+        if not r["ok"]:
+            continue
+        cfg = (site / "webconfig.js").read_text(encoding="utf-8")
+        html = (site / "index.html").read_text(encoding="utf-8")
+        js = (site / "krkrz.js").read_text(encoding="utf-8", errors="replace")
+        data_size = (site / "krkrz.data").stat().st_size
+        step("web (%s): engine options" % mode, "-appname=kagex-sample" in cfg and "-debugwin=no" in cfg and "-bitmappoolsize=" in cfg, cfg.replace("\n", " | ")[-300:])
+        step("web (%s): title, manifest and icons" % mode, "<title>KAGEX Sample</title>" in html and "window.coi=" in html and "manifest.webmanifest" in html
+             and json.loads((site / "manifest.webmanifest").read_text())["name"] == "KAGEX Sample" and (site / "icon-512.png").exists())
+        step("web (%s): krkrz.data is what krkrz.js expects" % mode, ("end:%d}],remote_package_size:%d" % (data_size, data_size)) in js, "%d bytes" % data_size)
+        if mode == "files":
+            files = json.loads((site / "gamedata.krkrz_files.json").read_text())
+            step("web (files): the files, in lower case", "startup.tjs" in files and "system/initialize.tjs" in files and "image/title.tlg" in files
+                 and (site / "gamedata" / "system" / "initialize.tjs").exists() and (site / "gamedata" / "krkrz_files.json").exists()
+                 and 'KRKRZ_WEB_DEFAULT_WEBBASE = "gamedata/"' in cfg and data_size == 0, "%d files" % len(files))
+        else:
+            step("web (xp3): data.xp3 preloaded", data_size > 1000000 and not (site / "gamedata").exists() and "KRKRZ_WEB_DATA_XP3 = true" in cfg)
+        if not args.browser:
+            continue
+        sys.path.insert(0, str(REPO / "tools"))
+        import smoketest
+        class Quiet(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+        handler = functools.partial(Quiet, directory=str(site))
+        httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        work = Path(tempfile.mkdtemp())
+        eng = None
+        try:
+            eng = smoketest.WebEngine("http://127.0.0.1:%d/" % httpd.server_address[1], str(work), False)
+            res = eng._eval('kag.conductor.curStorage', 60)
+            time.sleep(5)
+            errors = [l for l in eng.lines if "Script exception raised" in l or "! trace :" in l]
+            step("web (%s): the game starts in the browser" % mode, res.get("ok") and not errors, str(res.get("result")) + " " + "; ".join(errors[:3]))
+            if args.out:
+                eng.snapshot(str(Path(args.out) / ("web-%s.png" % mode)))
+        except Exception as e:
+            step("web (%s): the game starts in the browser" % mode, False, str(e)[:1500])
+        finally:
+            if eng:
+                if args.out:
+                    shutil.copyfile(eng.log_path, Path(args.out) / ("web-%s-console.txt" % mode))
+                eng.stop()
+            httpd.shutdown()
+
+
 def write_wav(path, frames, rate=44100):
     import math
     import struct
@@ -481,6 +549,8 @@ def main():
         if args.engines:
             os.environ["KAGEX_RELEASE_CACHE"] = str(Path(t) / "cache")
             build_tests(exe, proj, args)
+            if (Path(args.engines) / "kagex_engine_web.zip").exists():
+                web_tests(exe, proj, args)
             media_tests(exe, proj, args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)

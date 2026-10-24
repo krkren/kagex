@@ -9,9 +9,11 @@ package: the engine, its plugins and its licenses, without the sample game.
   linux    kagex_sdl3_linux_{release,debug}.zip    krkrz, libSDL3.so.0, plugin/
   steam    kagex_sdl3_linux_steam.tar.gz           the same, from the Steam Runtime build
   macos    kagex_sdl3_macos.zip                    KAGEX.app without data, signature and .cf files
+  web      kagex_sdl3_web.zip                      the site without gamedata/ and its lists
 
 Symbolic links are stored as the files they point to (only libSDL3.so.0 is needed by name).
-The macOS app has no license files of its own: --licenses-from takes them from another package.
+The macOS app and the web site have no license files of their own: --licenses-from takes them
+from another package.
 """
 import argparse
 import json
@@ -67,6 +69,8 @@ def keep(platform, name):
         return name == "krkrz.exe" or (len(parts) == 1 and leaf.lower().endswith(".dll")) or parts[0] == "plugin"
     if platform in ("linux", "steam"):
         return name == "krkrz" or name == "libSDL3.so.0" or parts[0] == "plugin"
+    if platform == "web":
+        return parts[0] != "gamedata" and name not in ("gamedata.krkrz_files.json", "krkrz_prefetch.json", "README.md")
     if platform == "macos":
         if not parts[0].endswith(".app"):
             return False
@@ -79,7 +83,7 @@ def keep(platform, name):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("platform", choices=["windows", "linux", "steam", "macos"])
+    ap.add_argument("platform", choices=["windows", "linux", "steam", "macos", "web"])
     ap.add_argument("package")
     ap.add_argument("out")
     ap.add_argument("--version", required=True)
@@ -97,6 +101,8 @@ def main():
         sys.exit("%s has no %s" % (a.package, exe))
     if a.platform == "macos" and not any(n.endswith(".app/Contents/MacOS/krkrz") for n in files):
         sys.exit("%s has no .app with Contents/MacOS/krkrz" % a.package)
+    if a.platform == "web" and not {"index.html", "krkrz.js", "krkrz.wasm", "webconfig.js"} <= set(files):
+        sys.exit("%s isn't a krkrz_web site" % a.package)
     manifest = {"format": 1, "platform": a.platform, "version": a.version, "debug": a.debug}
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         info = zipfile.ZipInfo("engine.json", date_time=(2026, 1, 1, 0, 0, 0))
