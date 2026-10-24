@@ -449,8 +449,12 @@ class WebEngine(Engine):
             except SmokeError as e:
                 last = e
             time.sleep(2)
-        raise SmokeError("the engine didn't start in the page (%s); console:\n%s"
+        err = SmokeError("the engine didn't start in the page (%s); console:\n%s"
                          % (last, "\n".join(self.lines[-40:])))
+        # a Playwright left running made the next WebEngine fail ("Sync API inside the
+        # asyncio loop"), hiding whether that page would have started
+        self.stop()
+        raise err
 
     def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
