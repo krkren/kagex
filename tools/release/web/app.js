@@ -83,6 +83,7 @@ const SECTIONS = [
 			{ path: 'output.archive', label: 'Archive', type: 'select', options: [['auto', 'zip, or tar.gz for Linux (keeps the executable flag)'], ['zip', 'zip'], ['tar.gz', 'tar.gz'], ['none', 'None (folders only)']] },
 			{ path: 'output.checksums', label: 'Checksums', type: 'check', text: 'Write SHA256SUMS next to the packages' },
 			{ path: 'output.check', label: 'Test run', type: 'check', text: 'Start this computer\'s build for a few seconds afterwards (without a window where it can) and look for script errors' },
+			{ path: 'output.patchFrom', label: 'Patch from', type: 'file', help: 'A file list an earlier build wrote (<file name>-<version>-files.json): makes patch.zip of what changed since, which the game loads from next to it or from its save folder. Make it from the full release\'s list, so each patch replaces the last' },
 			{ path: 'engine.debug', label: 'Engine', type: 'check', text: 'Debug engine (keeps the console and debug keys; for testers, not for players)' },
 		],
 	},

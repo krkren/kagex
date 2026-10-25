@@ -7,6 +7,11 @@
 - **Patches and DLC as zip files**: at start the framework loads `patch.zip`, `patch2.zip` and so on from next to the engine and then from the save folder (the one place the web, Android and iOS builds can add files), after the `patch.xp3` archives. Every folder in a zip is searched, so a patch can hold its files in `data/`'s layout. `KAGMountPatchZip(storage)` mounts another one, such as DLC, at any time. Every build has the minizip plugin; the web, Android and iOS builds gained it.
 - **CLIP STUDIO PAINT layers as images**: `clip://name.clip/root/folder/layer.bmp` (or `/id/LayerId.bmp`) on KAG and World layers, through the clipfile plugin, which every build now has (`doc/kagex.txt`, "image (Extension)").
 - The KAGEX Extended Layer demo shows the emblem as two layers of a CLIP STUDIO PAINT file, turned separately. `tools/assets/make_clip.py` makes the file from the emblem's art.
+- kagex-release writes each build's file list (`<file name>-<version>-files.json`, with SHA-256s) and, given an earlier one (`output.patchFrom`, Output > *Patch from*), `patch.zip` with the files that are new or changed since. A patch alone needs no platform or engines.
+
+### Changed
+
+- kagex-release packs a `.clip` or `.psd` file that a script loads layers from (`clip://name.clip/...`, `psd://name.psd/...`), although the default exclusions (`*.clip`, `*.psd`) match it.
 
 ## 0.6.0
 

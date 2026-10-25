@@ -148,6 +148,7 @@ Json defaultSettings(const Project& p)
 		{ "archive", Json("auto") },
 		{ "checksums", Json(true) },
 		{ "check", Json(true) },
+		{ "patchFrom", Json("") },
 	}));
 	Json pl = Json::object();
 	pl.set("windows", obj({ { "enabled", Json(host == "windows") }, { "data", Json("xp3") }, { "versionInfo", Json(true) } }));
@@ -329,6 +330,8 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if (!ec && !rel.empty() && *rel.begin() != "..") error("output.folder", "The output folder can't be inside data/ (it would be packed into the next build)");
 	}
 	if (!oneOf(str(s, "output.archive"), { "auto", "zip", "tar.gz", "none" })) error("output.archive", "archive is \"auto\", \"zip\", \"tar.gz\" or \"none\"");
+	const std::string patchFrom = str(s, "output.patchFrom");
+	if (!patchFrom.empty() && !exists(patchFrom)) error("output.patchFrom", "The file list " + patchFrom + " doesn't exist (a build writes <file name>-<version>-files.json beside its packages)");
 
 	// platforms
 	int enabled = 0;
@@ -390,7 +393,7 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			}
 		}
 	}
-	if (!enabled) error("platforms", "Choose at least one platform");
+	if (!enabled && patchFrom.empty()) error("platforms", "Choose at least one platform");
 	return out;
 }
 

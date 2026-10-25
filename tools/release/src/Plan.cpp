@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <map>
+#include <set>
 
 #include "krt/app/Text.h"
 
@@ -63,6 +64,71 @@ bool matchParts(const std::vector<std::string>& pat, size_t pi, const std::vecto
 
 bool isAudioSource(const std::string& ext) { return ext == ".wav" || ext == ".flac"; }
 bool isImageSource(const std::string& ext) { return ext == ".png" || ext == ".bmp" || ext == ".tlg"; }
+bool isScript(const std::string& ext)
+{
+	return ext == ".ks" || ext == ".tjs" || ext == ".csv" || ext == ".txt" || ext == ".asd" || ext == ".json" || ext == ".func";
+}
+// Files the game reads layers from: clipfile's clip:// and psdfile's psd://. They're art sources,
+// left out by default (*.clip, *.psd), unless a script names one
+bool isLayeredSource(const std::string& ext) { return ext == ".clip" || ext == ".psd"; }
+
+std::string extOf(const std::string& name)
+{
+	const size_t sl = name.find_last_of("/\\");
+	const size_t dot = name.rfind('.');
+	return dot == std::string::npos || (sl != std::string::npos && dot < sl) ? std::string() : lower(name.substr(dot));
+}
+
+std::string leafOf(const std::string& name)
+{
+	const size_t sl = name.find_last_of("/\\");
+	return sl == std::string::npos ? name : name.substr(sl + 1);
+}
+
+// The script as UTF-8: UTF-16LE (with a BOM) converted, anything else as it is (UTF-8, or
+// Shift_JIS, whose single-byte characters are ASCII)
+std::string scriptText(const std::string& raw)
+{
+	if (raw.size() < 2 || (unsigned char)raw[0] != 0xFF || (unsigned char)raw[1] != 0xFE) return raw;
+	std::string out;
+	for (size_t i = 2; i + 1 < raw.size(); i += 2) {
+		uint32_t cp = (unsigned char)raw[i] | ((unsigned char)raw[i + 1] << 8);
+		if (cp >= 0xD800 && cp < 0xDC00 && i + 3 < raw.size()) {
+			const uint32_t lo = (unsigned char)raw[i + 2] | ((unsigned char)raw[i + 3] << 8);
+			if (lo >= 0xDC00 && lo < 0xE000) { cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00); i += 2; }
+		}
+		if (cp < 0x80) out += (char)cp;
+		else if (cp < 0x800) { out += (char)(0xC0 | (cp >> 6)); out += (char)(0x80 | (cp & 0x3F)); }
+		else if (cp < 0x10000) { out += (char)(0xE0 | (cp >> 12)); out += (char)(0x80 | ((cp >> 6) & 0x3F)); out += (char)(0x80 | (cp & 0x3F)); }
+		else { out += (char)(0xF0 | (cp >> 18)); out += (char)(0x80 | ((cp >> 12) & 0x3F)); out += (char)(0x80 | ((cp >> 6) & 0x3F)); out += (char)(0x80 | (cp & 0x3F)); }
+	}
+	return out;
+}
+
+// The .clip and .psd files the scripts load layers from, as lower-case leaf names: the file in
+// clip://name.clip/root/... and psd://name.psd/root/...
+std::set<std::string> layeredFilesNamed(const std::vector<GameFile>& files)
+{
+	std::set<std::string> named;
+	for (const auto& f : files) {
+		if (!isScript(extOf(f.name))) continue;
+		std::string raw;
+		if (!krt::readFile(f.source, raw)) continue;
+		const std::string text = scriptText(raw);
+		const std::string low = lower(text);
+		for (const char* scheme : { "clip://", "psd://" }) {
+			const size_t n = std::string(scheme).size();
+			for (size_t at = low.find(scheme); at != std::string::npos; at = low.find(scheme, at + n)) {
+				size_t end = at + n;
+				while (end < text.size() && text[end] != '/' && text[end] != '"' && text[end] != '\'' &&
+				       text[end] != ']' && text[end] != '\r' && text[end] != '\n' && text[end] != ' ' && text[end] != '\t')
+					++end;
+				if (end < text.size() && text[end] == '/' && end > at + n) named.insert(lower(text.substr(at + n, end - at - n)));
+			}
+		}
+	}
+	return named;
+}
 
 } // namespace
 
@@ -92,6 +158,7 @@ std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* exc
 	const fs::path outDir = fs::weakly_canonical(p.root / krt::toPath(str(s, "output.folder")), ec);
 	const bool keepFont = !at(s, "contents.font").isBool() || flag(s, "contents.font");
 
+	std::vector<GameFile> layered;   // .clip and .psd files a pattern left out
 	auto walk = [&](const fs::path& dir, const std::string& prefix) {
 		std::error_code ec2;
 		for (fs::recursive_directory_iterator it(dir, fs::directory_options::skip_permission_denied, ec2), end;
@@ -102,10 +169,13 @@ std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* exc
 			const std::string leaf = krt::fromPath(it->path().filename());
 			bool skip = !leaf.empty() && leaf[0] == '.';   // .git, .DS_Store and the like
 			if (!skip && isDir && fs::weakly_canonical(it->path(), ec2) == outDir) skip = true;
-			for (const auto& pat : patterns) if (!skip && matchExclude(pat, rel, isDir)) skip = true;
+			bool excludedByPattern = false;
+			for (const auto& pat : patterns) if (!skip && matchExclude(pat, rel, isDir)) skip = excludedByPattern = true;
 			if (!skip && !isDir && !keepFont && lower(leaf) == "notosansjp-regular.otf") skip = true;
 			if (skip) {
 				if (isDir) it.disable_recursion_pending();
+				else if (excludedByPattern && isLayeredSource(extOf(leaf)))
+					layered.push_back({ it->path(), rel, (uint64_t)it->file_size(ec2) });
 				++skipped;
 				continue;
 			}
@@ -115,6 +185,15 @@ std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* exc
 	};
 	walk(p.data, "");
 	if (!p.frameworkInData && !p.framework.empty() && flag(s, "contents.framework")) walk(p.framework, "system/");
+	// ... go in after all when a script loads layers from them (clip://, psd://)
+	if (!layered.empty()) {
+		const std::set<std::string> named = layeredFilesNamed(files);
+		for (auto& f : layered) {
+			if (!named.count(lower(leafOf(f.name)))) continue;
+			files.push_back(std::move(f));
+			--skipped;
+		}
+	}
 	std::sort(files.begin(), files.end(), [](const GameFile& a, const GameFile& b) { return a.name < b.name; });
 	if (excluded) *excluded = skipped;
 	return files;

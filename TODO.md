@@ -5,7 +5,6 @@ Planned features, in three groups. The first two need only script and data work 
 ## New plugins from krkrz_dev
 
 - [ ] **Animated characters** (`psdfile`, `getSample`): eye blinks and lip-sync through `KAGEnvCharacterEx.tjs` and `psdlayer.tjs`, which nothing loads yet. Loading layers with `psd://` can also stand in for the missing `layerExSubImage` plugin that `psdlayer.tjs` uses for partial images. Outside Windows `psd://` doesn't load (psdfile writes the BMP it serves with a padded file header, as clipfile does), so read the layers with `PSD.getLayerData`, as `affineLoadClipLayer` does for `clip://`. `psdlayer.tjs` also uses `layerExSave` (exporting layers as TLG, trimming transparent edges, `oozeColor` against colour fringes when shrinking), which only the Windows, Linux and macOS packages have: check which of those calls run in the game rather than while authoring, and add the plugin to the web, Android and iOS builds if any do.
-- [ ] **Patch zips from kagex-release**: the framework loads `patch.zip` and the like (`minizip`); the tool should build one of the files that changed since an earlier build.
 
 ## Interface, accessibility and languages
 

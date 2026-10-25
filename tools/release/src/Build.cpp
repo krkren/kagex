@@ -231,7 +231,7 @@ public:
 				                                    : std::find(o_.only.begin(), o_.only.end(), id) != o_.only.end();
 				if (chosen) chosen_.push_back(id);
 			}
-			if (chosen_.empty()) throw Failure{ "No platform to build" };
+			if (chosen_.empty() && str(s_, "output.patchFrom").empty()) throw Failure{ "No platform to build" };
 
 			out_ = fs::weakly_canonical(p_.root / krt::toPath(str(s_, "output.folder")));
 			work_ = out_ / ".work";
@@ -239,11 +239,13 @@ public:
 			mustMkdirs(work_);
 
 			stage(PartProgress(pr_, 0.0, 0.05));
-			media(PartProgress(pr_, 0.05, 0.25));
+			media(PartProgress(pr_, 0.05, 0.22));
+			fileList(PartProgress(pr_, 0.22, 0.25));
+			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
 			if (needsXp3()) packXp3(PartProgress(pr_, 0.25, 0.35));
 			prepareIcons();
 
-			const double span = 0.6 / chosen_.size();
+			const double span = 0.6 / std::max<size_t>(1, chosen_.size());
 			for (size_t i = 0; i < chosen_.size(); ++i) {
 				const std::string id = chosen_[i];
 				PartProgress part(pr_, 0.35 + span * i, 0.35 + span * (i + 1));
@@ -274,6 +276,7 @@ public:
 				}
 				outputs.push(std::move(o));
 			}
+			if (patchFailed_) ok = false;
 			if (flag(s_, "output.checksums") && !packages_.empty()) writeChecksums();
 			if (flag(s_, "output.check")) {
 				Json check = testRun(PartProgress(pr_, 0.95, 1.0));
@@ -347,6 +350,122 @@ private:
 		media_.set("keptByReference", Json(m.keptByReference));
 		media_.set("keptForEffects", Json(m.keptForEffects));
 		media_.set("rewrittenScripts", Json(m.rewrittenScripts));
+	}
+
+	//-----------------------------------------------------------------------
+	// The file list, and a patch of what changed since an earlier one
+	//-----------------------------------------------------------------------
+	// <file name>-<version>-files.json beside the packages: every file in data (after the media
+	// conversion, with the framework as system/) and its SHA-256. A later build names it in
+	// output.patchFrom to make a patch of the files that are new or changed since
+	void fileList(krt::Progress&& pr)
+	{
+		std::vector<std::string> names;
+		std::error_code ec;
+		for (fs::recursive_directory_iterator it(stage_, ec), end; it != end; it.increment(ec)) {
+			if (ec) break;
+			if (!it->is_regular_file(ec)) continue;
+			std::string n = krt::fromPath(fs::relative(it->path(), stage_, ec));
+			std::replace(n.begin(), n.end(), '\\', '/');
+			names.push_back(n);
+		}
+		std::sort(names.begin(), names.end());
+		Json files = Json::object();
+		hashes_.clear();
+		for (size_t i = 0; i < names.size(); ++i) {
+			if ((i & 31) == 0) {
+				pr.progress((double)i / names.size(), "File list");
+				if (pr.canceled()) throw Failure{ "Canceled" };
+			}
+			std::string hex, err;
+			if (!sha256File(stage_ / krt::toPath(names[i]), hex, err)) throw Failure{ err };
+			files.set(names[i], Json(hex));
+			hashes_[names[i]] = hex;
+		}
+		Json list = Json::object();
+		list.set("format", Json(1));
+		list.set("title", Json(str(s_, "identity.title")));
+		list.set("version", Json(str(s_, "identity.version")));
+		list.set("files", std::move(files));
+		const fs::path file = out_ / krt::toPath(str(s_, "identity.exeName") + "-" + str(s_, "identity.version") + "-files.json");
+		writeText(file, list.dump(1) + "\n");
+		pr.log("File list: " + krt::fromPath(file));
+	}
+
+	// <file name>-<version>-patch/patch.zip: the files that are new or changed since the file list
+	// in output.patchFrom, in data/'s layout. The framework loads patch.zip from next to the game
+	// or from its save folder (Initialize.tjs), so a patch made from the full release's list holds
+	// every change since and replaces the patch before it. It can't take files away
+	Json patch(krt::Progress&& pr)
+	{
+		Json o = Json::object();
+		o.set("platform", Json("patch"));
+		o.set("title", Json("Patch"));
+		try {
+			const std::string fromName = str(s_, "output.patchFrom");
+			const fs::path from = p_.root / krt::toPath(fromName);
+			std::string text, err;
+			Json old;
+			if (!krt::readFile(from, text)) throw Failure{ "Can't read " + fromName };
+			const Json& list = old;
+			if (!Json::parse(text, old, &err) || !list["files"].isObj()) throw Failure{ fromName + " isn't a file list from kagex-release" + (err.empty() ? "" : ": " + err) };
+			const std::string since = list["version"].asStr();
+			std::map<std::string, std::string> before;
+			for (const auto& [name, hex] : list["files"].members()) before[name] = hex.asStr();
+			std::vector<std::string> changed;
+			for (const auto& [name, hex] : hashes_) {
+				const auto it = before.find(name);
+				if (it == before.end() || it->second != hex) changed.push_back(name);
+			}
+			int removed = 0;
+			for (const auto& [name, hex] : before) if (!hashes_.count(name)) ++removed;
+
+			const std::string base = str(s_, "identity.exeName") + "-" + str(s_, "identity.version") + "-patch";
+			const fs::path folder = out_ / krt::toPath(base);
+			const fs::path zip = folder / "patch.zip";
+			mustRemove(folder);
+			mustMkdirs(folder);
+			const fs::path dir = work_ / "patch";
+			mustRemove(dir);
+			mustMkdirs(dir);
+			std::error_code ec;
+			for (const auto& name : changed) {
+				const fs::path to = dir / krt::toPath(name);
+				fs::create_directories(to.parent_path(), ec);
+				fs::create_hard_link(stage_ / krt::toPath(name), to, ec);
+				if (ec) copyFile(stage_ / krt::toPath(name), to);
+			}
+			pr.progress(-1, "Patch");
+			if (!zipFolder(dir, zip, "", err)) throw Failure{ err };
+			packages_.push_back(zip);
+			o.set("ok", Json(true));
+			o.set("folder", Json(krt::fromPath(folder)));
+			o.set("package", Json(krt::fromPath(zip)));
+			o.set("bytes", Json((long long)treeSize(zip)));
+			const auto files = [](size_t n) { return std::to_string(n) + (n == 1 ? " file" : " files"); };
+			std::string note = "Patch since " + (since.empty() ? fromName : since) + ": " + files(changed.size()) + " new or changed";
+			if (changed.empty()) note += " (nothing to patch)";
+			if (removed) note += "; " + files(removed) + " removed since then " + (removed == 1 ? "stays" : "stay") + " in the game (a patch can't remove files)";
+			notes_.push_back(note);
+			pr.log(note);
+			// read before any patch is mounted, so changes to them can't reach players this way
+			std::vector<std::string> early;
+			for (const auto& name : changed) {
+				const std::string leaf = lower(krt::fromPath(krt::toPath(name).filename()));
+				if (leaf == "initialize.tjs" || leaf == "storages.tjs" || leaf == "startup.tjs") early.push_back(name);
+			}
+			if (!early.empty()) {
+				std::string list;
+				for (const auto& e : early) list += (list.empty() ? "" : ", ") + e;
+				notes_.push_back("The patch changes " + list + ", which the game reads before it loads patches: those changes need a full release");
+			}
+		} catch (const Failure& f) {
+			o.set("ok", Json(false));
+			o.set("error", Json(f.message));
+			pr.log("patch: " + f.message);
+			patchFailed_ = true;
+		}
+		return o;
 	}
 
 	// The plugins the scripts name ("plugin/foo.dll", KAGLinkPlugin("foo")), lower case
@@ -1377,6 +1496,8 @@ private:
 	IconSource icons_;
 	std::vector<fs::path> packages_;
 	std::map<std::string, fs::path> built_;
+	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
+	bool patchFailed_ = false;
 	Json media_;
 };
 

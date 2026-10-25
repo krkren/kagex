@@ -764,6 +764,57 @@ def media_tests(exe, proj, args):
          and not have("rule/rule_shatter.jpg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
 
 
+def patch_tests(exe, proj):
+    """A build with output.patchFrom: the file list each build writes, then patch.zip of what
+    changed since an earlier list. A patch alone needs no platform (and so no engines)"""
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = False
+    s["output"]["check"] = False
+    out = proj / "release"
+    out.mkdir(exist_ok=True)
+    (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+
+    def build(version, since):
+        s["identity"]["version"] = version
+        s["output"]["patchFrom"] = since
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, text = run(exe, "--cli", "build", str(rel), "--json")
+        try:
+            r = json.loads(text[text.index("{"):])
+        except ValueError:
+            return None, text[-2000:]
+        return r, ""
+
+    r, err = build("1.0.0", "release/nothing-files.json")
+    files = out / "kagex-sample-1.0.0-files.json"
+    zip_path = out / "kagex-sample-1.0.0-patch" / "patch.zip"
+    ok = r is not None and r.get("ok") and files.exists() and zip_path.exists()
+    step("patch: a build of a patch alone writes the file list and patch.zip", ok, err or (r or {}).get("error", ""))
+    if not ok:
+        return
+    listed = json.loads(files.read_text(encoding="utf-8"))["files"]
+    names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")}
+    step("patch: from an empty list it holds every file", names == set(listed), "%d in the zip, %d listed" % (len(names), len(listed)))
+    step("patch: a .clip a script loads layers from is kept, a .psd nothing names isn't",
+         "fgimage/emblem.clip" in listed and not any(n.endswith(".psd") for n in listed))
+
+    layer = proj / "data" / "scenario" / "layer.ks"
+    layer.write_bytes(layer.read_bytes() + b"\n; changed for the patch test\n")
+    (proj / "data" / "others").mkdir(exist_ok=True)
+    (proj / "data" / "others" / "zz_patch.txt").write_text("new in 1.1.0", encoding="utf-8")
+    (proj / "data" / "fgimage" / "emblem_bitmap.png").unlink()
+    r, err = build("1.1.0", "release/kagex-sample-1.0.0-files.json")
+    zip_path = out / "kagex-sample-1.1.0-patch" / "patch.zip"
+    names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")} if zip_path.exists() else set()
+    step("patch: only what changed since 1.0.0", names == {"scenario/layer.ks", "others/zz_patch.txt"}, ", ".join(sorted(names)) or err)
+    notes = " ".join((r or {}).get("notes", []))
+    step("patch: says a file removed since stays in the game", "1 file removed since then stays" in notes, notes)
+    pkg = [o for o in (r or {}).get("outputs", []) if o.get("platform") == "patch"]
+    step("patch: listed with the outputs", len(pkg) == 1 and pkg[0].get("ok") and pkg[0].get("package", "").endswith("patch.zip"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe")
@@ -788,6 +839,7 @@ def main():
             if (Path(args.engines) / "kagex_engine_ios.zip").exists():
                 ios_tests(exe, proj, args)
             media_tests(exe, proj, args)
+        patch_tests(exe, proj)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)
 

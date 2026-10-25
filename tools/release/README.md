@@ -81,6 +81,16 @@ licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages,
 starts this computer's build for a few seconds (headless where it can, through the engine's REPL)
 and reports script errors; its log is `<output>/test-run.log`.
 
+Every build also writes `<output>/<file name>-<version>-files.json`, the list of the game's files
+(as packed, after the media conversion) with their SHA-256. A later build makes a **patch** from
+it (Output > *Patch from*, `output.patchFrom`): `<output>/<file name>-<version>-patch/patch.zip`
+holds the files that are new or changed since, in `data/`'s layout, and KAGEX loads it from next
+to the game or from the save folder (`patch.zip`, then `patch2.zip` and on). Make each patch from
+the full release's list, so it holds every change since then and replaces the one before. A patch
+can't remove files, or change what the game reads before it loads patches (`Initialize.tjs`,
+`Storages.tjs`, `startup.tjs`, the engine and its `.cf`); the build says so. A build with
+*Patch from* set needs no platform, and a patch alone needs no engines.
+
 ### Media
 
 Before packing, lossless media in the staged data are converted (the sources are never touched):
@@ -122,9 +132,9 @@ them instead (zips, or unpacked into folders of the same names), for working off
 |---|---|
 | `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
 | `engine` | `debug`: the debug engine instead of the release one |
-| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
+| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
-| `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards) |
+| `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
