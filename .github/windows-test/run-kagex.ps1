@@ -195,6 +195,14 @@ function Effect-Demo {
     "$r; effects drawn"
 }
 
+# After the transition demo: every transition's plugin (extrans, extNagano) loaded, or the demo
+# showed crossfades in their place and passed
+function Transition-Plugins {
+    $missing = Invoke-Tjs "typeof global.KAGPluginTransitions == 'undefined' ? 'no KAGPluginTransitions' : (function() { var a = []; foreach(KAGPluginTransitions, function(k, v, d, a) { if (v != 'linked') a.add(k); }, a); return a.join(' '); })()"
+    if ($missing) { throw "these transitions' plugin isn't loaded: $missing" }
+    'extrans and extNagano loaded'
+}
+
 # ---------------------------------------------------------------------------------------
 $exe = Join-Path $Kagex $(if ($IsWindows) { 'krkrz.exe' } else { 'krkrz' })
 $argList = @('-datapath=savedata/', "-replfile=$chan") + $EngineArgs
@@ -263,6 +271,7 @@ if ($Plan -eq 'probe') {
     }
 } elseif ($Plan -eq 'smoke') {
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
+    Step 'transitions: their plugins loaded' { Transition-Plugins }
     Step 'demo: Effekseer effects' { Effect-Demo }
 } else {
     $demos = 'layer', 'char', 'envlayer', 'transition', 'action', 'effect'

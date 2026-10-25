@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.4.0"
-  KAGEX_SHA: 626301c5a8ee998d08db31ed755f603ae266309b
+  RELEASE_TAG: "0.5.0"
+  KAGEX_SHA: 5fa7a970f9b858e596dcfca0472ab8fb75ef4216
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -155,7 +155,8 @@ jobs:
                             'template\system\notosansjp-regular.otf', 'template\system\YesNoDialogLayer.tjs',
                             'plugin\KAGParserEx.dll', 'plugin\csvParser.dll', 'plugin\layerExBTOA.dll', 'plugin\layerExImage.dll',
                             'plugin\layerExRaster.dll', 'plugin\scriptsEx.dll', 'plugin\shrinkCopy.dll', 'plugin\extrans.dll',
-                            'plugin\krkr_richtext.dll', 'plugin\krkreffekseer.dll', 'data\effect\sparkle.efk') {
+                            'plugin\krkr_richtext.dll', 'plugin\krkreffekseer.dll', 'data\effect\sparkle.efk',
+                            'plugin\extNagano.dll', 'data\rule\rule_shatter.png') {
             if (-not (Test-Path "pkg\$need")) { throw "package is missing $need" }
           }
           Push-Location pkg
@@ -365,7 +366,7 @@ jobs:
           done
           cp -a kagex/data kagex/template kagex/doc "kagex/KAGEX Initial Setup.txt" kagex/krkrz.cf pkg/
           # libkrkr_richtext.so has linked without libpng & co. on some toolchains (CLAUDE.md);
-          # it and libkrkreffekseer.so must load on their own
+          # it, libkrkreffekseer.so and the transition plugins must load on their own
           python3 - <<'EOF'
           import ctypes, glob, os, sys
           bad = []
@@ -373,13 +374,13 @@ jobs:
               try: ctypes.CDLL(so, mode=os.RTLD_NOW | os.RTLD_LOCAL)
               except OSError as e: bad.append(f"{so}: {e}")
           print("\n".join(bad) or "all plugins load")
-          sys.exit(1 if any("krkr_richtext" in b or "krkreffekseer" in b for b in bad) else 0)
+          sys.exit(1 if any(n in b for b in bad for n in ("krkr_richtext", "krkreffekseer", "extNagano", "extrans")) else 0)
           EOF
           for need in krkrz libSDL3.so.0 license.txt licenses data/startup.tjs krkrz.cf template/system/notosansjp-regular.otf \
                       template/system/YesNoDialogLayer.tjs plugin/libKAGParserEx.so plugin/libcsvParser.so \
                       plugin/liblayerExBTOA.so plugin/liblayerExImage.so plugin/liblayerExRaster.so plugin/libscriptsEx.so \
                       plugin/libshrinkCopy.so plugin/libextrans.so plugin/libkrkr_richtext.so plugin/libkrkreffekseer.so \
-                      data/effect/sparkle.efk; do
+                      plugin/libextNagano.so data/effect/sparkle.efk data/rule/rule_shatter.png; do
             [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
           done
           ldd pkg/krkrz | tee results/ldd.txt
