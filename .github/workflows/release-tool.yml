@@ -165,8 +165,10 @@ jobs:
           if-no-files-found: warn
       - name: Share the libraries
         # vcpkg's libraries and clipparse's sqlite source, for building the tool where they can't
-        # be downloaded (ci/dev-libs-linux)
+        # be downloaded (ci/dev-libs-linux). Not worth failing for: two runs at once (main's and a
+        # release's) raced here, and the release's lost its push
         if: runner.os == 'Linux' && github.event_name == 'push'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
