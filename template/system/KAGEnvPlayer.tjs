@@ -586,14 +586,19 @@ class KAGEnvPlayer
 	 */
 	function convertList(list, pwin) {
 		var count = list.count;
+		var ok = true, started = false;
 
-		dm("-- Conversion Start --");
 		parser.prepare("parsermacro.ks", "parseroption.txt");
 		for (var i=0;i<count;i++) {
 			var name = list[i];
 			try {
 				if (parser.isNeedParse(name)) {
+					if (!started) {
+						dm("-- Conversion Start --");
+						started = true;
+					}
 					dm(@"Converting:${name}");
+					delete currentMap[name.toLowerCase()];
 					// Create progress window
 					if (pwin === void) {
 						pwin = getProgressWindow(list);
@@ -605,16 +610,20 @@ class KAGEnvPlayer
 				if (pwin) pwin.next();
 			} catch (e) {
 				dm(name + ":Scenario conversion error:" + e.message);
+				ok = false;
 			}
 		}
-		dm("-- Conversion Complete --");
+		dm("-- Conversion Complete --") if started;
 
 		if (pwin) invalidate pwin;
+		return ok;
 	}
 
 	/**
 	 * Convert only the corresponding file
 	 * @param storage Target scenario name
+	 * @return true when its compiled file is current (it was, or it has just been compiled),
+	 * false when compiling failed, void when it wasn't checked
 	 */
 	function convertOne(storage) {
 		if (!readonlydb && parser !== void) {
@@ -623,8 +632,9 @@ class KAGEnvPlayer
 			if (!parser.isTarget(storage)) return;
 			// Dependency file search - 1 level only
 			var dlist = parser.getAllDependStorageList(storage,false);
-			convertList(dlist);
+			var ok = convertList(dlist);
 			parser.saveDepend(dependFile);
+			return ok;
 		}
 	}
 
@@ -632,33 +642,20 @@ class KAGEnvPlayer
 	var handoff;
 
 	/**
-	 * Whether a script is to be played compiled: it's listed in !scnlist.txt
-	 */
-	function isListed(storage) {
-		storage = Storages.extractStorageName(storage).toLowerCase();
-		if (listedMap === void || debugWindowEnabled) {
-			listedMap = %[];
-			var list = getFileList();
-			for (var i=0;i<list.count;i++) listedMap[list[i].toLowerCase()] = true;
-		}
-		return listedMap[storage] !== void;
-	}
-	var listedMap;
-
-	/**
-	 * What KAG reads in place of a compiled script (KAGWorldPlugin.onScenarioLoad): each of
-	 * its labels starts the player at that scene, so jumps, calls, loads and kag.process()
-	 * all play it compiled. In debug mode it's compiled first when it has changed
+	 * What KAG reads in place of a compiled script (KAGWorldPlugin.onScenarioLoad, which has
+	 * found it in !scnlist.txt): each of its labels starts the player at that scene, so
+	 * jumps, calls, loads and kag.process() all play it compiled. In debug mode it's compiled
+	 * first when it has changed
 	 * @return the stand-in scenario, or void to read the script itself
 	 */
 	function getStub(storage) {
 		storage = Storages.extractStorageName(storage);
-		if (!isListed(storage)) return;
+		var checked;
 		if (debugWindowEnabled && parser !== void && !readonlydb) {
-			try {
-				convertOne(storage);
-			} catch (e) {
-				dm(storage + ": compiling failed, so it plays from the script: " + e.message);
+			checked = convertOne(storage);
+			if (checked === false) {
+				dm(storage + ": compiling failed, so it plays from the script");
+				return;
 			}
 		}
 		if (scnFindCompiled(storage) === void) return;
@@ -674,11 +671,19 @@ class KAGEnvPlayer
 			invalidate data;
 			return;
 		}
-		if (parser !== void && Storages.isExistentStorage(storage) && !parser.isCurrent(storage, data.root)) {
-			// compiled from something else: the script, the macros, envinit.tjs...
-			dm(storage + ": its compiled file is out of date, so it plays from the script (doc/scn.txt)");
-			invalidate data;
-			return;
+		if (checked) {
+			// just checked: [scenestart] needn't check it again
+			justChecked = storage.toLowerCase();
+		} else if (parser !== void && Storages.isExistentStorage(storage)) {
+			// compiled from something else (the script, the macros, envinit.tjs...)? Nothing
+			// compiles it while the game runs, so once a session is enough
+			var key = storage.toLowerCase();
+			if (currentMap[key] === void) currentMap[key] = parser.isCurrent(storage, data.root);
+			if (!currentMap[key]) {
+				dm(storage + ": its compiled file is out of date, so it plays from the script (doc/scn.txt)");
+				invalidate data;
+				return;
+			}
 		}
 		var q = "\"" + storage + "\"";
 		var stub = "@scenestart storage=" + q + " target=\"\"\n@sceneplay\n@s\n";
@@ -687,9 +692,15 @@ class KAGEnvPlayer
 			if (label == "") continue;
 			stub += label + "\n@scenestart storage=" + q + " target=\"" + label + "\"\n@sceneplay\n@s\n";
 		}
-		invalidate data;
+		// the player starts on it right after KAG reads the stub (initStorage)
+		invalidate pendingStorage if pendingStorage !== void;
+		pendingStorage = data;
 		return stub;
 	}
+
+	var justChecked;   // the script getStub has just made sure is compiled
+	var currentMap = %[]; // script (lower case) -> whether its compiled file is current
+	var pendingStorage; // the compiled data getStub read, for initStorage
 
 	/**
 	 * Compiles every script listed in !scnlist.txt that needs it (all of them with force)
@@ -723,7 +734,7 @@ class KAGEnvPlayer
 			}
 		}
 		ret.warnings = parser.warnings.count - w;
-		listedMap = void;
+		currentMap = %[];
 		return ret;
 	}
 
@@ -792,13 +803,15 @@ class KAGEnvPlayer
 	 * @param target Label name or line number
 	 * @param point Point designation or point label designation (only valid if target is a label name)
 	 */
-	function startScene(storage, target, point) {
+	function startScene(storage, target, point, check = false) {
 		storage = Storages.extractStorageName(storage);
 		try {
 			if (storage == "") {
 				storage = curStorage;
 			}
-			if (debugWindowEnabled && parser !== void) {
+			if (check && debugWindowEnabled && parser !== void) {
+				// in debug mode a script is compiled again when the game goes to it
+				// ([scenestart]), not at every label in it
 				convertOne(storage);
 			}
 			if (scnFindCompiled(storage) === void) {
@@ -841,12 +854,23 @@ class KAGEnvPlayer
 			invalidate storageCache;
 			storageCache = void;
 		}
+		if (pendingStorage !== void) {
+			invalidate pendingStorage;
+			pendingStorage = void;
+		}
 	}
 
 	function initStorage(storage) {
 		if (scnStorage === void || scnStorage.storage != storage) {
+			var ready = pendingStorage;
+			pendingStorage = void;
 			clearStorage();
-			scnStorage = new StorageData(storage);
+			if (ready !== void && ready.storage == storage) {
+				scnStorage = ready;
+			} else {
+				invalidate ready if ready !== void;
+				scnStorage = new StorageData(storage);
+			}
 		}
 	}
 
@@ -1902,13 +1926,15 @@ class KAGEnvPlayer
 			Storages.extractStorageName(elm.storage).toLowerCase() == handoff.storage;
 		var h = handoff;
 		handoff = void;
+		var check = Storages.extractStorageName(elm.storage).toLowerCase() != justChecked;
+		justChecked = void;
 		clear();
 		if (keep) {
 			// a compiled script went on to this one: it's the same story, so keep its history
 			restoreHistory(h);
 			restoreHistoryOfStore(h);
 		}
-		startScene(elm.storage, elm.target, elm.point);
+		startScene(elm.storage, elm.target, elm.point, check);
 		return 0;
 	}
 
@@ -2320,6 +2346,10 @@ class KAGEnvPlayer
 	var currentRuby;
 	var currentRubyCount;
 	var currentText;
+	// The message as it's drawn, for the word wrap (KAGWindow.needsToBeWrapped): every ch
+	// tag of a message carries it as wrap = %[key, line]
+	var currentWrap;
+	var wrapSerial = 0;
 
 	function processRuby(text) {
 		if (text.length > 0) {
@@ -2344,7 +2374,7 @@ class KAGEnvPlayer
 		if (currentRuby != "") {
 			addTag(%[tagname:"ruby", text:currentRuby]);
 		}
-		addTag(%[tagname:"ch", text:currentText]);
+		addTag(%[tagname:"ch", text:currentText, wrap:currentWrap]);
 		currentRuby = "";
 		currentText = "";
 	}
@@ -2371,6 +2401,9 @@ class KAGEnvPlayer
 			currentRubyCount = 0;
 			currentRuby = void;
 			currentText = "";
+			// filled in below, before KAG draws the characters
+			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
+			var wrapLine = "", wrapNewline = false;
 
 			var cont = (flag & TEXTFLAG_CONT);
 			if (!cont) {
@@ -2412,6 +2445,7 @@ class KAGEnvPlayer
 				if (!literal && ch == "\n") {
 					// Newline processing
 					addTagSimple("r");
+					wrapNewline = true;
 				} else if (!literal && ch == "%") {
 					// Font command
 					if (i < l) {
@@ -2455,6 +2489,7 @@ class KAGEnvPlayer
 
 					// Add character
 					processCh(ch);
+					wrapLine += ch;
 
 					// Auto-indent post-processing
 					if (indentBeginIdx >= 0) {
@@ -2474,6 +2509,8 @@ class KAGEnvPlayer
 					firstCh = false;
 				}
 			}
+			// with a new line in it the character wrap does it, as for a scenario line with [r]
+			currentWrap.line = wrapNewline ? "" : wrapLine;
 		}
 
 		// Wait process entry

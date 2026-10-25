@@ -641,6 +641,22 @@ def sample_steps(eng):
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
+    @step("compiled text gets the word wrap")
+    def _():
+        if not eng.compiled:
+            print("     (skipped: the demos play from the scripts here)", flush=True)
+            return
+        # The word wrap reads the conductor's scenario line, which is the stand-in's
+        # [sceneplay] while the player shows text: the player's ch tags bring the message
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks's first text", 'world_object.player !== void && world_object.player.working'
+                 ' && world_object.player.curTextId >= 1 && kag.inStable', timeout=20)
+        r = str(eng.tjs('var t = world_object.player.curText.text, w = kag.wrapSplitLine;'
+                        ' return [kag.wrapKey, w !== void ? w.count : -1, t.split(" ").count, t].join("|");'))
+        key, words, expected, text = r.split("|", 3)
+        if not key.startswith("scene:") or words != expected:
+            raise SmokeError("the word wrap didn't take the compiled text (%s): %s" % (r, text))
+
     @step("a compiled scene saves in the middle and loads where it was")
     def _():
         if not eng.compiled:
