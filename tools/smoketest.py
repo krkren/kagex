@@ -601,6 +601,17 @@ def sample_steps(eng):
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
 
+    @step("extrans's and extNagano's transitions are there, not crossfades")
+    def _():
+        # transition.ks plays all of them; without their plugin they'd quietly be crossfades
+        if eng.tjs('return typeof global.KAGPluginTransitions != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the extNagano transitions)", flush=True)
+            return
+        missing = eng.tjs('var a = []; foreach(KAGPluginTransitions, function(k, v, d, a) {'
+                          ' if (v != "linked") a.add(k); }, a); return a.join(" ");')
+        if missing:
+            raise SmokeError("these transitions' plugin isn't loaded: " + missing)
+
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
         if not effekseer_framework(eng):

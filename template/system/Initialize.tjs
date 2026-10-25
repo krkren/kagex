@@ -522,7 +522,31 @@ KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 KAGLinkPlugin("plugin/scriptsEx.dll");
 KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
-KAGLinkPlugin("plugin/extrans.dll");
+
+// Transitions from plugins: extrans's 7 and extNagano's 12. A transition whose plugin didn't
+// load runs as a crossfade (KAGTransitionMethod, which KAGLayer.beginTransition and the World's
+// layer transitions call), so a game that uses one still runs on an engine without the plugin.
+var KAGPluginTransitions = %[];  // transition => "linked", "missing" or "noted" (missing, logged)
+function KAGLinkTransitionPlugin(name, methods) {
+	var linked = KAGLinkPlugin(name);
+	for (var i = 0; i < methods.count; i++) KAGPluginTransitions[methods[i]] = linked ? "linked" : "missing";
+	return linked;
+}
+function KAGTransitionMethod(method) {
+	if (method === void) return method;
+	var state = KAGPluginTransitions[method];
+	if (state != "missing" && state != "noted") return method;
+	if (state == "missing") {
+		dm("Transition " + method + " runs as a crossfade: its plugin isn't loaded");
+		KAGPluginTransitions[method] = "noted";
+	}
+	return "crossfade";
+}
+KAGLinkTransitionPlugin("plugin/extrans.dll",
+	["wave", "mosaic", "turn", "rotatezoom", "rotatevanish", "rotateswap", "ripple"]);
+KAGLinkTransitionPlugin("plugin/extNagano.dll",
+	["3duniversal", "blurfade", "scanline", "zoomfade", "rgbfade", "spin", "flutter", "book",
+	 "imagewipe", "honeyturn", "morphing", "multiripple"]);
 // krkr_richtext.dll - optional; message text uses it when MessageLayer useRichText is set
 KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined";
 

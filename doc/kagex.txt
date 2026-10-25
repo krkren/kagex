@@ -980,6 +980,102 @@ Attributes
 
 
 
+◆ trans (Extension)
+
+
+
+
+
+Besides the engine's transitions (universal, crossfade, scroll) and extrans's (wave, mosaic, turn, rotatezoom, rotatevanish, rotateswap, ripple), method= takes the twelve of extNagano (plugin/extNagano.dll). The World's trans= takes the same names, with the same attributes in its tag (doc/world.txt).
+
+A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
+
+The sample's transition.ks shows all twelve.
+
+
+
+
+
+Attributes of extNagano's transitions (time is needed by all of them)
+
+
+
+    3duniversal  Moves each pixel as a rule picture says. rule: an RGB picture; red is when the
+
+                 pixel starts moving (0-255 over the time), green how fast, blue which way (0 right,
+
+                 64 down, 128 left, 192 up). type: RGB (default) or HSB. speed1, accel1, bound1:
+
+                 the old picture's speed, acceleration and bounce (0-127); speed2, accel2, bound2:
+
+                 the new picture's.
+
+    blurfade     A crossfade through a blur. blur1 (or blur1x, blur1y): the old picture's blur;
+
+                 blur2 (or blur2x, blur2y): the new one's. exponent: the pace (above 1, slower at
+
+                 first). prerender: 0 blurs each frame, 1 blurs first (smoother), 2 is a lighter 1.
+
+                 type: 0 box blur, 1 bilinear.
+
+    scanline     Lines slide in from alternate sides.
+
+    zoomfade     zoom1: the old picture's zoom at the end, in %. zoom2: the new picture's zoom at
+
+                 the start, in %.
+
+    rgbfade      Red, green, blue and alpha each change at their own time. delayr, delayg, delayb,
+
+                 delaya: how late each starts (0-255). It blends alpha too and takes a pixel of
+
+                 alpha 0 as transparent, and a screen of layers composited for a transition has no
+
+                 meaningful alpha: there it shows solid colours. Use it between two whole pictures
+
+                 on one layer, with children=false.
+
+    spin         The picture turns. type1 (the old picture), type2 (the new one): -1 still, 0 and 1
+
+                 like the side of a box, 4 and 5 like a door hinged on the left, 6 and 7 on the right.
+
+    flutter      The picture peels away like paper. back: the colour of the paper's back
+
+                 (0xAARRGGBB; AA 00 shows the front, reversed). alpha: its opacity. slip: how far
+
+                 the paper slides.
+
+    book         A page turns. dir: 0 the left page turns to the right, 1 the right page to the
+
+                 left, -1 either (default).
+
+    imagewipe    A wipe led by a picture. rule: in each row, the rightmost pixel more than 94%
+
+                 opaque is the edge, and the picture is drawn just behind it. dir: 0 from the left,
+
+                 1 from the right.
+
+    honeyturn    Hexagons flip over one by one. size: the side of a hexagon, in pixels. order: the
+
+                 direction they go in (1-9, as on a numeric keypad). twist. dir.
+
+    morphing     Triangles warp the old picture into the new. before, after: arrays of triangles,
+
+                 six numbers each (x1, y1, x2, y2, x3, y3), before on the old picture and after on
+
+                 the new; they should tile the screen. A tag can't hold an array: give them with &,
+
+                 or register the transition in envinit.tjs (the sample's swirl).
+
+    multiripple  Ripples spread from several points. count: how many (1-20). wavecount: waves
+
+                 each. rwidth: wavelength. maxdrift: wave height (0: none). roundness: 1.0 circles,
+
+                 less taller, more wider. delaylast: how late the last one starts (1.0: not).
+
+
+
+
+
 ◇ Message Window Display System Extensions
 
 

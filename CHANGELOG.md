@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Twelve more transitions** from the extNagano plugin, which the framework now links: `3duniversal`, `blurfade`, `scanline`, `zoomfade`, `rgbfade`, `spin`, `flutter`, `book`, `imagewipe`, `honeyturn`, `morphing` and `multiripple`, for KAG's `[trans method=...]` and the World's `trans=` (`doc/kagex.txt`, "trans (Extension)"). All the builds have the plugin.
+- The World Extension: Transition demo shows them, with two rule images of its own (`data/rule`, drawn by `tools/assets/make_rules.py`): glass shards for `3duniversal` and a brush stroke for `imagewipe`. Its `morphing` is a swirl registered in `envinit.tjs`, since a tag can't hold the triangle arrays.
+- kagex-release keeps rule images (`data/rule`) lossless when it converts images to JPEG: a rule's pixel values are timings.
+
+### Changed
+
+- A transition whose plugin didn't load (extrans's or extNagano's) runs as a crossfade, and the console says so, instead of stopping the game with an error.
+- `[trans method=rgbfade]` takes `delayr`, `delayg`, `delayb` and `delaya`: KAG lower-cases attribute names, and the plugin reads `delayR` and the like.
+
+### Fixed
+
+- The transition demo's extrans transitions changed nothing on screen: `[env night]` isn't how the World changes the time of day, so each one went from a picture to the same picture. They use the time tags now (`[night trans=wave]`).
+
 ## 0.4.0
 
 ### Added

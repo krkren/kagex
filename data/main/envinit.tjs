@@ -480,6 +480,62 @@
 
 
 
+		// extNagano's morphing (transition.ks): the old picture winds up into a swirl while the
+		// new one unwinds out of it. before and after list the same triangles, six numbers each
+		// (x1, y1, x2, y2, x3, y3), on a 12 x 7 grid over the screen: before as it is, after with
+		// its inner points turned around the centre, the middle most. The edges stay put, so the
+		// triangles cover the screen all the way through.
+
+		"swirl" => (function() {
+
+			var w = kag.scWidth, h = kag.scHeight, nx = 12, ny = 7, flat = [], turned = [];
+
+			for (var j = 0; j <= ny; j++) for (var i = 0; i <= nx; i++) {
+
+				var x = w * i / nx, y = h * j / ny, tx = x, ty = y;
+
+				if (i > 0 && i < nx && j > 0 && j < ny) {
+
+					var dx = x - w / 2, dy = y - h / 2;
+
+					var r = Math.sqrt(dx * dx + dy * dy) * 2 / Math.sqrt(w * w + h * h);
+
+					var a = Math.PI * 0.6 * (1 - r) * (1 - r);
+
+					tx = w / 2 + dx * Math.cos(a) - dy * Math.sin(a);
+
+					ty = h / 2 + dx * Math.sin(a) + dy * Math.cos(a);
+
+				}
+
+				flat.add((int)x); flat.add((int)y); turned.add((int)tx); turned.add((int)ty);
+
+			}
+
+			var before = [], after = [];
+
+			for (var j = 0; j < ny; j++) for (var i = 0; i < nx; i++) {
+
+				var a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
+
+				var corners = [a, b, c, b, d, c];
+
+				for (var k = 0; k < corners.count; k++) {
+
+					before.add(flat[corners[k] * 2]); before.add(flat[corners[k] * 2 + 1]);
+
+					after.add(turned[corners[k] * 2]); after.add(turned[corners[k] * 2 + 1]);
+
+				}
+
+			}
+
+			return %[ method: "morphing", time: 2000, before: before, after: after ];
+
+		})(),
+
+
+
 		],
 
 
