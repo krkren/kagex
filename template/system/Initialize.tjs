@@ -387,6 +387,7 @@ if(Storages.isExistentStorage("Storages.tjs"))
 
 
 // Patch archive (*patch contents are flattened; subfolders within the patch cannot be used)
+// (zip patches, patch.zip and on, come after the plugins below: KAGMountPatchZip)
 
 useArchiveIfExists("patch.xp3");
 
@@ -522,6 +523,66 @@ KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 KAGLinkPlugin("plugin/scriptsEx.dll");
 KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
+
+// CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
+// clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
+// psdfile's psd:// does for Photoshop's
+KAGLinkPlugin("plugin/clipfile.dll") if typeof global.CLIP == "undefined";
+
+// Patches and DLC as zip files (the minizip plugin), after the .xp3 patches above, so a later
+// one wins: patch.zip, patch2.zip, ... next to the engine, then the same names in the save
+// folder (System.dataPath), which is the one place the web, Android and iOS builds can add
+// files to. Unlike an .xp3 patch, a zip's folders count: every folder in it is searched, so a
+// patch can hold its files loose or in data/'s layout (scenario/, bgimage/, ...). A game mounts
+// others, such as DLC it knows the names of, with KAGMountPatchZip(storage) at any time; files
+// loaded before that (this script, Storages.tjs) can't be patched.
+KAGLinkPlugin("plugin/minizip.dll") if typeof Storages.mountZip == "undefined";
+var KAGPatchZips = [];  // the zip files mounted, in order
+function KAGMountPatchZip(storage) {
+	if (typeof Storages.mountZip == "undefined" || typeof global.Unzip == "undefined") {
+		dm("Not mounted (no minizip plugin): " + storage);
+		return false;
+	}
+	if (!Storages.isExistentStorage(storage)) return false;
+	var files;
+	try {
+		var unzip = new Unzip();
+		unzip.open(storage);
+		files = unzip.list();
+		unzip.close();
+		invalidate unzip;
+	} catch (e) {
+		dm("Not a zip file: " + storage + " (" + e.message + ")");
+		return false;
+	}
+	var name = "kagexpatch" + KAGPatchZips.count;
+	if (!Storages.mountZip(name, storage)) {
+		dm("Could not mount " + storage);
+		return false;
+	}
+	// the root, then every folder in it (an entry's parents too: not every zip lists folders)
+	var root = "zip://" + name + "/", folders = %[], order = [];
+	Storages.addAutoPath(root);
+	for (var i = 0; i < files.count; i++) {
+		var path = files[i].filename.replace(/\\/g, "/");
+		for (var at = path.indexOf("/"); at > 0; at = path.indexOf("/", at + 1)) {
+			var dir = path.substring(0, at + 1);
+			if (folders[dir] === void) folders[dir] = true, order.add(dir);
+		}
+	}
+	order.sort();
+	for (var i = 0; i < order.count; i++) Storages.addAutoPath(root + order[i]);
+	KAGPatchZips.add(storage);
+	dm("Patch mounted: " + storage + " (" + files.count + " files)");
+	return true;
+}
+{
+	var places = [System.exePath];
+	places.add(System.dataPath) if System.dataPath != System.exePath;
+	for (var p = 0; p < places.count; p++) {
+		for (var i = 1; KAGMountPatchZip(places[p] + "patch" + (i == 1 ? "" : (string)i) + ".zip"); i++) {}
+	}
+}
 
 // Transitions from plugins: extrans's 7 and extNagano's 12. A transition whose plugin didn't
 // load runs as a crossfade (KAGTransitionMethod, which KAGLayer.beginTransition and the World's

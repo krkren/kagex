@@ -45,7 +45,7 @@ jobs:
       - name: Smoke test
         run: |
           set +e
-          python3 tools/smoketest.py --effekseer required --vector required 2>&1 | tee "$RUNNER_TEMP/smoke.txt"
+          python3 tools/smoketest.py --effekseer required --vector required --zip required --clip required 2>&1 | tee "$RUNNER_TEMP/smoke.txt"
           status=${PIPESTATUS[0]}
           if [ "$status" != 0 ]; then
             # One annotation with the failures and the end of each failing project's engine

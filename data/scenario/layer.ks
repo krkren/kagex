@@ -166,6 +166,23 @@ Zoom in: the PNG blurs, while the SVG is drawn again at each size and stays shar
 Both turn like any other layer.
 [l][r]
 
+*label17|CLIP STUDIO PAINT Layers
+
+[cm]
+[freeimage layer=1]
+[freeimage layer=2]
+[image layer=1 page=fore storage="clip://emblem.clip/root/badge.bmp" visible=true left=960 top=370 dafx=156 dafy=156]
+[image layer=2 page=fore storage="clip://emblem.clip/root/star.bmp" visible=true left=960 top=374 dafx=156 dafy=160]
+Two layers of one CLIP STUDIO PAINT file, each loaded with clip://.
+[l][r]
+
+[layopt layer=1 zoom=200 time=800]
+[layopt layer=2 zoom=200 time=800]
+[action layer=1 module=LayerNormalRotateModule angvel=-30]
+[action layer=2 module=LayerNormalRotateModule angvel=120]
+So each part can move on its own.
+[l][r]
+
 [freeimage layer=1]
 [freeimage layer=2]
 [layopt layer=0 visible=true]

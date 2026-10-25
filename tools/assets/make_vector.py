@@ -43,9 +43,14 @@ def star_points(cx, cy, outer, inner, n=5, rot=-90):
     return pts
 
 
-def emblem():
-    """The shapes, back to front: (kind, geometry, fill, stroke), stroke = (colour, width)"""
-    c = 156.0
+C = 156.0           # the emblem's centre (its hard shadow takes the rest of the square)
+STAR_CENTRE = (C, C + 4)
+
+
+def badge():
+    """The emblem without its star, back to front: (kind, geometry, fill, stroke), stroke =
+    (colour, width)"""
+    c = C
     shapes = [
         ("circle", (c + 8, c + 8, 151), VIOLET, None),  # the hard shadow
         ("circle", (c, c, 148), radial(c, c, 148, [(0, (248, 245, 255)), (0.62, (204, 192, 255)), (1, LAV)]),
@@ -65,13 +70,22 @@ def emblem():
     for k in range(8):
         a = math.radians(k * 45 + 22.5)
         shapes.append(("circle", (c + 107 * math.cos(a), c + 107 * math.sin(a), 4), WHITE, (VIOLET, 1.5)))
-    shapes += [
-        ("polygon", star_points(c, c + 4, 82, 34), linear(c, c - 78, c, c + 70, [(0, WHITE), (1, (222, 212, 255))]),
-         (NAVY, 4)),
-        ("polygon", star_points(c, c + 4, 46, 19), None, (VIOLET, 1.5)),
-        ("circle", (c, c + 4, 6), VIOLET, None),
-    ]
     return shapes
+
+
+def star():
+    """The star in the middle (make_clip.py puts it on a layer of its own)"""
+    x, y = STAR_CENTRE
+    return [
+        ("polygon", star_points(x, y, 82, 34), linear(x, y - 82, x, y + 66, [(0, WHITE), (1, (222, 212, 255))]),
+         (NAVY, 4)),
+        ("polygon", star_points(x, y, 46, 19), None, (VIOLET, 1.5)),
+        ("circle", (x, y, 6), VIOLET, None),
+    ]
+
+
+def emblem():
+    return badge() + star()
 
 
 # --- SVG ---------------------------------------------------------------------------------

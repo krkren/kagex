@@ -390,6 +390,16 @@ Attributes
 
 		  the Windows-only engine has.
 
+		・A layer of a CLIP STUDIO PAINT file, through the clipfile plugin:
+
+		  clip://name.clip/root/folder/layer.bmp (names match in any case, and a
+
+		  "/" in a name is written "_"; the file is found like any other storage), or
+
+		  clip://name.clip/id/LayerId.bmp. Only the layer's own picture is used:
+
+		  its opacity and blend mode in the file are not.
+
 		・When *.psb is specified, motion data is loaded.
 
 		  Specify the following additional parameters simultaneously:

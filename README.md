@@ -27,7 +27,7 @@ The demo menu's Effekseer Effects plays [Effekseer](https://effekseer.github.io/
 
 The World Extension: Transition demo ends with the twelve transitions of the extNagano plugin: book, flutter, blurfade, zoomfade, scanline, rgbfade, spin, multiripple, imagewipe, 3duniversal (shards flying from the centre), honeyturn and morphing (a swirl). A game uses them like extrans's, with `[trans method=...]` or the World's `trans=` (`doc/kagex.txt`, "trans (Extension)"); a transition whose plugin is missing runs as a crossfade.
 
-The KAGEX Extended Layer demo ends with an SVG vector image beside a PNG of the same picture, both zoomed and turned: the layerExVector plugin draws the SVG again at each size and angle, so it stays sharp while the PNG blurs. A game shows `.svg` images like any other, on KAG or World layers (`doc/kagex.txt`, "image (Extension)"); SVG text isn't drawn, so convert it to outlines.
+The KAGEX Extended Layer demo ends with an SVG vector image beside a PNG of the same picture, both zoomed and turned: the layerExVector plugin draws the SVG again at each size and angle, so it stays sharp while the PNG blurs. A game shows `.svg` images like any other, on KAG or World layers (`doc/kagex.txt`, "image (Extension)"); SVG text isn't drawn, so convert it to outlines. Then it shows the emblem as two layers of a CLIP STUDIO PAINT file, each loaded with `clip://emblem.clip/root/badge.bmp` and the like (the clipfile plugin) and turned on its own: a game can keep its art in `.clip` files without exporting each layer.
 
 With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 
@@ -39,6 +39,10 @@ Windows, Linux, Steam and the web build on any of the three systems; macOS and i
 
 The macOS tool isn't notarized: after unzipping, run `xattr -d com.apple.quarantine kagex-release` (or allow it under System Settings > Privacy & Security).
 
+## Patches and DLC
+
+At start the framework loads `patch.zip`, `patch2.zip` and so on, from next to the engine and then from the save folder, after the `patch.xp3`, `patch2.xp3`... archives it already read from next to the engine. A later one wins over the earlier ones and over the game's own files. Every folder in a zip is searched, so its files can be loose or in `data/`'s folders (`scenario/`, `bgimage/`...). On the web, Android and iOS the save folder is the only place new files can go. A game mounts DLC, or anything it downloads, with `KAGMountPatchZip(storage)` at any time (`template/system/Initialize.tjs`). Only what's read before the patches can't be patched: `Initialize.tjs` and `Storages.tjs`. It needs the minizip plugin, which every build has.
+
 ## Layout
 
 - `data/`: the sample game. It loads the framework from `../template/system`, or from `data/system` where a package puts a copy there.
@@ -46,7 +50,7 @@ The macOS tool isn't notarized: after unzipping, run `xattr -d com.apple.quarant
 - `linux-config.json`, `web-config.json`, `app-config.json`, `ios-config.json`: the settings for Wamsoft's platform kits ([krkrz_linux](https://github.com/wamsoft/krkrz_linux), [krkrz_web](https://github.com/wamsoft/krkrz_web), [krkrz_android](https://github.com/wamsoft/krkrz_android), [krkrz_ios](https://github.com/wamsoft/krkrz_ios)), which build the Linux (Steam), web, Android and iOS packages from krkrz_dev without changing it. `.github/workflows/platforms.yml` shows the steps, and `platform/` holds the icons and the Android app name.
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
 - `TODO.md`: planned features.
-- `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`, `make_rules.py` for the transitions' rule images in `data/rule`, `make_vector.py` for the layer demo's SVG emblem and its PNG twin), with the original art they start from.
+- `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`, `make_rules.py` for the transitions' rule images in `data/rule`, `make_vector.py` for the layer demo's SVG emblem and its PNG twin, `make_clip.py` for the same emblem as a CLIP STUDIO PAINT file), with the original art they start from.
 - `tools/release/`: kagex-release (above): its source, `scripts/` that make the engine packages it uses from the release builds, and its smoke test. `.github/workflows/release-tool.yml` builds it for all three systems.
 - `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release. `--target android|ios-sim|web` runs the sample's part in the platform builds: on an emulator, the iOS Simulator or headless Chromium.
 

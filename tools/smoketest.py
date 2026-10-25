@@ -13,6 +13,7 @@ it starts and that its prompts are drawn in the game window too.
 
 usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [--keep] [--verbose]
                                  [--effekseer required|optional] [--vector required|optional]
+                                 [--zip required|optional] [--clip required|optional]
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
@@ -211,7 +212,7 @@ class DesktopEngine(FileChannel):
         self.chan = os.path.join(workdir, "repl")
         self.savedir = os.path.join(workdir, "savedata")
         os.makedirs(self.chan)
-        os.makedirs(self.savedir)
+        os.makedirs(self.savedir, exist_ok=True)  # it may already hold the boot patches
         self.log_path = os.path.join(workdir, "engine.log")
         self.verbose = verbose
         self.modals = []
@@ -671,6 +672,73 @@ def sample_steps(eng):
             raise SmokeError("turned 30 degrees, the SVG covers %.2f times the area (cut off?)"
                              % (counts["turned"] / counts["plain"]))
 
+    @step("a CLIP STUDIO PAINT layer loads through clip:// and turns (--clip required)")
+    def _():
+        if eng.tjs('return typeof global.affineLoadClipLayer != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates clip:// images)", flush=True)
+            return
+        if eng.tjs('return typeof global.CLIP != "undefined" ? 1 : 0;') != 1:
+            if eng.opts.clip == "required":
+                raise SmokeError("clip:// images are unavailable: no clipfile plugin")
+            print("     clip://: unavailable (no clipfile plugin)", flush=True)
+            return
+        # emblem.clip (tools/assets/make_clip.py): the badge and the star, drawn as in emblem.svg.
+        # The plugin's own clip:// BMPs don't load outside Windows (AffineLayer.tjs reads the
+        # layer through CLIP.getLayerData instead)
+        counts = {}
+        for name, layer, opts in (("badge", "root/badge.bmp", ""), ("star", "root/star.bmp", ""),
+                                  ("star by id, turned", "id/5.bmp", 'rotate:"30"')):
+            eng.tjs('kag.tagHandlers.image(%%[layer:"0", page:"fore", storage:"clip://emblem.clip/%s", visible:"true",'
+                    ' left:"960", top:"540", dafx:"center", dafy:"center"]);%s return 1;'
+                    % (layer, ' kag.tagHandlers.layopt(%%[layer:"0", page:"fore", %s]);' % opts if opts else ""))
+            time.sleep(0.5)
+            n = eng.tjs('var t = new global.Layer(kag, kag.primaryLayer), n = 0; t.assignImages(kag.fore.layers[0]);'
+                        ' for (var y = 2; y < t.imageHeight; y += 6) for (var x = 2; x < t.imageWidth; x += 6)'
+                        ' if (t.getMaskPixel(x, y) > 200) n++; invalidate t; return n;')
+            print("     %s: %d opaque samples" % (name, n), flush=True)
+            counts[name] = n
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+        if counts["badge"] < 1800 or counts["star"] < 150:
+            raise SmokeError("emblem.clip's layers didn't draw (badge %d, star %d samples)" % (counts["badge"], counts["star"]))
+        if not 0.85 < counts["star by id, turned"] / counts["star"] < 1.15:
+            raise SmokeError("the star by its LayerId, turned, covers %d samples, not about %d"
+                             % (counts["star by id, turned"], counts["star"]))
+
+    @step("zip patches: the ones in the save folder were mounted at start, and DLC mounts later")
+    def _():
+        if eng.tjs('return typeof global.KAGMountPatchZip != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates zip patches)", flush=True)
+            return
+        if eng.tjs('return typeof Storages.mountZip != "undefined" && typeof global.Zip != "undefined" ? 1 : 0;') != 1:
+            if eng.opts.zip == "required":
+                raise SmokeError("zip patches are unavailable: no minizip plugin")
+            print("     zip patches: unavailable (no minizip plugin)", flush=True)
+            return
+        if getattr(eng, "boot_patches", False):
+            # write_boot_patches: patch.zip and patch2.zip, which both hold zz_bootpatch.txt
+            mounted = eng.tjs('return KAGPatchZips.count;')
+            placed = eng.tjs('return Storages.getPlacedPath("zz_bootpatch.txt");')
+            text = eng.tjs('return [].load("zz_bootpatch.txt")[0];')
+            about = eng.tjs('return Storages.getPlacedPath("about.ks");')
+            deep = eng.tjs('return Storages.getPlacedPath("zz_deep.txt");')
+            print("     at start: %s zip(s); zz_bootpatch.txt %s (%r), about.ks %s, zz_deep.txt %s"
+                  % (mounted, placed, text, about, deep), flush=True)
+            if mounted < 2 or text != "from patch2":
+                raise SmokeError("patch.zip and patch2.zip in the save folder weren't both mounted, patch2 last")
+            if not about.startswith("zip://kagexpatch0/main/"):
+                raise SmokeError("patch.zip's main/about.ks doesn't take the place of data/main/about.ks")
+            if not deep.startswith("zip://kagexpatch0/scenario/deep/"):
+                raise SmokeError("a file in a folder of a folder of patch.zip isn't found")
+        # DLC: a zip the game writes with minizip's Zip class and mounts while running
+        n = eng.tjs('["global.__zipcheck = 42;"].save(System.dataPath + "zz_dlcsrc.txt");'
+                    ' var z = new Zip(); z.open(System.dataPath + "zz_dlc.zip", 1);'
+                    ' z.add(System.dataPath + "zz_dlcsrc.txt", "scenario/zz_zipcheck.tjs"); z.close();'
+                    ' invalidate z; if (!KAGMountPatchZip(System.dataPath + "zz_dlc.zip")) return -1;'
+                    ' Scripts.execStorage("zz_zipcheck.tjs"); return global.__zipcheck;')
+        print("     DLC zip in the save folder: zz_zipcheck.tjs ran: %s" % (n == 42), flush=True)
+        if n != 42:
+            raise SmokeError("a zip mounted while running didn't serve its script (%s)" % n)
+
     @step("the demo menu's choices are drawn in a text font")
     def _():
         # A face the engine can't draw falls back to its icon font, which measures 0 and
@@ -787,6 +855,20 @@ def run_steps(eng, steps):
     return failures
 
 
+def write_boot_patches(savedir, data):
+    """Zip patches for the engine to mount at start (KAGMountPatchZip in Initialize.tjs):
+    patch.zip with a copy of main/about.ks in data/'s layout and a file two folders down, and
+    patch2.zip, which wins over it for zz_bootpatch.txt"""
+    import zipfile
+    os.makedirs(savedir, exist_ok=True)
+    with zipfile.ZipFile(os.path.join(savedir, "patch.zip"), "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("zz_bootpatch.txt", "from patch\n")
+        z.write(os.path.join(data, "main", "about.ks"), "main/about.ks")
+        z.writestr("scenario/deep/zz_deep.txt", "deep\n")
+    with zipfile.ZipFile(os.path.join(savedir, "patch2.zip"), "w") as z:
+        z.writestr("zz_bootpatch.txt", "from patch2\n")
+
+
 def start_engine(opts, data, workdir):
     if opts.target == "android":
         return AndroidEngine(opts.apk, opts.package, workdir, opts.verbose, adb=opts.adb)
@@ -800,6 +882,9 @@ def start_engine(opts, data, workdir):
 def run_project(opts, label, data, make_steps):
     print("== %s (%s, %s)" % (label, data, opts.target), flush=True)
     workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
+    boot_patches = opts.target == "desktop" and label == "sample"
+    if boot_patches:
+        write_boot_patches(os.path.join(workdir, "savedata"), data)
     try:
         eng = start_engine(opts, data, workdir)
     except SmokeError as e:
@@ -807,6 +892,7 @@ def run_project(opts, label, data, make_steps):
         print("kept", workdir)
         return 1
     eng.opts = opts
+    eng.boot_patches = boot_patches
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
@@ -864,6 +950,12 @@ def main():
                     "and OpenGL ES): required fails when it can't; optional reports it")
     ap.add_argument("--vector", choices=["required", "optional"], default="optional",
                     help="whether the build must draw SVG images (the layerExVector plugin): "
+                    "required fails when it can't; optional reports it")
+    ap.add_argument("--zip", choices=["required", "optional"], default="optional",
+                    help="whether the build must mount zip patches (the minizip plugin): "
+                    "required fails when it can't; optional reports it")
+    ap.add_argument("--clip", choices=["required", "optional"], default="optional",
+                    help="whether the build must load CLIP STUDIO PAINT layers (the clipfile plugin): "
                     "required fails when it can't; optional reports it")
     opts = ap.parse_args()
     if opts.target != "desktop":

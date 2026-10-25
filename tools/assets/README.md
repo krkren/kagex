@@ -24,6 +24,12 @@ The sample's images are generated here rather than edited by hand.
   `data/fgimage/emblem.svg` and as a PNG of the same picture at its own size
   (`data/fgimage/emblem_bitmap.png`), from one list of shapes; `layer.ks` zooms the two side by
   side. No text in the SVG: layerExVector draws none.
+- `make_clip.py` packs the same emblem, as two layers (`badge` and `star`), into a CLIP STUDIO
+  PAINT file, `data/fgimage/emblem.clip`, which layer.ks loads layer by layer with `clip://`.
+  A `.clip` can't be written from nothing (CLIPWriter edits files, it doesn't create them), so
+  it starts from the empty canvas in clipparse (`samples/emptyimage.clip`, MIT, downloaded once
+  into `.cache/`, or given with `--template`) and runs the engine, as `tools/smoketest.py` does,
+  to edit it with the clipfile plugin: so it needs the engine next to `data/`.
 - `upscale.py` rebuilds the character sprites and the two backgrounds from the original
   800x600-era art in `src/` with Real-ESRGAN, run in NumPy (no PyTorch). It downloads the
   weights into `.weights/` on first use and takes about half an hour on two cores.
@@ -35,6 +41,7 @@ python3 tools/assets/make_ui.py          # all UI images; or name groups: title 
 python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
+python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the

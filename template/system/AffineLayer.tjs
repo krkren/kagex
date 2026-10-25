@@ -55,6 +55,63 @@ function affineVectorStorage(storage) {
 	return copy;
 }
 
+// CLIP STUDIO PAINT layers (clipfile): clip://name.clip/root/folder/layer.bmp or
+// clip://name.clip/id/LayerId.bmp. The plugin serves those as BMP files, but outside Windows it
+// writes the BMP's 14-byte file header as an unpacked, 16-byte struct, which the engine can't
+// read ("Non-supported header version"), so a KAG or World layer reads the layer through the
+// plugin instead (CLIP.getLayerData, the same picture) into its image. Names are matched as the
+// plugin matches them: lower case, a "/" in a name as "_", a later layer winning a tie.
+var affineClipFiles = %[], affineClipFileCount = 0;
+function affineLoadClipLayer(target, storage) {
+	if (typeof storage != "String" || storage.length < 8 || storage.substring(0, 7).toLowerCase() != "clip://")
+		return false;
+	if (typeof global.CLIP == "undefined")
+		throw new Exception(storage + ": CLIP STUDIO PAINT files need the clipfile plugin, which this engine doesn't have");
+	var rest = storage.substring(7), slash = rest.indexOf("/");
+	if (slash < 0) throw new Exception(storage + ": no layer after the file name");
+	var file = rest.substring(0, slash), path = rest.substring(slash + 1).toLowerCase();
+	if (path.length > 4 && path.substring(path.length - 4) == ".bmp") path = path.substring(0, path.length - 4);
+	var key = file.toLowerCase(), entry = affineClipFiles[key];
+	if (entry === void) {
+		var placed = Storages.getPlacedPath(file);
+		if (placed == "") placed = Storages.getPlacedPath(key);
+		if (placed == "") throw new Exception(storage + ": " + file + " not found");
+		var clip = new CLIP();
+		if (!clip.load(placed)) throw new Exception(storage + ": " + file + " isn't a CLIP STUDIO PAINT file it can read");
+		// "root/folder/layer" => index, the way clip:// names them
+		var names = %[], full = [];
+		for (var i = 0; i < clip.layer_count; i++) {
+			var info = clip.getLayerInfo(i);
+			var name = ((string)info.name).toLowerCase().replace(/\//g, "_");
+			full[i] = (info.parent_index >= 0 && full[info.parent_index] !== void ? full[info.parent_index] : "root") + "/" + name;
+			names[full[i]] = i;
+		}
+		if (affineClipFileCount >= 8) {
+			// keep a few files open, not every one ever shown
+			foreach(affineClipFiles, function(k, v) { invalidate v.clip; });
+			(Dictionary.clear incontextof affineClipFiles)();
+			affineClipFileCount = 0;
+		}
+		entry = affineClipFiles[key] = %[ clip: clip, names: names ];
+		affineClipFileCount++;
+	}
+	var no;
+	if (path.substring(0, 3) == "id/") no = entry.clip.getLayerIndexById(+path.substring(3));
+	else no = entry.names[path];
+	if (no === void || no < 0) throw new Exception(storage + ": no such layer in " + file);
+	var tmp = new global.Layer(target.window, target);
+	try {
+		entry.clip.getLayerData(tmp, no);
+		target.assignImages(tmp);
+		target.setSizeToImageSize();
+	} catch (e) {
+		invalidate tmp;
+		throw e;
+	}
+	invalidate tmp;
+	return true;
+}
+
 // --------------------------------------------------------------------------
 
 // Resolution information
@@ -529,7 +586,7 @@ class BitmapAffineSourceLayer extends AffineSourceLayer {
 	 */
 	function loadImages(storage) {
 		_psdlayer = void;
-		var ret = _image.loadImages(...);
+		var ret = affineLoadClipLayer(_image, storage) ? %[] : _image.loadImages(...);
 		_image.setSizeToImageSize();
 		if (_redrawFunction !== void) {
 			_redrawFunction(_image);
