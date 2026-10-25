@@ -28,19 +28,19 @@ Boing Boing action
 [endtrans trans=normal]
 Update all at once
 
-[env night trans=wave time=1000]wave
-[env evening trans=mosaic time=1000]mosaic
-[env day trans=turn time=1000]turn
-[env night trans=rotatezoom time=1000]rotatezoom
-[env evening trans=rotatevanish time=1000]rotatevanish
-[env day trans=rotateswap time=1000]rotateswap
-[env night trans=ripple time=1000]ripple
+[night trans=wave time=1000]wave
+[evening trans=mosaic time=1000]mosaic
+[day trans=turn time=1000]turn
+[night trans=rotatezoom time=1000]rotatezoom
+[evening trans=rotatevanish time=1000]rotatevanish
+[day trans=rotateswap time=1000]rotateswap
+[night trans=ripple time=1000]ripple
 
 *nagano|extNagano
 ; extNagano's twelve transitions, in daylight without the character: the event picture comes
 ; and goes, so each one changes the whole screen. Without the plugin (KAGPluginTransitions
 ; says which loaded), each one runs as a crossfade.
-[ai hide trans=normal][env day trans=normal]
+[ai hide trans=normal][day trans=normal]
 The extNagano plugin adds twelve more transitions.
 [if exp="KAGPluginTransitions.book != 'linked'"]
 This build doesn't have it, so they all run as crossfades here.
