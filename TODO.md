@@ -18,6 +18,7 @@ Planned features, in three groups. The first two need only script and data work 
 - [ ] A hotkey (and a controller button) that switches the language while playing: the current message, the choices and the menus redraw in the other language, and the history keeps what was shown. Needs the item above; the framework has no language support yet.
 - [ ] Line breaking with krkr_richtext's `StyledLayout` (`breakStrategy`, ruby, vertical text, per-character timing), in place of this fork's `needsToBeWrapped()` word wrap and its page-break edge cases.
 - [ ] Menus built with Elements panels (`ElementsPanel`), which draw into a game layer and work with a controller, in place of the Win32 menu bar on every platform.
+- [ ] A controls list: a screen that shows what every key, mouse button and controller button does (F1-F8, Shift+F11/F12 in debug mode, the D-pad and face buttons, R1/R2, START/BACK/L1), opened from Config and the menu above. It should read the bindings themselves (`AfterInit.tjs`'s `processKeys` hook and `padKeyMap`, `initialPadKeyMap` in `MainWindow.tjs`), so a game that changes them gets a correct list, and name the controller's buttons by the pad in use (✕/○ on a PlayStation pad, A/B elsewhere).
 - [ ] Positional sound effects on World stages (`WaveSoundBuffer.use3D`, `SoundListener`).
 
 ## Needing more than scripts
