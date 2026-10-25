@@ -209,6 +209,18 @@ function Vector-Image {
     "SVG emblem drawn turned: $n opaque samples"
 }
 
+# CLIP STUDIO PAINT layers (clipfile; AffineLayer.tjs reads them through CLIP.getLayerData, since the
+# plugin's own clip:// BMPs don't load outside Windows) and zip patches (minizip): a zip the game
+# writes into its save folder and mounts, as it would DLC
+function Clip-And-Zip {
+    $n = [int](Invoke-Tjs "(function() { if (typeof global.CLIP == 'undefined') return -1; var l = new global.Layer(kag, kag.primaryLayer); affineLoadClipLayer(l, 'clip://emblem.clip/root/badge.bmp'); var n = 0; for (var y = 2; y < l.imageHeight; y += 6) for (var x = 2; x < l.imageWidth; x += 6) if (l.getMaskPixel(x, y) > 200) n++; invalidate l; return n; })()")
+    if ($n -lt 0) { throw 'no clipfile plugin' }
+    if ($n -lt 1800) { throw "emblem.clip's badge layer drew $n opaque samples (about 2080 when whole)" }
+    $z = Invoke-Tjs "(function() { if (typeof global.Zip == 'undefined') return 'no minizip plugin'; ['global.__zipcheck = 42;'].save(System.dataPath + 'zz_dlcsrc.txt'); var z = new Zip(); z.open(System.dataPath + 'zz_dlc.zip', 1); z.add(System.dataPath + 'zz_dlcsrc.txt', 'scenario/zz_zipcheck.tjs'); z.close(); invalidate z; if (!KAGMountPatchZip(System.dataPath + 'zz_dlc.zip')) return 'not mounted'; Scripts.execStorage('zz_zipcheck.tjs'); return (string)global.__zipcheck; })()"
+    if ($z -ne '42') { throw "a zip in the save folder: $z" }
+    "clip:// badge layer: $n opaque samples; a zip written to the save folder mounted and ran"
+}
+
 # After the transition demo: every transition's plugin (extrans, extNagano) loaded, or the demo
 # showed crossfades in their place and passed
 function Transition-Plugins {
@@ -286,6 +298,7 @@ if ($Plan -eq 'probe') {
 } elseif ($Plan -eq 'smoke') {
     Step 'demo: KAGEX layer' { Run-Demo 0 'layer' }
     Step 'vector: an SVG image draws' { Vector-Image }
+    Step 'clip and zip: a CLIP STUDIO PAINT layer, a DLC zip' { Clip-And-Zip }
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
     Step 'transitions: their plugins loaded' { Transition-Plugins }
     Step 'demo: Effekseer effects' { Effect-Demo }
