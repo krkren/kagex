@@ -27,6 +27,8 @@ The demo menu's Effekseer Effects plays [Effekseer](https://effekseer.github.io/
 
 The World Extension: Transition demo ends with the twelve transitions of the extNagano plugin: book, flutter, blurfade, zoomfade, scanline, rgbfade, spin, multiripple, imagewipe, 3duniversal (shards flying from the centre), honeyturn and morphing (a swirl). A game uses them like extrans's, with `[trans method=...]` or the World's `trans=` (`doc/kagex.txt`, "trans (Extension)"); a transition whose plugin is missing runs as a crossfade.
 
+The KAGEX Extended Layer demo ends with an SVG vector image beside a PNG of the same picture, both zoomed and turned: the layerExVector plugin draws the SVG again at each size and angle, so it stays sharp while the PNG blurs. A game shows `.svg` images like any other, on KAG or World layers (`doc/kagex.txt`, "image (Extension)"); SVG text isn't drawn, so convert it to outlines.
+
 With a controller: the D-pad or left stick moves between buttons, A confirms and advances, B cancels or hides the message window, X shows the message history, Y switches auto mode, R1 skips to the next choice or unread text and holding R2 skips. START opens the config screen, BACK the save screen and L1 the load screen.
 
 ## Releasing a game
@@ -44,7 +46,7 @@ The macOS tool isn't notarized: after unzipping, run `xattr -d com.apple.quarant
 - `linux-config.json`, `web-config.json`, `app-config.json`, `ios-config.json`: the settings for Wamsoft's platform kits ([krkrz_linux](https://github.com/wamsoft/krkrz_linux), [krkrz_web](https://github.com/wamsoft/krkrz_web), [krkrz_android](https://github.com/wamsoft/krkrz_android), [krkrz_ios](https://github.com/wamsoft/krkrz_ios)), which build the Linux (Steam), web, Android and iOS packages from krkrz_dev without changing it. `.github/workflows/platforms.yml` shows the steps, and `platform/` holds the icons and the Android app name.
 - `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
 - `TODO.md`: planned features.
-- `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`, `make_rules.py` for the transitions' rule images in `data/rule`), with the original art they start from.
+- `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`, `make_rules.py` for the transitions' rule images in `data/rule`, `make_vector.py` for the layer demo's SVG emblem and its PNG twin), with the original art they start from.
 - `tools/release/`: kagex-release (above): its source, `scripts/` that make the engine packages it uses from the release builds, and its smoke test. `.github/workflows/release-tool.yml` builds it for all three systems.
 - `tools/smoketest.py`: a headless smoke test. With the engine next to `data/`, `python3 tools/smoketest.py` plays through the sample and starts the template, and fails on a script error. GitHub Actions runs it on pull requests with the engine from the newest release. `--target android|ios-sim|web` runs the sample's part in the platform builds: on an emulator, the iOS Simulator or headless Chromium.
 
@@ -59,7 +61,7 @@ These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. 
 - The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`). Effekseer effects (`efk`) can take the fire effect's place.
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
 - Native Windows dialogs (`win32dialog.dll`), used by the stand-picture viewer tool.
-- `.emf`/`.wmf` vector images (`layerExDraw.dll`).
+- `.emf`/`.wmf` vector images (`layerExDraw.dll`). SVG images take their place (layerExVector, which every build has).
 
 ## License
 

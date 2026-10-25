@@ -146,6 +146,30 @@ Change zoom
 Rotate
 [l][r]
 
+*label16|Vector Image
+
+[cm]
+[freeimage layer=1]
+[layopt layer=0 visible=false]
+[image layer=1 page=fore storage="emblem_bitmap" visible=true left=540 top=370 dafx=center dafy=center]
+[image layer=2 page=fore storage="emblem" visible=true left=1380 top=370 dafx=center dafy=center]
+The same picture twice: a PNG on the left, an SVG vector image on the right.
+[l][r]
+
+[layopt layer=1 zoom=210 time=1000]
+[layopt layer=2 zoom=210 time=1000]
+Zoom in: the PNG blurs, while the SVG is drawn again at each size and stays sharp.
+[l][r]
+
+[action layer=1 module=LayerNormalRotateModule angvel=60]
+[action layer=2 module=LayerNormalRotateModule angvel=60]
+Both turn like any other layer.
+[l][r]
+
+[freeimage layer=1]
+[freeimage layer=2]
+[layopt layer=0 visible=true]
+
 [demodone name=layer]
 
 [jump storage=s0001.ks]

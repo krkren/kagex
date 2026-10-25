@@ -378,7 +378,17 @@ Attributes
 
 	storage	Image specification (Extension)
 
-		・*.emf / *.wmf vector images can also be handled.
+		・*.svg vector images, drawn by the layerExVector plugin (every build has it).
+
+		  They are drawn again at each zoom and angle, so they stay sharp. A name
+
+		  without an extension finds an SVG when no bitmap has that name. SVG text
+
+		  (<text>) isn't drawn: convert it to outlines in the drawing program.
+
+		・*.emf / *.wmf vector images need GDI+ (the layerExDraw plugin), which only
+
+		  the Windows-only engine has.
 
 		・When *.psb is specified, motion data is loaded.
 

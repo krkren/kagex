@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **SVG vector images**: KAG and World layers show `.svg` images as they do bitmaps (`[image layer=0 storage=emblem.svg]`, `[newlay name=badge file=emblem show]`; a name without an extension finds an SVG when no bitmap has that name). The layerExVector plugin (ThorVG) draws them again at each zoom and angle, so they stay sharp. Every build has the plugin; the Android and iOS builds gained it. SVG text isn't drawn: convert it to outlines.
+- The KAGEX Extended Layer demo ends with an SVG emblem beside a PNG of the same picture, both zoomed and turned. `tools/assets/make_vector.py` draws the two from one list of shapes.
+
+### Changed
+
+- An `.emf` or `.wmf` image that doesn't load says it needs GDI+ (layerExDraw, which only the Windows-only engine has) and suggests SVG.
+
 ## 0.5.0
 
 ### Added

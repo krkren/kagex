@@ -7,13 +7,52 @@ if (typeof global.Layer.copyRaster == "undefined") {
 	}
 }
 
-// Plugin for vector processing
+// Plugin for vector images (VectorAffineSourceLayer) and drawing (the GdiPlus class): layerExVector,
+// which draws with ThorVG on every SDL engine and loads SVG, or, on the Windows-only engine,
+// layerExDraw (GDI+), which loads .emf and .wmf
+if (typeof global.Layer.drawImage == "undefined") {
+	try {
+		Plugins.link("plugin/layerExVector.dll");
+	} catch(e) {
+
+	}
+}
 if (typeof global.Layer.drawImage == "undefined") {
 	try {
 		Plugins.link("plugin/layerExDraw.dll");
 	} catch(e) {
 
 	}
+}
+
+// Whether vector images can be shown, and which kinds. SVG goes at the end of the image
+// extensions (Utils.tjs), so a name without one finds a bitmap of that name first
+var affineVectorImages = typeof global.GdiPlus != "undefined" && typeof global.GdiPlus.Image != "undefined";
+if (affineVectorImages && global.Layer.SupportedExtensions.find("svg") < 0)
+	global.Layer.SupportedExtensions.add("svg");
+// layerExVector (GDI+'s images know their resolution, ThorVG's don't)
+var affineVectorThorVG = affineVectorImages && typeof global.GdiPlus.Image.GetHorizontalResolution == "undefined";
+
+// layerExVector reads an image through the engine's storage, except that it hands a loose file's
+// local path to ThorVG, which it builds without file access (TVG_FILE_IO off), so a file in data/
+// never loads; one in an archive, on the web (web://) or in an app's assets does. A loose file is
+// copied to user:// (SDL storage, which never has a local path) the first time it's shown, as
+// vector-<name> (that storage has no folders: createDirectory needs a local path).
+var affineVectorCopies = %[];
+function affineVectorStorage(storage) {
+	if (!affineVectorThorVG) return storage;
+	var placed = Storages.getPlacedPath(storage);
+	if (placed == "") return storage;
+	var local = "";
+	try { local = Storages.getLocalName(placed); } catch (e) { }
+	if (local == "") return storage;
+	var copy = affineVectorCopies[placed];
+	if (copy === void) {
+		copy = "user://./vector-" + Storages.extractStorageName(placed);
+		Storages.copyFile(placed, copy);
+		affineVectorCopies[placed] = copy;
+	}
+	return copy;
 }
 
 // --------------------------------------------------------------------------
@@ -1103,6 +1142,10 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 	var _imageTop;
 	var _width;
 	var _height;
+
+	var _parent;      // the AffineLayer
+	var _raster;      // layerExVector: the picture drawn at the size it's shown (drawThorVG)
+	var _rasterKey;   // what _raster was drawn for
 	
 	/**
 	 * Constructor
@@ -1110,6 +1153,7 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 	 */
 	function VectorAffineSourceLayer(parent) {
 		super.AffineSourceLayer();
+		_parent = parent;
 		_image = new global.GdiPlus.Image();
 	}
 
@@ -1118,6 +1162,7 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 	 */
 	function finalize() {
 		invalidate _image;
+		invalidate _raster if _raster !== void && isvalid _raster;
 	}
 
 	/**
@@ -1259,7 +1304,8 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 	 * Load image
 	 */
 	function loadImages(storage) {
-		_image.load(storage);
+		_image.load(affineVectorStorage(storage));
+		_rasterKey = void;
 		var bounds = _image.GetBounds();
 		_imageX = bounds.x;
 		_imageY = bounds.y;
@@ -1267,7 +1313,11 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 		_imageHeight = bounds.height;
 		_initType    = ltAlpha;
 		_initOpacity = 255;
-		setResolution(storage, _image.GetHorizontalResolution(), _image.GetVerticalResolution());
+		// GDI+ images know their resolution; layerExVector's don't (then it's 100%, or affineResolutions)
+		if (typeof _image.GetHorizontalResolution != "undefined")
+			setResolution(storage, _image.GetHorizontalResolution(), _image.GetVerticalResolution());
+		else
+			setResolution(storage);
 		setSizeToImageSize();
 	}
 
@@ -1320,6 +1370,9 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 			y.add(top  + rx*dyh+ry*dyv);
 
 			// Affine transform draw
+			if (affineVectorThorVG) {
+				drawThorVG(target, src, x, y, mtx);
+			} else {
 			(global.Layer.drawImageAffine incontextof target)(_image,
 															  _imageX - _imageLeft,
 															  _imageY - _imageTop,
@@ -1328,11 +1381,58 @@ class VectorAffineSourceLayer extends AffineSourceLayer {
 															  x[0]-0.5,y[0]-0.5,
 															  x[1]-0.5,y[1]-0.5,
 															  x[2]-0.5,y[2]-0.5);
+			}
 			// Save draw region
 			x.sort();
 			y.sort();
 			updateRect(x[0], y[0], x[3], y[3]);
 		}
+	}
+
+	/**
+	 * Draws through layerExVector (ThorVG). It draws a picture with x' = A x + B y + E but clips
+	 * it to its corners mapped with x' = A x + C y + E (and doesn't read the three-point form as
+	 * points at all), so a turned picture came out cut off. A scaled or flipped one goes straight
+	 * through drawImageStretch, where B and C are 0; a turned one is drawn unturned at the size it's
+	 * shown, into _raster, and turned like a bitmap. _raster is kept until that size changes, so a
+	 * turning picture isn't redrawn every frame.
+	 * @param x, y where the image's corners go (top-left, top-right, bottom-left, bottom-right)
+	 */
+	function drawThorVG(target, src, x, y, mtx) {
+		var sl = _imageX - _imageLeft, st = _imageY - _imageTop;
+		if (mtx[1] == 0 && mtx[2] == 0) {
+			(global.Layer.drawImageStretch incontextof target)(x[0]-0.5, y[0]-0.5, x[1] - x[0], y[2] - y[0],
+															   _image, sl, st, _width, _height);
+			return;
+		}
+		var rw = (int)Math.ceil(Math.sqrt((x[1]-x[0])*(x[1]-x[0]) + (y[1]-y[0])*(y[1]-y[0])));
+		var rh = (int)Math.ceil(Math.sqrt((x[2]-x[0])*(x[2]-x[0]) + (y[2]-y[0])*(y[2]-y[0])));
+		rw = 1 if rw < 1;
+		rh = 1 if rh < 1;
+		rw = 4096 if rw > 4096;
+		rh = 4096 if rh > 4096;
+		var key = "%d,%d,%f,%f,%f,%f".sprintf(rw, rh, sl, st, _width, _height);
+		if (_raster === void) {
+			_raster = new global.Layer(_parent.window, _parent);
+			_raster.type = ltAlpha;
+			_raster.visible = false;
+			_raster.name = "vector raster";
+		}
+		if (_rasterKey != key) {
+			_raster.setImageSize(rw, rh);
+			_raster.setSizeToImageSize();
+			_raster.fillRect(0, 0, rw, rh, 0);
+			(global.Layer.drawImageStretch incontextof _raster)(0, 0, rw, rh, _image, sl, st, _width, _height);
+			_rasterKey = key;
+		}
+		var type = src._completionType;
+		type = stLinear if type === void;
+		(global.Layer.setClip incontextof target)();
+		(global.Layer.affineCopy incontextof target)(_raster, 0, 0, rw, rh, false,
+													 x[0]-0.5, y[0]-0.5,
+													 x[1]-0.5, y[1]-0.5,
+													 x[2]-0.5, y[2]-0.5,
+													 type|stRefNoClip, false);
 	}
 };
 
@@ -2037,13 +2137,27 @@ class AffineLayer extends KAGLayer {
 	function loadImages(image,colorKey=clNone,options=void) {
 		var ret;
 		var ext = Storages.extractStorageExt(image).toUpperCase();
-		if (ext == ".EMF" || ext == ".WMF") {
-			// Vector images go through GDI+ (the layerExDraw plugin), which only the Windows-only
-			// engine build has
-			if (typeof global.GdiPlus == "undefined" || typeof global.GdiPlus.Image == "undefined")
-				throw new Exception(image + ": .emf/.wmf images need the layerExDraw plugin (GDI+), which this engine doesn't have");
+		if (ext == "" && affineVectorImages) {
+			// a name without an extension may be an SVG (bitmaps of the same name come first)
+			var found = getExistImageName(image);
+			if (found !== void && Storages.extractStorageExt(found).toUpperCase() == ".SVG") {
+				image = found;
+				ext = ".SVG";
+			}
+		}
+		if (ext == ".SVG" || ext == ".EMF" || ext == ".WMF") {
+			// Vector images: SVG through layerExVector (ThorVG), on every SDL engine; .emf and .wmf
+			// through GDI+ (layerExDraw), which only the Windows-only engine has
+			if (!affineVectorImages)
+				throw new Exception(image + ": vector images need the layerExVector plugin, which this engine doesn't have");
 			_initVector();
-			ret = _image.loadImages(...);
+			try {
+				ret = _image.loadImages(image);
+			} catch (e) {
+				if (ext != ".SVG" && typeof global.GdiPlus.Image.GetHorizontalResolution == "undefined")
+					throw new Exception(image + ": .emf and .wmf images need GDI+ (layerExDraw, the Windows-only engine); convert them to SVG");
+				throw e;
+			}
 		} else {
 			_initBitmap();
 			ret = _image.loadImages(...);

@@ -20,6 +20,10 @@ The sample's images are generated here rather than edited by hand.
   extNagano's 3duniversal (Voronoi shards: red is when each one starts moving, green how fast,
   blue which way, out from the centre) and `wipe_brush.png` for imagewipe (a violet brush stroke
   with a ragged leading edge).
+- `make_vector.py` draws the layer demo's vector sprite, an emblem in the theme's colours, as
+  `data/fgimage/emblem.svg` and as a PNG of the same picture at its own size
+  (`data/fgimage/emblem_bitmap.png`), from one list of shapes; `layer.ks` zooms the two side by
+  side. No text in the SVG: layerExVector draws none.
 - `upscale.py` rebuilds the character sprites and the two backgrounds from the original
   800x600-era art in `src/` with Real-ESRGAN, run in NumPy (no PyTorch). It downloads the
   weights into `.weights/` on first use and takes about half an hour on two cores.
@@ -30,6 +34,7 @@ python3 tools/assets/make_ui.py          # all UI images; or name groups: title 
                                          # config saveload extras history star thumbs icons preview
 python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
 python3 tools/assets/make_rules.py       # rule images for the transitions
+python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the

@@ -5,7 +5,6 @@ Planned features, in three groups. The first two need only script and data work 
 ## New plugins from krkrz_dev
 
 - [ ] **Animated characters** (`psdfile`, `getSample`): eye blinks and lip-sync through `KAGEnvCharacterEx.tjs` and `psdlayer.tjs`, which nothing loads yet. Loading layers with `psd://` can also stand in for the missing `layerExSubImage` plugin that `psdlayer.tjs` uses for partial images.
-- [ ] **Vector sprites** (`layerExVector`): it copies part of the GDI+ plugin's `GdiPlus` API, including `Image` and `drawImageAffine`, so `VectorAffineSourceLayer` in `AffineLayer.tjs` can work again. It loads SVG, in place of the `.emf`/`.wmf` images that `doc/kagex.txt` documents (those stop with an error on the SDL engine).
 - [ ] **Smaller plugins:**
   - `layerExSave`: saves without a pause.
   - `layerExAreaAverage`: smoother thumbnails than `shrinkCopy`.

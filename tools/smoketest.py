@@ -12,7 +12,7 @@ It then runs template/ as a game of its own, the way a new game starts out, and 
 it starts and that its prompts are drawn in the game window too.
 
 usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [--keep] [--verbose]
-                                 [--effekseer required|optional]
+                                 [--effekseer required|optional] [--vector required|optional]
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
@@ -631,6 +631,46 @@ def sample_steps(eng):
         if n <= 0:
             raise SmokeError("sparkle.efk drew nothing")
 
+    @step("an SVG image draws, zoomed and turned too (--vector required), or the build says why not")
+    def _():
+        if eng.tjs('return typeof global.affineVectorImages != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates SVG images)", flush=True)
+            return
+        if eng.tjs("return affineVectorImages ? 1 : 0;") != 1:
+            if eng.opts.vector == "required":
+                raise SmokeError("SVG images are unavailable: no layerExVector")
+            print("     SVG: unavailable (no layerExVector)", flush=True)
+            return
+        # The emblem (tools/assets/make_vector.py) is an opaque disc in the theme's violets on a
+        # clear square. Count its opaque pixels and their average colour as drawn plain, zoomed
+        # and turned: layerExVector once drew turned pictures cut off (AffineLayer.tjs)
+        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"fore", storage:"emblem", visible:"true",'
+                ' left:"960", top:"540", dafx:"center", dafy:"center"]); return 1;')
+        counts = {}
+        for name, opts in (("plain", ""), ("zoomed", 'zoom:"200"'), ("turned", 'rotate:"30"')):
+            eng.tjs('kag.tagHandlers.layopt(%%[layer:"0", page:"fore", reset:"true"]);%s return 1;'
+                    % (' kag.tagHandlers.layopt(%%[layer:"0", page:"fore", %s]);' % opts if opts else ""))
+            time.sleep(0.5)
+            n, r, b = [int(v) for v in eng.tjs(
+                # an AffineLayer's width and pixels are its source image's; assignImages copies
+                # what it drew (the layer's own buffer, the size of the screen)
+                'var t = new global.Layer(kag, kag.primaryLayer), n = 0, r = 0, b = 0;'
+                ' t.assignImages(kag.fore.layers[0]);'
+                ' for (var y = 2; y < t.imageHeight; y += 6) for (var x = 2; x < t.imageWidth; x += 6)'
+                ' if (t.getMaskPixel(x, y) > 200) { var p = t.getMainPixel(x, y); n++; r += (p >> 16) & 255;'
+                ' b += p & 255; } invalidate t; return "%d %d %d".sprintf(n, n ? r \\ n : 0, n ? b \\ n : 0);').split()]
+            print("     %s: %d opaque samples, average red %d, blue %d" % (name, n, r, b), flush=True)
+            if n < 1500 or b < 200 or r > b:
+                raise SmokeError("the SVG emblem %s doesn't look drawn: %d opaque samples, red %d, blue %d"
+                                 % (name, n, r, b))
+            counts[name] = n
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+        if not 3.4 < counts["zoomed"] / counts["plain"] < 4.6:
+            raise SmokeError("zoomed 200%%, the SVG covers %.2f times the area" % (counts["zoomed"] / counts["plain"]))
+        if not 0.9 < counts["turned"] / counts["plain"] < 1.1:
+            raise SmokeError("turned 30 degrees, the SVG covers %.2f times the area (cut off?)"
+                             % (counts["turned"] / counts["plain"]))
+
     @step("the demo menu's choices are drawn in a text font")
     def _():
         # A face the engine can't draw falls back to its icon font, which measures 0 and
@@ -822,6 +862,9 @@ def main():
     ap.add_argument("--effekseer", choices=["required", "optional"], default="optional",
                     help="whether the build must draw Effekseer effects (the krkreffekseer plugin "
                     "and OpenGL ES): required fails when it can't; optional reports it")
+    ap.add_argument("--vector", choices=["required", "optional"], default="optional",
+                    help="whether the build must draw SVG images (the layerExVector plugin): "
+                    "required fails when it can't; optional reports it")
     opts = ap.parse_args()
     if opts.target != "desktop":
         opts.only = "sample"  # the platform packages hold the sample only
