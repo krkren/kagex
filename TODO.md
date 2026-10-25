@@ -4,12 +4,10 @@ Planned features, in three groups. The first two need only script and data work 
 
 ## New plugins from krkrz_dev
 
-- [ ] **Animated characters** (`psdfile`, `getSample`): eye blinks and lip-sync through `KAGEnvCharacterEx.tjs` and `psdlayer.tjs`, which nothing loads yet. Loading layers with `psd://` can also stand in for the missing `layerExSubImage` plugin that `psdlayer.tjs` uses for partial images.
+- [ ] **Animated characters** (`psdfile`, `getSample`): eye blinks and lip-sync through `KAGEnvCharacterEx.tjs` and `psdlayer.tjs`, which nothing loads yet. Loading layers with `psd://` can also stand in for the missing `layerExSubImage` plugin that `psdlayer.tjs` uses for partial images. `psdlayer.tjs` also uses `layerExSave` (exporting layers as TLG, trimming transparent edges, `oozeColor` against colour fringes when shrinking), which only the Windows, Linux and macOS packages have: check which of those calls run in the game rather than while authoring, and add the plugin to the web, Android and iOS builds if any do.
 - [ ] **Smaller plugins:**
-  - `layerExSave`: saves without a pause.
-  - `layerExAreaAverage`: smoother thumbnails than `shrinkCopy`.
-  - `minizip`: zip archives (`zip://`) for patches or DLC.
-  - `clipfile`: loading CLIP STUDIO PAINT files directly.
+  - `minizip`: patches and DLC as zip files (`zip://`), next to the engine or in the save folder, loaded after the `patch.xp3` patches the framework already reads (those only work next to the engine, which the web, Android and iOS builds can't write to). kagex-release builds a patch zip of what changed since an earlier build.
+  - `clipfile`: images straight from CLIP STUDIO PAINT files (`clip://file.clip/root/folder/layer.bmp`), as `psdfile` loads Photoshop's, so art can stay in `.clip` files without exporting each layer.
 
 ## Interface, accessibility and languages
 
@@ -18,6 +16,7 @@ Planned features, in three groups. The first two need only script and data work 
 - [ ] A hotkey (and a controller button) that switches the language while playing: the current message, the choices and the menus redraw in the other language, and the history keeps what was shown. Needs the item above; the framework has no language support yet.
 - [ ] Line breaking with krkr_richtext's `StyledLayout` (`breakStrategy`, ruby, vertical text, per-character timing), in place of this fork's `needsToBeWrapped()` word wrap and its page-break edge cases.
 - [ ] Menus built with Elements panels (`ElementsPanel`), which draw into a game layer and work with a controller, in place of the Win32 menu bar on every platform.
+- [ ] A screenshot key that saves the screen as a PNG without a hitch: writing a 1920x1080 PNG takes about 90 ms, which shows, and `layerExSave`'s `startSaveLayerImage` writes it in the background (the plugin has to be linked before the game window is made, or the window lacks the method).
 - [ ] A controls list: a screen that shows what every key, mouse button and controller button does (F1-F8, Shift+F11/F12 in debug mode, the D-pad and face buttons, R1/R2, START/BACK/L1), opened from Config and the menu above. It should read the bindings themselves (`AfterInit.tjs`'s `processKeys` hook and `padKeyMap`, `initialPadKeyMap` in `MainWindow.tjs`), so a game that changes them gets a correct list, and name the controller's buttons by the pad in use (✕/○ on a PlayStation pad, A/B elsewhere).
 - [ ] Positional sound effects on World stages (`WaveSoundBuffer.use3D`, `SoundListener`).
 
