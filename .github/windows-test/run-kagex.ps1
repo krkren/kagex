@@ -186,6 +186,15 @@ function Run-Demo([int]$Index, [string]$Tag) {
     "'$text': $n clicks back to the menu (choice $how)"
 }
 
+# The Effects demo (choice 5), which must have drawn its effects: without krkreffekseer or
+# OpenGL ES it says so and ends early, which passes Run-Demo
+function Effect-Demo {
+    $r = Run-Demo 5 'effect'
+    $why = Invoke-Tjs "typeof kag.effekseerSystem == 'undefined' || kag.effekseerSystem === void ? 'no effect was played' : kag.effekseerSystem.available ? '' : kag.effekseerSystem.reason"
+    if ($why) { throw "$r; Effekseer effects are unavailable: $why" }
+    "$r; effects drawn"
+}
+
 # ---------------------------------------------------------------------------------------
 $exe = Join-Path $Kagex $(if ($IsWindows) { 'krkrz.exe' } else { 'krkrz' })
 $argList = @('-datapath=savedata/', "-replfile=$chan") + $EngineArgs
@@ -254,8 +263,9 @@ if ($Plan -eq 'probe') {
     }
 } elseif ($Plan -eq 'smoke') {
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
+    Step 'demo: Effekseer effects' { Effect-Demo }
 } else {
-    $demos = 'layer', 'char', 'envlayer', 'transition', 'action'
+    $demos = 'layer', 'char', 'envlayer', 'transition', 'action', 'effect'
     for ($d = 0; $d -lt $demos.Count; $d++) {
         Step "demo $($d + 1): $($demos[$d]).ks" { Run-Demo $d $demos[$d] }
     }
