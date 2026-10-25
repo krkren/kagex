@@ -1026,6 +1026,226 @@ Clicking cancels the wait and proceeds to the next conversation.
 
 
 
+● Characters Drawn from Layers
+
+
+
+A character can be put together from layers each time it's shown, as a PSD is shown with some of
+its layers turned on: a body, outfits ("dress"), variations of a pose such as arm positions
+("diff") and faces. Its eyes blink by themselves, and its mouth moves with its voice. The sample's
+Pip is one (anim.ks; its files are made by tools/assets/make_pip.py).
+
+
+
+This is Wamsoft's "exstand" (template/system/KAGEnvCharacterEx.tjs, with psdlayer.tjs), which
+world.tjs loads when there is a charinit.csv. A character listed in charinit.csv whose envinit.tjs
+entry has no "poses" is drawn from layers; its entry holds the rest:
+
+
+
+------------------------------------
+"pip" => %[
+    "nameAlias" => "Pip",
+    "yoffset" => 0,             // its canvas's centre goes to the centre of the screen
+    "voiceFile" => "pip%s%06d", // pip000001.ogg ...
+    "voiceName" => "voice0"
+    ],
+------------------------------------
+
+
+
+◇ charinit.csv
+
+
+
+One line per pose, comma separated (a line starting with # is a comment):
+
+
+
+    character,pose,files,xoffset,yoffset[,facezoom,facexoff,faceyoff,emoRev]
+
+
+
+    files       Names the pose's files: <files>_info.txt, which says what its outfits,
+                diffs and faces are, and its layers, <files>_<level>.txt (below).
+    xoffset     Where the character's anchor is, from the centre of the canvas, at 100%
+    yoffset     (right and down are +). The World places the anchor where it places any
+                character: xpos from the centre of the screen and yoffset (the character's
+                or envinit.tjs's) below it. Pip's entry sets "yoffset" => 0, so the centre of
+                its canvas is the centre of the screen, and it's drawn standing 172 pixels
+                below that, on the message window.
+    facezoom    For the face window (facewin): the face's size in %, and its offset.
+    facexoff
+    faceyoff
+    emoRev      1: emotions show mirrored.
+
+
+
+charlevel.csv can move a pose per level: character,pose,x0,y0,x1,y1,... (pixels at each level,
+in the order of envinit.tjs's levels; pose * for every pose).
+
+
+
+◇ The layers: <files>_<level>.txt
+
+
+
+One file per World level, named after the level ("name" in envinit.tjs's levels: the sample's
+<files>_1.txt, _0.txt and _2.txt are 60%, 100% and 150%), so each level is drawn at its own size.
+A level without one uses the file of the next level after it in the list, or else of the one
+before it ("searchSmallLevel" => false in envinit.tjs: never one before), scaled to fit; with none
+at all, <files>.txt, scaled by each level's zoom.
+
+
+
+It's psdlayer.tjs's text format, tab separated: a header line (starting with #), the canvas
+size (four empty columns, then width and height), then a line per layer, the top layer first:
+
+
+
+    layer_type  name  left  top  width  height  type  opacity  visible  layer_id  group_layer_id
+
+
+
+    layer_type  0: a picture. 2: a group (a PSD's folder).
+    left, top   Where the picture goes on the canvas, and its size.
+    width
+    height
+    type        Its blend mode, as psdfile reports it: 13 is normal (drawn as ltAlpha).
+    opacity     0 to 255.
+    visible     1 (each pose turns its layers on and off itself).
+    layer_id    A number; the picture is the image <files>_<level>_<layer_id> (.png, .tlg or
+                any format the engine reads), cut to the layer's rectangle.
+    group_layer_id  The layer_id of the group the layer is in, if any.
+
+
+
+Layers with Background, Origin or Area in their names don't count for the size of the picture
+(such as "Emotion Origin", which places emotions). Layers saved in pieces (psdlayer.tjs's split
+images, .siz) need the layerExSubImage plugin, which the SDL engines don't have.
+
+
+
+◇ <files>_info.txt
+
+
+
+Tab separated; a line starting with # is a comment. A layer is named by its name alone, or by its
+group and name (Mouth/Open Mouth); names match exactly, case and spaces included.
+
+
+
+    common  <layer>                 Shown in every outfit.
+    dress   <dress>  base  <layer>  Shown in that outfit.
+    dress   <dress>  diff  <diff>  <layer>
+                                    Shown with that diff, in that outfit. Every outfit needs at
+                                    least one diff; more lines add layers to it.
+    dress   <dress>  diffface  <diff>  <face>
+                                    The face the diff starts with.
+    face    <face>  base  <layer>   Part of that face (brows, blush ...).
+    face    <face>  eye  <group>    The face's eyes: a group of three layers, "Open Eyes",
+                                    "Half-closed Eyes" (or "Half-open Eyes") and "Closed Eyes".
+                                    Those blink. With blinking off, the group's top layer shows.
+    face    <face>  lip  <group>    The face's mouth: "Open Mouth", "Half-open Mouth" (or
+                                    "Half-closed Mouth") and "Closed Mouth". With lip-sync off,
+                                    the group's top layer shows.
+    face    <face>  eyeimage  <layer>
+                                    Eyes that don't move (Pip's laugh has them drawn shut).
+    face    <face>  lipimage  <layer>
+                                    A mouth that doesn't move.
+    face    <face>  noeye           No eyes; nolip: no mouth.
+    add     <name>  <layer>         An extra layer, shown with add=<name> or <name>.
+    rename  dress|diff|face  <new name>  <old name>
+
+
+
+Without eye and lip lines, a face's eyes are the group named after its first base layer followed
+by "・目", and its mouth "・口". In common, dress and diff lines, a layer name followed by $ and a TJS
+expression (Glasses$f.glasses) shows only while the expression is true. The first outfit, its
+first diff and the first face are where a character starts.
+
+
+
+A face can also be made of parts from groups (brows, eyes and mouth chosen separately):
+facegroup <prefix> defines a group of parts, fgname <part> <layer> [eye0|eye1|eye2|lip0|lip1|lip2]
+adds a layer to the part whose name starts with that prefix (shown at that eye or mouth level only,
+when given), and fgalias <name> <part> <part>... names a set of them. Such a face is given as
+part:part:part, one per group, or by a part's or an alias's name, which changes that group only.
+
+
+
+◇ Blinking and lip-sync
+
+
+
+A face whose eyes are a group of three blinks at random, a frame every eyeFlipTime ms (60). A
+face whose mouth is a group of three moves with the character's voice (that of its 【name】
+lines): every lipFlipTime ms (120), the mouth opens half above a level of lipSyncHalfLevel
+(0.03) and wide above lipSyncOpenLevel (0.12), measured as the RMS of the voice
+(WaveSoundBuffer.getSoundLevel). They're global variables in KAGEnvCharacterEx.tjs, so
+Override.tjs can change them; eyeFlipFreq is the chance that a frame starts a blink.
+
+
+
+◆ KAG Commands
+
+
+
+    <dress>     Changes the outfit (also dress=<dress>).
+    <diff>      Changes the diff (also diff=<diff>).
+    <face>      Changes the face (also face=<face>).
+    x<face>     Changes the face with the eyes closed: they close, the face changes, they
+                open again (also xface=<face>).
+    <animation> Plays an animation from charanim.csv (below).
+    add         Shows the extra layer named in an add line, which also works as a command of
+                its own (add= with nothing: none).
+    addface     Shows a layer over the face (addface= with nothing: none).
+    facediff    The diff the face window (facewin) uses.
+    noconvdress Uses the outfit's name as given, not through envinit.tjs's dressNameMap.
+    eyeopen     Holds the eyes open, no blinking.
+    eyeclose    Holds them closed.
+    eyeopento   Opens them through the half-closed frame, and waits for that.
+    eyecloseto  Closes them the same way, and waits.
+    eyeflip     eyeflip=3: blinks three times, waits, and holds them open.
+    eyeflipon   Blinks at random again (after any of the above).
+    eyeflipoff  No blinking: the eye group's top layer.
+    lipopen, lipclose, lipopento, lipcloseto, lipflip, lipflipon, lipflipoff
+                The same for the mouth; lipflipon makes it follow the voice again.
+    fliptime    With the commands above: the time of each frame, in ms.
+
+
+
+Example
+------------------------------------
+[pip xsurprised voice=3]
+【pip】Oh! A new face!
+[pip eyecloseto]
+[pip beret smile]
+------------------------------------
+
+
+
+◇ charanim.csv
+
+
+
+Animations, in steps: character,animation,command,time. A step runs a command (any of the
+above, several separated by spaces: wave smile) and lasts its time in ms; wait just waits; loop
+goes back to the step numbered in its time column (from 0). [pip waving] plays one, and waits
+for it to end unless it loops. Changing the outfit, diff or face stops it.
+
+
+
+------------------------------------
+pip,waving,wave,280
+pip,waving,rest,280
+pip,waving,loop,0
+------------------------------------
+
+
+
+
+
 ● Layer Functions
 
 

@@ -8,22 +8,31 @@ var eyeFlipFreq = 0.025 * eyeFlipTime / 100;
 
 // Switching time for lip-sync animation patterns (shortest case)
 // Better for update timing if kept as an integer multiple of the eye timing
-var lipFlipTime = 180;
+var lipFlipTime = 120;
+
+// Voice levels (RMS, 0 to 1) at which the mouth is half open and open
+var lipSyncHalfLevel = 0.03;
+var lipSyncOpenLevel = 0.12;
 
 // Loading psdlayer
 KAGLoadScript("psdlayer.tjs");
 
 // Sound buffer processing
-if (typeof WaveSoundBuffer.setDefaultAheads == "undefined") {
-	WaveSoundBuffer.enableGetSample = false;
-	var plug = "plugin/getSample.dll";
-	try {
-		Plugins.link (plug);
+// Lip-sync reads the voice's level: with the engine's WaveSoundBuffer.getSoundLevel where it
+// has one (the SDL3 engines kagex ships, on every platform), otherwise with the getSample
+// plugin's sampleValue
+// (lipSyncSource "level", "sample", or "" for a random mouth)
+var lipSyncSource = "";
+if (typeof WaveSoundBuffer.getSoundLevel != "undefined") {
+	lipSyncSource = "level";
+} else {
+	if (typeof WaveSoundBuffer.setDefaultAheads == "undefined") {
+		KAGLinkPlugin("plugin/getSample.dll");
+	}
+	if (typeof WaveSoundBuffer.setDefaultAheads != "undefined") {
 		// Sample pre-fetch value (for reducing lip-sync lag)
 		WaveSoundBuffer.setDefaultAheads((int)(200 * 44.1));
-		WaveSoundBuffer.enableGetSample = true;
-	} catch {
-		//System.inform("Failed to load getSample.dll");
+		lipSyncSource = "sample";
 	}
 }
 
@@ -446,7 +455,7 @@ class ExStandAnimParser extends CSVParser
 		allStandInfoMap  = parser.result;
 		allStandInfoList = parser.chlist;
 		invalidate parser;
-	} else {Base size
+	} else {
 		allStandInfoMap  = %[];
 		allStandInfoList =  [];
 	}
@@ -2952,26 +2961,33 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 		case 3: // Animation
 			// Get and set volume level
 			// Only voices in a state reacting to labels are targeted
+			var voiceLevel = 0;
 			if (soundBuffer !== void && soundBuffer.status == "play" && soundBuffer.mode) {
-				var voiceLevel;
-				if (WaveSoundBuffer.enableGetSample) {
+				if (lipSyncSource == "level") {
+					// The level half a frame ahead, around the middle of the time the mouth is shown
+					var a = soundBuffer.getSoundLevel((int)(soundBuffer.frequency * lipflipTime / 2000)).rms;
+					if (a > lipSyncOpenLevel) {
+						voiceLevel = 2;
+					} else if (a > lipSyncHalfLevel) {
+						voiceLevel = 1;
+					}
+				} else if (lipSyncSource == "sample") {
 					var a = soundBuffer.sampleValue;
 					//dm("Voice value: "+soundBuffer.position+" : %0.3f".sprintf(a));
 					if (a > 0.2) {
 						voiceLevel = 2;
 					} else if (a > 0.01) {
 						voiceLevel = 1;
-					} else {
-						voiceLevel = 0;
 					}
 				} else {
 					// Random support for now
 					voiceLevel = (int)(Math.random() * 3);
 				}
-				if (lipLevel !== voiceLevel) {
-					lipLevel = voiceLevel;
-					updateFlag = true;
-				}
+			}
+			// The mouth closes when the voice ends or is stopped
+			if (lipLevel !== voiceLevel) {
+				lipLevel = voiceLevel;
+				updateFlag = true;
 			}
 			break;
 		case 4: // Transition to open state
@@ -3263,6 +3279,15 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	 * Play voice
      */
 	function playVoice(voicename=void) {
+		// Lip-sync reads the voice from the buffer's visualization data, which has to be on
+		// before the voice starts: a short voice is decoded at once, and turning it on later
+		// leaves nothing to read for most of it
+		if (lipSyncSource != "") {
+			if (soundBuffer === void) {
+				soundBuffer = new VoiceTrack(this);
+			}
+			soundBuffer.useVisBuffer = true;
+		}
 		var ret = super.playVoice(...);
 		if (ret > 0 && lipstate == 3) {
 			startUpdateHandler();
@@ -3474,8 +3499,10 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 };
 
 // Rewriting character generation logic
+// (a character with "poses" in envinit.tjs, or without a line in charinit.csv, stays a plain one)
 KAGEnvironment._getCharacter = function(name, initName, init) {
-	if (init.poses !== void) {
+	var standName = init.standName !== void ? init.standName : initName;
+	if (init.poses !== void || allStandInfoMap[standName] === void) {
 		return new KAGEnvCharacter(this, name, initName, init);
 	} else {
 		return new KAGEnvCharacterEx(this, name, initName, init);

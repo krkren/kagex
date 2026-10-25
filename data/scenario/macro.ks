@@ -62,13 +62,13 @@
 
 ; Marks a demo scene as played to the end; Extras on the title screen unlock once all
 
-; five have been (sf.clear)
+; six have been (sf.clear; not the Effekseer demo, which some builds can't show)
 
 [macro name=demodone]
 
 [eval exp="sf['demodone_' + mp.name] = true"]
 
-[eval exp="sf.clear = true" cond="sf.demodone_layer && sf.demodone_char && sf.demodone_envlayer && sf.demodone_transition && sf.demodone_action"]
+[eval exp="sf.clear = true" cond="sf.demodone_layer && sf.demodone_char && sf.demodone_envlayer && sf.demodone_transition && sf.demodone_action && sf.demodone_anim"]
 
 [endmacro]
 

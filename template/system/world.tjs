@@ -923,3 +923,9 @@ class KAGWorldPlugin extends KAGPlugin
 	}
 @endif
 };
+
+// Characters drawn from layered images, with eye blinks and lip-sync (exstand: charinit.csv,
+// doc/world.txt). A character without "poses" in envinit.tjs is one of those then.
+if (Storages.isExistentStorage("charinit.csv")) {
+	KAGLoadScript("KAGEnvCharacterEx.tjs");
+}

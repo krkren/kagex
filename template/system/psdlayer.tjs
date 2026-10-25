@@ -1,14 +1,20 @@
-// Load partial image loading plugin
+// Load partial image loading plugin (layerExSubImage), for layers saved in pieces ("images" in
 
-if (typeof global.Layer.loadSubImage == "undefined") {
+// the layer structure): linked when the first one is drawn, since most games have none
 
-	var plug = "plugin/layerExSubImage.dll";
+function psdLinkSubImage() {
 
-	try {
+	if (typeof global.Layer.loadSubImage == "undefined") {
 
-		Plugins.link (plug);
+		var plug = "plugin/layerExSubImage.dll";
 
-	} catch(e) {}
+		try {
+
+			Plugins.link (plug);
+
+		} catch(e) {}
+
+	}
 
 }
 
@@ -183,6 +189,8 @@ class PSDInfoLayer extends Layer {
 				var f = images[y].file;
 
 				if (f != null && !images[y].disp) {
+
+					psdLinkSubImage();
 
 					var dy = y * base;
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Characters drawn from layers, with blinking eyes and lip-sync**: a World character listed in `charinit.csv` is put together from layers each time it's shown (Wamsoft's "exstand", `KAGEnvCharacterEx.tjs`, which nothing loaded until now). Its outfits, pose variations ("diffs") and faces are sets of layers named in an `_info.txt`, and each World level can have layers drawn at its own size. A face's eyes blink by themselves, and its mouth moves with the character's voice, measured as it plays with the engine's `WaveSoundBuffer.getSoundLevel`, on every platform. Tags hold, open, close or flip the eyes and mouth (`eyecloseto`, `eyeflip=3`, `lipflip=4`...), `x<face>` changes the face with the eyes closed, and `charanim.csv` defines animations (`doc/world.txt`, "Characters Drawn from Layers").
+- The World Extension: Animated Character demo, last in the demo menu, with Pip, a character of the sample's own: two outfits, three arm poses, six faces and babbled voice lines. `tools/assets/make_pip.py` draws its layers at each level's size and makes the voices.
+
+### Changed
+
+- Extras on the title screen unlock once the new demo has been played too.
+
 ## 0.7.0
 
 ### Added

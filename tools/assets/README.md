@@ -30,6 +30,13 @@ The sample's images are generated here rather than edited by hand.
   it starts from the empty canvas in clipparse (`samples/emptyimage.clip`, MIT, downloaded once
   into `.cache/`, or given with `--template`) and runs the engine, as `tools/smoketest.py` does,
   to edit it with the clipfile plugin: so it needs the engine next to `data/`.
+- `make_pip.py` draws Pip, the Animated Character demo's character, as layers (body, outfits,
+  arm poses, and faces whose eyes and mouths are groups of three frames) at the size of each
+  World level, writing each level's layer structure (`data/fgimage/pip/pip_<level>.txt`), a PNG
+  per layer, `pip_info.txt`, and `data/main/charinit.csv` and `charanim.csv`. Every shape is a
+  signed distance field in NumPy, so each level is drawn rather than scaled. `voice` makes its
+  voice lines (`data/voice/pip000001.ogg`...): babble, syllables of a glottal pulse through vowel
+  formants, encoded with ffmpeg's libvorbis (so it needs ffmpeg).
 - `upscale.py` rebuilds the character sprites and the two backgrounds from the original
   800x600-era art in `src/` with Real-ESRGAN, run in NumPy (no PyTorch). It downloads the
   weights into `.weights/` on first use and takes about half an hour on two cores.
@@ -42,6 +49,7 @@ python3 tools/assets/make_effects.py     # effect textures and effects; or: text
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
+python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the

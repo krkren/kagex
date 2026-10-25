@@ -11,6 +11,10 @@ for d in /tmp/kagex-smoke-* "${TMPDIR:-/tmp}"/kagex-smoke-*; do
     [ -f "$f" ] && cp "$f" . 2>/dev/null || true
   done
 done
+# macOS's crash reports of the engine: a native crash leaves its stack only there
+for f in "$HOME"/Library/Logs/DiagnosticReports/*.ips; do
+  [ -f "$f" ] && grep -q -i -E 'krkrz|kagex' "$f" 2>/dev/null && cp "$f" . 2>/dev/null || true
+done
 for f in *.log; do
   [ -f "$f" ] || continue
   # The error lines of every log, with some context, before long logs lose their middle

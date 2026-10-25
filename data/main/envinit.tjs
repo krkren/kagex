@@ -680,6 +680,26 @@
 
 			],
 
+
+
+		// A character drawn from layers (exstand): its pose, outfits, arm poses and faces come from
+
+		// charinit.csv and fgimage/pip (tools/assets/make_pip.py), so it has no "poses" here.
+
+		// Its eyes blink, and its mouth follows its voice.
+
+		"pip" => %[
+
+			"nameAlias" => "Pip",
+
+			"yoffset" => 0, // the centre of its canvas goes to the centre of the screen
+
+			"voiceFile" => "pip%s%06d",
+
+			"voiceName" => "voice0"
+
+			],
+
 		],
 
 

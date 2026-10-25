@@ -14,6 +14,8 @@
 
 [seladd text="Effekseer Effects" storage=effect.ks]
 
+[seladd text="World Extension: Animated Character" storage=anim.ks]
+
 [select]
 
 [jump target=*start]

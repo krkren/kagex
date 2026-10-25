@@ -516,7 +516,7 @@ class WebEngine(Engine):
             self.console.close()
 
 
-DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks"]
+DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks", "anim.ks"]
 
 
 def collector():
@@ -571,6 +571,12 @@ def effekseer_framework(eng):
     return eng.tjs('return typeof global.KAGEffekseerOf != "undefined" ? 1 : 0;') == 1
 
 
+def animated_framework(eng):
+    """Whether the sample has the Animated Character demo (0.8.0 and later; pages.yml may test an
+    older release's site)"""
+    return eng.tjs('return Storages.isExistentStorage("anim.ks") ? 1 : 0;') == 1
+
+
 def sample_steps(eng):
     steps, step = collector()
 
@@ -592,6 +598,9 @@ def sample_steps(eng):
             if demo == "effect.ks" and not effekseer_framework(eng):
                 print("     (skipped: this build's framework predates the Effekseer demo)", flush=True)
                 return
+            if demo == "anim.ks" and not animated_framework(eng):
+                print("     (skipped: this build predates the Animated Character demo)", flush=True)
+                return
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
             eng.clicker(True, until="s0001.ks")
@@ -601,6 +610,63 @@ def sample_steps(eng):
     @step("finishing every demo unlocks Extras")
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
+
+    @step("the animated character blinks, and its mouth follows its voice")
+    def _():
+        if not animated_framework(eng):
+            print("     (skipped: this build predates the Animated Character demo)", flush=True)
+            return
+        pip = 'var c = world_object.env.characters["pip"]; '
+        eng.tjs('kag.process("anim.ks", "*start"); return 1;')
+        eng.wait("Pip", 'world_object.env.characters["pip"] !== void && kag.inStable', timeout=20)
+        # drawn, and on the screen: Pip's picture has its anchor on the canvas centre, which the
+        # World puts at the centre of the screen
+        drawn = eng.tjs(pip + 'var l = c.standlayer, n = 0; for (var y = 0; y < l.imageHeight; y += 16)'
+                        ' for (var x = 0; x < l.imageWidth; x += 16) if (l.getMaskPixel(x, y) > 0) n++;'
+                        ' var t = c.targetLayer; return [n, t.visible ? 1 : 0, (int)(t._affinetop - t.afy),'
+                        ' (int)(t._affinetop - t.afy + l.imageHeight)].join(",");')
+        n, visible, top, bottom = [int(v) for v in str(drawn).split(",")]
+        print("     Pip: %d of its samples drawn, from y %d to %d" % (n, top, bottom), flush=True)
+        if n < 300 or not visible or bottom < 200 or top > 900:
+            raise SmokeError("Pip isn't drawn on the screen: %s" % drawn)
+        # blinking: make every eye frame start a blink, and watch the eyes close
+        eng.tjs('global.__smokeBlink = eyeFlipFreq; eyeFlipFreq = 1.0; return 1;')
+        seen = set()
+        end = time.time() + 3
+        while time.time() < end and not {0, 2} <= seen:
+            seen.add(eng.tjs(pip + 'return c.eyeLevel === void ? -1 : c.eyeLevel;'))
+            time.sleep(0.03)
+        eng.tjs('eyeFlipFreq = global.__smokeBlink; return 1;')
+        if not {0, 2} <= seen:
+            raise SmokeError("Pip's eyes didn't blink (eye levels seen: %s)" % sorted(seen))
+        # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
+        # while it plays (asking through the REPL is too slow on some targets)
+        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [];'
+                ' global.__smokeLipTimer = new Timer(function() {'
+                ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
+                ' if (b !== void && b.status == "play") { global.__smokeLips.add(c.lipLevel); global.__smokeVoice.add(b.position); }'
+                ' }, ""); __smokeLipTimer.interval = 20; __smokeLipTimer.enabled = true; return 1;')
+        eng.tjs('kag.onPrimaryClick(); return 1;')
+        end = time.time() + 6
+        while time.time() < end:
+            time.sleep(0.5)
+            if eng.tjs('return __smokeLips.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                break
+        r = str(eng.tjs('__smokeLipTimer.enabled = false; invalidate __smokeLipTimer;'
+                        ' var p = %[]; for (var i = 0; i < __smokeVoice.count; i++) p[__smokeVoice[i]] = 1;'
+                        ' var n = []; n.assign(p);'
+                        ' return [__smokeLips.join(" "), n.count \\ 2, lipSyncSource].join(",");')).split(",")
+        levels = [int(v) for v in r[0].split()] if r[0].strip() else []
+        positions, source = int(r[1]), r[2]
+        print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
+              % (source or "(random)", len(levels), " ".join(str(v) for v in levels[:60]), positions), flush=True)
+        if positions <= 1:
+            print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
+        elif not {0, 2} <= set(levels):
+            raise SmokeError("Pip's mouth didn't open and close with its voice (levels seen: %s)" % sorted(set(levels)))
+        eng.clicker(True, until="s0001.ks")
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
+        eng.clicker(False)
 
     @step("extrans's and extNagano's transitions are there, not crossfades")
     def _():
