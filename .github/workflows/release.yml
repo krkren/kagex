@@ -286,9 +286,15 @@ jobs:
           # tp_stub.h uses ptrdiff_t without <cstddef>; GCC 12's headers don't pull it in for
           # the plugins that include tp_stub.h first (layerExSave, sigcheck, krkreffekseer, ...)
           CXXFLAGS: -include cstddef
+        # krkreffekseer-odr.cmake: the Debug libkrkreffekseer.so needs Effekseer's static members
+        # defined, or it won't load (see the file)
         run: |
           set -o pipefail
-          cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 2>&1 | tee "$GITHUB_WORKSPACE/results/configure.log" | tail -20
+          cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_PROJECT_INCLUDE="$GITHUB_WORKSPACE/ci/.github/release-build/krkreffekseer-odr.cmake" \
+            -DKAGEX_EFK_ODR="$GITHUB_WORKSPACE/kagex/.github/platforms/krkreffekseer-odr.cpp" \
+            2>&1 | tee "$GITHUB_WORKSPACE/results/configure.log" | tail -20
+          grep -q "kagex: Effekseer's static members are defined in efk_core" "$GITHUB_WORKSPACE/results/configure.log"
 
       - name: Save vcpkg binary cache
         if: always()
