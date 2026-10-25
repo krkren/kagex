@@ -195,6 +195,20 @@ function Effect-Demo {
     "$r; effects drawn"
 }
 
+# After the layer demo, whose last section shows an SVG beside a PNG of it: an SVG draws, turned
+# 30 degrees too (layerExVector; a loose file goes through a copy in user://, and a turned picture
+# through a raster of it, both worked around in AffineLayer.tjs). 2083 samples when it's all there
+function Vector-Image {
+    $why = Invoke-Tjs "typeof global.affineVectorImages == 'undefined' ? 'the framework has no SVG support' : affineVectorImages ? '' : 'layerExVector is not loaded'"
+    if ($why) { throw $why }
+    Invoke-Tjs "kag.tagHandlers.image(%[layer:'0', page:'fore', storage:'emblem', visible:'true', left:'960', top:'540', dafx:'center', dafy:'center']), kag.tagHandlers.layopt(%[layer:'0', page:'fore', rotate:'30']), 1" | Out-Null
+    Start-Sleep -Milliseconds 800
+    $n = [int](Invoke-Tjs "(function() { var t = new global.Layer(kag, kag.primaryLayer), n = 0; t.assignImages(kag.fore.layers[0]); for (var y = 2; y < t.imageHeight; y += 6) for (var x = 2; x < t.imageWidth; x += 6) if (t.getMaskPixel(x, y) > 200) n++; invalidate t; return n; })()")
+    Invoke-Tjs "kag.tagHandlers.freeimage(%[layer:'0', page:'fore']), 1" | Out-Null
+    if ($n -lt 1800) { throw "the SVG emblem, turned 30 degrees, drew $n opaque samples (2083 when whole)" }
+    "SVG emblem drawn turned: $n opaque samples"
+}
+
 # After the transition demo: every transition's plugin (extrans, extNagano) loaded, or the demo
 # showed crossfades in their place and passed
 function Transition-Plugins {
@@ -270,6 +284,8 @@ if ($Plan -eq 'probe') {
         $r
     }
 } elseif ($Plan -eq 'smoke') {
+    Step 'demo: KAGEX layer' { Run-Demo 0 'layer' }
+    Step 'vector: an SVG image draws' { Vector-Image }
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
     Step 'transitions: their plugins loaded' { Transition-Plugins }
     Step 'demo: Effekseer effects' { Effect-Demo }
