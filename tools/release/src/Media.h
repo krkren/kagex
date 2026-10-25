@@ -6,7 +6,8 @@
 //            for Opus.
 //   images:  PNG, BMP and TLG -> TLG6, TLG5, PNG or JPEG for opaque images; TLG6, TLG5, PNG, or a
 //            JPEG with a lossless mask (<name>_m.png) for transparent ones. Masks of separate
-//            main/mask pairs (<name>_m.*) are only converted to lossless formats.
+//            main/mask pairs (<name>_m.*) and transition rules (rule/) are only converted to
+//            lossless formats.
 //   never:   Ogg, Opus, JPEG (lossy already), and files whose names the scripts write with their
 //            extension, unless the references are rewritten.
 //

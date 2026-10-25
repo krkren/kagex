@@ -128,6 +128,16 @@ class KAGLayer extends Layer
 			default: elm.stay = ststNoStay; break;
 			}
 		}
+		else if(method == 'rgbfade')
+		{
+			// KAG lower-cases attribute names, and extNagano's rgbfade reads delayR, delayG,
+			// delayB and delayA
+			elm.delayR = elm.delayr if elm.delayR === void;
+			elm.delayG = elm.delayg if elm.delayG === void;
+			elm.delayB = elm.delayb if elm.delayB === void;
+			elm.delayA = elm.delaya if elm.delayA === void;
+		}
+		method = KAGTransitionMethod(method); // a crossfade when its plugin isn't loaded
 		super.beginTransition(method, withchildren, src, elm);
 	}
 	

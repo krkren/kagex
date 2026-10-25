@@ -128,7 +128,7 @@ class TransLayer
                 layer.opacity = 255;
                 tlayer.opacity = 255;
             }
-			layer.beginTransition(trans.method, true, tlayer, trans);
+			layer.beginTransition(KAGTransitionMethod(trans.method), true, tlayer, trans);
         } incontextof this,
         effect : function(count) {
             layer.update();

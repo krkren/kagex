@@ -262,6 +262,7 @@ struct Job {
 	std::string ext;       // lower case, with the dot
 	bool        audio = false;
 	bool        mask = false;      // the mask of a main/mask pair
+	bool        rule = false;      // a transition's rule image (data/rule): its exact values count
 	std::string params;            // what decides the output
 	// results
 	bool        ok = false;
@@ -346,8 +347,10 @@ void convert(Job& j, const fs::path& dir, const Json& s)
 	if (!im::load(j.source, img, err, &li)) { j.error = err; return; }
 	const bool alpha = im::hasTransparency(img);
 	std::string target = alpha ? str(s, "media.images.alpha") : str(s, "media.images.opaque");
-	// masks of main/mask pairs stay lossless
-	if (j.mask && (target == "jpeg" || target == "jpeg-mask")) target = "tlg6";
+	// masks of main/mask pairs and rule images stay lossless: a rule's values are each pixel's
+	// timing (universal, imagewipe) or its timing, speed and direction (3duniversal), which
+	// JPEG's artifacts would scatter
+	if ((j.mask || j.rule) && (target == "jpeg" || target == "jpeg-mask")) target = "tlg6";
 	if (target == "keep") { j.skipped = true; return; }
 	const im::Format have = li.format;
 	if ((target == "tlg6" && have == im::Format::Tlg6) || (target == "tlg5" && have == im::Format::Tlg5) || (target == "png" && have == im::Format::Png)) {
@@ -556,8 +559,11 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 			if (referenced && !rewrite) { ++result.keptByReference; continue; }
 			const std::string stem = lower(stemOf(f.leaf));
 			j.mask = stem.size() > 2 && stem.compare(stem.size() - 2, 2, "_m") == 0 && imageStems.count(stem.substr(0, stem.size() - 2));
+			const size_t sl = f.name.find('/');
+			j.rule = sl != std::string::npos && lower(f.name.substr(0, sl)) == "rule";
 			j.params = "image|opaque=" + str(s, "media.images.opaque") + "|alpha=" + str(s, "media.images.alpha") +
-			           "|q=" + std::to_string(at(s, "media.images.jpegQuality").asInt(90)) + "|mask=" + (j.mask ? "1" : "0");
+			           "|q=" + std::to_string(at(s, "media.images.jpegQuality").asInt(90)) + "|mask=" + (j.mask ? "1" : "0") +
+			           (j.rule ? "|rule=1" : "");
 		} else {
 			continue;
 		}

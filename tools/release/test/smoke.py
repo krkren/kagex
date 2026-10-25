@@ -755,6 +755,14 @@ def media_tests(exe, proj, args):
     step("media: the cache", m.get("images", 0) > 100 and m.get("fromCache", 0) >= m.get("images", 0) + m.get("sounds", 0) - 6,
          "%s from the cache, of %s images and %s sounds" % (m.get("fromCache"), m.get("images"), m.get("sounds")))
 
+    # a rule's pixels are timings (and for 3duniversal speeds and directions): JPEG would scatter them
+    s["media"]["images"]["opaque"] = "jpeg"
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r = build()
+    step("media: build with JPEG for opaque images", r["ok"], r.get("error", ""))
+    step("media: rule images stay lossless", have("bgimage/bg01_01.jpg") and have("rule/rule_shatter.tlg")
+         and not have("rule/rule_shatter.jpg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
+
 
 def main():
     ap = argparse.ArgumentParser()
