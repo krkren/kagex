@@ -221,6 +221,35 @@ function Clip-And-Zip {
     "clip:// badge layer: $n opaque samples; a zip written to the save folder mounted and ran"
 }
 
+# The Animated Character demo's Pip (KAGEnvCharacterEx.tjs): drawn on the screen, blinking, and its
+# mouth following its voice. A timer in the game notes the eyes and the mouth every 20 ms (the REPL is
+# too slow to); the mouth is checked only while the voice plays, and not where it doesn't
+function Animated-Character {
+    Wait-State 'the demo menu' $atMenu 30 | Out-Null
+    Invoke-Tjs "(function() { kag.process('anim.ks', '*start'); return 1; })()" | Out-Null
+    Wait-State 'Pip' { param($s) $s.storage -eq 'anim.ks' -and $s.stable -eq '1' } 30 | Out-Null
+    Start-Sleep -Milliseconds 500
+    $n = [int](Invoke-Tjs "(function() { var c = world_object.env.characters['pip']; if (c === void || c.standlayer === void) return -1; var l = c.standlayer, n = 0; for (var y = 0; y < l.imageHeight; y += 16) for (var x = 0; x < l.imageWidth; x += 16) if (l.getMaskPixel(x, y) > 0) n++; return n; })()")
+    if ($n -lt 300) { throw "Pip isn't drawn ($n samples)" }
+    Invoke-Tjs "(function() { global.__ci_eyes = []; global.__ci_lips = []; global.__ci_voice = %[]; global.__ci_blink = eyeFlipFreq; eyeFlipFreq = 1.0; global.__ci_animTimer = new Timer(function() { var c = world_object.env.characters['pip'], b = c !== void ? c.soundBuffer : void; if (c === void) return; global.__ci_eyes.add(c.eyeLevel === void ? -1 : c.eyeLevel); if (b !== void && b.status == 'play') { global.__ci_lips.add(c.lipLevel); global.__ci_voice[(string)b.position] = 1; } }, ''); __ci_animTimer.interval = 20; __ci_animTimer.enabled = true; return 1; })()" | Out-Null
+    Start-Sleep -Milliseconds 1500
+    Invoke-Tjs "(function() { eyeFlipFreq = global.__ci_blink; return 1; })()" | Out-Null
+    Invoke-Tjs '__ci_clickAt(960, 400)' | Out-Null
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($sw.Elapsed.TotalSeconds -lt 6) {
+        Start-Sleep -Milliseconds 500
+        if ((Invoke-Tjs "(function() { var c = world_object.env.characters['pip']; return __ci_lips.count > 0 && (c.soundBuffer === void || c.soundBuffer.status != 'play') ? 1 : 0; })()") -eq '1') { break }
+    }
+    $r = Invoke-Tjs "(function() { __ci_animTimer.enabled = false; invalidate __ci_animTimer; var e = %[], l = %[], v = []; for (var i = 0; i < __ci_eyes.count; i++) e[(string)__ci_eyes[i]] = 1; for (var i = 0; i < __ci_lips.count; i++) l[(string)__ci_lips[i]] = 1; v.assign(__ci_voice); return (e['0'] ? 'E' : '') + (e['2'] ? 'e' : '') + '|' + (l['0'] ? 'L' : '') + (l['2'] ? 'l' : '') + '|' + __ci_lips.count + '|' + (v.count \ 2) + '|' + lipSyncSource; })()"
+    $p = $r.Split('|')
+    $note = "Pip drawn ($n samples); eyes closed and open: $($p[0]); mouth closed and open while the voice played: $($p[1]) ($($p[2]) samples at $($p[3]) positions, from $($p[4]))"
+    if ($p[0] -ne 'Ee') { throw "Pip's eyes didn't blink; $note" }
+    if ([int]$p[3] -gt 1 -and $p[1] -ne 'Ll') { throw "Pip's mouth didn't open and close with its voice; $note" }
+    if ([int]$p[3] -le 1) { $note += '; the voice did not play, so the mouth was not checked' }
+    $c = Advance 'anim-check' $atMenu
+    "$note; $c clicks back to the menu"
+}
+
 # After the transition demo: every transition's plugin (extrans, extNagano) loaded, or the demo
 # showed crossfades in their place and passed
 function Transition-Plugins {
@@ -302,8 +331,10 @@ if ($Plan -eq 'probe') {
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
     Step 'transitions: their plugins loaded' { Transition-Plugins }
     Step 'demo: Effekseer effects' { Effect-Demo }
+    Step 'demo: Animated character' { Run-Demo 6 'anim' }
+    Step 'animated: Pip blinks and lip-syncs' { Animated-Character }
 } else {
-    $demos = 'layer', 'char', 'envlayer', 'transition', 'action', 'effect'
+    $demos = 'layer', 'char', 'envlayer', 'transition', 'action', 'effect', 'anim'
     for ($d = 0; $d -lt $demos.Count; $d++) {
         Step "demo $($d + 1): $($demos[$d]).ks" { Run-Demo $d $demos[$d] }
     }

@@ -24,8 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.7.0"
-  KAGEX_SHA: a0392f57c532bc64fdd4d04a49f9353549f115f6
+  RELEASE_TAG: "0.8.0"
+  KAGEX_SHA: 1a3a82d439d034f237f13cd28f433a7ddce1284b
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -157,7 +157,8 @@ jobs:
                             'plugin\layerExRaster.dll', 'plugin\scriptsEx.dll', 'plugin\shrinkCopy.dll', 'plugin\extrans.dll',
                             'plugin\krkr_richtext.dll', 'plugin\krkreffekseer.dll', 'data\effect\sparkle.efk',
                             'plugin\extNagano.dll', 'data\rule\rule_shatter.png', 'plugin\layerExVector.dll',
-                            'data\fgimage\emblem.svg', 'plugin\minizip.dll', 'plugin\clipfile.dll', 'data\fgimage\emblem.clip') {
+                            'data\fgimage\emblem.svg', 'plugin\minizip.dll', 'plugin\clipfile.dll', 'data\fgimage\emblem.clip',
+                            'data\main\charinit.csv', 'data\fgimage\pip\pip_0.txt', 'data\voice\pip000001.ogg') {
             if (-not (Test-Path "pkg\$need")) { throw "package is missing $need" }
           }
           Push-Location pkg
@@ -384,7 +385,7 @@ jobs:
                       plugin/libshrinkCopy.so plugin/libextrans.so plugin/libkrkr_richtext.so plugin/libkrkreffekseer.so \
                       plugin/libextNagano.so data/effect/sparkle.efk data/rule/rule_shatter.png \
                       plugin/liblayerExVector.so data/fgimage/emblem.svg plugin/libminizip.so plugin/libclipfile.so \
-                      data/fgimage/emblem.clip; do
+                      data/fgimage/emblem.clip data/main/charinit.csv data/fgimage/pip/pip_0.txt data/voice/pip000001.ogg; do
             [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
           done
           ldd pkg/krkrz | tee results/ldd.txt
