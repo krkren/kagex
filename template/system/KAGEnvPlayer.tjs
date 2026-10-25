@@ -67,7 +67,7 @@ class KAGEnvForParse extends KAGEnvironment {
 };
 
 function convertSceneText(array)
-{ shade
+{
 	if (array !== void) {
 		var ret = %[];
 		ret.name  = array[0];
