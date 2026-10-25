@@ -89,7 +89,9 @@ to the game or from the save folder (`patch.zip`, then `patch2.zip` and on). Mak
 the full release's list, so it holds every change since then and replaces the one before. A patch
 can't remove files, or change what the game reads before it loads patches (`Initialize.tjs`,
 `Storages.tjs`, `startup.tjs`, the engine and its `.cf`); the build says so. A build with
-*Patch from* set needs no platform, and a patch alone needs no engines.
+*Patch from* set needs no platform, and a patch alone needs no engines but this computer's, for
+compiling the scripts (none with *Scripts* off). Compiling gives the same bytecode each time, so
+a patch holds only the scripts that changed.
 
 ### Media
 
@@ -116,6 +118,38 @@ Before packing, lossless media in the staged data are converted (the sources are
 Results are cached by content and settings (in the cache folder below), so a later build only
 converts what changed.
 
+### Compiled scripts
+
+After the media conversion (which rewrites names in scripts), every `.tjs` in the staged data is
+compiled to TJS2 bytecode (Contents > *Scripts*, `contents.compileScripts`, on by default). This
+computer's engine does it, run headless with a script of the tool's (`Scripts.compileStorage`),
+so the tool gets the engine package for this computer even when it builds no package for it.
+Each script keeps its name; the engine tells bytecode by its header wherever it runs a script
+(`startup.tjs`, `Scripts.execStorage`, `Scripts.evalStorage`), so nothing in the game changes.
+A package then carries no readable TJS, and the scripts load a little faster. Strings and names
+still show in the bytecode, so this keeps out casual reading, not a determined person.
+
+- A script that is one expression (`envinit.tjs`'s `%[ ... ];`, a file holding a function) is
+  compiled as one, so `Scripts.evalStorage` still returns its value. Others are compiled as
+  statements, as `Scripts.execStorage` runs them.
+- `@if` is decided when compiling: with `PACKED` set, `DEBUG` set for the debug engine (as the
+  framework sets them), and the `@set` lines of the scripts the game reads first, which are
+  compiled first (`startup.tjs`, `Initialize.tjs`, `Storages.tjs`, `AppConfig.tjs`,
+  `Config.tjs`). A switch the game sets later with `Scripts.exec("@set (...)")` doesn't reach the
+  compiled scripts: put it in `AppConfig.tjs` as a `@set` line instead.
+- Errors in compiled scripts name the script and the function, at line 1: the engine's debug
+  information makes it crash when it reports an exception, so the bytecode has none. With the
+  debug engine chosen, the check warns about it: testers' builds are easier with *Scripts* off.
+- The engines for Linux and macOS store integer constants beyond 32 bits (`0xff000000`) cut to 32
+  bits. On those computers the tool compiles each script that has such numbers a second time
+  with marker numbers in their place, and puts the real values where the markers are. A
+  constant the compiler works out from others (`0xff << 24`, or `@"${0x100000000}"`) can't be
+  followed that way: such a script stays as it is. Windows' engine keeps them.
+- A script that doesn't compile stays as it is, and so does one too large for the bytecode's
+  16-bit indexes (a function of more than 32767 code words, or more than 32767 different
+  strings); the build lists each one and why. The engine's output is
+  `<output>/compile-scripts.log`.
+
 ### Engine packages
 
 The engines come from the KAGEX release of the tool's version: `kagex_engine_<platform>.zip`
@@ -132,7 +166,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 |---|---|
 | `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
 | `engine` | `debug`: the debug engine instead of the release one |
-| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
+| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |

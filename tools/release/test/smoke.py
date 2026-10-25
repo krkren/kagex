@@ -12,7 +12,10 @@
   (and macOS on a Mac), with the test run; then data bound into the exe, a data folder and only
   the linked plugins; the packages are checked. Then the media: WAV, FLAC (with loop points) and
   images converted, files the scripts name kept and then rewritten, the conversion cache, and on
-  Linux the converted build in the engine (a button's hover image found, the button highlighted)
+  Linux the converted build in the engine (a button's hover image found, the button highlighted).
+  Then compiled scripts: a small game of its own whose scripts check, when it runs, the
+  constants beyond 32 bits, expression scripts, UTF-16LE and Shift_JIS scripts; and a patch of
+  compiled scripts holds only the one that changed
 """
 import argparse
 import hashlib
@@ -772,6 +775,7 @@ def patch_tests(exe, proj):
     for p in s["platforms"]:
         s["platforms"][p]["enabled"] = False
     s["output"]["check"] = False
+    s["contents"]["compileScripts"] = False   # compiling takes this computer's engine
     out = proj / "release"
     out.mkdir(exist_ok=True)
     (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
@@ -815,6 +819,158 @@ def patch_tests(exe, proj):
     step("patch: listed with the outputs", len(pkg) == 1 and pkg[0].get("ok") and pkg[0].get("package", "").endswith("patch.zip"))
 
 
+# A game whose Initialize.tjs checks, as it runs, what the compiled scripts give: constants
+# beyond 32 bits (with values equal to theirs cut to 32 bits beside them), strings and regular
+# expressions that look like them, expression scripts read with Scripts.evalStorage, UTF-16LE and
+# Shift_JIS scripts (krkrz.cf's readencoding), and folded constants, which stay source where the
+# engine would cut them. It writes "name<TAB>ok|FAIL<TAB>value" lines to check.txt
+SCRIPT_GAME = {
+    "startup.tjs": 'Scripts.execStorage("system/Initialize.tjs");\n',
+    "system/Initialize.tjs": r"""var r = [];
+function check(name, got, want) { r.add(name + "\t" + (got === want ? "ok" : "FAIL") + "\t" + got + " (want " + want + ")"); }
+try {
+	Scripts.execStorage("main/consts.tjs");
+	check("0xff000000", c1, 4278190080);
+	check("4294967296", c2, 4294967296);
+	check("-2147483649", c3, -2147483649);
+	check("0xffffffff", c4, 4294967295);
+	check("-1 beside 0xffffffff", c5, -1);
+	check("-16777216 beside 0xff000000", c6, -16777216);
+	check("in a function", f(), 3355443201);
+	check("a class member", (new K()).m(), 0x123456789ab);
+	check("a string", c8, "0xff000000 and 4294967296");
+	check("a regular expression", c9.test("x0xff000000y"), true);
+	check("negated", c10, -4278190080);
+	check("in a dictionary", c11.v, 4278190080);
+	check("octal", c14, 0x100000000);
+	check("binary", c15, 4294967296);
+	check("after a nested comment", c16, 4294967297);
+	var d = Scripts.evalStorage("main/data.tjs");
+	check("an expression script", typeof d == "Object" ? d.c : "void", 4278190080);
+	check("a function script", Scripts.evalStorage("main/func.tjs")(21), 42);
+	Scripts.execStorage("main/fold.tjs");
+	check("folded", f1, 4278190080);
+	check("folded into a string", f3, "4294967296");
+	Scripts.execStorage("main/utf16.tjs");
+	check("UTF-16LE", u1, 4278190080);
+	check("UTF-16LE string", u2.length + " " + #u2, "13 26085");
+	Scripts.execStorage("main/sjis.tjs");
+	check("Shift_JIS", s1, 4278190080);
+	check("Shift_JIS string", s2.length, 4);
+} catch (e) {
+	r.add("exception\tFAIL\t" + e.message);
+}
+r.save(System.dataPath + "check.txt");
+System.exit();
+""",
+    "main/consts.tjs": r"""// constants beyond 32 bits
+global.c1 = 0xff000000;
+global.c2 = 4294967296;
+global.c3 = -2147483649;
+global.c4 = 0xffffffff;
+global.c5 = -1;
+global.c6 = -16777216;
+function f() { return 0xc8000001; }
+class K {
+	var v = 0x123456789ab;
+	function K() {}
+	function m() { return v; }
+}
+global.c8 = "0xff000000 and 4294967296";
+global.c9 = /0xff000000/;
+global.c10 = -0xff000000;
+global.c11 = %[ "v" => 0xff000000 ];
+global.c14 = 040000000000;
+global.c15 = 0b100000000000000000000000000000000;
+/* a /* nested */ comment 0xdeadbeef00 */
+global.c16 = 4294967297;
+""",
+    "main/data.tjs": '%[\n\t"c" => 0xff000000,\n]; // the end\n',
+    "main/func.tjs": "function (a) { return a * 2; }\n",
+    "main/fold.tjs": 'global.f1 = 0xff << 24;\nglobal.f3 = @"${0x100000000}";\n',
+}
+
+
+def script_tests(exe, tmp, args):
+    proj = tmp / "Scripts Game"
+    for name, text in SCRIPT_GAME.items():
+        (proj / "data" / name).parent.mkdir(parents=True, exist_ok=True)
+        (proj / "data" / name).write_text(text, encoding="utf-8")
+    (proj / "data" / "main" / "utf16.tjs").write_bytes(
+        b"\xff\xfe" + 'global.u1 = 0xff000000;\nglobal.u2 = "\u65e5\u672c 0xff000000";\n'.encode("utf-16-le"))
+    # a Shift_JIS string whose characters' second bytes are backslashes (\u30bd is 0x83 0x5c)
+    (proj / "data" / "main" / "sjis.tjs").write_bytes('global.s2 = "\u30bd\u30bd\u30bd\u30bd";\nglobal.s1 = 0xff000000;\n'.encode("shift_jis"))
+    (proj / "krkrz.cf").write_text("readencoding=Shift_JIS\n")
+    code, out = run(exe, "--cli", "init", str(proj))
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    host = host_id()
+    s["identity"].update({"orgName": "kagex-test", "appName": "scripts", "exeName": "scripts"})
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == host
+    s["platforms"][host]["data"] = "folder"
+    s["output"].update({"archive": "none", "check": False})
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+
+    def build():
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            return json.loads(out[out.index("{"):])
+        except ValueError:
+            return {"ok": False, "error": out[-2000:], "outputs": []}
+
+    r = build()
+    sc = r.get("scripts", {})
+    step("scripts: build", r["ok"], r.get("error", "") + "; ".join(o.get("error", "") for o in r["outputs"]))
+    if args.out and (proj / "release" / "compile-scripts.log").exists():
+        shutil.copyfile(proj / "release" / "compile-scripts.log", Path(args.out) / "compile-scripts.log")
+    # where the engine cuts constants to 32 bits (Linux, macOS), folded ones stay source
+    kept = {k["name"] for k in sc.get("kept", [])}
+    want_kept = {"main/fold.tjs"} if sc.get("truncates") else set()
+    step("scripts: compiled, and kept as source only where needed", sc.get("compiled") == 8 - len(want_kept) and kept == want_kept,
+         json.dumps(sc))
+    step("scripts: the expression scripts", sc.get("expressions", 0) >= 2, "%s as expressions" % sc.get("expressions"))
+    base = proj / "release" / ("scripts-1.0.0-" + host)
+    data = base / "Scripts Game.app" / "Contents" / "Resources" / "data" if host == "macos" else base / "data"
+    names = sorted(str(p.relative_to(data)).replace("\\", "/") for p in data.rglob("*.tjs"))
+    bytecode = [n for n in names if (data / n).read_bytes()[:8] == b"TJS2100\0"]
+    step("scripts: the packaged scripts are bytecode", set(names) - set(bytecode) == want_kept and len(names) == 8, ", ".join(bytecode))
+    if host == "macos":
+        game = base / "Scripts Game.app" / "Contents" / "MacOS" / "krkrz"
+    else:
+        game = base / ("scripts.exe" if host == "windows" else "scripts")
+    save = tmp / "scripts-save"
+    save.mkdir(exist_ok=True)
+    env = dict(os.environ, SDL_AUDIO_DRIVER="dummy")
+    if host == "linux":
+        env["SDL_VIDEO_DRIVER"] = "offscreen"
+    try:
+        subprocess.run([str(game), "-datapath=" + str(save) + "/"], cwd=str(game.parent), env=env, capture_output=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        step("scripts: the game runs", False, str(e))
+        return
+    raw = (save / "check.txt").read_bytes() if (save / "check.txt").exists() else b""
+    lines = [l for l in raw.decode("utf-16", errors="replace").splitlines() if l]
+    bad = [l for l in lines if "\tok\t" not in l]
+    step("scripts: the compiled game's checks", len(lines) == 23 and not bad, "; ".join(bad) or "%d checks" % len(lines))
+
+    # a patch of compiled scripts: compiling again gives the same bytes, so only the script that
+    # changed is in it
+    files = proj / "release" / "scripts-1.0.0-files.json"
+    consts = proj / "data" / "main" / "consts.tjs"
+    consts.write_text(consts.read_text(encoding="utf-8") + "global.c17 = 0x200000000;\n", encoding="utf-8")
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = False
+    s["identity"]["version"] = "1.0.1"
+    s["output"]["patchFrom"] = "release/" + files.name
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r = build()
+    zip_path = proj / "release" / "scripts-1.0.1-patch" / "patch.zip"
+    names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")} if zip_path.exists() else set()
+    step("scripts: a patch holds only the script that changed, compiled", names == {"main/consts.tjs"}
+         and zipfile.ZipFile(zip_path).read("main/consts.tjs")[:8] == b"TJS2100\0", ", ".join(sorted(names)) or r.get("error", ""))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe")
@@ -839,6 +995,7 @@ def main():
             if (Path(args.engines) / "kagex_engine_ios.zip").exists():
                 ios_tests(exe, proj, args)
             media_tests(exe, proj, args)
+            script_tests(exe, Path(t), args)
         patch_tests(exe, proj)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)

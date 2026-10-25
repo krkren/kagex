@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Compiled scripts**: kagex-release compiles every `.tjs` in a package to TJS2 bytecode (Contents > *Scripts*, `contents.compileScripts`, on by default), so the packages carry no readable TJS and load their scripts a little faster. The engine on the computer that builds does it (`Scripts.compileStorage`), and each script keeps its name, so the game loads them as before. A script that is one expression, like `envinit.tjs`, is compiled as one, so `Scripts.evalStorage` still returns its value. `@if` is decided when building. Errors in compiled scripts name the script and function but not the line (the engine's debug information crashes it, `UPSTREAM.md`). On Linux and macOS the engine cuts integer constants beyond 32 bits (`0xff000000`) when it compiles; kagex-release puts them right, and keeps as source the few scripts where it can't (a constant made of others, like `0xff << 24`). The build lists every script it keeps as source and why, and the engine's output is `compile-scripts.log`.
+
 ## 0.8.0
 
 ### Added

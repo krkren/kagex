@@ -256,6 +256,10 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 			else
 				std::printf("%s: FAILED: %s\n", out["title"].asStr().c_str(), out["error"].asStr().c_str());
 		}
+		if (r.has("scripts")) {
+			const Json& sc = r["scripts"];
+			std::printf("Scripts: %lld compiled to bytecode, %d kept as source\n", (long long)sc["compiled"].asInt(), (int)sc["kept"].elements().size());
+		}
 		for (const auto& n : r["notes"].elements()) std::printf("note: %s\n", n.asStr().c_str());
 		if (r.has("check")) {
 			const Json& c = r["check"];
