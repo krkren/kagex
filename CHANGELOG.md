@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Compiled scenarios** (the first stage of [krkren/scnfile](https://github.com/krkren/scnfile)): the scripts listed in `!scnlist.txt` are compiled into `<script>.scn.json` by `SceneParser.tjs`, and the scene player (`KAGEnvPlayer.tjs`, `[scenestart]`) plays those in their place: text, names and voices as a table, tags as steps, and the World's state at every save point. However the game goes to a listed script (a jump, a choice, `kag.process()`, a load), it plays compiled. In debug mode a script is compiled when it has changed; `-scncompile` compiles them from the command line and exits, `-scnplay=no` plays the scripts themselves. `[if]`, `cond=` and `&` entities are decided as the game plays, macros come from `parsermacro.ks`, and the line modes put text together as KAG does (`doc/scn.txt`).
+- The sample's demos and demo menu play compiled.
+
+### Fixed
+
+- The scene player loads: `KAGEnvPlayer.tjs` had a syntax error from the translation, and needed Wamsoft's psbfile plugin. Its history, read tracking and save code had bugs that couldn't show until now.
+
 ## 0.8.0
 
 ### Added

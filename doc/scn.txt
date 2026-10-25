@@ -1,0 +1,223 @@
+﻿Title: Compiled Scenarios
+
+
+
+● Overview
+
+A script can be played compiled: the compiler (template/system/SceneParser.tjs) turns it into
+scenes, and the scene player (template/system/KAGEnvPlayer.tjs, the [scenestart] tag) plays
+those instead of the script. A compiled scene holds its text, names and voices as a table, its
+tags as steps, and the World's state at every save point, so the player can start at any line,
+go back to an earlier choice, stop skipping exactly at unread text and draw a thumbnail of any
+line.
+
+This is the first stage of the plan at https://github.com/krkren/scnfile: compiled scenes are
+JSON files, <script>.scn.json, which every build reads through the json plugin. The scnfile
+plugin will read and write them as binary, encrypted .scn files, and kagex-release will
+compile a game's scripts and ship only those; the player already reads a .scn when a plugin
+that reads one (SCNFile, or Wamsoft's PSBFile) is there.
+
+
+
+● Using it
+
+◇ Which scripts
+
+!scnlist.txt (on the auto path; the sample's is data/scenario/!scnlist.txt) lists the scripts
+to play compiled, one per line. A line starting with # is a comment. Scripts not listed (the
+title screen, the system screens, macro files) are played as before.
+
+◇ Compiling
+
+The compiled file of a script goes next to it: data/scenario/char.ks is compiled into
+data/scenario/char.ks.scn.json. The files are made from the scripts and aren't committed
+(.gitignore). A script is compiled again when it has changed, or the macros, the options,
+envinit.tjs, charinit.csv or the compiler have: each compiled file holds the key of what it
+was compiled from (hash).
+
+- In debug mode (the default; -debugwin=no turns it off), a listed script that changed is
+  compiled when the game goes to it.
+- -scncompile compiles every listed script that changed, writes what happened to the console
+  and exits (with 1 if one failed); -scncompile=all compiles all of them.
+- KAGCompileScenarios(force) does the same from a running game, and returns
+  %[compiled, skipped, failed, errors, warnings].
+
+The compiler writes only where the list is a local folder: not inside an archive, the web
+build's files or a phone app's assets. A compiled file whose key doesn't match its script is
+not used: the script is played instead.
+
+◇ Macros and options
+
+The compiler expands macros as KAG does. It takes them from parsermacro.ks, collecting the
+macros it defines and those of the files it calls or jumps to (the sample's has
+@call storage=macro.ks). Without parsermacro.ks it takes the game's macros as they are when it
+compiles; -scncompile happens before first.ks, so it needs parsermacro.ks.
+
+parseroption.txt (optional) holds name=value lines:
+
+    linemode     the line mode a script starts in (none, page, line, vn, tex, free).
+                 Default none. A script that sets its own ([linemode], or a macro that does,
+                 like the sample's [initscene]) doesn't need it.
+    craftername  whether a line with just a name carries it to the next line (true/false),
+                 as [craftername mode=]. Default false.
+
+◇ Playing
+
+A listed script that has a compiled file plays compiled however the game goes to it: [jump],
+a choice, kag.process(), loading a save. KAG reads a stand-in for the script, made of its
+labels, each followed by [scenestart] for that scene (KAGWorldPlugin.onScenarioLoad), so the
+conductor's current script is still the script's name.
+
+To play every script from the script itself, start with -scnplay=no (-scnplay=yes plays them
+compiled whatever the game has saved). The setting the game keeps is the World's
+playerExecMode (scflags.playerExecMode), on unless turned off.
+
+Saves made while playing compiled resume at the save point they were made at. A script
+compiled again since then (its hash changed) resumes at the top of the scene instead. Saves
+made with compiled play on and off don't mix: one made reading the script can't be loaded
+into the compiled script, or the other way round.
+
+
+
+● What the compiler does
+
+A script is read the way KAGParser reads it (labels, comments, [iscript], line commands,
+macros, tabs, [[), with one difference: [if]/[elsif]/[else]/[endif]/[ignore]/[endignore],
+cond= and & entities aren't worked out while compiling, but when the game plays them.
+
+◇ Scenes
+
+Each label starts a scene: its label, its title (the label's page name, or the title before
+it) and its first line. A scene that runs into the next label goes on to it. Text before the
+first label is a scene of its own, labelled "", when it does anything.
+
+◇ Text
+
+Text is put together as KAG's line modes put it together ([linemode], [craftername], [nor],
+[noer], 【name/display name】, [voice], [nextvoice], [parse], ruby, [r], [l], [p]), into
+messages: a name, its display name, its voices and the text, ending at a wait for a click. In
+page mode each line is a message; with no line mode, a message ends at [l] or [p].
+
+A tag inside a message splits it: the part after the tag carries on the message window as it
+is (no new name, no clearing).
+
+Voices are worked out as KAG works them out: [ai voice=1] gives the next 【ai】 line voice 1,
+the one after that voice 2, and so on.
+
+◇ Save points
+
+After every wait for a click there's a save point: the game can save, load and jump there.
+Each holds the World's state then, worked out by running the World tags in a World of the
+player's own that draws nothing (KAGEnvForParse). Loading a save point puts the World back as
+it was and plays on from there, so the tags between it and the text play again. Each text
+holds the state while it's shown, for thumbnails and for going back.
+
+A script is compiled from an empty World. A script that carries on from what another one left
+on the screen starts with an empty screen when played compiled.
+
+◇ Tags
+
+- World tags (characters, the stage, events, World layers, World BGM and SE, [allchar] and
+  the like, [dellay], [delchar], [init]) are steps, and change the saved states.
+- [clearlayers] clears the World's layers in the saved states too, as it does in the game.
+- Every other tag is a step, run as KAG runs it. KAG's own layers, message windows and sounds
+  aren't part of the saved states: a save restores them through KAG's own save data, but
+  jumping to a line doesn't.
+- cond= is checked when the step runs. A World tag with cond= doesn't change the saved states
+  (the compiler says so).
+- & entities are worked out when the step runs. For the saved states, a World tag's entities
+  are worked out while compiling, from the values they have then (the compiler says so if it
+  can't).
+- A tag from a macro that uses mp (in an expression or an entity) brings the macro's
+  arguments with it, and mp is those while it runs.
+- [if]...[endif] become steps the player branches on. Each branch is compiled from the state
+  at [if]; after [endif] the states follow the first branch that doesn't jump away (the
+  compiler says when branches leave the World in different states). A choice made inside
+  [if] is offered only when its branch would run.
+- [jump] at the end of a scene is where the scene goes next; one with cond=, inside [if], or
+  to a destination given by an entity is a step. What follows an unconditional [jump] or a
+  [select] up to the next label can't be reached and is left out.
+- [seladd]/[mseladd] and [select]/[mselect] end the scene with its choices. A choice's cond=
+  becomes its eval= (checked when the choices are shown).
+- [iscript] runs as a step; [emb] shows the text its expression gives when it's shown.
+- [macro], [endmacro] and [erasemacro] work while compiling only.
+
+Not supported in a compiled script (the compiler stops with an error): [call], [return],
+[pmacro], a label inside [if]...[endif], [select] inside [if]...[endif], and [scenestart] and
+the other player tags.
+
+◇ When skipping without display
+
+While KAG skips without showing anything, the player doesn't run World tags (the screen is
+put back from the saved state when the skip ends) or most other tags. It still runs [next],
+[exit], [eval], [cancelskip], [linemode], [craftername], [erafterpage], [autoindent],
+[iscript] and [if].
+
+
+
+● The compiled format
+
+<script>.scn.json, one object (the .scn files will hold the same tree):
+
+    version     1
+    storage     the script
+    hash        the key of what it was compiled from
+    scenes      the scenes, in order
+
+A scene:
+
+    label       its label ("*start"), or "" for the part before the first label
+    title       its title
+    firstLine   its label's line (lines count from 0, as KAG's do)
+    startLine   the same
+    lastLine    its last line
+    spCount     the number of its last save point
+    texts       its messages: [name, display name, text, voice, flag, state]
+    lines       its steps, below
+    nexts       where it goes when it ends, below (none: the story stops)
+
+A text's display name is null unless the script gave one; its voice is null or a list of
+%[name, voice, noplayvoice]; its state is the World's state (KAGEnvironment.onStore), or the
+number of an earlier text in the scene with the same state. In the text, \\ is \, \% is %, \[
+is [, \k waits for a click, a new line is [r], [ruby] goes before its character, %<number>
+sets the font size and %r resets the font. The flag:
+
+    0x01  ends with [l] (otherwise with [p])
+    0x02  the page doesn't clear the message window ([noer])
+    0x04  no wait: the message goes on after a tag
+    0x08  an event picture is shown or changes
+    0x10  the stage changes
+    0x20  no text (a voice alone)
+    0x40  carries on the message window as it is (no msgon, no name)
+
+A line is one of:
+
+    a number      shows that text
+    a string      sets that read flag (bgm_, cg_, ...), as the World did there
+    [point, state, text, force, line, flag, label]
+                  a save point: its number, the World's state (or a text's number), the text
+                  it leads to, whether it saves even while skipping without display, its line,
+                  that text's flag, and a name to go to it by
+    [tagname, flag attributes..., 0, name, value...]
+                  a tag. Attributes without a value come before the 0, in order, the rest
+                  after it. A value starting with & is an entity (an expression worked out
+                  when the tag runs), one starting with ` has the ` taken off; *cond is a
+                  condition and *mp the arguments of the macro the tag came from
+    [*if/*elsif, 0, exp, expression], [*else], [*endif]
+                  branches
+    [*script, 0, script, code, storage, script, line, line]
+                  an [iscript] block
+    [*emb, 0, exp, expression]
+                  text worked out when it's shown
+    [*noer]       the next page doesn't clear the message window
+
+nexts: one or more of
+
+    type      0 goes on ([next]), below 0 leaves the player ([exit]), 1 a choice ([select]),
+              2 a map choice ([mselect])
+    storage   the script (none: the same one)
+    target    the label
+    exp       an expression run when it's taken
+    eval      a condition
+    text, onceflag, tag
+              a choice's text and flags, as [seladd] takes them

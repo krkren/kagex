@@ -9773,6 +9773,12 @@ class KAGWindow extends Window
 
 		// Returning true results in a normal scenario file load.
 
+		// A plugin can do that too (KAGWorldPlugin plays compiled scripts this way)
+
+		var ret = forEachFunctionHook("onScenarioLoad", name);
+
+		if (typeof ret == "String") return ret;
+
 		return true;
 
 	}

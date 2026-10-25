@@ -3,8 +3,9 @@
 
 Starts the engine with SDL's offscreen video driver and drives the sample through the
 engine's REPL file channel (-replfile, see krkrz_dev src/core/doc/REPL.md): the title screen,
-each demo scene, save and load, the config and extras screens, a Yes/No prompt and the About
-screen. It fails when a step doesn't reach the state it expects, when the engine raises a
+each demo scene (compiled from the scripts in !scnlist.txt where the data folder is writable,
+doc/scn.txt), save and load, the config and extras screens, a Yes/No prompt and the About
+screen. On the desktop it also compiles the scripts with -scncompile=all. It fails when a step doesn't reach the state it expects, when the engine raises a
 script exception, or when the engine opens a native modal dialog (an error message box or a
 Yes/No that should have been drawn in the game window).
 
@@ -577,8 +578,15 @@ def animated_framework(eng):
     return eng.tjs('return Storages.isExistentStorage("anim.ks") ? 1 : 0;') == 1
 
 
+def compiled_framework(eng):
+    """Whether the framework compiles scenarios (SceneParser.tjs; pages.yml may test an older
+    release's site)"""
+    return eng.tjs('return typeof global.KAGCompileScenarios != "undefined" ? 1 : 0;') == 1
+
+
 def sample_steps(eng):
     steps, step = collector()
+    eng.compiled = False
 
     @step("start-up reaches the title screen")
     def _():
@@ -592,6 +600,25 @@ def sample_steps(eng):
         if eng.tjs("return sf.clear ? 1 : 0;") != 0:
             raise SmokeError("sf.clear is already set on a fresh start")
 
+    @step("the scripts in !scnlist.txt compile, so the demos play compiled")
+    def _():
+        # SceneParser.tjs writes <script>.scn.json next to each script, where that's a local
+        # folder; a package (web, phones, an archive) plays the scripts themselves
+        if not compiled_framework(eng):
+            print("     (skipped: this build's framework predates compiled scenarios)", flush=True)
+            return
+        if eng.tjs("world_object.initPlayer(); return world_object.player.readonlydb ? 1 : 0;") == 1:
+            print("     (skipped: this build can't write compiled scenarios, so the demos play from the scripts)",
+                  flush=True)
+            return
+        r = str(eng.tjs('var r = KAGCompileScenarios(true);'
+                        ' return [r.compiled, r.failed, r.warnings, r.errors.join(" / ")].join(",");',
+                        timeout=120)).split(",", 3)
+        print("     %s compiled, %s warning(s)" % (r[0], r[2]), flush=True)
+        if r[1] != "0" or r[0] == "0":
+            raise SmokeError("compiling failed: " + r[3])
+        eng.compiled = True
+
     for demo in DEMOS:
         @step("demo " + demo + " plays to the end")
         def _(demo=demo):
@@ -603,6 +630,9 @@ def sample_steps(eng):
                 return
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
+            if eng.compiled:
+                eng.wait(demo + " played compiled", 'world_object.player !== void && world_object.player.working'
+                         ' && world_object.player.curStorage == "%s"' % demo, timeout=10)
             eng.clicker(True, until="s0001.ks")
             eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
             eng.clicker(False)
@@ -610,6 +640,43 @@ def sample_steps(eng):
     @step("finishing every demo unlocks Extras")
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
+
+    @step("a compiled scene saves in the middle and loads where it was")
+    def _():
+        if not eng.compiled:
+            print("     (skipped: the demos play from the scripts here)", flush=True)
+            return
+        state = ('var p = world_object.player, c = world_object.env.characters["ai"];'
+                 ' return [p.curSceneName, p.curTextId, p.curPoint, c !== void && c.isShowBU() ? 1 : 0].join(",");')
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'world_object.player !== void && world_object.player.working', timeout=20)
+        # read on to its sixth text: Ai is on the screen, under another name
+        eng.tjs("""
+            global.__smokeToText = new Timer(function() {
+                if (world_object.player.curTextId >= 6) { global.__smokeToText.enabled = false; return; }
+                kag.onPrimaryClick();
+            }, "");
+            __smokeToText.interval = 50;
+            __smokeToText.enabled = true;
+            return 1;""")
+        eng.wait("the sixth text", "world_object.player.curTextId >= 6 && kag.inStable", timeout=60)
+        eng.tjs("invalidate global.__smokeToText; return 1;")
+        before = str(eng.tjs(state))
+        print("     saved at", before, flush=True)
+        if not before.endswith(",1"):
+            raise SmokeError("Ai isn't on the screen at the sixth text: " + before)
+        eng.tjs("kag.saveBookMark(1); return 1;")
+        eng.wait("data1 to be written",
+                 "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(1))", timeout=10)
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs("loadFunction(1); return 1;")
+        text = before.split(",")[1]
+        eng.wait("the save to load", 'world_object.player.working && world_object.player.curTextId == %s'
+                 ' && kag.inStable' % text, timeout=30)
+        after = str(eng.tjs(state))
+        if after != before:
+            raise SmokeError("loaded at %s, saved at %s" % (after, before))
 
     @step("the animated character blinks, and its mouth follows its voice")
     def _():
@@ -993,6 +1060,39 @@ def run_project(opts, label, data, make_steps):
     return failures
 
 
+def scncompile_check(opts, data):
+    """-scncompile=all compiles every script in !scnlist.txt from the command line and exits:
+    how kagex-release will compile a game's scripts"""
+    print("== %s: -scncompile" % data, flush=True)
+    if not os.path.exists(os.path.join(data, "..", "template", "system", "SceneParser.tjs")) and \
+            not os.path.exists(os.path.join(data, "system", "SceneParser.tjs")):
+        print("     (skipped: this framework predates compiled scenarios)", flush=True)
+        return 0
+    workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
+    env = dict(os.environ)
+    env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+    env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+    t = time.time()
+    try:
+        p = subprocess.run([opts.engine, os.path.abspath(data), "-datapath=" + workdir + "/", "-scncompile=all"],
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=180)
+        out = p.stdout.decode("utf-8", "replace")
+        code = p.returncode
+    except subprocess.TimeoutExpired:
+        out, code = "", "timeout"
+    done = [l for l in out.splitlines() if "Compiled scenarios:" in l]
+    errors = [l for l in out.splitlines() if ERROR_PATTERNS.search(l)]
+    shutil.rmtree(workdir, ignore_errors=True)
+    if code != 0 or not done or " 0 failed" not in done[-1] or errors:
+        print("FAIL -scncompile=all compiles the listed scripts and exits (exit code %s)" % code)
+        for l in (done + errors)[:20] or out.splitlines()[-30:]:
+            print("     " + l)
+        return 1
+    print("ok   %-62s %5.1fs" % ("-scncompile=all compiles the listed scripts and exits", time.time() - t))
+    print("     " + done[-1].split("Compiled scenarios:")[-1].strip(), flush=True)
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     default_exe = "krkrz.exe" if os.name == "nt" else "./krkrz"
@@ -1030,6 +1130,8 @@ def main():
     failures = 0
     if opts.only in (None, "sample"):
         failures += run_project(opts, "sample", "data", sample_steps)
+        if opts.target == "desktop":
+            failures += scncompile_check(opts, "data")
     if opts.only in (None, "template"):
         failures += run_project(opts, "template", "template", template_steps)
     print("smoke test:", "FAILED (%d)" % failures if failures else "passed")
