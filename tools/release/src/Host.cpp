@@ -123,9 +123,9 @@ Requirement checkEngine(const std::string& platform, bool debug)
 	std::error_code ec;
 	const std::string asset = engineAssetName(platform, debug && hasDebugEngine(platform));
 	const std::string stem = asset.substr(0, asset.size() - 4);
-	const std::string local = getEnv("KAGEX_RELEASE_ENGINES");
-	if (!local.empty() && (fs::is_regular_file(krt::toPath(local) / asset, ec) || fs::is_regular_file(krt::toPath(local) / stem / "engine.json", ec)))
-		return req("Engine", true, "From " + local);
+	const fs::path local = localEngines();
+	if (!local.empty() && (fs::is_regular_file(local / asset, ec) || fs::is_regular_file(local / stem / "engine.json", ec)))
+		return req("Engine", true, "From " + krt::fromPath(local));
 	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / stem;
 	if (fs::is_regular_file(cached / "engine.json", ec))
 		return req("Engine", true, "Downloaded before (" + krt::fromPath(cached) + ")");

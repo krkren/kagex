@@ -52,6 +52,17 @@ bool unpack(const fs::path& zip, const fs::path& dest, std::string& error)
 
 } // namespace
 
+fs::path localEngines(const fs::path& localDir)
+{
+	if (!localDir.empty()) return localDir;
+	const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
+	if (!env.empty()) return krt::toPath(env);
+	std::error_code ec;
+	const fs::path beside = krt::selfPath().parent_path() / "engines";
+	if (fs::is_directory(beside, ec)) return beside;
+	return {};
+}
+
 std::string engineAssetName(const std::string& platform, bool debug)
 {
 	return "kagex_engine_" + platform + (debug ? "_debug" : "") + ".zip";
@@ -102,12 +113,8 @@ bool ensureEngine(const std::string& platform, bool debug, const fs::path& local
 	const std::string stem = asset.substr(0, asset.size() - 4);
 	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / stem;
 
-	// a folder of engine packages given by the developer (or CI)
-	fs::path local = localDir;
-	if (local.empty()) {
-		const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
-		if (!env.empty()) local = krt::toPath(env);
-	}
+	// a folder of engine packages given by the developer (or CI), or beside this tool
+	const fs::path local = localEngines(localDir);
 	if (!local.empty()) {
 		if (fs::is_regular_file(local / stem / "engine.json", ec)) {
 			dir = local / stem;

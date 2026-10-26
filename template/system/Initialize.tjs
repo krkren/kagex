@@ -232,6 +232,17 @@ function addArchive(name)
 
 {
 
+	// Hashed-name archive mode (the bootstrap startup.tjs set kagexHashedArchive to
+	// "xpcrypt://data/"): the folder lives in that one archive, served by the xpcrypt plugin.
+
+	if (global.kagexHashedArchive != "") {
+
+		Storages.addAutoPath(global.kagexHashedArchive + name + "/");
+
+		return;
+
+	}
+
 	// While setting the search path, use the archive if name.xp3 exists
 
 	Storages.addAutoPath(name + "/");
@@ -250,13 +261,21 @@ function addArchiveWithSubFolder(name, arr*)
 
 	var arcname = System.exePath + name + ".xp3";
 
-	var isexist = archive_exists[name.toLowerCase()];
+	var isexist = (global.kagexHashedArchive == "") && archive_exists[name.toLowerCase()];
 
 	for (var i = 0; i < arr.count; i++) {
 
 		var sub = arr[i];
 
 		if (sub == "") continue;
+
+		if (global.kagexHashedArchive != "") {
+
+			Storages.addAutoPath(global.kagexHashedArchive + name + "/" + sub + "/");
+
+			continue;
+
+		}
 
 		Storages.addAutoPath(name    + "/" + sub + "/");
 
@@ -336,7 +355,13 @@ function addVoiceArchive(name) {
 
 
 
-if (debugWindowEnabled) {
+// Hashed-name archive mode: the bootstrap startup.tjs sets kagexHashedArchive to "xpcrypt://data/"
+// when the game ships as one encrypted, name-hashed archive; otherwise the folders are next to the
+// executable or in data/ as usual.
+
+if (typeof global.kagexHashedArchive == "undefined") global.kagexHashedArchive = "";
+
+if (debugWindowEnabled && global.kagexHashedArchive == "") {
 
 	Storages.addAutoPath(System.exePath + "tools/"); // tools/ under exePath
 
@@ -346,9 +371,13 @@ if (debugWindowEnabled) {
 
 }
 
-Storages.addAutoPath(System.exePath + "video/") if (global.KAGSigned !== true); // video/ under exePath (a signed build ignores a loose folder beside the engine)
+// video/: in the hashed archive, or under exePath (a signed build ignores a loose folder beside the engine)
 
-Storages.addAutoPath("data/"); // data folder
+if (global.kagexHashedArchive != "") Storages.addAutoPath(global.kagexHashedArchive + "video/");
+
+else if (global.KAGSigned !== true) Storages.addAutoPath(System.exePath + "video/");
+
+Storages.addAutoPath(global.kagexHashedArchive != "" ? global.kagexHashedArchive : "data/"); // data folder
 
 {
 

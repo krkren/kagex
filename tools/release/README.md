@@ -18,11 +18,14 @@ kagex-release --cli check [release.json]   # problems in the settings, and what 
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
 kagex-release --cli keygen [folder]        # write a signing key pair (private.txt, public.txt)
+kagex-release --cli archive-keygen <keyfile>  # make an archive-encryption key
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
 release.json enables) and `--json`; `build` also takes `--engines=DIR` (engine packages to use
-instead of downloading them) and `--keep-work` (keep the staged files in `<output>/.work`).
+instead of downloading them; `KAGEX_RELEASE_ENGINES` does the same, and without either an
+`engines/` folder next to the tool is used when there is one) and `--keep-work` (keep the staged
+files in `<output>/.work`).
 `keygen` takes `--bits=1024|2048|3072|4096` (default 2048), `--private=FILE`, `--public=FILE` and
 `--force`. Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
 
@@ -134,6 +137,37 @@ also refuses the engine's REPL and debug options, so no console can be opened in
   large archives*). Splitting is for the Windows and Linux packages; build macOS on its own if its
   data is that large. If one folder alone is 2 GB or more, split its contents across subfolders.
 
+### Encrypted game files
+
+With *Encrypt the archive* on (`archive.encrypt`), `data.xp3` is packed with every file encrypted
+(XChaCha20, a separate key per file). The [xp3crypt](https://github.com/krkren/xp3crypt) plugin,
+built into the engine, decrypts each file as the engine reads it, so the game runs the same; the
+scripts and assets are no longer readable in the shipped archive.
+
+In the window, the *Encryption* section has the switch and the *Key file*: **Create key…** asks
+for a folder (it starts outside the game's folder) and a file name and saves a new random key there
+(it never replaces an existing file); **Browse…** picks a key you already have. From the command
+line:
+
+```bash
+kagex-release --cli keygen game.key        # make a key (64 hex digits; keep it out of the repo)
+```
+
+**Hide names** (`archive.hideNames`, desktop only) goes further: the game ships as one encrypted
+archive `data.xpc` whose file names are hashed, so a generic tool sees neither the files nor their
+names. The engine reads it through the plugin's `xpcrypt://` storage medium, with a tiny plain
+`data/startup.tjs` that mounts it; the data mode can't be "bind".
+
+Point *Key file* (`archive.keyFile`) at it, or set `KAGEX_ARCHIVE_KEY` (which wins, for CI). The
+check refuses a key inside `data/` (it would be packed into the game) and warns about one inside
+the game's folder (it would likely end up in the repository). The
+build packs the encrypted `data.xp3` and writes the key into each platform's engine; the engine
+must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
+key ships inside the game, so this keeps the files out of casual view rather than making them
+unrecoverable to a determined person. Encryption applies to files inside `data.xp3`, so a platform
+has to use `xp3` (or `bind`) data, not loose `folder`/`files`; the build warns otherwise. An engine
+with no key reads a plain archive, so the same engine works with encryption off.
+
 ### Media
 
 Before packing, lossless media in the staged data are converted (the sources are never touched):
@@ -211,6 +245,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `signing` | `enabled` (check for tampering before the game starts), `privateKey` (the signing key file; `KAGEX_SIGNING_KEY` overrides it and is never stored), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
+| `archive` | `encrypt` (pack `data.xp3` encrypted; the engine needs the xp3crypt plugin), `keyFile` (the key, 64 hex digits; or `KAGEX_ARCHIVE_KEY`), `hideNames` (ship one `data.xpc` with hashed file names; desktop only) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,

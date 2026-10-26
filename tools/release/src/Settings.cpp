@@ -5,8 +5,10 @@
 #include <regex>
 #include <set>
 
+#include "Encrypt.h"
 #include "Media.h"
 #include "Sign.h"
+#include "Subprocess.h"
 #include "krt/app/Text.h"
 
 namespace fs = std::filesystem;
@@ -157,6 +159,13 @@ Json defaultSettings(const Project& p)
 		{ "enabled", Json(false) },
 		{ "privateKey", Json("") },
 		{ "splitArchives", Json(false) },
+	}));
+	// Encrypted data.xp3 (the xp3crypt plugin decrypts it; the engine must have the plugin).
+	// The key is 64 hexadecimal digits in the file keyFile names, or in KAGEX_ARCHIVE_KEY.
+	s.set("archive", obj({
+		{ "encrypt", Json(false) },
+		{ "keyFile", Json("") },
+		{ "hideNames", Json(false) },
 	}));
 	Json pl = Json::object();
 	pl.set("windows", obj({ { "enabled", Json(host == "windows") }, { "data", Json("xp3") }, { "versionInfo", Json(true) } }));
@@ -343,6 +352,45 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const std::string patchFrom = str(s, "output.patchFrom");
 	if (!patchFrom.empty() && !exists(patchFrom)) error("output.patchFrom", "The file list " + patchFrom + " doesn't exist (a build writes <file name>-<version>-files.json beside its packages)");
 
+	// archive encryption: a named key file must exist and hold a key (the key may instead come
+	// from KAGEX_ARCHIVE_KEY, which Build checks at build time)
+	if (flag(s, "archive.encrypt")) {
+		const std::string keyFile = str(s, "archive.keyFile");
+		if (!canEncryptArchive()) error("archive.encrypt", "This kagex-release was built without xp3crypt, so it can't encrypt the archive");
+		else if (keyFile.empty()) {
+			if (getEnv("KAGEX_ARCHIVE_KEY").empty()) error("archive.keyFile", "Choose the key file, or create one (Create key…)");
+		} else if (!exists(keyFile)) {
+			error("archive.keyFile", "The key file " + keyFile + " doesn't exist (Create key… makes one)");
+		} else {
+			const fs::path key = fs::weakly_canonical(p.root / krt::toPath(keyFile), ec);
+			std::string why;
+			if (!checkArchiveKeyFile(key, why)) error("archive.keyFile", keyFile + " isn't a key: " + why);
+			const auto inside = [&](const fs::path& dir) {
+				const auto rel = fs::relative(key, fs::weakly_canonical(dir, ec), ec);
+				return !ec && !rel.empty() && *rel.begin() != "..";
+			};
+			if (inside(p.data)) error("archive.keyFile", "The key is inside data/, so it would be packed into the game: keep it outside the game's folder");
+			else if (inside(p.root)) warn("archive.keyFile", "The key is inside the game's folder: keep it out of the game's repository (anyone with it can read the encrypted files)");
+		}
+	}
+
+	// hidden file names (one encrypted, name-hashed archive served through the xpcrypt:// medium)
+	if (flag(s, "archive.hideNames")) {
+		if (!flag(s, "archive.encrypt")) error("archive.hideNames", "Hiding the file names needs encryption on (Encrypt)");
+		// a signed build verifies data.xp3 (or the executable it's bound into) and refuses a loose
+		// data/ folder; the hidden-names layout is data.xpc with a plain data/startup.tjs
+		if (flag(s, "signing.enabled")) error("archive.hideNames", "Signing can't check a game with hidden file names yet (data.xpc and its plain startup.tjs): turn Hide names or Signing off");
+		for (const auto& pl : platforms()) {
+			const std::string base = std::string("platforms.") + pl.id + ".";
+			if (!flag(s, base + "enabled")) continue;
+			const std::string id = pl.id;
+			if (id == "web" || id == "android" || id == "ios")
+				error(base + "enabled", std::string(pl.title) + " can't hide the file names yet (desktop only)");
+			else if (str(s, base + "data") == "bind")
+				error(base + "data", std::string(pl.title) + " can't bind the data into the executable with hidden file names; use \"xp3\"");
+		}
+	}
+
 	// platforms
 	int enabled = 0;
 	static const std::regex bundleRe(R"([A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+)");
@@ -359,6 +407,13 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if ((id == "macos" || id == "android" || id == "ios") && !oneOf(data, { "xp3", "folder" }))
 			error(base + "data", std::string(pl.title) + " data is \"xp3\" or \"folder\"");
 		if (id == "web" && !oneOf(data, { "files", "xp3" })) error(base + "data", "Web data is \"files\" (loaded as needed) or \"xp3\"");
+		// archive encryption (xp3crypt): only the files inside data.xp3 are encrypted, so a
+		// platform needs a data.xp3 (not loose files) for it to apply
+		if (flag(s, "archive.encrypt")) {
+			if (id == "web" && data == "files") error(base + "data", "Encrypting the archive needs web data \"xp3\" (the \"files\" mode serves loose files the plugin can't decrypt)");
+			if ((id == "macos" || id == "android" || id == "ios") && data == "folder") warn(base + "data", std::string(pl.title) + " uses loose files (\"folder\"), which aren't encrypted; choose \"xp3\" to encrypt");
+			if ((id == "windows" || id == "linux" || id == "steam") && data == "folder") warn(base + "data", std::string(pl.title) + " uses loose files (\"folder\"), which aren't encrypted; choose \"xp3\" or \"bind\" to encrypt");
+		}
 		if (id == "web") {
 			static const std::regex urlRe(R"(https?://[^\s"<>]+)");
 			const std::string url = str(s, base + "url"), preview = str(s, base + "preview");

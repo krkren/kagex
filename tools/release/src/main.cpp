@@ -7,6 +7,7 @@
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
 //   kagex-release --cli keygen [<folder>] [--bits=N]          writes a signing key pair
+//   kagex-release --cli archive-keygen <keyfile>             writes a new archive-encryption key
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits,
@@ -22,6 +23,7 @@
 #include <mutex>
 
 #include "Build.h"
+#include "Encrypt.h"
 #include "Host.h"
 #include "Plan.h"
 #include "Project.h"
@@ -169,6 +171,16 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return 2;
 	}
 	const std::string cmd = args[0];
+
+	// archive-keygen makes an archive-encryption key; it needs no project or release.json
+	if (cmd == "archive-keygen") {
+		if (args.size() < 2) { std::fprintf(stderr, "usage: kagex-release --cli archive-keygen <keyfile>\n"); return 2; }
+		std::string kerr;
+		if (!makeArchiveKey(krt::toPath(args[1]), kerr)) { std::fprintf(stderr, "error: %s\n", kerr.c_str()); return 2; }
+		std::printf("Wrote a new archive key to %s (keep it out of the game's repository)\n", args[1].c_str());
+		return 0;
+	}
+
 	const std::string path = args.size() > 1 ? args[1] : std::string();
 
 	if (cmd == "keygen") {
@@ -296,7 +308,7 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return r["ok"].asBool() ? 0 : 1;
 	}
 
-	std::fprintf(stderr, "error: unknown command %s (init, check, plan or build)\n", cmd.c_str());
+	std::fprintf(stderr, "error: unknown command %s (init, check, plan, build or keygen)\n", cmd.c_str());
 	return 2;
 }
 
@@ -422,6 +434,25 @@ public:
 			return appserve::Response::json(out);
 		});
 
+		// Makes a new archive-encryption key file (body: { path }, absolute or relative to the
+		// game's folder). Refuses to replace a file: a lost or replaced key can't be recovered
+		reg.route("/api/release/archive-keygen", [this](const appserve::Request& req) {
+			const std::string path = req.json()["path"].asStr();
+			if (krt::trim(path).empty()) return appserve::Response::error(400, "Choose where to save the key");
+			fs::path file = krt::toPath(path);
+			if (file.is_relative()) {
+				std::lock_guard<std::mutex> lk(mu_);
+				if (!have_) return appserve::Response::error(400, targetError_);
+				file = target_.project.root / file;
+			}
+			std::string err;
+			if (!makeArchiveKey(file, err)) return appserve::Response::error(400, err);
+			std::error_code ec;
+			Json out = Json::object();
+			out.set("path", Json(krt::fromPath(fs::weakly_canonical(file, ec))));
+			return appserve::Response::json(out);
+		});
+
 		// Saves release.json (body: { settings })
 		reg.route("/api/release/save", [this](const appserve::Request& req) {
 			if (!have_) return appserve::Response::error(400, targetError_);
@@ -440,6 +471,7 @@ private:
 		Json out = Json::object();
 		out.set("version", Json(KAGEX_RELEASE_VERSION));
 		out.set("host", Json(hostId()));
+		out.set("canEncrypt", Json(canEncryptArchive()));
 		Json pls = Json::array();
 		for (const auto& pl : platforms()) {
 			Json o = Json::object();
@@ -482,7 +514,7 @@ int main(int argc, char** argv)
 	app.options().appName = "kagex-release";
 	app.options().appVersion = KAGEX_RELEASE_VERSION;
 	Options o;
-	app.addOption({ "cli", "", "Run a command (init, check, plan, build) instead of opening the window",
+	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
 	app.addOption({ "force", "", "init: replace an existing release.json",
 	                [&o](const std::string&) { o.force = true; return true; } });

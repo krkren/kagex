@@ -39,6 +39,23 @@ endif()
 # krkrz_tools' libraries; its own tools are only built when asked for
 add_subdirectory("${KRKRZ_TOOLS_DIR}" krkrz_tools EXCLUDE_FROM_ALL)
 
+# xp3crypt's library (encrypted data.xp3), from the repo next to kagex. Optional: without it the
+# tool builds but can't encrypt (KR_HAVE_XP3CRYPT off)
+if(DEFINED ENV{KRKRZ_BASE})
+    set(_xp3crypt_default "$ENV{KRKRZ_BASE}/xp3crypt")
+else()
+    get_filename_component(_xp3crypt_default "${_kagex_root}/../xp3crypt" ABSOLUTE)
+endif()
+set(XP3CRYPT_DIR "${_xp3crypt_default}" CACHE PATH "The xp3crypt repository (for encrypted archives)")
+set(_have_xp3crypt OFF)
+if(EXISTS "${XP3CRYPT_DIR}/lib/CMakeLists.txt")
+    add_subdirectory("${XP3CRYPT_DIR}/lib" xp3crypt EXCLUDE_FROM_ALL)
+    set(_have_xp3crypt ON)
+    message(STATUS "xp3crypt: ${XP3CRYPT_DIR} (archive encryption on)")
+else()
+    message(STATUS "xp3crypt not found at ${XP3CRYPT_DIR}: archive encryption off (set XP3CRYPT_DIR)")
+endif()
+
 add_executable(kagex-release
     src/main.cpp
     src/Settings.cpp
@@ -50,6 +67,7 @@ add_executable(kagex-release
     src/Icons.cpp
     src/Engine.cpp
     src/Build.cpp
+    src/Encrypt.cpp
     src/Media.cpp
     src/Sign.cpp
     src/Scripts.cpp
@@ -66,6 +84,10 @@ target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS} ${LI
 target_compile_definitions(kagex-release PRIVATE LTM_DESC)
 target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop krt_sig
     ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
+if(_have_xp3crypt)
+    target_link_libraries(kagex-release PRIVATE xp3crypt_lib)
+    target_compile_definitions(kagex-release PRIVATE KR_HAVE_XP3CRYPT)
+endif()
 target_compile_definitions(kagex-release PRIVATE KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     # the exe's icon and version info (Windows resource APIs)
