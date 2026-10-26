@@ -26,7 +26,7 @@ concurrency:
 
 env:
   RELEASE_TAG: "0.9.0"
-  KAGEX_SHA: 32e9e360852a5ebdf65222b24326bcf52e98465c
+  KAGEX_SHA: a64e42316c2eb23732c69a92a3fda4ceb5c02eff
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -35,7 +35,7 @@ env:
   # kagex's own plugins, built into the engines (as platforms.yml pins them): xp3crypt
   # (encrypted data.xp3, built into the engine) and scnfile (compiled scenarios, a plugin)
   XP3CRYPT_SHA: bda2affc0594ab6f07655d913fbb41bf99d78b84
-  SCNFILE_SHA: 7daaeaf7a85d9439d0e2256e05ba95562684b282
+  SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
 
 jobs:
   release-commit:
