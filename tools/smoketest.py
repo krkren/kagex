@@ -486,6 +486,14 @@ class WebEngine(Engine):
         end = start + 180
         last = None
         while time.time() < end:
+            # krkrz_repl_eval traps ("RuntimeError: unreachable", and every call after it) when
+            # it lands after the module is up but before the engine has made its script engine:
+            # on the Linux runner a poll hit that window in two runs out of three, and the page
+            # never started. The engine prints its version line once the script engine is
+            # there; without one in 30 s, poll as before.
+            if time.time() - start < 30 and not any("Kirikiri Z Executable core" in l for l in self.lines):
+                time.sleep(0.25)
+                continue
             try:
                 # ccall throws until the runtime is up; then wait for the game window
                 if self._raw('typeof global.kag == "Object" && kag !== void').get("result") == "1":
