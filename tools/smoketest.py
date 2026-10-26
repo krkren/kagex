@@ -142,6 +142,14 @@ class Engine:
         pass
 
 
+def storage_name(path):
+    """A local path as the engine names it: file://./home/... or file://./c/Users/..."""
+    path = os.path.abspath(path).replace("\\", "/")
+    if re.match(r"^[A-Za-z]:/", path):
+        return "file://./" + path[0].lower() + path[2:]
+    return "file://." + path
+
+
 class FileChannel(Engine):
     """The REPL file channel (-replfile=<dir>): TJS in cmd, the answer in resp. A native modal
     dialog shows up as a modal file; it is answered and counted as a failure."""
@@ -177,6 +185,34 @@ class FileChannel(Engine):
         while time.time() < end and (os.path.exists(path) or
                                      os.path.exists(os.path.join(self.chan, "modalresp"))):
             time.sleep(0.02)
+
+    def tjs(self, body, timeout=30.0):
+        """As Engine.tjs, but the main thread writes the result to a file. The file channel
+        pretty-prints a result on its own thread, and a TJS string or object handled there races
+        the main thread's reference counts: engine 2.6.5 aborted with "double free or corruption"
+        now and then (UPSTREAM.md). So the REPL only gets the number 0 back."""
+        out = os.path.join(self.chan, "result.txt")
+        if os.path.exists(out):
+            os.remove(out)
+        cmd = ("(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r"
+               " : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
+               " a.save('%s'); return 0; })((function() {\n%s\n})())") % (storage_name(out), body)
+        j = self._eval(cmd, timeout)
+        if not j.get("ok"):
+            raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
+        with open(out, encoding="utf-16") as f:   # Array.save: UTF-16 with a BOM
+            text = f.read()
+        text = text[:-1] if text.endswith("\n") else text
+        text = text[:-1] if text.endswith("\r") else text
+        kind, value = text[:1], text[1:]
+        if kind == "N":
+            try:
+                return int(value)
+            except ValueError:
+                return float(value)
+        if kind == "V":
+            return "(void)"
+        return value
 
     def _eval(self, cmd, timeout):
         resp = os.path.join(self.chan, "resp")

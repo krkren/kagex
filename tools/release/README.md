@@ -76,9 +76,7 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   Identity `-` signs a device build ad hoc, to check the package.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
-`appname` (the save folder on Linux and macOS), for the release engine `debugwin=no`, and
-`krkrzpoolsize=none` unless `krkrz.cf` sets that option (engine 2.6.5's general memory pool
-corrupts its heap now and then; see UPSTREAM.md in the kagex repository). The
+`appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
 licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
 starts this computer's build for a few seconds (headless where it can, through the engine's REPL)
 and reports script errors; its log is `<output>/test-run.log`.
