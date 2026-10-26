@@ -6,6 +6,7 @@
 //   kagex-release --cli check [<release.json>] [--json]       the settings, and what this computer can build
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
+//   kagex-release --cli keygen <keyfile>                     writes a new archive-encryption key
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work.
@@ -19,6 +20,7 @@
 #include <mutex>
 
 #include "Build.h"
+#include "Encrypt.h"
 #include "Host.h"
 #include "Plan.h"
 #include "Project.h"
@@ -159,10 +161,20 @@ bool selected(const Options& o, const std::string& id)
 int runCli(const Options& o, const std::vector<std::string>& args)
 {
 	if (args.empty()) {
-		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan [<path>] (see --help)\n");
+		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen [<path>] (see --help)\n");
 		return 2;
 	}
 	const std::string cmd = args[0];
+
+	// keygen makes an archive-encryption key; it needs no project or release.json
+	if (cmd == "keygen") {
+		if (args.size() < 2) { std::fprintf(stderr, "usage: kagex-release --cli keygen <keyfile>\n"); return 2; }
+		std::string kerr;
+		if (!makeArchiveKey(krt::toPath(args[1]), kerr)) { std::fprintf(stderr, "error: %s\n", kerr.c_str()); return 2; }
+		std::printf("Wrote a new archive key to %s (keep it out of the game's repository)\n", args[1].c_str());
+		return 0;
+	}
+
 	const std::string path = args.size() > 1 ? args[1] : std::string();
 	Target t;
 	std::string err;
@@ -265,7 +277,7 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return r["ok"].asBool() ? 0 : 1;
 	}
 
-	std::fprintf(stderr, "error: unknown command %s (init, check, plan or build)\n", cmd.c_str());
+	std::fprintf(stderr, "error: unknown command %s (init, check, plan, build or keygen)\n", cmd.c_str());
 	return 2;
 }
 
@@ -418,7 +430,7 @@ int main(int argc, char** argv)
 	app.options().appName = "kagex-release";
 	app.options().appVersion = KAGEX_RELEASE_VERSION;
 	Options o;
-	app.addOption({ "cli", "", "Run a command (init, check, plan, build) instead of opening the window",
+	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
 	app.addOption({ "force", "", "init: replace an existing release.json",
 	                [&o](const std::string&) { o.force = true; return true; } });

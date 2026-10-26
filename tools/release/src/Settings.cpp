@@ -150,6 +150,12 @@ Json defaultSettings(const Project& p)
 		{ "check", Json(true) },
 		{ "patchFrom", Json("") },
 	}));
+	// Encrypted data.xp3 (the xp3crypt plugin decrypts it; the engine must have the plugin).
+	// The key is 64 hexadecimal digits in the file keyFile names, or in KAGEX_ARCHIVE_KEY.
+	s.set("archive", obj({
+		{ "encrypt", Json(false) },
+		{ "keyFile", Json("") },
+	}));
 	Json pl = Json::object();
 	pl.set("windows", obj({ { "enabled", Json(host == "windows") }, { "data", Json("xp3") }, { "versionInfo", Json(true) } }));
 	pl.set("linux", obj({ { "enabled", Json(host == "linux") }, { "data", Json("xp3") }, { "desktopEntry", Json(true) } }));
@@ -333,6 +339,14 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const std::string patchFrom = str(s, "output.patchFrom");
 	if (!patchFrom.empty() && !exists(patchFrom)) error("output.patchFrom", "The file list " + patchFrom + " doesn't exist (a build writes <file name>-<version>-files.json beside its packages)");
 
+	// archive encryption: a named key file must exist (the key may instead come from
+	// KAGEX_ARCHIVE_KEY, which validate can't see; Build checks that one at build time)
+	if (flag(s, "archive.encrypt")) {
+		const std::string keyFile = str(s, "archive.keyFile");
+		if (!keyFile.empty() && !exists(keyFile))
+			error("archive.keyFile", "The archive key " + keyFile + " doesn't exist (make one with: kagex-release --cli keygen <file>, or the xp3crypt tool)");
+	}
+
 	// platforms
 	int enabled = 0;
 	static const std::regex bundleRe(R"([A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+)");
@@ -349,6 +363,13 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if ((id == "macos" || id == "android" || id == "ios") && !oneOf(data, { "xp3", "folder" }))
 			error(base + "data", std::string(pl.title) + " data is \"xp3\" or \"folder\"");
 		if (id == "web" && !oneOf(data, { "files", "xp3" })) error(base + "data", "Web data is \"files\" (loaded as needed) or \"xp3\"");
+		// archive encryption (xp3crypt): only the files inside data.xp3 are encrypted, so a
+		// platform needs a data.xp3 (not loose files) for it to apply
+		if (flag(s, "archive.encrypt")) {
+			if (id == "web" && data == "files") error(base + "data", "Encrypting the archive needs web data \"xp3\" (the \"files\" mode serves loose files the plugin can't decrypt)");
+			if ((id == "macos" || id == "android" || id == "ios") && data == "folder") warn(base + "data", std::string(pl.title) + " uses loose files (\"folder\"), which aren't encrypted; choose \"xp3\" to encrypt");
+			if ((id == "windows" || id == "linux" || id == "steam") && data == "folder") warn(base + "data", std::string(pl.title) + " uses loose files (\"folder\"), which aren't encrypted; choose \"xp3\" or \"bind\" to encrypt");
+		}
 		if (id == "web") {
 			static const std::regex urlRe(R"(https?://[^\s"<>]+)");
 			const std::string url = str(s, base + "url"), preview = str(s, base + "preview");

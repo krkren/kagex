@@ -17,6 +17,7 @@ kagex-release --cli init  [path]           # write release.json with the default
 kagex-release --cli check [release.json]   # problems in the settings, and what this computer can build
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
+kagex-release --cli keygen <keyfile>       # make an archive-encryption key
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
@@ -91,6 +92,25 @@ can't remove files, or change what the game reads before it loads patches (`Init
 `Storages.tjs`, `startup.tjs`, the engine and its `.cf`); the build says so. A build with
 *Patch from* set needs no platform, and a patch alone needs no engines.
 
+### Encrypted game files
+
+With *Encrypt the archive* on (`archive.encrypt`), `data.xp3` is packed with every file encrypted
+(XChaCha20, a separate key per file). The [xp3crypt](https://github.com/krkren/xp3crypt) plugin,
+built into the engine, decrypts each file as the engine reads it, so the game runs the same; the
+scripts and assets are no longer readable in the shipped archive.
+
+```bash
+kagex-release --cli keygen game.key        # make a key (64 hex digits; keep it out of the repo)
+```
+
+Point *Key file* (`archive.keyFile`) at it, or set `KAGEX_ARCHIVE_KEY` (which wins, for CI). The
+build packs the encrypted `data.xp3` and writes the key into each platform's engine; the engine
+must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
+key ships inside the game, so this keeps the files out of casual view rather than making them
+unrecoverable to a determined person. Encryption applies to files inside `data.xp3`, so a platform
+has to use `xp3` (or `bind`) data, not loose `folder`/`files`; the build warns otherwise. An engine
+with no key reads a plain archive, so the same engine works with encryption off.
+
 ### Media
 
 Before packing, lossless media in the staged data are converted (the sources are never touched):
@@ -135,6 +155,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
+| `archive` | `encrypt` (pack `data.xp3` encrypted; the engine needs the xp3crypt plugin), `keyFile` (the key, 64 hex digits; or `KAGEX_ARCHIVE_KEY`) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,

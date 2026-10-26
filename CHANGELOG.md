@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Encrypted game files**: kagex-release can pack `data.xp3` with every file encrypted (XChaCha20, keyed per file). The [xp3crypt](https://github.com/krkren/xp3crypt) plugin, built into the engine, decrypts each read through the engine's XP3 extraction filter, so the archive is read transparently; the game's key is written into each platform's engine when it's packaged. Turn it on with `archive.encrypt` and a key from `archive.keyFile` (or `KAGEX_ARCHIVE_KEY`); make a key with `kagex-release --cli keygen <file>`. An engine without a key reads a plain archive, so the same build works either way. Keeps the scripts and assets out of plain view; the key ships with the game, so a determined person can still recover it.
+
 ## 0.8.0
 
 ### Added
