@@ -168,6 +168,12 @@ def server_tests(exe, proj, args):
         st = api(port, "/api/release/state")
         step("state", st.get("exists") is True and st["settings"]["identity"]["title"] == "KAGEX Sample" and len(st["platforms"]) == 7,
              st.get("file", st.get("error", "")))
+        # a release's tool is built with xp3crypt and scnfile (release-tool.yml sets this)
+        enc = "archive %s, scenarios %s" % (st.get("canEncrypt"), st.get("scnfile"))
+        if os.environ.get("KAGEX_RELEASE_REQUIRE_ENCRYPTION") == "1":
+            step("state: the tool encrypts archives and scenarios", st.get("canEncrypt") is True and st.get("scnfile") is True, enc)
+        else:
+            print("     encryption built in: " + enc, flush=True)
         s = st["settings"]
         s["platforms"]["android"]["enabled"] = True
         s["platforms"]["android"]["applicationId"] = "1bad"

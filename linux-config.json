@@ -13,7 +13,9 @@
             "CMAKE_CXX_STANDARD_LIBRARIES": "${PROJECT_DIR}/build/linux/cmake/vcpkg_installed/x64-linux/lib/libpng16.a ${PROJECT_DIR}/build/linux/cmake/vcpkg_installed/x64-linux/lib/libz.a ${PROJECT_DIR}/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbz2.a ${PROJECT_DIR}/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbrotlidec.a ${PROJECT_DIR}/build/linux/cmake/vcpkg_installed/x64-linux/lib/libbrotlicommon.a -lm"
         },
         "pluginFolders": [
-            "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+            "${KRKRZ_BASE}/krkrz_dev/src/plugins",
+            "${KRKRZ_BASE}/xp3crypt/plugins",
+            "${KRKRZ_BASE}/scnfile/plugins"
         ],
         "plugins": [
             "KAGParserEx", "clipfile", "csvParser", "getSample", "json",
@@ -21,9 +23,9 @@
             "layerExRaster", "layerExVector", "lineParser", "minizip", "psdfile",
             "saveStruct", "scriptsEx", "shrinkCopy", "krkr_richtext", "extrans",
             "extNagano", "AlphaMovie", "expat", "layerExSave", "sigcheck",
-            "krkreffekseer", "krkrthreepp"
+            "krkreffekseer", "krkrthreepp", "xp3crypt", "scnfile"
         ],
-        "staticPlugins": []
+        "staticPlugins": ["xp3crypt"]
     },
 
     "config": {

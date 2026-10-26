@@ -155,8 +155,8 @@ folder already has are left out and every script compiled again.
 With the engine's scnfile plugin the files are .scn, and every platform's engine needs the
 plugin to play them: a platform whose engine lacks it fails to build. Without the plugin
 they're .scn.json, which every engine reads. The tool's check says which it will be. The
-engines the tool downloads don't have the plugin yet: engine packages that do go in engines/
-next to data/, which the tool uses before its downloads.
+engines the tool downloads have the plugin from KAGEX 0.9.0 on; engine packages of your own go
+in engines/ next to data/, which the tool uses before its downloads.
 
 With Scenarios > Encrypt (scenes.encrypt) the .scn files are encrypted with the scenes key
 of the game's keys file (Keys > keys file, keys.file, or the variable KAGEX_KEYS_FILE; Create

@@ -11,17 +11,21 @@
     "cmake": {
         "pluginFolders": [
             "${BUILD_SYSTEM_DIR}/app/src/main/cpp",
-            "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+            "${KRKRZ_BASE}/krkrz_dev/src/plugins",
+            "${KRKRZ_BASE}/xp3crypt/plugins",
+            "${KRKRZ_BASE}/scnfile/plugins"
         ],
         "plugins": [
             "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
             "layerExImage", "layerExRaster", "layerExVector", "minizip", "clipfile", "saveStruct", "scriptsEx", "shrinkCopy",
-            "krkr_richtext", "extrans", "extNagano", "krkreffekseer", "virtualpad", "license", "androidconfig"
+            "krkr_richtext", "extrans", "extNagano", "krkreffekseer", "virtualpad", "license", "androidconfig",
+            "xp3crypt", "scnfile"
         ],
         "staticPlugins": [
             "json", "KAGParserEx", "csvParser", "getSample", "layerExBTOA",
             "layerExImage", "layerExRaster", "layerExVector", "minizip", "clipfile", "saveStruct", "scriptsEx", "shrinkCopy",
-            "krkr_richtext", "extrans", "extNagano", "krkreffekseer", "virtualpad", "license", "androidconfig"
+            "krkr_richtext", "extrans", "extNagano", "krkreffekseer", "virtualpad", "license", "androidconfig",
+            "xp3crypt", "scnfile"
         ]
     },
     "assetPack": {

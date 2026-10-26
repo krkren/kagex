@@ -42,6 +42,11 @@ env:
   KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
   KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
   STEAMDEV_SHA: e39d1d9dddc741a1c343dc6c653dc303515a0204
+  # kagex's own plugins (setup.sh clones them next to krkrz_dev): xp3crypt, built into every
+  # engine, decrypts data.xp3; scnfile reads compiled scenarios. kagex-release writes each game's
+  # keys into them
+  XP3CRYPT_SHA: bda2affc0594ab6f07655d913fbb41bf99d78b84
+  SCNFILE_SHA: 7daaeaf7a85d9439d0e2256e05ba95562684b282
   # CMake 4 (the macOS runners) refuses the old cmake_minimum_required of some engine
   # dependencies (krkrz_vorbis)
   CMAKE_POLICY_VERSION_MINIMUM: "3.5"
@@ -117,7 +122,7 @@ jobs:
           # software renderer stands in for a GPU)
           sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
             libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri > "$GITHUB_WORKSPACE/results/apt.log" 2>&1
-          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz --effekseer required --vector required --zip required --clip required
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine ./krkrz --effekseer required --vector required --zip required --clip required --encryption required
       - name: Publish results branch
         if: always()
         env:
@@ -195,7 +200,7 @@ jobs:
           (cd "$PROJECT_DIR/build/web/site" && exec python3 -m http.server 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
           sleep 3
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep --effekseer required --vector required --zip required --clip required || s=$?
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep --effekseer required --vector required --zip required --clip required --encryption required || s=$?
           cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - name: Publish results branch
@@ -246,6 +251,7 @@ jobs:
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
           echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
+          echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
           chmod +x kirikiri/krkrz_android/gradlew
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
@@ -281,7 +287,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --effekseer required --vector required --zip required --clip required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --effekseer required --vector required --zip required --clip required --encryption required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
       # The smoke test needs the debug build (only it has the REPL); the package is the
       # optimized release build, signed with the same debug key (the kit's release-debug)
       - name: Build the release APK
@@ -347,7 +353,10 @@ jobs:
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
           xcodebuild -version | tee results/xcode.txt
       - name: Build for the Simulator
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+        run: |
+          # every plugin is static on iOS: scnfile's Monocypher is renamed beside xp3crypt's
+          echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_ios/CMakeLists.txt
+          kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
       - name: Pack the app
         run: |
           app=$(find "$PROJECT_DIR/build/ios" -name '*.app' -path '*iphonesimulator*' | head -1)
@@ -372,7 +381,7 @@ jobs:
           xcrun simctl boot "$dev" || true
           xcrun simctl bootstatus "$dev" -b > /dev/null
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --vector required --zip required --clip required || s=$?
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --vector required --zip required --clip required --encryption required || s=$?
           cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       # kagex-release's iOS engine: an unsigned Release build for devices (the developer's
@@ -431,7 +440,15 @@ jobs:
           { sw_vers; xcodebuild -version; cmake --version | head -1; } | tee results/toolchain.txt
       - name: Configure
         working-directory: kirikiri/krkrz_dev
-        run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh configure cmake --preset arm64-osx -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_PROJECT_INCLUDE="$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/krkreffekseer-apple.cmake"
+        # xp3crypt built into the engine, scnfile a plugin beside it. The plugin folders' tp_stub,
+        # ncbind and simplebinder are krkrz_dev's: the first plugin's CMakeLists caches them
+        # relative to itself, and xp3crypt comes first
+        run: |
+          p="$KRKRZ_BASE/krkrz_dev/src/plugins"
+          $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh configure cmake --preset arm64-osx -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DCMAKE_PROJECT_INCLUDE="$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/krkreffekseer-apple.cmake" \
+            "-DTVP_PLUGIN_FOLDERS=$KRKRZ_BASE/xp3crypt/plugins;$KRKRZ_BASE/scnfile/plugins" "-DTVP_PLUGINS=xp3crypt;scnfile" -DTVP_PLUGINS_STATIC=xp3crypt \
+            "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder"
       - name: Build the engine and its plugins
         working-directory: kirikiri/krkrz_dev
         run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh build cmake --build build/arm64-osx --config Release -- -k 0
@@ -490,7 +507,7 @@ jobs:
           # the game as the app holds it (the app has no template/). SDL's offscreen driver has
           # no OpenGL ES here (the engine draws through ANGLE), but the runners have a desktop
           cd "$APP/Contents/Resources"
-          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample --effekseer required --vector required --zip required --clip required
+          SDL_VIDEO_DRIVER=cocoa $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --engine "$exe" --only sample --effekseer required --vector required --zip required --clip required --encryption required
       - name: Publish results branch
         if: always()
         env:

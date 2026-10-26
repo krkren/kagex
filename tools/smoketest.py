@@ -1002,6 +1002,23 @@ def sample_steps(eng):
             raise SmokeError("the star by its LayerId, turned, covers %d samples, not about %d"
                              % (counts["star by id, turned"], counts["star"]))
 
+    @step("encryption: xp3crypt is in the engine and scnfile reads compiled scenarios (--encryption required)")
+    def _():
+        # xp3crypt is built into the engine (its XP3 filter in place before startup.tjs) and decrypts
+        # data.xp3; scnfile reads .scn files, which kagex-release encrypts. Both take their keys from
+        # the slots kagex-release writes; the sample's own packages carry none, so this checks the
+        # plugins are there and work, and tool-check builds and runs an encrypted game
+        r = eng.tjs('var x = "no xp3crypt", s = "no scnfile";'
+                    ' if (typeof global.XP3Crypt != "undefined") { try { x = XP3Crypt.installed ? "" : "xp3crypt\'s filter isn\'t installed"; } catch (e) { x = "XP3Crypt: " + e.message; } }'
+                    ' if (typeof global.SCNFile != "undefined") { try { var f = new SCNFile(SCNFile.toOctet(%[a:1, b:"scn"]));'
+                    ' s = f.root.a == 1 && f.root.b == "scn" ? "" : "SCNFile doesn\'t read back what it wrote"; invalidate f; }'
+                    ' catch (e) { s = "SCNFile: " + e.message; } }'
+                    ' return [x, s].join("|");')
+        x, sc = (r.split("|") + ["", ""])[:2]
+        print("     xp3crypt: %s; scnfile: %s" % (x or "built in, filter installed", sc or "reads what it writes"), flush=True)
+        if (x or sc) and eng.opts.encryption == "required":
+            raise SmokeError("; ".join(m for m in (x, sc) if m))
+
     @step("zip patches: the ones in the save folder were mounted at start, and DLC mounts later")
     def _():
         if eng.tjs('return typeof global.KAGMountPatchZip != "undefined" ? 1 : 0;') != 1:
@@ -1395,6 +1412,9 @@ def main():
     ap.add_argument("--clip", choices=["required", "optional"], default="optional",
                     help="whether the build must load CLIP STUDIO PAINT layers (the clipfile plugin): "
                     "required fails when it can't; optional reports it")
+    ap.add_argument("--encryption", choices=["required", "optional"], default="optional",
+                    help="whether the engine must have the xp3crypt plugin built in and the scnfile plugin "
+                    "(encrypted data.xp3 and compiled scenarios): required fails without them; optional reports it")
     opts = ap.parse_args()
     if opts.target != "desktop" or opts.packaged:
         opts.only = "sample"  # the platform packages hold the sample only

@@ -1,0 +1,59 @@
+// Force-included (-include) into scnfile's sources where it and xp3crypt are both built into
+// the engine (every plugin is static on the web, Android and iOS): each compiles its own copy
+// of Monocypher, and their crypto_* functions were duplicate symbols there. This renames
+// scnfile's copy; xp3crypt keeps the plain names. Made from both copies' crypto_* names by
+// listing them (Monocypher 4.x); monocypher-kit.cmake applies it.
+#pragma once
+#define crypto_aead_ctx scnfile_crypto_aead_ctx
+#define crypto_aead_init_djb scnfile_crypto_aead_init_djb
+#define crypto_aead_init_ietf scnfile_crypto_aead_init_ietf
+#define crypto_aead_init_x scnfile_crypto_aead_init_x
+#define crypto_aead_lock scnfile_crypto_aead_lock
+#define crypto_aead_read scnfile_crypto_aead_read
+#define crypto_aead_unlock scnfile_crypto_aead_unlock
+#define crypto_aead_write scnfile_crypto_aead_write
+#define crypto_argon2 scnfile_crypto_argon2
+#define crypto_argon2_config scnfile_crypto_argon2_config
+#define crypto_argon2_extras scnfile_crypto_argon2_extras
+#define crypto_argon2_inputs scnfile_crypto_argon2_inputs
+#define crypto_argon2_no_extras scnfile_crypto_argon2_no_extras
+#define crypto_blake2b scnfile_crypto_blake2b
+#define crypto_blake2b_ctx scnfile_crypto_blake2b_ctx
+#define crypto_blake2b_final scnfile_crypto_blake2b_final
+#define crypto_blake2b_init scnfile_crypto_blake2b_init
+#define crypto_blake2b_keyed scnfile_crypto_blake2b_keyed
+#define crypto_blake2b_keyed_init scnfile_crypto_blake2b_keyed_init
+#define crypto_blake2b_update scnfile_crypto_blake2b_update
+#define crypto_chacha20_djb scnfile_crypto_chacha20_djb
+#define crypto_chacha20_h scnfile_crypto_chacha20_h
+#define crypto_chacha20_ietf scnfile_crypto_chacha20_ietf
+#define crypto_chacha20_x scnfile_crypto_chacha20_x
+#define crypto_curve_to_hidden scnfile_crypto_curve_to_hidden
+#define crypto_eddsa_check scnfile_crypto_eddsa_check
+#define crypto_eddsa_check_equation scnfile_crypto_eddsa_check_equation
+#define crypto_eddsa_key_pair scnfile_crypto_eddsa_key_pair
+#define crypto_eddsa_mul_add scnfile_crypto_eddsa_mul_add
+#define crypto_eddsa_reduce scnfile_crypto_eddsa_reduce
+#define crypto_eddsa_scalarbase scnfile_crypto_eddsa_scalarbase
+#define crypto_eddsa_sign scnfile_crypto_eddsa_sign
+#define crypto_eddsa_to_x25519 scnfile_crypto_eddsa_to_x25519
+#define crypto_eddsa_trim_scalar scnfile_crypto_eddsa_trim_scalar
+#define crypto_elligator_key_pair scnfile_crypto_elligator_key_pair
+#define crypto_elligator_map scnfile_crypto_elligator_map
+#define crypto_elligator_rev scnfile_crypto_elligator_rev
+#define crypto_lock scnfile_crypto_lock
+#define crypto_poly1305 scnfile_crypto_poly1305
+#define crypto_poly1305_ctx scnfile_crypto_poly1305_ctx
+#define crypto_poly1305_final scnfile_crypto_poly1305_final
+#define crypto_poly1305_init scnfile_crypto_poly1305_init
+#define crypto_poly1305_update scnfile_crypto_poly1305_update
+#define crypto_verify16 scnfile_crypto_verify16
+#define crypto_verify32 scnfile_crypto_verify32
+#define crypto_verify64 scnfile_crypto_verify64
+#define crypto_wipe scnfile_crypto_wipe
+#define crypto_x25519 scnfile_crypto_x25519
+#define crypto_x25519_dirty_fast scnfile_crypto_x25519_dirty_fast
+#define crypto_x25519_dirty_small scnfile_crypto_x25519_dirty_small
+#define crypto_x25519_inverse scnfile_crypto_x25519_inverse
+#define crypto_x25519_public_key scnfile_crypto_x25519_public_key
+#define crypto_x25519_to_eddsa scnfile_crypto_x25519_to_eddsa

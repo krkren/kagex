@@ -15,12 +15,15 @@
   "cmake": {
     "pluginFolders": [
       "${BUILD_SYSTEM_DIR}/plugins",
-      "${KRKRZ_BASE}/krkrz_dev/src/plugins"
+      "${KRKRZ_BASE}/krkrz_dev/src/plugins",
+      "${KRKRZ_BASE}/xp3crypt/plugins",
+      "${KRKRZ_BASE}/scnfile/plugins"
     ],
     "plugins": [
       "json", "KAGParserEx", "csvParser",
       "getSample", "layerExBTOA", "layerExImage", "layerExRaster", "layerExVector", "minizip", "clipfile", "saveStruct",
-      "scriptsEx", "shrinkCopy", "extrans", "extNagano", "virtualpad", "iosconfig"
+      "scriptsEx", "shrinkCopy", "extrans", "extNagano", "virtualpad", "iosconfig",
+      "xp3crypt", "scnfile"
     ]
   },
   "assetPack": {
