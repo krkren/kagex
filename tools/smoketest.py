@@ -629,15 +629,23 @@ def sample_steps(eng):
         print("     Pip: %d of its samples drawn, from y %d to %d" % (n, top, bottom), flush=True)
         if n < 300 or not visible or bottom < 200 or top > 900:
             raise SmokeError("Pip isn't drawn on the screen: %s" % drawn)
-        # blinking: make every eye frame start a blink, and watch the eyes close
-        eng.tjs('global.__smokeBlink = eyeFlipFreq; eyeFlipFreq = 1.0; return 1;')
-        seen = set()
+        # blinking: make every eye frame start a blink, and watch the eyes close. A timer in the
+        # game notes the eyes every 20 ms: the eyes are open for a frame between blinks, which
+        # asking through the REPL missed on the macOS runner
+        eng.tjs('global.__smokeBlink = eyeFlipFreq; eyeFlipFreq = 1.0; global.__smokeEyes = %[];'
+                ' global.__smokeEyeTimer = new Timer(function() {'
+                ' var c = world_object.env.characters["pip"]; if (c === void) return;'
+                ' global.__smokeEyes[c.eyeLevel === void ? "-1" : (string)c.eyeLevel] = 1;'
+                ' }, ""); __smokeEyeTimer.interval = 20; __smokeEyeTimer.enabled = true; return 1;')
         end = time.time() + 3
-        while time.time() < end and not {0, 2} <= seen:
-            seen.add(eng.tjs(pip + 'return c.eyeLevel === void ? -1 : c.eyeLevel;'))
-            time.sleep(0.03)
-        eng.tjs('eyeFlipFreq = global.__smokeBlink; return 1;')
-        if not {0, 2} <= seen:
+        while time.time() < end:
+            time.sleep(0.5)
+            if eng.tjs('return __smokeEyes["0"] && __smokeEyes["2"] ? 1 : 0;') == 1:
+                break
+        seen = str(eng.tjs('__smokeEyeTimer.enabled = false; invalidate __smokeEyeTimer;'
+                           ' eyeFlipFreq = global.__smokeBlink; var a = []; a.assign(__smokeEyes);'
+                           ' var k = []; for (var i = 0; i < a.count; i += 2) k.add(a[i]); return k.join(" ");')).split()
+        if not {"0", "2"} <= set(seen):
             raise SmokeError("Pip's eyes didn't blink (eye levels seen: %s)" % sorted(seen))
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
         # while it plays (asking through the REPL is too slow on some targets)
