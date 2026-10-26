@@ -14,6 +14,7 @@
 #include "Media.h"
 #include "Plan.h"
 #include "Sign.h"
+#include "Scripts.h"
 #include "Subprocess.h"
 #include "krt/app/Progress.h"
 #include "krt/app/Text.h"
@@ -248,8 +249,9 @@ public:
 			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));
-			media(PartProgress(pr_, 0.05, 0.22));
-			signStage();   // write the public key and the self-test into the data (before it is hashed/packed)
+			media(PartProgress(pr_, 0.05, 0.2));
+			signStage();   // write the public key and the self-test into the data (before it is compiled/hashed/packed)
+			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.2, 0.22));
 			fileList(PartProgress(pr_, 0.22, 0.25));
 			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
 			if (needsXp3()) { splitIfNeeded(PartProgress(pr_, 0.25, 0.27)); packXp3(PartProgress(pr_, 0.27, 0.35)); }
@@ -310,6 +312,7 @@ public:
 		result.set("outputs", std::move(outputs));
 		result.set("notes", Json::array(notes_));
 		if (media_.isObj()) result.set("media", media_);
+		if (scripts_.isObj()) result.set("scripts", scripts_);
 		return result;
 	}
 
@@ -360,6 +363,75 @@ private:
 		media_.set("keptByReference", Json(m.keptByReference));
 		media_.set("keptForEffects", Json(m.keptForEffects));
 		media_.set("rewrittenScripts", Json(m.rewrittenScripts));
+	}
+
+	//-----------------------------------------------------------------------
+	// The scripts, compiled to bytecode by this computer's engine (Scripts.h)
+	//-----------------------------------------------------------------------
+	void scripts(krt::Progress&& pr)
+	{
+		const fs::path exe = compileEngine(pr);
+		ScriptsResult r;
+		std::string err;
+		const bool ok = compileScripts(s_, p_, stage_, exe, work_, pr, r, err);
+		const fs::path logFile = out_ / "compile-scripts.log";
+		if (!r.log.empty()) writeText(logFile, r.log);
+		if (!ok) throw Failure{ err };
+		std::string line = "Compiled " + std::to_string(r.compiled) + " scripts to bytecode";
+		std::vector<std::string> parts;
+		if (r.expressions) parts.push_back(std::to_string(r.expressions) + " as expressions");
+		if (r.fixed) parts.push_back(std::to_string(r.fixed) + " with constants beyond 32 bits put right");
+		if (!parts.empty()) {
+			line += " (";
+			for (size_t i = 0; i < parts.size(); ++i) line += (i ? "; " : "") + parts[i];
+			line += ")";
+		}
+		pr.log(line);
+		Json kept = Json::array();
+		for (const auto& [name, why] : r.kept) {
+			const std::string note = "Kept as source: " + name + ": " + why;
+			pr.log(note);
+			notes_.push_back(note);
+			Json k = Json::object();
+			k.set("name", Json(name));
+			k.set("why", Json(why));
+			kept.push(std::move(k));
+		}
+		scripts_ = Json::object();
+		scripts_.set("compiled", Json(r.compiled));
+		scripts_.set("expressions", Json(r.expressions));
+		scripts_.set("fixed", Json(r.fixed));
+		scripts_.set("truncates", Json(r.truncates));
+		scripts_.set("kept", std::move(kept));
+		scripts_.set("log", Json(krt::fromPath(logFile)));
+	}
+
+	// This computer's engine, from its package (on macOS a copy of the app, signed: an unsigned
+	// one isn't allowed to start)
+	fs::path compileEngine(krt::Progress& pr)
+	{
+		const std::string host = hostId();
+		fs::path engine;
+		std::string err;
+		pr.progress(-1, "Getting this computer's engine to compile the scripts");
+		if (!ensureEngine(host, flag(s_, "engine.debug"), o_.engines, pr, engine, err))
+			throw Failure{ "Compiling the scripts takes this computer's (" + host + ") engine: " + err };
+		if (host == "windows") return engine / "krkrz.exe";
+		if (host == "linux") return engine / "krkrz";
+		std::error_code ec;
+		fs::path src;
+		for (const auto& e : fs::directory_iterator(engine, ec))
+			if (e.is_directory(ec) && e.path().extension() == ".app") src = e.path();
+		if (src.empty()) throw Failure{ "The macOS engine package has no .app" };
+		const fs::path app = work_ / "compile-engine" / src.filename();
+		mustMkdirs(app.parent_path());
+		copyTree(src, app);
+		fs::remove_all(app / "Contents" / "_CodeSignature", ec);
+		RunOptions opt;
+		opt.timeoutSeconds = 600;
+		const RunResult r = run("codesign", { "--force", "--deep", "--sign", "-", krt::fromPath(app) }, opt);
+		if (!r.ok()) throw Failure{ "codesign failed: " + krt::trim(r.output) };
+		return app / "Contents" / "MacOS" / "krkrz";
 	}
 
 	//-----------------------------------------------------------------------
@@ -1735,7 +1807,7 @@ private:
 	std::map<std::string, fs::path> built_;
 	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
 	bool patchFailed_ = false;
-	Json media_;
+	Json media_, scripts_;
 	// signing
 	bool signing_ = false;
 	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)

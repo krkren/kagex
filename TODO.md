@@ -1,6 +1,6 @@
 # To do
 
-Planned features, in four groups. The first three need only work in this repository (scripts, data and kagex-release): the plugins and engine features they use are already in krkrz_dev's default build and ship in the Linux package, and krkrz_dev itself isn't changed (`CLAUDE.md`). The fourth needs changes to the builds as well. The last section lists the plugins looked at and left out, and why.
+Planned features, in three groups. The first two need only work in this repository (scripts, data and kagex-release): the plugins and engine features they use are already in krkrz_dev's default build and ship in the Linux package, and krkrz_dev itself isn't changed (`CLAUDE.md`). The third needs changes to the builds as well. The last section lists the plugins looked at and left out, and why.
 
 ## From krkrz_dev: plugins and engine features
 
@@ -17,10 +17,6 @@ Planned features, in four groups. The first three need only work in this reposit
 - [ ] A screenshot key that saves the screen as a PNG without a hitch: writing a 1920x1080 PNG takes about 90 ms, which shows, and `layerExSave`'s `startSaveLayerImage` writes it in the background (the plugin has to be linked before the game window is made, or the window lacks the method).
 - [ ] A controls list: a screen that shows what every key, mouse button and controller button does (F1-F8, Shift+F11/F12 in debug mode, the D-pad and face buttons, R1/R2, START/BACK/L1), opened from Config and the menu above. It should read the bindings themselves (`AfterInit.tjs`'s `processKeys` hook and `padKeyMap`, `initialPadKeyMap` in `MainWindow.tjs`), so a game that changes them gets a correct list, and name the controller's buttons by the pad in use (✕/○ on a PlayStation pad, A/B elsewhere).
 - [ ] Positional sound effects on World stages (`WaveSoundBuffer.use3D`, `SoundListener`).
-
-## Releasing
-
-- [ ] **Compiled TJS** (`Scripts.compileStorage`, built into the engine): kagex-release compiles every `.tjs` in the package to bytecode, by running the engine headless with a compile script as its test run does, so a package carries no readable TJS and starts faster (the engine guide's anti-cracking topic recommends it). Bytecode runs through `Scripts.execStorage`/`evalStorage` like source, so `KAGLoadScript` doesn't change. It has to come after the media conversion, which rewrites file names in scripts as text. `@if` switches are decided at compile time (`DEBUG`, `KAGENV_OVERLAYER`, `OLDBOOKMARK` and others), so a package keeps the settings it was compiled with. Check that bytecode compiled on the host runs on every platform's engine, and whether `startup.tjs` can be bytecode. Strings stay readable (there's no obfuscator for TJS bytecode), so like Encrypted game files this keeps out casual reading, not a determined person.
 
 ## Needing more than scripts
 

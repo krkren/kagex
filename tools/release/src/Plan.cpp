@@ -211,7 +211,7 @@ Json makePlan(const Json& s, const Project& p)
 	const auto files = collectGameFiles(s, p, &excluded);
 	uint64_t bytes = 0;
 	std::map<std::string, std::pair<int, uint64_t>> byExt;
-	int images = 0, audio = 0;
+	int images = 0, audio = 0, scripts = 0;
 	const std::string audioTo = str(s, "media.audio.convert");
 	const bool imagesKept = str(s, "media.images.opaque") == "keep" && str(s, "media.images.alpha") == "keep";
 	for (const auto& f : files) {
@@ -222,6 +222,7 @@ Json makePlan(const Json& s, const Project& p)
 		e.second += f.size;
 		if (isAudioSource(ext) && audioTo != "keep") ++audio;
 		if (isImageSource(ext) && !imagesKept) ++images;
+		if (ext == ".tjs" && flag(s, "contents.compileScripts")) ++scripts;
 	}
 	Json data = Json::object();
 	data.set("files", Json((long long)files.size()));
@@ -229,6 +230,7 @@ Json makePlan(const Json& s, const Project& p)
 	data.set("excluded", Json(excluded));
 	data.set("convertImages", Json(images));
 	data.set("convertAudio", Json(audio));
+	data.set("compileScripts", Json(scripts));
 	data.set("framework", Json(p.frameworkInData ? "data/system" : flag(s, "contents.framework") ? "template/system, copied in as data/system" : "not included"));
 	Json exts = Json::array();
 	std::vector<std::pair<std::string, std::pair<int, uint64_t>>> sorted(byExt.begin(), byExt.end());

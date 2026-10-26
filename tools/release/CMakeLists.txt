@@ -52,6 +52,7 @@ add_executable(kagex-release
     src/Build.cpp
     src/Media.cpp
     src/Sign.cpp
+    src/Scripts.cpp
 )
 find_package(ZLIB REQUIRED)
 # dr_flac (FLAC sources; header only)

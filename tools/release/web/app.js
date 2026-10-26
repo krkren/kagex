@@ -72,6 +72,7 @@ const SECTIONS = [
 			{ path: 'contents.font', label: 'Font', type: 'check', text: 'Include Noto Sans JP (Japanese text where the player has no Japanese font)' },
 			{ path: 'contents.licenses', label: 'Licenses', type: 'check', text: 'Include the engine\'s license files (its libraries ask for them)' },
 			{ path: 'contents.plugins', label: 'Plugins', type: 'select', options: [['all', 'All the engine\'s plugins'], ['linked', 'Only the ones the scripts link']] },
+			{ path: 'contents.compileScripts', label: 'Scripts', type: 'check', text: 'Compile the TJS scripts to bytecode (this computer\'s engine does it)', help: 'The packages then carry no readable TJS (strings and names still show), and they start a little faster. Errors in compiled scripts name the function but not the line, and @if switches are decided when building' },
 			{ path: 'contents.exclude', label: 'Leave out', type: 'lines', help: 'One pattern per line: *.psd matches anywhere, bgimage/raw/** a folder\'s contents, work/ a folder' },
 			{ path: 'contents.extraFiles', label: 'Extra files', type: 'lines', help: 'Files next to data/ to put beside the executable (a readme, a manual), one per line' },
 		],
@@ -351,7 +352,8 @@ function renderPlan(body) {
 	const d = plan.data;
 	body.append(el('p', {},
 		`Game files: ${d.files} (${formatSize(d.bytes)}), ${d.excluded} left out. Framework: ${d.framework}. `,
-		`To convert: ${d.convertImages} images, ${d.convertAudio} sounds.`));
+		`To convert: ${d.convertImages} images, ${d.convertAudio} sounds.`,
+		d.compileScripts ? ` To compile: ${d.compileScripts} scripts.` : ''));
 	const outs = el('div', { class: 'outputs' });
 	for (const o of plan.outputs) {
 		const st = hostStatus[o.platform];
@@ -529,6 +531,13 @@ function showJob(st) {
 			el('div', { class: 'what' }, el('b', {}, 'Media'), ` ${m.images} images and ${m.sounds} sounds converted`,
 				m.fromCache ? ` (${m.fromCache} from earlier builds)` : '', `: ${formatSize(m.bytesBefore)} → ${formatSize(m.bytesAfter)}`,
 				m.rewrittenScripts ? `; names rewritten in ${m.rewrittenScripts} scripts` : '')));
+	}
+	if (r.scripts) {
+		const sc = r.scripts;
+		d.results.append(el('div', { class: 'result ok' }, el('span', { class: 'mark' }, '✓'),
+			el('div', { class: 'what' }, el('b', {}, 'Scripts'), ` ${sc.compiled} compiled to bytecode`,
+				sc.kept.length ? `, ${sc.kept.length} kept as source (below)` : ''),
+			sc.log ? el('button', { onclick: () => app.post('/api/release/reveal', { path: sc.log }).catch(() => {}) }, 'Log') : null));
 	}
 	for (const n of r.notes || []) d.results.append(el('div', { class: 'result' }, el('span', { class: 'mark' }, 'i'), el('div', { class: 'what' }, n)));
 	if (r.outputFolder) d.results.append(el('div', {}, el('button', { onclick: () => app.post('/api/release/reveal', { path: r.outputFolder }).catch(() => {}) }, 'Open the output folder')));

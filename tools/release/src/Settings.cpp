@@ -131,6 +131,7 @@ Json defaultSettings(const Project& p)
 		{ "exclude", strings({ "*.psd", "*.clip", "*.bak", "*.tmp", "Thumbs.db", "desktop.ini", ".DS_Store" }) },
 		{ "extraFiles", Json::array() },
 		{ "plugins", Json("all") },
+		{ "compileScripts", Json(true) },
 	}));
 	s.set("media", obj({
 		{ "audio", obj({
@@ -298,6 +299,8 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	if (!oneOf(plugins, { "all", "linked" })) error("contents.plugins", "plugins is \"all\" or \"linked\"");
 	if (!p.frameworkInData && p.framework.empty())
 		error("contents.framework", "The game has no data/system and there is no template/system next to data/ to copy in");
+	if (flag(s, "contents.compileScripts") && flag(s, "engine.debug"))
+		warn("contents.compileScripts", "Errors in compiled scripts show no line numbers: a build for testers is easier to debug with the scripts as they are");
 	const Json& extra = at(s, "contents.extraFiles");
 	for (const auto& e : extra.elements())
 		if (!exists(e.asStr())) error("contents.extraFiles", e.asStr() + " doesn't exist");
