@@ -9,6 +9,7 @@
 - A compiled script plays without its `.ks`.
 - The sample's demos and demo menu play compiled.
 - **kagex-release compiles scenarios** (Scenarios > *Compile*, `scenes.compile`, on when the game has a `!scnlist.txt`): it compiles the listed scripts with this computer's engine and ships the compiled files without the scripts. With a key (Scenarios > *Key*, *New key*, `--cli keygen`, or `KAGEX_SCENES_KEY`) the `.scn` files are encrypted (XChaCha20-Poly1305) and the key is written into each package's scnfile plugin; a platform whose engine has no plugin then fails to build. The same files and key give the same bytes, so a patch holds only the scripts that changed (`doc/scn.txt`, "Releases").
+- kagex-release uses engine packages in an `engines/` folder next to the game's `data/` before downloading, and its check says whether scenarios will compile to `.scn` or `.scn.json` and marks a platform whose engine can't play `.scn` files.
 - `tools/smoketest.py --packaged` runs the sample's steps on a desktop package (kagex-release's build of the sample) with the data it holds.
 
 ### Changed

@@ -825,12 +825,34 @@ def scenes_tests(exe, proj, args):
         except ValueError:
             return None, out[-2000:]
 
+    # engine packages in engines/ next to data/ are used without --engines, and check and plan
+    # say which format the scenarios compile to
+    has_plugin = engine_has_scnfile(args.engines, host)
+    link = proj / "engines"
+    try:
+        os.symlink(Path(args.engines).resolve(), link, target_is_directory=True)
+    except OSError:
+        link = None   # Windows without the right to make links
+    if link:
+        code, out = run(exe, "--cli", "check", str(rel), "--json")
+        st = [p for p in json.loads(out)["platforms"] if p["id"] == host]
+        notes = " ".join(st[0]["notes"]) if st else ""
+        engine = " ".join(r["detail"] for r in st[0]["requirements"] if r["name"] == "Engine") if st else ""
+        code, out = run(exe, "--cli", "plan", str(rel), "--json")
+        fmt = json.loads(out)["data"]["scenes"].get("format")
+        want = ".scn" if has_plugin else ".scn.json"
+        said = ("compile to .scn " in notes) if has_plugin else ("no scnfile plugin" in notes)
+        # the engine is known when it's a folder, or a zip a build has unpacked
+        step("scenes: engines/ next to data/ is used, and check and plan name the format",
+             "engines" in engine and (fmt == "" or (fmt == want and said)), "%s | %s | %s" % (engine, fmt, notes))
+        link.unlink()
+
     base = "kagex-sample-%s-" % s["identity"]["version"]
     folder = proj / "release" / (base + host)
     data = folder / "data" if host != "macos" else next(folder.glob("*.app")) / "Contents" / "Resources" / "data"
     listed = [l.strip() for l in (proj / "data" / "scenario" / "!scnlist.txt").read_text(encoding="utf-8").splitlines()
               if l.strip() and not l.strip().startswith("#")]
-    if engine_has_scnfile(args.engines, host):
+    if has_plugin:
         r, err = build()
         step("scenes: an encrypted build", r is not None and r.get("ok"), err or (r or {}).get("error", "") + " " +
              "; ".join(o.get("error", "") for o in (r or {}).get("outputs", [])))

@@ -236,6 +236,11 @@ public:
 			}
 			if (chosen_.empty() && str(s_, "output.patchFrom").empty()) throw Failure{ "No platform to build" };
 
+			// engine packages in engines/ next to data/ (or --engines, KAGEX_RELEASE_ENGINES)
+			// come before the cache
+			o_.engines = localEngines(o_.engines, p_.root);
+			if (!o_.engines.empty()) pr_.log("Engine packages from " + krt::fromPath(o_.engines));
+
 			out_ = fs::weakly_canonical(p_.root / krt::toPath(str(s_, "output.folder")));
 			work_ = out_ / ".work";
 			mustRemove(work_);

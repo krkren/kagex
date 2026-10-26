@@ -93,6 +93,54 @@ bool download(const std::string& url, const fs::path& file, krt::Progress& progr
 	return true;
 }
 
+fs::path localEngines(const fs::path& dir, const fs::path& projectRoot)
+{
+	if (!dir.empty()) return dir;
+	const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
+	if (!env.empty()) return krt::toPath(env);
+	std::error_code ec;
+	if (!projectRoot.empty() && fs::is_directory(projectRoot / "engines", ec)) return projectRoot / "engines";
+	return {};
+}
+
+fs::path engineIfPresent(const std::string& platform, bool debug, const fs::path& localDir)
+{
+	std::error_code ec;
+	if (debug && !hasDebugEngine(platform)) debug = false;
+	const std::string asset = engineAssetName(platform, debug);
+	const std::string stem = asset.substr(0, asset.size() - 4);
+	fs::path local = localDir;
+	if (local.empty()) {
+		const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
+		if (!env.empty()) local = krt::toPath(env);
+	}
+	if (!local.empty()) {
+		if (fs::is_regular_file(local / stem / "engine.json", ec)) return local / stem;
+		if (fs::is_regular_file(local / asset, ec)) {
+			// a zip: known once unpacked (and the unpacked copy as new as the zip)
+			const fs::path dest = cacheDir() / "engines" / "local" / stem;
+			if (fs::is_regular_file(dest / "engine.json", ec) &&
+			    fs::last_write_time(dest / "engine.json", ec) >= fs::last_write_time(local / asset, ec))
+				return dest;
+			return {};
+		}
+	}
+	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / stem;
+	if (fs::is_regular_file(cached / "engine.json", ec)) return cached;
+	return {};
+}
+
+bool engineHasScnfile(const fs::path& engineDir)
+{
+	std::error_code ec;
+	for (fs::recursive_directory_iterator it(engineDir, ec), end; it != end; it.increment(ec)) {
+		if (ec) break;
+		const std::string n = krt::fromPath(it->path().filename());
+		if (n == "libscnfile.so" || n == "scnfile.dll" || n == "libscnfile.dylib") return true;
+	}
+	return false;
+}
+
 bool ensureEngine(const std::string& platform, bool debug, const fs::path& localDir, krt::Progress& progress,
                   fs::path& dir, std::string& error)
 {

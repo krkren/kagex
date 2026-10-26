@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 
+#include "Engine.h"
+#include "Host.h"
 #include "Subprocess.h"
 #include "krt/app/Text.h"
 
@@ -260,6 +262,13 @@ Json makePlan(const Json& s, const Project& p)
 	scenes.set("compile", Json(compile));
 	scenes.set("scripts", Json(listed));
 	scenes.set("encrypted", Json(compile && (!str(s, "scenes.keyFile").empty() || !getEnv("KAGEX_SCENES_KEY").empty())));
+	// .scn with the scnfile plugin in this computer's engine, else .scn.json; "" when that
+	// engine isn't here yet
+	{
+		const std::string host = hostId();
+		const fs::path engine = engineIfPresent(host, flag(s, "engine.debug"), localEngines({}, p.root));
+		scenes.set("format", Json(engine.empty() ? std::string() : engineHasScnfile(engine) ? ".scn" : ".scn.json"));
+	}
 	data.set("scenes", std::move(scenes));
 	plan.set("data", std::move(data));
 

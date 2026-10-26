@@ -28,6 +28,18 @@ std::string engineAssetName(const std::string& platform, bool debug);
 /// Whether a debug engine is published for the platform (Windows and Linux)
 bool hasDebugEngine(const std::string& platform);
 
+/// The folder of engine packages to use before the cache: dir when given (--engines), else
+/// KAGEX_RELEASE_ENGINES, else engines/ next to the game's data/ when there is one; else empty
+std::filesystem::path localEngines(const std::filesystem::path& dir, const std::filesystem::path& projectRoot);
+
+/// The unpacked engine for platform when it's here already (unpacked in localDir, or in the
+/// cache), without downloading or unpacking anything; empty otherwise
+std::filesystem::path engineIfPresent(const std::string& platform, bool debug, const std::filesystem::path& localDir);
+
+/// Whether an unpacked desktop engine (Windows, Linux, Steam, macOS) has the scnfile plugin,
+/// which compiles and plays scenarios as .scn files
+bool engineHasScnfile(const std::filesystem::path& engineDir);
+
 /// The unpacked engine for platform. localDir may be empty
 bool ensureEngine(const std::string& platform, bool debug, const std::filesystem::path& localDir,
                   krt::Progress& progress, std::filesystem::path& dir, std::string& error);

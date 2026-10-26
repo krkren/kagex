@@ -94,7 +94,9 @@ folder already has are left out and every script compiled again.
 
 With the engine's scnfile plugin the files are .scn, and every platform's engine needs the
 plugin to play them: a platform whose engine lacks it fails to build. Without the plugin
-they're .scn.json, which every engine reads.
+they're .scn.json, which every engine reads. The tool's check says which it will be. The
+engines the tool downloads don't have the plugin yet: engine packages that do go in engines/
+next to data/, which the tool uses before its downloads.
 
 A key encrypts the .scn files (Scenarios > Key, scenes.keyFile; or the variable
 KAGEX_SCENES_KEY, 64 hexadecimal digits, which wins). New key in the window, or

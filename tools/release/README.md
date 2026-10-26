@@ -104,7 +104,9 @@ package, and the game plays the compiled files (`doc/scn.txt`).
 - **The scnfile plugin.** An engine with the scnfile plugin compiles to `.scn`, and then every
   platform's engine needs the plugin to play them: a platform whose engine package lacks it
   fails to build. Without the plugin the scripts compile to `.scn.json`, which every engine
-  reads (in plain text).
+  reads (in plain text). The check says which it will be (a note on this computer's platform,
+  and *To compile: ... to .scn* in the plan) once the engine is here, and marks a platform whose
+  engine lacks the plugin as one that can't be built.
 - **Encryption.** With a key (*Key*, `scenes.keyFile`, or `KAGEX_SCENES_KEY` set to its 64
   hexadecimal digits, which wins), the `.scn` files are encrypted (XChaCha20-Poly1305, scnfile's
   `docs/format.md`) and the key is written into each package's copy of the plugin, before
@@ -147,7 +149,9 @@ The engines come from the KAGEX release of the tool's version: `kagex_engine_<pl
 and the release's APK; for iOS by `scripts/ios-engine.py` from krkrz_ios's unsigned device build
 and its Simulator build. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
 them instead (zips, or unpacked into folders of the same names), for working offline;
-`KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from.
+`KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from. Without either, an `engines/`
+folder next to the game's `data/` is used when there is one (engine packages of your own, such
+as ones with the scnfile plugin).
 
 ### release.json
 

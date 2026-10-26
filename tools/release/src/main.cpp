@@ -239,7 +239,8 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		            humanSize(d["bytes"].asInt()).c_str(), (long long)d["excluded"].asInt(), d["framework"].asStr().c_str());
 		std::printf("Converted: %lld images, %lld sounds\n", (long long)d["convertImages"].asInt(), (long long)d["convertAudio"].asInt());
 		if (d["scenes"]["compile"].asBool())
-			std::printf("Compiled: %lld scripts in !scnlist.txt%s\n", (long long)d["scenes"]["scripts"].asInt(),
+			std::printf("Compiled: %lld scripts in !scnlist.txt%s%s\n", (long long)d["scenes"]["scripts"].asInt(),
+			            d["scenes"]["format"].asStr().empty() ? "" : (" to " + d["scenes"]["format"].asStr()).c_str(),
 			            d["scenes"]["encrypted"].asBool() ? ", encrypted" : "");
 		for (const auto& out : plan["outputs"].elements()) {
 			std::printf("%s:\n", out["title"].asStr().c_str());

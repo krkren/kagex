@@ -4,6 +4,7 @@
 #include <regex>
 #include <set>
 
+#include "Engine.h"
 #include "Media.h"
 #include "Scenes.h"
 #include "Subprocess.h"
@@ -353,6 +354,11 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			if (!ec && !rel.empty() && *rel.begin() != "..") error(field, "The key can't be inside data/: it would be packed into the game");
 		}
 		if (!compile) warn(field, "The key is only used for compiled scenarios");
+		// this computer's engine compiles them: without the scnfile plugin, to .scn.json
+		const fs::path engine = engineIfPresent(hostPlatform(), flag(s, "engine.debug"), localEngines({}, p.root));
+		if (compile && !engine.empty() && !engineHasScnfile(engine))
+			error(field, "This computer's engine has no scnfile plugin, so the scenarios would compile to .scn.json, which can't be encrypted. "
+			             "Engine packages with the plugin go in engines/ next to data/ (" + krt::fromPath(engine) + ")");
 	} else if (compile) {
 		warn("scenes.keyFile", "Without a key the compiled scenarios aren't encrypted: a PSB viewer opens them");
 	}

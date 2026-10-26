@@ -336,7 +336,7 @@ function renderPlan(body) {
 	body.append(el('p', {},
 		`Game files: ${d.files} (${formatSize(d.bytes)}), ${d.excluded} left out. Framework: ${d.framework}. `,
 		`To convert: ${d.convertImages} images, ${d.convertAudio} sounds.`,
-		d.scenes?.compile ? ` To compile: ${d.scenes.scripts} scripts${d.scenes.encrypted ? ', encrypted' : ''}.` : ''));
+		d.scenes?.compile ? ` To compile: ${d.scenes.scripts} scripts${d.scenes.format ? ' to ' + d.scenes.format : ''}${d.scenes.encrypted ? ', encrypted' : ''}.` : ''));
 	const outs = el('div', { class: 'outputs' });
 	for (const o of plan.outputs) {
 		const st = hostStatus[o.platform];
