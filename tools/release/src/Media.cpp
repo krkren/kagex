@@ -465,6 +465,12 @@ bool frameworkFindsConvertedImages(const fs::path& framework)
 	return body.find("global.Layer.SupportedExtensions") != std::string::npos || body.find("\".tlg\"") != std::string::npos;
 }
 
+bool frameworkSupportsSigning(const fs::path& framework)
+{
+	std::error_code ec;
+	return fs::is_regular_file(framework / "SignatureCheck.tjs", ec);
+}
+
 bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress, MediaResult& result, std::string& error)
 {
 	const std::string audioTo = str(s, "media.audio.convert");

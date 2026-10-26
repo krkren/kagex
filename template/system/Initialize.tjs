@@ -68,6 +68,32 @@ Scripts.exec(@"@set (PACKED=${inXP3archivePacked})");
 
 
 
+// Signed-build check (a kagex-release build with signing on carries a public key). Loaded here,
+// before the auto paths and patches, so it can gate their mounting. In a signed build this also
+// refuses REPL / startup options straight away (SignatureCheck.tjs).
+
+{
+
+	var sigNames = [ "SignatureCheck.tjs", "system/SignatureCheck.tjs", "../template/system/SignatureCheck.tjs" ];
+
+	for (var i = 0; i < sigNames.count; i++) {
+
+		if (Storages.isExistentStorage(sigNames[i])) { Scripts.execStorage(sigNames[i]); break; }
+
+	}
+
+}
+
+if (typeof global.KAGSignatureInit != "undefined") KAGSignatureInit();
+
+else global.KAGSigned = false;
+
+// A refused option (or an unreadable key) in a signed build: stop the rest of start-up now.
+// System.terminate() is asynchronous, so without this the remainder would still run first.
+if (global.KAGSignatureAborted === true) return;
+
+
+
 if (!debugWindowEnabled) {
 
 	/*
@@ -192,6 +218,8 @@ function useArchiveIfExists(name)
 
 		archive_exists[name.toLowerCase()] = true;
 
+		if (global.KAGSigned === true) { KAGSignedUseArchive(name, arcname); return; }
+
 		Storages.addAutoPath(arcname + ">");
 
 	}
@@ -232,7 +260,13 @@ function addArchiveWithSubFolder(name, arr*)
 
 		Storages.addAutoPath(name    + "/" + sub + "/");
 
-		Storages.addAutoPath(arcname + ">" + sub + "/") if (isexist);
+		if (isexist) {
+
+			if (global.KAGSigned === true) KAGSignedDeferSubPath(arcname, arcname + ">" + sub + "/");
+
+			else Storages.addAutoPath(arcname + ">" + sub + "/");
+
+		}
 
 	}
 
@@ -312,7 +346,7 @@ if (debugWindowEnabled) {
 
 }
 
-Storages.addAutoPath(System.exePath + "video/"); // video/ under exePath
+Storages.addAutoPath(System.exePath + "video/") if (global.KAGSigned !== true); // video/ under exePath (a signed build ignores a loose folder beside the engine)
 
 Storages.addAutoPath("data/"); // data folder
 
@@ -403,13 +437,13 @@ for(var i = 2; ; i++)
 
 	// prioritize loading them
 
-	if(Storages.isExistentStorage(System.exePath + "patch" + i + ".xp3"))
+	var pstore = System.exePath + "patch" + i + ".xp3";
 
-		Storages.addAutoPath(System.exePath + "patch" + i + ".xp3>");
+	if (!Storages.isExistentStorage(pstore)) break;
 
-	else
+	if (global.KAGSigned === true) KAGSignedDeferPatchXp3(pstore);
 
-		break;
+	else Storages.addAutoPath(pstore + ">");
 
 }
 
@@ -537,8 +571,17 @@ KAGLinkPlugin("plugin/clipfile.dll") if typeof global.CLIP == "undefined";
 // others, such as DLC it knows the names of, with KAGMountPatchZip(storage) at any time; files
 // loaded before that (this script, Storages.tjs) can't be patched.
 KAGLinkPlugin("plugin/minizip.dll") if typeof Storages.mountZip == "undefined";
+
+// Signatures (the sigcheck plugin, Window.checkSignature). Only a signed build needs it, and only
+// the desktop engines have it, so link it just for a signed build (SignatureCheck.tjs verifies the
+// archives, the engine and the patches before kag.process at the very end).
+KAGLinkPlugin("plugin/sigcheck.dll") if (global.KAGSigned === true && typeof global.Window.checkSignature == "undefined");
 var KAGPatchZips = [];  // the zip files mounted, in order
 function KAGMountPatchZip(storage) {
+	if (global.KAGSigned === true && global.KAGSignedMountOK !== true) {
+		dm("Refused to mount an unverified patch in a signed build: " + storage + " (signed DLC uses KAGMountSignedPatchZip)");
+		return false;
+	}
 	if (typeof Storages.mountZip == "undefined" || typeof global.Unzip == "undefined") {
 		dm("Not mounted (no minizip plugin): " + storage);
 		return false;
@@ -580,7 +623,11 @@ function KAGMountPatchZip(storage) {
 	var places = [System.exePath];
 	places.add(System.dataPath) if System.dataPath != System.exePath;
 	for (var p = 0; p < places.count; p++) {
-		for (var i = 1; KAGMountPatchZip(places[p] + "patch" + (i == 1 ? "" : (string)i) + ".zip"); i++) {}
+		for (var i = 1; ; i++) {
+			var zstore = places[p] + "patch" + (i == 1 ? "" : (string)i) + ".zip";
+			if (global.KAGSigned === true) { if (!KAGSignedDeferPatchZip(zstore)) break; }
+			else { if (!KAGMountPatchZip(zstore)) break; }
+		}
 	}
 }
 
@@ -1103,4 +1150,14 @@ if (typeof global.kag !== "undefined") {
         global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);
 }
 
-kag.process("first.ks");
+// In a signed build, verify the archives, the engine files and the patches first, then start the
+// game from the completion (the check is asynchronous and can't be waited on inline). An unsigned
+// build starts straight away. See SignatureCheck.tjs.
+if (global.KAGSigned === true && typeof global.KAGSignatureVerifyAndStart != "undefined") {
+	if (typeof kag.checkSignature == "undefined")
+		KAGSignatureQuit("The signature plugin (sigcheck) is missing, so this signed build can't verify itself.");
+	else
+		KAGSignatureVerifyAndStart(function() { kag.process("first.ks"); });
+} else {
+	kag.process("first.ks");
+}

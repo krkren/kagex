@@ -51,12 +51,20 @@ add_executable(kagex-release
     src/Engine.cpp
     src/Build.cpp
     src/Media.cpp
+    src/Sign.cpp
 )
 find_package(ZLIB REQUIRED)
 # dr_flac (FLAC sources; header only)
 find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h" REQUIRED)
-target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS})
-target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop ZLIB::ZLIB)
+# libtomcrypt / libtommath provide no CMake config (as in krkrz_dev's sigcheck / krt_sig), so find
+# them by hand; used by src/Sign.cpp to derive a public key from a private key.
+find_path(LIBTOMCRYPT_INCLUDE_DIR tomcrypt.h REQUIRED)
+find_library(LIBTOMCRYPT_LIBRARY tomcrypt REQUIRED)
+find_library(LIBTOMMATH_LIBRARY tommath REQUIRED)
+target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS} ${LIBTOMCRYPT_INCLUDE_DIR})
+target_compile_definitions(kagex-release PRIVATE LTM_DESC)
+target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop krt_sig
+    ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
 target_compile_definitions(kagex-release PRIVATE KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     # the exe's icon and version info (Windows resource APIs)

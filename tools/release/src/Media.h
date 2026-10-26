@@ -49,4 +49,8 @@ bool frameworkPlaysOpus(const std::filesystem::path& framework);
 /// converted (.tlg, .jpg) hover, pressed and focus images never showed
 bool frameworkFindsConvertedImages(const std::filesystem::path& framework);
 
+/// Whether a framework folder can verify signatures (it has SignatureCheck.tjs): the signing
+/// support added in KAGEX 0.9.0. A signed build needs it, or it would ship with no check.
+bool frameworkSupportsSigning(const std::filesystem::path& framework);
+
 } // namespace kr
