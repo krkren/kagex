@@ -31,6 +31,13 @@ class HistoryLayer extends Layer
     var actionMark = void;
     var actionMarkOver = void;
     var actionIndent = 10;
+    // Going back to a message (compiled scenes, KAGEnvPlayer.histMark): a mark left of the
+    // voice mark on the message's first line, which runs its jumpInfo when clicked
+    var jumpMark = void;
+    var jumpMarkOver = void;
+    var jumpIndent = 8;
+    var jumpInfo = []; // What each line's mark runs (Ring buffer, like actionInfo)
+    var jumpHover = void; // The jumpInfo index whose mark is under the mouse
 
     var topPageButton  = void;
     var prevPageButton = void;
@@ -147,6 +154,8 @@ class HistoryLayer extends Layer
         invalidate baseImage if baseImage !== void;
         invalidate actionMark if actionMark !== void;
         invalidate actionMarkOver if actionMarkOver !== void;
+        invalidate jumpMark if jumpMark !== void;
+        invalidate jumpMarkOver if jumpMarkOver !== void;
 
         invalidate topPageButton if topPageButton !== void;
 		invalidate prevPageButton if prevPageButton !== void;
@@ -165,6 +174,8 @@ class HistoryLayer extends Layer
 		// Clear contents
 		lineStart = [];
 		actionInfo = [];
+		jumpInfo = [];
+		jumpHover = void;
 		dataStart = 0;
 		dataLines = 0;
 		dataPos = 0;
@@ -208,6 +219,7 @@ class HistoryLayer extends Layer
 			(dic.lineStart = []).assignStruct(lineStart);
 			(dic.actionInfo = []).assignStruct(actionInfo);
 			(dic.data = []).assignStruct(data);
+			(dic.jumpInfo = []).assignStruct(jumpInfo);
 		}
 		dic.dataStart = dataStart;
 		dic.dataPos = dataPos;
@@ -228,6 +240,7 @@ class HistoryLayer extends Layer
 		lineStart.assignStruct(dic.lineStart);
 		actionInfo.assignStruct(dic.actionInfo);
 		data.assignStruct(dic.data);
+		jumpInfo.assignStruct(dic.jumpInfo) if dic.jumpInfo !== void;
 		dataStart = dic.dataStart;
 		dataPos = dic.dataPos;
 		dataPages = dic.dataPages;
@@ -280,6 +293,14 @@ class HistoryLayer extends Layer
         actionMarkOver = new global.Layer(window, this);
         actionMarkOver.loadImages("log_play_over");
         actionMarkOver.setSizeToImageSize();
+
+        jumpMark = new global.Layer(window, this);
+        jumpMark.loadImages("log_jump_normal");
+        jumpMark.setSizeToImageSize();
+
+        jumpMarkOver = new global.Layer(window, this);
+        jumpMarkOver.loadImages("log_jump_over");
+        jumpMarkOver.setSizeToImageSize();
         
         topPageButton  = new LButtonLayer(window, this);
         prevPageButton = new LButtonLayer(window, this);
@@ -393,6 +414,75 @@ class HistoryLayer extends Layer
 		n += dataStart;
 		if(n >= maxPages) n -= maxPages;
 		return lineStart[n][m];
+	}
+
+	// The line being written starts a message the game can go back to: exp is what its mark
+	// runs (KAGEnvPlayer.histMark and rebuildBacklog). Lines a line at a time, across, only
+	function markJump(exp)
+	{
+		if(everypage || verticalView) return;
+		jumpInfo[dataPos] = exp;
+	}
+
+	// The jumpInfo index of display line n (n counted from the first line kept)
+	function jumpIndex(n)
+	{
+		n += dataStart;
+		if(n >= maxLines) n -= maxLines;
+		return n;
+	}
+
+	// Where the going-back marks are: left of the voice marks
+	property jumpMarkLeft
+	{
+		getter() { return marginL - actionIndent - (actionMark !== void ? actionMark.width : 0) - jumpIndent - jumpMark.width; }
+	}
+
+	function drawJumpMark(n)
+	{
+		if(everypage || verticalView || jumpMark === void) return;
+		var i = jumpIndex(n + dispStart);
+		if(jumpInfo[i] === void) return;
+		var img = jumpHover === i ? jumpMarkOver : jumpMark;
+		operateRect(jumpMarkLeft, n*lineHeight + controlHeight + marginT, img, 0, 0, img.width, img.height);
+	}
+
+	// The jumpInfo index whose mark is at x, y (void: none)
+	function getJumpFromPos(x, y)
+	{
+		if(everypage || verticalView || jumpMark === void) return void;
+		if(x < jumpMarkLeft || x >= jumpMarkLeft + jumpMark.width) return void;
+		var line = (y - controlHeight - marginT) \ lineHeight;
+		if(line < 0 || y < controlHeight + marginT) return void;
+		if(dataLines <= dispLines ? line >= dataLines : line >= dispLines) return void;
+		var i = jumpIndex(line + dispStart);
+		return jumpInfo[i] !== void ? i : void;
+	}
+
+	// Redraws the line whose mark has jumpInfo index i (when it's on screen)
+	function redrawJumpLine(i)
+	{
+		if(i === void) return;
+		var max = (dataLines <= dispLines) ? dataLines : dispLines;
+		for(var n = 0; n < max; n++)
+		{
+			if(jumpIndex(n + dispStart) == i)
+			{
+				clearBack(n);
+				drawLine(n);
+				return;
+			}
+		}
+	}
+
+	function setJumpHover(i)
+	{
+		if(jumpHover === i) return;
+		var old = jumpHover;
+		jumpHover = i;
+		redrawJumpLine(old);
+		redrawJumpLine(i);
+		cursor = i !== void ? window.cursorPointed : window.cursorDefault;
 	}
 
 	function getActionInfo(n)
@@ -559,6 +649,7 @@ class HistoryLayer extends Layer
 			dataPos++;
 			if(dataPos >= maxLines) dataPos=0;
 			data[dataPos] = void;
+			jumpInfo[dataPos] = void;
 			lineStart[dataPos] = indentPos;
 			limitPos = limitPos_org - indentPos;
 			relinePos = relinePos_org - indentPos;
@@ -636,6 +727,7 @@ class HistoryLayer extends Layer
 		lastAction = currentAction;
 
 		antialiased = window.chDefaultAntialiased;
+		jumpHover = void;
 		clearBack();
 
 		if(everypage)
@@ -774,6 +866,7 @@ class HistoryLayer extends Layer
         }
         
         drawActionMark(n,over);
+        drawJumpMark(n);
     }
 
 	function drawPage()
@@ -1120,7 +1213,12 @@ class HistoryLayer extends Layer
 
 	function onMouseDown(x, y, button)
 	{
+		var jump = button == mbLeft ? getJumpFromPos(x, y) : void;
 		if(button == mbRight) hide();
+		else if(jump !== void)
+		{
+			Scripts.eval(jumpInfo[jump]);
+		}
 		else if(button == mbLeft)
 		{
 			var n = getActionInfoFromPos(x,y);
@@ -1135,6 +1233,7 @@ class HistoryLayer extends Layer
 
 	function onMouseMove(x, y, shift)
 	{
+		setJumpHover(getJumpFromPos(x, y));
 		var n = getActionInfoFromPos(x,y);
 		n = (n === void) ? 0 : n.id;
 		if(lastHighlightedActionID != n)
@@ -1149,6 +1248,7 @@ class HistoryLayer extends Layer
 
 	function onMouseLeave()
 	{
+		setJumpHover(void);
 		clearActionHighlights();
 		super.onMouseLeave(...);
 	}

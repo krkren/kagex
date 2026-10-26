@@ -320,6 +320,16 @@ def ic_repeat(c, cx, cy, s, col):
     c.polygon([(ex - s * 0.2, ey - s * 0.08), (ex + s * 0.13, ey - s * 0.1), (ex + s * 0.02, ey + s * 0.22)], col)
 
 
+def ic_back(c, cx, cy, s, col):
+    """an arrow curving back over the top: going back to an earlier line"""
+    r = s * 0.36
+    ox, oy = cx + s * 0.04, cy + s * 0.08
+    pts = [(ox + r * math.cos(a), oy + r * math.sin(a)) for a in np.linspace(math.radians(40), math.radians(-180), 28)]
+    c.stroke(pts, s * 0.12, col)
+    ex, ey = pts[-1]
+    c.polygon([(ex - s * 0.2, ey - s * 0.04), (ex + s * 0.2, ey - s * 0.04), (ex, ey + s * 0.24)], col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -402,7 +412,7 @@ def make_logo():
 
 
 # --- the message window ----------------------------------------------------------------
-MSG_BUTTONS = ["save", "load", "skip", "auto", "log", "config", "exit", "hide"]
+MSG_BUTTONS = ["save", "load", "back", "skip", "auto", "log", "config", "exit", "hide"]
 
 
 def make_message():
@@ -634,11 +644,18 @@ def make_history():
         for y in (18, 24, 30):
             t.rrect((14, y - 1, 29, y + 1), 1, fill=rgba(border))
         t.save(os.path.join(IMAGE, "log_bar_%s.png" % st))
+    # the marks left of a line, a line high (MyHistoryLayer.tjs: lineHeight 42): playing its
+    # voice, and going back to the message (compiled scenes)
     for st, fill, fg in (("normal", VIOLET, WHITE), ("over", WHITE, VIOLET)):
-        p = Canvas(58, 58)
-        p.ellipse((3, 3, 55, 55), fill=rgba(fill), outline=rgba(WHITE if st == "normal" else VIOLET), width=3)
-        ic_play(p, 31, 29, 22, rgba(fg))
+        p = Canvas(42, 42)
+        p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(WHITE if st == "normal" else VIOLET), width=2.5)
+        ic_play(p, 22.5, 21, 16, rgba(fg))
         p.save(os.path.join(IMAGE, "log_play_%s.png" % st))
+    for st, fill, fg in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
+        p = Canvas(42, 42)
+        p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(VIOLET if st == "normal" else WHITE), width=2.5)
+        ic_back(p, 21, 21, 22, rgba(fg))
+        p.save(os.path.join(IMAGE, "log_jump_%s.png" % st))
 
 
 # --- thumbnails drawn from the upscaled art --------------------------------------------

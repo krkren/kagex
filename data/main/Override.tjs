@@ -70,6 +70,22 @@ function setButtonMode(kag, name, mode)
 }
 
 /**
+ * Whether BACK can go back a message (compiled scenes: KAGEnvPlayer.rollback)
+ */
+function canRollBack()
+{
+    return typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.canRollback;
+}
+
+/**
+ * BACK: the message before the one on screen, as it was
+ */
+function rollBack()
+{
+    if (canRollBack()) world_object.player.rollback(true);
+}
+
+/**
  * Change Mode
  * Called from MainWindow when system state changes
  * @param kag KAG window
@@ -92,6 +108,7 @@ function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, 
     setButtonEnabled(kag, "msg_log",  kag.showHistoryMenuItem.enabled);
     setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
     setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
+    setButtonEnabled(kag, "msg_back", !modal && kag.inStable && canRollBack());
 
     // Sync config menu
     if (typeof kag.configMenuItem != "undefined") {

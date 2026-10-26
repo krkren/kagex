@@ -221,6 +221,32 @@ class StorageData {
 }
 
 /**
+ * Whether two values hold the same data: dictionaries and arrays member by member
+ */
+function scnSameStruct(a, b)
+{
+	if (typeof a != typeof b) return false;
+	if (typeof a != "Object") return a === b;
+	if (a === b) return true;
+	if (a === null || b === null) return false;
+	if (a instanceof "Array") {
+		if (!(b instanceof "Array") || a.count != b.count) return false;
+		for (var i = 0; i < a.count; i++) if (!scnSameStruct(a[i], b[i])) return false;
+		return true;
+	}
+	if (a instanceof "Dictionary") {
+		if (!(b instanceof "Dictionary")) return false;
+		var ka = [], kb = [];
+		ka.assign(a);
+		kb.assign(b);
+		if (ka.count != kb.count) return false;
+		for (var i = 0; i < ka.count; i += 2) if (!scnSameStruct(ka[i + 1], b[ka[i]])) return false;
+		return true;
+	}
+	return false;
+}
+
+/**
  * Scene playback specialized player
  * Plays pre-parsed special scenario data
  *
@@ -285,6 +311,7 @@ class KAGEnvPlayer
 		if (parser !== void) {
 			invalidate parser;
 		}
+		invalidate laterTrigger if laterTrigger !== void;
 	}
 
 	function errorCmd() {
@@ -1047,6 +1074,8 @@ class KAGEnvPlayer
 			if (point !== void) {
 				goToPoint(point);
 			}
+			// the backlog of the history the save had (saves don't keep KAG's own)
+			rebuildBacklog();
 			// the conductor stands after [sceneplay]: carry on playing
 			addTagSimple("sceneplay");
 			return true;
@@ -1172,7 +1201,10 @@ class KAGEnvPlayer
 		var startNo = 0;
 		if (histories.count > 0) {
 			var last = lastHistory;
-			if (last.text === void && curSceneName == last.scene && idx == last.idx + last.num) {
+			// a block keeps the flags of its start, so going back to a text in it (goToHistory)
+			// gives the flags it had: a change of flags starts a new block
+			if (last.text === void && curSceneName == last.scene && idx == last.idx + last.num &&
+				scnSameStruct(last.flags, kag.flags)) {
 				last.num++;
 				return;
 			}
@@ -1201,7 +1233,7 @@ class KAGEnvPlayer
 			var last = lastHistory;
 			startNo = last.startNo + last.num;
 		}
-		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice:" + text, num:1, flags:selectFlags]);
+		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice: " + text, num:1, flags:selectFlags]);
 	}
 
 	/**
@@ -1360,6 +1392,185 @@ class KAGEnvPlayer
 				}
 			}
 		}
+	}
+
+	// -------------------------------------------------------------------
+	// Going back: a message at a time (the Back button), or to a message in the backlog
+	// -------------------------------------------------------------------
+
+	// Whether the text at history position pos goes on with the message before it
+	function historyContinues(pos) {
+		var d = getHistoryData(pos);
+		return d !== void && d.flag !== void && (+d.flag & TEXTFLAG_CONT) != 0;
+	}
+
+	// The history position the message at pos starts at
+	function historyMessageStart(pos) {
+		while (pos > 0 && historyContinues(pos)) pos--;
+		return pos;
+	}
+
+	/**
+	 * Where going back one message goes: the start of the message before the one on screen
+	 * @return a history position, or void when there's none
+	 */
+	function getRollbackPoint() {
+		if (!working) return;
+		var pos = historyMessageStart(getHistoryCount() - 1);
+		// at a choice, the message with it shows again
+		if (kag.selectShowing) return pos >= 0 ? pos : void;
+		if (pos <= 0) return;
+		return historyMessageStart(pos - 1);
+	}
+
+	property canRollback {
+		getter() { return getRollbackPoint() !== void; }
+	}
+
+	/**
+	 * Goes back to the message before the one on screen, as it was then (the World, the
+	 * game's flags, the backlog)
+	 * @param later after the event being handled (a button's click: going back clears the
+	 * layers the button is on)
+	 * @return whether there was one
+	 */
+	function rollback(later = false) {
+		var pos = getRollbackPoint();
+		if (pos === void) return false;
+		if (later) goToHistoryLater(pos);
+		else goToHistory(pos);
+		return true;
+	}
+
+	/**
+	 * Goes back to the message at history position pos once the player says so: what the
+	 * backlog's marks run (rebuildBacklog, the scnhistmark tag)
+	 */
+	function jumpFromHistory(pos) {
+		if (!working || pos < 0 || pos >= getHistoryCount()) return;
+		askYesNo("Go back to this line?", "Confirm", function(pos) { goToHistoryLater(pos); } incontextof this, void, pos);
+	}
+
+	// goToHistory once the event being handled is over (the backlog closed first)
+	var laterTrigger, laterPos;
+	function goToHistoryLater(pos) {
+		laterPos = pos;
+		if (laterTrigger === void) laterTrigger = new AsyncTrigger(onGoToHistoryLater, "");
+		laterTrigger.trigger();
+	}
+	function onGoToHistoryLater() {
+		var pos = laterPos;
+		laterPos = void;
+		kag.hideHistory() if kag.historyShowing;
+		if (pos !== void && working && pos < getHistoryCount()) goToHistory(pos);
+	}
+
+	// What the backlog's mark for history position pos runs
+	function backlogJump(pos) {
+		return "world_object.player.jumpFromHistory(" + pos + ")";
+	}
+
+	// The scnhistmark tag, before each message's name: the backlog line it starts on gets a
+	// mark that goes back to it (a backlog without markJump has none)
+	function histMark(elm) {
+		var hl = kag.historyLayer;
+		if (kag.historyWriteEnabled && hl !== void && typeof hl.markJump != "undefined") hl.markJump(backlogJump(+elm.pos));
+		return 0;
+	}
+
+	// The end of a message in the backlog, as [p] and afterpage leave it
+	function endBacklogMessage(hl) {
+		hl.reline();
+		hl.clearAction();
+		hl.reline();
+	}
+
+	// A history text in the backlog: its characters without the font commands, ruby and
+	// escapes, words taken to the next line whole where they don't fit (the backlog's own wrap
+	// breaks text without spaces by character)
+	function storeBacklogText(hl, t) {
+		var l = t.length, word = "", i = 0;
+		var wordWrap = typeof hl.textWidth != "undefined" && typeof hl.relinePos != "undefined" && hl.autoReturn;
+		while (true) {
+			var ch = "";
+			if (i < l) ch = t.charAt(i++);
+			var literal = false;
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch != "\\" && ch != "%" && ch != "[") continue;
+				literal = true;
+			} else if (ch == "%") {
+				// a font command: a size, or a letter
+				if (i < l && /[0-9]/.test(t.charAt(i))) {
+					while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+				} else {
+					i++;
+				}
+				continue;
+			} else if (ch == "[") {
+				// ruby, for the character after it
+				while (i < l && t.charAt(i++) != "]") {}
+				continue;
+			}
+			if (literal || (ch != " " && ch != "\n" && ch != "")) {
+				word += ch;
+				continue;
+			}
+			// the end of a word
+			if (word != "") {
+				if (wordWrap && hl.currentLine != "" && hl.textWidth(word) < hl.relinePos &&
+					hl.textWidth(hl.currentLine + word) >= hl.relinePos) {
+					hl.reline();
+				}
+				for (var j = 0; j < word.length; j++) hl.store(word.charAt(j));
+				word = "";
+			}
+			if (ch == "\n") hl.reline();
+			else if (ch == " ") hl.store(" ");
+			else if (i >= l) break;
+		}
+	}
+
+	/**
+	 * Writes the backlog (kag.historyLayer) again from the history, as playing wrote it, with
+	 * a mark on each message: after a jump or a load, so it ends where the game is
+	 */
+	function rebuildBacklog() {
+		var hl = kag.historyLayer;
+		if (hl === void) return;
+		hl.clear();
+		var count = getHistoryCount();
+		var open = false;
+		for (var pos = 0; pos < count; pos++) {
+			var d = getHistoryData(pos);
+			if (d === void) continue;
+			if (d.flag === void) {
+				// a choice
+				endBacklogMessage(hl) if open;
+				open = false;
+				storeBacklogText(hl, d.text);
+				endBacklogMessage(hl);
+				continue;
+			}
+			var flag = +d.flag;
+			if ((flag & TEXTFLAG_NOTEXT)) continue;
+			if (!(flag & TEXTFLAG_CONT) || !open) {
+				endBacklogMessage(hl) if open;
+				open = true;
+				hl.markJump(backlogJump(pos)) if typeof hl.markJump != "undefined";
+				var name = d.disp != "" ? d.disp : d.name;
+				if (name != "" && typeof global.dispNameFilter != "undefined") name = global.dispNameFilter(name);
+				if (typeof hl.storeName != "undefined") hl.storeName(name);
+				else if (name != "") hl.store(name + " ");
+			}
+			if (d.voice !== void && d.voice.count > 0) {
+				var list = [];
+				env.extractVoice(d.voice, list);
+				hl.setNewAction(kag.getVoicePlayingScript(list)) if list.count > 0;
+			}
+			storeBacklogText(hl, d.text);
+		}
+		endBacklogMessage(hl) if open;
 	}
 
 	// -------------------------------------------------------------------
@@ -1692,7 +1903,7 @@ class KAGEnvPlayer
 	// Consolidate in one place to avoid copy-pasting
 	function kagProcessGo() {
 		kag.nextRecordHistory = false; // XXX Prevents redundant saving when jumping from choices
-		kag.historyLayer.clear();      // XXX Clears current text from history layer
+		rebuildBacklog();              // the backlog up to where the game is now
 		kag.conductor.delaytags.clear();
 		kag.processGo();
 	}
@@ -2423,6 +2634,9 @@ class KAGEnvPlayer
 				// Show message window
 				addTagSimple("msgon");
 
+				// the backlog line the message starts on goes back to it
+				addTag(%[tagname:"scnhistmark", pos:getHistoryCount() - 1]);
+
 				// Display name
 				addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
 			}
@@ -2562,20 +2776,7 @@ class KAGEnvPlayer
 	 * Callback when choice processing starts on KAG side
 	 */
 	function onSelectStart(selectInfos) {
-		var text;
-		for (var i=0;i<selectInfos.count;i++) {
-			var sel = selectInfos[i];
-			if (sel.eval == "" || Scripts.eval(sel.eval)) {
-				if (text != "") {
-					text += "/";
-				}
-				text += sel.text;
-			}
-		}
-		if (text != "" && kag.historyWriteEnabled) {
-			kag.historyLayer.clear();
-			kag.historyLayer.store("Choice:" + text);
-		}
+		// the backlog gets the choice that's taken (onSelect), as rebuildBacklog writes it
 	}
 
 	/*
@@ -2585,6 +2786,11 @@ class KAGEnvPlayer
 		if (working) {
 			dm("Choice complete:" + text);
 			addHistorySelect(text);
+			var hl = kag.historyLayer;
+			if (kag.historyWriteEnabled && hl !== void) {
+				storeBacklogText(hl, lastHistory.text);
+				endBacklogMessage(hl);
+			}
 		}
 	}
 

@@ -12,9 +12,13 @@
 - kagex-release uses engine packages in an `engines/` folder next to the game's `data/` before downloading, and its check says whether scenarios will compile to `.scn` or `.scn.json` and marks a platform whose engine can't play `.scn` files.
 - `tools/smoketest.py --packaged` runs the sample's steps on a desktop package (kagex-release's build of the sample) with the data it holds.
 
+- **Going back in compiled scenes**: a BACK button in the message window goes back to the message before, and each message in the backlog has a mark that goes back to it (after a Yes/No). The World, the game's flags and the backlog are as they were at that message (`doc/scn.txt`, "Going back").
+
 ### Changed
 
 - `-scncompile` keeps the game's window hidden.
+- In compiled scenes the backlog follows the scene player's history: written again after a jump or a load (it used to be wiped), and kept at choices (wiped too), which it shows as "Choice: ..." lines.
+- The backlog's voice marks are a line high (42 px), so redrawing a line doesn't cut them off, and the text starts further right (`marginL` 140) to make room for the going-back marks.
 
 ### Fixed
 

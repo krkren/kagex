@@ -569,6 +569,7 @@ class KAGWorldPlugin extends KAGPlugin
 		tagHandlers["scenecheck"]  = scenecheck incontextof this;
 		// mp for a tag from a macro in a compiled scenario (KAGEnvPlayer.extractTag)
 		tagHandlers["scnmp"] = function(elm) { global.mp_override = elm.mp; return 0; };
+		tagHandlers["scnhistmark"] = function(elm) { return player !== void ? player.histMark(elm) : 0; } incontextof this;
 
 		addTag(kag, tagHandlers);
 	}

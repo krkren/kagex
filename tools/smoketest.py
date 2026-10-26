@@ -709,6 +709,41 @@ def sample_steps(eng):
         if after != before:
             raise SmokeError("loaded at %s, saved at %s" % (after, before))
 
+    @step("BACK goes back a message, and the backlog's marks go back to theirs")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # where the last step left the game: the sixth text of char.ks, Ai on the screen, its
+        # backlog written again from the history the save had
+        state = ('var p = world_object.player, hl = kag.historyLayer, c = world_object.env.characters["ai"], marks = 0;'
+                 ' for (var i = 0; i < hl.dataLines; i++) if (hl.jumpInfo[hl.jumpIndex(i)] !== void) marks++;'
+                 ' return [p.curTextId, p.getHistoryCount(), marks, c !== void && c.isShowBU() ? 1 : 0].join(",");')
+        before = str(eng.tjs(state)).split(",")
+        if before[1] != before[2]:
+            raise SmokeError("after loading, the backlog has %s marks for %s messages" % (before[2], before[1]))
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("the message before", 'world_object.player.curTextId == %d && kag.inStable' % (int(before[0]) - 1),
+                 timeout=20)
+        back = str(eng.tjs(state)).split(",")
+        print("     text, history, backlog marks, Ai shown: %s, then BACK: %s" % (",".join(before), ",".join(back)),
+              flush=True)
+        if back[1] != str(int(before[1]) - 1) or back[2] != back[1]:
+            raise SmokeError("BACK left the history and backlog at %s (from %s)" % (back, before))
+        # the first message's mark in the backlog, and Yes: the start of the scene, before Ai
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the backlog", "kag.historyShowing", timeout=10)
+        eng.tjs("var hl = kag.historyLayer; Scripts.eval(hl.jumpInfo[hl.jumpIndex(0)]); return 1;")
+        eng.wait("the prompt", "kag.currentDialog !== void", timeout=10)
+        eng.key("VK_LEFT")  # the focus starts on No
+        eng.key("VK_RETURN")
+        eng.wait("the first message", '!kag.historyShowing && world_object.player.curTextId == 1 && kag.inStable',
+                 timeout=20)
+        first = str(eng.tjs(state)).split(",")
+        if first[1:] != ["1", "1", "0"]:
+            raise SmokeError("the first message's mark went to %s (text, history, marks, Ai shown)" % first)
+
     @step("the animated character blinks, and its mouth follows its voice")
     def _():
         if not animated_framework(eng):

@@ -83,6 +83,26 @@ compiled again since then (its hash changed) resumes at the top of the scene ins
 made with compiled play on and off don't mix: one made reading the script can't be loaded
 into the compiled script, or the other way round.
 
+◇ Going back
+
+The player keeps the history of what it showed (KAGEnvPlayer.tjs, histories): each text, with
+the game's flags as they were at it, and the choices taken. Going back to a text in it
+restores the World's state at that text's save point and the flags, and plays on from there.
+
+- player.rollback() goes back to the message before the one on the screen (at a choice, to the
+  message the choice came with); player.canRollback says whether there is one. The sample's
+  BACK button (macro.ks, rollBack() in Override.tjs) is this.
+- player.jumpFromHistory(pos) asks "Go back to this line?" and goes back to history position
+  pos. The backlog gets a mark on the first line of each message it's shown (the scnhistmark tag
+  before its name, history layers with markJump: the sample's MyHistoryLayer.tjs draws it left
+  of the voice mark) that does this.
+- After a jump or a load the backlog is written again from the history (rebuildBacklog), so it
+  ends where the game is, marks and voices included. A choice is a line "Choice: <the one
+  taken>".
+
+The history goes on across compiled scripts that go to one another, and starts again when the
+game plays a script that isn't compiled. Saves keep it.
+
 ◇ Releases
 
 kagex-release compiles the listed scripts as it builds (Scenarios > Compile, scenes.compile in
