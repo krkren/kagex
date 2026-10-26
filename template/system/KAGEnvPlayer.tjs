@@ -1250,6 +1250,24 @@ class KAGEnvPlayer
 	}
 
 	/**
+	 * The state at the last save point of a scene: what the screen shows at the choices at its
+	 * end (a choice's history data)
+	 */
+	function getLastState(sceneName) {
+		var storage = getStorage(sceneName);
+		if (storageCache === void || storageCache.storage != storage) {
+			invalidate storageCache if storageCache !== void;
+			storageCache = new StorageData(storage);
+		}
+		var scene = storageCache.findScene(getLabel(sceneName));
+		var lines = scene !== void ? scene.lines : void;
+		for (var i = lines !== void ? lines.count - 1 : -1; i >= 0; i--) {
+			var obj = lines[i];
+			if (typeof obj == "Object" && typeof obj[SAVE_POINT] == "Integer") return obj[SAVE_STATE];
+		}
+	}
+
+	/**
 	 * Return total history count
 	 * @return Number of recorded history text lines
 	 */
@@ -1487,11 +1505,21 @@ class KAGEnvPlayer
 		keepKagStates = false;
 	}
 
+	// The history block history position pos is in (void: none)
+	function historyBlock(pos) {
+		for (var i = 0; i < histories.count; i++) {
+			var h = histories[i];
+			if (h.startNo + h.num > pos) return pos >= h.startNo ? h : void;
+		}
+	}
+
 	// Whether history position pos goes on from the one before it in one click: the text
-	// before it didn't wait
+	// before it didn't wait (a choice always did)
 	function historyContinues(pos) {
 		if (pos <= 0) return false;
-		var d = getHistoryData(pos - 1);
+		var h = historyBlock(pos - 1);
+		if (h === void || h.text !== void) return false;
+		var d = getTextData(h.scene, h.idx + (pos - 1 - h.startNo));
 		return d !== void && d.flag !== void && (+d.flag & TEXTFLAG_NOWAIT) != 0;
 	}
 

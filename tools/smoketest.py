@@ -744,6 +744,31 @@ def sample_steps(eng):
         if first[1:] != ["1", "1", "0"]:
             raise SmokeError("the first message's mark went to %s (text, history, marks, Ai shown)" % first)
 
+    @step("a demo chosen from the menu: BACK goes back to the menu, and another choice plays")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # the menu's choice is in the history: what BACK and the backlog read has to cope with it
+        menu = ('kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0')
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]); return 1;")
+        eng.wait("layer.ks", 'world_object.player !== void && world_object.player.curStorage == "layer.ks" && kag.inStable',
+                 timeout=30)
+        first = str(eng.tjs('var p = world_object.player; return [p.getHistoryCount(), p.histories[0].text].join("|");'))
+        if not first.startswith("2|Choice: "):
+            raise SmokeError("the history at the demo's first text is %s" % first)
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("the demo menu again", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'world_object.player !== void && world_object.player.curStorage == "char.ks" && kag.inStable',
+                 timeout=30)
+        then = str(eng.tjs('var p = world_object.player; return [p.getHistoryCount(), p.histories[0].text].join("|");'))
+        if then != "2|Choice: World Extension: Character":
+            raise SmokeError("after going back and choosing again, the history is %s" % then)
+
     @step("BACK in a scene on KAG's own layers brings them back as they were")
     def _():
         if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
