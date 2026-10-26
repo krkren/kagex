@@ -212,7 +212,7 @@ def browser_tests(port, proj, args):
             step("screen (%s): no script errors" % scheme, not errors, "; ".join(errors))
             if scheme == "dark":
                 break
-            step("screen: every section", page.locator("section.card").count() == 7)
+            step("screen: every section", page.locator("section.card").count() == 10, str(page.locator("section.card").count()))
             step("screen: the title field", page.locator("#sec-game input").first.input_value() == "KAGEX Sample")
             # turn on the web build and save with Ctrl+S
             page.locator("#pl-web").check()
@@ -1156,7 +1156,17 @@ def signing_validation_tests(exe, proj):
 
 
 def signing_build_tests(exe, proj, args):
-    """A signed Linux build, then the tampering scenarios against the built engine (Linux host)."""
+    """A signed Linux build, then the tampering scenarios against the built engine (Linux host).
+    release.json is put back afterwards: the groups after this one build unsigned"""
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        _signing_build_tests(exe, proj, args)
+    finally:
+        rel.write_bytes(saved)
+
+
+def _signing_build_tests(exe, proj, args):
     if host_id() != "linux":
         print("skip signing build tests: not a Linux host")
         return
