@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 env:
   # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
@@ -185,3 +186,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         # per branch, so runs of several branches don't overwrite each other's results
         run: kagex/.github/platforms/publish-results.sh "release-tool-${{ matrix.name }}${{ github.ref_name != 'main' && format('-{0}', github.ref_name) || '' }}" "release tool ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"
+      - name: Stop the whole run on a failure
+        # a failed job cancels the others (iOS and Android take the longest), so a
+        # release that can't publish stops at once
+        if: failure() && github.workflow == 'Release packages'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
