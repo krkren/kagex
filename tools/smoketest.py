@@ -744,6 +744,36 @@ def sample_steps(eng):
         if first[1:] != ["1", "1", "0"]:
             raise SmokeError("the first message's mark went to %s (text, history, marks, Ai shown)" % first)
 
+    @step("BACK in a scene on KAG's own layers brings them back as they were")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # layer.ks's pictures are on KAG layer 0, which the compiled save points don't hold:
+        # going back restores KAG's state from the click it goes to (KAGEnvPlayer.storeKagState)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'world_object.player !== void && world_object.player.working', timeout=20)
+        eng.tjs("""
+            global.__smokeToText = new Timer(function() {
+                if (world_object.player.curLabel == "*label2") { global.__smokeToText.enabled = false; return; }
+                kag.onPrimaryClick();
+            }, "");
+            __smokeToText.interval = 50;
+            __smokeToText.enabled = true;
+            return 1;""")
+        eng.wait("Rotation", 'world_object.player.curLabel == "*label2" && kag.inStable', timeout=60)
+        eng.tjs("invalidate global.__smokeToText; return 1;")
+        layer = ('var l = kag.fore.layers[0], p = world_object.player;'
+                 ' return [p.curLabel, p.curTextId, l.visible ? 1 : 0, l.opacity].join(",");')
+        at = str(eng.tjs(layer))
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("Translucency", 'world_object.player.curLabel == "*label1" && kag.inStable', timeout=20)
+        back = str(eng.tjs(layer))
+        print("     layer 0 at %s, after BACK %s (label, text, visible, opacity)" % (at, back), flush=True)
+        if back.split(",")[2:] != ["1", "200"]:
+            raise SmokeError("after BACK, layer 0 is %s, not the translucent picture of *label1" % back)
+
     @step("the animated character blinks, and its mouth follows its voice")
     def _():
         if not animated_framework(eng):

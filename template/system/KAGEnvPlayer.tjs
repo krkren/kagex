@@ -487,6 +487,16 @@ class KAGEnvPlayer
 	/**
 	 * Clear progress information
 	 */
+	var unitStart = true;       // the text being shown starts what a click shows
+	var lastTextNoWait = false; // the text before it went on without a wait
+	var freshMessage = false;   // a jump left the message window empty (jumped)
+
+	// After a jump: the next text starts a click and the message window
+	function jumped() {
+		lastTextNoWait = false;
+		freshMessage = true;
+	}
+
 	function clearInfo() {
 		if (scenario) {
 			scenario = void;
@@ -831,6 +841,7 @@ class KAGEnvPlayer
 		try {
 			loadScene(scene);
 			goToText(idx);
+			jumped();
 		} catch (e) {
 			clearInfo();
 			throw e;
@@ -1074,6 +1085,7 @@ class KAGEnvPlayer
 			if (point !== void) {
 				goToPoint(point);
 			}
+			jumped();
 			// the backlog of the history the save had (saves don't keep KAG's own)
 			rebuildBacklog();
 			// the conductor stands after [sceneplay]: carry on playing
@@ -1164,6 +1176,7 @@ class KAGEnvPlayer
 	 */
 	function clearHistory() {
 		histories.clear();
+		clearKagStates() if !keepKagStates;
 		if (storageCache !== void) {
 			invalidate storageCache;
 			storageCache = void;
@@ -1398,26 +1411,104 @@ class KAGEnvPlayer
 	// Going back: a message at a time (the Back button), or to a message in the backlog
 	// -------------------------------------------------------------------
 
-	// Whether the text at history position pos goes on with the message before it
-	function historyContinues(pos) {
-		var d = getHistoryData(pos);
-		return d !== void && d.flag !== void && (+d.flag & TEXTFLAG_CONT) != 0;
+	// KAG's own state (pflags/pcflags, what a save holds) at the start of the last messages,
+	// by history position. A compiled save point has the World's state only, so going back to
+	// one of these restores this instead, as a load does: KAG's layers, sounds and the like
+	// come back too. Kept in memory only (a load starts again without them)
+	var kagStates = %[];
+	var kagStateOrder = []; // their positions, oldest first
+	var maxKagStates = 100;
+	var keepKagStates = false; // restoring one: the restore's clear() keeps the rest
+
+	function clearKagStates() {
+		(Dictionary.clear incontextof kagStates)();
+		kagStateOrder.clear();
 	}
 
-	// The history position the message at pos starts at
+	// Keeps KAG's state as the save point before the text at history position pos stored it
+	// (one that starts a click: play())
+	function storeKagState(pos) {
+		var sp = kag.pcflags.scenePlayer;
+		if (sp === void || sp.scene != curSceneName || sp.point != curPoint) return;
+		var s = %[user:%[], core:%[]];
+		(Dictionary.assignStruct incontextof s.user)(kag.pflags);
+		(Dictionary.assignStruct incontextof s.core)(kag.pcflags);
+		// the history is put back as it is then (restoreKagState)
+		delete s.core.scenePlayer.histories;
+		delete s.core.scenePlayer.historyOfStore;
+		dropKagStates(pos);
+		kagStates[pos] = s;
+		kagStateOrder.add(pos);
+		while (kagStateOrder.count > maxKagStates) delete kagStates[kagStateOrder.shift()];
+	}
+
+	// Forgets the states from history position pos on
+	function dropKagStates(pos) {
+		for (var i = kagStateOrder.count - 1; i >= 0; i--) {
+			if (kagStateOrder[i] >= pos) {
+				delete kagStates[kagStateOrder[i]];
+				kagStateOrder.erase(i);
+			}
+		}
+	}
+
+	// Cuts the history back to before position pos
+	function truncateHistory(pos) {
+		var i = 0, h;
+		while (i < histories.count) {
+			h = histories[i];
+			if (h.startNo + h.num > pos) break;
+			i++;
+		}
+		if (i >= histories.count) return;
+		while (histories.count > i + 1) histories.pop();
+		h.num = pos - h.startNo;
+		histories.pop() if h.num <= 0;
+	}
+
+	// Goes back to the message at history position pos through its KAG state, as a load
+	function restoreKagState(pos) {
+		var s = kagStates[pos];
+		truncateHistory(pos);
+		dropKagStates(pos);
+		resetHistoryOfStore();
+		(Dictionary.assignStruct incontextof kag.pflags)(s.user);
+		(Dictionary.assignStruct incontextof kag.pcflags)(s.core);
+		var sp = kag.pcflags.scenePlayer;
+		storeHistory(sp);
+		storeHistoryOfStore(sp);
+		keepKagStates = true;
+		try {
+			kag.restoreFlags();
+		} catch (e) {
+			keepKagStates = false;
+			throw e;
+		}
+		keepKagStates = false;
+	}
+
+	// Whether history position pos goes on from the one before it in one click: the text
+	// before it didn't wait
+	function historyContinues(pos) {
+		if (pos <= 0) return false;
+		var d = getHistoryData(pos - 1);
+		return d !== void && d.flag !== void && (+d.flag & TEXTFLAG_NOWAIT) != 0;
+	}
+
+	// The history position what the click at pos shows starts at
 	function historyMessageStart(pos) {
 		while (pos > 0 && historyContinues(pos)) pos--;
 		return pos;
 	}
 
 	/**
-	 * Where going back one message goes: the start of the message before the one on screen
+	 * Where going back goes: the start of what the click before the one on screen showed
 	 * @return a history position, or void when there's none
 	 */
 	function getRollbackPoint() {
 		if (!working) return;
 		var pos = historyMessageStart(getHistoryCount() - 1);
-		// at a choice, the message with it shows again
+		// at a choice, the text with it shows again
 		if (kag.selectShowing) return pos >= 0 ? pos : void;
 		if (pos <= 0) return;
 		return historyMessageStart(pos - 1);
@@ -1554,10 +1645,16 @@ class KAGEnvPlayer
 			}
 			var flag = +d.flag;
 			if ((flag & TEXTFLAG_NOTEXT)) continue;
-			if (!(flag & TEXTFLAG_CONT) || !open) {
+			var start = !historyContinues(pos), newMessage = !(flag & TEXTFLAG_CONT) || !open;
+			if (newMessage) {
 				endBacklogMessage(hl) if open;
+			} else if (start && hl.currentLine != "") {
+				// what a click showed after a wait in the same window: on a line of its own, as [l][r]
+				hl.reline();
+			}
+			if (start && typeof hl.markJump != "undefined") hl.markJump(backlogJump(pos));
+			if (newMessage) {
 				open = true;
-				hl.markJump(backlogJump(pos)) if typeof hl.markJump != "undefined";
 				var name = d.disp != "" ? d.disp : d.name;
 				if (name != "" && typeof global.dispNameFilter != "undefined") name = global.dispNameFilter(name);
 				if (typeof hl.storeName != "undefined") hl.storeName(name);
@@ -1598,6 +1695,10 @@ class KAGEnvPlayer
 	 * @param pos Jump destination history number
 	 */
 	function goToHistory(pos) {
+		if (pos >= 0 && pos < getHistoryCount() && kagStates[pos] !== void) {
+			restoreKagState(pos);
+			return;
+		}
 		initEnv();
 		var count = getHistoryCount();
 		if (pos >= 0  && pos < count) {
@@ -1627,6 +1728,7 @@ class KAGEnvPlayer
 				// Jump to end of scene
 				loadScene(scene);
 				goToPoint(spcount);
+				jumped();
 			} else {
 				var idx   = h.idx + h.num;
 				if (h.num <= 0) {
@@ -1637,6 +1739,7 @@ class KAGEnvPlayer
 				dm(@"History jump:${scene}:${idx}");
 				loadScene(scene);
 				goToText(idx);
+				jumped();
 			}
 			clearTag();
 			addTagSimple("sceneplay");
@@ -1893,6 +1996,7 @@ class KAGEnvPlayer
 		// Forced jump
 		initEnv();
 		goToPoint(target);
+		jumped();
 		clearTag();
 		addTagSimple("sceneplay");
 		resetHistoryOfStore();
@@ -2129,6 +2233,7 @@ class KAGEnvPlayer
 			clearSearch();
 			loadScene(scene);
 			goToText(idx);
+			jumped();
 			clearTag();
 			addTagSimple("sceneplay");
 		}
@@ -2305,6 +2410,14 @@ class KAGEnvPlayer
 			curState = curTextId = obj;
 			curRead = getReaded(curTextId);
 			addHistory(curTextId);
+			{
+				// a text after one that waited for a click starts what one click shows: going
+				// back goes to these (the backlog's marks, BACK, the KAG states)
+				var t = getText(curTextId);
+				unitStart = !lastTextNoWait;
+				lastTextNoWait = t !== void && (+t.flag & TEXTFLAG_NOWAIT) != 0;
+			}
+			storeKagState(getHistoryCount() - 1) if unitStart && !kag.skipNoDisp;
 			if (kag.skipNoDisp) {
 				kag.currentNameTarget = void;
 				kag.stopAllActions();
@@ -2629,13 +2742,14 @@ class KAGEnvPlayer
 			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
 			var wrapLine = "", wrapNewline = false;
 
-			var cont = (flag & TEXTFLAG_CONT);
+			// after a jump the message window starts empty: a text that carried it on starts it
+			var cont = (flag & TEXTFLAG_CONT) && !freshMessage;
+			freshMessage = false;
+			// the backlog line what this click shows starts on goes back to it
+			addTag(%[tagname:"scnhistmark", pos:getHistoryCount() - 1]) if unitStart;
 			if (!cont) {
 				// Show message window
 				addTagSimple("msgon");
-
-				// the backlog line the message starts on goes back to it
-				addTag(%[tagname:"scnhistmark", pos:getHistoryCount() - 1]);
 
 				// Display name
 				addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
