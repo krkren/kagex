@@ -448,8 +448,63 @@ def web_tests(exe, proj, args):
             if eng:
                 eng.stop()
             httpd.shutdown()
+    if args.browser and builds.get("files"):
+        web_prefetch_race(exe, proj, args)
     step("web: another build, another id (players' pages and caches update)", builds.get("files") and builds.get("xp3") and builds["files"] != builds["xp3"],
          "%s / %s" % (builds.get("files"), builds.get("xp3")))
+
+
+# Each OPFS write the page makes commits 1.5 s late: krkrz.js's prefetch makes an entry (empty)
+# before it writes it, and the engine took any entry it found as the file, so a script it read in
+# that window came back empty and a compiled one failed to load ("Syntax error at line 1").
+# kagex-web.js makes such a lookup wait for the write; without that this failed every time
+SLOW_OPFS_WRITES = """(() => {
+  const W = globalThis.FileSystemWritableFileStream && FileSystemWritableFileStream.prototype;
+  if (!W) return;
+  const close = W.close;
+  W.close = function () { const s = this; return new Promise(r => setTimeout(r, 1500)).then(() => close.call(s)); };
+})();"""
+
+
+def web_prefetch_race(exe, proj, args):
+    """The files build again, its cache writes slowed: the game still starts"""
+    import functools
+    import http.server
+    import threading
+    s = json.loads((proj / "release.json").read_text(encoding="utf-8"))
+    s["platforms"]["web"]["data"] = "files"
+    (proj / "release.json").write_text(json.dumps(s, indent=2), encoding="utf-8")
+    site = proj / "release" / ("kagex-sample-%s-web" % s["identity"]["version"])
+    code, out = run(exe, "--cli", "build", str(proj / "release.json"), "--engines=" + str(args.engines), "--json")
+    if code != 0:
+        step("web (files): starts while the prefetch's cache writes are slow", False, "the build failed: " + out[-500:])
+        return
+    sys.path.insert(0, str(REPO / "tools"))
+    import smoketest
+    class Quiet(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+    class Server(http.server.ThreadingHTTPServer):
+        def handle_error(self, *a):
+            pass  # the browser drops connections it no longer needs
+    httpd = Server(("127.0.0.1", 0), functools.partial(Quiet, directory=str(site)))
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    work = Path(tempfile.mkdtemp())
+    eng = None
+    try:
+        eng = smoketest.WebEngine("http://127.0.0.1:%d/" % httpd.server_address[1], str(work), False, init_script=SLOW_OPFS_WRITES)
+        res = eng._eval('kag.conductor.curStorage', 60)
+        time.sleep(5)
+        errors = [l for l in eng.lines if "Script exception raised" in l or "! trace :" in l or "Syntax error" in l or "pageerror" in l]
+        step("web (files): starts while the prefetch's cache writes are slow", res.get("ok") and not errors, str(res.get("result")) + " " + "; ".join(errors[:3]))
+    except Exception as e:
+        step("web (files): starts while the prefetch's cache writes are slow", False, str(e)[:1500])
+    finally:
+        if args.out and (work / "console.txt").exists():
+            shutil.copyfile(work / "console.txt", Path(args.out) / "web-files-slow-console.txt")
+        if eng:
+            eng.stop()
+        httpd.shutdown()
 
 
 def android_tests(exe, proj, args):

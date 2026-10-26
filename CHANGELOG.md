@@ -34,6 +34,7 @@
 
 ### Fixed
 
+- Web builds: a file the engine read while the page's background prefetch was still writing it to the browser's cache came back empty, which could stop the game at start (a compiled script then failed with "Syntax error at line 1"). `kagex-web.js` makes the engine wait for that write.
 - The scene player loads: `KAGEnvPlayer.tjs` had a syntax error from the translation, and needed Wamsoft's psbfile plugin. Its history, read tracking and save code had bugs that couldn't show until now.
 
 ## 0.8.0

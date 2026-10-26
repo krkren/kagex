@@ -463,7 +463,7 @@ class WebEngine(Engine):
     crashed the page. So every command runs from a Timer, and the bridge only starts it and
     reads its result back."""
 
-    def __init__(self, url, workdir, verbose, channel=None):
+    def __init__(self, url, workdir, verbose, channel=None, init_script=None):
         from playwright.sync_api import sync_playwright
         self.workdir = workdir
         self.verbose = verbose
@@ -474,6 +474,8 @@ class WebEngine(Engine):
         self.browser = self.pw.chromium.launch(channel=channel,
                                                args=["--autoplay-policy=no-user-gesture-required"])
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
+        if init_script:
+            self.page.add_init_script(init_script)
         # written as it comes, so a page that hangs still leaves its console behind
         self.console = open(self.log_path, "w", encoding="utf-8")
         self.page.on("console", lambda m: self._line(m.text))
@@ -486,14 +488,6 @@ class WebEngine(Engine):
         end = start + 180
         last = None
         while time.time() < end:
-            # krkrz_repl_eval traps ("RuntimeError: unreachable", and every call after it) when
-            # it lands after the module is up but before the engine has made its script engine:
-            # on the Linux runner a poll hit that window in two runs out of three, and the page
-            # never started. The engine prints its version line once the script engine is
-            # there; without one in 30 s, poll as before.
-            if time.time() - start < 30 and not any("Kirikiri Z Executable core" in l for l in self.lines):
-                time.sleep(0.25)
-                continue
             try:
                 # ccall throws until the runtime is up; then wait for the game window
                 if self._raw('typeof global.kag == "Object" && kag !== void').get("result") == "1":

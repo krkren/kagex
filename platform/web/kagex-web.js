@@ -9,6 +9,8 @@
 //   cache is emptied, so the game's new files are fetched.
 // - Same-origin fetches without ?v= revalidate with the server (cache: no-cache): the game's
 //   files, krkrz.wasm and krkrz.data never come from a stale HTTP cache.
+// - The engine's file cache (OPFS): a lookup of an entry the prefetch is still writing waits for
+//   the write, which the engine would otherwise have read as an empty file.
 // - Add to Home Screen: on phones and tablets, outside the home-screen app, a bar offers it: a
 //   button where the browser can install the page (beforeinstallprompt: Chrome, Edge, Samsung
 //   Internet, Opera), the steps elsewhere (iPhone and iPad browsers: Share, then Add to Home
@@ -32,6 +34,63 @@
       return origFetch.call(this, input, init);
     };
   }
+
+  // --- the file cache: no reading an entry while it's being written --------------------------
+  // krkrz.js's prefetch makes each OPFS entry (getFileHandle with create: an empty file) and then
+  // writes it, and the engine takes any entry it finds as the file. One it read in between came
+  // back empty: a compiled script then loaded as text (the engine opens a script as bytecode,
+  // then as text), "Syntax error at line 1", and the page stopped. A lookup of an entry that is
+  // being written waits until the write is done; an entry a failed write left is removed.
+  (function () {
+    var D = typeof FileSystemDirectoryHandle !== "undefined" ? FileSystemDirectoryHandle.prototype : null;
+    var F = typeof FileSystemFileHandle !== "undefined" ? FileSystemFileHandle.prototype : null;
+    if (!D || !F || !D.getFileHandle || !F.createWritable) return;
+    var getFileHandle = D.getFileHandle, createWritable = F.createWritable;
+    var writing = new Map();   // entry name -> { done, finish(ok) }
+    function begin(dir, name) {
+      if (writing.has(name)) return;
+      var release;
+      var entry = { done: new Promise(function (r) { release = r; }), settled: false };
+      entry.finish = function (ok) {
+        if (entry.settled) return;
+        entry.settled = true;
+        clearTimeout(entry.timer);
+        if (writing.get(name) === entry) writing.delete(name);
+        (ok ? Promise.resolve() : dir.removeEntry(name).catch(function () {})).then(function () { release(); });
+      };
+      // a create with no write after it doesn't hold the readers up for good
+      entry.timer = setTimeout(function () { entry.finish(true); }, 30000);
+      writing.set(name, entry);
+    }
+    D.getFileHandle = function (name, options) {
+      var self = this, args = arguments;
+      if (options && options.create) begin(self, name);
+      else if (writing.has(name))
+        return writing.get(name).done.then(function () { return getFileHandle.apply(self, args); });
+      return getFileHandle.apply(self, args);
+    };
+    F.createWritable = function () {
+      var name = this.name;
+      return createWritable.apply(this, arguments).then(function (w) {
+        var entry = writing.get(name);
+        if (!entry) return w;
+        var close = w.close, abort = w.abort;
+        w.close = function () {
+          return close.apply(w, arguments).then(function (r) { entry.finish(true); return r; },
+                                                 function (e) { entry.finish(false); throw e; });
+        };
+        w.abort = function () {
+          return abort.apply(w, arguments).then(function (r) { entry.finish(false); return r; },
+                                                 function (e) { entry.finish(false); throw e; });
+        };
+        return w;
+      }, function (e) {
+        var entry = writing.get(name);
+        if (entry) entry.finish(false);
+        throw e;
+      });
+    };
+  })();
 
   // --- updates -------------------------------------------------------------------------------
   function dependency(add, id) {
