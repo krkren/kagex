@@ -23,6 +23,10 @@ permissions:
 env:
   # krkrz_tools is the commit this engine pins (src/tools/krkrz_tools)
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # xp3crypt's library (encrypted data.xp3) and scnfile's sealing code (encrypted compiled
+  # scenarios), built into the tool from checkouts next to kagex (as platforms.yml pins them)
+  XP3CRYPT_SHA: bda2affc0594ab6f07655d913fbb41bf99d78b84
+  SCNFILE_SHA: 7daaeaf7a85d9439d0e2256e05ba95562684b282
 
 jobs:
   build:
@@ -52,13 +56,19 @@ jobs:
           git clone -q https://github.com/wamsoft/krkrz_tools.git krkrz_tools
           git -C krkrz_tools checkout -q "$sha"
           git -C krkrz_tools submodule update -q --init --recursive
+          # next to kagex, where tools/release/CMakeLists.txt looks for them
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+            git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
+            git -C "${p%%:*}" checkout -q "${p#*:}"
+          done
           ws=$(pwd -W 2>/dev/null || pwd)
           echo "KRKRZ_TOOLS_DIR=$ws/krkrz_tools" >> "$GITHUB_ENV"
           PY=python3; [ "$RUNNER_OS" = Windows ] && PY=python
           echo "PY=$PY" >> "$GITHUB_ENV"
           # the oldest macOS the tool runs on (also for the vcpkg libraries)
           [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
-          { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status; } | tee results/versions.txt
+          { echo "kagex $(git -C kagex rev-parse HEAD)"; echo "krkrz_tools $sha"; git -C krkrz_tools submodule status
+            echo "xp3crypt $(git -C xp3crypt rev-parse HEAD)"; echo "scnfile $(git -C scnfile rev-parse HEAD)"; } | tee results/versions.txt
       # The engine packages for the build tests (kagex_engine_*.zip), from the newest release that
       # has them (the releases are pre-releases, so there's no "latest" to ask for; a tool newer
       # than its engines only notes it). The scripts that make them run in the release workflow
@@ -152,7 +162,7 @@ jobs:
             $PY -m playwright install --with-deps chromium > /dev/null
             browser=--browser
           fi
-          kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke --engines engines
+          KAGEX_RELEASE_REQUIRE_ENCRYPTION=1 kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke --engines engines
       - name: Pack the tool
         if: always()
         run: |

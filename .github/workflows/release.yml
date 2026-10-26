@@ -25,13 +25,17 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.8.0"
-  KAGEX_SHA: 712155a2a3ef4b7a41a4be0943cde6896cf9d998
+  RELEASE_TAG: "0.9.0"
+  KAGEX_SHA: 73872aa3a6d70e0e6f868cd1f77b0effd6429f7d
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
   # the engine commit the Windows tests ran against
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  # kagex's own plugins, built into the engines (as platforms.yml pins them): xp3crypt
+  # (encrypted data.xp3, built into the engine) and scnfile (compiled scenarios, a plugin)
+  XP3CRYPT_SHA: bda2affc0594ab6f07655d913fbb41bf99d78b84
+  SCNFILE_SHA: 7daaeaf7a85d9439d0e2256e05ba95562684b282
 
 jobs:
   release-commit:
@@ -93,9 +97,14 @@ jobs:
             git -C krkrz_dev checkout "$ENGINE_SHA"
             git -C krkrz_dev submodule update --init --recursive
           fi
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+            git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
+            git -C "${p%%:*}" checkout -q "${p#*:}"
+          done
           {
             echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
             echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
+            echo "xp3crypt $(git -C xp3crypt rev-parse HEAD), scnfile $(git -C scnfile rev-parse HEAD)"
             echo "windows $CONFIG, runner $ImageOS $ImageVersion"
           } | tee results/versions.txt
 
@@ -126,8 +135,15 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { python -m pip install --quiet ninja }
+          # xp3crypt built into the engine, scnfile a plugin beside it. tp_stub, ncbind and
+          # simplebinder are krkrz_dev's: the first plugin's CMakeLists caches them relative to
+          # itself, and these -D lists come before krkrz_dev's own (kagex's CLAUDE.md)
+          $ws = $env:GITHUB_WORKSPACE -replace '\\', '/'
+          $p = "$ws/krkrz_dev/src/plugins"
           # quoted: PowerShell splits an unquoted -DNAME=3.5 at the dot
-          cmake --preset x64-windows '-DKRKRZ_BUILD_TOOLS=OFF' '-DCMAKE_POLICY_VERSION_MINIMUM=3.5' 2>&1 |
+          cmake --preset x64-windows '-DKRKRZ_BUILD_TOOLS=OFF' '-DCMAKE_POLICY_VERSION_MINIMUM=3.5' `
+            "-DTVP_PLUGIN_FOLDERS=$ws/xp3crypt/plugins;$ws/scnfile/plugins" '-DTVP_PLUGINS=xp3crypt;scnfile' '-DTVP_PLUGINS_STATIC=xp3crypt' `
+            "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder" 2>&1 |
             Tee-Object -FilePath "$env:GITHUB_WORKSPACE\results\configure.log" | Select-Object -Last 20
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
@@ -161,9 +177,16 @@ jobs:
                             'plugin\krkr_richtext.dll', 'plugin\krkreffekseer.dll', 'data\effect\sparkle.efk',
                             'plugin\extNagano.dll', 'data\rule\rule_shatter.png', 'plugin\layerExVector.dll',
                             'data\fgimage\emblem.svg', 'plugin\minizip.dll', 'plugin\clipfile.dll', 'data\fgimage\emblem.clip',
-                            'data\main\charinit.csv', 'data\fgimage\pip\pip_0.txt', 'data\voice\pip000001.ogg') {
+                            'data\main\charinit.csv', 'data\fgimage\pip\pip_0.txt', 'data\voice\pip000001.ogg',
+                            'plugin\json.dll', 'plugin\sigcheck.dll', 'template\system\SceneParser.tjs',
+                            'template\system\KAGEnvPlayer.tjs', 'template\system\SignatureCheck.tjs',
+                            'template\system\hashed-bootstrap.tjs', 'data\scenario\!scnlist.txt', 'data\main\searchmode.ks',
+                            'plugin\scnfile.dll') {
             if (-not (Test-Path "pkg\$need")) { throw "package is missing $need" }
           }
+          # kagex-release writes a game's keys into these slots: xp3crypt's in the engine (built in),
+          # scnfile's in its plugin
+          python ci/.github/release-build/key-slots.py pkg/krkrz.exe pkg/plugin/scnfile.dll
           Push-Location pkg
           7z a -tzip -mx=9 "..\$name" * | Select-Object -Last 3
           Pop-Location
@@ -272,9 +295,14 @@ jobs:
             git -C krkrz_dev checkout "$ENGINE_SHA"
             git -C krkrz_dev submodule update --init --recursive
           fi
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+            git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
+            git -C "${p%%:*}" checkout -q "${p#*:}"
+          done
           {
             echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
             echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
+            echo "xp3crypt $(git -C xp3crypt rev-parse HEAD), scnfile $(git -C scnfile rev-parse HEAD)"
             echo "linux $CONFIG, runner $ImageOS $ImageVersion"
           } | tee results/versions.txt
 
@@ -303,7 +331,11 @@ jobs:
         # defined, or it won't load (see the file)
         run: |
           set -o pipefail
+          # xp3crypt built into the engine, scnfile a plugin beside it (see the Windows job)
+          p="$GITHUB_WORKSPACE/krkrz_dev/src/plugins"
           cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            "-DTVP_PLUGIN_FOLDERS=$GITHUB_WORKSPACE/xp3crypt/plugins;$GITHUB_WORKSPACE/scnfile/plugins" "-DTVP_PLUGINS=xp3crypt;scnfile" -DTVP_PLUGINS_STATIC=xp3crypt \
+            "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder" \
             -DCMAKE_PROJECT_INCLUDE="$GITHUB_WORKSPACE/ci/.github/release-build/krkreffekseer-odr.cmake" \
             -DKAGEX_EFK_ODR="$GITHUB_WORKSPACE/kagex/.github/platforms/krkreffekseer-odr.cpp" \
             2>&1 | tee "$GITHUB_WORKSPACE/results/configure.log" | tail -20
@@ -378,8 +410,9 @@ jobs:
           done
           cp -a kagex/data kagex/template kagex/doc "kagex/KAGEX Initial Setup.txt" kagex/krkrz.cf pkg/
           # libkrkr_richtext.so has linked without libpng & co. on some toolchains (CLAUDE.md);
-          # it, libkrkreffekseer.so, the transition plugins, liblayerExVector.so, libminizip.so and
-          # libclipfile.so must load on their own
+          # it, libkrkreffekseer.so, the transition plugins, liblayerExVector.so, libminizip.so,
+          # libclipfile.so, libjson.so (compiled scenarios), libsigcheck.so (signed builds) and
+          # libscnfile.so (compiled scenarios as .scn) must load on their own
           python3 - <<'EOF'
           import ctypes, glob, os, sys
           bad = []
@@ -387,7 +420,7 @@ jobs:
               try: ctypes.CDLL(so, mode=os.RTLD_NOW | os.RTLD_LOCAL)
               except OSError as e: bad.append(f"{so}: {e}")
           print("\n".join(bad) or "all plugins load")
-          sys.exit(1 if any(n in b for b in bad for n in ("krkr_richtext", "krkreffekseer", "extNagano", "extrans", "layerExVector", "minizip", "clipfile")) else 0)
+          sys.exit(1 if any(n in b for b in bad for n in ("krkr_richtext", "krkreffekseer", "extNagano", "extrans", "layerExVector", "minizip", "clipfile", "libjson", "sigcheck", "scnfile")) else 0)
           EOF
           for need in krkrz libSDL3.so.0 license.txt licenses data/startup.tjs krkrz.cf template/system/notosansjp-regular.otf \
                       template/system/YesNoDialogLayer.tjs plugin/libKAGParserEx.so plugin/libcsvParser.so \
@@ -395,9 +428,13 @@ jobs:
                       plugin/libshrinkCopy.so plugin/libextrans.so plugin/libkrkr_richtext.so plugin/libkrkreffekseer.so \
                       plugin/libextNagano.so data/effect/sparkle.efk data/rule/rule_shatter.png \
                       plugin/liblayerExVector.so data/fgimage/emblem.svg plugin/libminizip.so plugin/libclipfile.so \
-                      data/fgimage/emblem.clip data/main/charinit.csv data/fgimage/pip/pip_0.txt data/voice/pip000001.ogg; do
+                      data/fgimage/emblem.clip data/main/charinit.csv data/fgimage/pip/pip_0.txt data/voice/pip000001.ogg \
+                      plugin/libjson.so plugin/libsigcheck.so template/system/SceneParser.tjs template/system/KAGEnvPlayer.tjs \
+                      template/system/SignatureCheck.tjs template/system/hashed-bootstrap.tjs 'data/scenario/!scnlist.txt' \
+                      data/main/searchmode.ks plugin/libscnfile.so; do
             [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
           done
+          python3 ci/.github/release-build/key-slots.py pkg/krkrz pkg/plugin/libscnfile.so
           ldd pkg/krkrz | tee results/ldd.txt
           (cd pkg && zip -q -9 -r "../$name" .)
           (cd pkg && find . -type f ! -path './data/*' ! -path './template/*' -printf '%12s %P\n' | sort -k2) > results/package-files.txt
@@ -524,6 +561,79 @@ jobs:
           print("test run:", r.get("check", {}).get("message"))
           sys.exit(0 if r["ok"] else 1)
           EOF
+      - name: Build the sample encrypted with this release's engines
+        # every engine has xp3crypt built in and the scnfile plugin: the archive and the compiled
+        # scenarios encrypted, each with a key of its own from one keys file, and the Linux
+        # build's test run reads them; then the same with the file names hidden (desktop only)
+        run: |
+          tool=platforms/kagex-release-linux/kagex-release
+          "$tool" --cli keygen keys/game-keys.txt
+          build() {  # build <name>: results/build-<name>.json, then the outputs and the test run
+            KAGEX_RELEASE_CACHE="$PWD/cache" "$tool" --cli build game/release.json --engines=engines --json > "results/build-$1.json" || true
+            python3 - "$1" <<'EOF'
+          import json, re, sys
+          t = open("results/build-%s.json" % sys.argv[1]).read()
+          r = json.loads(t[re.search(r"^\{", t, re.M).start():])
+          for o in r["outputs"]:
+              print(o["platform"], "ok" if o["ok"] else "FAILED: " + o.get("error", ""), o.get("package") or o.get("folder"))
+          for n in r.get("notes", []):
+              print("note:", n)
+          chk = r.get("check", {})
+          print("test run:", chk.get("message"), "; ".join(chk.get("errors", [])))
+          sys.exit(0 if r["ok"] and chk.get("ok") is True else 1)
+          EOF
+          }
+          python3 - <<'EOF'
+          import json
+          p = "game/release.json"
+          s = json.load(open(p))
+          s["keys"] = {"file": "../keys/game-keys.txt"}
+          s["archive"]["encrypt"] = True
+          s["scenes"]["compile"] = True
+          s["scenes"]["encrypt"] = True
+          s["output"]["folder"] = "release-encrypted"
+          s["output"]["check"] = True
+          for k in s["platforms"]:
+              s["platforms"][k]["enabled"] = k in ("windows", "linux", "steam", "web", "android")
+          s["platforms"]["web"]["data"] = "xp3"   # loose files ("files") aren't encrypted
+          json.dump(s, open(p, "w"), indent=2)
+          EOF
+          build encrypted
+          python3 - <<'EOF'
+          import glob, json, re, sys
+          # stored uncompressed, so an unencrypted script would show in the archive as it is
+          xp3 = glob.glob("game/release-encrypted/*-linux/data.xp3")
+          data = open(xp3[0], "rb").read() if xp3 else b""
+          leak = [w for w in (b"sf.software_title", b"KAGLinkPlugin", b"macro name") if w in data]
+          print("data.xp3:", len(data), "bytes; plain text found:", leak or "none")
+          # what the build says it did
+          t = open("results/build-encrypted.json").read()
+          prot = json.loads(t[re.search(r"^\{", t, re.M).start():]).get("protection", {})
+          print("protection:", prot)
+          ok = prot.get("archive") == "encrypted" and prot.get("scenes") == "encrypted"
+          sys.exit(1 if not data or leak or not ok else 0)
+          EOF
+          python3 - <<'EOF'
+          import json
+          p = "game/release.json"
+          s = json.load(open(p))
+          s["archive"]["hideNames"] = True
+          s["output"]["folder"] = "release-hidden"
+          for k in s["platforms"]:
+              s["platforms"][k]["enabled"] = k in ("windows", "linux")
+          json.dump(s, open(p, "w"), indent=2)
+          EOF
+          build hidden
+          python3 - <<'EOF'
+          import json, re, sys
+          t = open("results/build-hidden.json").read()
+          prot = json.loads(t[re.search(r"^\{", t, re.M).start():]).get("protection", {})
+          print("protection:", prot)
+          sys.exit(0 if prot.get("archive") == "encrypted, names hidden" and prot.get("scenes") == "encrypted" else 1)
+          EOF
+          ls -la game/release-hidden/*-linux game/release-hidden/*-linux/data | tee results/hidden-names.txt
+          test -f game/release-hidden/*-linux/data.xpc
+          test "$(ls game/release-hidden/*-linux/data)" = startup.tjs
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-engine-packages
@@ -536,6 +646,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp game/release/test-run.log game/release/android-build.log results/ 2>/dev/null || true
+          for d in release-encrypted release-hidden; do
+            for f in test-run.log compile-scenarios.log compile-scripts.log; do cp "game/$d/$f" "results/$d-$f" 2>/dev/null || true; done
+          done
           ci/.github/windows-test/publish-results.sh release-results-tool-check "kagex-release with $RELEASE_TAG's engines, run ${{ github.run_id }} (${{ job.status }})"
       - name: Stop the whole run on a failure
         # a failed job cancels the others (iOS and Android take the longest), so a

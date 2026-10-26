@@ -258,6 +258,15 @@ function Animated-Character {
     "$note; $c clicks back to the menu"
 }
 
+# Compiled scenarios (SceneParser.tjs, KAGEnvPlayer.tjs; doc/scn.txt): with the debug window on (the
+# zips' default) and data/ writable, the scripts in !scnlist.txt are compiled to .scn.json when the
+# game first goes to one, and the scene player plays them. Checked after the first demo
+function Compiled-Scenes {
+    $r = Invoke-Tjs "(function() { if (typeof global.world_object == 'undefined') return 'no World'; var p = world_object.player; if (p === void || p === null) return 'the scene player never ran'; var a = ['s0001.ks', 'layer.ks', 'char.ks', 'anim.ks']; var miss = []; for (var i = 0; i < a.count; i++) if (!Storages.isExistentStorage(a[i] + '.scn.json') && !Storages.isExistentStorage(a[i] + '.scn')) miss.add(a[i]); return miss.count ? 'not compiled: ' + miss.join(' ') : 'ok'; })()"
+    if ($r -ne 'ok') { throw $r }
+    'the demo menu and the demos were compiled, and the scene player played them'
+}
+
 # After the transition demo: every transition's plugin (extrans, extNagano) loaded, or the demo
 # showed crossfades in their place and passed
 function Transition-Plugins {
@@ -334,6 +343,7 @@ if ($Plan -eq 'probe') {
     }
 } elseif ($Plan -eq 'smoke') {
     Step 'demo: KAGEX layer' { Run-Demo 0 'layer' }
+    Step 'compiled: the demos play compiled' { Compiled-Scenes }
     Step 'vector: an SVG image draws' { Vector-Image }
     Step 'clip and zip: a CLIP STUDIO PAINT layer, a DLC zip' { Clip-And-Zip }
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
@@ -503,14 +513,20 @@ if (-not $script:proc.HasExited) {
 
 # Script exceptions in the engine log. Plugins.link of optional plugins that this build
 # does not provide throws inside kagex's try/catch; those are listed separately.
-$optional = 'layerExDraw|gfxEffect|flashPlayer|AlphaMovie|windowEx'
+$optional = 'layerExDraw|gfxEffect|flashPlayer|AlphaMovie|windowEx|scnfile|xp3crypt'
 $lines = (Read-Log) -split "`r?`n"
 $excs = @(); $expected = @()
 for ($n = 0; $n -lt $lines.Count; $n++) {
     if ($lines[$n] -match 'An exception occured at (.+?)\[') {
         $where = $Matches[1]
         $ctx = ($lines[$n..([Math]::Min($n + 3, $lines.Count - 1))] -join "`n")
+        # KAGLinkPlugin(name) (Initialize.tjs) links by a variable: the plugin's name is in this
+        # exception's register dump (up to its ---- line)
+        $end = [Math]::Min($n + 12, $lines.Count - 1)
+        for ($k = $n + 1; $k -le $end; $k++) { if ($lines[$k] -match '-{40}|An exception occured') { $end = $k; break } }
+        $dump = ($lines[$n..$end] -join "`n")
         if ($ctx -match "Plugins\.link\(`"plugin/($optional)\.dll`"\)") { $expected += "$where (Plugins.link $($Matches[1]).dll)" }
+        elseif ($dump -match 'Plugins\.link|origPluginsLink' -and $dump -match "\(string\)`"(?:plugin/)?($optional)\.dll`"") { $expected += "$where (Plugins.link $($Matches[1]).dll)" }
         elseif ($where -match 'kagenvironment\.tjs\(\d+\)' -and $lines[$n] -match 'loadBGFromCache') {
             # KAGEnvStage tries the time-of-day background (bg01_02...) and falls back to bg01_01 + colour correction
             $expected += "$where (loadBGFromCache: time-of-day background missing, falls back by design)"
