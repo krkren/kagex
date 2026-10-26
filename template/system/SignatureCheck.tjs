@@ -344,5 +344,6 @@ function KAGSignatureQuit(reason)
 		System.inform(msg);
 		System.eventDisabled = wasDisabled;
 	} catch (e) {}
+	KAGUnlinkPluginsBeforeExit() if typeof global.KAGUnlinkPluginsBeforeExit != "undefined";
 	System.terminate();
 }

@@ -1328,6 +1328,8 @@ def run_project(opts, label, data, make_steps):
     failures = 0
     try:
         failures = run_steps(eng, make_steps(eng))
+        if isinstance(eng, DesktopEngine):
+            failures += quit_check(eng)
     except Exception as e:  # a bug here still gets the engine's log printed
         failures += 1
         print("FAIL %s: %s" % (type(e).__name__, e))
@@ -1357,6 +1359,28 @@ def run_project(opts, label, data, make_steps):
     else:
         shutil.rmtree(workdir, ignore_errors=True)
     return failures
+
+
+def quit_check(eng):
+    """The game closes the way a player closes it (kag.shutdown(), as Exit does) and the engine
+    exits with 0. The Linux kit build aborted on every exit (the json plugin's unlink,
+    KAGUnlinkPluginsBeforeExit in Initialize.tjs), which the other steps never saw: the smoke
+    test stops the engine with a signal"""
+    what = "quit: the game closes and the engine exits with 0"
+    t = time.time()
+    try:
+        eng.tjs("kag.shutdown(); return 1;", 5)
+    except SmokeError:
+        pass  # it may be gone before it answers
+    try:
+        code = eng.proc.wait(30)
+    except subprocess.TimeoutExpired:
+        code = "none: still running after 30 s"
+    if code != 0:
+        print("FAIL %s (exit code %s)" % (what, code))
+        return 1
+    print("ok   %-62s %5.1fs" % (what, time.time() - t), flush=True)
+    return 0
 
 
 def scncompile_check(opts, data):

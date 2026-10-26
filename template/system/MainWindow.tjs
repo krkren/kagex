@@ -2494,6 +2494,13 @@ class KAGWindow extends Window
 
 
 
+		// The game window going ends the game: unlink the plugins that abort the engine on its
+		// way out (KAGUnlinkPluginsBeforeExit, Initialize.tjs)
+
+		KAGUnlinkPluginsBeforeExit() if global.kag === this && typeof global.KAGUnlinkPluginsBeforeExit != "undefined";
+
+
+
 		// Call superclass finalize
 
 		super.finalize(...);

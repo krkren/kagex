@@ -114,6 +114,8 @@ if (!debugWindowEnabled) {
 
 		System.inform(e.message);
 
+		KAGUnlinkPluginsBeforeExit() if typeof global.KAGUnlinkPluginsBeforeExit != "undefined";
+
 		System.terminate();
 
 		return true;
@@ -589,6 +591,20 @@ KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "und
 // JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
 // <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
 KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
+// The json plugin's V2Unlink looks up Scripts, which is gone by the time the engine unlinks its
+// plugins on the way out: that throws, and the engine catches it, but in the Linux kit build
+// (made for the Steam Linux Runtime) each plugin carries its own copy of the C++ unwinder, and
+// unwinding through the plugin's frame aborted the process: every exit dumped core. Unlinked
+// while Scripts is still there, it throws nothing. Called before the framework's exits and when
+// the game window goes (KAGWindow.finalize)
+function KAGUnlinkPluginsBeforeExit() {
+	if (typeof System.platformTag == "undefined" || System.platformTag != "linux") return;
+	var list = Plugins.getList();
+	for (var i = 0; i < list.count; i++) {
+		var n = list[i].toLowerCase();
+		if (n == "json.dll" || n == "libjson.so") { try { Plugins.unlink(list[i]); } catch (e) {} }
+	}
+}
 // SCNFile: compiled scenarios as .scn (PSB) files, from https://github.com/krkren/scnfile.
 // Without it they're .scn.json
 KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
@@ -836,6 +852,8 @@ if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[
 		try { (Window.sendMessage incontextof %[ HWND:0 ])(System.title, System.getArgument("-sendmessage")); } catch {}
 
 	} else System.inform(System.title + " is already running");
+
+	KAGUnlinkPluginsBeforeExit();
 
 	System.exit();
 
@@ -1205,6 +1223,7 @@ function KAGCompileScenarios(force = false)
 }
 if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") {
 	var r = KAGCompileScenarios(System.getArgument("-scncompile") == "all");
+	KAGUnlinkPluginsBeforeExit();
 	System.exit(r.failed > 0 ? 1 : 0);
 }
 
