@@ -592,6 +592,18 @@ def make_extras():
         for st in ("normal", "over"):
             button(330, 80, label, st, size=30, r=12).save(os.path.join(IMAGE, "cgmode_page%d_%s.png" % (i, st)))
 
+    # Replay's tabs, labelled at run time from replaylist.csv (Override.tjs), and the arrows
+    # beside its tiles for a tab with more than one page of them (replay.ks)
+    for st in ("normal", "over"):
+        button(330, 80, "", st, size=30, r=12).save(os.path.join(IMAGE, "replay_tab_%s.png" % st))
+        for name, up in (("prev", True), ("next", False)):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            chevron(b, 32, 32, 30, rgba(fg), up)
+            b.save(os.path.join(IMAGE, "replay_%s_%s.png" % (name, st)))
+
     for st, border in (("normal", LAV), ("over", VIOLET)):
         c = Canvas(214, 123)
         c.rrect((0, 0, 214, 123), 4, fill=rgba(border))

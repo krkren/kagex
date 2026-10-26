@@ -24,7 +24,7 @@
 
 [if exp="tf.recollect"]
 
-[sysbutton name=msg_exit   x=976 y=18 exp="kag.process('title.ks','*start')"]
+[sysbutton name=msg_exit   x=976 y=18 exp="exitScene()"]
 
 [sysbutton name=msg_back   x=1108 y=18 exp="rollBack()"]
 

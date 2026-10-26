@@ -2264,7 +2264,67 @@ class KAGEnvPlayer
 			restoreHistoryOfStore(h);
 		}
 		startScene(elm.storage, elm.target, elm.point, check);
+		if (seekScene !== void && !seeking) beginSeek();
+		else if (!seeking) replayEnd = void; // a replay is of one scene, in the script it started
 		return 0;
+	}
+
+	// -------------------------------------------------------------
+	// Seeking: playing a script from its start without showing anything, up to a text in one of
+	// its scenes, so that what it puts on KAG's own layers on the way is there (a compiled save
+	// point holds the World's state only). Scene replays and search results start this way
+	// -------------------------------------------------------------
+
+	// tags a seek passes over: ending a replay or stopping where nothing is shown
+	var seekPasses = %[endrecollection:true, s:true];
+	var seekScene;       // the scene to stop in (storage + label, lower case)
+	var seekText;        // the text in it to stop at (1: its first)
+	var seeking = false; // the hidden skip is on
+	var replayEnd;       // the scene whose end ends the recollection (a replay)
+
+	/**
+	 * Where the next compiled script started (scenestart) stops: KAG plays it from its start
+	 * without showing anything until the text, then shows it
+	 * @param storage the script
+	 * @param label its scene ("" or *label)
+	 * @param text the text in the scene (1: its first)
+	 * @param replay the end of that scene ends the recollection (KAGWindow.startRecollection)
+	 */
+	function seek(storage, label, text = 1, replay = false) {
+		var scene = Storages.extractStorageName(storage);
+		if (label == "") {
+			var data = new StorageData(scene);
+			var first = data.findScene("");
+			label = first !== void ? first.label : "";
+			invalidate data;
+		}
+		seekScene = (scene + label).toLowerCase();
+		seekText = +text > 0 ? +text : 1;
+		replayEnd = replay ? seekScene : void;
+	}
+
+	function beginSeek() {
+		seeking = true;
+		kag.skipMode = SKIP_FORCE;
+		kag.skipNoDisp = true;
+	}
+
+	// At the text the seek goes to: the skip ends there (onSync puts the World's state back),
+	// and the history starts there
+	function finishSeek() {
+		seeking = false;
+		seekScene = void;
+		seekText = void;
+		clearHistory();
+		clearHistoryOfStore();
+		kag.historyLayer.clear() if kag.historyLayer !== void;
+		// KAG clears the message layer when a hidden skip ends, which would take the buttons the
+		// script put there on the way ([sysbutton]); nothing was written there to clear
+		var clearNum = kag._clearMessageLayerNumOnSkipNoDispChanged;
+		kag._clearMessageLayerNumOnSkipNoDispChanged = -1;
+		kag.cancelSkip();
+		kag._clearMessageLayerNumOnSkipNoDispChanged = clearNum;
+		jumped();
 	}
 
 	/**
@@ -2346,8 +2406,8 @@ class KAGEnvPlayer
 			return 0;
 		}
 
-		// Read setting
-		setReaded(curTextId);
+		// Read setting (not for what a seek passes over)
+		setReaded(curTextId) if !seeking;
 		curRead = getReaded(curTextId+1);
 
 		if (cur == 0) {
@@ -2364,6 +2424,12 @@ class KAGEnvPlayer
 		var obj = getLine(cur++);
 
 		// End of scene
+		if (obj === void && replayEnd !== void && curSceneName.toLowerCase() == replayEnd && kag.isRecollection) {
+			// the scene a replay plays (seek): its end is the replay's
+			replayEnd = void;
+			clearInfo();
+			return kag.isRecollection ? kag.endRecollection() : 0;
+		}
 		if (obj === void) {
 			//dm("Executing post-scene processing");
 			var eval = scenario.postevals;
@@ -2409,6 +2475,7 @@ class KAGEnvPlayer
 			// Text
 			curState = curTextId = obj;
 			curRead = getReaded(curTextId);
+			if (seeking && curSceneName.toLowerCase() == seekScene && curTextId >= seekText) finishSeek();
 			addHistory(curTextId);
 			{
 				// a text after one that waited for a click starts what one click shows: going
@@ -2463,7 +2530,7 @@ class KAGEnvPlayer
 				control(obj);
 			} else {
 				// Command tag
-				if (!kag.skipNoDisp || dotags[obj[0]]) {
+				if (!kag.skipNoDisp || dotags[obj[0]] || (seeking && !seekPasses[obj[0]])) {
 					extractTag(obj);
 				}
 			}
@@ -2611,7 +2678,7 @@ class KAGEnvPlayer
 			} else if (isControl(obj)) {
 				control(obj);
 			} else {
-				if (!kag.skipNoDisp || dotags[obj[0]]) {
+				if (!kag.skipNoDisp || dotags[obj[0]] || (seeking && !seekPasses[obj[0]])) {
 					extractTag(obj);
 				}
 			}

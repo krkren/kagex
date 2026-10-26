@@ -14,9 +14,12 @@
 
 - **Going back in compiled scenes**: a BACK button in the message window goes back to the message before, and each message in the backlog has a mark that goes back to it (after a Yes/No). The World, the game's flags and the backlog are as they were at that message (`doc/scn.txt`, "Going back").
 
+- **Scene replay**: the Replay screen has a tile for every titled scene of the compiled demos, on tabs named in `replaylist.csv` (a label `*` there means all of a script's scenes), with a picture of the scene and its title; each plays on its own and comes back to Replay. A scene is reached by playing its script from the start without showing it (`KAGEnvPlayer.seek`), so what earlier scenes put on KAG's own layers is there (`doc/scn.txt`, "Replays").
+
 ### Changed
 
 - `-scncompile` keeps the game's window hidden.
+- EXIT in a scene played from Replay goes back to Replay (it went to the title).
 - In compiled scenes the backlog follows the scene player's history: written again after a jump or a load (it used to be wiped), and kept at choices (wiped too), which it shows as "Choice: ..." lines.
 - The backlog's voice marks are a line high (42 px), so redrawing a line doesn't cut them off, and the text starts further right (`marginL` 140) to make room for the going-back marks.
 

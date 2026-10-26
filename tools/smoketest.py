@@ -1057,6 +1057,36 @@ def sample_steps(eng):
             eng.key("VK_ESCAPE")
             eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("a Replay tile plays its scene from the script's start, and comes back to Replay")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.replayTile != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before scene replays)", flush=True)
+            return
+        eng.tjs('tf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
+        # the Layers tab: a tile for each scene of layer.ks, which the demos have read
+        titles = str(eng.tjs('var t = replayTabs.find("Layers"); setReplayPage(t, 0); var r = [];'
+                             ' for (var i = 0; i < tf.cgbtnnum; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
+                             ' return r.join("|");')).split("|")
+        if "Blending Mode" not in titles:
+            raise SmokeError("no Blending Mode tile on the Layers tab: %s" % titles)
+        # layer.ks played unseen up to *label5: its picture on KAG layer 0, blended, which the
+        # compiled save points don't hold
+        eng.tjs("replayTile(%d); return 1;" % titles.index("Blending Mode"))
+        eng.wait("Blending Mode", 'world_object.player !== void && world_object.player.curLabel == "*label5"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        layer = str(eng.tjs('var l = kag.fore.layers[0]; return [l.visible ? 1 : 0, l.type == ltPsDifference5 ? 1 : 0,'
+                            ' world_object.player.getHistoryCount()].join(",");'))
+        if layer != "1,1,1":
+            raise SmokeError("the scene started with layer 0 at %s (visible, blended, history)" % layer)
+        eng.clicker(True, until="replay.ks")
+        eng.wait("Replay again, at the scene's end", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=60)
+        eng.clicker(False)
+        if eng.tjs('return tf.replayTab == replayTabs.find("Layers") && !kag.isRecollection ? 1 : 0;') != 1:
+            raise SmokeError("back in Replay on another tab, or still replaying")
+        eng.key("VK_ESCAPE")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     return steps
 
 

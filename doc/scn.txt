@@ -110,6 +110,25 @@ window starts empty, with the text gone back to (and its name), as after a load.
 The history goes on across compiled scripts that go to one another, and starts again when the
 game plays a script that isn't compiled. Saves keep it.
 
+◇ Replays: starting at a scene or a line
+
+A compiled save point holds the World's state, so the player can start any scene there, but not
+what the script put on KAG's own layers before it. player.seek(storage, label, text, replay)
+starts the next compiled script KAG goes to ([scenestart]) from its beginning without showing
+anything (KAG's hidden skip, running every tag but [endrecollection] and [s]) until the text in
+that scene, then shows it: the screen is as playing gets there. The history starts at that
+text. With replay, the end of that scene ends the recollection (KAGWindow.startRecollection),
+which goes back to where it was started from.
+
+The sample's Replay screen (Extras) is made from data/main/replaylist.csv: a tile a line, on up
+to six tabs (the first column, which labels them), 16 tiles a page. A line's label * makes a
+tile for every scene of a compiled script that has a title (*label|Title), in order. A tile
+shows its scene's World at its first line (or the line's image, or a play tile where the World
+shows nothing, as in layer.ks), with the title; it stays locked until its scene has been read
+(the player's read marks; sf.trail_* for a script that isn't compiled). A tile plays its scene
+on its own (replayTile in Override.tjs: a seek with replay) and comes back to Replay at its
+end; EXIT comes back too.
+
 ◇ Releases
 
 kagex-release compiles the listed scripts as it builds (Scenarios > Compile, scenes.compile in
