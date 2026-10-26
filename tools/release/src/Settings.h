@@ -9,6 +9,7 @@
 //     "contents": { framework, font, licenses, exclude: [...], extraFiles: [...], plugins },
 //     "media":    { audio: { convert, opusKbps: { folder: kbps, "*": kbps }, vorbisQuality },
 //                   images: { opaque, alpha, jpegQuality }, references },
+//     "scenes":   { compile, keyFile },
 //     "output":   { folder, archive, checksums, check, patchFrom },
 //     "platforms": { windows: { enabled, data, ... }, linux, steam, macos, web, android, ios }
 //   }

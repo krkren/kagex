@@ -77,6 +77,15 @@ const SECTIONS = [
 		],
 	},
 	{
+		id: 'scenes', title: 'Scenarios',
+		intro: 'Scripts listed in !scnlist.txt can be compiled into .scn files, which the game plays without the scripts (doc/scn.txt).',
+		fields: [
+			{ path: 'scenes.compile', label: 'Compile', type: 'check', text: 'Compile the scripts in !scnlist.txt and leave the scripts out' },
+			{ path: 'scenes.keyFile', label: 'Key', type: 'key', showIf: (s) => s.scenes.compile && state.scnfile,
+				help: 'Encrypts the compiled scripts; the key is written into each package\'s engine. Empty: not encrypted. Keep the key out of the game\'s repository, and keep it: patches have to be built with the same one' },
+		],
+	},
+	{
 		id: 'output', title: 'Output',
 		fields: [
 			{ path: 'output.folder', label: 'Output folder', type: 'folder', help: 'Each build goes to <file name>-<version>-<platform> in here' },
@@ -193,6 +202,24 @@ function input(f, path, value, onChange) {
 			table.append(el('tr', { class: 'add' }, el('td', { colspan: 3 }, el('button', { onclick: () => { addRow('', 96); } }, 'Add a folder'))));
 			return table;
 		}
+		case 'key': {
+			// a key file, or a new one made here
+			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', placeholder: 'not encrypted', oninput: (e) => onChange(e.target.value) });
+			const browse = el('button', { onclick: async () => {
+				const picked = await pickPath(t.value ? state.project.root + '/' + t.value : state.project.root, true);
+				if (picked != null) { t.value = relativePath(picked); onChange(t.value); }
+			} }, 'Browse…');
+			const make = el('button', { onclick: async () => {
+				try {
+					const r = await app.post('/api/release/keygen', { path: t.value || 'scenario.key' });
+					t.value = relativePath(r.file);
+					onChange(t.value);
+				} catch (e) {
+					alertBox('Could not make a key', String(e.message || e));
+				}
+			} }, 'New key');
+			return el('div', { class: 'field' }, t, browse, make);
+		}
 		case 'file':
 		case 'folder': {
 			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', oninput: (e) => onChange(e.target.value) });
@@ -308,7 +335,8 @@ function renderPlan(body) {
 	const d = plan.data;
 	body.append(el('p', {},
 		`Game files: ${d.files} (${formatSize(d.bytes)}), ${d.excluded} left out. Framework: ${d.framework}. `,
-		`To convert: ${d.convertImages} images, ${d.convertAudio} sounds.`));
+		`To convert: ${d.convertImages} images, ${d.convertAudio} sounds.`,
+		d.scenes?.compile ? ` To compile: ${d.scenes.scripts} scripts${d.scenes.encrypted ? ', encrypted' : ''}.` : ''));
 	const outs = el('div', { class: 'outputs' });
 	for (const o of plan.outputs) {
 		const st = hostStatus[o.platform];
@@ -349,7 +377,7 @@ function showFieldIssues() {
 	for (const sec of SECTIONS) {
 		const badge = document.querySelector(`[data-badge="${sec.id}"]`);
 		if (!badge) continue;
-		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], output: ['output', 'engine'], plan: [''] }[sec.id];
+		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], scenes: ['scenes'], output: ['output', 'engine'], plan: [''] }[sec.id];
 		const mine = issues.filter((i) => prefix.some((p) => i.field.startsWith(p)));
 		const errs = mine.filter((i) => i.level === 'error').length;
 		badge.textContent = errs || mine.length || '';

@@ -26,6 +26,10 @@ struct Project {
 	std::filesystem::path preview;
 	/// the engine next to data/ (krkrz.exe or krkrz), when there is one
 	std::filesystem::path engine;
+	/// the list of scripts to compile (data/.../!scnlist.txt, doc/scn.txt), when the game has one
+	std::filesystem::path sceneList;
+	/// whether the framework compiles scripts (it has SceneParser.tjs: KAGEX 0.9.0 and later)
+	bool frameworkCompiles = false;
 };
 
 /// Looks for the project at dir, then in its parents (up to 3 levels): a folder with

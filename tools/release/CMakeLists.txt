@@ -51,6 +51,7 @@ add_executable(kagex-release
     src/Engine.cpp
     src/Build.cpp
     src/Media.cpp
+    src/Scenes.cpp
 )
 find_package(ZLIB REQUIRED)
 # dr_flac (FLAC sources; header only)
@@ -62,6 +63,23 @@ if(WIN32)
     # the exe's icon and version info (Windows resource APIs)
     target_link_libraries(kagex-release PRIVATE krt_release)
     target_compile_definitions(kagex-release PRIVATE KR_HAVE_RELEASE_LIB)
+endif()
+# Encrypting compiled scenarios and writing the game's key into the scnfile plugin: scnfile's own
+# code (https://github.com/krkren/scnfile, plugins/scnfile), by default from ../scnfile next to
+# this repository. Without it the tool still compiles scenarios, but can't encrypt them
+get_filename_component(_scnfile_default "${_kagex_root}/../scnfile" ABSOLUTE)
+set(SCNFILE_DIR "${_scnfile_default}" CACHE PATH "scnfile (for encrypting compiled scenarios; optional)")
+if(EXISTS "${SCNFILE_DIR}/plugins/scnfile/seal.cpp")
+    set(_scn "${SCNFILE_DIR}/plugins/scnfile")
+    target_sources(kagex-release PRIVATE "${_scn}/seal.cpp" "${_scn}/seal_random.cpp" "${_scn}/psb.cpp" "${_scn}/monocypher/monocypher.c")
+    target_include_directories(kagex-release PRIVATE "${_scn}")
+    target_compile_definitions(kagex-release PRIVATE KR_HAVE_SCNFILE SCNFILE_HAVE_ZLIB)
+    if(WIN32)
+        target_link_libraries(kagex-release PRIVATE bcrypt)
+    endif()
+    message(STATUS "kagex-release: encrypting scenarios with scnfile from ${SCNFILE_DIR}")
+else()
+    message(STATUS "kagex-release: no scnfile at ${SCNFILE_DIR}: compiled scenarios can't be encrypted")
 endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # runs on any distribution with the glibc it was built against or newer

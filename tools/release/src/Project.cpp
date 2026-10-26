@@ -58,6 +58,19 @@ void readFirstKs(const fs::path& data, Project& p)
 	}
 }
 
+// The list of scripts to compile, !scnlist.txt, wherever it is in data/ (the framework finds it
+// by name on the auto path)
+fs::path findSceneList(const fs::path& data)
+{
+	std::error_code ec;
+	for (fs::recursive_directory_iterator it(data, fs::directory_options::skip_permission_denied, ec), end;
+	     it != end; it.increment(ec)) {
+		if (ec) break;
+		if (lower(krt::fromPath(it->path().filename())) == "!scnlist.txt" && it->is_regular_file(ec)) return it->path();
+	}
+	return {};
+}
+
 // orgname= / appname= from krkrz.cf
 void readCf(const fs::path& cf, Project& p)
 {
@@ -109,6 +122,8 @@ bool findProject(const fs::path& start, Project& out, std::string& error)
 			} else if (fs::is_regular_file(p.root / "template" / "system" / "Initialize.tjs", ec)) {
 				p.framework = p.root / "template" / "system";
 			}
+			p.frameworkCompiles = !p.framework.empty() && fs::is_regular_file(p.framework / "SceneParser.tjs", ec);
+			p.sceneList = findSceneList(p.data);
 			readFirstKs(p.data, p);
 			readCf(p.root / "krkrz.cf", p);
 			for (const char* icon : { "platform/icon-1024.png", "icon-1024.png", "icon.png" }) {

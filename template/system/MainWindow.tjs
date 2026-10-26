@@ -2376,7 +2376,11 @@ class KAGWindow extends Window
 
 
 
-			visible = !invisible;
+			// a run that only compiles scenarios (-scncompile, as kagex-release does) stays hidden
+
+			var compileArg = System.getArgument("-scncompile");
+
+			visible = !invisible && (compileArg == "" || compileArg == "no");
 
 
 

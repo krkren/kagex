@@ -30,6 +30,10 @@ The platform builds run the sample's steps the same way, through their own REPL 
   --target web --url http://...        the browser build in headless Chromium (Playwright):
                                        krkrz_web's krkrz_repl_eval bridge (--channel chrome
                                        uses the installed Chrome)
+
+  --engine <exe> --packaged            a desktop package (kagex-release's Windows or Linux
+                                       build of the sample): the exe with the data it was
+                                       packaged with, without a project folder
 """
 
 import argparse
@@ -220,8 +224,9 @@ class DesktopEngine(FileChannel):
         env = dict(os.environ)
         env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
         env.setdefault("SDL_AUDIO_DRIVER", "dummy")
-        args = [exe, os.path.abspath(data), "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
-                "-replmodaltimeout=0"]
+        # without data: a package, which runs the data it holds
+        args = [exe] + ([os.path.abspath(data)] if data else []) + \
+            ["-datapath=" + self.savedir + "/", "-replfile=" + self.chan, "-replmodaltimeout=0"]
         self.log = open(self.log_path, "wb")
         self.proc = subprocess.Popen(args, stdout=self.log, stderr=subprocess.STDOUT, env=env)
 
@@ -575,7 +580,9 @@ def effekseer_framework(eng):
 def animated_framework(eng):
     """Whether the sample has the Animated Character demo (0.8.0 and later; pages.yml may test an
     older release's site)"""
-    return eng.tjs('return Storages.isExistentStorage("anim.ks") ? 1 : 0;') == 1
+    # a package compiled by kagex-release has anim.ks.scn and no anim.ks
+    return eng.tjs('return Storages.isExistentStorage("anim.ks") || (typeof global.scnFindCompiled != "undefined"'
+                   ' && scnFindCompiled("anim.ks") !== void) ? 1 : 0;') == 1
 
 
 def compiled_framework(eng):
@@ -607,7 +614,14 @@ def sample_steps(eng):
         if not compiled_framework(eng):
             print("     (skipped: this build's framework predates compiled scenarios)", flush=True)
             return
-        if eng.tjs("world_object.initPlayer(); return world_object.player.readonlydb ? 1 : 0;") == 1:
+        # a package compiled by kagex-release (doc/scn.txt) holds the compiled files and not the
+        # scripts
+        if eng.tjs('world_object.initPlayer(); return !Storages.isExistentStorage("s0001.ks") &&'
+                   ' scnFindCompiled("s0001.ks") !== void ? 1 : 0;') == 1:
+            print("     (a package with compiled scenarios: the demos play those)", flush=True)
+            eng.compiled = True
+            return
+        if eng.tjs("return world_object.player.readonlydb ? 1 : 0;") == 1:
             print("     (skipped: this build can't write compiled scenarios, so the demos play from the scripts)",
                   flush=True)
             return
@@ -1026,13 +1040,13 @@ def start_engine(opts, data, workdir):
         return SimulatorEngine(opts.app, opts.bundle_id, workdir, opts.verbose, opts.device)
     if opts.target == "web":
         return WebEngine(opts.url, workdir, opts.verbose, opts.channel)
-    return DesktopEngine(opts.engine, data, workdir, opts.verbose)
+    return DesktopEngine(opts.engine, None if opts.packaged else data, workdir, opts.verbose)
 
 
 def run_project(opts, label, data, make_steps):
     print("== %s (%s, %s)" % (label, data, opts.target), flush=True)
     workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
-    boot_patches = opts.target == "desktop" and label == "sample"
+    boot_patches = opts.target == "desktop" and label == "sample" and not opts.packaged
     if boot_patches:
         write_boot_patches(os.path.join(workdir, "savedata"), data)
     try:
@@ -1119,6 +1133,8 @@ def main():
     ap.add_argument("--keep", action="store_true", help="keep the temporary folders")
     ap.add_argument("--verbose", action="store_true", help="print the engine log at the end")
     ap.add_argument("--target", choices=["desktop", "android", "ios-sim", "web"], default="desktop")
+    ap.add_argument("--packaged", action="store_true",
+                    help="desktop: --engine is a package of the sample, run with the data it holds")
     ap.add_argument("--apk", help="android: the APK to install")
     ap.add_argument("--package", default="io.github.krkren.kagex", help="android: its applicationId")
     ap.add_argument("--adb", default="adb")
@@ -1141,13 +1157,13 @@ def main():
                     help="whether the build must load CLIP STUDIO PAINT layers (the clipfile plugin): "
                     "required fails when it can't; optional reports it")
     opts = ap.parse_args()
-    if opts.target != "desktop":
+    if opts.target != "desktop" or opts.packaged:
         opts.only = "sample"  # the platform packages hold the sample only
 
     failures = 0
     if opts.only in (None, "sample"):
         failures += run_project(opts, "sample", "data", sample_steps)
-        if opts.target == "desktop":
+        if opts.target == "desktop" and not opts.packaged:
             failures += scncompile_check(opts, "data")
     if opts.only in (None, "template"):
         failures += run_project(opts, "template", "template", template_steps)

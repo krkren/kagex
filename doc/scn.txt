@@ -14,10 +14,11 @@ line.
 This follows the plan at https://github.com/krkren/scnfile. A compiled scene is a .scn file,
 M2's binary PSB format, which the scnfile plugin (SCNFile, from that repository; the player
 also takes Wamsoft's PSBFile) reads and writes. A build without the plugin compiles to and
-reads <script>.scn.json instead, through the json plugin every build has. Still to come:
-encrypted .scn files, the plugin on every platform (only Linux builds it so far), and
-kagex-release compiling a game's scripts and shipping only those. A compiled script plays
-without its .ks: the .ks of a script in !scnlist.txt only has to be there to compile it.
+reads <script>.scn.json instead, through the json plugin every build has. kagex-release
+compiles a game's listed scripts, encrypts the .scn files with the game's key and ships them
+without the scripts (Releases, below). A compiled script plays without its .ks: the .ks of a
+script in !scnlist.txt only has to be there to compile it. Still to come: the plugin on every
+platform (only Linux builds it so far, and the engine packages don't have it yet).
 
 
 
@@ -41,7 +42,8 @@ was compiled from (hash).
 - In debug mode (the default; -debugwin=no turns it off), a listed script that changed is
   compiled when the game goes to it.
 - -scncompile compiles every listed script that changed, writes what happened to the console
-  and exits (with 1 if one failed); -scncompile=all compiles all of them.
+  and exits (with 1 if one failed); -scncompile=all compiles all of them. The game's window
+  stays hidden.
 - KAGCompileScenarios(force) does the same from a running game, and returns
   %[compiled, skipped, failed, errors, warnings].
 
@@ -80,6 +82,34 @@ Saves made while playing compiled resume at the save point they were made at. A 
 compiled again since then (its hash changed) resumes at the top of the scene instead. Saves
 made with compiled play on and off don't mix: one made reading the script can't be loaded
 into the compiled script, or the other way round.
+
+◇ Releases
+
+kagex-release compiles the listed scripts as it builds (Scenarios > Compile, scenes.compile in
+release.json; on by default when the game has a !scnlist.txt): after the media conversion it
+runs this computer's engine on the game's files with -scncompile=all, then leaves out each
+compiled script and the compiler's own parsermacro.ks and parseroption.txt. !scnlist.txt
+stays: the game reads it to know which scripts are compiled. The compiled files the game
+folder already has are left out and every script compiled again.
+
+With the engine's scnfile plugin the files are .scn, and every platform's engine needs the
+plugin to play them: a platform whose engine lacks it fails to build. Without the plugin
+they're .scn.json, which every engine reads.
+
+A key encrypts the .scn files (Scenarios > Key, scenes.keyFile; or the variable
+KAGEX_SCENES_KEY, 64 hexadecimal digits, which wins). New key in the window, or
+kagex-release --cli keygen <file>, makes one. The build writes the key into each package's
+copy of the plugin (or of an engine with the plugin built in), before signing and before the
+web build's id, so each game's engines open only that game's files. The key can't be inside
+data/. Encrypting the same file with the same key gives the same bytes, so a patch
+(output.patchFrom) holds only the scripts that changed, and it has to be built with the key
+the game was: keep the key, and keep it out of the game's repository. The format is
+scnfile's docs/format.md (XChaCha20-Poly1305: a changed byte makes the file refuse to open).
+The key is in the game, as any key a game reads its own files with has to be: this keeps the
+scripts from being read with a text editor or a PSB viewer, not from someone determined.
+
+In debug mode a release's compiled files are used as they are: there is no script to compile
+them from.
 
 
 

@@ -721,6 +721,12 @@ class KAGEnvPlayer
 		for (var i=0;i<list.count;i++) {
 			var name = list[i];
 			try {
+				if (!Storages.isExistentStorage(name)) {
+					// a release without its scripts (kagex-release): the compiled file is all there is
+					if (scnFindCompiled(name) === void) throw new Exception("not found");
+					ret.skipped++;
+					continue;
+				}
 				parser.prepare("parsermacro.ks", "parseroption.txt");
 				if (force || parser.isNeedParse(name) || parser.outputPath(name) === void) {
 					clearStorage();

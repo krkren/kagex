@@ -6,6 +6,7 @@
 //   kagex-release --cli check [<release.json>] [--json]       the settings, and what this computer can build
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
+//   kagex-release --cli keygen <file>                         makes a key for encrypting compiled scenarios
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work.
@@ -22,6 +23,7 @@
 #include "Host.h"
 #include "Plan.h"
 #include "Project.h"
+#include "Scenes.h"
 #include "Settings.h"
 #include "Subprocess.h"
 #include "krt/app/JobRunner.h"
@@ -164,8 +166,14 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 	}
 	const std::string cmd = args[0];
 	const std::string path = args.size() > 1 ? args[1] : std::string();
-	Target t;
 	std::string err;
+	if (cmd == "keygen") {
+		if (path.empty()) { std::fprintf(stderr, "usage: kagex-release --cli keygen <file>\n"); return 2; }
+		if (!makeSceneKey(krt::toPath(path), err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
+		std::printf("Wrote a new key to %s: name it in release.json's scenes.keyFile, and keep it out of the game's repository\n", path.c_str());
+		return 0;
+	}
+	Target t;
 	if (!resolveTarget(path, t, err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
 
 	if (cmd == "init") {
@@ -230,6 +238,9 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		std::printf("Game files: %lld (%s), %lld excluded; framework: %s\n", (long long)d["files"].asInt(),
 		            humanSize(d["bytes"].asInt()).c_str(), (long long)d["excluded"].asInt(), d["framework"].asStr().c_str());
 		std::printf("Converted: %lld images, %lld sounds\n", (long long)d["convertImages"].asInt(), (long long)d["convertAudio"].asInt());
+		if (d["scenes"]["compile"].asBool())
+			std::printf("Compiled: %lld scripts in !scnlist.txt%s\n", (long long)d["scenes"]["scripts"].asInt(),
+			            d["scenes"]["encrypted"].asBool() ? ", encrypted" : "");
 		for (const auto& out : plan["outputs"].elements()) {
 			std::printf("%s:\n", out["title"].asStr().c_str());
 			if (!out["folder"].asStr().empty()) std::printf("  folder  %s/\n", out["folder"].asStr().c_str());
@@ -265,7 +276,7 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return r["ok"].asBool() ? 0 : 1;
 	}
 
-	std::fprintf(stderr, "error: unknown command %s (init, check, plan or build)\n", cmd.c_str());
+	std::fprintf(stderr, "error: unknown command %s (init, check, plan, build or keygen)\n", cmd.c_str());
 	return 2;
 }
 
@@ -358,6 +369,17 @@ public:
 			return appserve::Response::json(Json::object());
 		});
 
+		// Makes a key for encrypting compiled scenarios (body: { path }, relative to the project)
+		reg.route("/api/release/keygen", [this](const appserve::Request& req) {
+			if (!have_) return appserve::Response::error(400, targetError_);
+			const fs::path file = target_.project.root / krt::toPath(req.json()["path"].asStr());
+			std::string err;
+			if (!makeSceneKey(file, err)) return appserve::Response::error(400, err);
+			Json out = Json::object();
+			out.set("file", Json(krt::fromPath(file.lexically_normal())));
+			return appserve::Response::json(out);
+		});
+
 		// Saves release.json (body: { settings })
 		reg.route("/api/release/save", [this](const appserve::Request& req) {
 			if (!have_) return appserve::Response::error(400, targetError_);
@@ -376,6 +398,7 @@ private:
 		Json out = Json::object();
 		out.set("version", Json(KAGEX_RELEASE_VERSION));
 		out.set("host", Json(hostId()));
+		out.set("scnfile", Json(canEncryptScenes()));
 		Json pls = Json::array();
 		for (const auto& pl : platforms()) {
 			Json o = Json::object();
@@ -418,7 +441,7 @@ int main(int argc, char** argv)
 	app.options().appName = "kagex-release";
 	app.options().appVersion = KAGEX_RELEASE_VERSION;
 	Options o;
-	app.addOption({ "cli", "", "Run a command (init, check, plan, build) instead of opening the window",
+	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
 	app.addOption({ "force", "", "init: replace an existing release.json",
 	                [&o](const std::string&) { o.force = true; return true; } });
