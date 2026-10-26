@@ -442,9 +442,10 @@ def web_tests(exe, proj, args):
         except Exception as e:
             step("web (%s): the game starts in the browser" % mode, False, str(e)[:1500])
         finally:
+            # the console, also from a page that never started (WebEngine writes it as it comes)
+            if args.out and (work / "console.txt").exists():
+                shutil.copyfile(work / "console.txt", Path(args.out) / ("web-%s-console.txt" % mode))
             if eng:
-                if args.out:
-                    shutil.copyfile(eng.log_path, Path(args.out) / ("web-%s-console.txt" % mode))
                 eng.stop()
             httpd.shutdown()
     step("web: another build, another id (players' pages and caches update)", builds.get("files") and builds.get("xp3") and builds["files"] != builds["xp3"],

@@ -482,7 +482,8 @@ class WebEngine(Engine):
         self.page.on("response", lambda r: r.status >= 400 and self._line("HTTP %d %s" % (r.status, r.url)))
         # audiogate=0: start without waiting for a click (Chromium may play audio anyway here)
         self.page.goto(url + ("&" if "?" in url else "?") + "audiogate=0")
-        end = time.time() + 180
+        start = time.time()
+        end = start + 180
         last = None
         while time.time() < end:
             try:
@@ -491,6 +492,9 @@ class WebEngine(Engine):
                     return
             except SmokeError as e:
                 last = e
+                # in the console file only, so a page that never starts shows where it stopped
+                if not self.console.closed:
+                    self.console.write("(smoke test, %.1f s) %s\n" % (time.time() - start, str(e).split("\n")[0][:200]))
             time.sleep(2)
         err = SmokeError("the engine didn't start in the page (%s); console:\n%s"
                          % (last, "\n".join(self.lines[-40:])))
