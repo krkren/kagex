@@ -1429,7 +1429,11 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			lipflip     = f.lipflip;
 			lipflipTime = f.lipflipTime;
 			setEyeState(f.eyestate !== void ? f.eyestate : 0);
-			setLipState(f.lipstate !== void ? f.lipstate : 0); 
+			setLipState(f.lipstate !== void ? f.lipstate : 0);
+			// blinking and lip-sync go on as they were (a load, going back, a seek's end): only a
+			// command or a voice started them before. Not in a World that draws nothing (the
+			// compiler's, snapshots) or while skipping unseen
+			startUpdateHandler() if !env.skipNoDisp;
 		}
 		if (dress !== void) {
 			_setDress(dress);

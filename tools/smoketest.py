@@ -1150,6 +1150,43 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("after a search jump into Pip's scene he still blinks and lip-syncs")
+    def _():
+        if not eng.compiled or not animated_framework(eng) or \
+                eng.tjs('return typeof global.searchInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, Pip or Search here)", flush=True)
+            return
+        # a character put back from a saved state (a seek's end, a load, going back) has to start
+        # its blinking and lip-sync again (KAGEnvCharacterEx.onRestore)
+        eng.tjs('tf.searchText = "blink"; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
+                 timeout=20)
+        k = eng.tjs('for (var i = 0; i < searchFound.count; i++) if (searchFound[i].storage == "anim.ks") return i;'
+                    ' return -1;')
+        if k < 0:
+            raise SmokeError("searching for \"blink\" found nothing in anim.ks")
+        eng.tjs('global.__smokeFace = []; global.__smokeFaceTimer = new Timer(function() {'
+                ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
+                ' if (c !== void && !kag.skipNoDisp) __smokeFace.add([c.eyeLevel, b !== void && b.status == "play" ? c.lipLevel : "-"]);'
+                ' }, ""); __smokeFaceTimer.interval = 20; __smokeFaceTimer.enabled = true; return 1;')
+        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.wait("Pip's line", 'world_object.player !== void && world_object.player.curStorage == "anim.ks"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        time.sleep(3.0)
+        seen = str(eng.tjs('__smokeFaceTimer.enabled = false; var eyes = %[], lips = %[];'
+                           ' for (var i = 0; i < __smokeFace.count; i++) { eyes["k" + __smokeFace[i][0]] = 1; lips["k" + __smokeFace[i][1]] = 1; }'
+                           ' invalidate __smokeFaceTimer; var e = [], l = []; e.assign(eyes); l.assign(lips);'
+                           ' var re = [], rl = []; for (var i = 0; i < e.count; i += 2) re.add(e[i].substr(1)); for (var i = 0; i < l.count; i += 2) rl.add(l[i].substr(1));'
+                           ' return re.join(" ") + "|" + rl.join(" ");')).split("|")
+        eyes, lips = seen[0].split(), [x for x in seen[1].split() if x != "-"]
+        print("     eye levels %s, mouth levels while the voice played %s" % (eyes, lips), flush=True)
+        if "0" not in eyes and "1" not in eyes:
+            raise SmokeError("Pip didn't blink (eye levels %s)" % eyes)
+        if lips and not any(x in ("1", "2") for x in lips):
+            raise SmokeError("Pip's mouth didn't move while he spoke (levels %s)" % lips)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     return steps
 
 

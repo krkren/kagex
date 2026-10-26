@@ -22,6 +22,7 @@
 ### Changed
 
 - `-scncompile` keeps the game's window hidden.
+- A character drawn from layers blinks and lip-syncs again right after a load (or going back, or a search jump): it used to stand still until the next command on it.
 - Extras has four tabs (CG, Replay, Music, Search); the nav buttons moved left to make room.
 - EXIT in a scene played from Replay goes back to Replay (it went to the title).
 - In compiled scenes the backlog follows the scene player's history: written again after a jump or a load (it used to be wiped), and kept at choices (wiped too), which it shows as "Choice: ..." lines.
