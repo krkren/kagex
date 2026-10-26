@@ -157,6 +157,7 @@ Json defaultSettings(const Project& p)
 	s.set("archive", obj({
 		{ "encrypt", Json(false) },
 		{ "keyFile", Json("") },
+		{ "hideNames", Json(false) },
 	}));
 	Json pl = Json::object();
 	pl.set("windows", obj({ { "enabled", Json(host == "windows") }, { "data", Json("xp3") }, { "versionInfo", Json(true) } }));
@@ -360,6 +361,20 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			};
 			if (inside(p.data)) error("archive.keyFile", "The key is inside data/, so it would be packed into the game: keep it outside the game's folder");
 			else if (inside(p.root)) warn("archive.keyFile", "The key is inside the game's folder: keep it out of the game's repository (anyone with it can read the encrypted files)");
+		}
+	}
+
+	// hidden file names (one encrypted, name-hashed archive served through the xpcrypt:// medium)
+	if (flag(s, "archive.hideNames")) {
+		if (!flag(s, "archive.encrypt")) error("archive.hideNames", "Hiding the file names needs encryption on (Encrypt)");
+		for (const auto& pl : platforms()) {
+			const std::string base = std::string("platforms.") + pl.id + ".";
+			if (!flag(s, base + "enabled")) continue;
+			const std::string id = pl.id;
+			if (id == "web" || id == "android" || id == "ios")
+				error(base + "enabled", std::string(pl.title) + " can't hide the file names yet (desktop only)");
+			else if (str(s, base + "data") == "bind")
+				error(base + "data", std::string(pl.title) + " can't bind the data into the executable with hidden file names; use \"xp3\"");
 		}
 	}
 

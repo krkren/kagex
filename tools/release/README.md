@@ -110,6 +110,11 @@ line:
 kagex-release --cli keygen game.key        # make a key (64 hex digits; keep it out of the repo)
 ```
 
+**Hide names** (`archive.hideNames`, desktop only) goes further: the game ships as one encrypted
+archive `data.xpc` whose file names are hashed, so a generic tool sees neither the files nor their
+names. The engine reads it through the plugin's `xpcrypt://` storage medium, with a tiny plain
+`data/startup.tjs` that mounts it; the data mode can't be "bind".
+
 Point *Key file* (`archive.keyFile`) at it, or set `KAGEX_ARCHIVE_KEY` (which wins, for CI). The
 check refuses a key inside `data/` (it would be packed into the game) and warns about one inside
 the game's folder (it would likely end up in the repository). The
@@ -164,7 +169,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
-| `archive` | `encrypt` (pack `data.xp3` encrypted; the engine needs the xp3crypt plugin), `keyFile` (the key, 64 hex digits; or `KAGEX_ARCHIVE_KEY`) |
+| `archive` | `encrypt` (pack `data.xp3` encrypted; the engine needs the xp3crypt plugin), `keyFile` (the key, 64 hex digits; or `KAGEX_ARCHIVE_KEY`), `hideNames` (ship one `data.xpc` with hashed file names; desktop only) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,

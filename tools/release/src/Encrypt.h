@@ -32,9 +32,10 @@ bool makeArchiveKey(const std::filesystem::path& file, std::string& error);
 /// Whether file holds a key (64 hexadecimal digits); the key itself isn't kept
 bool checkArchiveKeyFile(const std::filesystem::path& file, std::string& error);
 
-/// Packs the staged folder into an encrypted data.xp3 at `output`. files/bytes get the counts
+/// Packs the staged folder into an encrypted archive at `output`. hashNames also hashes the file
+/// names (the game runs it through the xpcrypt:// medium). files/bytes get the counts
 bool packEncrypted(const std::filesystem::path& stageDir, const std::filesystem::path& output, const ArchiveKey& key,
-                   int& files, uint64_t& bytes, std::string& error);
+                   bool hashNames, int& files, uint64_t& bytes, std::string& error);
 
 /// The files under root (a platform's folder, app or project) that hold the xp3crypt key slot:
 /// the engine with the plugin built in (or a plugin shipped beside it). Data folders aren't searched

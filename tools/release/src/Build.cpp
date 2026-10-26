@@ -244,13 +244,15 @@ public:
 				std::string err;
 				if (!readArchiveKey(s_, p_, archiveKey_, haveArchiveKey_, err)) throw Failure{ err };
 				if (!haveArchiveKey_) throw Failure{ "archive.encrypt is on but there's no key: set archive.keyFile or KAGEX_ARCHIVE_KEY (make one with: kagex-release --cli keygen <file>)" };
+				hashNames_ = flag(s_, "archive.hideNames");
 			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));
 			media(PartProgress(pr_, 0.05, 0.22));
 			fileList(PartProgress(pr_, 0.22, 0.25));
 			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
-			if (needsXp3()) packXp3(PartProgress(pr_, 0.25, 0.35));
+			if (hashNames_) packHashed(PartProgress(pr_, 0.25, 0.35));
+			else if (needsXp3()) packXp3(PartProgress(pr_, 0.25, 0.35));
 			prepareIcons();
 
 			const double span = 0.6 / std::max<size_t>(1, chosen_.size());
@@ -520,7 +522,7 @@ private:
 			int files = 0;
 			uint64_t bytes = 0;
 			std::string err;
-			if (!packEncrypted(stage_, xp3_, archiveKey_, files, bytes, err)) throw Failure{ "Couldn't pack the encrypted data.xp3: " + err };
+			if (!packEncrypted(stage_, xp3_, archiveKey_, false, files, bytes, err)) throw Failure{ "Couldn't pack the encrypted data.xp3: " + err };
 			std::error_code ec;
 			if (!fs::is_regular_file(xp3_, ec) || files == 0) throw Failure{ "Couldn't pack the encrypted data.xp3" };
 			pr.log("data.xp3: " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted");
@@ -534,9 +536,28 @@ private:
 		pr.log("data.xp3: " + std::to_string(r.files) + " files, " + std::to_string(r.arcBytes / 1048576) + " MB");
 	}
 
+	// Hidden file names: one encrypted, name-hashed archive (data.xpc) the game reads through the
+	// xpcrypt:// medium, plus a plain bootstrap startup.tjs that mounts it. The game's folders are
+	// inside data.xpc with their names hashed, so nothing is readable in the package but the engine
+	void packHashed(krt::Progress&& pr)
+	{
+		// the plain bootstrap: template/system/hashed-bootstrap.tjs, copied into the staged data
+		std::error_code ec;
+		if (!krt::readFile(stage_ / "system" / "hashed-bootstrap.tjs", bootstrap_) || bootstrap_.empty())
+			throw Failure{ "Hiding the file names needs template/system/hashed-bootstrap.tjs in the framework (update template/system)" };
+		xpc_ = work_ / "data.xpc";
+		pr.progress(0, "Packing data.xpc (encrypted, names hidden)");
+		int files = 0;
+		uint64_t bytes = 0;
+		std::string err;
+		if (!packEncrypted(stage_, xpc_, archiveKey_, true, files, bytes, err)) throw Failure{ "Couldn't pack data.xpc: " + err };
+		if (!fs::is_regular_file(xpc_, ec) || files == 0) throw Failure{ "Couldn't pack data.xpc" };
+		pr.log("data.xpc: " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted with hidden names");
+	}
+
 	// Write the game's key into the platform's engine, which must have the xp3crypt plugin (its
 	// key slot). root: the platform's own copy of the engine. Called when the platform ships the
-	// encrypted data.xp3 (xp3 or bind data mode)
+	// encrypted data.xp3 (xp3 or bind data mode), or a hashed data.xpc
 	void archiveKeyInto(const std::string& id, const fs::path& root)
 	{
 		if (!haveArchiveKey_) return;
@@ -560,6 +581,7 @@ private:
 	bool encryptedXp3For(const std::string& id)
 	{
 		if (!haveArchiveKey_) return false;
+		if (hashNames_) return true;   // the hashed data.xpc is always read through the medium, so the engine needs the key
 		const std::string d = str(s_, "platforms." + id + ".data");
 		return d == "xp3" || d == "bind";
 	}
@@ -618,6 +640,12 @@ private:
 
 	void dataInto(const std::string& id, const fs::path& dir)
 	{
+		if (hashNames_) {
+			// data.xpc next to the engine, and a plain data/ with just the bootstrap startup.tjs
+			copyFile(xpc_, dir / "data.xpc");
+			writeText(dir / "data" / "startup.tjs", bootstrap_);
+			return;
+		}
 		const std::string mode = str(s_, "platforms." + id + ".data");
 		if (mode == "xp3") copyFile(xp3_, dir / "data.xp3");
 		else if (mode == "folder") copyTree(stage_, dir / "data");
@@ -701,7 +729,7 @@ private:
 		if (encryptedXp3For("windows")) archiveKeyInto("windows", dir);   // before bind, so the exe is keyed first
 		writeText(dir / krt::toPath(str(s_, "identity.exeName") + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms.windows.data");
-		if (mode == "bind") bind(exe);
+		if (mode == "bind" && !hashNames_) bind(exe);
 		else dataInto("windows", dir);
 		licensesInto(engine, dir);
 	}
@@ -726,7 +754,7 @@ private:
 		if (encryptedXp3For(id)) archiveKeyInto(id, dir);   // before bind, so the executable is keyed first
 		writeText(dir / krt::toPath(exeName + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms." + id + ".data");
-		if (mode == "bind") bind(exe);
+		if (mode == "bind" && !hashNames_) bind(exe);
 		else dataInto(id, dir);
 		licensesInto(engine, dir);
 		if (id == "linux" && flag(s_, "platforms.linux.desktopEntry")) {
@@ -1556,6 +1584,9 @@ private:
 	Json media_;
 	ArchiveKey archiveKey_{};     ///< the game's key for an encrypted data.xp3 (when haveArchiveKey_)
 	bool haveArchiveKey_ = false;
+	bool hashNames_ = false;      ///< one encrypted, name-hashed archive (data.xpc) + a plain bootstrap
+	fs::path xpc_;                ///< the hashed archive (work/data.xpc)
+	std::string bootstrap_;       ///< the plain bootstrap startup.tjs that mounts it
 };
 
 } // namespace

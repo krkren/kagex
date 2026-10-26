@@ -95,6 +95,8 @@ const SECTIONS = [
 			{ path: 'archive.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the files in data.xp3 (platforms whose data is data.xp3 or bound into the executable)', showIf: () => state.canEncrypt },
 			{ path: 'archive.keyFile', label: 'Key file', type: 'keyfile', showIf: (s) => state.canEncrypt && s.archive.encrypt,
 			  help: 'Create key… makes a new random key; Browse… picks one you already have. Keep it outside the game\'s folder and back it up: a game can only be rebuilt or patched with the key it was released with, and anyone who has it can read the encrypted files. KAGEX_ARCHIVE_KEY overrides it (for CI)' },
+			{ path: 'archive.hideNames', label: 'Hide names', type: 'check', text: 'Also hide the file names (one archive, data.xpc, with hashed names)', showIf: (s) => state.canEncrypt && s.archive.encrypt,
+			  help: 'The game ships as one encrypted archive whose file names are hashed, so a generic tool sees neither the files nor their names. Desktop only, and the data mode can\'t be "bind". The game reads it through the plugin\'s xpcrypt:// medium' },
 		],
 	},
 	{ id: 'plan', title: 'Check', intro: 'What a build would make, and anything that would stop it.', render: renderPlan },

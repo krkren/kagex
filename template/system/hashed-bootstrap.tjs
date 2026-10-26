@@ -1,0 +1,19 @@
+// Hashed-name archive bootstrap. kagex-release ships this as data/startup.tjs when the game is
+// packed as one encrypted, name-hashed archive (data.xpc). The engine finds this plain startup
+// before any plugin loads; everything else of the game lives in data.xpc, with its file names
+// hashed, and is served by the xpcrypt plugin (xpcrypt://). See xp3crypt and doc/scn.txt.
+
+// The plugin is normally built into the engine (TVP_PLUGINS_STATIC); for a desktop build that
+// ships it as a file instead, link it here. (Built in, this link just fails and is ignored.)
+try { Plugins.link("xp3crypt.dll"); } catch (e) { }
+
+if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", System.exePath + "data.xpc")) {
+	// no plugin, no key, or the archive is missing or damaged
+	Debug.message("xp3crypt: the game data (data.xpc) could not be opened");
+	System.exit();
+} else {
+	// the folders of the game are xpcrypt://data/<folder>; Initialize.tjs reads kagexHashedArchive
+	global.kagexHashedArchive = "xpcrypt://data/";
+	Storages.addAutoPath("xpcrypt://data/system/");   // so Initialize.tjs itself resolves
+	Scripts.execStorage("Initialize.tjs");
+}
