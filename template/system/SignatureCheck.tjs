@@ -153,18 +153,20 @@ function KAGSignatureVerifyAndStart(cont)
 
 	// A decoy: a file whose .sig was made for different content, so a correct plugin reports a
 	// mismatch (0). A plugin stubbed to always succeed would return 1 here and be caught; one that
-	// always fails is caught on the real files below.
-	if (Storages.isExistentStorage("SignatureDecoy.bin"))
-		KAGSigQueue.add(%[ "storage" => Storages.getPlacedPath("SignatureDecoy.bin"),
-			"label" => "the signature self-test", "expect" => "mismatch", "kind" => "decoy" ]);
+	// always fails is caught on the real files below. It is always queued: a signed build always
+	// ships it, so its absence means the archive was repacked and is treated as a failure.
+	KAGSigQueue.add(%[ "storage" => "SignatureDecoy.bin", "label" => "the signature self-test",
+		"expect" => "mismatch", "kind" => "decoy" ]);
 
 	KAGSigQueue.add(%[ "storage" => KAGSignedArchive, "label" => "the game data (" +
 		Storages.extractStorageName(KAGSignedArchive) + ")", "expect" => "pass", "kind" => "archive" ]);
 
 	// The engine files, from the signed list beside the executable (<exe>.sigfiles). Verified as a
 	// whole; the files it names are appended to the queue once it passes (so the list can't be
-	// edited to drop a file).
-	if (KAGSignatureCheckEngine) {
+	// edited to drop a file). Not on macOS: there the app bundle is sealed by codesign (and would
+	// rewrite these binaries after we signed them), so the engine's own code signature covers them.
+	var tag = (typeof System.platformTag != "undefined") ? System.platformTag : "";
+	if (KAGSignatureCheckEngine && tag != "macos") {
 		var listName = KAGSignatureEngineListName();
 		KAGSigQueue.add(%[ "storage" => listName, "label" => "the engine file list",
 			"expect" => "pass", "kind" => "enginelist" ]);
@@ -199,12 +201,15 @@ function KAGSignatureStartNext()
 	if (KAGSigIndex >= KAGSigQueue.count) { KAGSignatureAllPassed(); return; }
 	var item = KAGSigQueue[KAGSigIndex];
 	if (item.storage == "" || !Storages.isExistentStorage(item.storage)) {
-		// A file named for checking but not present. The engine list missing is a failure; an
-		// archive/patch that isn't there was never a candidate, so it is simply skipped.
-		if (item.kind == "enginelist") { KAGSignatureQuit("The engine file list is missing (" + item.storage + ")."); return; }
-		if (item.kind == "enginefile") { KAGSignatureQuit("An engine file is missing: " + item.storage); return; }
-		KAGSigIndex++;
-		KAGSignatureStartNext();
+		// A file named for checking but not present. The decoy, the game archive and the engine
+		// files are always shipped, so a missing one means tampering and fails. Only a part or a
+		// patch can legitimately be absent (it was a candidate that this build doesn't have).
+		if (item.kind == "part" || item.kind == "patchxp3" || item.kind == "patchzip") {
+			KAGSigIndex++;
+			KAGSignatureStartNext();
+			return;
+		}
+		KAGSignatureQuit("A file that must be checked is missing: " + item.label + ".");
 		return;
 	}
 	kag.checkSignature(item.storage, KAGSignaturePublicKey, (string)KAGSigIndex);

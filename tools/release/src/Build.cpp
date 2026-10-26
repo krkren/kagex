@@ -447,6 +447,7 @@ private:
 			}
 			pr.progress(-1, "Patch");
 			if (!zipFolder(dir, zip, "", err)) throw Failure{ err };
+			if (signing_) { signChecked(zip); pr.log("Signed the patch (patch.zip.sig)"); }   // a signed game only mounts a signed patch
 			packages_.push_back(zip);
 			o.set("ok", Json(true));
 			o.set("folder", Json(krt::fromPath(folder)));
@@ -685,29 +686,18 @@ private:
 		        (partNames_.empty() ? std::string() : " and " + std::to_string(partNames_.size()) + " part(s)"));
 	}
 
-	// Signs a macOS app's engine files and data inside the bundle, before codesign reseals it.
+	// Signs a macOS app's data archive inside the bundle, before codesign reseals it. The engine
+	// files (the executable and the plugin dylibs) are NOT signed here: codesign --deep rewrites
+	// their embedded signatures a moment later, which would break a krt::sig .sig, so the app's own
+	// code signature (Developer ID, or ad hoc) is what vouches for them. codesign records a hash of
+	// data.xp3 without changing its bytes, so its .sig stays valid; the framework skips the engine
+	// file list on macOS (SignatureCheck.tjs). Splitting is disabled on macOS, so there are no parts.
 	void signMacosApp(const fs::path& contents)
 	{
 		if (!signing_) return;
-		const fs::path macos = contents / "MacOS", res = contents / "Resources";
-		std::vector<std::string> rel;
-		rel.push_back("krkrz");
-		rel.push_back("krkrz.cf");
-		std::error_code ec;
-		for (const auto& e : fs::directory_iterator(macos, ec)) {
-			if (!e.is_regular_file(ec)) continue;
-			const std::string n = krt::fromPath(e.path().filename()), ln = lower(n);
-			if (n == "krkrz" || n == "krkrz.cf") continue;
-			if (ln.size() > 6 && ln.compare(ln.size() - 6, 6, ".dylib") == 0) rel.push_back(n);
-		}
 		pr_.progress(-1, "Signing macOS");
-		for (const auto& r : rel) signChecked(macos / krt::toPath(r));
-		std::string manifest = "; engine files for the signature check, relative to the executable (kagex-release)\n";
-		for (const auto& r : rel) manifest += r + "\n";
-		writeText(macos / "krkrz.sigfiles", manifest);
-		signChecked(macos / "krkrz.sigfiles");
-		signChecked(res / "data.xp3");
-		pr_.log("Signed " + std::to_string(rel.size()) + " engine files and the archive (macOS)");
+		signChecked(contents / "Resources" / "data.xp3");
+		pr_.log("Signed the game archive (macOS; codesign seals the engine)");
 	}
 
 	//-----------------------------------------------------------------------

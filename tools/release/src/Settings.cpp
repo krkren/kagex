@@ -405,7 +405,15 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	// signing
 	if (flag(s, "signing.enabled")) {
 		const char* envKey = std::getenv("KAGEX_SIGNING_KEY");
+		const bool envInline = envKey && *envKey && std::string(envKey).find("BEGIN") != std::string::npos;
 		const std::string keyPath = str(s, "signing.privateKey");
+		// the key must never be inside data/ (it would be packed into the game) and should not sit
+		// in the project at all (it could be committed)
+		auto under = [&](const fs::path& key, const fs::path& dir) {
+			std::error_code e1, e2;
+			const fs::path rel = fs::relative(fs::weakly_canonical(key, e1), fs::weakly_canonical(dir, e2), e2);
+			return !e1 && !e2 && !rel.empty() && *rel.begin() != "..";
+		};
 		if (keyPath.empty() && (!envKey || !*envKey)) {
 			error("signing.privateKey", "Signing needs your private key (a file, or the KAGEX_SIGNING_KEY environment variable). "
 			      "Make one with \"Create key pair\" (or --cli keygen). Keep it out of the game folder and out of version control");
@@ -414,21 +422,19 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			if (!fs::exists(key, ec)) {
 				error("signing.privateKey", "The private key " + keyPath + " doesn't exist");
 			} else {
-				// the key must never be inside data/ (it would be packed into the game) and should
-				// not sit in the project at all (it could be committed)
-				const fs::path keyc = fs::weakly_canonical(key, ec);
-				auto under = [&](const fs::path& dir) {
-					const fs::path rel = fs::relative(keyc, fs::weakly_canonical(dir, ec), ec);
-					return !ec && !rel.empty() && *rel.begin() != "..";
-				};
-				if (under(p.data))
+				if (under(key, p.data))
 					error("signing.privateKey", "The private key is inside data/ — it would be packed into the game, exposing it. Move it outside the game folder");
-				else if (under(p.root))
+				else if (under(key, p.root))
 					warn("signing.privateKey", "The private key is inside the project folder, where it could be committed by accident. Keeping it elsewhere is safer");
 				std::string text, kerr;
 				if (readKeyText(key, text, kerr) && !looksLikePrivateKey(text))
 					error("signing.privateKey", keyPath + " doesn't look like an RSA private key (expected a \"-----BEGIN RSA PRIVATE KEY-----\" block)");
 			}
+		} else if (envKey && *envKey && !envInline) {
+			// KAGEX_SIGNING_KEY is a path: it must not point inside data/ either
+			const fs::path key = krt::toPath(envKey);
+			if (fs::exists(key, ec) && under(key, p.data))
+				error("signing.enabled", "KAGEX_SIGNING_KEY points at a key inside data/ — it would be packed into the game. Move it outside the game folder");
 		}
 		if (!p.framework.empty() && !frameworkSupportsSigning(p.framework))
 			error("signing.enabled", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
