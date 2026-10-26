@@ -347,6 +347,14 @@ public:
 		result.set("notes", Json::array(notes_));
 		if (media_.isObj()) result.set("media", media_);
 		if (scripts_.isObj()) result.set("scripts", scripts_);
+		{
+			// what the packages are protected with (the keys file's keys)
+			Json prot = Json::object();
+			prot.set("archive", Json(std::string(!haveArchiveKey_ ? "plain" : hashNames_ ? "encrypted, names hidden" : "encrypted")));
+			prot.set("scenes", Json(std::string(scenesSealed_ ? "encrypted" : scenesPsb_ ? "plain .scn" : "not compiled to .scn")));
+			prot.set("signed", Json(signing_));
+			result.set("protection", std::move(prot));
+		}
 		return result;
 	}
 
@@ -606,6 +614,7 @@ private:
 			pr.progress(-1, "Encrypting the scenarios");
 			for (const auto& f : compiled)
 				if (!sealScene(f, key_, err)) throw Failure{ "Encrypting the scenarios: " + err };
+			scenesSealed_ = true;
 		}
 		for (const auto& f : compiled) {
 			std::string script = krt::fromPath(f);
@@ -2117,6 +2126,7 @@ private:
 	SceneKey key_{};             ///< the game's key for compiled scenarios (when haveKey_)
 	bool haveKey_ = false;
 	bool scenesPsb_ = false;     ///< scenarios compiled to .scn: the engines need the scnfile plugin
+	bool scenesSealed_ = false;  ///< and encrypted with the game's scenes key
 };
 
 } // namespace
