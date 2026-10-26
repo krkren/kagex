@@ -21,7 +21,9 @@ function scnFindCompiled(storage)
 		Storages.isExistentStorage(storage + ".scn")) return storage + ".scn";
 	if (Storages.isExistentStorage(storage + ".scn.json")) return storage + ".scn.json";
 	var placed = Storages.getPlacedPath(storage);
-	if (placed != "" && Storages.isExistentStorage(placed + ".scn.json")) return placed + ".scn.json";
+	if (placed == "") return;
+	if (typeof global.SCNFile != "undefined" && Storages.isExistentStorage(placed + ".scn")) return placed + ".scn";
+	if (Storages.isExistentStorage(placed + ".scn.json")) return placed + ".scn.json";
 }
 
 /**
@@ -770,7 +772,12 @@ class KAGEnvPlayer
 				var list = parser.getTargetList();
 				for (var i=0;i<list.count;i++) {
 					var out = parser.outputPath(list[i]);
-					Storages.deleteFile(out) if out !== void && Storages.isExistentStorage(out);
+					if (out !== void) {
+						// either kind: .scn or .scn.json
+						var base = out.substr(out.length - 5) == ".json" ? out.substr(0, out.length - 5) : out;
+						Storages.deleteFile(base) if Storages.isExistentStorage(base);
+						Storages.deleteFile(base + ".json") if Storages.isExistentStorage(base + ".json");
+					}
 				}
 				Storages.deleteFile(dependFile);
 				// [XXX] Path reconstruction (fstat's deleteFile has a bug where it remains in Kirikiri's path cache)

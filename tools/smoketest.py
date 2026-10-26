@@ -611,12 +611,13 @@ def sample_steps(eng):
             print("     (skipped: this build can't write compiled scenarios, so the demos play from the scripts)",
                   flush=True)
             return
-        r = str(eng.tjs('var r = KAGCompileScenarios(true);'
-                        ' return [r.compiled, r.failed, r.warnings, r.errors.join(" / ")].join(",");',
-                        timeout=120)).split(",", 3)
-        print("     %s compiled, %s warning(s)" % (r[0], r[2]), flush=True)
+        r = str(eng.tjs('var r = KAGCompileScenarios(true), p = world_object.player.parser;'
+                        ' var kind = typeof p.writesPsb != "undefined" && p.writesPsb ? ".scn" : ".scn.json";'
+                        ' return [r.compiled, r.failed, r.warnings, kind, r.errors.join(" / ")].join(",");',
+                        timeout=120)).split(",", 4)
+        print("     %s compiled to %s, %s warning(s)" % (r[0], r[3], r[2]), flush=True)
         if r[1] != "0" or r[0] == "0":
-            raise SmokeError("compiling failed: " + r[3])
+            raise SmokeError("compiling failed: " + r[4])
         eng.compiled = True
 
     for demo in DEMOS:

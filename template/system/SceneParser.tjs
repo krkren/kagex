@@ -1,7 +1,8 @@
 ﻿// SceneParser.tjs - compiles KAG scenarios into scenes for the scene player (KAGEnvPlayer.tjs)
 //
-// A script listed in !scnlist.txt is compiled into <script>.scn.json, next to the script. The
-// player reads that instead of the script: text, names and voices as a table, the tags as
+// A script listed in !scnlist.txt is compiled into <script>.scn (a PSB file, written by the
+// scnfile plugin's SCNFile), or <script>.scn.json without the plugin or with format=json in
+// parseroption.txt, next to the script. The player reads that instead of the script: text, names and voices as a table, the tags as
 // steps, and the World's state at every save point, so it can start at any line, roll back
 // and skip to unread text. See doc/scn.txt for what is compiled and how, and the format.
 //
@@ -491,7 +492,7 @@ class SceneParser
 	 * Loads the macros the scripts are compiled with and the options
 	 * @param macroFile parsermacro.ks: its macros, and those of the files it calls or jumps
 	 * to. Without it, the game's macros as they are now
-	 * @param optionFile parseroption.txt: name=value lines (linemode, craftername)
+	 * @param optionFile parseroption.txt: name=value lines (linemode, craftername, format)
 	 */
 	function prepare(macroFile = "parsermacro.ks", optionFile = "parseroption.txt") {
 		(Dictionary.clear incontextof baseMacros)();
@@ -598,12 +599,28 @@ class SceneParser
 		return list;
 	}
 
+	// Whether compiled files are .scn (PSB, through the scnfile plugin) or .scn.json
+	property writesPsb {
+		getter() {
+			return typeof global.SCNFile != "undefined" && options.format != "json";
+		}
+	}
+
 	// Where a script's compiled file goes: next to it, when that's a local folder
 	function outputPath(storage) {
 		var placed = Storages.getPlacedPath(storage);
 		if (placed == "" || placed.indexOf(">") >= 0) return void;
 		if (placed.substr(0, 7) != "file://") return void;
-		return placed + ".scn.json";
+		return placed + (writesPsb ? ".scn" : ".scn.json");
+	}
+
+	// A compiled file's data, whichever kind it is
+	function readCompiled(path) {
+		if (path.substr(path.length - 5) == ".json") return Scripts.evalJSONStorage(path, true);
+		var file = new SCNFile(path);
+		var root = file.root;
+		invalidate file;
+		return root;
 	}
 
 	// The key of everything a script's compile depends on
@@ -633,7 +650,7 @@ class SceneParser
 		if (keyCache[lkey] === void) {
 			if (!Storages.isExistentStorage(out)) return true;
 			try {
-				var root = Scripts.evalJSONStorage(out, true);
+				var root = readCompiled(out);
 				keyCache[lkey] = root !== void ? root.hash : "";
 			} catch (e) {
 				return true;
@@ -659,7 +676,11 @@ class SceneParser
 		if (out === void) throw new Exception(storage + ": its folder isn't writable, so it can't be compiled");
 		var t = System.getTickCount();
 		var root = compile(storage);
-		Scripts.saveJSON(out, root, true, 1);
+		if (writesPsb) SCNFile.save(root, out);
+		else Scripts.saveJSON(out, root, true, 1);
+		// one compiled file per script: the player would read a .scn before a .scn.json
+		var other = out.substr(out.length - 5) == ".json" ? out.substr(0, out.length - 5) : out + ".json";
+		Storages.deleteFile(other) if Storages.isExistentStorage(other);
 		keyCache[((string)storage).toLowerCase()] = root.hash;
 		// a new file isn't found through the auto path until its cache is rebuilt
 		Storages.addAutoPath(System.exePath + "dummy/");

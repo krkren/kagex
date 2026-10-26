@@ -526,6 +526,9 @@ KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "und
 // JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
 // <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
 KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
+// SCNFile: compiled scenarios as .scn (PSB) files, from https://github.com/krkren/scnfile.
+// Without it they're .scn.json
+KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
 
 // CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
 // clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
