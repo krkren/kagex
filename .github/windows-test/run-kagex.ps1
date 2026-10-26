@@ -260,9 +260,10 @@ function Animated-Character {
 
 # Compiled scenarios (SceneParser.tjs, KAGEnvPlayer.tjs; doc/scn.txt): with the debug window on (the
 # zips' default) and data/ writable, the scripts in !scnlist.txt are compiled to .scn.json when the
-# game first goes to one, and the scene player plays them. Checked after the first demo
+# game first goes to one, and the scene player plays them. Checked after the last demo the plan
+# plays, for the menu and the demos it played (the smoke plan skips char.ks)
 function Compiled-Scenes {
-    $r = Invoke-Tjs "(function() { if (typeof global.world_object == 'undefined') return 'no World'; var p = world_object.player; if (p === void || p === null) return 'the scene player never ran'; var a = ['s0001.ks', 'layer.ks', 'char.ks', 'anim.ks']; var miss = []; for (var i = 0; i < a.count; i++) if (!Storages.isExistentStorage(a[i] + '.scn.json') && !Storages.isExistentStorage(a[i] + '.scn')) miss.add(a[i]); return miss.count ? 'not compiled: ' + miss.join(' ') : 'ok'; })()"
+    $r = Invoke-Tjs "(function() { if (typeof global.world_object == 'undefined') return 'no World'; var p = world_object.player; if (p === void || p === null) return 'the scene player never ran'; var a = ['s0001.ks', 'layer.ks', 'transition.ks', 'anim.ks']; var miss = []; for (var i = 0; i < a.count; i++) if (!Storages.isExistentStorage(a[i] + '.scn.json') && !Storages.isExistentStorage(a[i] + '.scn')) miss.add(a[i]); return miss.count ? 'not compiled: ' + miss.join(' ') : 'ok'; })()"
     if ($r -ne 'ok') { throw $r }
     'the demo menu and the demos were compiled, and the scene player played them'
 }
@@ -343,7 +344,6 @@ if ($Plan -eq 'probe') {
     }
 } elseif ($Plan -eq 'smoke') {
     Step 'demo: KAGEX layer' { Run-Demo 0 'layer' }
-    Step 'compiled: the demos play compiled' { Compiled-Scenes }
     Step 'vector: an SVG image draws' { Vector-Image }
     Step 'clip and zip: a CLIP STUDIO PAINT layer, a DLC zip' { Clip-And-Zip }
     Step 'demo: World transitions' { Run-Demo 3 'transition' }
@@ -351,6 +351,7 @@ if ($Plan -eq 'probe') {
     Step 'demo: Effekseer effects' { Effect-Demo }
     Step 'demo: Animated character' { Run-Demo 6 'anim' }
     Step 'animated: Pip blinks and lip-syncs' { Animated-Character }
+    Step 'compiled: the demos play compiled' { Compiled-Scenes }
 } else {
     $demos = 'layer', 'char', 'envlayer', 'transition', 'action', 'effect', 'anim'
     for ($d = 0; $d -lt $demos.Count; $d++) {
