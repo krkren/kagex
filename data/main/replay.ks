@@ -32,17 +32,21 @@
 
 ; Navigation buttons
 
-[locate x=870 y=78]
+[locate x=680 y=78]
 
 [button name="extra_cgmode" storage="cgmode.ks"]
 
-[locate x=1060 y=78]
+[locate x=870 y=78]
 
 [button name="extra_replaymode" normal="extra_replaymode_over" disabled]
 
-[locate x=1250 y=78]
+[locate x=1060 y=78]
 
 [button name="extra_musicmode" storage="musicmode.ks"]
+
+[locate x=1250 y=78]
+
+[button name="extra_searchmode" storage="searchmode.ks"]
 
 [locate x=1450 y=78]
 

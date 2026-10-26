@@ -1087,6 +1087,44 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("Search finds a word typed in the lines read, and plays from one")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.searchInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before Search)", flush=True)
+            return
+        eng.tjs('tf.searchText = ""; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("searchmode.ks", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable', timeout=20)
+        # typed into the field: the characters as the engine hands typed text to the focused
+        # layer (onKeyPress; injected keys make none), then Return ([edit enter=])
+        eng.tjs('var e = kag.fore.messages[0].names["tf.searchText"]; e.focus();'
+                ' for (var i = 0; i < "layer".length; i++) e.onKeyPress("layer".charAt(i)); return 1;')
+        eng.key("VK_RETURN")
+        eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
+                 timeout=20)
+        found = str(eng.tjs('var r = []; for (var i = 0; i < searchFound.count; i++) r.add(searchFound[i].title);'
+                            ' return [tf.searchText, r.join("|")].join("~");'))
+        text, titles = found.split("~")
+        titles = titles.split("|")
+        print("     \"%s\": %d lines" % (text, len(titles)), flush=True)
+        if text != "layer" or "Vector Image" not in titles:
+            raise SmokeError("searching for \"%s\" found %s" % (text, titles))
+        # the line in layer.ks's *label16, played from: the script played unseen up to it
+        k = titles.index("Vector Image")
+        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.wait("the line", 'world_object.player !== void && world_object.player.curLabel == "*label16"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        line = str(eng.tjs("return world_object.player.curText.text;"))
+        if "layer" not in line.lower():
+            raise SmokeError("it played from \"%s\"" % line)
+        eng.clicker(True, until="searchmode.ks")
+        eng.wait("Search again, at the scene's end", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable',
+                 timeout=60)
+        eng.clicker(False)
+        if eng.tjs('return tf.searchText == "layer" && searchFound.count > 0 ? 1 : 0;') != 1:
+            raise SmokeError("back in Search without what it found")
+        eng.key("VK_ESCAPE")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     return steps
 
 

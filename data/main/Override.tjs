@@ -1072,6 +1072,175 @@ function replayTile(index)
     kag.startRecollection(elm);
 }
 
+// --------------------------------------------------------
+// Search (Extras): the lines read so far, in the compiled scenes (searchmode.ks)
+// --------------------------------------------------------
+
+var searchFound = []; // what the last search found (KAGEnvPlayer.searchTexts)
+var searchRows = 7;   // rows a page
+var searchMax = 500;  // the most it finds
+var searchTrigger;    // shows the screen again once the key or click that searched is over
+var searchNames;      // what replaylist.csv calls each script (its "Start" scene's title)
+
+// Whether there's anything to search: the World's scene player and compiled scripts
+function searchAvailable()
+{
+    return typeof global.world_object != "undefined" && world_object.scenePlayEnabled &&
+        Storages.isExistentStorage("!scnlist.txt");
+}
+
+function searchInit()
+{
+    tf.extramode = 4;
+    tf.recollect = 0;
+    tf.searchText = "" if tf.searchText === void;
+    tf.searchPage = 0 if tf.searchPage === void;
+    // the scene player's script (it loads when first used)
+    KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.world_object != "undefined" && typeof global.scnFindCompiled == "undefined";
+    // the scripts' names, from Replay's list: a row says which demo its line is in
+    searchNames = %[];
+    var parser = new ReplayListParser();
+    var list = parser.parseStorage("replaylist.csv");
+    invalidate parser;
+    for (var i = 0; i < list.count; i++) {
+        var info = list[i];
+        if (info === void || info.title == "") continue;
+        var key = (info.scene + ".ks").toLowerCase();
+        if (info.target == "*" || info.target == "start" || searchNames[key] === void) searchNames[key] = info.title;
+    }
+    searchFound = [];
+    var text = ((string)tf.searchText).trim();
+    if (!searchAvailable()) {
+        tf.searchStatus = "Search looks through compiled scenes, and this game has none";
+    } else if (text == "") {
+        tf.searchStatus = "Type a word or a name, then press Return";
+    } else {
+        world_object.initPlayer();
+        searchFound = world_object.player.searchTexts(text, !tf.allseen, searchMax);
+        var n = searchFound.count;
+        tf.searchStatus = n == 0 ? "No line read so far has \"" + text + "\"" :
+            (n == 1 ? "1 line" : "%d lines".sprintf(n)) + (n >= searchMax ? " (the first %d)".sprintf(searchMax) : "") +
+            " with \"" + text + "\": choose one to play from it";
+    }
+}
+
+// The Search button: what's typed, then searchRun
+function searchFromField()
+{
+    kag.fore.messages[0].commit();
+    searchRun();
+}
+
+// Return in the field ([edit enter=]) or the button: the screen again with what tf.searchText
+// finds, from its first page
+function searchRun()
+{
+    tf.searchPage = 0;
+    if (searchTrigger === void) searchTrigger = new AsyncTrigger(function { kag.process("searchmode.ks"); }, "");
+    searchTrigger.trigger();
+}
+
+// Typing goes to the field
+function searchFocus()
+{
+    var e = kag.fore.messages[0].names["tf.searchText"];
+    e.focus() if e !== void;
+}
+
+// Fits a found line to w (font as set): a window around the match at m (when it's found in
+// the line), with ellipses where it's cut. [prefix, from, to, suffix]
+function searchFit(font, text, m, w)
+{
+    var a = 0, b = text.length, pre = "";
+    if (m > 30 && font.getTextWidth(text) > w) {
+        a = m - 30;
+        pre = "...";
+    }
+    while (b > a && font.getTextWidth(pre + text.substring(a, b - a) + (b < text.length ? "..." : "")) > w) b--;
+    return [pre, a, b, b < text.length ? "..." : ""];
+}
+
+// A row: the scene and who speaks above, the line below with what was looked for picked out,
+// on each of the button's states
+function drawSearchRow(button, info, key)
+{
+    var hold = button.holdAlpha;
+    button.holdAlpha = true;
+    var f = button.font;
+    f.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    var left = 24, w = button.width - left * 2;
+    // the demo (replaylist.csv's title for its script) and the scene, then who speaks
+    var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
+    var head = script === void || script == "" ? info.title : info.title == "Start" ? script : script + "  ›  " + info.title;
+    head += "  ·  " + info.name if info.name != "";
+    var m = info.text.toLowerCase().indexOf(key);
+    for (var st = 0; st < 3; st++) {
+        var x0 = button.width * st + left;
+        var over = st != 0;
+        f.height = 19;
+        f.bold = true;
+        button.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
+        f.height = 26;
+        f.bold = false;
+        var fit = searchFit(f, info.text, m, w);
+        var x = x0, y = 36;
+        var pieces = [];
+        pieces.add([fit[0], false]);
+        if (m >= fit[1] && m < fit[2]) {
+            var e = m + key.length < fit[2] ? m + key.length : fit[2];
+            pieces.add([info.text.substring(fit[1], m - fit[1]), false]);
+            pieces.add([info.text.substring(m, e - m), true]);
+            pieces.add([info.text.substring(e, fit[2] - e), false]);
+        } else {
+            pieces.add([info.text.substring(fit[1], fit[2] - fit[1]), false]);
+        }
+        pieces.add([fit[3], false]);
+        for (var i = 0; i < pieces.count; i++) {
+            var t = pieces[i][0];
+            if (t == "") continue;
+            var mark = pieces[i][1];
+            f.bold = mark;
+            button.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
+            x += f.getTextWidth(t);
+        }
+        f.bold = false;
+    }
+    button.holdAlpha = hold;
+}
+
+// The rows of the page shown (tf.searchPage), and the arrows to the others
+function setSearchPage()
+{
+    var pages = (searchFound.count + searchRows - 1) \ searchRows;
+    tf.searchPage = 0 if tf.searchPage >= pages || tf.searchPage < 0;
+    var key = ((string)tf.searchText).trim().toLowerCase();
+    for (var i = 0; i < searchRows; i++) {
+        var button = kag.current.names["row" + i];
+        if (button === void) continue;
+        var info = searchFound[tf.searchPage * searchRows + i];
+        button.visible = button.enabled = info !== void;
+        if (info !== void) drawSearchRow(button, info, key);
+    }
+    var prev = kag.current.names["search_prev"], next = kag.current.names["search_next"];
+    if (prev !== void) prev.visible = prev.enabled = tf.searchPage > 0;
+    if (next !== void) next.visible = next.enabled = tf.searchPage < pages - 1;
+}
+
+/**
+ * Plays from a found line to the end of its scene, and comes back to Search: the line's
+ * script played from its start without showing it, up to the line (KAGEnvPlayer.seek)
+ */
+function searchPlay(index)
+{
+    var info = searchFound[tf.searchPage * searchRows + index];
+    if (info === void) return;
+    tf.recollect = 1;
+    kag.process('loadinit.ks', '', true, true);
+    world_object.initPlayer();
+    world_object.player.seek(info.storage, info.label, info.idx, true);
+    kag.startRecollection(%[storage:info.storage, target:"", doneStorage:"searchmode.ks", doneTarget:""]);
+}
+
 class MusicListParser extends CSVParser {
 
     // For holding results

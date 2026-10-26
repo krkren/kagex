@@ -16,9 +16,13 @@
 
 - **Scene replay**: the Replay screen has a tile for every titled scene of the compiled demos, on tabs named in `replaylist.csv` (a label `*` there means all of a script's scenes), with a picture of the scene and its title; each plays on its own and comes back to Replay. A scene is reached by playing its script from the start without showing it (`KAGEnvPlayer.seek`), so what earlier scenes put on KAG's own layers is there (`doc/scn.txt`, "Replays").
 
+- **Dialogue search**: a Search screen in Extras finds the lines read so far that hold a word (or a speaker's name), shows each with its demo and scene, and plays from the one chosen to the end of its scene (`KAGEnvPlayer.searchTexts`; `doc/scn.txt`, "Search").
+- `[edit enter=...]` runs an expression when Return is pressed in the field (`doc/kagex.txt`).
+
 ### Changed
 
 - `-scncompile` keeps the game's window hidden.
+- Extras has four tabs (CG, Replay, Music, Search); the nav buttons moved left to make room.
 - EXIT in a scene played from Replay goes back to Replay (it went to the title).
 - In compiled scenes the backlog follows the scene player's history: written again after a jump or a load (it used to be wiped), and kept at choices (wiped too), which it shows as "Choice: ..." lines.
 - The backlog's voice marks are a line high (42 px), so redrawing a line doesn't cut them off, and the text starts further right (`marginL` 140) to make room for the going-back marks.

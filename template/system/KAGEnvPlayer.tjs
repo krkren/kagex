@@ -2146,12 +2146,78 @@ class KAGEnvPlayer
 	// idx     Starting text index
 	var searchResult;
 
+	// A text as it's shown: without its font commands, ruby and escapes, new lines as spaces
+	function plainText(t) {
+		var l = t.length, ret = "", i = 0;
+		while (i < l) {
+			var ch = t.charAt(i++);
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch == "\\" || ch == "%" || ch == "[") ret += ch;
+			} else if (ch == "%") {
+				if (i < l && /[0-9]/.test(t.charAt(i))) {
+					while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+				} else {
+					i++;
+				}
+			} else if (ch == "[") {
+				while (i < l && t.charAt(i++) != "]") {}
+			} else {
+				ret += ch == "\n" ? " " : ch;
+			}
+		}
+		return ret;
+	}
+
 	/**
-	 * Execute search process
+	 * The texts of the compiled scripts in !scnlist.txt that hold a string, or whose speaker's
+	 * name does
+	 * @param text what to look for (letter case ignored)
+	 * @param readOnly only texts that have been read (the read marks)
+	 * @param max the most to find
+	 * @return [%[storage, label, scene (storage + label, lower case), title, idx (1: a scene's
+	 * first text), name (as shown), text (as shown)]...], in the list's and the scripts' order
 	 */
-	function doSearch(text) {
+	function searchTexts(text, readOnly = true, max = 500) {
+		var ret = [];
+		var key = ((string)text).trim().toLowerCase();
+		if (key == "") return ret;
+		var list = getFileList();
+		var r = readed;
+		for (var f = 0; f < list.count && ret.count < max; f++) {
+			var storage = list[f];
+			if (scnFindCompiled(storage) === void) continue;
+			var data = new StorageData(storage);
+			var scenes = data.root !== void ? data.root.scenes : void;
+			for (var j = 0; scenes !== void && j < scenes.count && ret.count < max; j++) {
+				var scene = scenes[j];
+				var texts = scene.texts;
+				if (texts === void) continue;
+				var sceneKey = (storage + scene.label).toLowerCase();
+				var read = +r[sceneKey];
+				for (var i = 0; i < texts.count && ret.count < max; i++) {
+					if (readOnly && read < i + 1) break;
+					var t = changeAlias(convertSceneText(texts[i]));
+					if ((+t.flag & TEXTFLAG_NOTEXT)) continue;
+					var shown = plainText(t.text);
+					var name = t.disp != "" ? t.disp : t.name;
+					if (shown.toLowerCase().indexOf(key) < 0 && ((string)name).toLowerCase().indexOf(key) < 0) continue;
+					ret.add(%[storage:storage, label:scene.label, scene:sceneKey, title:scene.title, idx:i + 1, name:name, text:shown]);
+				}
+			}
+			invalidate data;
+		}
+		return ret;
+	}
+
+	/**
+	 * Execute search process: searchTexts, for getSearchData and goToSearch
+	 */
+	function doSearch(text, readOnly = true) {
 		clearSearch();
-		// XXX Reconstruct search process
+		searchResult = [];
+		var found = searchTexts(text, readOnly);
+		for (var i = 0; i < found.count; i++) searchResult.add(%[scene:found[i].storage + found[i].label, idx:found[i].idx]);
 		return searchResult;
 	}
 
@@ -2213,6 +2279,7 @@ class KAGEnvPlayer
 	function getSearchPosition(pos) {
 		var count = getSearchCount();
 		if (pos >= 0  && pos < count) {
+			var r = searchResult[pos];
 			var ret = %[scene:r.scene, idx:r.idx];
 			clearSearch();
 			return ret;

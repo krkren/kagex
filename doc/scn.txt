@@ -129,6 +129,20 @@ shows nothing, as in layer.ks), with the title; it stays locked until its scene 
 on its own (replayTile in Override.tjs: a seek with replay) and comes back to Replay at its
 end; EXIT comes back too.
 
+◇ Search
+
+player.searchTexts(text, readOnly, max) finds the texts of the compiled scripts in
+!scnlist.txt that hold a string, or whose speaker's name does (letter case ignored), as they're
+shown: without font commands, ruby and escapes. With readOnly only texts that have been read
+count (the read marks), so a search gives nothing away. Each result is %[storage, label, scene,
+title, idx, name, text]; player.seek(storage, label, idx, true) plays from it. doSearch,
+getSearchData and goToSearch use the same search.
+
+The sample's Search screen (Extras, searchmode.ks) takes a word in an [edit] field (Return
+searches: [edit enter=], doc/kagex.txt), lists the lines read that hold it, 7 a page, with the
+demo and scene each is in (replaylist.csv's titles), and plays from the one chosen to the end of
+its scene, then comes back to Search. tf.allseen searches every line.
+
 ◇ Releases
 
 kagex-release compiles the listed scripts as it builds (Scenarios > Compile, scenes.compile in

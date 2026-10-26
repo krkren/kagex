@@ -558,7 +558,8 @@ def make_saveload():
 
 
 # --- Extras ----------------------------------------------------------------------------
-EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music")]
+EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music"),
+              ("extra_searchmode", "Search")]
 
 
 def make_extras():
@@ -583,6 +584,22 @@ def make_extras():
     c.ellipse((cx - 70, cy - 70, cx + 70, cy + 70), fill=rgba(WHITE))
     ic_note(c, cx, cy, 80, rgba(VIOLET))
     c.save(os.path.join(IMAGE, "musicmode_base.png"), opaque=True)
+
+    # Search: the field (searchmode.ks puts an [edit] in it), its button, and the results'
+    # panel with 7 rows of 1314x76 (316 + 86 y) and the replay arrows beside them
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, "Search")
+    c.panel((290, 206, 1190, 270), r=12, fill=rgba(WHITE), border=VIOLET, bw=4, shadow=6)
+    c.panel((290, 300, 1656, 936), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
+    c.save(os.path.join(IMAGE, "searchmode_base.png"), opaque=True)
+    for st in ("normal", "over"):
+        nav_button("Search", st).save(os.path.join(IMAGE, "search_go_%s.png" % st))
+    for st, fill, border in (("normal", rgba(WHITE, 235), LAV), ("over", rgba(VIOLET), VIOLET)):
+        c = Canvas(1314, 76)
+        c.rrect((0, 0, 1314, 76), 12, fill=rgba(border))
+        c.rrect((3, 3, 1311, 73), 9, fill=fill)
+        c.save(os.path.join(IMAGE, "search_row_%s.png" % st))
 
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
