@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0
+
+### Added
+
+- **Signed game files (tamper checking)**: kagex-release can sign a release, and the game checks the signatures before it starts. With signing on, the Windows, Linux, Steam and macOS builds carry RSA-PSS/SHA-256 signatures of the game archive, the engine and its plugins, any extra archives and each patch; `template/system/SignatureCheck.tjs` verifies them at start-up with the `sigcheck` plugin and the public key written into `data.xp3`, and quits with a message naming the file if any is damaged, edited, or signed with a different key. A signed build also refuses the engine's REPL and debug options. The web, Android and iOS builds have no such plugin, so they skip the check and rely on the platform's own integrity. Make a key pair with *Create key pair…* in the window or `kagex-release --cli keygen`; set it in *Signing* or the `KAGEX_SIGNING_KEY` environment variable (it is never stored in `release.json` or shipped). See `tools/release/README.md`, "Signing".
+- kagex-release can split a large game's media into separate signed archives beside `data.xp3` (*Signing > Split large archives*), forced on when a signed build's data would otherwise cross the engine's 2 GB signature-check limit.
+
 ## 0.8.0
 
 ### Added

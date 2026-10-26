@@ -65,6 +65,16 @@ function KAGSignatureInit()
 	}
 	global.KAGSigned = true;
 
+	// Only the desktop engines have the sigcheck plugin. The web, Android and iOS builds carry the
+	// same data.xp3 (and so the key), but are signed by the app store or served from the developer's
+	// site, so the check is skipped there and the build runs as an unsigned one.
+	var tag = (typeof System.platformTag != "undefined") ? System.platformTag : "";
+	if (tag != "windows" && tag != "linux" && tag != "macos") {
+		dm("Signature checking is not available on \"" + tag + "\"; relying on the platform's own integrity.");
+		global.KAGSigned = false;
+		return;
+	}
+
 	// Refuse a console / startup / eval option, however it was given (command line or a .cf)
 	for (var i = 0; i < KAGSignatureBannedArgs.count; i++) {
 		if (System.getArgument(KAGSignatureBannedArgs[i]) != "") {

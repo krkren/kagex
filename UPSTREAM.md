@@ -77,3 +77,15 @@ Script features that need these log the missing plugin and carry on without the 
 - **Where:** keys injected through `Agent` or the REPL don't change `System.getKeyState`.
 - **What it costs:** the smoke tests press and release keys over two frames, but can't test anything that needs a key held: skipping while Ctrl or the controller's R2 is held.
 - **Fix:** have the injected key events update the key state that `getKeyState` reads.
+
+## 13. The sigcheck plugin keeps file sizes and offsets in 32-bit ints
+
+- **Where:** `src/plugins/sigcheck/main.cpp` (`SigChecker::CheckSignatureOfFile` and `CheckKrkrExecutable`) holds the file size, the running byte count and the mark offsets in `int`/`tjs_uint32`. krkrz_tools' `krt::sig` (the signing side) uses 64-bit offsets, so it signs any size correctly; only the engine-side verifier is 32-bit.
+- **What it costs:** signatures (`sigcheck`, used by `template/system/SignatureCheck.tjs`) can only be checked on files below 2 GB. From 2 GB the progress byte count overflows (odd or missing progress events, but the hash still verifies); past 4 GB the size is truncated to 32 bits (thousands of spurious progress events); and at an exact multiple of 4 GiB the size reads as 0 and the per-cent calculation divides by it. kagex-release works around it by keeping every signed archive under 2 GB — splitting a large game's media into separate archives (`Build.cpp`, `splitIfNeeded`) — and refusing a single folder of 2 GB or more. Confirmed on the 0.8.0 Linux engine: a 1 GB file verifies in ~12 s; 2.3 GB and 4.1 GB verify but with the byte-count problems above.
+- **Fix:** use `tjs_int64` for the size, the running offset and the mark offsets in the plugin, matching `krt::sig`.
+
+## 14. The sigcheck plugin reads each file several times per check
+
+- **Where:** `SigChecker::CheckSignature` calls `CheckKrkrExecutable` three times (searching for the `XOPT_EMBED_AREA_`, `XRELEASE_SIG____` and XP3 marks), each a full scan from the start of the file, before `CheckSignatureOfFile` reads the whole file once more to hash it.
+- **What it costs:** start-up of a signed build (`SignatureCheck.tjs`) reads the game archive and every engine file about four times over. For a large archive that is seconds of disk I/O before the game appears; splitting (above) spreads it across several files but doesn't reduce the total. The mark search also has no business running on a plain data file (only an executable carries the marks), but the plugin runs it on everything.
+- **Fix:** scan for all three marks in one pass, skip the executable-mark search for a file that isn't an executable, and reuse that read for the hash.

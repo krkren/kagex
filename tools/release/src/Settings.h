@@ -10,6 +10,7 @@
 //     "media":    { audio: { convert, opusKbps: { folder: kbps, "*": kbps }, vorbisQuality },
 //                   images: { opaque, alpha, jpegQuality }, references },
 //     "output":   { folder, archive, checksums, check, patchFrom },
+//     "signing":  { enabled, privateKey, splitArchives },
 //     "platforms": { windows: { enabled, data, ... }, linux, steam, macos, web, android, ios }
 //   }
 //
@@ -63,5 +64,10 @@ bool flag(const Json& settings, const std::string& dotted);
 
 /// The Android versionCode / iOS build number for a version: major*10000 + minor*100 + patch
 long long versionNumber(const std::string& version);
+
+/// The signing private key as PEM text: from the KAGEX_SIGNING_KEY environment variable (inline
+/// PEM, or a path) or signing.privateKey (a path relative to the project). false with a reason when
+/// there is none or it can't be read.
+bool signingPrivateKey(const Json& settings, const Project& project, std::string& privPem, std::string& error);
 
 } // namespace kr

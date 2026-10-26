@@ -204,7 +204,7 @@ def browser_tests(port, proj, args):
             step("screen (%s): no script errors" % scheme, not errors, "; ".join(errors))
             if scheme == "dark":
                 break
-            step("screen: every section", page.locator("section.card").count() == 6)
+            step("screen: every section", page.locator("section.card").count() == 7)
             step("screen: the title field", page.locator("#sec-game input").first.input_value() == "KAGEX Sample")
             # turn on the web build and save with Ctrl+S
             page.locator("#pl-web").check()
@@ -815,6 +815,247 @@ def patch_tests(exe, proj):
     step("patch: listed with the outputs", len(pkg) == 1 and pkg[0].get("ok") and pkg[0].get("package", "").endswith("patch.zip"))
 
 
+def run_engine(pkgdir, exe_rel, extra_args, seconds=20):
+    """Starts a built engine headless, waits (polling its console log) for the signature check to
+    pass or fail or for the time limit, kills it, and returns (verified, log_text)."""
+    import signal as _signal
+    save = pkgdir / "_test_save"
+    if save.exists():
+        shutil.rmtree(save)
+    save.mkdir(parents=True)
+    exe = pkgdir / exe_rel
+    env = dict(os.environ)
+    env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+    env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+    logf = open(pkgdir / "_test_out.txt", "wb")
+    proc = subprocess.Popen([str(exe), "-datapath=" + str(save) + "/", *extra_args],
+                            cwd=str(exe.parent), stdout=logf, stderr=subprocess.STDOUT, env=env)
+    console = save / "krkr.console.log"
+    deadline = time.time() + seconds
+    decided = None
+    while time.time() < deadline and proc.poll() is None:
+        time.sleep(0.4)
+        if console.exists():
+            try:
+                text = console.read_bytes().decode("utf-16-le", "replace")
+            except OSError:
+                continue
+            if "Signatures verified; starting the game" in text:
+                decided = True
+                break
+            if "Signature check:" in text:
+                decided = False
+                break
+    if proc.poll() is None:
+        proc.send_signal(_signal.SIGKILL)
+    proc.wait()
+    logf.close()
+    log = ""
+    if console.exists():
+        log = console.read_bytes().decode("utf-16-le", "replace")
+    if not log:
+        log = (pkgdir / "_test_out.txt").read_bytes().decode("utf-8", "replace")
+    verified = ("Signatures verified; starting the game" in log) if decided is None else decided
+    return verified, log
+
+
+def signing_cli_tests(exe, tmp):
+    """keygen and the signing validation rules (no engines needed)."""
+    kd = tmp / "keys"
+    kd.mkdir(exist_ok=True)
+    code, out = run(exe, "--cli", "keygen", str(kd), "--bits=2048")
+    step("keygen writes a key pair", code == 0 and (kd / "private.txt").exists() and (kd / "public.txt").exists()
+         and "BEGIN RSA PRIVATE KEY" in (kd / "private.txt").read_text() and "BEGIN PUBLIC KEY" in (kd / "public.txt").read_text(), out.strip())
+    code, out = run(exe, "--cli", "keygen", str(kd))
+    step("keygen won't overwrite without --force", code == 2 and "already" in out, out.strip())
+    code, out = run(exe, "--cli", "keygen", str(kd), "--force")
+    step("keygen --force replaces", code == 0, out.strip())
+
+
+def signing_validation_tests(exe, proj):
+    rel = proj / "release.json"
+    base = json.loads(rel.read_text(encoding="utf-8"))
+    host = host_id()
+
+    def check(mut):
+        s = json.loads(json.dumps(base))
+        mut(s)
+        f = proj / "sign-check.json"
+        f.write_text(json.dumps(s), encoding="utf-8")
+        env = dict(os.environ)
+        env.pop("KAGEX_SIGNING_KEY", None)
+        r = subprocess.run([str(exe), "--cli", "check", str(f), "--json"], capture_output=True, text=True, env=env, timeout=120)
+        f.unlink()
+        try:
+            data = json.loads(r.stdout)
+        except ValueError:
+            return r.returncode, [], []
+        errs = [i["field"] for i in data["issues"] if i["level"] == "error"]
+        warns = [i["field"] for i in data["issues"] if i["level"] == "warning"]
+        return r.returncode, errs, warns
+
+    def on(s, **kw):
+        for k in s["platforms"]:
+            s["platforms"][k]["enabled"] = (k == host)
+        s["signing"]["enabled"] = True
+        s["signing"]["privateKey"] = kw.get("privateKey", "")
+
+    code, errs, warns = check(lambda s: on(s))
+    step("signing: no key is an error", "signing.privateKey" in errs, ", ".join(errs))
+    # a key inside data/ must be refused (it would be packed into the game)
+    (proj / "data" / "mykey.txt").write_text("-----BEGIN RSA PRIVATE KEY-----\nAA\n-----END RSA PRIVATE KEY-----\n")
+    code, errs, warns = check(lambda s: on(s, privateKey="data/mykey.txt"))
+    step("signing: a key inside data/ is an error", "signing.privateKey" in errs, ", ".join(errs))
+    (proj / "data" / "mykey.txt").unlink()
+    # a folder data mode for a signed desktop build is refused
+    if host != "macos":
+        def folder(s):
+            on(s, privateKey="")
+            s["platforms"][host]["data"] = "folder"
+            s["signing"]["privateKey"] = ""
+        # supply a key via a real file so only the folder rule trips
+        key = proj / "k.txt"
+        key.write_text("-----BEGIN RSA PRIVATE KEY-----\nAA\n-----END RSA PRIVATE KEY-----\n")
+        code, errs, warns = check(lambda s: (on(s, privateKey="k.txt"), s["platforms"].__setitem__(host, {**s["platforms"][host], "data": "folder"})))
+        step("signing: a signed desktop build can't use a data folder", ("platforms.%s.data" % host) in errs, ", ".join(errs))
+        key.unlink()
+    # web enabled under signing warns that it isn't checked
+    code, errs, warns = check(lambda s: (on(s, privateKey=""), s["signing"].__setitem__("privateKey", ""), s["platforms"]["web"].__setitem__("enabled", True)))
+    step("signing: web build warns it isn't signature-checked", "signing.enabled" in warns, "warns=" + ", ".join(warns))
+    # a framework without SignatureCheck.tjs is refused
+    sc = proj / "template" / "system" / "SignatureCheck.tjs"
+    saved = sc.read_bytes()
+    sc.unlink()
+    code, errs, warns = check(lambda s: on(s, privateKey=""))
+    sc.write_bytes(saved)
+    step("signing: a framework without SignatureCheck.tjs is refused", "signing.enabled" in errs, ", ".join(errs))
+
+
+def signing_build_tests(exe, proj, args):
+    """A signed Linux build, then the tampering scenarios against the built engine (Linux host)."""
+    if host_id() != "linux":
+        print("skip signing build tests: not a Linux host")
+        return
+    keydir = Path(tempfile.mkdtemp())
+    code, out = run(exe, "--cli", "keygen", str(keydir), "--bits=2048")
+    if code != 0:
+        step("signing build: keygen", False, out)
+        return
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = (p == "linux")
+    s["platforms"]["linux"]["data"] = "xp3"
+    s["output"]["check"] = True
+    s["output"]["archive"] = "none"
+    s["signing"]["enabled"] = True
+    s["signing"]["privateKey"] = ""
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    env = dict(os.environ)
+    env["KAGEX_SIGNING_KEY"] = str(keydir / "private.txt")
+    r = subprocess.run([str(exe), "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json"],
+                       capture_output=True, text=True, env=env, timeout=1800)
+    try:
+        res = json.loads(r.stdout[r.stdout.index("{"):])
+    except ValueError:
+        step("signing build: build", False, r.stdout[-2000:] + r.stderr[-500:])
+        return
+    if args.out:
+        (Path(args.out) / "signing-build.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    step("signing build: built", res.get("ok"), res.get("error", "") + "; ".join(o.get("error", "") for o in res.get("outputs", [])))
+    pkg = proj / "release" / ("kagex-sample-%s-linux" % s["identity"]["version"])
+    if not pkg.exists():
+        step("signing build: package folder", False)
+        return
+    # the signed build's own test run (log-based) passed
+    chk = res.get("check", {})
+    step("signing build: the signed test run verifies", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+    # the files that signing produced
+    names = set(p.name for p in pkg.iterdir())
+    step("signing build: data.xp3.sig, the engine list and its sig, engine .sig files",
+         "data.xp3.sig" in names and "kagex-sample.sigfiles" in names and "kagex-sample.sigfiles.sig" in names
+         and "kagex-sample.sig" in names and (pkg / "plugin").exists(), ", ".join(sorted(n for n in names if n.endswith(".sig") or n.endswith(".sigfiles"))[:6]))
+    # SignatureKey.tjs is inside data.xp3, not loose in the package
+    step("signing build: no private key shipped", not (pkg / "private.txt").exists() and not any(n.endswith("private.txt") for n in names))
+
+    exe_rel = "kagex-sample"
+    # 1. the untouched build starts
+    ok, _ = run_engine(pkg, exe_rel, [])
+    step("signing run: the untouched build starts", ok)
+
+    def tamper_case(label, mutate, restore):
+        mutate()
+        verified, log = run_engine(pkg, exe_rel, [])
+        restore()
+        failed = (not verified) and ("Signature check:" in log)
+        step("signing run: %s stops the game" % label, failed, "verified=%s" % verified)
+
+    data = pkg / "data.xp3"
+    orig = data.read_bytes()
+    tamper_case("a changed data.xp3",
+                lambda: data.write_bytes(orig[:20000] + b"\x00" + orig[20001:]),
+                lambda: data.write_bytes(orig))
+    sig = pkg / "data.xp3.sig"
+    sbak = sig.read_bytes()
+    tamper_case("a deleted .sig", lambda: sig.unlink(), lambda: sig.write_bytes(sbak))
+    # a changed engine file: append a byte to a plugin (ELF ignores trailing bytes, so the engine
+    # still loads and runs — the signature check, not a load failure, is what must catch it)
+    plug = next((p for p in (pkg / "plugin").glob("*json*.so")), None) or next(iter((pkg / "plugin").glob("*.so")), None)
+    if plug:
+        porig = plug.read_bytes()
+        tamper_case("a changed engine file",
+                    lambda: plug.write_bytes(porig + b"\x00"),
+                    lambda: plug.write_bytes(porig))
+    # a stray unsigned archive beside the engine
+    tamper_case("an unsigned extra archive",
+                lambda: shutil.copyfile(data, pkg / "scenario.xp3"),
+                lambda: (pkg / "scenario.xp3").unlink())
+    # -replfile is refused
+    verified, log = run_engine(pkg, exe_rel, ["-replfile=" + str(pkg / "_ch")])
+    step("signing run: -replfile is refused", (not verified) and "not allowed" in log, "verified=%s" % verified)
+
+    # a patch signed with the developer's key mounts; one signed with another key stops the game.
+    # Needs krkrsign (krkrz_tools' signing tool); it isn't always built, so skip these if absent.
+    import zipfile as _zip
+    patch = pkg / "patch.zip"
+    z = _zip.ZipFile(patch, "w"); z.writestr("scenario/zz_sig_patch.ks", "*start\n[s]\n"); z.close()
+    ks = None
+    for root in (exe.parents[1] if len(exe.parents) > 1 else exe.parent,):
+        for cand in root.rglob("krkrsign*"):
+            if cand.is_file() and os.access(cand, os.X_OK):
+                ks = cand
+                break
+    if ks:
+        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(keydir / "private.txt"), str(patch)], capture_output=True)
+        ok, log = run_engine(pkg, exe_rel, [])
+        step("signing run: a correctly signed patch mounts", ok and "Patch mounted" in log, "verified=%s; mounted=%s" % (ok, "Patch mounted" in log))
+        otherkeys = Path(tempfile.mkdtemp())
+        run(exe, "--cli", "keygen", str(otherkeys))
+        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(otherkeys / "private.txt"), str(patch)], capture_output=True)
+        verified, log = run_engine(pkg, exe_rel, [])
+        step("signing run: a patch signed with another key stops the game", (not verified) and "Signature check:" in log, "verified=%s" % verified)
+    patch.unlink(missing_ok=True)
+    (pkg / "patch.zip.sig").unlink(missing_ok=True)
+
+    # splitting: with the checkbox on, the media folders move into their own signed archives
+    s["signing"]["splitArchives"] = True
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r = subprocess.run([str(exe), "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json"],
+                       capture_output=True, text=True, env=env, timeout=1800)
+    try:
+        res = json.loads(r.stdout[r.stdout.index("{"):])
+    except ValueError:
+        res = {"ok": False, "error": r.stdout[-1500:]}
+    pkg2 = proj / "release" / ("kagex-sample-%s-linux" % s["identity"]["version"])
+    parts = sorted(p.name for p in pkg2.iterdir() if p.suffix == ".xp3" and p.name != "data.xp3") if pkg2.exists() else []
+    step("signing build: split produces signed part archives", res.get("ok") and parts
+         and all((pkg2 / (p + ".sig")).exists() for p in parts), "parts=%s" % parts)
+    if pkg2.exists():
+        ok, log = run_engine(pkg2, "kagex-sample", [])
+        step("signing run: the split signed build starts", ok, "verified=%s; mounted=%d" % (ok, log.count("Signed archive mounted")))
+    shutil.rmtree(keydir, ignore_errors=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe")
@@ -828,6 +1069,8 @@ def main():
     with tempfile.TemporaryDirectory() as t:
         proj = make_project(Path(t))
         cli_tests(exe, proj)
+        signing_cli_tests(exe, Path(t))
+        signing_validation_tests(exe, proj)
         server_tests(exe, proj, args)
         if args.engines:
             os.environ["KAGEX_RELEASE_CACHE"] = str(Path(t) / "cache")
@@ -839,6 +1082,7 @@ def main():
             if (Path(args.engines) / "kagex_engine_ios.zip").exists():
                 ios_tests(exe, proj, args)
             media_tests(exe, proj, args)
+            signing_build_tests(exe, proj, args)
         patch_tests(exe, proj)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)

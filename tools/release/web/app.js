@@ -87,7 +87,18 @@ const SECTIONS = [
 			{ path: 'engine.debug', label: 'Engine', type: 'check', text: 'Debug engine (keeps the console and debug keys; for testers, not for players)' },
 		],
 	},
+	{
+		id: 'signing', title: 'Signing',
+		intro: 'Check the game files for tampering before the game starts (Windows, Linux and macOS). The game carries your public key and verifies the archive, the engine and any patches; a damaged or differently signed file stops it. The web, Android and iOS builds rely on the platform instead.',
+		render: renderSigning,
+	},
 	{ id: 'plan', title: 'Check', intro: 'What a build would make, and anything that would stop it.', render: renderPlan },
+];
+
+const SIGNING_FIELDS = [
+	{ path: 'enabled', label: 'Signing', type: 'check', text: 'Sign the release and check it at start-up' },
+	{ path: 'privateKey', label: 'Private key', type: 'file', showIf: (s) => s.enabled, help: 'Your RSA private key. Keep it secret and out of version control. The KAGEX_SIGNING_KEY environment variable overrides it, for CI' },
+	{ path: 'splitArchives', label: 'Split large archives', type: 'check', showIf: (s) => s.enabled, text: 'Put large media folders in their own archives (done automatically once the data passes 2 GB)' },
 ];
 
 const PLATFORM_FIELDS = {
@@ -292,6 +303,38 @@ function refreshHost(id) {
 }
 
 //---------------------------------------------------------------------------
+// Signing
+//---------------------------------------------------------------------------
+function renderSigning(body) {
+	body.replaceChildren();
+	const grid = el('div', { class: 'grid' });
+	body.append(grid);
+	renderFields(grid, SIGNING_FIELDS, 'signing');
+	if (get(settings, 'signing.enabled')) {
+		const status = el('span', { class: 'muted' });
+		const btn = el('button', { onclick: () => createKeyPair(status) }, 'Create key pair…');
+		body.append(el('div', { class: 'platform-body' }, btn, ' ', status));
+	}
+}
+
+async function createKeyPair(status) {
+	const dir = await pickPath(state.project.root, false);
+	if (dir == null) return;
+	status.textContent = 'Generating…';
+	try {
+		const r = await app.post('/api/release/keygen', { bits: 2048, privatePath: dir + '/signing-private.txt', publicPath: dir + '/signing-public.txt' });
+		set(settings, 'signing.privateKey', relativePath(r.privatePath));
+		changed();
+		build();   // re-render so the key field shows the new path
+		alertBox('Key pair created', 'Private key: ' + r.privatePath + '\nPublic key: ' + r.publicPath +
+			'\n\nKeep the private key secret and out of version control — back it up, or you can\'t sign updates that verify against the same public key. It is now set as the signing key.');
+	} catch (e) {
+		status.textContent = '';
+		alertBox('Could not create the key', String(e.message || e) + '\n\nChoose a folder without a signing-private.txt already in it.');
+	}
+}
+
+//---------------------------------------------------------------------------
 // Check: problems and the plan
 //---------------------------------------------------------------------------
 function renderPlan(body) {
@@ -349,7 +392,7 @@ function showFieldIssues() {
 	for (const sec of SECTIONS) {
 		const badge = document.querySelector(`[data-badge="${sec.id}"]`);
 		if (!badge) continue;
-		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], output: ['output', 'engine'], plan: [''] }[sec.id];
+		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], output: ['output', 'engine'], signing: ['signing'], plan: [''] }[sec.id];
 		const mine = issues.filter((i) => prefix.some((p) => i.field.startsWith(p)));
 		const errs = mine.filter((i) => i.level === 'error').length;
 		badge.textContent = errs || mine.length || '';

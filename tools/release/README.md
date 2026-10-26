@@ -17,12 +17,14 @@ kagex-release --cli init  [path]           # write release.json with the default
 kagex-release --cli check [release.json]   # problems in the settings, and what this computer can build
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
+kagex-release --cli keygen [folder]        # write a signing key pair (private.txt, public.txt)
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
 release.json enables) and `--json`; `build` also takes `--engines=DIR` (engine packages to use
 instead of downloading them) and `--keep-work` (keep the staged files in `<output>/.work`).
-Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
+`keygen` takes `--bits=1024|2048|3072|4096` (default 2048), `--private=FILE`, `--public=FILE` and
+`--force`. Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
 
 ### What a build makes
 
@@ -78,7 +80,8 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
 `appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
 licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
-starts this computer's build for a few seconds (headless where it can, through the engine's REPL)
+starts this computer's build for a few seconds (headless where it can, through the engine's REPL;
+a signed build refuses the REPL, so its test run reads the log for the "signatures verified" line)
 and reports script errors; its log is `<output>/test-run.log`.
 
 Every build also writes `<output>/<file name>-<version>-files.json`, the list of the game's files
@@ -90,6 +93,44 @@ the full release's list, so it holds every change since then and replaces the on
 can't remove files, or change what the game reads before it loads patches (`Initialize.tjs`,
 `Storages.tjs`, `startup.tjs`, the engine and its `.cf`); the build says so. A build with
 *Patch from* set needs no platform, and a patch alone needs no engines.
+
+### Signing (checking for tampering)
+
+With signing on, the Windows, Linux, Steam and macOS builds carry RSA-PSS/SHA-256 signatures
+(the same format as the engine's key-and-signing tool), and the game checks them with the
+`sigcheck` plugin before it starts (`template/system/SignatureCheck.tjs`): it verifies the game
+archive it loaded from, the engine and its plugins (a signed list, `<file name>.sigfiles`, sits
+beside the executable), and every extra archive and patch. If any file is damaged, edited, or
+signed with a different key, the game shows a message naming the file and quits. A signed build
+also refuses the engine's REPL and debug options, so no console can be opened into it.
+
+- **Make a key pair** with *Create key pair…* in the window, or `kagex-release --cli keygen`. The
+  **private key signs** and must stay secret and out of version control; the **public key** is
+  written into `data.xp3` so the game can check itself. Lose the private key and you can't make
+  updates that verify against the same public key, so keep a backup.
+- **Set the key**: *Signing > Private key* (`signing.privateKey`, a path), or the
+  `KAGEX_SIGNING_KEY` environment variable (a path, or the key text itself) for CI. The key is
+  never stored in `release.json` or shipped. The tool refuses to build if the key sits inside
+  `data/` (it would be packed into the game), and a signed desktop build must ship an archive
+  (`data.xp3` or bound into the executable), not a loose `data/` folder.
+- **Patches and extra archives** are signed too (`patch.zip` gets a `patch.zip.sig`). In a signed
+  build they are verified and mounted only after the framework and `Config` load, so a patch can
+  change scenarios, images and other assets, but the framework, `Config` and `Override` need a
+  full release. An unsigned or wrongly signed patch stops the game.
+- **The web, Android and iOS builds aren't checked** (there's no plugin for them): they rely on
+  the app store's or your site's own integrity. They carry the key harmlessly and run as unsigned.
+- **macOS**: the in-app check is a backup to the bundle's own code signature; a Developer ID build
+  is still sealed by `codesign` as usual.
+- **What it does and doesn't stop.** It catches a damaged download, dropped-in or modified files,
+  unofficial patches and mods, and a swapped engine or plugin. It can't protect the code that runs
+  the check: anyone who can rebuild `data.xp3` (or the engine itself) can take the check out. It
+  raises the effort to tamper with a release; it isn't DRM.
+- **Large games — splitting.** The engine's check uses 32-bit sizes, so no single archive may reach
+  2 GB. When a signed build's data would, the biggest media folders (`video`, `bgm`, `voice`,
+  `sound`, `image`, `bgimage`, `fgimage`, `evimage`, `thum`) are moved into their own signed
+  archives beside `data.xp3` automatically; you can also turn this on yourself (*Signing > Split
+  large archives*). Splitting is for the Windows and Linux packages; build macOS on its own if its
+  data is that large. If one folder alone is 2 GB or more, split its contents across subfolders.
 
 ### Media
 
@@ -135,6 +176,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
+| `signing` | `enabled` (check for tampering before the game starts), `privateKey` (the signing key file; `KAGEX_SIGNING_KEY` overrides it and is never stored), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
@@ -170,5 +212,6 @@ release's `kagex_engine_*.zip`).
 Source: `src/main.cpp` (CLI and the window's API), `Settings` (release.json: defaults,
 validation), `Project` (finding the game, reading its defaults), `Host` (what this computer can
 build), `Plan` (the game's files and the outputs), `Build` (the packages), `Engine` (engine
-packages), `Archive` (zip, tar.gz, SHA-256), `Icons` (.ico, .icns, PNG sizes), `Subprocess`
-(running other programs); `web/` is the window.
+packages), `Archive` (zip, tar.gz, SHA-256), `Icons` (.ico, .icns, PNG sizes), `Sign` (key
+generation and signing, through krkrz_tools' krt::sig), `Subprocess` (running other programs);
+`web/` is the window.

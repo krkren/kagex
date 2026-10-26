@@ -13,6 +13,7 @@
 #include "Icons.h"
 #include "Media.h"
 #include "Plan.h"
+#include "Sign.h"
 #include "Subprocess.h"
 #include "krt/app/Progress.h"
 #include "krt/app/Text.h"
@@ -238,11 +239,20 @@ public:
 			mustRemove(work_);
 			mustMkdirs(work_);
 
+			// signing: resolve the keys up front, so a bad key stops the build before it does work
+			signing_ = flag(s_, "signing.enabled");
+			if (signing_) {
+				std::string err;
+				if (!signingPrivateKey(s_, p_, privPem_, err)) throw Failure{ "Signing: " + err };
+				if (!derivePublicKey(privPem_, pubPem_, err)) throw Failure{ "Signing: " + err };
+			}
+
 			stage(PartProgress(pr_, 0.0, 0.05));
 			media(PartProgress(pr_, 0.05, 0.22));
+			signStage();   // write the public key and the self-test into the data (before it is hashed/packed)
 			fileList(PartProgress(pr_, 0.22, 0.25));
 			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
-			if (needsXp3()) packXp3(PartProgress(pr_, 0.25, 0.35));
+			if (needsXp3()) { splitIfNeeded(PartProgress(pr_, 0.25, 0.27)); packXp3(PartProgress(pr_, 0.27, 0.35)); }
 			prepareIcons();
 
 			const double span = 0.6 / std::max<size_t>(1, chosen_.size());
@@ -525,6 +535,182 @@ private:
 	}
 
 	//-----------------------------------------------------------------------
+	// Signing (SignatureCheck.tjs verifies these at start-up)
+	//-----------------------------------------------------------------------
+	static std::string humanGB(uint64_t b)
+	{
+		char buf[32];
+		std::snprintf(buf, sizeof(buf), "%.2f GB", b / 1073741824.0);
+		return buf;
+	}
+
+	// SignatureKey.tjs sets the public key as a TJS string; a signed build is recognised by it.
+	static std::string keyTjs(const std::string& pubPem)
+	{
+		std::string esc;
+		for (char c : pubPem) {
+			if (c == '\\') esc += "\\\\";
+			else if (c == '"') esc += "\\\"";
+			else if (c == '\r') {}            // keep only \n, written as an escape
+			else if (c == '\n') esc += "\\n";
+			else esc += c;
+		}
+		return "// Written by kagex-release: the public key for the signature check (SignatureCheck.tjs).\n"
+		       "global.KAGSignaturePublicKey = \"" + esc + "\";\n"
+		       "global.KAGSignatureCheckEngine = true;\n";
+	}
+
+	// Writes the public key and the self-test into the staged data, before it is hashed and packed.
+	void signStage()
+	{
+		if (!signing_) return;
+		writeText(stage_ / "SignatureKey.tjs", keyTjs(pubPem_));
+		// the self-test: content whose .sig deliberately doesn't match, so a working plugin reports
+		// a mismatch (a plugin stubbed to always succeed is then caught)
+		std::string data(4096, '\0');
+		for (size_t i = 0; i < data.size(); ++i) data[i] = (char)((i * 131 + 7) & 0xFF);
+		const fs::path decoy = stage_ / "SignatureDecoy.bin";
+		writeText(decoy, data);
+		std::string err;
+		if (!signFileWith(decoy, privPem_, err)) throw Failure{ "Signing (self-test): " + err };
+		data[0] = (char)(data[0] ^ 0xFF);   // break the content so it no longer matches the signature
+		writeText(decoy, data);
+	}
+
+	void signChecked(const fs::path& f)
+	{
+		std::string err;
+		if (!signFileWith(f, privPem_, err)) throw Failure{ "Couldn't sign " + krt::fromPath(f.filename()) + ": " + err };
+		if (!verifyFileWith(f, pubPem_, err)) throw Failure{ "The signature for " + krt::fromPath(f.filename()) + " didn't verify: " + err };
+	}
+
+	uint64_t splitThresholdBytes()
+	{
+		const std::string env = getEnv("KAGEX_RELEASE_SPLIT_THRESHOLD_MB");
+		const long long mb = env.empty() ? 2000 : std::atoll(env.c_str());
+		return (uint64_t)(mb > 0 ? mb : 2000) * 1048576ULL;
+	}
+
+	// Splits the biggest media folders out of data.xp3 into their own archives beside it, so no
+	// archive reaches the engine's 2 GB signature-check limit. Forced on for a signed build whose
+	// data is that large; otherwise follows signing.splitArchives. Windows and Linux only (the
+	// parts sit beside the engine, where the framework looks for them).
+	void splitIfNeeded(krt::Progress&& pr)
+	{
+		bool want = flag(s_, "signing.splitArchives");
+		const uint64_t threshold = splitThresholdBytes();
+		const uint64_t dataBytes = treeSize(stage_);
+		const bool mustSplit = signing_ && dataBytes >= threshold;
+		if (mustSplit) want = true;
+		if (!want) return;
+		for (const auto& id : chosen_)
+			if (id == "macos" || id == "android" || id == "ios" || id == "web")
+				throw Failure{ std::string(mustSplit ? "This signed build's data is " + humanGB(dataBytes) + ", so data.xp3 must be split to stay under the engine's 2 GB signature-check limit. " : "") +
+					"Splitting the data into separate archives is supported for Windows and Linux only; build " + id + " on its own, or turn splitting off" };
+
+		static const std::set<std::string> splittable = {
+			"video", "bgm", "voice", "sound", "bgimage", "fgimage", "image", "evimage", "thum" };
+		struct Folder { std::string name; uint64_t size; };
+		std::vector<Folder> folders;
+		std::error_code ec;
+		for (const auto& e : fs::directory_iterator(stage_, ec)) {
+			if (!e.is_directory(ec)) continue;
+			const std::string n = krt::fromPath(e.path().filename());
+			if (splittable.count(lower(n))) folders.push_back({ n, treeSize(e.path()) });
+		}
+		std::sort(folders.begin(), folders.end(), [](const Folder& a, const Folder& b) { return a.size > b.size; });
+
+		const uint64_t signLimit = 2000ULL * 1048576;   // the engine's ~2 GB signature-check limit (fixed, not the test threshold)
+		uint64_t remaining = dataBytes;
+		for (const auto& f : folders) {
+			if (mustSplit && remaining < threshold) break;   // enough moved out already
+			if (signing_ && f.size >= signLimit)
+				throw Failure{ "The " + f.name + " folder is " + humanGB(f.size) + " on its own; a signed build can't put 2 GB or more into one archive "
+					"(the engine's signature check uses 32-bit sizes). Split that folder's contents across smaller folders" };
+			pr.progress(-1, "Splitting out " + f.name + ".xp3");
+			const fs::path part = work_ / krt::toPath(f.name + ".xp3");
+			const auto r = krt::xp3::pack(stage_ / krt::toPath(f.name), part, krt::xp3::PackOptions::defaults(), pr);
+			if (r.canceled) throw Failure{ "Canceled" };
+			if (!fs::is_regular_file(part, ec)) throw Failure{ "Couldn't pack " + f.name + ".xp3" };
+			partXp3_[f.name] = part;
+			partNames_.push_back(f.name);
+			mustRemove(stage_ / krt::toPath(f.name));
+			remaining -= f.size;
+			pr_.log("Split out " + f.name + ".xp3 (" + humanGB(f.size) + ")");
+		}
+		if (mustSplit && remaining >= threshold)
+			throw Failure{ "Couldn't get data.xp3 under 2 GB by moving the media folders out (" + humanGB(remaining) + " left). "
+				"Reduce the data, or move more of it into the media folders that can be split (video, bgm, voice, sound, image, bgimage, fgimage, evimage, thum)" };
+	}
+
+	void copyParts(const fs::path& dir)
+	{
+		for (const auto& [name, part] : partXp3_) copyFile(part, dir / krt::toPath(name + ".xp3"));
+	}
+
+	// Signs a Windows/Linux/Steam package: the engine files (with a signed list of them), the game
+	// archive, and the split parts. The last step, after the executable is final.
+	void signDesktopPackage(const std::string& id, const fs::path& dir)
+	{
+		if (!signing_) return;
+		const bool win = id == "windows";
+		const std::string exeName = str(s_, "identity.exeName");
+		const std::string exeLeaf = win ? exeName + ".exe" : exeName;
+		std::vector<std::string> rel;
+		rel.push_back(exeLeaf);
+		rel.push_back(exeName + ".cf");
+		std::error_code ec;
+		for (const auto& e : fs::directory_iterator(dir, ec)) {
+			if (!e.is_regular_file(ec)) continue;
+			const std::string n = krt::fromPath(e.path().filename()), ln = lower(n);
+			if (n == exeLeaf || n == exeName + ".cf") continue;
+			const bool isLib = win ? (ln.size() > 4 && ln.compare(ln.size() - 4, 4, ".dll") == 0)
+			                       : (ln.rfind("lib", 0) == 0 && ln.find(".so") != std::string::npos);
+			if (isLib) rel.push_back(n);
+		}
+		if (fs::is_directory(dir / "plugin", ec))
+			for (const auto& e : fs::directory_iterator(dir / "plugin", ec))
+				if (e.is_regular_file(ec)) rel.push_back("plugin/" + krt::fromPath(e.path().filename()));
+
+		pr_.progress(-1, "Signing " + id);
+		for (const auto& r : rel) signChecked(dir / krt::toPath(r));
+		std::string manifest = "; engine files for the signature check, relative to the executable (kagex-release)\n";
+		for (const auto& r : rel) manifest += r + "\n";
+		writeText(dir / krt::toPath(exeLeaf + ".sigfiles"), manifest);
+		signChecked(dir / krt::toPath(exeLeaf + ".sigfiles"));
+
+		if (str(s_, "platforms." + id + ".data") != "bind") signChecked(dir / "data.xp3");   // a bound exe is signed above
+		for (const auto& name : partNames_) signChecked(dir / krt::toPath(name + ".xp3"));
+		pr_.log("Signed " + std::to_string(rel.size()) + " engine files, the archive" +
+		        (partNames_.empty() ? std::string() : " and " + std::to_string(partNames_.size()) + " part(s)"));
+	}
+
+	// Signs a macOS app's engine files and data inside the bundle, before codesign reseals it.
+	void signMacosApp(const fs::path& contents)
+	{
+		if (!signing_) return;
+		const fs::path macos = contents / "MacOS", res = contents / "Resources";
+		std::vector<std::string> rel;
+		rel.push_back("krkrz");
+		rel.push_back("krkrz.cf");
+		std::error_code ec;
+		for (const auto& e : fs::directory_iterator(macos, ec)) {
+			if (!e.is_regular_file(ec)) continue;
+			const std::string n = krt::fromPath(e.path().filename()), ln = lower(n);
+			if (n == "krkrz" || n == "krkrz.cf") continue;
+			if (ln.size() > 6 && ln.compare(ln.size() - 6, 6, ".dylib") == 0) rel.push_back(n);
+		}
+		pr_.progress(-1, "Signing macOS");
+		for (const auto& r : rel) signChecked(macos / krt::toPath(r));
+		std::string manifest = "; engine files for the signature check, relative to the executable (kagex-release)\n";
+		for (const auto& r : rel) manifest += r + "\n";
+		writeText(macos / "krkrz.sigfiles", manifest);
+		signChecked(macos / "krkrz.sigfiles");
+		signChecked(res / "data.xp3");
+		pr_.log("Signed " + std::to_string(rel.size()) + " engine files and the archive (macOS)");
+	}
+
+	//-----------------------------------------------------------------------
 	// Platforms
 	//-----------------------------------------------------------------------
 	void buildPlatform(const std::string& id, krt::Progress& pr, fs::path& folder, fs::path& package)
@@ -570,7 +756,7 @@ private:
 	void dataInto(const std::string& id, const fs::path& dir)
 	{
 		const std::string mode = str(s_, "platforms." + id + ".data");
-		if (mode == "xp3") copyFile(xp3_, dir / "data.xp3");
+		if (mode == "xp3") { copyFile(xp3_, dir / "data.xp3"); copyParts(dir); }
 		else if (mode == "folder") copyTree(stage_, dir / "data");
 	}
 
@@ -651,9 +837,10 @@ private:
 		pluginsInto(engine / "plugin", dir / "plugin");
 		writeText(dir / krt::toPath(str(s_, "identity.exeName") + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms.windows.data");
-		if (mode == "bind") bind(exe);
+		if (mode == "bind") { bind(exe); copyParts(dir); }
 		else dataInto("windows", dir);
 		licensesInto(engine, dir);
+		signDesktopPackage("windows", dir);
 	}
 
 	void buildLinux(const std::string& id, const fs::path& engine, const fs::path& dir)
@@ -675,7 +862,7 @@ private:
 		pluginsInto(engine / "plugin", dir / "plugin");
 		writeText(dir / krt::toPath(exeName + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms." + id + ".data");
-		if (mode == "bind") bind(exe);
+		if (mode == "bind") { bind(exe); copyParts(dir); }
 		else dataInto(id, dir);
 		licensesInto(engine, dir);
 		if (id == "linux" && flag(s_, "platforms.linux.desktopEntry")) {
@@ -689,6 +876,7 @@ private:
 			}
 			writeText(dir / krt::toPath(exeName + ".desktop"), entry);
 		}
+		signDesktopPackage(id, dir);
 	}
 
 	void buildMacos(const fs::path& engine, const fs::path& dir)
@@ -740,6 +928,7 @@ private:
 		writeText(contents / "MacOS" / "krkrz.cf", engineConfig(s_, p_));
 		dataInto("macos", res);
 		licensesInto(engine, res);
+		signMacosApp(contents);   // sign the engine files and data before codesign reseals the bundle
 		macSign(app);
 	}
 
@@ -1395,6 +1584,60 @@ private:
 	//-----------------------------------------------------------------------
 	// Test run: this computer's build, for a few seconds, through the engine's REPL
 	//-----------------------------------------------------------------------
+	// A signed build's test run: start it (no REPL), let it run a few seconds, then read the log
+	// for the "signatures verified" line and no failure or script error.
+	Json signedTestRun(const fs::path& exe, const fs::path& dir, const std::string& host)
+	{
+		Json r = Json::object();
+		RunOptions opt;
+		opt.timeoutSeconds = 120;
+		opt.workDir = exe.parent_path();
+		opt.env = { { "SDL_AUDIO_DRIVER", "dummy" } };
+		if (host == "linux" && getEnv("DISPLAY").empty() && getEnv("WAYLAND_DISPLAY").empty())
+			opt.env.push_back({ "SDL_VIDEO_DRIVER", "offscreen" });
+		const auto start = std::chrono::steady_clock::now();
+		opt.canceled = [&]() {
+			if (pr_.canceled()) return true;
+			return std::chrono::steady_clock::now() - start > std::chrono::seconds(20);
+		};
+		const RunResult rr = run(krt::fromPath(exe), { "-datapath=" + krt::fromPath(dir / "save") + "/" }, opt);
+		std::string log, raw;
+		if (krt::readFile(dir / "save" / "krkr.console.log", raw)) log = utf16leToUtf8(raw);
+		if (log.empty()) log = rr.output;
+		writeText(out_ / "test-run.log", log);
+
+		std::vector<std::string> errors;
+		size_t pos = 0;
+		while (pos < log.size()) {
+			size_t end = log.find('\n', pos);
+			if (end == std::string::npos) end = log.size();
+			const std::string line = log.substr(pos, end - pos);
+			pos = end + 1;
+			if (line.find("Script exception raised") != std::string::npos ||
+			    line.find("\xe3\x82\xb9\xe3\x82\xaf\xe3\x83\xaa\xe3\x83\x97\xe3\x83\x88\xe3\x81\xa7\xe4\xbe\x8b\xe5\xa4\x96") != std::string::npos ||
+			    line.find("! trace :") != std::string::npos ||
+			    line.find("Signature check:") != std::string::npos)
+				errors.push_back(krt::trim(line));
+		}
+		const bool verified = log.find("Signatures verified; starting the game") != std::string::npos;
+		r.set("ran", Json(true));
+		r.set("started", Json(verified));
+		r.set("errors", Json::array(errors));
+		r.set("log", Json(krt::fromPath(out_ / "test-run.log")));
+		if (!verified && log.find("GLES context is unavailable") != std::string::npos) {
+			r.set("inconclusive", Json(true));
+			r.set("message", Json("Not tested: the engine found no OpenGL ES driver on this computer (a virtual machine?), so the signed build couldn't start here"));
+		} else {
+			r.set("ok", Json(verified && errors.empty()));
+			if (!verified && !errors.empty()) r.set("message", Json("The signature check stopped the build (see test-run.log)"));
+			else if (!verified) r.set("message", Json(rr.started ? "The signed build didn't report its signatures verified within the time limit (see test-run.log)" : "The engine couldn't be started: " + rr.output));
+			else if (!errors.empty()) r.set("message", Json("Signatures verified, but there were script errors (see test-run.log)"));
+			else r.set("message", Json("Signatures verified and the game started without script errors"));
+		}
+		pr_.log("Test run: " + r["message"].asStr());
+		return r;
+	}
+
 	Json testRun(krt::Progress&& pr)
 	{
 		Json r = Json::object();
@@ -1418,6 +1661,10 @@ private:
 		fs::create_directories(dir / "repl", ec);
 		pr.progress(-1, "Test run");
 		pr.log("Test run: " + krt::fromPath(exe));
+
+		// A signed build refuses the REPL (it's an injection route), so its test run reads the log
+		// instead of driving the engine through the REPL.
+		if (signing_) return signedTestRun(exe, dir, host);
 
 		RunOptions opt;
 		opt.timeoutSeconds = 120;
@@ -1499,6 +1746,11 @@ private:
 	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
 	bool patchFailed_ = false;
 	Json media_;
+	// signing
+	bool signing_ = false;
+	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)
+	std::vector<std::string> partNames_;          ///< folders split out of data.xp3 (signed/large builds)
+	std::map<std::string, fs::path> partXp3_;     ///< part name -> work_/<name>.xp3
 };
 
 } // namespace

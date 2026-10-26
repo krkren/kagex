@@ -1,10 +1,12 @@
 #include "Settings.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <regex>
 #include <set>
 
 #include "Media.h"
+#include "Sign.h"
 #include "krt/app/Text.h"
 
 namespace fs = std::filesystem;
@@ -149,6 +151,11 @@ Json defaultSettings(const Project& p)
 		{ "checksums", Json(true) },
 		{ "check", Json(true) },
 		{ "patchFrom", Json("") },
+	}));
+	s.set("signing", obj({
+		{ "enabled", Json(false) },
+		{ "privateKey", Json("") },
+		{ "splitArchives", Json(false) },
 	}));
 	Json pl = Json::object();
 	pl.set("windows", obj({ { "enabled", Json(host == "windows") }, { "data", Json("xp3") }, { "versionInfo", Json(true) } }));
@@ -394,7 +401,77 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		}
 	}
 	if (!enabled && patchFrom.empty()) error("platforms", "Choose at least one platform");
+
+	// signing
+	if (flag(s, "signing.enabled")) {
+		const char* envKey = std::getenv("KAGEX_SIGNING_KEY");
+		const std::string keyPath = str(s, "signing.privateKey");
+		if (keyPath.empty() && (!envKey || !*envKey)) {
+			error("signing.privateKey", "Signing needs your private key (a file, or the KAGEX_SIGNING_KEY environment variable). "
+			      "Make one with \"Create key pair\" (or --cli keygen). Keep it out of the game folder and out of version control");
+		} else if (!keyPath.empty()) {
+			const fs::path key = p.root / krt::toPath(keyPath);
+			if (!fs::exists(key, ec)) {
+				error("signing.privateKey", "The private key " + keyPath + " doesn't exist");
+			} else {
+				// the key must never be inside data/ (it would be packed into the game) and should
+				// not sit in the project at all (it could be committed)
+				const fs::path keyc = fs::weakly_canonical(key, ec);
+				auto under = [&](const fs::path& dir) {
+					const fs::path rel = fs::relative(keyc, fs::weakly_canonical(dir, ec), ec);
+					return !ec && !rel.empty() && *rel.begin() != "..";
+				};
+				if (under(p.data))
+					error("signing.privateKey", "The private key is inside data/ — it would be packed into the game, exposing it. Move it outside the game folder");
+				else if (under(p.root))
+					warn("signing.privateKey", "The private key is inside the project folder, where it could be committed by accident. Keeping it elsewhere is safer");
+				std::string text, kerr;
+				if (readKeyText(key, text, kerr) && !looksLikePrivateKey(text))
+					error("signing.privateKey", keyPath + " doesn't look like an RSA private key (expected a \"-----BEGIN RSA PRIVATE KEY-----\" block)");
+			}
+		}
+		if (!p.framework.empty() && !frameworkSupportsSigning(p.framework))
+			error("signing.enabled", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+			      ") has no SignatureCheck.tjs: it predates KAGEX 0.9.0's signing. Update it from KAGEX 0.9.0's template/system, or turn signing off");
+
+		bool anyDesktop = false, anyUnchecked = false;
+		for (const auto& pl : platforms()) {
+			const std::string id = pl.id, base = std::string("platforms.") + id + ".";
+			if (!flag(s, base + "enabled")) continue;
+			const bool desktop = (id == "windows" || id == "linux" || id == "steam" || id == "macos");
+			if (desktop) {
+				anyDesktop = true;
+				if (str(s, base + "data") == "folder")
+					error(base + "data", "A signed " + std::string(pl.title) + " build can't ship its data as a loose folder (anyone could edit it and the game couldn't tell). Use data.xp3" + std::string(id == "macos" ? "" : " or bind it into the executable"));
+			} else {
+				anyUnchecked = true;
+			}
+		}
+		if (anyUnchecked)
+			warn("signing.enabled", "The web, Android and iOS builds aren't signature-checked (there's no plugin for them): they rely on the app store's or your site's own integrity, and a signed build doesn't load patches from the save folder there");
+		if (!anyDesktop && enabled)
+			warn("signing.enabled", "None of the enabled platforms are signature-checked, so signing has no effect on this build");
+	}
+
 	return out;
+}
+
+bool signingPrivateKey(const Json& s, const Project& p, std::string& privPem, std::string& error)
+{
+	const char* env = std::getenv("KAGEX_SIGNING_KEY");
+	if (env && *env) {
+		const std::string v = env;
+		if (v.find("BEGIN") != std::string::npos && v.find("PRIVATE KEY") != std::string::npos) { privPem = v; return true; }
+		std::error_code ec;
+		if (!fs::exists(krt::toPath(v), ec)) { error = "KAGEX_SIGNING_KEY points at " + v + ", which doesn't exist"; return false; }
+		if (!krt::readFile(krt::toPath(v), privPem)) { error = "Can't read the key from KAGEX_SIGNING_KEY (" + v + ")"; return false; }
+		return true;
+	}
+	const std::string keyPath = str(s, "signing.privateKey");
+	if (keyPath.empty()) { error = "No signing key (set signing.privateKey or KAGEX_SIGNING_KEY)"; return false; }
+	const fs::path key = p.root / krt::toPath(keyPath);
+	if (!krt::readFile(key, privPem)) { error = "Can't read the private key " + keyPath; return false; }
+	return true;
 }
 
 bool hasErrors(const std::vector<Issue>& issues)

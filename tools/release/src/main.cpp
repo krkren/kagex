@@ -6,15 +6,18 @@
 //   kagex-release --cli check [<release.json>] [--json]       the settings, and what this computer can build
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
+//   kagex-release --cli keygen [<folder>] [--bits=N]          writes a signing key pair
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
-// (engine packages to use instead of downloading them) and --keep-work.
+// (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits,
+// --private, --public and --force.
 // Without a path it uses the current folder, or else the folder above the tool (a KAGEX
 // package keeps the tool in tools/). CLI exit codes: 0 = fine, 1 = problems found, 2 = failed.
 //---------------------------------------------------------------------------
 #include <appserve/appserve.h>
 
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 
@@ -23,6 +26,7 @@
 #include "Plan.h"
 #include "Project.h"
 #include "Settings.h"
+#include "Sign.h"
 #include "Subprocess.h"
 #include "krt/app/JobRunner.h"
 #include "krt/app/Progress.h"
@@ -45,6 +49,8 @@ struct Options {
 	bool keepWork = false;
 	std::string engines;             // --engines=DIR
 	std::vector<std::string> only;   // --platform=a,b
+	int bits = 2048;                 // keygen
+	std::string keyPrivate, keyPublic;
 };
 
 // The settings file and project for a path given on the command line (or none)
@@ -159,11 +165,32 @@ bool selected(const Options& o, const std::string& id)
 int runCli(const Options& o, const std::vector<std::string>& args)
 {
 	if (args.empty()) {
-		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan [<path>] (see --help)\n");
+		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen [<path>] (see --help)\n");
 		return 2;
 	}
 	const std::string cmd = args[0];
 	const std::string path = args.size() > 1 ? args[1] : std::string();
+
+	if (cmd == "keygen") {
+		// A key pair, independent of any game. --private / --public set the files (default
+		// private.txt / public.txt in <path> or the current folder); --bits the length.
+		std::error_code ec;
+		const fs::path dir = path.empty() ? fs::current_path(ec) : krt::toPath(path);
+		const fs::path priv = o.keyPrivate.empty() ? dir / "private.txt" : krt::toPath(o.keyPrivate);
+		const fs::path pub = o.keyPublic.empty() ? dir / "public.txt" : krt::toPath(o.keyPublic);
+		if ((fs::exists(priv, ec) || fs::exists(pub, ec)) && !o.force) {
+			std::fprintf(stderr, "error: %s or %s already exists (--force replaces them)\n",
+			             krt::fromPath(priv).c_str(), krt::fromPath(pub).c_str());
+			return 2;
+		}
+		std::string pubPem, privPem, gerr;
+		if (!generateSigningKeys(o.bits, pubPem, privPem, gerr)) { std::fprintf(stderr, "error: %s\n", gerr.c_str()); return 2; }
+		if (!krt::writeFile(priv, privPem) || !krt::writeFile(pub, pubPem)) { std::fprintf(stderr, "error: couldn't write the key files\n"); return 2; }
+		std::printf("Wrote the private key to %s and the public key to %s (%d-bit).\n", krt::fromPath(priv).c_str(), krt::fromPath(pub).c_str(), o.bits);
+		std::printf("Keep the private key safe and out of version control; set it as the signing key in release.json.\n");
+		return 0;
+	}
+
 	Target t;
 	std::string err;
 	if (!resolveTarget(path, t, err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
@@ -358,6 +385,39 @@ public:
 			return appserve::Response::json(Json::object());
 		});
 
+		// Makes a signing key pair and writes it (body: { bits, privatePath, publicPath, force }).
+		// Paths are relative to the project; returns the written paths and the public key text.
+		reg.route("/api/release/keygen", appserve::Affinity::Any, [this](const appserve::Request& req) {
+			Project p;
+			{
+				std::lock_guard<std::mutex> lk(mu_);
+				if (!have_) return appserve::Response::error(400, targetError_);
+				p = target_.project;
+			}
+			const int bits = (int)req.json()["bits"].asInt(2048);
+			std::string privRel = req.json()["privatePath"].asStr();
+			std::string pubRel = req.json()["publicPath"].asStr();
+			if (privRel.empty()) privRel = "signing-private.txt";
+			if (pubRel.empty()) pubRel = "signing-public.txt";
+			auto resolve = [&](const std::string& r) {
+				const fs::path pth = krt::toPath(r);
+				return pth.is_absolute() ? pth : p.root / pth;
+			};
+			const fs::path priv = resolve(privRel), pub = resolve(pubRel);
+			std::error_code ec;
+			if ((fs::exists(priv, ec) || fs::exists(pub, ec)) && !req.json()["force"].asBool())
+				return appserve::Response::error(409, "A key file is already there. Choose another name, or allow replacing it.");
+			std::string pubPem, privPem, err;
+			if (!generateSigningKeys(bits, pubPem, privPem, err)) return appserve::Response::error(400, err);
+			if (!krt::writeFile(priv, privPem) || !krt::writeFile(pub, pubPem))
+				return appserve::Response::error(400, "Couldn't write the key files.");
+			Json out = Json::object();
+			out.set("privatePath", Json(krt::fromPath(priv)));
+			out.set("publicPath", Json(krt::fromPath(pub)));
+			out.set("publicKey", Json(pubPem));
+			return appserve::Response::json(out);
+		});
+
 		// Saves release.json (body: { settings })
 		reg.route("/api/release/save", [this](const appserve::Request& req) {
 			if (!have_) return appserve::Response::error(400, targetError_);
@@ -428,6 +488,12 @@ int main(int argc, char** argv)
 	                [&o](const std::string& v) { o.engines = v; return true; } });
 	app.addOption({ "keep-work", "", "build: keep the staged files (<output>/.work)",
 	                [&o](const std::string&) { o.keepWork = true; return true; } });
+	app.addOption({ "bits", "N", "keygen: key length 1024/2048/3072/4096 (default 2048)",
+	                [&o](const std::string& v) { o.bits = std::atoi(v.c_str()); return true; } });
+	app.addOption({ "private", "FILE", "keygen: where to write the private key (default private.txt)",
+	                [&o](const std::string& v) { o.keyPrivate = v; return true; } });
+	app.addOption({ "public", "FILE", "keygen: where to write the public key (default public.txt)",
+	                [&o](const std::string& v) { o.keyPublic = v; return true; } });
 	app.addOption({ "platform", "LIST", "check, plan, build: only these platforms (windows,linux,steam,macos,web,android,ios)",
 	                [&o](const std::string& v) {
 		                size_t start = 0;
