@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: release-packages
@@ -25,7 +26,7 @@ concurrency:
 
 env:
   RELEASE_TAG: "0.8.0"
-  KAGEX_SHA: 923fe863dbdb133e8159ad61ad1cb110bc3193f4
+  KAGEX_SHA: e63d0ea55a1dd32ecc63ac274409e750c616d512
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -48,6 +49,7 @@ jobs:
       ref: ${{ needs.release-commit.outputs.sha }}
     permissions:
       contents: write
+      actions: write
 
   release-tool:
     needs: release-commit
@@ -56,6 +58,7 @@ jobs:
       ref: ${{ needs.release-commit.outputs.sha }}
     permissions:
       contents: write
+      actions: write
 
   windows:
     runs-on: windows-2022
@@ -200,6 +203,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ci/.github/windows-test/publish-results.sh "release-results-windows-${CONFIG,,}" "Windows $CONFIG package, run ${{ github.run_id }} (${{ job.status }})"
+      - name: Stop the whole run on a failure
+        # a failed job cancels the others (iOS and Android take the longest), so a
+        # release that can't publish stops at once
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   linux:
     runs-on: ubuntu-22.04
@@ -420,6 +430,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ci/.github/windows-test/publish-results.sh "release-results-linux-${CONFIG,,}" "Linux $CONFIG package, run ${{ github.run_id }} (${{ job.status }})"
+      - name: Stop the whole run on a failure
+        # a failed job cancels the others (iOS and Android take the longest), so a
+        # release that can't publish stops at once
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   # kagex-release with this release's engines: the engine packages, made from the packages
   # above, and a build of the sample for what a Linux runner makes, with the test run
@@ -522,6 +539,13 @@ jobs:
         run: |
           cp game/release/test-run.log game/release/android-build.log results/ 2>/dev/null || true
           ci/.github/windows-test/publish-results.sh release-results-tool-check "kagex-release with $RELEASE_TAG's engines, run ${{ github.run_id }} (${{ job.status }})"
+      - name: Stop the whole run on a failure
+        # a failed job cancels the others (iOS and Android take the longest), so a
+        # release that can't publish stops at once
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   publish:
     needs: [windows, linux, platforms, release-tool, tool-check]
