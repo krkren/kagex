@@ -188,6 +188,7 @@ std::string engineConfig(const Json& s, const Project& p)
 	                  ": engine options (each line is a command-line option without its \"-\")\n";
 	// the developer's own options from krkrz.cf, without the ones written below
 	std::string text;
+	bool krkrzPool = false;   // krkrz.cf sets krkrzpoolsize itself
 	if (krt::readFile(p.root / "krkrz.cf", text)) {
 		size_t pos = 0;
 		while (pos < text.size()) {
@@ -200,12 +201,15 @@ std::string engineConfig(const Json& s, const Project& p)
 			if (t.empty() || t[0] == ';') continue;
 			const std::string key = lower(krt::trim(t.substr(0, t.find('='))));
 			if (key == "orgname" || key == "appname" || key == "debugwin") continue;
+			if (key == "krkrzpoolsize") krkrzPool = true;
 			out += t + "\n";
 		}
 	}
 	out += "orgname=" + str(s, "identity.orgName") + "\n";
 	out += "appname=" + str(s, "identity.appName") + "\n";
 	if (!flag(s, "engine.debug")) out += "debugwin=no\n";
+	// engine 2.6.5 corrupts its heap now and then with its general memory pool on (UPSTREAM.md)
+	if (!krkrzPool) out += "krkrzpoolsize=none\n";
 	return out;
 }
 

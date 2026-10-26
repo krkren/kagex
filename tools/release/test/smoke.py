@@ -264,7 +264,7 @@ def build_tests(exe, proj, args):
          "; ".join("%s=%s" % (n, outs.get(n, {}).get("ok") or outs.get(n, {}).get("error")) for n in names) + (" " + r.get("error", "")))
     base = "kagex-sample-%s-" % s["identity"]["version"]
     outdir = proj / "release"
-    cf_ok = lambda t: "orgname=krkren\n" in t and "appname=kagex-sample\n" in t and "debugwin=no\n" in t
+    cf_ok = lambda t: "orgname=krkren\n" in t and "appname=kagex-sample\n" in t and "debugwin=no\n" in t and "krkrzpoolsize=none\n" in t
 
     w = outdir / (base + "windows.zip")
     if w.exists():

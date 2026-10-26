@@ -11,6 +11,10 @@
 
 - Extras on the title screen unlock once the new demo has been played too.
 
+### Fixed
+
+- **Random crashes** ("free(): corrupted unsorted chunks", "double free or corruption", Windows' 0xC0000374), most often in the Animated Character demo: the engine corrupted its heap now and then while its general memory pool was on. The packages turn the pool off (`krkrzpoolsize=none` in `krkrz.cf`, the Steam build's and the web build's options), and kagex-release does the same in every `.cf` it writes unless the game's `krkrz.cf` sets the option. The Android and iOS builds can't take engine options yet (UPSTREAM.md).
+
 ## 0.7.0
 
 ### Added

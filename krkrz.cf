@@ -7,3 +7,9 @@
 ; savedata/ next to the exe either way. A game made from the template should use its own names.
 orgname=krkren
 appname=kagex
+;
+; krkrzpoolsize=none: the engine's general allocations go to the system's malloc instead of its
+; own 256 MB pool. With the pool, engine 2.6.5 corrupted its heap in about one run in five of the
+; release smoke test (UPSTREAM.md: "The engine's general memory pool corrupts the heap"); without
+; it, never. kagex-release adds this to a game's .cf unless the game's krkrz.cf sets the option.
+krkrzpoolsize=none
