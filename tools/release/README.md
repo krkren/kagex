@@ -19,6 +19,7 @@ kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
 kagex-release --cli keygen [folder]        # write a signing key pair (private.txt, public.txt)
 kagex-release --cli archive-keygen <keyfile>  # make an archive-encryption key
+kagex-release --cli scenes-keygen <file>   # a new key for encrypting compiled scenarios
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
@@ -168,6 +169,30 @@ unrecoverable to a determined person. Encryption applies to files inside `data.x
 has to use `xp3` (or `bind`) data, not loose `folder`/`files`; the build warns otherwise. An engine
 with no key reads a plain archive, so the same engine works with encryption off.
 
+### Compiled scenarios
+
+With *Compile* on (Scenarios, `scenes.compile`; on by default when the game has a
+`!scnlist.txt`), the build compiles the scripts that list names into `.scn` files after the
+media conversion, by running this computer's engine on the staged data with
+`-scncompile=all` (its window stays hidden; the log is `<output>/compile-scenarios.log`). The
+compiled scripts and the compiler's `parsermacro.ks` and `parseroption.txt` are left out of the
+package, and the game plays the compiled files (`doc/scn.txt`).
+
+- **The scnfile plugin.** An engine with the scnfile plugin compiles to `.scn`, and then every
+  platform's engine needs the plugin to play them: a platform whose engine package lacks it
+  fails to build. Without the plugin the scripts compile to `.scn.json`, which every engine
+  reads (in plain text). The check says which it will be (a note on this computer's platform,
+  and *To compile: ... to .scn* in the plan) once the engine is here, and marks a platform whose
+  engine lacks the plugin as one that can't be built.
+- **Encryption.** With a key (*Key*, `scenes.keyFile`, or `KAGEX_SCENES_KEY` set to its 64
+  hexadecimal digits, which wins), the `.scn` files are encrypted (XChaCha20-Poly1305, scnfile's
+  `docs/format.md`) and the key is written into each package's copy of the plugin, before
+  signing and before the web build's id. *New key* (or `--cli keygen <file>`) makes one. Keep it,
+  out of the game's repository (it can't be inside `data/`): a patch has to be built with the
+  same key, and since the same file and key always encrypt to the same bytes, a patch holds only
+  the scripts that changed. The key is in the game too, as it must be for the game to read its
+  files: this keeps the scripts from plain view, not from a determined person.
+
 ### Media
 
 Before packing, lossless media in the staged data are converted (the sources are never touched):
@@ -233,7 +258,9 @@ The engines come from the KAGEX release of the tool's version: `kagex_engine_<pl
 and the release's APK; for iOS by `scripts/ios-engine.py` from krkrz_ios's unsigned device build
 and its Simulator build. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
 them instead (zips, or unpacked into folders of the same names), for working offline;
-`KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from.
+`KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from. Without either, an `engines/`
+folder next to the game's `data/` is used when there is one (engine packages of your own, such
+as ones with the scnfile plugin).
 
 ### release.json
 
@@ -242,6 +269,7 @@ them instead (zips, or unpacked into folders of the same names), for working off
 | `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
+| `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `keyFile` (the key that encrypts them; empty: not encrypted) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `signing` | `enabled` (check for tampering before the game starts), `privateKey` (the signing key file; `KAGEX_SIGNING_KEY` overrides it and is never stored), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
@@ -276,11 +304,17 @@ python3 test/smoke.py build/linux/Release/kagex-release --browser   # --browser 
 `.github/workflows/release-tool.yml` builds it on all three systems and runs the smoke test.
 
 The smoke test also builds when given engine packages (`--engines DIR`; the CI downloads a
-release's `kagex_engine_*.zip`).
+release's `kagex_engine_*.zip`). `--tests scenes,patch` (any of `cli`, `server`, `build`, `web`,
+`android`, `ios`, `media`, `scenes`, `patch`) runs some of its parts.
+
+Encrypting scenarios uses scnfile's own code (https://github.com/krkren/scnfile,
+`plugins/scnfile`): `SCNFILE_DIR` defaults to `../scnfile` next to this repository. Without it the
+tool still builds and compiles scenarios, but refuses a key.
 
 Source: `src/main.cpp` (CLI and the window's API), `Settings` (release.json: defaults,
 validation), `Project` (finding the game, reading its defaults), `Host` (what this computer can
 build), `Plan` (the game's files and the outputs), `Build` (the packages), `Engine` (engine
-packages), `Archive` (zip, tar.gz, SHA-256), `Icons` (.ico, .icns, PNG sizes), `Sign` (key
-generation and signing, through krkrz_tools' krt::sig), `Subprocess` (running other programs);
+packages), `Scenes` (the scenario key, encrypting, the plugin's key slot), `Archive` (zip,
+tar.gz, SHA-256), `Icons` (.ico, .icns, PNG sizes), `Sign` (key generation and signing, through
+krkrz_tools' krt::sig), `Subprocess` (running other programs);
 `web/` is the window.

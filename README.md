@@ -50,7 +50,7 @@ At start the framework loads `patch.zip`, `patch2.zip` and so on, from next to t
 - `data/`: the sample game. It loads the framework from `../template/system`, or from `data/system` where a package puts a copy there.
 - `template/`: the KAGEX framework (`template/system`) and empty folders for a new game, with `template/main/` holding empty versions of the game-side hooks (`Override.tjs`, `AfterInit.tjs`, `Storages.tjs`). To ship a game, copy `template/system` and `template/startup.tjs` into `data/`, and `krkrz.cf` next to the engine with your own `orgname`/`appname`: without it, every game on the stock engine saves to the same `~/.local/share/wamsoft/krkrz/` folder on Linux.
 - `linux-config.json`, `web-config.json`, `app-config.json`, `ios-config.json`: the settings for Wamsoft's platform kits ([krkrz_linux](https://github.com/wamsoft/krkrz_linux), [krkrz_web](https://github.com/wamsoft/krkrz_web), [krkrz_android](https://github.com/wamsoft/krkrz_android), [krkrz_ios](https://github.com/wamsoft/krkrz_ios)), which build the Linux (Steam), web, Android and iOS packages from krkrz_dev without changing it. `.github/workflows/platforms.yml` shows the steps, and `platform/` holds the icons and the Android app name.
-- `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension).
+- `doc/`: the KAGEX reference: `kagex.txt` (new and changed tags), `action.txt` (actions), `world*.txt` (the World extension), `scn.txt` (compiled scenarios).
 - `TODO.md`: planned features.
 - `tools/assets/`: the scripts that make the sample's images and effects (`make_ui.py` for the screens, `upscale.py` for the characters and backgrounds, `make_effects.py` for the Effekseer effects in `data/effect`, written with `efkformat.py`, `make_rules.py` for the transitions' rule images in `data/rule`, `make_vector.py` for the layer demo's SVG emblem and its PNG twin, `make_clip.py` for the same emblem as a CLIP STUDIO PAINT file, `make_pip.py` for the Animated Character demo's Pip, its layers and voice lines), with the original art they start from.
 - `tools/release/`: kagex-release (above): its source, `scripts/` that make the engine packages it uses from the release builds, and its smoke test. `.github/workflows/release-tool.yml` builds it for all three systems.
@@ -63,7 +63,6 @@ The engine isn't part of this repository. It's built from [wamsoft/krkrz_dev](ht
 These KAGEX features depend on Windows plugins the SDL3 engine doesn't include. The scripts load without them; using one either falls back to something simpler or stops with an error:
 
 - The menu bar (`menu.dll`, `windowEx.dll`). The sample puts its player commands on keys (F1-F8), buttons and the controller instead; in KAG's debug mode (on unless the engine gets `-debugwin=no`), Shift+F12 shows the debug window and Shift+F11 switches the debug level.
-- Scene playback with `[scenestart]` (`psbfile.dll`).
 - The fire and Flash effects (`gfxEffect.dll`, `flashPlayer.dll`). Effekseer effects (`efk`) can take the fire effect's place.
 - GDI+ outlined text (`layerExDraw.dll`); krkr_richtext draws outlines and shadows instead.
 - Native Windows dialogs (`win32dialog.dll`), used by the stand-picture viewer tool.

@@ -132,6 +132,8 @@
 
 *extra
 
+[jump storage="searchmode.ks" cond='tf.extramode == 4']
+
 [jump storage="musicmode.ks" cond='tf.extramode == 3']
 
 [jump storage="replay.ks"    cond='tf.extramode == 2']

@@ -5,6 +5,9 @@
 #include <map>
 #include <set>
 
+#include "Engine.h"
+#include "Host.h"
+#include "Subprocess.h"
 #include "krt/app/Text.h"
 
 namespace fs = std::filesystem;
@@ -243,6 +246,32 @@ Json makePlan(const Json& s, const Project& p)
 		exts.push(std::move(e));
 	}
 	data.set("byExtension", std::move(exts));
+	// compiled scenarios: the scripts in !scnlist.txt
+	Json scenes = Json::object();
+	const bool compile = flag(s, "scenes.compile") && !p.sceneList.empty();
+	int listed = 0;
+	std::string list;
+	if (compile && krt::readFile(p.sceneList, list)) {
+		size_t pos = 0;
+		while (pos < list.size()) {
+			size_t end = list.find('\n', pos);
+			if (end == std::string::npos) end = list.size();
+			const std::string line = krt::trim(list.substr(pos, end - pos));
+			pos = end + 1;
+			if (!line.empty() && line[0] != '#' && line.find(':') == std::string::npos) ++listed;
+		}
+	}
+	scenes.set("compile", Json(compile));
+	scenes.set("scripts", Json(listed));
+	scenes.set("encrypted", Json(compile && (!str(s, "scenes.keyFile").empty() || !getEnv("KAGEX_SCENES_KEY").empty())));
+	// .scn with the scnfile plugin in this computer's engine, else .scn.json; "" when that
+	// engine isn't here yet
+	{
+		const std::string host = hostId();
+		const fs::path engine = engineIfPresent(host, flag(s, "engine.debug"), localEngines({}, p.root));
+		scenes.set("format", Json(engine.empty() ? std::string() : engineHasScnfile(engine) ? ".scn" : ".scn.json"));
+	}
+	data.set("scenes", std::move(scenes));
 	plan.set("data", std::move(data));
 
 	const std::string out = str(s, "output.folder");

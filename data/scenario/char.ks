@@ -22,7 +22,7 @@ Character appearance
 [ai voice=1]
 【ai】Ninth-grade antiseptic hell!
 
-[ai clearvoice]
+[ai voice=clear]
 【ai】By the way, you can change the voice playback speed in the debug menu.
 
 ; Recollection end point

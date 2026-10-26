@@ -6,7 +6,9 @@
 #include <set>
 
 #include "Encrypt.h"
+#include "Engine.h"
 #include "Media.h"
+#include "Scenes.h"
 #include "Sign.h"
 #include "Subprocess.h"
 #include "krt/app/Text.h"
@@ -147,6 +149,11 @@ Json defaultSettings(const Project& p)
 			{ "jpegQuality", Json(90) },
 		}) },
 		{ "references", Json("keep") },
+	}));
+	// compiled when the game lists scripts to compile and its framework compiles them
+	s.set("scenes", obj({
+		{ "compile", Json(!p.sceneList.empty() && p.frameworkCompiles) },
+		{ "keyFile", Json("") },
 	}));
 	s.set("output", obj({
 		{ "folder", Json("release") },
@@ -338,6 +345,41 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const long long jq = at(s, "media.images.jpegQuality").asInt(90);
 	if (jq < 1 || jq > 100) error("media.images.jpegQuality", "The JPEG quality is 1 to 100");
 	if (!oneOf(str(s, "media.references"), { "keep", "rewrite" })) error("media.references", "references is \"keep\" or \"rewrite\"");
+
+	// compiled scenarios
+	const bool compile = flag(s, "scenes.compile");
+	const std::string keyFile = str(s, "scenes.keyFile");
+	const bool keyFromEnv = !getEnv("KAGEX_SCENES_KEY").empty();
+	if (compile && p.sceneList.empty())
+		error("scenes.compile", "The game has no !scnlist.txt (the list of scripts to compile, usually data/scenario/!scnlist.txt; doc/scn.txt)");
+	else if (compile && !p.frameworkCompiles)
+		error("scenes.compile", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+		      ") has no SceneParser.tjs: it predates compiled scenarios. Update it from a newer KAGEX's template/system");
+	if (!keyFile.empty() || keyFromEnv) {
+		const std::string field = keyFile.empty() ? "scenes" : "scenes.keyFile";
+		if (!canEncryptScenes()) error(field, "This kagex-release was built without scnfile, so it can't encrypt scenarios");
+		else if (!keyFile.empty() && !keyFromEnv && !exists(keyFile)) error(field, "The key " + keyFile + " doesn't exist (New key makes one)");
+		else {
+			SceneKey key;
+			bool have = false;
+			std::string err;
+			if (!readSceneKey(s, p, key, have, err)) error(field, err);
+			wipeSceneKey(key);
+		}
+		if (!keyFile.empty()) {
+			fs::path k = fs::weakly_canonical(p.root / krt::toPath(keyFile), ec);
+			auto rel = fs::relative(k, fs::weakly_canonical(p.data, ec), ec);
+			if (!ec && !rel.empty() && *rel.begin() != "..") error(field, "The key can't be inside data/: it would be packed into the game");
+		}
+		if (!compile) warn(field, "The key is only used for compiled scenarios");
+		// this computer's engine compiles them: without the scnfile plugin, to .scn.json
+		const fs::path engine = engineIfPresent(hostPlatform(), flag(s, "engine.debug"), localEngines({}, p.root));
+		if (compile && !engine.empty() && !engineHasScnfile(engine))
+			error(field, "This computer's engine has no scnfile plugin, so the scenarios would compile to .scn.json, which can't be encrypted. "
+			             "Engine packages with the plugin go in engines/ next to data/ (" + krt::fromPath(engine) + ")");
+	} else if (compile) {
+		warn("scenes.keyFile", "Without a key the compiled scenarios aren't encrypted: a PSB viewer opens them");
+	}
 
 	// output
 	const std::string folder = str(s, "output.folder");

@@ -15,7 +15,12 @@
   Linux the converted build in the engine (a button's hover image found, the button highlighted).
   Then compiled scripts: a small game of its own whose scripts check, when it runs, the
   constants beyond 32 bits, expression scripts, UTF-16LE and Shift_JIS scripts; and a patch of
-  compiled scripts holds only the one that changed
+  compiled scripts holds only the one that changed.
+  Then compiled scenarios: the scripts compiled and left out, encrypted with a key that's
+  written into the engine's scnfile plugin (where the host's engine package has it, else the
+  .scn.json the engine writes without it), a patch of one changed script, and on Linux the
+  sample played from the package by tools/smoketest.py --packaged
+- --tests cli,signing,server,build,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
 """
 import argparse
 import hashlib
@@ -767,6 +772,150 @@ def media_tests(exe, proj, args):
          and not have("rule/rule_shatter.jpg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
 
 
+SLOT_MARKER = b"KSCN-KEY-SLOT-v1"
+
+
+def engine_has_scnfile(engines, host):
+    """Whether the host's engine package (a zip or a folder) has the scnfile plugin"""
+    names = ("plugin/libscnfile.so", "plugin/scnfile.dll", "libscnfile.dylib")
+    z = Path(engines) / ("kagex_engine_%s.zip" % host)
+    if z.exists():
+        with zipfile.ZipFile(z) as zf:
+            return any(n.endswith(names) for n in zf.namelist())
+    d = Path(engines) / ("kagex_engine_%s" % host)
+    return d.is_dir() and any(str(f).replace(os.sep, "/").endswith(names) for f in d.rglob("*"))
+
+
+def scenes_tests(exe, proj, args):
+    """Compiled scenarios (doc/scn.txt): the scripts in !scnlist.txt compiled by the host's
+    engine during the build and left out of the package"""
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    host = host_id()
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == host
+    s["platforms"][host]["data"] = "folder"
+    s["output"].update(archive="none", check=True, patchFrom="")
+    s["contents"]["plugins"] = "all"
+    s["media"]["audio"]["convert"] = "keep"
+    s["media"]["images"].update(opaque="keep", alpha="keep")
+
+    key = proj / "scenes.key"
+    code, out = run(exe, "--cli", "keygen", str(key))
+    text = key.read_text() if key.exists() else ""
+    step("scenes: keygen writes a key", code == 0 and re.fullmatch(r"[0-9a-f]{64}\n", text) is not None, out.strip())
+    code, out = run(exe, "--cli", "keygen", str(key))
+    step("scenes: keygen refuses to replace a key", code == 2 and "already" in out, out.strip())
+    inside = proj / "data" / "scenes.key"
+    shutil.copyfile(key, inside)
+    s["scenes"] = {"compile": True, "keyFile": "data/scenes.key"}
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "check", str(rel), "--json")
+    fields = [i["field"] for i in json.loads(out)["issues"] if i["level"] == "error"]
+    step("scenes: check refuses a key inside data/", code == 1 and "scenes.keyFile" in fields, ", ".join(fields))
+    inside.unlink()
+
+    s["scenes"]["keyFile"] = "scenes.key"
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "plan", str(rel), "--json")
+    sc = json.loads(out)["data"].get("scenes", {})
+    step("scenes: plan lists the scripts to compile", sc.get("compile") and sc.get("scripts", 0) >= 7 and sc.get("encrypted"), json.dumps(sc))
+
+    def build():
+        code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+        try:
+            return json.loads(out[out.index("{"):]), ""
+        except ValueError:
+            return None, out[-2000:]
+
+    # engine packages in engines/ next to data/ are used without --engines, and check and plan
+    # say which format the scenarios compile to
+    has_plugin = engine_has_scnfile(args.engines, host)
+    link = proj / "engines"
+    try:
+        os.symlink(Path(args.engines).resolve(), link, target_is_directory=True)
+    except OSError:
+        link = None   # Windows without the right to make links
+    if link:
+        code, out = run(exe, "--cli", "check", str(rel), "--json")
+        st = [p for p in json.loads(out)["platforms"] if p["id"] == host]
+        notes = " ".join(st[0]["notes"]) if st else ""
+        engine = " ".join(r["detail"] for r in st[0]["requirements"] if r["name"] == "Engine") if st else ""
+        code, out = run(exe, "--cli", "plan", str(rel), "--json")
+        fmt = json.loads(out)["data"]["scenes"].get("format")
+        want = ".scn" if has_plugin else ".scn.json"
+        said = ("compile to .scn " in notes) if has_plugin else ("no scnfile plugin" in notes)
+        # the engine is known when it's a folder, or a zip a build has unpacked
+        step("scenes: engines/ next to data/ is used, and check and plan name the format",
+             "engines" in engine and (fmt == "" or (fmt == want and said)), "%s | %s | %s" % (engine, fmt, notes))
+        link.unlink()
+
+    base = "kagex-sample-%s-" % s["identity"]["version"]
+    folder = proj / "release" / (base + host)
+    data = folder / "data" if host != "macos" else next(folder.glob("*.app")) / "Contents" / "Resources" / "data"
+    listed = [l.strip() for l in (proj / "data" / "scenario" / "!scnlist.txt").read_text(encoding="utf-8").splitlines()
+              if l.strip() and not l.strip().startswith("#")]
+    if has_plugin:
+        r, err = build()
+        step("scenes: an encrypted build", r is not None and r.get("ok"), err or (r or {}).get("error", "") + " " +
+             "; ".join(o.get("error", "") for o in (r or {}).get("outputs", [])))
+        if not r or not r.get("ok"):
+            return
+        scn = sorted((data / "scenario").glob("*.scn"))
+        step("scenes: a .scn for each listed script, encrypted", len(scn) == len(listed) and
+             all(f.read_bytes()[:4] == b"KSCN" for f in scn), ", ".join(f.name for f in scn))
+        left = [n for n in listed if (data / "scenario" / n).exists()] + \
+               [n for n in ("parsermacro.ks", "parseroption.txt") if (data / "scenario" / n).exists()]
+        step("scenes: the compiled scripts and the compiler's files are left out", not left, ", ".join(left))
+        want = bytes.fromhex(key.read_text().strip())
+        holders = [f for f in folder.rglob("*") if f.is_file() and not f.is_symlink() and "data" not in f.relative_to(folder).parts
+                   and SLOT_MARKER in f.read_bytes()]
+        keyed = [f for f in holders if f.read_bytes().split(SLOT_MARKER, 1)[1][:32] == want]
+        step("scenes: the key is in the package's plugin", len(holders) == 1 and keyed == holders, ", ".join(f.name for f in holders))
+        chk = r.get("check", {})
+        step("scenes: test run", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+        if host == "linux":
+            exe_path = folder / s["identity"]["exeName"]
+            p = subprocess.run([sys.executable, str(REPO / "tools" / "smoketest.py"), "--engine", str(exe_path), "--packaged"],
+                               cwd=REPO, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800)
+            fails = [l for l in p.stdout.splitlines() if l.startswith("FAIL")]
+            step("scenes: the sample plays from the encrypted package (smoketest.py --packaged)", p.returncode == 0,
+                 "; ".join(fails) or p.stdout.strip().splitlines()[-1] if p.stdout.strip() else p.stderr[-500:])
+        ext = ".scn"
+    else:
+        r, err = build()
+        msg = err or (r or {}).get("error", "")
+        step("scenes: without the scnfile plugin an encrypted build is refused", r is not None and not r.get("ok") and ".scn.json" in msg, msg)
+        s["scenes"]["keyFile"] = ""
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        r, err = build()
+        step("scenes: without the plugin the scripts compile to .scn.json", r is not None and r.get("ok") and
+             len(list((data / "scenario").glob("*.scn.json"))) == len(listed) and not any((data / "scenario" / n).exists() for n in listed),
+             err or (r or {}).get("error", ""))
+        chk = (r or {}).get("check", {})
+        step("scenes: test run", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+        ext = ".scn.json"
+
+    # a patch of one changed script holds its compiled file only (compiling and encrypting give
+    # the same bytes for the same script)
+    files = proj / "release" / ("kagex-sample-%s-files.json" % s["identity"]["version"])
+    since = proj / "release" / "scenes-files.json"
+    shutil.copyfile(files, since)
+    layer = proj / "data" / "scenario" / "layer.ks"
+    layer.write_bytes(layer.read_bytes() + b"\n; changed for the scenes test\n")
+    s["output"]["patchFrom"] = "release/scenes-files.json"
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = False
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r, err = build()
+    zip_path = proj / "release" / ("kagex-sample-%s-patch" % s["identity"]["version"]) / "patch.zip"
+    names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")} if zip_path.exists() else set()
+    step("scenes: a patch after one script changed holds its compiled file only", names == {"scenario/layer.ks" + ext},
+         ", ".join(sorted(names)) or err or (r or {}).get("error", ""))
+    s["output"]["patchFrom"] = ""
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+
+
 def patch_tests(exe, proj):
     """A build with output.patchFrom: the file list each build writes, then patch.zip of what
     changed since an earlier list. A patch alone needs no platform (and so no engines)"""
@@ -776,6 +925,8 @@ def patch_tests(exe, proj):
         s["platforms"][p]["enabled"] = False
     s["output"]["check"] = False
     s["contents"]["compileScripts"] = False   # compiling takes this computer's engine
+    # the scripts as they are: compiling them needs an engine (scenes_tests)
+    s["scenes"] = {"compile": False, "keyFile": ""}
     out = proj / "release"
     out.mkdir(exist_ok=True)
     (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
@@ -1218,29 +1369,43 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
+    ap.add_argument("--tests", help="some of cli,signing,server,build,web,android,ios,media,scripts,scenes,patch (default: all)")
     args = ap.parse_args()
+    chosen = set(args.tests.split(",")) if args.tests else None
+    want = lambda name: chosen is None or name in chosen
     exe = Path(args.exe).resolve()
     if args.out:
         Path(args.out).mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as t:
         proj = make_project(Path(t))
-        cli_tests(exe, proj)
-        signing_cli_tests(exe, Path(t))
-        signing_validation_tests(exe, proj)
-        server_tests(exe, proj, args)
+        # init (in cli_tests) writes the release.json every other group starts from
+        if want("cli") or not (proj / "release.json").exists():
+            cli_tests(exe, proj)
+        if want("signing"):
+            signing_cli_tests(exe, Path(t))
+            signing_validation_tests(exe, proj)
+        if want("server"):
+            server_tests(exe, proj, args)
         if args.engines:
             os.environ["KAGEX_RELEASE_CACHE"] = str(Path(t) / "cache")
-            build_tests(exe, proj, args)
-            if (Path(args.engines) / "kagex_engine_web.zip").exists():
+            if want("build"):
+                build_tests(exe, proj, args)
+            if want("web") and (Path(args.engines) / "kagex_engine_web.zip").exists():
                 web_tests(exe, proj, args)
-            if (Path(args.engines) / "kagex_engine_android.zip").exists():
+            if want("android") and (Path(args.engines) / "kagex_engine_android.zip").exists():
                 android_tests(exe, proj, args)
-            if (Path(args.engines) / "kagex_engine_ios.zip").exists():
+            if want("ios") and (Path(args.engines) / "kagex_engine_ios.zip").exists():
                 ios_tests(exe, proj, args)
-            media_tests(exe, proj, args)
-            signing_build_tests(exe, proj, args)
-            script_tests(exe, Path(t), args)
-        patch_tests(exe, proj)
+            if want("media"):
+                media_tests(exe, proj, args)
+            if want("signing"):
+                signing_build_tests(exe, proj, args)
+            if want("scripts"):
+                script_tests(exe, Path(t), args)
+            if want("scenes"):
+                scenes_tests(exe, proj, args)
+        if want("patch"):
+            patch_tests(exe, proj)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)
 

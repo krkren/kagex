@@ -8,6 +8,7 @@
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
 //   kagex-release --cli keygen [<folder>] [--bits=N]          writes a signing key pair
 //   kagex-release --cli archive-keygen <keyfile>             writes a new archive-encryption key
+//   kagex-release --cli scenes-keygen <file>                  makes a key for encrypting compiled scenarios
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits,
@@ -27,6 +28,7 @@
 #include "Host.h"
 #include "Plan.h"
 #include "Project.h"
+#include "Scenes.h"
 #include "Settings.h"
 #include "Sign.h"
 #include "Subprocess.h"
@@ -203,8 +205,14 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return 0;
 	}
 
-	Target t;
 	std::string err;
+	if (cmd == "scenes-keygen") {
+		if (path.empty()) { std::fprintf(stderr, "usage: kagex-release --cli scenes-keygen <file>\n"); return 2; }
+		if (!makeSceneKey(krt::toPath(path), err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
+		std::printf("Wrote a new key to %s: name it in release.json's scenes.keyFile, and keep it out of the game's repository\n", path.c_str());
+		return 0;
+	}
+	Target t;
 	if (!resolveTarget(path, t, err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
 
 	if (cmd == "init") {
@@ -269,6 +277,10 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		std::printf("Game files: %lld (%s), %lld excluded; framework: %s\n", (long long)d["files"].asInt(),
 		            humanSize(d["bytes"].asInt()).c_str(), (long long)d["excluded"].asInt(), d["framework"].asStr().c_str());
 		std::printf("Converted: %lld images, %lld sounds\n", (long long)d["convertImages"].asInt(), (long long)d["convertAudio"].asInt());
+		if (d["scenes"]["compile"].asBool())
+			std::printf("Compiled: %lld scripts in !scnlist.txt%s%s\n", (long long)d["scenes"]["scripts"].asInt(),
+			            d["scenes"]["format"].asStr().empty() ? "" : (" to " + d["scenes"]["format"].asStr()).c_str(),
+			            d["scenes"]["encrypted"].asBool() ? ", encrypted" : "");
 		for (const auto& out : plan["outputs"].elements()) {
 			std::printf("%s:\n", out["title"].asStr().c_str());
 			if (!out["folder"].asStr().empty()) std::printf("  folder  %s/\n", out["folder"].asStr().c_str());
@@ -453,6 +465,17 @@ public:
 			return appserve::Response::json(out);
 		});
 
+		// Makes a key for encrypting compiled scenarios (body: { path }, relative to the project)
+		reg.route("/api/release/scenes-keygen", [this](const appserve::Request& req) {
+			if (!have_) return appserve::Response::error(400, targetError_);
+			const fs::path file = target_.project.root / krt::toPath(req.json()["path"].asStr());
+			std::string err;
+			if (!makeSceneKey(file, err)) return appserve::Response::error(400, err);
+			Json out = Json::object();
+			out.set("file", Json(krt::fromPath(file.lexically_normal())));
+			return appserve::Response::json(out);
+		});
+
 		// Saves release.json (body: { settings })
 		reg.route("/api/release/save", [this](const appserve::Request& req) {
 			if (!have_) return appserve::Response::error(400, targetError_);
@@ -472,6 +495,7 @@ private:
 		out.set("version", Json(KAGEX_RELEASE_VERSION));
 		out.set("host", Json(hostId()));
 		out.set("canEncrypt", Json(canEncryptArchive()));
+		out.set("scnfile", Json(canEncryptScenes()));
 		Json pls = Json::array();
 		for (const auto& pl : platforms()) {
 			Json o = Json::object();

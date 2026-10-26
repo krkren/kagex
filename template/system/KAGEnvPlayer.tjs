@@ -1,33 +1,75 @@
-// Scene playback ([scenestart] and the compiled-scene player) reads .psb files through the
-// psbfile plugin, which the SDL3 engine build doesn't include. Without it, using the player
-// throws a message that says so instead of failing on the missing plugin at load time
-class PSBFileUnavailable {
-	function PSBFileUnavailable() {
-		throw new Exception("Scene playback is unavailable: it needs the psbfile plugin, which this engine build doesn't include");
-	}
-}
-if (typeof global.PSBFile == "undefined") {
+// Scene playback ([scenestart] and the compiled-scene player) plays scenarios compiled by
+// SceneParser.tjs. A compiled scenario is <script>.scn, read through the scnfile plugin
+// (SCNFile) or Wamsoft's psbfile plugin (PSBFile), or <script>.scn.json, which the compiler
+// writes and the json plugin reads (doc/scn.txt)
+if (typeof global.SCNFile == "undefined" && typeof global.PSBFile == "undefined") {
 	try {
 		Plugins.link("plugin/psbfile.dll");
 	} catch {
-		global.PSBFile = PSBFileUnavailable;
 	}
+}
+KAGLoadScript("SceneParser.tjs");
+
+/**
+ * Where a script's compiled data is: <script>.scn (with a plugin that reads it), else
+ * <script>.scn.json, on the auto path or next to the script. void when it isn't compiled
+ */
+function scnFindCompiled(storage)
+{
+	if (storage == "") return;
+	if ((typeof global.SCNFile != "undefined" || typeof global.PSBFile != "undefined") &&
+		Storages.isExistentStorage(storage + ".scn")) return storage + ".scn";
+	if (Storages.isExistentStorage(storage + ".scn.json")) return storage + ".scn.json";
+	var placed = Storages.getPlacedPath(storage);
+	if (placed == "") return;
+	if (typeof global.SCNFile != "undefined" && Storages.isExistentStorage(placed + ".scn")) return placed + ".scn";
+	if (Storages.isExistentStorage(placed + ".scn.json")) return placed + ".scn.json";
 }
 
 /**
  * KAGEnv for parsing/snapshot processing
+ * A World of its own that draws nothing: the compiler runs World tags in it to record the
+ * state at each save point, and snapshots draw a saved state into baseLayer
  */
 class KAGEnvForParse extends KAGEnvironment {
 
 	// Layer for acquiring snapshots
 	var baseLayer;
-	
+
+	// The SceneParser compiling with it, which collects its error messages
+	var parser;
+
 	function KAGEnvForParse(kag) {
 		super.KAGEnvironment(kag);
 		baseLayer = new Layer(kag, kag.primaryLayer);
 		baseLayer.name = "For EnvPlayer Snap";
 		baseLayer.setSize(kag.scWidth, kag.scHeight);
 	}
+
+	// Tags change its objects' state and nothing else (KAGEnvBase.nodisp)
+	property skipNoDisp { getter() { return true; } }
+	property skipMode { getter() { return SKIP_FORCE; } }
+	property isInTransition { getter() { return false; } }
+
+	// The game's name box, face window, conductor and triggers aren't its to touch
+	function clearName() {}
+	function drawName() {}
+	function clearFace() {}
+	function drawFace() {}
+	function addFastTag() {}
+	function extractDelay() {}
+	function entryDelay() {}
+	function trigger() {}
+
+	function report(msg) {
+		if (parser !== void) parser.warn(msg);
+		else global.dm(msg);
+	}
+	function error(msg)      { report(msg); }
+	function errorCmd(msg)   { report(msg); }
+	function errorImage(msg) { report(msg); }
+	function errorVoice(msg) { report(msg); }
+	function errorLine(log, msg) { report(msg); }
 
 	// Set rendering destination to something other than KAG
 	property foreBase {
@@ -74,7 +116,7 @@ function convertSceneText(array)
 		ret.disp  = array[1];
 		ret.text  = array[2];
 		var voice = array[3];
-		if (typeof voice == "String") {
+		if (typeof voice == "String" || typeof voice == "Integer") {
 			ret.voice = [%[name:ret.name, voice:voice]];
 		} else {
 			ret.voice = voice;
@@ -92,15 +134,21 @@ function convertSceneText(array)
 class StorageData {
 
 	var storage;
-	var data;
+	var data;  // the SCNFile/PSBFile object, which owns root (void for JSON)
+	var root;  // the compiled data
 	var sceneMap = %[];
 
 	function StorageData(storage) {
 		this.storage = storage;
-		var path = storage + ".scn";
-		if (Storages.isExistentStorage(path)) {
-			data = new PSBFile(path);
-			var scenes = data.root.scenes;
+		var path = scnFindCompiled(storage);
+		if (path !== void) {
+			if (path.substr(path.length - 5) == ".json") {
+				root = Scripts.evalJSONStorage(path, true);
+			} else {
+				data = typeof global.SCNFile != "undefined" ? new SCNFile(path) : new PSBFile(path);
+				root = data.root;
+			}
+			var scenes = root !== void ? root.scenes : void;
 			if (scenes !== void) {
 				var count = scenes.count;
 				for (var i=0;i<count;i++) {
@@ -121,22 +169,22 @@ class StorageData {
 
 	property hash {
 		getter() {
-			return data !== void && data.root.hash !== void ? data.root.hash : void;
+			return root !== void ? root.hash : void;
 		}
 	}
 
 	function findScene(label) {
-		if (data && data.root.scenes) {
+		if (root !== void && root.scenes) {
 			if (label == "") {
-				return data.root.scenes[0];
+				return root.scenes[0];
 			}
 			return sceneMap[label];
 		}
 	}
 
 	function findSceneLine(line) {
-		if (data && data.root.scenes) {
-			var scenes = data.root.scenes;
+		if (root !== void && root.scenes) {
+			var scenes = root.scenes;
 			var count = scenes.count;
 			for (var i=0;i<count-1;i++) {
 				var scene = scenes[i];
@@ -173,6 +221,32 @@ class StorageData {
 }
 
 /**
+ * Whether two values hold the same data: dictionaries and arrays member by member
+ */
+function scnSameStruct(a, b)
+{
+	if (typeof a != typeof b) return false;
+	if (typeof a != "Object") return a === b;
+	if (a === b) return true;
+	if (a === null || b === null) return false;
+	if (a instanceof "Array") {
+		if (!(b instanceof "Array") || a.count != b.count) return false;
+		for (var i = 0; i < a.count; i++) if (!scnSameStruct(a[i], b[i])) return false;
+		return true;
+	}
+	if (a instanceof "Dictionary") {
+		if (!(b instanceof "Dictionary")) return false;
+		var ka = [], kb = [];
+		ka.assign(a);
+		kb.assign(b);
+		if (ka.count != kb.count) return false;
+		for (var i = 0; i < ka.count; i += 2) if (!scnSameStruct(ka[i + 1], b[ka[i]])) return false;
+		return true;
+	}
+	return false;
+}
+
+/**
  * Scene playback specialized player
  * Plays pre-parsed special scenario data
  *
@@ -196,9 +270,11 @@ class KAGEnvPlayer
 	var sceneList = "!scnlist.txt"; // List of scenarios to be processed
 
 	// Parser initialization
+	// Scripts are compiled where the list is a local file: not from an archive, the web
+	// build's files or a phone's assets
 	function initParser() {
 		var listpath = Storages.getPlacedPath(sceneList);
-		readonlydb = (listpath.indexOf(">") >= 0 || forceReadOnly);
+		readonlydb = (listpath == "" || listpath.indexOf(">") >= 0 || listpath.substr(0, 7) != "file://" || forceReadOnly);
 		if (parser !== void && !readonlydb) {
 			parser.loadDepend(dependFile);
 			parser.initDepend(getFileList());
@@ -235,6 +311,7 @@ class KAGEnvPlayer
 		if (parser !== void) {
 			invalidate parser;
 		}
+		invalidate laterTrigger if laterTrigger !== void;
 	}
 
 	function errorCmd() {
@@ -277,7 +354,7 @@ class KAGEnvPlayer
 	 * Entire scene is read
 	 */
 	function isReadedScene() {
-		return curSceneName !== void && readed[curSceneName] >= textcount;
+		return curSceneName !== void && readed[curSceneName.toLowerCase()] >= textcount;
 	}
 
 	
@@ -299,7 +376,7 @@ class KAGEnvPlayer
 	 */
 	function setReaded(id) {
 		if (curSceneName !== void && id != 0) {
-			if (id > readed[curSceneName]) {
+			if (id > readed[curSceneName.toLowerCase()]) {
 				readed[curSceneName.toLowerCase()] = id;
 				//dm(@"Read setting:${curScene}:${id}");
 			}
@@ -322,6 +399,7 @@ class KAGEnvPlayer
 	var TEXTFLAG_EVENT  = 0x08; // For detecting timing when event CG is displayed
 	var TEXTFLAG_STAGE  = 0x10; // For detecting timing when background changes
 	var TEXTFLAG_NOTEXT = 0x20; // Do not display text
+	var TEXTFLAG_CONT   = 0x40; // Carries on the message window as it is: no msgon or dispname
 
 	var scnStorage; // Executing storage data
 	var scenario;  // Executing scene reference
@@ -409,6 +487,16 @@ class KAGEnvPlayer
 	/**
 	 * Clear progress information
 	 */
+	var unitStart = true;       // the text being shown starts what a click shows
+	var lastTextNoWait = false; // the text before it went on without a wait
+	var freshMessage = false;   // a jump left the message window empty (jumped)
+
+	// After a jump: the next text starts a click and the message window
+	function jumped() {
+		lastTextNoWait = false;
+		freshMessage = true;
+	}
+
 	function clearInfo() {
 		if (scenario) {
 			scenario = void;
@@ -459,6 +547,7 @@ class KAGEnvPlayer
 	function getFileList(file = this.sceneList) {
 		var list = [];
 		var ret = [];
+		if (!Storages.isExistentStorage(file)) return ret;
 		list.load(file);
 		var count = list.count;
 		for (var i=0;i<count;i++) {
@@ -536,13 +625,19 @@ class KAGEnvPlayer
 	 */
 	function convertList(list, pwin) {
 		var count = list.count;
+		var ok = true, started = false;
 
-		dm("-- Conversion Start --");
+		parser.prepare("parsermacro.ks", "parseroption.txt");
 		for (var i=0;i<count;i++) {
 			var name = list[i];
 			try {
 				if (parser.isNeedParse(name)) {
+					if (!started) {
+						dm("-- Conversion Start --");
+						started = true;
+					}
 					dm(@"Converting:${name}");
+					delete currentMap[name.toLowerCase()];
 					// Create progress window
 					if (pwin === void) {
 						pwin = getProgressWindow(list);
@@ -554,27 +649,138 @@ class KAGEnvPlayer
 				if (pwin) pwin.next();
 			} catch (e) {
 				dm(name + ":Scenario conversion error:" + e.message);
+				ok = false;
 			}
 		}
-		dm("-- Conversion Complete --");
+		dm("-- Conversion Complete --") if started;
 
 		if (pwin) invalidate pwin;
+		return ok;
 	}
 
 	/**
 	 * Convert only the corresponding file
 	 * @param storage Target scenario name
+	 * @return true when its compiled file is current (it was, or it has just been compiled),
+	 * false when compiling failed, void when it wasn't checked
 	 */
 	function convertOne(storage) {
-		dm(@"Executing conversion:${storage}:${Scripts.getTraceString()}");
 		if (!readonlydb && parser !== void) {
 			// Re-searching dependency info
 			parser.initDepend(getFileList());
+			if (!parser.isTarget(storage)) return;
 			// Dependency file search - 1 level only
 			var dlist = parser.getAllDependStorageList(storage,false);
-			convertList(dlist);
+			var ok = convertList(dlist);
 			parser.saveDepend(dependFile);
+			return ok;
 		}
+	}
+
+	// The history to carry on with when a compiled script goes on to another (start)
+	var handoff;
+
+	/**
+	 * What KAG reads in place of a compiled script (KAGWorldPlugin.onScenarioLoad, which has
+	 * found it in !scnlist.txt): each of its labels starts the player at that scene, so
+	 * jumps, calls, loads and kag.process() all play it compiled. In debug mode it's compiled
+	 * first when it has changed
+	 * @return the stand-in scenario, or void to read the script itself
+	 */
+	function getStub(storage) {
+		storage = Storages.extractStorageName(storage);
+		var checked;
+		if (debugWindowEnabled && parser !== void && !readonlydb) {
+			checked = convertOne(storage);
+			if (checked === false) {
+				dm(storage + ": compiling failed, so it plays from the script");
+				return;
+			}
+		}
+		if (scnFindCompiled(storage) === void) return;
+		var data;
+		try {
+			data = new StorageData(storage);
+		} catch (e) {
+			dm(storage + ": its compiled data can't be read, so it plays from the script: " + e.message);
+			return;
+		}
+		var scenes = data.root !== void ? data.root.scenes : void;
+		if (scenes === void || scenes.count == 0) {
+			invalidate data;
+			return;
+		}
+		if (checked) {
+			// just checked: [scenestart] needn't check it again
+			justChecked = storage.toLowerCase();
+		} else if (parser !== void && Storages.isExistentStorage(storage)) {
+			// compiled from something else (the script, the macros, envinit.tjs...)? Nothing
+			// compiles it while the game runs, so once a session is enough
+			var key = storage.toLowerCase();
+			if (currentMap[key] === void) currentMap[key] = parser.isCurrent(storage, data.root);
+			if (!currentMap[key]) {
+				dm(storage + ": its compiled file is out of date, so it plays from the script (doc/scn.txt)");
+				invalidate data;
+				return;
+			}
+		}
+		var q = "\"" + storage + "\"";
+		var stub = "@scenestart storage=" + q + " target=\"\"\n@sceneplay\n@s\n";
+		for (var i=0;i<scenes.count;i++) {
+			var label = scenes[i].label;
+			if (label == "") continue;
+			stub += label + "\n@scenestart storage=" + q + " target=\"" + label + "\"\n@sceneplay\n@s\n";
+		}
+		// the player starts on it right after KAG reads the stub (initStorage)
+		invalidate pendingStorage if pendingStorage !== void;
+		pendingStorage = data;
+		return stub;
+	}
+
+	var justChecked;   // the script getStub has just made sure is compiled
+	var currentMap = %[]; // script (lower case) -> whether its compiled file is current
+	var pendingStorage; // the compiled data getStub read, for initStorage
+
+	/**
+	 * Compiles every script listed in !scnlist.txt that needs it (all of them with force)
+	 * @return %[compiled, skipped, failed, errors:[...], warnings]
+	 */
+	function compileAll(force = false) {
+		var ret = %[compiled:0, skipped:0, failed:0, errors:[], warnings:0];
+		if (parser === void) {
+			ret.errors.add("there's no compiler (SceneParser.tjs)");
+			ret.failed++;
+			return ret;
+		}
+		var list = getFileList();
+		parser.initDepend(list);
+		var w = parser.warnings.count;
+		for (var i=0;i<list.count;i++) {
+			var name = list[i];
+			try {
+				if (!Storages.isExistentStorage(name)) {
+					// a release without its scripts (kagex-release): the compiled file is all there is
+					if (scnFindCompiled(name) === void) throw new Exception("not found");
+					ret.skipped++;
+					continue;
+				}
+				parser.prepare("parsermacro.ks", "parseroption.txt");
+				if (force || parser.isNeedParse(name) || parser.outputPath(name) === void) {
+					clearStorage();
+					parser.parse(name);
+					ret.compiled++;
+				} else {
+					ret.skipped++;
+				}
+			} catch (e) {
+				ret.failed++;
+				ret.errors.add(name + ": " + e.message);
+				dm(name + ":Scenario conversion error:" + e.message);
+			}
+		}
+		ret.warnings = parser.warnings.count - w;
+		currentMap = %[];
+		return ret;
 	}
 
 	// Convert all files
@@ -608,7 +814,13 @@ class KAGEnvPlayer
 				// Delete all parsed files
 				var list = parser.getTargetList();
 				for (var i=0;i<list.count;i++) {
-					Storages.deleteFile(scenePath + list[i] + ".scn");
+					var out = parser.outputPath(list[i]);
+					if (out !== void) {
+						// either kind: .scn or .scn.json
+						var base = out.substr(out.length - 5) == ".json" ? out.substr(0, out.length - 5) : out;
+						Storages.deleteFile(base) if Storages.isExistentStorage(base);
+						Storages.deleteFile(base + ".json") if Storages.isExistentStorage(base + ".json");
+					}
 				}
 				Storages.deleteFile(dependFile);
 				// [XXX] Path reconstruction (fstat's deleteFile has a bug where it remains in Kirikiri's path cache)
@@ -629,6 +841,7 @@ class KAGEnvPlayer
 		try {
 			loadScene(scene);
 			goToText(idx);
+			jumped();
 		} catch (e) {
 			clearInfo();
 			throw e;
@@ -641,14 +854,19 @@ class KAGEnvPlayer
 	 * @param target Label name or line number
 	 * @param point Point designation or point label designation (only valid if target is a label name)
 	 */
-	function startScene(storage, target, point) {
-		storage = Storages.extractStorageName(storage).toLowerCase();
+	function startScene(storage, target, point, check = false) {
+		storage = Storages.extractStorageName(storage);
 		try {
 			if (storage == "") {
 				storage = curStorage;
 			}
-			if (debugWindowEnabled && parser !== void) {
+			if (check && debugWindowEnabled && parser !== void) {
+				// in debug mode a script is compiled again when the game goes to it
+				// ([scenestart]), not at every label in it
 				convertOne(storage);
+			}
+			if (scnFindCompiled(storage) === void) {
+				throw new Exception(storage + " isn't compiled (doc/scn.txt)");
 			}
 			if (target != "" && ((string)target).charAt(0) != "*") {
 				// Target is numerical = line specification
@@ -687,12 +905,23 @@ class KAGEnvPlayer
 			invalidate storageCache;
 			storageCache = void;
 		}
+		if (pendingStorage !== void) {
+			invalidate pendingStorage;
+			pendingStorage = void;
+		}
 	}
 
 	function initStorage(storage) {
 		if (scnStorage === void || scnStorage.storage != storage) {
+			var ready = pendingStorage;
+			pendingStorage = void;
 			clearStorage();
-			scnStorage = new StorageData(storage);
+			if (ready !== void && ready.storage == storage) {
+				scnStorage = ready;
+			} else {
+				invalidate ready if ready !== void;
+				scnStorage = new StorageData(storage);
+			}
 		}
 	}
 
@@ -721,6 +950,10 @@ class KAGEnvPlayer
 		initStorage(curStorage);
 		scenario = scnStorage.findScene(curLabel);
 		initScenario();
+		if (scenario) {
+			// the scene by its own label ("" finds the first one)
+			curSceneName = curStorage + scenario.label;
+		}
 	}
 
 	/**
@@ -824,6 +1057,7 @@ class KAGEnvPlayer
 		if (curSceneName !== void && curPoint !== void) {
 			//dm("Saving:%s:%d".sprintf(curStorage, curPoint));
 			f.scenePlayer = %[scene:curSceneName, point:curPoint];
+			f.scenePlayer.hash = scnStorage.hash if scnStorage !== void && scnStorage.hash !== void;
 			storeHistory(f.scenePlayer);
 			storeHistoryOfStore(f.scenePlayer);
 			return true;
@@ -842,9 +1076,20 @@ class KAGEnvPlayer
 			restoreHistory(f.scenePlayer);
 			restoreHistoryOfStore(f.scenePlayer);
 			loadScene(f.scenePlayer.scene);
-			if (f.scenePlayer.point !== void) {
-				goToPoint(f.scenePlayer.point);
+			var point = f.scenePlayer.point;
+			if (point !== void && f.scenePlayer.hash !== void && scnStorage.hash != f.scenePlayer.hash) {
+				// compiled again since the save: its save points may have moved
+				dm(@"${f.scenePlayer.scene}: compiled again since this save was made, so it starts from the top of its scene");
+				point = 0;
 			}
+			if (point !== void) {
+				goToPoint(point);
+			}
+			jumped();
+			// the backlog of the history the save had (saves don't keep KAG's own)
+			rebuildBacklog();
+			// the conductor stands after [sceneplay]: carry on playing
+			addTagSimple("sceneplay");
 			return true;
 		} else {
 			return false;
@@ -873,7 +1118,7 @@ class KAGEnvPlayer
 			}
 			break;
 		case "Octet":
-			parseEnv.onRestore((new PSBFile(obj)).root,,,false); // XXX Do not restore plugins. Screen may glitch.
+			parseEnv.onRestore((typeof global.SCNFile != "undefined" ? new SCNFile(obj) : new PSBFile(obj)).root,,,false); // XXX Do not restore plugins. Screen may glitch.
 			parseEnv.update(,false);
 			parseEnv.getSnapshot(layer);
 			return true;
@@ -897,7 +1142,8 @@ class KAGEnvPlayer
 	function getTextData(sceneName, idx, title=false) {
 		var storage = getStorage(sceneName);
 		var label   = getLabel(sceneName);
-		if (storageCache === void || storageCache.storage !== void) {
+		if (storageCache === void || storageCache.storage != storage) {
+			invalidate storageCache if storageCache !== void;
 			storageCache = new StorageData(storage);
 		}
 		return changeAlias(storageCache.getText(label, idx, title));
@@ -930,6 +1176,7 @@ class KAGEnvPlayer
 	 */
 	function clearHistory() {
 		histories.clear();
+		clearKagStates() if !keepKagStates;
 		if (storageCache !== void) {
 			invalidate storageCache;
 			storageCache = void;
@@ -967,7 +1214,10 @@ class KAGEnvPlayer
 		var startNo = 0;
 		if (histories.count > 0) {
 			var last = lastHistory;
-			if (last.text === void && curSceneName == last.scene && idx == last.idx + last.num) {
+			// a block keeps the flags of its start, so going back to a text in it (goToHistory)
+			// gives the flags it had: a change of flags starts a new block
+			if (last.text === void && curSceneName == last.scene && idx == last.idx + last.num &&
+				scnSameStruct(last.flags, kag.flags)) {
 				last.num++;
 				return;
 			}
@@ -996,7 +1246,25 @@ class KAGEnvPlayer
 			var last = lastHistory;
 			startNo = last.startNo + last.num;
 		}
-		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice:" + text, num:1, flags:selectFlags]);
+		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice: " + text, num:1, flags:selectFlags]);
+	}
+
+	/**
+	 * The state at the last save point of a scene: what the screen shows at the choices at its
+	 * end (a choice's history data)
+	 */
+	function getLastState(sceneName) {
+		var storage = getStorage(sceneName);
+		if (storageCache === void || storageCache.storage != storage) {
+			invalidate storageCache if storageCache !== void;
+			storageCache = new StorageData(storage);
+		}
+		var scene = storageCache.findScene(getLabel(sceneName));
+		var lines = scene !== void ? scene.lines : void;
+		for (var i = lines !== void ? lines.count - 1 : -1; i >= 0; i--) {
+			var obj = lines[i];
+			if (typeof obj == "Object" && typeof obj[SAVE_POINT] == "Integer") return obj[SAVE_STATE];
+		}
 	}
 
 	/**
@@ -1158,6 +1426,279 @@ class KAGEnvPlayer
 	}
 
 	// -------------------------------------------------------------------
+	// Going back: a message at a time (the Back button), or to a message in the backlog
+	// -------------------------------------------------------------------
+
+	// KAG's own state (pflags/pcflags, what a save holds) at the start of the last messages,
+	// by history position. A compiled save point has the World's state only, so going back to
+	// one of these restores this instead, as a load does: KAG's layers, sounds and the like
+	// come back too. Kept in memory only (a load starts again without them)
+	var kagStates = %[];
+	var kagStateOrder = []; // their positions, oldest first
+	var maxKagStates = 100;
+	var keepKagStates = false; // restoring one: the restore's clear() keeps the rest
+
+	function clearKagStates() {
+		(Dictionary.clear incontextof kagStates)();
+		kagStateOrder.clear();
+	}
+
+	// Keeps KAG's state as the save point before the text at history position pos stored it
+	// (one that starts a click: play())
+	function storeKagState(pos) {
+		var sp = kag.pcflags.scenePlayer;
+		if (sp === void || sp.scene != curSceneName || sp.point != curPoint) return;
+		var s = %[user:%[], core:%[]];
+		(Dictionary.assignStruct incontextof s.user)(kag.pflags);
+		(Dictionary.assignStruct incontextof s.core)(kag.pcflags);
+		// the history is put back as it is then (restoreKagState)
+		delete s.core.scenePlayer.histories;
+		delete s.core.scenePlayer.historyOfStore;
+		dropKagStates(pos);
+		kagStates[pos] = s;
+		kagStateOrder.add(pos);
+		while (kagStateOrder.count > maxKagStates) delete kagStates[kagStateOrder.shift()];
+	}
+
+	// Forgets the states from history position pos on
+	function dropKagStates(pos) {
+		for (var i = kagStateOrder.count - 1; i >= 0; i--) {
+			if (kagStateOrder[i] >= pos) {
+				delete kagStates[kagStateOrder[i]];
+				kagStateOrder.erase(i);
+			}
+		}
+	}
+
+	// Cuts the history back to before position pos
+	function truncateHistory(pos) {
+		var i = 0, h;
+		while (i < histories.count) {
+			h = histories[i];
+			if (h.startNo + h.num > pos) break;
+			i++;
+		}
+		if (i >= histories.count) return;
+		while (histories.count > i + 1) histories.pop();
+		h.num = pos - h.startNo;
+		histories.pop() if h.num <= 0;
+	}
+
+	// Goes back to the message at history position pos through its KAG state, as a load
+	function restoreKagState(pos) {
+		var s = kagStates[pos];
+		truncateHistory(pos);
+		dropKagStates(pos);
+		resetHistoryOfStore();
+		(Dictionary.assignStruct incontextof kag.pflags)(s.user);
+		(Dictionary.assignStruct incontextof kag.pcflags)(s.core);
+		var sp = kag.pcflags.scenePlayer;
+		storeHistory(sp);
+		storeHistoryOfStore(sp);
+		keepKagStates = true;
+		try {
+			kag.restoreFlags();
+		} catch (e) {
+			keepKagStates = false;
+			throw e;
+		}
+		keepKagStates = false;
+	}
+
+	// The history block history position pos is in (void: none)
+	function historyBlock(pos) {
+		for (var i = 0; i < histories.count; i++) {
+			var h = histories[i];
+			if (h.startNo + h.num > pos) return pos >= h.startNo ? h : void;
+		}
+	}
+
+	// Whether history position pos goes on from the one before it in one click: the text
+	// before it didn't wait (a choice always did)
+	function historyContinues(pos) {
+		if (pos <= 0) return false;
+		var h = historyBlock(pos - 1);
+		if (h === void || h.text !== void) return false;
+		var d = getTextData(h.scene, h.idx + (pos - 1 - h.startNo));
+		return d !== void && d.flag !== void && (+d.flag & TEXTFLAG_NOWAIT) != 0;
+	}
+
+	// The history position what the click at pos shows starts at
+	function historyMessageStart(pos) {
+		while (pos > 0 && historyContinues(pos)) pos--;
+		return pos;
+	}
+
+	/**
+	 * Where going back goes: the start of what the click before the one on screen showed
+	 * @return a history position, or void when there's none
+	 */
+	function getRollbackPoint() {
+		if (!working) return;
+		var pos = historyMessageStart(getHistoryCount() - 1);
+		// at a choice, the text with it shows again
+		if (kag.selectShowing) return pos >= 0 ? pos : void;
+		if (pos <= 0) return;
+		return historyMessageStart(pos - 1);
+	}
+
+	property canRollback {
+		getter() { return getRollbackPoint() !== void; }
+	}
+
+	/**
+	 * Goes back to the message before the one on screen, as it was then (the World, the
+	 * game's flags, the backlog)
+	 * @param later after the event being handled (a button's click: going back clears the
+	 * layers the button is on)
+	 * @return whether there was one
+	 */
+	function rollback(later = false) {
+		var pos = getRollbackPoint();
+		if (pos === void) return false;
+		if (later) goToHistoryLater(pos);
+		else goToHistory(pos);
+		return true;
+	}
+
+	/**
+	 * Goes back to the message at history position pos once the player says so: what the
+	 * backlog's marks run (rebuildBacklog, the scnhistmark tag)
+	 */
+	function jumpFromHistory(pos) {
+		if (!working || pos < 0 || pos >= getHistoryCount()) return;
+		askYesNo("Go back to this line?", "Confirm", function(pos) { goToHistoryLater(pos); } incontextof this, void, pos);
+	}
+
+	// goToHistory once the event being handled is over (the backlog closed first)
+	var laterTrigger, laterPos;
+	function goToHistoryLater(pos) {
+		laterPos = pos;
+		if (laterTrigger === void) laterTrigger = new AsyncTrigger(onGoToHistoryLater, "");
+		laterTrigger.trigger();
+	}
+	function onGoToHistoryLater() {
+		var pos = laterPos;
+		laterPos = void;
+		kag.hideHistory() if kag.historyShowing;
+		if (pos !== void && working && pos < getHistoryCount()) goToHistory(pos);
+	}
+
+	// What the backlog's mark for history position pos runs
+	function backlogJump(pos) {
+		return "world_object.player.jumpFromHistory(" + pos + ")";
+	}
+
+	// The scnhistmark tag, before each message's name: the backlog line it starts on gets a
+	// mark that goes back to it (a backlog without markJump has none)
+	function histMark(elm) {
+		var hl = kag.historyLayer;
+		if (kag.historyWriteEnabled && hl !== void && typeof hl.markJump != "undefined") hl.markJump(backlogJump(+elm.pos));
+		return 0;
+	}
+
+	// The end of a message in the backlog, as [p] and afterpage leave it
+	function endBacklogMessage(hl) {
+		hl.reline();
+		hl.clearAction();
+		hl.reline();
+	}
+
+	// A history text in the backlog: its characters without the font commands, ruby and
+	// escapes, words taken to the next line whole where they don't fit (the backlog's own wrap
+	// breaks text without spaces by character)
+	function storeBacklogText(hl, t) {
+		var l = t.length, word = "", i = 0;
+		var wordWrap = typeof hl.textWidth != "undefined" && typeof hl.relinePos != "undefined" && hl.autoReturn;
+		while (true) {
+			var ch = "";
+			if (i < l) ch = t.charAt(i++);
+			var literal = false;
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch != "\\" && ch != "%" && ch != "[") continue;
+				literal = true;
+			} else if (ch == "%") {
+				// a font command: a size, or a letter
+				if (i < l && /[0-9]/.test(t.charAt(i))) {
+					while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+				} else {
+					i++;
+				}
+				continue;
+			} else if (ch == "[") {
+				// ruby, for the character after it
+				while (i < l && t.charAt(i++) != "]") {}
+				continue;
+			}
+			if (literal || (ch != " " && ch != "\n" && ch != "")) {
+				word += ch;
+				continue;
+			}
+			// the end of a word
+			if (word != "") {
+				if (wordWrap && hl.currentLine != "" && hl.textWidth(word) < hl.relinePos &&
+					hl.textWidth(hl.currentLine + word) >= hl.relinePos) {
+					hl.reline();
+				}
+				for (var j = 0; j < word.length; j++) hl.store(word.charAt(j));
+				word = "";
+			}
+			if (ch == "\n") hl.reline();
+			else if (ch == " ") hl.store(" ");
+			else if (i >= l) break;
+		}
+	}
+
+	/**
+	 * Writes the backlog (kag.historyLayer) again from the history, as playing wrote it, with
+	 * a mark on each message: after a jump or a load, so it ends where the game is
+	 */
+	function rebuildBacklog() {
+		var hl = kag.historyLayer;
+		if (hl === void) return;
+		hl.clear();
+		var count = getHistoryCount();
+		var open = false;
+		for (var pos = 0; pos < count; pos++) {
+			var d = getHistoryData(pos);
+			if (d === void) continue;
+			if (d.flag === void) {
+				// a choice
+				endBacklogMessage(hl) if open;
+				open = false;
+				storeBacklogText(hl, d.text);
+				endBacklogMessage(hl);
+				continue;
+			}
+			var flag = +d.flag;
+			if ((flag & TEXTFLAG_NOTEXT)) continue;
+			var start = !historyContinues(pos), newMessage = !(flag & TEXTFLAG_CONT) || !open;
+			if (newMessage) {
+				endBacklogMessage(hl) if open;
+			} else if (start && hl.currentLine != "") {
+				// what a click showed after a wait in the same window: on a line of its own, as [l][r]
+				hl.reline();
+			}
+			if (start && typeof hl.markJump != "undefined") hl.markJump(backlogJump(pos));
+			if (newMessage) {
+				open = true;
+				var name = d.disp != "" ? d.disp : d.name;
+				if (name != "" && typeof global.dispNameFilter != "undefined") name = global.dispNameFilter(name);
+				if (typeof hl.storeName != "undefined") hl.storeName(name);
+				else if (name != "") hl.store(name + " ");
+			}
+			if (d.voice !== void && d.voice.count > 0) {
+				var list = [];
+				env.extractVoice(d.voice, list);
+				hl.setNewAction(kag.getVoicePlayingScript(list)) if list.count > 0;
+			}
+			storeBacklogText(hl, d.text);
+		}
+		endBacklogMessage(hl) if open;
+	}
+
+	// -------------------------------------------------------------------
 
 	function initEnv() {
 		env.initEnv();
@@ -1182,6 +1723,10 @@ class KAGEnvPlayer
 	 * @param pos Jump destination history number
 	 */
 	function goToHistory(pos) {
+		if (pos >= 0 && pos < getHistoryCount() && kagStates[pos] !== void) {
+			restoreKagState(pos);
+			return;
+		}
 		initEnv();
 		var count = getHistoryCount();
 		if (pos >= 0  && pos < count) {
@@ -1211,6 +1756,7 @@ class KAGEnvPlayer
 				// Jump to end of scene
 				loadScene(scene);
 				goToPoint(spcount);
+				jumped();
 			} else {
 				var idx   = h.idx + h.num;
 				if (h.num <= 0) {
@@ -1221,6 +1767,7 @@ class KAGEnvPlayer
 				dm(@"History jump:${scene}:${idx}");
 				loadScene(scene);
 				goToText(idx);
+				jumped();
 			}
 			clearTag();
 			addTagSimple("sceneplay");
@@ -1306,8 +1853,8 @@ class KAGEnvPlayer
 	// Get title of the last history entry
 	function getHistoryOfStorePage() {
 		var c = historyOfStore.count;
-		if (count > 0) {
-			var data = getHistoryData(historyOfStore[count-1]);
+		if (c > 0) {
+			var data = getHistoryData(historyOfStore[c-1]);
 			if (data !== void) {
 				return data.title;
 			}
@@ -1477,6 +2024,7 @@ class KAGEnvPlayer
 		// Forced jump
 		initEnv();
 		goToPoint(target);
+		jumped();
 		clearTag();
 		addTagSimple("sceneplay");
 		resetHistoryOfStore();
@@ -1487,7 +2035,7 @@ class KAGEnvPlayer
 	// Consolidate in one place to avoid copy-pasting
 	function kagProcessGo() {
 		kag.nextRecordHistory = false; // XXX Prevents redundant saving when jumping from choices
-		kag.historyLayer.clear();      // XXX Clears current text from history layer
+		rebuildBacklog();              // the backlog up to where the game is now
 		kag.conductor.delaytags.clear();
 		kag.processGo();
 	}
@@ -1613,7 +2161,7 @@ class KAGEnvPlayer
 	 * @return Return the read position of the scene
 	 */
 	function getReadedScenePoint() {
-		return findScenePointOfText((int)readed[curSceneName]);
+		return findScenePointOfText((int)readed[curSceneName.toLowerCase()]);
 	}
 
 	// -------------------------------------------------------------
@@ -1626,12 +2174,78 @@ class KAGEnvPlayer
 	// idx     Starting text index
 	var searchResult;
 
+	// A text as it's shown: without its font commands, ruby and escapes, new lines as spaces
+	function plainText(t) {
+		var l = t.length, ret = "", i = 0;
+		while (i < l) {
+			var ch = t.charAt(i++);
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch == "\\" || ch == "%" || ch == "[") ret += ch;
+			} else if (ch == "%") {
+				if (i < l && /[0-9]/.test(t.charAt(i))) {
+					while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+				} else {
+					i++;
+				}
+			} else if (ch == "[") {
+				while (i < l && t.charAt(i++) != "]") {}
+			} else {
+				ret += ch == "\n" ? " " : ch;
+			}
+		}
+		return ret;
+	}
+
 	/**
-	 * Execute search process
+	 * The texts of the compiled scripts in !scnlist.txt that hold a string, or whose speaker's
+	 * name does
+	 * @param text what to look for (letter case ignored)
+	 * @param readOnly only texts that have been read (the read marks)
+	 * @param max the most to find
+	 * @return [%[storage, label, scene (storage + label, lower case), title, idx (1: a scene's
+	 * first text), name (as shown), text (as shown)]...], in the list's and the scripts' order
 	 */
-	function doSearch(text) {
+	function searchTexts(text, readOnly = true, max = 500) {
+		var ret = [];
+		var key = ((string)text).trim().toLowerCase();
+		if (key == "") return ret;
+		var list = getFileList();
+		var r = readed;
+		for (var f = 0; f < list.count && ret.count < max; f++) {
+			var storage = list[f];
+			if (scnFindCompiled(storage) === void) continue;
+			var data = new StorageData(storage);
+			var scenes = data.root !== void ? data.root.scenes : void;
+			for (var j = 0; scenes !== void && j < scenes.count && ret.count < max; j++) {
+				var scene = scenes[j];
+				var texts = scene.texts;
+				if (texts === void) continue;
+				var sceneKey = (storage + scene.label).toLowerCase();
+				var read = +r[sceneKey];
+				for (var i = 0; i < texts.count && ret.count < max; i++) {
+					if (readOnly && read < i + 1) break;
+					var t = changeAlias(convertSceneText(texts[i]));
+					if ((+t.flag & TEXTFLAG_NOTEXT)) continue;
+					var shown = plainText(t.text);
+					var name = t.disp != "" ? t.disp : t.name;
+					if (shown.toLowerCase().indexOf(key) < 0 && ((string)name).toLowerCase().indexOf(key) < 0) continue;
+					ret.add(%[storage:storage, label:scene.label, scene:sceneKey, title:scene.title, idx:i + 1, name:name, text:shown]);
+				}
+			}
+			invalidate data;
+		}
+		return ret;
+	}
+
+	/**
+	 * Execute search process: searchTexts, for getSearchData and goToSearch
+	 */
+	function doSearch(text, readOnly = true) {
 		clearSearch();
-		// XXX Reconstruct search process
+		searchResult = [];
+		var found = searchTexts(text, readOnly);
+		for (var i = 0; i < found.count; i++) searchResult.add(%[scene:found[i].storage + found[i].label, idx:found[i].idx]);
 		return searchResult;
 	}
 
@@ -1693,6 +2307,7 @@ class KAGEnvPlayer
 	function getSearchPosition(pos) {
 		var count = getSearchCount();
 		if (pos >= 0  && pos < count) {
+			var r = searchResult[pos];
 			var ret = %[scene:r.scene, idx:r.idx];
 			clearSearch();
 			return ret;
@@ -1713,6 +2328,7 @@ class KAGEnvPlayer
 			clearSearch();
 			loadScene(scene);
 			goToText(idx);
+			jumped();
 			clearTag();
 			addTagSimple("sceneplay");
 		}
@@ -1730,9 +2346,80 @@ class KAGEnvPlayer
 	 * elm.point Point number or point label
 	 */
 	function start(elm) {
+		var keep = handoff !== void && handoff.histories !== void &&
+			Storages.extractStorageName(elm.storage).toLowerCase() == handoff.storage;
+		var h = handoff;
+		handoff = void;
+		var check = Storages.extractStorageName(elm.storage).toLowerCase() != justChecked;
+		justChecked = void;
 		clear();
-		startScene(elm.storage, elm.target, elm.point);
+		if (keep) {
+			// a compiled script went on to this one: it's the same story, so keep its history
+			restoreHistory(h);
+			restoreHistoryOfStore(h);
+		}
+		startScene(elm.storage, elm.target, elm.point, check);
+		if (seekScene !== void && !seeking) beginSeek();
+		else if (!seeking) replayEnd = void; // a replay is of one scene, in the script it started
 		return 0;
+	}
+
+	// -------------------------------------------------------------
+	// Seeking: playing a script from its start without showing anything, up to a text in one of
+	// its scenes, so that what it puts on KAG's own layers on the way is there (a compiled save
+	// point holds the World's state only). Scene replays and search results start this way
+	// -------------------------------------------------------------
+
+	// tags a seek passes over: ending a replay or stopping where nothing is shown
+	var seekPasses = %[endrecollection:true, s:true];
+	var seekScene;       // the scene to stop in (storage + label, lower case)
+	var seekText;        // the text in it to stop at (1: its first)
+	var seeking = false; // the hidden skip is on
+	var replayEnd;       // the scene whose end ends the recollection (a replay)
+
+	/**
+	 * Where the next compiled script started (scenestart) stops: KAG plays it from its start
+	 * without showing anything until the text, then shows it
+	 * @param storage the script
+	 * @param label its scene ("" or *label)
+	 * @param text the text in the scene (1: its first)
+	 * @param replay the end of that scene ends the recollection (KAGWindow.startRecollection)
+	 */
+	function seek(storage, label, text = 1, replay = false) {
+		var scene = Storages.extractStorageName(storage);
+		if (label == "") {
+			var data = new StorageData(scene);
+			var first = data.findScene("");
+			label = first !== void ? first.label : "";
+			invalidate data;
+		}
+		seekScene = (scene + label).toLowerCase();
+		seekText = +text > 0 ? +text : 1;
+		replayEnd = replay ? seekScene : void;
+	}
+
+	function beginSeek() {
+		seeking = true;
+		kag.skipMode = SKIP_FORCE;
+		kag.skipNoDisp = true;
+	}
+
+	// At the text the seek goes to: the skip ends there (onSync puts the World's state back),
+	// and the history starts there
+	function finishSeek() {
+		seeking = false;
+		seekScene = void;
+		seekText = void;
+		clearHistory();
+		clearHistoryOfStore();
+		kag.historyLayer.clear() if kag.historyLayer !== void;
+		// KAG clears the message layer when a hidden skip ends, which would take the buttons the
+		// script put there on the way ([sysbutton]); nothing was written there to clear
+		var clearNum = kag._clearMessageLayerNumOnSkipNoDispChanged;
+		kag._clearMessageLayerNumOnSkipNoDispChanged = -1;
+		kag.cancelSkip();
+		kag._clearMessageLayerNumOnSkipNoDispChanged = clearNum;
+		jumped();
 	}
 
 	/**
@@ -1763,7 +2450,7 @@ class KAGEnvPlayer
 			}
 			break;
 		case "Octet":
-			env.onRestore((new PSBFile(obj)).root);
+			env.onRestore((typeof global.SCNFile != "undefined" ? new SCNFile(obj) : new PSBFile(obj)).root);
 			env.updateAll();
 			break;
 		case "Object":
@@ -1773,8 +2460,10 @@ class KAGEnvPlayer
 		}
 	}
 
-	// Mandatory execution commands
-	var dotags = %[cancelskip:true];
+	// Mandatory execution commands: run while skipping without display too, since they change
+	// where the story goes, variables or how KAG reads text
+	var dotags = %[cancelskip:true, next:true, exit:true, eval:true, linemode:true, craftername:true,
+				   erafterpage:true, autoindent:true];
 
 	function extractSelect(seltype, sellist) {
 		var c = sellist.count;
@@ -1812,8 +2501,8 @@ class KAGEnvPlayer
 			return 0;
 		}
 
-		// Read setting
-		setReaded(curTextId);
+		// Read setting (not for what a seek passes over)
+		setReaded(curTextId) if !seeking;
 		curRead = getReaded(curTextId+1);
 
 		if (cur == 0) {
@@ -1830,6 +2519,12 @@ class KAGEnvPlayer
 		var obj = getLine(cur++);
 
 		// End of scene
+		if (obj === void && replayEnd !== void && curSceneName.toLowerCase() == replayEnd && kag.isRecollection) {
+			// the scene a replay plays (seek): its end is the replay's
+			replayEnd = void;
+			clearInfo();
+			return kag.isRecollection ? kag.endRecollection() : 0;
+		}
 		if (obj === void) {
 			//dm("Executing post-scene processing");
 			var eval = scenario.postevals;
@@ -1875,7 +2570,16 @@ class KAGEnvPlayer
 			// Text
 			curState = curTextId = obj;
 			curRead = getReaded(curTextId);
+			if (seeking && curSceneName.toLowerCase() == seekScene && curTextId >= seekText) finishSeek();
 			addHistory(curTextId);
+			{
+				// a text after one that waited for a click starts what one click shows: going
+				// back goes to these (the backlog's marks, BACK, the KAG states)
+				var t = getText(curTextId);
+				unitStart = !lastTextNoWait;
+				lastTextNoWait = t !== void && (+t.flag & TEXTFLAG_NOWAIT) != 0;
+			}
+			storeKagState(getHistoryCount() - 1) if unitStart && !kag.skipNoDisp;
 			if (kag.skipNoDisp) {
 				kag.currentNameTarget = void;
 				kag.stopAllActions();
@@ -1916,9 +2620,12 @@ class KAGEnvPlayer
 					kag.storeLabelPassed = true;
 					kag.setMenuAccessibleAll();
 				}
+			} else if (isControl(obj)) {
+				// [if], [iscript] and the like (SceneParser.tjs)
+				control(obj);
 			} else {
 				// Command tag
-				if (!kag.skipNoDisp || dotags[obj[0]]) {
+				if (!kag.skipNoDisp || dotags[obj[0]] || (seeking && !seekPasses[obj[0]])) {
 					extractTag(obj);
 				}
 			}
@@ -1927,6 +2634,124 @@ class KAGEnvPlayer
 		addTagSimple("sceneplay");
 		return 0;
 	}
+
+	// ------------------------------------------------------------------------
+	// Control steps: what the compiler adds for KAGParser's own tags. Their names start
+	// with * ([*] alone is the World's talk wait)
+	//   *if, *elsif exp=  *else  *endif   branches
+	//   *script script= storage= line=    an [iscript] block
+	//   *emb exp= escape=                 text worked out as it's shown
+	//   *noer                             the next page doesn't clear the message window
+	// ------------------------------------------------------------------------
+
+	function isControl(obj) {
+		var name = obj[0];
+		return typeof name == "String" && name.length > 1 && name.charAt(0) == "*";
+	}
+
+	// A step's attributes (after the 0)
+	function stepAttrs(obj) {
+		var ret = %[];
+		var count = obj.count, i = 1;
+		while (i < count && obj[i] !== 0) i++;
+		for (i++; i < count; i += 2) ret[obj[i]] = obj[i+1];
+		return ret;
+	}
+
+	// Evaluates an expression with the macro arguments (*mp) it was written with
+	function evalWithMp(exp, mp) {
+		if (mp === void) return Scripts.eval(exp);
+		var prev = global.mp_override;
+		global.mp_override = mp;
+		var ret;
+		try {
+			ret = Scripts.eval(exp);
+		} catch (e) {
+			global.mp_override = prev;
+			throw e;
+		}
+		global.mp_override = prev;
+		return ret;
+	}
+
+	function control(obj) {
+		var a = stepAttrs(obj);
+		switch (obj[0]) {
+		case "*if":
+			if (!evalWithMp(a.exp, a["*mp"])) skipToBranch();
+			break;
+		case "*elsif":
+		case "*else":
+			// the branch before ran
+			skipToEnd();
+			break;
+		case "*endif":
+			break;
+		case "*script":
+			try {
+				Scripts.exec(a.script, a.storage, a.line);
+			} catch (e) {
+				throw new Exception("An error occurred in the iscript block starting from line " + (a.line + 1) +
+									" of " + a.storage + ".\n( Please check the console for details )\n" + e.message);
+			}
+			break;
+		case "*emb":
+			if (!kag.skipNoDisp && (a["*cond"] === void || evalWithMp(a["*cond"], a["*mp"]))) {
+				var t = evalWithMp(a.exp, a["*mp"]);
+				t = t !== void ? (string)t : "";
+				for (var i = 0; i < t.length; i++) addTag(%[tagname:"ch", text:t.charAt(i)]);
+			}
+			break;
+		case "*noer":
+			kag.noErOnce = true;
+			break;
+		default:
+			errorCmd("Unknown control step:" + obj[0]);
+			break;
+		}
+	}
+
+	// After a branch's condition failed: on to the next branch that holds, or past [endif]
+	function skipToBranch() {
+		var depth = 0, obj;
+		while ((obj = getLine(cur++)) !== void) {
+			if (typeof obj != "Object" || typeof obj[0] != "String") continue;
+			switch (obj[0]) {
+			case "*if":
+				depth++;
+				break;
+			case "*endif":
+				if (depth-- == 0) return;
+				break;
+			case "*else":
+				if (depth == 0) return;
+				break;
+			case "*elsif":
+				if (depth == 0) {
+					var a = stepAttrs(obj);
+					if (evalWithMp(a.exp, a["*mp"])) return;
+				}
+				break;
+			}
+		}
+	}
+
+	// After a branch ran: past [endif]
+	function skipToEnd() {
+		var depth = 0, obj;
+		while ((obj = getLine(cur++)) !== void) {
+			if (typeof obj != "Object" || typeof obj[0] != "String") continue;
+			switch (obj[0]) {
+			case "*if":
+				depth++;
+				break;
+			case "*endif":
+				if (depth-- == 0) return;
+				break;
+			}
+		}
+	}
+
 
 	/**
 	 * Check process
@@ -1945,8 +2770,10 @@ class KAGEnvPlayer
 		case "Object":
 			if (typeof obj[SAVE_POINT] == "Integer") {
 				//restore(obj[SAVE_STATE]);
+			} else if (isControl(obj)) {
+				control(obj);
 			} else {
-				if (!kag.skipNoDisp || dotags[obj[0]]) {
+				if (!kag.skipNoDisp || dotags[obj[0]] || (seeking && !seekPasses[obj[0]])) {
 					extractTag(obj);
 				}
 			}
@@ -1966,7 +2793,8 @@ class KAGEnvPlayer
 		if (tagname == "") {
 			return;
 		}
-		var elm = %[];
+		// in the order KAGParser makes them: the name, then the attributes as written
+		var elm = %[tagname:tagname];
 		var count = obj.count;
 		var i=1;
 		for (;i<count;i++) {
@@ -1975,18 +2803,52 @@ class KAGEnvPlayer
 				i++;
 				break;
 			}
-			elm[id] = true;
+			elm[id] = "true";
 		}
+		var cond, mp, entities;
 		for (;i<count;i+=2) {
-			elm[obj[i]] = obj[i+1];
+			var name = obj[i], value = obj[i+1];
+			if (name == "*cond") { cond = value; continue; }
+			if (name == "*mp") { mp = value; continue; }
+			if (typeof value == "String") {
+				var c = value.charAt(0);
+				if (c == "&") {
+					// an & entity, worked out now as KAG does when it reads the tag
+					entities = [] if entities === void;
+					entities.add(name);
+				} else if (c == "`") {
+					value = value.substr(1);
+				}
+			}
+			elm[name] = value;
 		}
-		elm.tagname = tagname;
-		addTag(elm);
+		if (cond !== void && !evalWithMp(cond, mp)) {
+			return;
+		}
+		if (entities !== void) {
+			for (var j=0;j<entities.count;j++) {
+				var v = evalWithMp(((string)elm[entities[j]]).substr(1), mp);
+				elm[entities[j]] = v !== void ? (string)v : void;
+			}
+		}
+		if (mp !== void) {
+			// a tag from a macro: mp is its arguments while it runs
+			addTag(%[tagname:"scnmp", mp:mp]);
+			addTag(elm);
+			addTag(%[tagname:"scnmp"]);
+		} else {
+			addTag(elm);
+		}
 	}
+
 
 	var currentRuby;
 	var currentRubyCount;
 	var currentText;
+	// The message as it's drawn, for the word wrap (KAGWindow.needsToBeWrapped): every ch
+	// tag of a message carries it as wrap = %[key, line]
+	var currentWrap;
+	var wrapSerial = 0;
 
 	function processRuby(text) {
 		if (text.length > 0) {
@@ -2011,7 +2873,7 @@ class KAGEnvPlayer
 		if (currentRuby != "") {
 			addTag(%[tagname:"ruby", text:currentRuby]);
 		}
-		addTag(%[tagname:"ch", text:currentText]);
+		addTag(%[tagname:"ch", text:currentText, wrap:currentWrap]);
 		currentRuby = "";
 		currentText = "";
 	}
@@ -2038,12 +2900,22 @@ class KAGEnvPlayer
 			currentRubyCount = 0;
 			currentRuby = void;
 			currentText = "";
+			// filled in below, before KAG draws the characters
+			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
+			var wrapLine = "", wrapNewline = false;
 
-			// Show message window
-			addTagSimple("msgon");
+			// after a jump the message window starts empty: a text that carried it on starts it
+			var cont = (flag & TEXTFLAG_CONT) && !freshMessage;
+			freshMessage = false;
+			// the backlog line what this click shows starts on goes back to it
+			addTag(%[tagname:"scnhistmark", pos:getHistoryCount() - 1]) if unitStart;
+			if (!cont) {
+				// Show message window
+				addTagSimple("msgon");
 
-			// Display name
-			addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
+				// Display name
+				addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
+			}
 
 			var indentCharacter = void;
 			var indentLevel = 0;
@@ -2051,17 +2923,21 @@ class KAGEnvPlayer
 			// Expand text
 			var t = text.text;
 			var l = t.length;
-			var firstCh = true;
+			var firstCh = !cont;
 			//dm("Display text:" + t);
 			for (var i=0;i<l;) {
 				var ch = t.charAt(i++);
-				// Escape command
+				var literal = false;
+				// Escape command: \\, \% and \[ are those characters, \k waits for a click
 				if (ch == "\\") {
 					if (i < l) {
 						ch = t.charAt(i++);
 					}
 					switch (ch) {
 					case "\\":
+					case "%":
+					case "[":
+						literal = true;
 						break;
 					case "k":
 						addTag(%[tagname:"l"]);
@@ -2069,10 +2945,11 @@ class KAGEnvPlayer
 						continue;
 					}
 				}
-				if (ch == "\n") {
+				if (!literal && ch == "\n") {
 					// Newline processing
 					addTagSimple("r");
-				} else if (ch == "%") {
+					wrapNewline = true;
+				} else if (!literal && ch == "%") {
 					// Font command
 					if (i < l) {
 						ch = t.charAt(i++);
@@ -2095,7 +2972,7 @@ class KAGEnvPlayer
 							}
 						}
 					}
-				} else if (ch == "[") {
+				} else if (!literal && ch == "[") {
 					// Ruby processing
 					var text = "";
 					while (i<l && (ch = t.charAt(i++)) != "]") {
@@ -2115,6 +2992,7 @@ class KAGEnvPlayer
 
 					// Add character
 					processCh(ch);
+					wrapLine += ch;
 
 					// Auto-indent post-processing
 					if (indentBeginIdx >= 0) {
@@ -2134,6 +3012,8 @@ class KAGEnvPlayer
 					firstCh = false;
 				}
 			}
+			// with a new line in it the character wrap does it, as for a scenario line with [r]
+			currentWrap.line = wrapNewline ? "" : wrapLine;
 		}
 
 		// Wait process entry
@@ -2172,20 +3052,7 @@ class KAGEnvPlayer
 	 * Callback when choice processing starts on KAG side
 	 */
 	function onSelectStart(selectInfos) {
-		var text;
-		for (var i=0;i<selectInfos.count;i++) {
-			var sel = selectInfos[i];
-			if (sel.eval == "" || Scripts.eval(sel.eval)) {
-				if (text != "") {
-					text += "/";
-				}
-				text += sel.text;
-			}
-		}
-		if (text != "" && kag.historyWriteEnabled) {
-			kag.historyLayer.clear();
-			kag.historyLayer.store("Choice:" + text);
-		}
+		// the backlog gets the choice that's taken (onSelect), as rebuildBacklog writes it
 	}
 
 	/*
@@ -2195,6 +3062,11 @@ class KAGEnvPlayer
 		if (working) {
 			dm("Choice complete:" + text);
 			addHistorySelect(text);
+			var hl = kag.historyLayer;
+			if (kag.historyWriteEnabled && hl !== void) {
+				storeBacklogText(hl, lastHistory.text);
+				endBacklogMessage(hl);
+			}
 		}
 	}
 
@@ -2204,7 +3076,16 @@ class KAGEnvPlayer
 	function onNext(file, label) {
 		if (working) {
 			//dm(@"Next scene call storage:${file} target:${label}");
-			startScene(file, label);
+			var storage = file != "" ? Storages.extractStorageName(file) : curStorage;
+			if (storage.toLowerCase() != curStorage.toLowerCase()) {
+				// another script: KAG loads it, so it's the conductor's script again, and the
+				// player starts there if it's compiled (KAGWorldPlugin.onScenarioLoad)
+				handoff = %[storage:storage.toLowerCase()];
+				storeHistory(handoff);
+				storeHistoryOfStore(handoff);
+				return;
+			}
+			startScene(storage, label);
 			// Call confirmed, clear queue and proceed
 			clearTag();
 			addTagSimple("sceneplay");

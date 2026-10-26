@@ -118,12 +118,12 @@ Requirement checkIdentity(const std::string& identity, const std::string& label)
 	return req(label, ok, ok ? identity : "\"" + identity + "\" isn't in the keychain (security find-identity -v -p codesigning)");
 }
 
-Requirement checkEngine(const std::string& platform, bool debug)
+Requirement checkEngine(const std::string& platform, bool debug, const fs::path& projectRoot)
 {
 	std::error_code ec;
 	const std::string asset = engineAssetName(platform, debug && hasDebugEngine(platform));
 	const std::string stem = asset.substr(0, asset.size() - 4);
-	const fs::path local = localEngines();
+	const fs::path local = localEngines({}, projectRoot);
 	if (!local.empty() && (fs::is_regular_file(local / asset, ec) || fs::is_regular_file(local / stem / "engine.json", ec)))
 		return req("Engine", true, "From " + krt::fromPath(local));
 	const fs::path cached = cacheDir() / "engines" / KAGEX_RELEASE_VERSION / stem;
@@ -186,7 +186,23 @@ PlatformStatus checkPlatform(const std::string& id, const Json& s, const Project
 	const std::string base = "platforms." + id + ".";
 	const std::string host = hostId();
 	auto& rq = st.requirements;
-	rq.push_back(checkEngine(id, flag(s, "engine.debug")));
+	const bool debug = flag(s, "engine.debug");
+	rq.push_back(checkEngine(id, debug, project.root));
+
+	// compiled scenarios: .scn when this computer's engine has the scnfile plugin, and then
+	// every platform's engine needs it. Told for the desktop engines that are here already
+	if (flag(s, "scenes.compile") && (id == "windows" || id == "linux" || id == "steam" || id == "macos")) {
+		const fs::path local = localEngines({}, project.root);
+		const fs::path mine = engineIfPresent(host, debug, local), theirs = engineIfPresent(id, debug, local);
+		const bool psb = !mine.empty() && engineHasScnfile(mine);
+		if (id == host && !mine.empty()) {
+			st.notes.push_back(psb ? "Scenarios compile to .scn with this engine (it has the scnfile plugin)"
+			                       : "This engine has no scnfile plugin: scenarios compile to .scn.json, in plain text, and can't be encrypted. "
+			                         "Engine packages with the plugin go in engines/ next to data/");
+		}
+		if (psb && !theirs.empty() && !engineHasScnfile(theirs))
+			rq.push_back(req("scnfile plugin", false, "This engine can't play the compiled .scn files: use an engine package with the plugin (engines/ next to data/)"));
+	}
 
 	if (id == "windows") {
 		if (host != "windows")

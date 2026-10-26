@@ -3,8 +3,9 @@
 
 Starts the engine with SDL's offscreen video driver and drives the sample through the
 engine's REPL file channel (-replfile, see krkrz_dev src/core/doc/REPL.md): the title screen,
-each demo scene, save and load, the config and extras screens, a Yes/No prompt and the About
-screen. It fails when a step doesn't reach the state it expects, when the engine raises a
+each demo scene (compiled from the scripts in !scnlist.txt where the data folder is writable,
+doc/scn.txt), save and load, the config and extras screens, a Yes/No prompt and the About
+screen. On the desktop it also compiles the scripts with -scncompile=all. It fails when a step doesn't reach the state it expects, when the engine raises a
 script exception, or when the engine opens a native modal dialog (an error message box or a
 Yes/No that should have been drawn in the game window).
 
@@ -29,6 +30,10 @@ The platform builds run the sample's steps the same way, through their own REPL 
   --target web --url http://...        the browser build in headless Chromium (Playwright):
                                        krkrz_web's krkrz_repl_eval bridge (--channel chrome
                                        uses the installed Chrome)
+
+  --engine <exe> --packaged            a desktop package (kagex-release's Windows or Linux
+                                       build of the sample): the exe with the data it was
+                                       packaged with, without a project folder
 """
 
 import argparse
@@ -255,8 +260,9 @@ class DesktopEngine(FileChannel):
         env = dict(os.environ)
         env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
         env.setdefault("SDL_AUDIO_DRIVER", "dummy")
-        args = [exe, os.path.abspath(data), "-datapath=" + self.savedir + "/", "-replfile=" + self.chan,
-                "-replmodaltimeout=0"]
+        # without data: a package, which runs the data it holds
+        args = [exe] + ([os.path.abspath(data)] if data else []) + \
+            ["-datapath=" + self.savedir + "/", "-replfile=" + self.chan, "-replmodaltimeout=0"]
         self.log = open(self.log_path, "wb")
         self.proc = subprocess.Popen(args, stdout=self.log, stderr=subprocess.STDOUT, env=env)
 
@@ -610,11 +616,20 @@ def effekseer_framework(eng):
 def animated_framework(eng):
     """Whether the sample has the Animated Character demo (0.8.0 and later; pages.yml may test an
     older release's site)"""
-    return eng.tjs('return Storages.isExistentStorage("anim.ks") ? 1 : 0;') == 1
+    # a package compiled by kagex-release has anim.ks.scn and no anim.ks
+    return eng.tjs('return Storages.isExistentStorage("anim.ks") || (typeof global.scnFindCompiled != "undefined"'
+                   ' && scnFindCompiled("anim.ks") !== void) ? 1 : 0;') == 1
+
+
+def compiled_framework(eng):
+    """Whether the framework compiles scenarios (SceneParser.tjs; pages.yml may test an older
+    release's site)"""
+    return eng.tjs('return typeof global.KAGCompileScenarios != "undefined" ? 1 : 0;') == 1
 
 
 def sample_steps(eng):
     steps, step = collector()
+    eng.compiled = False
 
     @step("start-up reaches the title screen")
     def _():
@@ -628,6 +643,33 @@ def sample_steps(eng):
         if eng.tjs("return sf.clear ? 1 : 0;") != 0:
             raise SmokeError("sf.clear is already set on a fresh start")
 
+    @step("the scripts in !scnlist.txt compile, so the demos play compiled")
+    def _():
+        # SceneParser.tjs writes <script>.scn.json next to each script, where that's a local
+        # folder; a package (web, phones, an archive) plays the scripts themselves
+        if not compiled_framework(eng):
+            print("     (skipped: this build's framework predates compiled scenarios)", flush=True)
+            return
+        # a package compiled by kagex-release (doc/scn.txt) holds the compiled files and not the
+        # scripts
+        if eng.tjs('world_object.initPlayer(); return !Storages.isExistentStorage("s0001.ks") &&'
+                   ' scnFindCompiled("s0001.ks") !== void ? 1 : 0;') == 1:
+            print("     (a package with compiled scenarios: the demos play those)", flush=True)
+            eng.compiled = True
+            return
+        if eng.tjs("return world_object.player.readonlydb ? 1 : 0;") == 1:
+            print("     (skipped: this build can't write compiled scenarios, so the demos play from the scripts)",
+                  flush=True)
+            return
+        r = str(eng.tjs('var r = KAGCompileScenarios(true), p = world_object.player.parser;'
+                        ' var kind = typeof p.writesPsb != "undefined" && p.writesPsb ? ".scn" : ".scn.json";'
+                        ' return [r.compiled, r.failed, r.warnings, kind, r.errors.join(" / ")].join(",");',
+                        timeout=120)).split(",", 4)
+        print("     %s compiled to %s, %s warning(s)" % (r[0], r[3], r[2]), flush=True)
+        if r[1] != "0" or r[0] == "0":
+            raise SmokeError("compiling failed: " + r[4])
+        eng.compiled = True
+
     for demo in DEMOS:
         @step("demo " + demo + " plays to the end")
         def _(demo=demo):
@@ -639,6 +681,9 @@ def sample_steps(eng):
                 return
             eng.tjs('kag.process("%s", "*start"); return 1;' % demo)
             eng.wait(demo, 'kag.conductor.curStorage == "%s"' % demo, timeout=10)
+            if eng.compiled:
+                eng.wait(demo + " played compiled", 'world_object.player !== void && world_object.player.working'
+                         ' && world_object.player.curStorage == "%s"' % demo, timeout=10)
             eng.clicker(True, until="s0001.ks")
             eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
             eng.clicker(False)
@@ -646,6 +691,149 @@ def sample_steps(eng):
     @step("finishing every demo unlocks Extras")
     def _():
         eng.wait("sf.clear", "sf.clear ? 1 : 0", timeout=5)
+
+    @step("compiled text gets the word wrap")
+    def _():
+        if not eng.compiled:
+            print("     (skipped: the demos play from the scripts here)", flush=True)
+            return
+        # The word wrap reads the conductor's scenario line, which is the stand-in's
+        # [sceneplay] while the player shows text: the player's ch tags bring the message
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks's first text", 'world_object.player !== void && world_object.player.working'
+                 ' && world_object.player.curTextId >= 1 && kag.inStable', timeout=20)
+        r = str(eng.tjs('var t = world_object.player.curText.text, w = kag.wrapSplitLine;'
+                        ' return [kag.wrapKey, w !== void ? w.count : -1, t.split(" ").count, t].join("|");'))
+        key, words, expected, text = r.split("|", 3)
+        if not key.startswith("scene:") or words != expected:
+            raise SmokeError("the word wrap didn't take the compiled text (%s): %s" % (r, text))
+
+    @step("a compiled scene saves in the middle and loads where it was")
+    def _():
+        if not eng.compiled:
+            print("     (skipped: the demos play from the scripts here)", flush=True)
+            return
+        state = ('var p = world_object.player, c = world_object.env.characters["ai"];'
+                 ' return [p.curSceneName, p.curTextId, p.curPoint, c !== void && c.isShowBU() ? 1 : 0].join(",");')
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'world_object.player !== void && world_object.player.working', timeout=20)
+        # read on to its sixth text: Ai is on the screen, under another name
+        eng.tjs("""
+            global.__smokeToText = new Timer(function() {
+                if (world_object.player.curTextId >= 6) { global.__smokeToText.enabled = false; return; }
+                kag.onPrimaryClick();
+            }, "");
+            __smokeToText.interval = 50;
+            __smokeToText.enabled = true;
+            return 1;""")
+        eng.wait("the sixth text", "world_object.player.curTextId >= 6 && kag.inStable", timeout=60)
+        eng.tjs("invalidate global.__smokeToText; return 1;")
+        before = str(eng.tjs(state))
+        print("     saved at", before, flush=True)
+        if not before.endswith(",1"):
+            raise SmokeError("Ai isn't on the screen at the sixth text: " + before)
+        eng.tjs("kag.saveBookMark(1); return 1;")
+        eng.wait("data1 to be written",
+                 "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(1))", timeout=10)
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs("loadFunction(1); return 1;")
+        text = before.split(",")[1]
+        eng.wait("the save to load", 'world_object.player.working && world_object.player.curTextId == %s'
+                 ' && kag.inStable' % text, timeout=30)
+        after = str(eng.tjs(state))
+        if after != before:
+            raise SmokeError("loaded at %s, saved at %s" % (after, before))
+
+    @step("BACK goes back a message, and the backlog's marks go back to theirs")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # where the last step left the game: the sixth text of char.ks, Ai on the screen, its
+        # backlog written again from the history the save had
+        state = ('var p = world_object.player, hl = kag.historyLayer, c = world_object.env.characters["ai"], marks = 0;'
+                 ' for (var i = 0; i < hl.dataLines; i++) if (hl.jumpInfo[hl.jumpIndex(i)] !== void) marks++;'
+                 ' return [p.curTextId, p.getHistoryCount(), marks, c !== void && c.isShowBU() ? 1 : 0].join(",");')
+        before = str(eng.tjs(state)).split(",")
+        if before[1] != before[2]:
+            raise SmokeError("after loading, the backlog has %s marks for %s messages" % (before[2], before[1]))
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("the message before", 'world_object.player.curTextId == %d && kag.inStable' % (int(before[0]) - 1),
+                 timeout=20)
+        back = str(eng.tjs(state)).split(",")
+        print("     text, history, backlog marks, Ai shown: %s, then BACK: %s" % (",".join(before), ",".join(back)),
+              flush=True)
+        if back[1] != str(int(before[1]) - 1) or back[2] != back[1]:
+            raise SmokeError("BACK left the history and backlog at %s (from %s)" % (back, before))
+        # the first message's mark in the backlog, and Yes: the start of the scene, before Ai
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the backlog", "kag.historyShowing", timeout=10)
+        eng.tjs("var hl = kag.historyLayer; Scripts.eval(hl.jumpInfo[hl.jumpIndex(0)]); return 1;")
+        eng.wait("the prompt", "kag.currentDialog !== void", timeout=10)
+        eng.key("VK_LEFT")  # the focus starts on No
+        eng.key("VK_RETURN")
+        eng.wait("the first message", '!kag.historyShowing && world_object.player.curTextId == 1 && kag.inStable',
+                 timeout=20)
+        first = str(eng.tjs(state)).split(",")
+        if first[1:] != ["1", "1", "0"]:
+            raise SmokeError("the first message's mark went to %s (text, history, marks, Ai shown)" % first)
+
+    @step("a demo chosen from the menu: BACK goes back to the menu, and another choice plays")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # the menu's choice is in the history: what BACK and the backlog read has to cope with it
+        menu = ('kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0')
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]); return 1;")
+        eng.wait("layer.ks", 'world_object.player !== void && world_object.player.curStorage == "layer.ks" && kag.inStable',
+                 timeout=30)
+        first = str(eng.tjs('var p = world_object.player; return [p.getHistoryCount(), p.histories[0].text].join("|");'))
+        if not first.startswith("2|Choice: "):
+            raise SmokeError("the history at the demo's first text is %s" % first)
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("the demo menu again", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'world_object.player !== void && world_object.player.curStorage == "char.ks" && kag.inStable',
+                 timeout=30)
+        then = str(eng.tjs('var p = world_object.player; return [p.getHistoryCount(), p.histories[0].text].join("|");'))
+        if then != "2|Choice: World Extension: Character":
+            raise SmokeError("after going back and choosing again, the history is %s" % then)
+
+    @step("BACK in a scene on KAG's own layers brings them back as they were")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before going back)", flush=True)
+            return
+        # layer.ks's pictures are on KAG layer 0, which the compiled save points don't hold:
+        # going back restores KAG's state from the click it goes to (KAGEnvPlayer.storeKagState)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'world_object.player !== void && world_object.player.working', timeout=20)
+        eng.tjs("""
+            global.__smokeToText = new Timer(function() {
+                if (world_object.player.curLabel == "*label2") { global.__smokeToText.enabled = false; return; }
+                kag.onPrimaryClick();
+            }, "");
+            __smokeToText.interval = 50;
+            __smokeToText.enabled = true;
+            return 1;""")
+        eng.wait("Rotation", 'world_object.player.curLabel == "*label2" && kag.inStable', timeout=60)
+        eng.tjs("invalidate global.__smokeToText; return 1;")
+        layer = ('var l = kag.fore.layers[0], p = world_object.player;'
+                 ' return [p.curLabel, p.curTextId, l.visible ? 1 : 0, l.opacity].join(",");')
+        at = str(eng.tjs(layer))
+        eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
+        eng.tjs("rollBack(); return 1;")
+        eng.wait("Translucency", 'world_object.player.curLabel == "*label1" && kag.inStable', timeout=20)
+        back = str(eng.tjs(layer))
+        print("     layer 0 at %s, after BACK %s (label, text, visible, opacity)" % (at, back), flush=True)
+        if back.split(",")[2:] != ["1", "200"]:
+            raise SmokeError("after BACK, layer 0 is %s, not the translucent picture of *label1" % back)
 
     @step("the animated character blinks, and its mouth follows its voice")
     def _():
@@ -938,6 +1126,111 @@ def sample_steps(eng):
             eng.key("VK_ESCAPE")
             eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("a Replay tile plays its scene from the script's start, and comes back to Replay")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.replayTile != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before scene replays)", flush=True)
+            return
+        eng.tjs('tf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
+        # the Layers tab: a tile for each scene of layer.ks, which the demos have read
+        titles = str(eng.tjs('var t = replayTabs.find("Layers"); setReplayPage(t, 0); var r = [];'
+                             ' for (var i = 0; i < tf.cgbtnnum; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
+                             ' return r.join("|");')).split("|")
+        if "Blending Mode" not in titles:
+            raise SmokeError("no Blending Mode tile on the Layers tab: %s" % titles)
+        # layer.ks played unseen up to *label5: its picture on KAG layer 0, blended, which the
+        # compiled save points don't hold
+        eng.tjs("replayTile(%d); return 1;" % titles.index("Blending Mode"))
+        eng.wait("Blending Mode", 'world_object.player !== void && world_object.player.curLabel == "*label5"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        layer = str(eng.tjs('var l = kag.fore.layers[0]; return [l.visible ? 1 : 0, l.type == ltPsDifference5 ? 1 : 0,'
+                            ' world_object.player.getHistoryCount()].join(",");'))
+        if layer != "1,1,1":
+            raise SmokeError("the scene started with layer 0 at %s (visible, blended, history)" % layer)
+        eng.clicker(True, until="replay.ks")
+        eng.wait("Replay again, at the scene's end", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=60)
+        eng.clicker(False)
+        if eng.tjs('return tf.replayTab == replayTabs.find("Layers") && !kag.isRecollection ? 1 : 0;') != 1:
+            raise SmokeError("back in Replay on another tab, or still replaying")
+        eng.key("VK_ESCAPE")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("Search finds a word typed in the lines read, and plays from one")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.searchInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before Search)", flush=True)
+            return
+        eng.tjs('tf.searchText = ""; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("searchmode.ks", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable', timeout=20)
+        # typed into the field: the characters as the engine hands typed text to the focused
+        # layer (onKeyPress; injected keys make none), then Return ([edit enter=])
+        eng.tjs('var e = kag.fore.messages[0].names["tf.searchText"]; e.focus();'
+                ' for (var i = 0; i < "layer".length; i++) e.onKeyPress("layer".charAt(i)); return 1;')
+        eng.key("VK_RETURN")
+        eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
+                 timeout=20)
+        found = str(eng.tjs('var r = []; for (var i = 0; i < searchFound.count; i++) r.add(searchFound[i].title);'
+                            ' return [tf.searchText, r.join("|")].join("~");'))
+        text, titles = found.split("~")
+        titles = titles.split("|")
+        print("     \"%s\": %d lines" % (text, len(titles)), flush=True)
+        if text != "layer" or "Vector Image" not in titles:
+            raise SmokeError("searching for \"%s\" found %s" % (text, titles))
+        # the line in layer.ks's *label16, played from: the script played unseen up to it
+        k = titles.index("Vector Image")
+        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.wait("the line", 'world_object.player !== void && world_object.player.curLabel == "*label16"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        line = str(eng.tjs("return world_object.player.curText.text;"))
+        if "layer" not in line.lower():
+            raise SmokeError("it played from \"%s\"" % line)
+        eng.clicker(True, until="searchmode.ks")
+        eng.wait("Search again, at the scene's end", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable',
+                 timeout=60)
+        eng.clicker(False)
+        if eng.tjs('return tf.searchText == "layer" && searchFound.count > 0 ? 1 : 0;') != 1:
+            raise SmokeError("back in Search without what it found")
+        eng.key("VK_ESCAPE")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("after a search jump into Pip's scene he still blinks and lip-syncs")
+    def _():
+        if not eng.compiled or not animated_framework(eng) or \
+                eng.tjs('return typeof global.searchInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, Pip or Search here)", flush=True)
+            return
+        # a character put back from a saved state (a seek's end, a load, going back) has to start
+        # its blinking and lip-sync again (KAGEnvCharacterEx.onRestore)
+        eng.tjs('tf.searchText = "blink"; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
+                 timeout=20)
+        k = eng.tjs('for (var i = 0; i < searchFound.count; i++) if (searchFound[i].storage == "anim.ks") return i;'
+                    ' return -1;')
+        if k < 0:
+            raise SmokeError("searching for \"blink\" found nothing in anim.ks")
+        eng.tjs('global.__smokeFace = []; global.__smokeFaceTimer = new Timer(function() {'
+                ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
+                ' if (c !== void && !kag.skipNoDisp) __smokeFace.add([c.eyeLevel, b !== void && b.status == "play" ? c.lipLevel : "-"]);'
+                ' }, ""); __smokeFaceTimer.interval = 20; __smokeFaceTimer.enabled = true; return 1;')
+        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.wait("Pip's line", 'world_object.player !== void && world_object.player.curStorage == "anim.ks"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        time.sleep(3.0)
+        seen = str(eng.tjs('__smokeFaceTimer.enabled = false; var eyes = %[], lips = %[];'
+                           ' for (var i = 0; i < __smokeFace.count; i++) { eyes["k" + __smokeFace[i][0]] = 1; lips["k" + __smokeFace[i][1]] = 1; }'
+                           ' invalidate __smokeFaceTimer; var e = [], l = []; e.assign(eyes); l.assign(lips);'
+                           ' var re = [], rl = []; for (var i = 0; i < e.count; i += 2) re.add(e[i].substr(1)); for (var i = 0; i < l.count; i += 2) rl.add(l[i].substr(1));'
+                           ' return re.join(" ") + "|" + rl.join(" ");')).split("|")
+        eyes, lips = seen[0].split(), [x for x in seen[1].split() if x != "-"]
+        print("     eye levels %s, mouth levels while the voice played %s" % (eyes, lips), flush=True)
+        if "0" not in eyes and "1" not in eyes:
+            raise SmokeError("Pip didn't blink (eye levels %s)" % eyes)
+        if lips and not any(x in ("1", "2") for x in lips):
+            raise SmokeError("Pip's mouth didn't move while he spoke (levels %s)" % lips)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     return steps
 
 
@@ -986,13 +1279,13 @@ def start_engine(opts, data, workdir):
         return SimulatorEngine(opts.app, opts.bundle_id, workdir, opts.verbose, opts.device)
     if opts.target == "web":
         return WebEngine(opts.url, workdir, opts.verbose, opts.channel)
-    return DesktopEngine(opts.engine, data, workdir, opts.verbose)
+    return DesktopEngine(opts.engine, None if opts.packaged else data, workdir, opts.verbose)
 
 
 def run_project(opts, label, data, make_steps):
     print("== %s (%s, %s)" % (label, data, opts.target), flush=True)
     workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
-    boot_patches = opts.target == "desktop" and label == "sample"
+    boot_patches = opts.target == "desktop" and label == "sample" and not opts.packaged
     if boot_patches:
         write_boot_patches(os.path.join(workdir, "savedata"), data)
     try:
@@ -1037,6 +1330,39 @@ def run_project(opts, label, data, make_steps):
     return failures
 
 
+def scncompile_check(opts, data):
+    """-scncompile=all compiles every script in !scnlist.txt from the command line and exits:
+    how kagex-release will compile a game's scripts"""
+    print("== %s: -scncompile" % data, flush=True)
+    if not os.path.exists(os.path.join(data, "..", "template", "system", "SceneParser.tjs")) and \
+            not os.path.exists(os.path.join(data, "system", "SceneParser.tjs")):
+        print("     (skipped: this framework predates compiled scenarios)", flush=True)
+        return 0
+    workdir = tempfile.mkdtemp(prefix="kagex-smoke-")
+    env = dict(os.environ)
+    env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
+    env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+    t = time.time()
+    try:
+        p = subprocess.run([opts.engine, os.path.abspath(data), "-datapath=" + workdir + "/", "-scncompile=all"],
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, timeout=180)
+        out = p.stdout.decode("utf-8", "replace")
+        code = p.returncode
+    except subprocess.TimeoutExpired:
+        out, code = "", "timeout"
+    done = [l for l in out.splitlines() if "Compiled scenarios:" in l]
+    errors = [l for l in out.splitlines() if ERROR_PATTERNS.search(l)]
+    shutil.rmtree(workdir, ignore_errors=True)
+    if code != 0 or not done or " 0 failed" not in done[-1] or errors:
+        print("FAIL -scncompile=all compiles the listed scripts and exits (exit code %s)" % code)
+        for l in (done + errors)[:20] or out.splitlines()[-30:]:
+            print("     " + l)
+        return 1
+    print("ok   %-62s %5.1fs" % ("-scncompile=all compiles the listed scripts and exits", time.time() - t))
+    print("     " + done[-1].split("Compiled scenarios:")[-1].strip(), flush=True)
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     default_exe = "krkrz.exe" if os.name == "nt" else "./krkrz"
@@ -1046,6 +1372,8 @@ def main():
     ap.add_argument("--keep", action="store_true", help="keep the temporary folders")
     ap.add_argument("--verbose", action="store_true", help="print the engine log at the end")
     ap.add_argument("--target", choices=["desktop", "android", "ios-sim", "web"], default="desktop")
+    ap.add_argument("--packaged", action="store_true",
+                    help="desktop: --engine is a package of the sample, run with the data it holds")
     ap.add_argument("--apk", help="android: the APK to install")
     ap.add_argument("--package", default="io.github.krkren.kagex", help="android: its applicationId")
     ap.add_argument("--adb", default="adb")
@@ -1068,12 +1396,14 @@ def main():
                     help="whether the build must load CLIP STUDIO PAINT layers (the clipfile plugin): "
                     "required fails when it can't; optional reports it")
     opts = ap.parse_args()
-    if opts.target != "desktop":
+    if opts.target != "desktop" or opts.packaged:
         opts.only = "sample"  # the platform packages hold the sample only
 
     failures = 0
     if opts.only in (None, "sample"):
         failures += run_project(opts, "sample", "data", sample_steps)
+        if opts.target == "desktop" and not opts.packaged:
+            failures += scncompile_check(opts, "data")
     if opts.only in (None, "template"):
         failures += run_project(opts, "template", "template", template_steps)
     print("smoke test:", "FAILED (%d)" % failures if failures else "passed")

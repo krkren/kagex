@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <map>
 #include <regex>
 #include <set>
@@ -16,6 +17,7 @@
 #include "Plan.h"
 #include "Sign.h"
 #include "Scripts.h"
+#include "Scenes.h"
 #include "Subprocess.h"
 #include "krt/app/Progress.h"
 #include "krt/app/Text.h"
@@ -217,7 +219,7 @@ namespace {
 class Builder {
 public:
 	Builder(const Json& s, const Project& p, const BuildOptions& o, krt::Progress& pr) : s_(s), p_(p), o_(o), pr_(pr) {}
-	~Builder() { wipeArchiveKey(archiveKey_); }
+	~Builder() { wipeArchiveKey(archiveKey_); wipeSceneKey(key_); }
 
 	Json execute()
 	{
@@ -237,6 +239,11 @@ public:
 			}
 			if (chosen_.empty() && str(s_, "output.patchFrom").empty()) throw Failure{ "No platform to build" };
 
+			// engine packages in engines/ next to data/ (or --engines, KAGEX_RELEASE_ENGINES)
+			// come before the cache
+			o_.engines = localEngines(o_.engines, p_.root);
+			if (!o_.engines.empty()) pr_.log("Engine packages from " + krt::fromPath(o_.engines));
+
 			out_ = fs::weakly_canonical(p_.root / krt::toPath(str(s_, "output.folder")));
 			work_ = out_ / ".work";
 			mustRemove(work_);
@@ -255,11 +262,16 @@ public:
 				if (!haveArchiveKey_) throw Failure{ "archive.encrypt is on but there's no key: set archive.keyFile or KAGEX_ARCHIVE_KEY (make one with: kagex-release --cli keygen <file>)" };
 				hashNames_ = flag(s_, "archive.hideNames");
 			}
+			if (flag(s_, "scenes.compile")) {
+				std::string err;
+				if (!readSceneKey(s_, p_, key_, haveKey_, err)) throw Failure{ err };
+			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));
 			media(PartProgress(pr_, 0.05, 0.2));
+			scenes(PartProgress(pr_, 0.2, 0.21));   // before signStage: a compiling run of a signed game would refuse its options
 			signStage();   // write the public key and the self-test into the data (before it is compiled/hashed/packed)
-			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.2, 0.22));
+			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.21, 0.22));
 			fileList(PartProgress(pr_, 0.22, 0.25));
 			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
 			if (hashNames_) packHashed(PartProgress(pr_, 0.25, 0.35));
@@ -441,6 +453,180 @@ private:
 		const RunResult r = run("codesign", { "--force", "--deep", "--sign", "-", krt::fromPath(app) }, opt);
 		if (!r.ok()) throw Failure{ "codesign failed: " + krt::trim(r.output) };
 		return app / "Contents" / "MacOS" / "krkrz";
+	}
+
+	//-----------------------------------------------------------------------
+	// Compiled scenarios (doc/scn.txt): the scripts in !scnlist.txt, compiled by this computer's
+	// engine into .scn (a PSB, when the engine has the scnfile plugin) or .scn.json, encrypted
+	// with the game's key when it has one; the scripts themselves are left out, with the
+	// compiler's own parsermacro.ks and parseroption.txt
+	//-----------------------------------------------------------------------
+	static bool endsWith(const std::string& s, const char* tail)
+	{
+		const size_t n = std::strlen(tail);
+		return s.size() >= n && s.compare(s.size() - n, n, tail) == 0;
+	}
+
+	void scenes(krt::Progress&& pr)
+	{
+		if (!flag(s_, "scenes.compile")) return;
+		std::error_code ec;
+		// what the developer's own runs compiled is left out, and every script compiled again
+		// (removed, not written over: the staged files are links to the game's own)
+		std::vector<fs::path> old;
+		std::set<std::string> listed;   // the scripts !scnlist.txt names, lower case
+		bool haveList = false;
+		for (fs::recursive_directory_iterator it(stage_, ec), end; it != end; it.increment(ec)) {
+			if (ec) break;
+			if (!it->is_regular_file(ec)) continue;
+			const std::string n = lower(krt::fromPath(it->path().filename()));
+			if (endsWith(n, ".scn") || endsWith(n, ".scn.json")) old.push_back(it->path());
+			if (n != "!scnlist.txt") continue;
+			haveList = true;
+			std::string text;
+			krt::readFile(it->path(), text);
+			size_t pos = 0;
+			while (pos < text.size()) {
+				size_t end = text.find('\n', pos);
+				if (end == std::string::npos) end = text.size();
+				std::string line = krt::trim(text.substr(pos, end - pos));
+				pos = end + 1;
+				if (line.size() >= 3 && (unsigned char)line[0] == 0xEF && (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF) line = krt::trim(line.substr(3));
+				if (line.empty() || line[0] == '#' || line.find(':') != std::string::npos) continue;
+				const size_t slash = line.find_last_of("/\\");
+				listed.insert(lower(slash == std::string::npos ? line : line.substr(slash + 1)));
+			}
+		}
+		for (const auto& f : old) fs::remove(f, ec);
+		if (!haveList) throw Failure{ "Compiling scenarios: the game has no !scnlist.txt (doc/scn.txt)" };
+
+		const std::string host = hostId();
+		fs::path engine;
+		std::string err;
+		pr.progress(0, "Getting the " + host + " engine to compile the scenarios");
+		if (!ensureEngine(host, flag(s_, "engine.debug"), o_.engines, pr, engine, err)) throw Failure{ "Compiling scenarios: " + err };
+		fs::path exe;
+		if (host == "windows") exe = engine / "krkrz.exe";
+		else if (host == "linux") exe = engine / "krkrz";
+		else {
+			for (const auto& e : fs::directory_iterator(engine, ec))
+				if (e.is_directory(ec) && e.path().extension() == ".app") exe = e.path() / "Contents" / "MacOS" / "krkrz";
+		}
+		if (exe.empty() || !fs::is_regular_file(exe, ec)) throw Failure{ "Compiling scenarios: the " + host + " engine package has no engine" };
+
+		// the game, headless where it can be (the framework keeps a compiling run's window
+		// hidden), through its -scncompile, which compiles and exits
+		const fs::path dir = work_ / "compile";
+		mustRemove(dir);
+		mustMkdirs(dir / "save");
+		RunOptions opt;
+		opt.timeoutSeconds = 1800;
+		opt.workDir = exe.parent_path();
+		opt.env = { { "SDL_AUDIO_DRIVER", "dummy" } };
+		if (host == "linux") opt.env.push_back({ "SDL_VIDEO_DRIVER", "offscreen" });
+		opt.canceled = [&pr]() { return pr.canceled(); };
+		pr.progress(-1, "Compiling the scenarios");
+		pr.log("Compiling the scenarios with " + krt::fromPath(exe));
+		const RunResult r = run(krt::fromPath(exe), { krt::fromPath(stage_), "-scncompile=all", "-datapath=" + krt::fromPath(dir / "save") + "/" }, opt);
+		if (pr.canceled()) throw Failure{ "Canceled" };
+		std::string raw, log;
+		if (krt::readFile(dir / "save" / "krkr.console.log", raw)) log = utf16leToUtf8(raw);
+		if (log.empty()) log = r.output;
+		writeText(out_ / "compile-scenarios.log", log);
+		std::string summary;
+		std::vector<std::string> problems, warnings;
+		size_t pos = 0;
+		while (pos < log.size()) {
+			size_t end = log.find('\n', pos);
+			if (end == std::string::npos) end = log.size();
+			std::string line = log.substr(pos, end - pos);
+			pos = end + 1;
+			if (!line.empty() && line.back() == '\r') line.pop_back();
+			if (line.find("Compiled scenarios: ") != std::string::npos) summary = line.substr(line.find("Compiled scenarios: ") + 20);
+			else if (line.find(":Scenario conversion error:") != std::string::npos || line.find("Script exception raised") != std::string::npos ||
+			         line.find("\xe3\x82\xb9\xe3\x82\xaf\xe3\x83\xaa\xe3\x83\x97\xe3\x83\x88\xe3\x81\xa7\xe4\xbe\x8b\xe5\xa4\x96") != std::string::npos)
+				problems.push_back(krt::trim(line));
+			else if (line.find("warning: ") != std::string::npos) warnings.push_back(krt::trim(line.substr(line.find("warning: ") + 9)));
+		}
+		for (const auto& w : warnings) pr.log("scenarios: warning: " + w);
+		// the summary is in the engine's log; a run that exits 0 compiled everything even when
+		// the log didn't get written (the count of compiled files is checked below)
+		if (!r.ok()) {
+			std::string why = problems.empty() ? std::string(r.timedOut ? "it took over half an hour" : r.started ? "the engine stopped" : "the engine couldn't be started: " + krt::trim(r.output))
+			                                   : problems.front();
+			throw Failure{ "Compiling scenarios failed: " + why + " (see compile-scenarios.log)" };
+		}
+		if (!summary.empty()) pr.log("Compiled scenarios: " + summary);
+		if (!warnings.empty())
+			notes_.push_back("Compiling scenarios: " + std::to_string(warnings.size()) + (warnings.size() == 1 ? " warning" : " warnings") + " (see compile-scenarios.log)");
+
+		// what was compiled: encrypted, and the scripts left out
+		std::vector<fs::path> compiled;
+		std::vector<fs::path> compilerFiles;
+		bool json = false;
+		for (fs::recursive_directory_iterator it(stage_, ec), end; it != end; it.increment(ec)) {
+			if (ec) break;
+			if (!it->is_regular_file(ec)) continue;
+			const std::string n = lower(krt::fromPath(it->path().filename()));
+			if (endsWith(n, ".scn")) compiled.push_back(it->path());
+			else if (endsWith(n, ".scn.json")) { compiled.push_back(it->path()); json = true; }
+			else if (n == "parsermacro.ks" || n == "parseroption.txt") compilerFiles.push_back(it->path());
+		}
+		std::set<std::string> done;
+		for (const auto& f : compiled) {
+			std::string n = lower(krt::fromPath(f.filename()));
+			n.resize(n.size() - (endsWith(n, ".scn.json") ? 9 : 4));
+			done.insert(n);
+		}
+		std::string missing;
+		for (const auto& n : listed) if (!done.count(n)) missing += (missing.empty() ? "" : ", ") + n;
+		if (!missing.empty()) throw Failure{ "Compiling scenarios: no compiled file for " + missing + " (see compile-scenarios.log)" };
+		if (compiled.empty()) {
+			notes_.push_back("Scenarios: !scnlist.txt lists no scripts, so nothing was compiled");
+			return;
+		}
+		scenesPsb_ = !json;
+		if (haveKey_) {
+			if (json)
+				throw Failure{ "The scenarios were compiled to .scn.json, which can't be encrypted: the " + host +
+				               " engine has no scnfile plugin (use engine packages that have it), or parseroption.txt asks for format=json" };
+			pr.progress(-1, "Encrypting the scenarios");
+			for (const auto& f : compiled)
+				if (!sealScene(f, key_, err)) throw Failure{ "Encrypting the scenarios: " + err };
+		}
+		for (const auto& f : compiled) {
+			std::string script = krt::fromPath(f);
+			script.resize(script.size() - (endsWith(lower(script), ".scn.json") ? 9 : 4));
+			fs::remove(krt::toPath(script), ec);
+		}
+		for (const auto& f : compilerFiles) fs::remove(f, ec);
+		pr.log("Scenarios: " + std::to_string(compiled.size()) + " compiled to " + (json ? ".scn.json" : ".scn") +
+		       (haveKey_ ? ", encrypted" : "") + "; their scripts are left out");
+		if (json) notes_.push_back("Scenarios: compiled to .scn.json (plain text), as the " + host + " engine has no scnfile plugin");
+		else if (!haveKey_) notes_.push_back("Scenarios: compiled, not encrypted (no key)");
+	}
+
+	// What compiled scenarios need from a platform's engine: the scnfile plugin, to read .scn
+	// files, with the game's key written into its slot when they're encrypted. root: the
+	// platform's own copy of the engine
+	void scenesInto(const std::string& id, const fs::path& root)
+	{
+		if (!scenesPsb_) return;
+		std::string err;
+		const auto slots = sceneKeySlots(root, err);
+		if (!err.empty()) throw Failure{ "The engine's scnfile plugin: " + err };
+		if (slots.empty())
+			throw Failure{ "The " + id + " engine has no scnfile plugin, which plays the compiled scenarios (.scn): use engine packages that have it" };
+		if (!haveKey_) return;
+		std::string names;
+		for (const auto& f : slots) {
+			if (!writeSceneKey(f, key_, err)) throw Failure{ "Writing the scenario key: " + err };
+			std::error_code ec;
+			std::string rel = krt::fromPath(fs::relative(f, root, ec));
+			std::replace(rel.begin(), rel.end(), '\\', '/');
+			names += (names.empty() ? "" : ", ") + rel;
+		}
+		pr_.log(id + ": the scenario key is in " + names);
 	}
 
 	//-----------------------------------------------------------------------
@@ -983,6 +1169,7 @@ private:
 		}
 		pluginsInto(engine / "plugin", dir / "plugin");
 		if (encryptedXp3For("windows")) archiveKeyInto("windows", dir);   // before bind, so the exe is keyed first
+		scenesInto("windows", dir);
 		writeText(dir / krt::toPath(str(s_, "identity.exeName") + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms.windows.data");
 		if (mode == "bind" && !hashNames_) { bind(exe); copyParts(dir); }
@@ -1009,6 +1196,7 @@ private:
 		}
 		pluginsInto(engine / "plugin", dir / "plugin");
 		if (encryptedXp3For(id)) archiveKeyInto(id, dir);   // before bind, so the executable is keyed first
+		scenesInto(id, dir);
 		writeText(dir / krt::toPath(exeName + ".cf"), engineConfig(s_, p_));
 		const std::string mode = str(s_, "platforms." + id + ".data");
 		if (mode == "bind" && !hashNames_) { bind(exe); copyParts(dir); }
@@ -1074,6 +1262,7 @@ private:
 					fs::remove(e.path(), ec);
 			}
 		}
+		scenesInto("macos", app);
 		writeText(contents / "MacOS" / "krkrz.cf", engineConfig(s_, p_));
 		dataInto("macos", res);
 		licensesInto(engine, res);
@@ -1152,6 +1341,7 @@ private:
 		copyTree(engine / "project", proj);
 		makeExecutable(proj / "gradlew");
 		if (encryptedXp3For("android")) archiveKeyInto("android", proj);   // key the engine .so before Gradle packages it
+		scenesInto("android", proj);
 
 		// app-config.json: the engine's settings, with the game's
 		Json cfg;
@@ -1300,6 +1490,7 @@ private:
 		const fs::path app = dir / "Payload" / krt::toPath(exe + ".app");
 		copyTree(src, app);
 		for (const char* gone : { "data", "data.xp3", "_CodeSignature", "embedded.mobileprovision" }) fs::remove_all(app / gone, ec);
+		scenesInto("ios", app);
 
 		// Info.plist (Xcode writes it binary: edited as XML, written back binary)
 		const fs::path plist = app / "Info.plist";
@@ -1417,6 +1608,7 @@ private:
 			if (e.is_directory(ec)) copyTree(e.path(), dir / e.path().filename());
 			else copyFile(e.path(), dir / e.path().filename());
 		}
+		scenesInto("web", dir);
 		std::string js;
 		if (!krt::readFile(dir / "krkrz.js", js)) throw Failure{ "The web engine has no krkrz.js" };
 		// krkrz.data is the engine's preloaded /data.xp3 (the files packager's metadata in
@@ -1909,6 +2101,9 @@ private:
 	bool hashNames_ = false;      ///< one encrypted, name-hashed archive (data.xpc) + a plain bootstrap
 	fs::path xpc_;                ///< the hashed archive (work/data.xpc)
 	std::string bootstrap_;       ///< the plain bootstrap startup.tjs that mounts it
+	SceneKey key_{};             ///< the game's key for compiled scenarios (when haveKey_)
+	bool haveKey_ = false;
+	bool scenesPsb_ = false;     ///< scenarios compiled to .scn: the engines need the scnfile plugin
 };
 
 } // namespace

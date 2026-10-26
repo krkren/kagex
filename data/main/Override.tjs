@@ -70,6 +70,36 @@ function setButtonMode(kag, name, mode)
 }
 
 /**
+ * EXIT, in a scene played from Extras: back where it was played from (Replay), or the title
+ */
+function exitScene()
+{
+    if (kag.isRecollection && kag.recollectionStorage != "") {
+        var storage = kag.recollectionStorage, target = kag.recollectionTarget;
+        kag.stopRecollection();
+        kag.process(storage, target);
+    } else {
+        kag.process('title.ks', '*start');
+    }
+}
+
+/**
+ * Whether BACK can go back a message (compiled scenes: KAGEnvPlayer.rollback)
+ */
+function canRollBack()
+{
+    return typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.canRollback;
+}
+
+/**
+ * BACK: the message before the one on screen, as it was
+ */
+function rollBack()
+{
+    if (canRollBack()) world_object.player.rollback(true);
+}
+
+/**
  * Change Mode
  * Called from MainWindow when system state changes
  * @param kag KAG window
@@ -92,6 +122,7 @@ function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, 
     setButtonEnabled(kag, "msg_log",  kag.showHistoryMenuItem.enabled);
     setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
     setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
+    setButtonEnabled(kag, "msg_back", !modal && kag.inStable && canRollBack());
 
     // Sync config menu
     if (typeof kag.configMenuItem != "undefined") {
@@ -791,6 +822,7 @@ class ReplayListParser extends CSVParser {
             info.scene  = columns[1];
             info.target = columns[2];
             info.thum   = columns[3];
+            info.title  = columns[4];
             result.add(info);
         }
     }
@@ -806,92 +838,407 @@ class ReplayListParser extends CSVParser {
     }
 };
 
+// Replay's tabs (their labels) and the tiles on each: %[storage, label (no *), thum, title,
+// compiled, scene (storage + *label, lower case)]
+var replayTabs, replayTiles;
+// Thumbnails drawn from compiled scenes, by scene (Layers): drawing the World takes a moment
+var replayThumbs = %[];
+
 function replayInit()
 {
     var replayParser = new ReplayListParser();
-    tf.replaymodelist = replayParser.parseStorage("replaylist.csv");
+    var list = replayParser.parseStorage("replaylist.csv");
     invalidate replayParser;
 
     tf.extramode = 2;
-    tf.cgpagenum = 6;
+    tf.recollect = 0;
     tf.cgbtnnum  = 16;
-    tf.cgmodepage = 0 if tf.cgmodepage === void;
+    tf.replayTab = 0 if tf.replayTab === void;
+    tf.replayPage = 0 if tf.replayPage === void;
+
+    // the scene player's script, for the compiled scenes (it loads when first used)
+    KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.world_object != "undefined" && typeof global.scnFindCompiled == "undefined";
+
+    replayTabs = [];
+    replayTiles = [];
+    for (var i = 0; i < list.count; i++) {
+        var info = list[i];
+        if (info === void || info.page == "") continue;
+        var tab = replayTabs.find(info.page);
+        if (tab < 0) {
+            if (replayTabs.count >= 6) continue;
+            tab = replayTabs.count;
+            replayTabs.add(info.page);
+            replayTiles.add([]);
+        }
+        var storage = info.scene + ".ks";
+        var compiled = typeof global.scnFindCompiled != "undefined" && scnFindCompiled(storage) !== void &&
+            typeof global.world_object != "undefined" && world_object.scenePlayEnabled;
+        if (info.target == "*") {
+            // every scene of the compiled script that has a title
+            if (!compiled) {
+                replayTiles[tab].add(%[storage:storage, label:"", thum:info.thum, title:info.title, compiled:false]);
+                continue;
+            }
+            var data = new StorageData(storage);
+            var scenes = data.root !== void ? data.root.scenes : void;
+            for (var j = 0; scenes !== void && j < scenes.count; j++) {
+                var sc = scenes[j];
+                if (sc.title == "" || sc.label == "") continue;
+                var title = sc.title == "Start" && info.title != "" ? info.title : sc.title;
+                replayTiles[tab].add(%[storage:storage, label:sc.label.substr(1), thum:info.thum, title:title,
+                    compiled:true, scene:(storage + sc.label).toLowerCase()]);
+            }
+            invalidate data;
+        } else {
+            var title = info.title;
+            if (title == "" && compiled) {
+                var data = new StorageData(storage);
+                var sc = data.findScene(info.target != "" ? "*" + info.target : "");
+                title = sc !== void ? sc.title : "";
+                invalidate data;
+            }
+            replayTiles[tab].add(%[storage:storage, label:info.target, thum:info.thum, title:title, compiled:compiled,
+                scene:(storage + "*" + (info.target != "" ? info.target : "start")).toLowerCase()]);
+        }
+    }
+    tf.replayTab = 0 if tf.replayTab >= replayTabs.count;
 }
 
-function setReplaymodePageButton(work=void)
+// Whether a tile can be played: its scene has been read (compiled scenes: the scene player's
+// read marks), or its label passed (setRecordLabel: sf["trail_<storage>_<label>"])
+function replayUnlocked(info)
 {
-    tf.cgmodepage = work if work !== void;
+    if (tf.allseen) return true;
+    if (info.compiled) {
+        var r = kag.sflags.envPlayerSceneReaded;
+        return r !== void && r[info.scene] !== void && +r[info.scene] > 0;
+    }
+    var flagname = "trail_" + Storages.chopStorageExt(info.storage).toLowerCase() + "_" + (info.label != "" ? info.label : "start");
+    return sf[flagname] !== void && +sf[flagname] > 0;
+}
 
-    for (var i=0;i<tf.cgpagenum; i++) {
-        var pagename = "cgmode_page" + i;
-        var button = kag.current.names[pagename];
-        if (button !== void) {
-            button.loadButtons(pagename + (i == tf.cgmodepage ? "_over" : "_normal"), pagename + "_over");
+// A label drawn on each state of a button: the replay tabs' labels
+function drawButtonLabel(button, text, colors, size = 30)
+{
+    var hold = button.holdAlpha;
+    button.holdAlpha = true;
+    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    button.font.height = size;
+    button.font.bold = true;
+    var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
+    for (var st = 0; st < 3; st++) {
+        button.drawText(button.width * st + (button.width - w) \ 2, (button.height - h) \ 2, text, colors[st], 255, true);
+    }
+    button.holdAlpha = hold;
+}
+
+// The picture of a compiled scene at its first line (the World only, as compiled), fitted to
+// w x h; void where the World shows nothing there
+function replaySnapshot(info, w, h)
+{
+    if (replayThumbs[info.scene] !== void) return replayThumbs[info.scene] ? replayThumbs[info.scene] : void;
+    var thumb;
+    try {
+        world_object.initPlayer();
+        var data = new StorageData(info.storage);
+        var text = data.getText(info.label != "" ? "*" + info.label : "", 1);
+        invalidate data;
+        if (text !== void && text.state !== void) {
+            var shot = new global.Layer(kag, kag.fore.base);
+            world_object.player.getSnapshot(shot, text.state);
+            // shows anything: some of it isn't transparent
+            var seen = false;
+            for (var y = 0; y < 8 && !seen; y++)
+                for (var x = 0; x < 8 && !seen; x++)
+                    seen = shot.getMaskPixel(shot.imageWidth * (x * 2 + 1) \ 16, shot.imageHeight * (y * 2 + 1) \ 16) > 0;
+            if (seen) {
+                thumb = new global.Layer(kag, kag.fore.base);
+                thumb.setImageSize(w, h);
+                thumb.fillRect(0, 0, w, h, 0xff000000);
+                if (typeof thumb.shrinkCopy == "Object") thumb.shrinkCopy(0, 0, w, h, shot, 0, 0, shot.imageWidth, shot.imageHeight, stLinear);
+                else thumb.operateStretch(0, 0, w, h, shot, 0, 0, shot.imageWidth, shot.imageHeight, omAuto, 255, stLinear);
+            }
+            invalidate shot;
+        }
+    } catch (e) {
+        dm("Replay: no thumbnail for " + info.scene + ": " + e.message);
+    }
+    replayThumbs[info.scene] = thumb !== void ? thumb : false;
+    return thumb;
+}
+
+// A tile: its picture, and its title on a band along the bottom (violet when hovered)
+function drawReplayTile(button, info)
+{
+    var b = 3, pw = button.width - b*2, ph = button.height - b*2;
+    if (info.thum != "") {
+        setCGImage(button, info.thum);
+    } else {
+        var thumb = info.compiled ? replaySnapshot(info, pw, ph) : void;
+        if (thumb !== void) {
+            var hold = button.holdAlpha;
+            button.holdAlpha = true;
+            for (var st = 0; st < 3; st++) button.operateRect(button.width * st + b, b, thumb, 0, 0, pw, ph, omOpaque);
+            button.holdAlpha = hold;
+        } else {
+            button.loadButtons("replay_thum_normal", "replay_thum_over");
         }
     }
+    if (info.title == "") return;
+    var hold = button.holdAlpha;
+    button.holdAlpha = true;
+    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    button.font.bold = true;
+    // smaller where the title doesn't fit
+    var band = 30, size = 20;
+    button.font.height = size;
+    while (size > 13 && button.font.getTextWidth(info.title) > pw - 12) button.font.height = --size;
+    var w = button.font.getTextWidth(info.title), th = button.font.getTextHeight(info.title);
+    for (var st = 0; st < 3; st++) {
+        var x = button.width * st + b;
+        button.fillRect(x, b + ph - band, pw, band, st == 0 ? 0xc8010062 : 0xe85025ff);
+        button.drawText(x + (pw - w) \ 2, b + ph - band + (band - th) \ 2, info.title, 0xffffff, 255, true);
+    }
+    button.holdAlpha = hold;
+}
 
-    // Hide all buttons once
-    for (var i=0;i<tf.cgbtnnum;i++) {
-        var button = kag.current.names["cg" + i];
-        if (button !== void) {
-            button.enabled = false;
+/**
+ * Lays out Replay's tabs and the tiles of the tab and page shown (tf.replayTab, tf.replayPage)
+ */
+function setReplayPage(tab = void, page = void)
+{
+    tf.replayTab = tab if tab !== void;
+    tf.replayPage = page if page !== void;
+    var tiles = replayTiles[tf.replayTab] !== void ? replayTiles[tf.replayTab] : [];
+    var pages = (tiles.count + tf.cgbtnnum - 1) \ tf.cgbtnnum;
+    tf.replayPage = 0 if tf.replayPage >= pages || tf.replayPage < 0;
+
+    for (var i = 0; i < 6; i++) {
+        var button = kag.current.names["replay_tab" + i];
+        if (button === void) continue;
+        if (i >= replayTabs.count) {
             button.visible = false;
+            button.enabled = false;
+            continue;
         }
+        var current = i == tf.replayTab;
+        button.loadButtons(current ? "replay_tab_over" : "replay_tab_normal", "replay_tab_over");
+        drawButtonLabel(button, replayTabs[i], current ? [0xffffff, 0xffffff, 0xffffff] : [0x5025ff, 0xffffff, 0xffffff]);
     }
+    var prev = kag.current.names["replay_prev"], next = kag.current.names["replay_next"];
+    if (prev !== void) prev.visible = prev.enabled = tf.replayPage > 0;
+    if (next !== void) next.visible = next.enabled = tf.replayPage < pages - 1;
 
     tf.replaylist = [];
-    var pagename = "page" + tf.cgmodepage;
-    var cgnum = 0;
-    for (var i=0;i<tf.replaymodelist.count && cgnum < tf.cgbtnnum;i++) {
-        var info = tf.replaymodelist[i];
-        if (info === void) continue;
-
-        // A scene unlocks once its label has been passed: setRecordLabel (MainWindow.tjs)
-        // records it as sf["trail_<storage>_<label>"]. Compare, so a missing flag (void)
-        // is simply false. tf.allseen unlocks everything
-        var flagname = "trail_" + info.scene.toLowerCase() + "_" + (info.target != "" ? info.target : "start");
-        var replayFlagSet = tf.allseen || (sf[flagname] !== void && +sf[flagname] > 0);
-
-        if (info.page == pagename) {
-            var button = kag.current.names["cg" + cgnum];
-            if (button !== void) {
-                if (replayFlagSet) {
-                    // Compare, don't test the string itself: the engine converts it to a number
-                    // ("event1" is false) and crashes on an empty one
-                    if (info.thum != "") {
-                        setCGImage(button, info.thum);
-                    } else {
-                        // No thumbnail: a play tile, since the locked "?" tile would hide
-                        // that the scene can be played
-                        button.loadButtons("replay_thum_normal", "replay_thum_over");
-                    }
-                    tf.replaylist[cgnum] = info;
-                    button.enabled = true;
-                } else {
-                    button.loadButtons("cgmode_thum_normal");
-                    button.enabled = false;
-                }
-            }
-            cgnum++;
-            button.visible = true;
+    for (var i = 0; i < tf.cgbtnnum; i++) {
+        var button = kag.current.names["cg" + i];
+        if (button === void) continue;
+        var info = tiles[tf.replayPage * tf.cgbtnnum + i];
+        if (info === void) {
+            button.enabled = false;
+            button.visible = false;
+            continue;
+        }
+        button.visible = true;
+        if (replayUnlocked(info)) {
+            drawReplayTile(button, info);
+            tf.replaylist[i] = info;
+            button.enabled = true;
+        } else {
+            button.loadButtons("cgmode_thum_normal");
+            button.enabled = false;
         }
     }
 }
 
 /**
- * Start recollection process
+ * Plays a tile's scene, and comes back to Replay at its end. A compiled scene is reached by
+ * playing its script from the start without showing it (KAGEnvPlayer.seek), so it starts as
+ * playing gets there; anything else starts at its label
  */
-function recollect(index)
+function replayTile(index)
 {
     var info = tf.replaylist[index];
+    if (info === void) return;
     tf.recollect = 1;
     kag.process('loadinit.ks', '', true, true);
-    var elm = %[];
-    elm.doneStorage = 'title.ks'; // Return to title when finished
-    elm.doneTarget  = '*start';
-    elm.storage = info.scene + ".ks";
-    elm.target  = "*" + info.target if info.target !== void;
+    var elm = %[storage:info.storage, target:info.label != "" ? "*" + info.label : "", doneStorage:"replay.ks", doneTarget:""];
+    if (info.compiled) {
+        world_object.initPlayer();
+        world_object.player.seek(info.storage, info.label != "" ? "*" + info.label : "", 1, true);
+        elm.target = "";
+    }
     kag.startRecollection(elm);
+}
+
+// --------------------------------------------------------
+// Search (Extras): the lines read so far, in the compiled scenes (searchmode.ks)
+// --------------------------------------------------------
+
+var searchFound = []; // what the last search found (KAGEnvPlayer.searchTexts)
+var searchRows = 7;   // rows a page
+var searchMax = 500;  // the most it finds
+var searchTrigger;    // shows the screen again once the key or click that searched is over
+var searchNames;      // what replaylist.csv calls each script (its "Start" scene's title)
+
+// Whether there's anything to search: the World's scene player and compiled scripts
+function searchAvailable()
+{
+    return typeof global.world_object != "undefined" && world_object.scenePlayEnabled &&
+        Storages.isExistentStorage("!scnlist.txt");
+}
+
+function searchInit()
+{
+    tf.extramode = 4;
+    tf.recollect = 0;
+    tf.searchText = "" if tf.searchText === void;
+    tf.searchPage = 0 if tf.searchPage === void;
+    // the scene player's script (it loads when first used)
+    KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.world_object != "undefined" && typeof global.scnFindCompiled == "undefined";
+    // the scripts' names, from Replay's list: a row says which demo its line is in
+    searchNames = %[];
+    var parser = new ReplayListParser();
+    var list = parser.parseStorage("replaylist.csv");
+    invalidate parser;
+    for (var i = 0; i < list.count; i++) {
+        var info = list[i];
+        if (info === void || info.title == "") continue;
+        var key = (info.scene + ".ks").toLowerCase();
+        if (info.target == "*" || info.target == "start" || searchNames[key] === void) searchNames[key] = info.title;
+    }
+    searchFound = [];
+    var text = ((string)tf.searchText).trim();
+    if (!searchAvailable()) {
+        tf.searchStatus = "Search looks through compiled scenes, and this game has none";
+    } else if (text == "") {
+        tf.searchStatus = "Type a word or a name, then press Return";
+    } else {
+        world_object.initPlayer();
+        searchFound = world_object.player.searchTexts(text, !tf.allseen, searchMax);
+        var n = searchFound.count;
+        tf.searchStatus = n == 0 ? "No line read so far has \"" + text + "\"" :
+            (n == 1 ? "1 line" : "%d lines".sprintf(n)) + (n >= searchMax ? " (the first %d)".sprintf(searchMax) : "") +
+            " with \"" + text + "\": choose one to play from it";
+    }
+}
+
+// The Search button: what's typed, then searchRun
+function searchFromField()
+{
+    kag.fore.messages[0].commit();
+    searchRun();
+}
+
+// Return in the field ([edit enter=]) or the button: the screen again with what tf.searchText
+// finds, from its first page
+function searchRun()
+{
+    tf.searchPage = 0;
+    if (searchTrigger === void) searchTrigger = new AsyncTrigger(function { kag.process("searchmode.ks"); }, "");
+    searchTrigger.trigger();
+}
+
+// Typing goes to the field
+function searchFocus()
+{
+    var e = kag.fore.messages[0].names["tf.searchText"];
+    e.focus() if e !== void;
+}
+
+// Fits a found line to w (font as set): a window around the match at m (when it's found in
+// the line), with ellipses where it's cut. [prefix, from, to, suffix]
+function searchFit(font, text, m, w)
+{
+    var a = 0, b = text.length, pre = "";
+    if (m > 30 && font.getTextWidth(text) > w) {
+        a = m - 30;
+        pre = "...";
+    }
+    while (b > a && font.getTextWidth(pre + text.substring(a, b - a) + (b < text.length ? "..." : "")) > w) b--;
+    return [pre, a, b, b < text.length ? "..." : ""];
+}
+
+// A row: the scene and who speaks above, the line below with what was looked for picked out,
+// on each of the button's states
+function drawSearchRow(button, info, key)
+{
+    var hold = button.holdAlpha;
+    button.holdAlpha = true;
+    var f = button.font;
+    f.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    var left = 24, w = button.width - left * 2;
+    // the demo (replaylist.csv's title for its script) and the scene, then who speaks
+    var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
+    var head = script === void || script == "" ? info.title : info.title == "Start" ? script : script + "  ›  " + info.title;
+    head += "  ·  " + info.name if info.name != "";
+    var m = info.text.toLowerCase().indexOf(key);
+    for (var st = 0; st < 3; st++) {
+        var x0 = button.width * st + left;
+        var over = st != 0;
+        f.height = 19;
+        f.bold = true;
+        button.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
+        f.height = 26;
+        f.bold = false;
+        var fit = searchFit(f, info.text, m, w);
+        var x = x0, y = 36;
+        var pieces = [];
+        pieces.add([fit[0], false]);
+        if (m >= fit[1] && m < fit[2]) {
+            var e = m + key.length < fit[2] ? m + key.length : fit[2];
+            pieces.add([info.text.substring(fit[1], m - fit[1]), false]);
+            pieces.add([info.text.substring(m, e - m), true]);
+            pieces.add([info.text.substring(e, fit[2] - e), false]);
+        } else {
+            pieces.add([info.text.substring(fit[1], fit[2] - fit[1]), false]);
+        }
+        pieces.add([fit[3], false]);
+        for (var i = 0; i < pieces.count; i++) {
+            var t = pieces[i][0];
+            if (t == "") continue;
+            var mark = pieces[i][1];
+            f.bold = mark;
+            button.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
+            x += f.getTextWidth(t);
+        }
+        f.bold = false;
+    }
+    button.holdAlpha = hold;
+}
+
+// The rows of the page shown (tf.searchPage), and the arrows to the others
+function setSearchPage()
+{
+    var pages = (searchFound.count + searchRows - 1) \ searchRows;
+    tf.searchPage = 0 if tf.searchPage >= pages || tf.searchPage < 0;
+    var key = ((string)tf.searchText).trim().toLowerCase();
+    for (var i = 0; i < searchRows; i++) {
+        var button = kag.current.names["row" + i];
+        if (button === void) continue;
+        var info = searchFound[tf.searchPage * searchRows + i];
+        button.visible = button.enabled = info !== void;
+        if (info !== void) drawSearchRow(button, info, key);
+    }
+    var prev = kag.current.names["search_prev"], next = kag.current.names["search_next"];
+    if (prev !== void) prev.visible = prev.enabled = tf.searchPage > 0;
+    if (next !== void) next.visible = next.enabled = tf.searchPage < pages - 1;
+}
+
+/**
+ * Plays from a found line to the end of its scene, and comes back to Search: the line's
+ * script played from its start without showing it, up to the line (KAGEnvPlayer.seek)
+ */
+function searchPlay(index)
+{
+    var info = searchFound[tf.searchPage * searchRows + index];
+    if (info === void) return;
+    tf.recollect = 1;
+    kag.process('loadinit.ks', '', true, true);
+    world_object.initPlayer();
+    world_object.player.seek(info.storage, info.label, info.idx, true);
+    kag.startRecollection(%[storage:info.storage, target:"", doneStorage:"searchmode.ks", doneTarget:""]);
 }
 
 class MusicListParser extends CSVParser {

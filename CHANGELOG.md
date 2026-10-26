@@ -9,6 +9,33 @@
 - **Compiled scripts**: kagex-release compiles every `.tjs` in a package to TJS2 bytecode (Contents > *Scripts*, `contents.compileScripts`, on by default), so the packages carry no readable TJS and load their scripts a little faster. The engine on the computer that builds does it (`Scripts.compileStorage`), and each script keeps its name, so the game loads them as before. A script that is one expression, like `envinit.tjs`, is compiled as one, so `Scripts.evalStorage` still returns its value. `@if` is decided when building. Errors in compiled scripts name the script and function but not the line (the engine's debug information crashes it, `UPSTREAM.md`). On Linux and macOS the engine cuts integer constants beyond 32 bits (`0xff000000`) when it compiles; kagex-release puts them right, and keeps as source the few scripts where it can't (a constant made of others, like `0xff << 24`). The build lists every script it keeps as source and why, and the engine's output is `compile-scripts.log`.
 - **Encrypted game files**: kagex-release can pack `data.xp3` with every file encrypted (XChaCha20, keyed per file). The [xp3crypt](https://github.com/krkren/xp3crypt) plugin, built into the engine, decrypts each read through the engine's XP3 extraction filter, so the archive is read transparently; the game's key is written into each platform's engine when it's packaged. Turn it on with `archive.encrypt` and a key from `archive.keyFile` (or `KAGEX_ARCHIVE_KEY`); make a key with `kagex-release --cli keygen <file>`. An engine without a key reads a plain archive, so the same build works either way. Keeps the scripts and assets out of plain view; the key ships with the game, so a determined person can still recover it.
 - **Hidden file names** (Encryption > *Hide names*, `archive.hideNames`): the game ships as one encrypted archive, `data.xpc`, whose file names are a keyed hash of each path, so a generic tool sees neither the files nor their names. The engine reads it through the plugin's own `xpcrypt://` storage medium (the built-in XP3 mount matches plain names), with a tiny plain `startup.tjs` that mounts it; the real names live in an encrypted manifest only the plugin reads. Desktop only so far.
+- **Compiled scenarios** (the first stage of [krkren/scnfile](https://github.com/krkren/scnfile)): the scripts listed in `!scnlist.txt` are compiled into `<script>.scn.json` by `SceneParser.tjs`, and the scene player (`KAGEnvPlayer.tjs`, `[scenestart]`) plays those in their place: text, names and voices as a table, tags as steps, and the World's state at every save point. However the game goes to a listed script (a jump, a choice, `kag.process()`, a load), it plays compiled. In debug mode a script is compiled when it has changed; `-scncompile` compiles them from the command line and exits, `-scnplay=no` plays the scripts themselves. `[if]`, `cond=` and `&` entities are decided as the game plays, macros come from `parsermacro.ks`, and the line modes put text together as KAG does (`doc/scn.txt`).
+- **The scnfile plugin** ([krkren/scnfile](https://github.com/krkren/scnfile), linked at start where a build has it; Linux so far): compiled scenarios are `.scn` files, M2's binary PSB format, a third the size of the JSON. Without the plugin they're `.scn.json` as before.
+- A compiled script plays without its `.ks`.
+- The sample's demos and demo menu play compiled.
+- **kagex-release compiles scenarios** (Scenarios > *Compile*, `scenes.compile`, on when the game has a `!scnlist.txt`): it compiles the listed scripts with this computer's engine and ships the compiled files without the scripts. With a key (Scenarios > *Key*, *New key*, `--cli keygen`, or `KAGEX_SCENES_KEY`) the `.scn` files are encrypted (XChaCha20-Poly1305) and the key is written into each package's scnfile plugin; a platform whose engine has no plugin then fails to build. The same files and key give the same bytes, so a patch holds only the scripts that changed (`doc/scn.txt`, "Releases").
+- kagex-release uses engine packages in an `engines/` folder next to the game's `data/` before downloading, and its check says whether scenarios will compile to `.scn` or `.scn.json` and marks a platform whose engine can't play `.scn` files.
+- `tools/smoketest.py --packaged` runs the sample's steps on a desktop package (kagex-release's build of the sample) with the data it holds.
+
+- **Going back in compiled scenes**: a BACK button in the message window goes back to the message before, and each message in the backlog has a mark that goes back to it (after a Yes/No). The World, the game's flags and the backlog are as they were at that message (`doc/scn.txt`, "Going back").
+
+- **Scene replay**: the Replay screen has a tile for every titled scene of the compiled demos, on tabs named in `replaylist.csv` (a label `*` there means all of a script's scenes), with a picture of the scene and its title; each plays on its own and comes back to Replay. A scene is reached by playing its script from the start without showing it (`KAGEnvPlayer.seek`), so what earlier scenes put on KAG's own layers is there (`doc/scn.txt`, "Replays").
+
+- **Dialogue search**: a Search screen in Extras finds the lines read so far that hold a word (or a speaker's name), shows each with its demo and scene, and plays from the one chosen to the end of its scene (`KAGEnvPlayer.searchTexts`; `doc/scn.txt`, "Search").
+- `[edit enter=...]` runs an expression when Return is pressed in the field (`doc/kagex.txt`).
+
+### Changed
+
+- `-scncompile` keeps the game's window hidden.
+- A character drawn from layers blinks and lip-syncs again right after a load (or going back, or a search jump): it used to stand still until the next command on it.
+- Extras has four tabs (CG, Replay, Music, Search); the nav buttons moved left to make room.
+- EXIT in a scene played from Replay goes back to Replay (it went to the title).
+- In compiled scenes the backlog follows the scene player's history: written again after a jump or a load (it used to be wiped), and kept at choices (wiped too), which it shows as "Choice: ..." lines.
+- The backlog's voice marks are a line high (42 px), so redrawing a line doesn't cut them off, and the text starts further right (`marginL` 140) to make room for the going-back marks.
+
+### Fixed
+
+- The scene player loads: `KAGEnvPlayer.tjs` had a syntax error from the translation, and needed Wamsoft's psbfile plugin. Its history, read tracking and save code had bugs that couldn't show until now.
 
 ## 0.8.0
 

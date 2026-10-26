@@ -586,6 +586,12 @@ KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 KAGLinkPlugin("plugin/scriptsEx.dll");
 KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
+// JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
+// <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
+KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
+// SCNFile: compiled scenarios as .scn (PSB) files, from https://github.com/krkren/scnfile.
+// Without it they're .scn.json
+KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
 
 // CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
 // clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
@@ -1089,11 +1095,15 @@ var tf = kag.tflags; // Temporary variables (temporary flags)
 
 
 
-var mp_dummy = %[], mp_target;
+var mp_dummy = %[], mp_target, mp_override;
 
 property mp {
 
 	getter {
+
+		// a tag from a macro in a compiled scenario brings the macro's arguments with it
+
+		if (mp_override !== void) return mp_override;
 
 		var macroParams = mp_target ? mp_target.macroParams : void;
 
@@ -1177,6 +1187,25 @@ if (typeof global.kag !== "undefined") {
     // fullScreened, not fullScreen: the start-up switch may not have taken effect yet
     if (!global.kag.fullScreened)
         global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);
+}
+
+/*
+    Compiling scenarios: -scncompile compiles the scripts in !scnlist.txt that changed since
+    they were last compiled (-scncompile=all every one of them), writes what happened to the
+    console and exits, with 1 if one failed (doc/scn.txt)
+*/
+function KAGCompileScenarios(force = false)
+{
+	if (typeof global.world_object == "undefined") throw new Exception("compiling scenarios needs the World (KAGWorldPlugin)");
+	world_object.initPlayer();
+	var r = world_object.player.compileAll(force);
+	dm("Compiled scenarios: %d compiled, %d up to date, %d failed, %d warnings".sprintf(r.compiled, r.skipped, r.failed, r.warnings));
+	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	return r;
+}
+if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") {
+	var r = KAGCompileScenarios(System.getArgument("-scncompile") == "all");
+	System.exit(r.failed > 0 ? 1 : 0);
 }
 
 // In a signed build, verify the archives, the engine files and the patches first, then start the

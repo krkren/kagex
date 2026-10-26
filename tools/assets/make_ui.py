@@ -320,6 +320,16 @@ def ic_repeat(c, cx, cy, s, col):
     c.polygon([(ex - s * 0.2, ey - s * 0.08), (ex + s * 0.13, ey - s * 0.1), (ex + s * 0.02, ey + s * 0.22)], col)
 
 
+def ic_back(c, cx, cy, s, col):
+    """an arrow curving back over the top: going back to an earlier line"""
+    r = s * 0.36
+    ox, oy = cx + s * 0.04, cy + s * 0.08
+    pts = [(ox + r * math.cos(a), oy + r * math.sin(a)) for a in np.linspace(math.radians(40), math.radians(-180), 28)]
+    c.stroke(pts, s * 0.12, col)
+    ex, ey = pts[-1]
+    c.polygon([(ex - s * 0.2, ey - s * 0.04), (ex + s * 0.2, ey - s * 0.04), (ex, ey + s * 0.24)], col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -402,7 +412,7 @@ def make_logo():
 
 
 # --- the message window ----------------------------------------------------------------
-MSG_BUTTONS = ["save", "load", "skip", "auto", "log", "config", "exit", "hide"]
+MSG_BUTTONS = ["save", "load", "back", "skip", "auto", "log", "config", "exit", "hide"]
 
 
 def make_message():
@@ -548,7 +558,8 @@ def make_saveload():
 
 
 # --- Extras ----------------------------------------------------------------------------
-EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music")]
+EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music"),
+              ("extra_searchmode", "Search")]
 
 
 def make_extras():
@@ -574,6 +585,22 @@ def make_extras():
     ic_note(c, cx, cy, 80, rgba(VIOLET))
     c.save(os.path.join(IMAGE, "musicmode_base.png"), opaque=True)
 
+    # Search: the field (searchmode.ks puts an [edit] in it), its button, and the results'
+    # panel with 7 rows of 1314x76 (316 + 86 y) and the replay arrows beside them
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, "Search")
+    c.panel((290, 206, 1190, 270), r=12, fill=rgba(WHITE), border=VIOLET, bw=4, shadow=6)
+    c.panel((290, 300, 1656, 936), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
+    c.save(os.path.join(IMAGE, "searchmode_base.png"), opaque=True)
+    for st in ("normal", "over"):
+        nav_button("Search", st).save(os.path.join(IMAGE, "search_go_%s.png" % st))
+    for st, fill, border in (("normal", rgba(WHITE, 235), LAV), ("over", rgba(VIOLET), VIOLET)):
+        c = Canvas(1314, 76)
+        c.rrect((0, 0, 1314, 76), 12, fill=rgba(border))
+        c.rrect((3, 3, 1311, 73), 9, fill=fill)
+        c.save(os.path.join(IMAGE, "search_row_%s.png" % st))
+
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
             nav_button(label, st).save(os.path.join(IMAGE, "%s_%s.png" % (name, st)))
@@ -581,6 +608,18 @@ def make_extras():
     for i, label in enumerate(pages):
         for st in ("normal", "over"):
             button(330, 80, label, st, size=30, r=12).save(os.path.join(IMAGE, "cgmode_page%d_%s.png" % (i, st)))
+
+    # Replay's tabs, labelled at run time from replaylist.csv (Override.tjs), and the arrows
+    # beside its tiles for a tab with more than one page of them (replay.ks)
+    for st in ("normal", "over"):
+        button(330, 80, "", st, size=30, r=12).save(os.path.join(IMAGE, "replay_tab_%s.png" % st))
+        for name, up in (("prev", True), ("next", False)):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            chevron(b, 32, 32, 30, rgba(fg), up)
+            b.save(os.path.join(IMAGE, "replay_%s_%s.png" % (name, st)))
 
     for st, border in (("normal", LAV), ("over", VIOLET)):
         c = Canvas(214, 123)
@@ -634,11 +673,18 @@ def make_history():
         for y in (18, 24, 30):
             t.rrect((14, y - 1, 29, y + 1), 1, fill=rgba(border))
         t.save(os.path.join(IMAGE, "log_bar_%s.png" % st))
+    # the marks left of a line, a line high (MyHistoryLayer.tjs: lineHeight 42): playing its
+    # voice, and going back to the message (compiled scenes)
     for st, fill, fg in (("normal", VIOLET, WHITE), ("over", WHITE, VIOLET)):
-        p = Canvas(58, 58)
-        p.ellipse((3, 3, 55, 55), fill=rgba(fill), outline=rgba(WHITE if st == "normal" else VIOLET), width=3)
-        ic_play(p, 31, 29, 22, rgba(fg))
+        p = Canvas(42, 42)
+        p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(WHITE if st == "normal" else VIOLET), width=2.5)
+        ic_play(p, 22.5, 21, 16, rgba(fg))
         p.save(os.path.join(IMAGE, "log_play_%s.png" % st))
+    for st, fill, fg in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
+        p = Canvas(42, 42)
+        p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(VIOLET if st == "normal" else WHITE), width=2.5)
+        ic_back(p, 21, 21, 22, rgba(fg))
+        p.save(os.path.join(IMAGE, "log_jump_%s.png" % st))
 
 
 # --- thumbnails drawn from the upscaled art --------------------------------------------

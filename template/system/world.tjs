@@ -567,6 +567,9 @@ class KAGWorldPlugin extends KAGPlugin
 		tagHandlers["scenestarttext"] = scenestarttext incontextof this;
 		tagHandlers["sceneplay"]  = sceneplay incontextof this;
 		tagHandlers["scenecheck"]  = scenecheck incontextof this;
+		// mp for a tag from a macro in a compiled scenario (KAGEnvPlayer.extractTag)
+		tagHandlers["scnmp"] = function(elm) { global.mp_override = elm.mp; return 0; };
+		tagHandlers["scnhistmark"] = function(elm) { return player !== void ? player.histMark(elm) : 0; } incontextof this;
 
 		addTag(kag, tagHandlers);
 	}
@@ -770,6 +773,54 @@ class KAGWorldPlugin extends KAGPlugin
 		player.onProcess(usingExtraConductor) if player !== void;
 	}
 
+	/**
+	 * The scenario KAG reads in place of a script that's played compiled (doc/scn.txt):
+	 * labels that start the player. void reads the script itself
+	 */
+	function onScenarioLoad(name) {
+		if (!scenePlayEnabled) return;
+		var storage = Storages.extractStorageName(name);
+		if (storage == "" || !isSceneListed(storage)) return;
+		var list = Storages.getPlacedPath(sceneListName);
+		if (player === void && (list.substr(0, 7) != "file://" || list.indexOf(">") >= 0) &&
+			!Storages.isExistentStorage(storage + ".scn") && !Storages.isExistentStorage(storage + ".scn.json")) {
+			// nothing compiled, and nowhere to compile it (a package): no need for the player
+			return;
+		}
+		initPlayer();
+		return player.getStub(storage);
+	}
+	var sceneListName = "!scnlist.txt";
+
+	// Whether a script is listed in !scnlist.txt (read again each time in debug mode, where
+	// the list may be edited while the game runs)
+	var sceneListMap;
+	function isSceneListed(storage) {
+		if (sceneListMap === void || debugWindowEnabled) {
+			sceneListMap = %[];
+			if (Storages.isExistentStorage(sceneListName)) {
+				var list = [].load(sceneListName);
+				for (var i = 0; i < list.count; i++) {
+					var name = ((string)list[i]).trim();
+					if (name == "" || name.charAt(0) == "#" || name.indexOf(":") >= 0) continue;
+					sceneListMap[Storages.extractStorageName(name).toLowerCase()] = true;
+				}
+			}
+		}
+		return sceneListMap[storage.toLowerCase()] !== void;
+	}
+
+	// Whether compiled scripts play compiled: playerExecMode, unless -scnplay=no (play every
+	// script from the script itself) or -scnplay=yes says otherwise for this run
+	property scenePlayEnabled {
+		getter() {
+			var arg = System.getArgument("-scnplay");
+			if (arg == "no") return false;
+			if (arg == "yes") return true;
+			return playerExecMode;
+		}
+	}
+
 	// Replacement of current execution position information
 	function getCurrentInfo() {
 		if (playerWorking || playerConverting) {
@@ -877,6 +928,8 @@ class KAGWorldPlugin extends KAGPlugin
 		// Default values if undefined
 		playerExecMode  = envPlayerConvertEnabled   if (playerExecMode  === void && typeof global.envPlayerConvertEnabled   != "undefined");
 		playerReadOnly  = envPlayerReadOnlyEnabled  if (playerReadOnly  === void && typeof global.envPlayerReadOnlyEnabled  != "undefined");
+		// Compiled scripts play compiled unless turned off
+		playerExecMode  = true if playerExecMode === void;
 
 		updateMenuItemChecked();
 	}

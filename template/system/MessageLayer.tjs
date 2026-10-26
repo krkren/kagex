@@ -536,6 +536,8 @@ class LinkEditLayer extends EditLayer
 
 	var exp; // Expression
 
+	var enterExp; // Run on Return ([edit enter=]), after the text is committed
+
 
 
 	function LinkEditLayer(win, par)
@@ -593,6 +595,20 @@ class LinkEditLayer extends EditLayer
 			if(key == VK_LEFT) key = VK_RIGHT;
 
 			else if(key == VK_RIGHT) key = VK_LEFT;
+
+		}
+
+		// Return runs enter= ([edit enter=]) with the text committed
+
+		if (key == VK_RETURN && enterExp != "")
+
+		{
+
+			commit();
+
+			Scripts.eval(enterExp);
+
+			return;
 
 		}
 
@@ -6673,6 +6689,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		object.text = Scripts.eval(exp);
 
 		object.exp  = exp;
+
+		object.enterExp = elm.enter if elm.enter !== void;
 
 		object.antialiased = antialiased;
 

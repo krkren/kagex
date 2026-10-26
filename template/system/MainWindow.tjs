@@ -65,6 +65,8 @@ class KAGWindow extends Window
 	// next word won't fit on the message line or the history line, it breaks the line before
 	// the word. The space the line broke at is dropped: the ch handler checks wrapDropSpace
 	// and wrapDropSpaceHist (assigning to text inside this function has no effect there).
+	// Text from the scene player (compiled scenarios) isn't on the conductor's line: its ch
+	// tags carry wrap = %[key, line], the message as it's drawn (KAGEnvPlayer.extractText).
 	var wrapKey = void;             // "storage:line" of the scenario line the state below is for
 	var wrapSplitLine = void;       // its words; a word gets the space before it appended when that space is reached
 	var wrapNum = 0;                // index of the current word
@@ -117,21 +119,30 @@ class KAGWindow extends Window
 	function wrapLinePos() {
 		return current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
 	}
-	function needsToBeWrapped(text) {
+	function needsToBeWrapped(text, elm) {
 		wrapDropSpace = wrapDropSpaceHist = false;
-		var line = conductor.curLineStr;
-		if (line === void || line == "") return false;
-		var c0 = line[0];
-		if (c0 == "*" || c0 == "[" || c0 == ";" || c0 == "\t") return false;
-		if (line.indexOf(newlineTag) != -1 || line.indexOf(spaceChar) == -1) return false;
+		var wrap = elm !== void ? elm.wrap : void;
+		var line, key;
+		if (wrap !== void) {
+			// A message from the scene player: its text, already without tags
+			line = wrap.line;
+			if (line == "" || line.indexOf(spaceChar) == -1) return false;
+			key = wrap.key;
+		} else {
+			line = conductor.curLineStr;
+			if (line === void || line == "") return false;
+			var c0 = line[0];
+			if (c0 == "*" || c0 == "[" || c0 == ";" || c0 == "\t") return false;
+			if (line.indexOf(newlineTag) != -1 || line.indexOf(spaceChar) == -1) return false;
+			key = conductor.curStorage + ":" + conductor.curLine;
+		}
 
 		// A new scenario line: split it into words. Lines are told apart by position, not
 		// by content, so two identical lines in a row each get their own pass
-		var key = conductor.curStorage + ":" + conductor.curLine;
 		if (key != wrapKey) {
 			wrapKey = key;
 			wrapResume = false;
-			var clean = wrapCleanLine(line);
+			var clean = wrap !== void ? line : wrapCleanLine(line);
 			wrapBreakWrap = clean.indexOf(spaceChar) == -1 ? 1 : 0;
 			wrapSplitLine = wrapBreakWrap ? void : clean.split(spaceChar);
 			wrapNum = 0;
@@ -2365,7 +2376,11 @@ class KAGWindow extends Window
 
 
 
-			visible = !invisible;
+			// a run that only compiles scenarios (-scncompile, as kagex-release does) stays hidden
+
+			var compileArg = System.getArgument("-scncompile");
+
+			visible = !invisible && (compileArg == "" || compileArg == "no");
 
 
 
@@ -9773,6 +9788,12 @@ class KAGWindow extends Window
 
 		// Returning true results in a normal scenario file load.
 
+		// A plugin can do that too (KAGWorldPlugin plays compiled scripts this way)
+
+		var ret = forEachFunctionHook("onScenarioLoad", name);
+
+		if (typeof ret == "String") return ret;
+
 		return true;
 
 	}
@@ -15026,7 +15047,7 @@ class KAGWindow extends Window
 		@endif
 		// Word wrap after every early return above: -3 and -5 run this tag again, and a
 		// space counted twice would put the wrap one word out
-		if (needsToBeWrapped(text)) return showPageBreakAndClear();
+		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			if(currentWithBack) current.comp.processCh(text);
 			repage = current.processCh(text, chUserMode ? acs : 0);

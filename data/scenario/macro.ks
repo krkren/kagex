@@ -24,7 +24,9 @@
 
 [if exp="tf.recollect"]
 
-[sysbutton name=msg_exit   x=1108 y=18 exp="kag.process('title.ks','*start')"]
+[sysbutton name=msg_exit   x=976 y=18 exp="exitScene()"]
+
+[sysbutton name=msg_back   x=1108 y=18 exp="rollBack()"]
 
 [sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
 
@@ -36,9 +38,11 @@
 
 [else]
 
-[sysbutton name=msg_save   x=976 y=18 exp="startSave()"]
+[sysbutton name=msg_save   x=844 y=18 exp="startSave()"]
 
-[sysbutton name=msg_load   x=1108 y=18 exp="startLoad()"]
+[sysbutton name=msg_load   x=976 y=18 exp="startLoad()"]
+
+[sysbutton name=msg_back   x=1108 y=18 exp="rollBack()"]
 
 [sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
 
