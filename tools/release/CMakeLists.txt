@@ -102,7 +102,12 @@ get_filename_component(_scnfile_default "${_kagex_root}/../scnfile" ABSOLUTE)
 set(SCNFILE_DIR "${_scnfile_default}" CACHE PATH "scnfile (for encrypting compiled scenarios; optional)")
 if(EXISTS "${SCNFILE_DIR}/plugins/scnfile/seal.cpp")
     set(_scn "${SCNFILE_DIR}/plugins/scnfile")
-    target_sources(kagex-release PRIVATE "${_scn}/seal.cpp" "${_scn}/seal_random.cpp" "${_scn}/psb.cpp" "${_scn}/monocypher/monocypher.c")
+    target_sources(kagex-release PRIVATE "${_scn}/seal.cpp" "${_scn}/seal_random.cpp" "${_scn}/psb.cpp")
+    # one Monocypher in the tool: xp3crypt_core has its own copy (the same 4.x API), and two
+    # copies' symbols clash at link time
+    if(NOT _have_xp3crypt)
+        target_sources(kagex-release PRIVATE "${_scn}/monocypher/monocypher.c")
+    endif()
     target_include_directories(kagex-release PRIVATE "${_scn}")
     target_compile_definitions(kagex-release PRIVATE KR_HAVE_SCNFILE SCNFILE_HAVE_ZLIB)
     if(WIN32)
