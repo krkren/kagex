@@ -370,6 +370,25 @@ public:
 			return appserve::Response::json(Json::object());
 		});
 
+		// Makes a new archive-encryption key file (body: { path }, absolute or relative to the
+		// game's folder). Refuses to replace a file: a lost or replaced key can't be recovered
+		reg.route("/api/release/keygen", [this](const appserve::Request& req) {
+			const std::string path = req.json()["path"].asStr();
+			if (krt::trim(path).empty()) return appserve::Response::error(400, "Choose where to save the key");
+			fs::path file = krt::toPath(path);
+			if (file.is_relative()) {
+				std::lock_guard<std::mutex> lk(mu_);
+				if (!have_) return appserve::Response::error(400, targetError_);
+				file = target_.project.root / file;
+			}
+			std::string err;
+			if (!makeArchiveKey(file, err)) return appserve::Response::error(400, err);
+			std::error_code ec;
+			Json out = Json::object();
+			out.set("path", Json(krt::fromPath(fs::weakly_canonical(file, ec))));
+			return appserve::Response::json(out);
+		});
+
 		// Saves release.json (body: { settings })
 		reg.route("/api/release/save", [this](const appserve::Request& req) {
 			if (!have_) return appserve::Response::error(400, targetError_);
@@ -388,6 +407,7 @@ private:
 		Json out = Json::object();
 		out.set("version", Json(KAGEX_RELEASE_VERSION));
 		out.set("host", Json(hostId()));
+		out.set("canEncrypt", Json(canEncryptArchive()));
 		Json pls = Json::array();
 		for (const auto& pl : platforms()) {
 			Json o = Json::object();

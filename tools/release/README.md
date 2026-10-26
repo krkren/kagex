@@ -22,7 +22,9 @@ kagex-release --cli keygen <keyfile>       # make an archive-encryption key
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
 release.json enables) and `--json`; `build` also takes `--engines=DIR` (engine packages to use
-instead of downloading them) and `--keep-work` (keep the staged files in `<output>/.work`).
+instead of downloading them; `KAGEX_RELEASE_ENGINES` does the same, and without either an
+`engines/` folder next to the tool is used when there is one) and `--keep-work` (keep the staged
+files in `<output>/.work`).
 Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
 
 ### What a build makes
@@ -99,11 +101,18 @@ With *Encrypt the archive* on (`archive.encrypt`), `data.xp3` is packed with eve
 built into the engine, decrypts each file as the engine reads it, so the game runs the same; the
 scripts and assets are no longer readable in the shipped archive.
 
+In the window, the *Encryption* section has the switch and the *Key file*: **Create key…** asks
+for a folder (it starts outside the game's folder) and a file name and saves a new random key there
+(it never replaces an existing file); **Browse…** picks a key you already have. From the command
+line:
+
 ```bash
 kagex-release --cli keygen game.key        # make a key (64 hex digits; keep it out of the repo)
 ```
 
 Point *Key file* (`archive.keyFile`) at it, or set `KAGEX_ARCHIVE_KEY` (which wins, for CI). The
+check refuses a key inside `data/` (it would be packed into the game) and warns about one inside
+the game's folder (it would likely end up in the repository). The
 build packs the encrypted `data.xp3` and writes the key into each platform's engine; the engine
 must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
 key ships inside the game, so this keeps the files out of casual view rather than making them

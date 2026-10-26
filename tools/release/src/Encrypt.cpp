@@ -93,6 +93,17 @@ bool makeArchiveKey(const fs::path& file, std::string& error)
 	return true;
 }
 
+bool checkArchiveKeyFile(const fs::path& file, std::string& error)
+{
+	std::string text;
+	if (!krt::readFile(file, text)) { error = "it can't be read"; return false; }
+	xp3crypt::Key key;
+	const bool ok = xp3crypt::parseKey(text, key, error);
+	xp3crypt::wipe(key);
+	std::fill(text.begin(), text.end(), '\0');
+	return ok;
+}
+
 bool packEncrypted(const fs::path& stageDir, const fs::path& output, const ArchiveKey& key, int& files, uint64_t& bytes, std::string& error)
 {
 	xp3crypt::PackOptions opt;   // store everything (encrypted), compress the index
@@ -155,6 +166,12 @@ bool readArchiveKey(const Json& s, const Project&, ArchiveKey&, bool& have, std:
 bool makeArchiveKey(const fs::path&, std::string& error)
 {
 	error = "This kagex-release was built without xp3crypt, so it can't make archive keys";
+	return false;
+}
+
+bool checkArchiveKeyFile(const fs::path&, std::string& error)
+{
+	error = "this kagex-release was built without xp3crypt";
 	return false;
 }
 

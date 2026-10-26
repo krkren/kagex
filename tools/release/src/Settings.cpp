@@ -4,7 +4,9 @@
 #include <regex>
 #include <set>
 
+#include "Encrypt.h"
 #include "Media.h"
+#include "Subprocess.h"
 #include "krt/app/Text.h"
 
 namespace fs = std::filesystem;
@@ -339,12 +341,26 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const std::string patchFrom = str(s, "output.patchFrom");
 	if (!patchFrom.empty() && !exists(patchFrom)) error("output.patchFrom", "The file list " + patchFrom + " doesn't exist (a build writes <file name>-<version>-files.json beside its packages)");
 
-	// archive encryption: a named key file must exist (the key may instead come from
-	// KAGEX_ARCHIVE_KEY, which validate can't see; Build checks that one at build time)
+	// archive encryption: a named key file must exist and hold a key (the key may instead come
+	// from KAGEX_ARCHIVE_KEY, which Build checks at build time)
 	if (flag(s, "archive.encrypt")) {
 		const std::string keyFile = str(s, "archive.keyFile");
-		if (!keyFile.empty() && !exists(keyFile))
-			error("archive.keyFile", "The archive key " + keyFile + " doesn't exist (make one with: kagex-release --cli keygen <file>, or the xp3crypt tool)");
+		if (!canEncryptArchive()) error("archive.encrypt", "This kagex-release was built without xp3crypt, so it can't encrypt the archive");
+		else if (keyFile.empty()) {
+			if (getEnv("KAGEX_ARCHIVE_KEY").empty()) error("archive.keyFile", "Choose the key file, or create one (Create key…)");
+		} else if (!exists(keyFile)) {
+			error("archive.keyFile", "The key file " + keyFile + " doesn't exist (Create key… makes one)");
+		} else {
+			const fs::path key = fs::weakly_canonical(p.root / krt::toPath(keyFile), ec);
+			std::string why;
+			if (!checkArchiveKeyFile(key, why)) error("archive.keyFile", keyFile + " isn't a key: " + why);
+			const auto inside = [&](const fs::path& dir) {
+				const auto rel = fs::relative(key, fs::weakly_canonical(dir, ec), ec);
+				return !ec && !rel.empty() && *rel.begin() != "..";
+			};
+			if (inside(p.data)) error("archive.keyFile", "The key is inside data/, so it would be packed into the game: keep it outside the game's folder");
+			else if (inside(p.root)) warn("archive.keyFile", "The key is inside the game's folder: keep it out of the game's repository (anyone with it can read the encrypted files)");
+		}
 	}
 
 	// platforms

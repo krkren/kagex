@@ -87,6 +87,16 @@ const SECTIONS = [
 			{ path: 'engine.debug', label: 'Engine', type: 'check', text: 'Debug engine (keeps the console and debug keys; for testers, not for players)' },
 		],
 	},
+	{
+		id: 'encryption', title: 'Encryption',
+		intro: 'Encrypts every file in data.xp3, so the game\'s scripts and pictures can\'t be read out of the package; the engine decrypts them as it reads, with the key written into each build\'s engine. The engine packages need the xp3crypt plugin built in. The key ships inside the game, so this keeps the files out of casual view; it doesn\'t stop a determined person.',
+		fields: [
+			{ type: 'note', label: '', text: 'This kagex-release was built without xp3crypt, so it can\'t encrypt.', showIf: () => !state.canEncrypt },
+			{ path: 'archive.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the files in data.xp3 (platforms whose data is data.xp3 or bound into the executable)', showIf: () => state.canEncrypt },
+			{ path: 'archive.keyFile', label: 'Key file', type: 'keyfile', showIf: (s) => state.canEncrypt && s.archive.encrypt,
+			  help: 'Create key… makes a new random key; Browse… picks one you already have. Keep it outside the game\'s folder and back it up: a game can only be rebuilt or patched with the key it was released with, and anyone who has it can read the encrypted files. KAGEX_ARCHIVE_KEY overrides it (for CI)' },
+		],
+	},
 	{ id: 'plan', title: 'Check', intro: 'What a build would make, and anything that would stop it.', render: renderPlan },
 ];
 
@@ -147,6 +157,18 @@ function relativePath(p) {
 	return p;
 }
 
+// A settings path as an absolute one (settings paths are relative to the game's folder)
+function absolutePath(p) {
+	if (p.startsWith('/') || /^[A-Za-z]:[\\/]/.test(p)) return p;
+	return state.project.root.replace(/\/+$/, '') + '/' + p;
+}
+
+function parentFolder(p) {
+	const t = p.replace(/[\\/]+$/, '');
+	const i = Math.max(t.lastIndexOf('/'), t.lastIndexOf('\\'));
+	return i > 0 ? t.slice(0, i) : t;
+}
+
 function input(f, path, value, onChange) {
 	switch (f.type) {
 		case 'check': {
@@ -203,6 +225,33 @@ function input(f, path, value, onChange) {
 			} }, 'Browse…');
 			return el('div', { class: 'field' }, t, b);
 		}
+		case 'keyfile': {
+			// the archive key: picked, or made here (outside the game's folder by default)
+			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', placeholder: 'No key chosen', oninput: (e) => onChange(e.target.value) });
+			const choose = (p) => { t.value = relativePath(p); onChange(t.value); };
+			const outside = parentFolder(state.project.root);
+			const browse = el('button', { onclick: async () => {
+				const picked = await pickPath(t.value ? absolutePath(t.value) : outside, true);
+				if (picked != null) choose(picked);
+			} }, 'Browse…');
+			const create = el('button', { onclick: async () => {
+				const folder = await pickPath(t.value ? parentFolder(absolutePath(t.value)) : outside, false);
+				if (folder == null) return;
+				const name = await promptBox('Create a key', 'A new random key is saved in ' + folder + '. Keep it out of the game\'s repository, and back it up.',
+					'File name', (get(settings, 'identity.exeName') || 'game') + '.key', 'Create');
+				if (!name) return;
+				try {
+					const r = await app.post('/api/release/keygen', { path: folder.replace(/[\\/]+$/, '') + '/' + name });
+					choose(r.path);
+					alertBox('Key created', 'Saved a new key to ' + r.path + '. Back it up: a game released with it can only be rebuilt or patched with the same key, and anyone who has it can read the encrypted files.');
+				} catch (e) {
+					alertBox('Couldn\'t create the key', String(e.message || e));
+				}
+			} }, 'Create key…');
+			return el('div', { class: 'field' }, t, browse, create);
+		}
+		case 'note':
+			return el('div', { class: 'muted' }, f.text || '');
 		default: {
 			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', oninput: (e) => onChange(e.target.value) });
 			return el('div', { class: 'field' }, t);
@@ -217,6 +266,10 @@ function renderFields(grid, fields, base) {
 	const scope = base ? get(settings, base) : settings;
 	for (const f of fields) {
 		if (f.showIf && !f.showIf(scope)) continue;
+		if (!f.path) {   // text only (a note), no setting
+			grid.append(el('label', {}, f.label || ''), input(f, '', undefined, () => {}));
+			continue;
+		}
 		const path = base ? base + '.' + f.path : f.path;
 		grid.append(el('label', {}, f.label));
 		grid.append(input(f, path, get(settings, path), (v) => {
@@ -349,7 +402,7 @@ function showFieldIssues() {
 	for (const sec of SECTIONS) {
 		const badge = document.querySelector(`[data-badge="${sec.id}"]`);
 		if (!badge) continue;
-		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], output: ['output', 'engine'], plan: [''] }[sec.id];
+		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], output: ['output', 'engine'], encryption: ['archive'], plan: [''] }[sec.id] || [];
 		const mine = issues.filter((i) => prefix.some((p) => i.field.startsWith(p)));
 		const errs = mine.filter((i) => i.level === 'error').length;
 		badge.textContent = errs || mine.length || '';
@@ -524,6 +577,27 @@ function passwordBox(title, text, fields) {
 		for (const [, i] of inputs) i.addEventListener('keydown', (e) => { if (e.key === 'Enter') go.click(); });
 		document.body.append(dlg);
 		inputs[0][1].focus();
+	});
+}
+
+// One line of text (null when canceled)
+function promptBox(title, text, label, initial, yes) {
+	return new Promise((resolve) => {
+		const box = el('input', { type: 'text', spellcheck: 'false', 'aria-label': label });
+		box.value = initial || '';
+		const cancel = el('button', {}, 'Cancel');
+		const go = el('button', { class: 'primary' }, yes || 'OK');
+		const dlg = el('div', { class: 'modal' }, el('div', { class: 'dialog' },
+			el('div', { class: 'dialog-title' }, title), el('div', { class: 'muted' }, text),
+			el('div', { class: 'grid' }, el('label', {}, label), el('div', { class: 'field' }, box)),
+			el('div', { class: 'dialog-buttons' }, cancel, go)));
+		const done = (v) => { dlg.remove(); resolve(v); };
+		cancel.addEventListener('click', () => done(null));
+		go.addEventListener('click', () => { const v = box.value.trim(); if (v) done(v); });
+		box.addEventListener('keydown', (e) => { if (e.key === 'Enter') go.click(); if (e.key === 'Escape') cancel.click(); });
+		document.body.append(dlg);
+		box.focus();
+		box.select();
 	});
 }
 

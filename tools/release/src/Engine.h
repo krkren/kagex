@@ -9,9 +9,10 @@
 //   linux/steam: krkrz, libSDL3.so.0, plugin/lib*.so
 //   macos:       KAGEX.app (no data, unsigned)
 //
-// Looked for in a folder given with --engines / KAGEX_RELEASE_ENGINES (zips, or the same
-// unpacked into folders of those names), then in the cache, then downloaded from the KAGEX
-// release of this tool's version (KAGEX_RELEASE_ENGINE_URL overrides where from).
+// Looked for in a folder given with --engines / KAGEX_RELEASE_ENGINES, or else an engines/
+// folder next to this tool (zips, or the same unpacked into folders of those names), then in the
+// cache, then downloaded from the KAGEX release of this tool's version
+// (KAGEX_RELEASE_ENGINE_URL overrides where from).
 //---------------------------------------------------------------------------
 #pragma once
 #include <filesystem>
@@ -27,6 +28,10 @@ namespace kr {
 std::string engineAssetName(const std::string& platform, bool debug);
 /// Whether a debug engine is published for the platform (Windows and Linux)
 bool hasDebugEngine(const std::string& platform);
+
+/// The folder of engine packages to use before the cache: localDir when given, else
+/// KAGEX_RELEASE_ENGINES, else an engines/ folder next to this tool. Empty when there's none
+std::filesystem::path localEngines(const std::filesystem::path& localDir = {});
 
 /// The unpacked engine for platform. localDir may be empty
 bool ensureEngine(const std::string& platform, bool debug, const std::filesystem::path& localDir,

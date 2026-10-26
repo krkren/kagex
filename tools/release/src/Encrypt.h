@@ -29,6 +29,9 @@ bool readArchiveKey(const Json& settings, const Project& project, ArchiveKey& ke
 /// Writes a new random key to file (refuses to replace one)
 bool makeArchiveKey(const std::filesystem::path& file, std::string& error);
 
+/// Whether file holds a key (64 hexadecimal digits); the key itself isn't kept
+bool checkArchiveKeyFile(const std::filesystem::path& file, std::string& error);
+
 /// Packs the staged folder into an encrypted data.xp3 at `output`. files/bytes get the counts
 bool packEncrypted(const std::filesystem::path& stageDir, const std::filesystem::path& output, const ArchiveKey& key,
                    int& files, uint64_t& bytes, std::string& error);
