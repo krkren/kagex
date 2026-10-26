@@ -26,7 +26,7 @@ concurrency:
 
 env:
   RELEASE_TAG: "0.8.0"
-  KAGEX_SHA: e63d0ea55a1dd32ecc63ac274409e750c616d512
+  KAGEX_SHA: 712155a2a3ef4b7a41a4be0943cde6896cf9d998
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -398,8 +398,6 @@ jobs:
                       data/fgimage/emblem.clip data/main/charinit.csv data/fgimage/pip/pip_0.txt data/voice/pip000001.ogg; do
             [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
           done
-          # the heap-corruption workaround (UPSTREAM.md: the engine's general memory pool)
-          grep -qx 'krkrzpoolsize=none' pkg/krkrz.cf || { echo "krkrz.cf doesn't turn the general memory pool off"; exit 1; }
           ldd pkg/krkrz | tee results/ldd.txt
           (cd pkg && zip -q -9 -r "../$name" .)
           (cd pkg && find . -type f ! -path './data/*' ! -path './template/*' -printf '%12s %P\n' | sort -k2) > results/package-files.txt

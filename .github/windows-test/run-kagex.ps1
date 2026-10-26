@@ -25,10 +25,17 @@ $script:proc   = $null
 $script:shotNo = 0
 $script:steps  = [System.Collections.Generic.List[object]]::new()
 
+# The REPL file channel pretty-prints a result on its own thread, and a TJS string or object
+# handled there races the main thread's reference counts: engine 2.6.5 aborted with "double free
+# or corruption" in about one run in five (UPSTREAM.md). So the main thread writes the result to
+# ci-chan/result.txt (a type letter, then the value) and the REPL only gets the number 0 back.
 function Invoke-Tjs([string]$Code, [int]$TimeoutSec = 30) {
     if ($script:proc.HasExited) { throw "engine has exited (code $($script:proc.ExitCode))" }
     $tmp = Join-Path $chan 'cmd.tmp'; $cmd = Join-Path $chan 'cmd'; $resp = Join-Path $chan 'resp'
-    [IO.File]::WriteAllText($tmp, $Code, [Text.UTF8Encoding]::new($false))
+    $out = Join-Path $chan 'result.txt'
+    Remove-Item -Force $out -ErrorAction SilentlyContinue
+    $wrapped = "(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ]; a.save(System.exePath + 'ci-chan/result.txt'); return 0; })(($Code))"
+    [IO.File]::WriteAllText($tmp, $wrapped, [Text.UTF8Encoding]::new($false))
     Move-Item -Force $tmp $cmd
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while (-not (Test-Path $resp)) {
@@ -43,12 +50,13 @@ function Invoke-Tjs([string]$Code, [int]$TimeoutSec = 30) {
     }
     $r = $txt | ConvertFrom-Json
     if (-not $r.ok) { throw "TJS: $($r.error)" }
-    $v = [string]$r.result
-    # Strings come back pretty-printed, i.e. quoted
-    if ($v.Length -ge 2 -and $v[0] -eq '"' -and $v[-1] -eq '"') {
-        try { $v = [string]($v | ConvertFrom-Json) } catch { $v = $v.Substring(1, $v.Length - 2) }
-    }
-    return $v
+    # UTF-16 with a BOM, one line per element: the value, then a line end
+    $v = [IO.File]::ReadAllText($out)
+    if ($v.EndsWith("`n")) { $v = $v.Substring(0, $v.Length - 1) }
+    if ($v.EndsWith("`r")) { $v = $v.Substring(0, $v.Length - 1) }
+    if ($v.Length -eq 0) { throw "no result from: $($Code.Substring(0, [Math]::Min(80, $Code.Length)))" }
+    if ($v[0] -eq 'V') { return '(void)' }
+    return $v.Substring(1)
 }
 
 function Get-State {
