@@ -1386,6 +1386,11 @@ def scncompile_check(opts, data):
         print("FAIL -scncompile=all compiles the listed scripts and exits (exit code %s)" % code)
         for l in (done + errors)[:20] or out.splitlines()[-30:]:
             print("     " + l)
+        if code != 0 and done:
+            # it compiled, then stopped on the way out: what the engine said last
+            print("     last lines:")
+            for l in out.splitlines()[-30:]:
+                print("     " + l)
         return 1
     print("ok   %-62s %5.1fs" % ("-scncompile=all compiles the listed scripts and exits", time.time() - t))
     print("     " + done[-1].split("Compiled scenarios:")[-1].strip(), flush=True)
