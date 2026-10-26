@@ -82,8 +82,8 @@ const SECTIONS = [
 		intro: 'Scripts listed in !scnlist.txt can be compiled into .scn files, which the game plays without the scripts (doc/scn.txt).',
 		fields: [
 			{ path: 'scenes.compile', label: 'Compile', type: 'check', text: 'Compile the scripts in !scnlist.txt and leave the scripts out' },
-			{ path: 'scenes.keyFile', label: 'Key', type: 'key', showIf: (s) => s.scenes.compile && state.scnfile,
-				help: 'Encrypts the compiled scripts; the key is written into each package\'s engine. Empty: not encrypted. Keep the key out of the game\'s repository, and keep it: patches have to be built with the same one' },
+			{ path: 'scenes.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the compiled scripts with the scenes key (Keys)', showIf: (s) => s.scenes.compile && state.scnfile,
+				help: 'The key is written into each package\'s scnfile plugin. Patches have to be built with the same key' },
 		],
 	},
 	{
@@ -98,6 +98,14 @@ const SECTIONS = [
 		],
 	},
 	{
+		id: 'keys', title: 'Keys',
+		intro: 'One file holds the game\'s keys, a key of its own for each kind of protection: the archive (Encryption), the compiled scenarios (Scenarios) and signing. Keep it outside the game\'s folder and out of its repository, and back it up: a game\'s patches and later builds need the keys it was released with, and anyone who has the file can read its encrypted files and sign as the game.',
+		fields: [
+			{ path: 'keys.file', label: 'Keys file', type: 'keysfile',
+			  help: 'Create keys… makes a new keys file, or adds the keys an existing one lacks (it never replaces a key); Browse… picks one you already have. The KAGEX_KEYS_FILE environment variable overrides it (for CI)' },
+		],
+	},
+	{
 		id: 'signing', title: 'Signing',
 		intro: 'Check the game files for tampering before the game starts (Windows, Linux and macOS). The game carries your public key and verifies the archive, the engine and any patches; a damaged or differently signed file stops it. The web, Android and iOS builds rely on the platform instead.',
 		render: renderSigning,
@@ -107,9 +115,7 @@ const SECTIONS = [
 		intro: 'Encrypts every file in data.xp3, so the game\'s scripts and pictures can\'t be read out of the package; the engine decrypts them as it reads, with the key written into each build\'s engine. The engine packages need the xp3crypt plugin built in. The key ships inside the game, so this keeps the files out of casual view; it doesn\'t stop a determined person.',
 		fields: [
 			{ type: 'note', label: '', text: 'This kagex-release was built without xp3crypt, so it can\'t encrypt.', showIf: () => !state.canEncrypt },
-			{ path: 'archive.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the files in data.xp3 (platforms whose data is data.xp3 or bound into the executable)', showIf: () => state.canEncrypt },
-			{ path: 'archive.keyFile', label: 'Key file', type: 'keyfile', showIf: (s) => state.canEncrypt && s.archive.encrypt,
-			  help: 'Create key… makes a new random key; Browse… picks one you already have. Keep it outside the game\'s folder and back it up: a game can only be rebuilt or patched with the key it was released with, and anyone who has it can read the encrypted files. KAGEX_ARCHIVE_KEY overrides it (for CI)' },
+			{ path: 'archive.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the files in data.xp3 with the archive key (Keys; platforms whose data is data.xp3 or bound into the executable)', showIf: () => state.canEncrypt },
 			{ path: 'archive.hideNames', label: 'Hide names', type: 'check', text: 'Also hide the file names (one archive, data.xpc, with hashed names)', showIf: (s) => state.canEncrypt && s.archive.encrypt,
 			  help: 'The game ships as one encrypted archive whose file names are hashed, so a generic tool sees neither the files nor their names. Desktop only, and the data mode can\'t be "bind". The game reads it through the plugin\'s xpcrypt:// medium' },
 		],
@@ -118,8 +124,7 @@ const SECTIONS = [
 ];
 
 const SIGNING_FIELDS = [
-	{ path: 'enabled', label: 'Signing', type: 'check', text: 'Sign the release and check it at start-up' },
-	{ path: 'privateKey', label: 'Private key', type: 'file', showIf: (s) => s.enabled, help: 'Your RSA private key. Keep it secret and out of version control. The KAGEX_SIGNING_KEY environment variable overrides it, for CI' },
+	{ path: 'enabled', label: 'Signing', type: 'check', text: 'Sign the release with the signing key (Keys) and check it at start-up' },
 	{ path: 'splitArchives', label: 'Split large archives', type: 'check', showIf: (s) => s.enabled, text: 'Put large media folders in their own archives (done automatically once the data passes 2 GB)' },
 ];
 
@@ -238,24 +243,6 @@ function input(f, path, value, onChange) {
 			table.append(el('tr', { class: 'add' }, el('td', { colspan: 3 }, el('button', { onclick: () => { addRow('', 96); } }, 'Add a folder'))));
 			return table;
 		}
-		case 'key': {
-			// a key file, or a new one made here
-			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', placeholder: 'not encrypted', oninput: (e) => onChange(e.target.value) });
-			const browse = el('button', { onclick: async () => {
-				const picked = await pickPath(t.value ? state.project.root + '/' + t.value : state.project.root, true);
-				if (picked != null) { t.value = relativePath(picked); onChange(t.value); }
-			} }, 'Browse…');
-			const make = el('button', { onclick: async () => {
-				try {
-					const r = await app.post('/api/release/scenes-keygen', { path: t.value || 'scenario.key' });
-					t.value = relativePath(r.file);
-					onChange(t.value);
-				} catch (e) {
-					alertBox('Could not make a key', String(e.message || e));
-				}
-			} }, 'New key');
-			return el('div', { class: 'field' }, t, browse, make);
-		}
 		case 'file':
 		case 'folder': {
 			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', oninput: (e) => onChange(e.target.value) });
@@ -266,9 +253,9 @@ function input(f, path, value, onChange) {
 			} }, 'Browse…');
 			return el('div', { class: 'field' }, t, b);
 		}
-		case 'keyfile': {
-			// the archive key: picked, or made here (outside the game's folder by default)
-			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', placeholder: 'No key chosen', oninput: (e) => onChange(e.target.value) });
+		case 'keysfile': {
+			// the keys file: picked, or made here (outside the game's folder by default)
+			const t = el('input', { type: 'text', value: value ?? '', spellcheck: 'false', placeholder: 'No keys file chosen', oninput: (e) => onChange(e.target.value) });
 			const choose = (p) => { t.value = relativePath(p); onChange(t.value); };
 			const outside = parentFolder(state.project.root);
 			const browse = el('button', { onclick: async () => {
@@ -278,17 +265,19 @@ function input(f, path, value, onChange) {
 			const create = el('button', { onclick: async () => {
 				const folder = await pickPath(t.value ? parentFolder(absolutePath(t.value)) : outside, false);
 				if (folder == null) return;
-				const name = await promptBox('Create a key', 'A new random key is saved in ' + folder + '. Keep it out of the game\'s repository, and back it up.',
-					'File name', (get(settings, 'identity.exeName') || 'game') + '.key', 'Create');
+				const current = t.value ? absolutePath(t.value).split(/[\\/]/).pop() : '';
+				const name = await promptBox('Create keys', 'The keys file is saved in ' + folder + '. If it is already there, the keys it lacks are added and the others kept. Keep it out of the game\'s repository, and back it up.',
+					'File name', current || ((get(settings, 'identity.exeName') || 'game') + '-keys.txt'), 'Create');
 				if (!name) return;
 				try {
-					const r = await app.post('/api/release/archive-keygen', { path: folder.replace(/[\\/]+$/, '') + '/' + name });
+					const r = await app.post('/api/release/keygen', { path: folder.replace(/[\\/]+$/, '') + '/' + name });
 					choose(r.path);
-					alertBox('Key created', 'Saved a new key to ' + r.path + '. Back it up: a game released with it can only be rebuilt or patched with the same key, and anyone who has it can read the encrypted files.');
+					alertBox('Keys created', 'Wrote the ' + r.added.join(', ') + ' key' + (r.added.length === 1 ? '' : 's') + ' to ' + r.path +
+						'. Back it up: a game released with these keys can only be rebuilt or patched with them, and anyone who has the file can read its encrypted files and sign as the game.');
 				} catch (e) {
-					alertBox('Couldn\'t create the key', String(e.message || e));
+					alertBox('Couldn\'t create the keys', String(e.message || e));
 				}
-			} }, 'Create key…');
+			} }, 'Create keys…');
 			return el('div', { class: 'field' }, t, browse, create);
 		}
 		case 'note':
@@ -393,28 +382,6 @@ function renderSigning(body) {
 	const grid = el('div', { class: 'grid' });
 	body.append(grid);
 	renderFields(grid, SIGNING_FIELDS, 'signing');
-	if (get(settings, 'signing.enabled')) {
-		const status = el('span', { class: 'muted' });
-		const btn = el('button', { onclick: () => createKeyPair(status) }, 'Create key pair…');
-		body.append(el('div', { class: 'platform-body' }, btn, ' ', status));
-	}
-}
-
-async function createKeyPair(status) {
-	const dir = await pickPath(state.project.root, false);
-	if (dir == null) return;
-	status.textContent = 'Generating…';
-	try {
-		const r = await app.post('/api/release/keygen', { bits: 2048, privatePath: dir + '/signing-private.txt', publicPath: dir + '/signing-public.txt' });
-		set(settings, 'signing.privateKey', relativePath(r.privatePath));
-		changed();
-		build();   // re-render so the key field shows the new path
-		alertBox('Key pair created', 'Private key: ' + r.privatePath + '\nPublic key: ' + r.publicPath +
-			'\n\nKeep the private key secret and out of version control — back it up, or you can\'t sign updates that verify against the same public key. It is now set as the signing key.');
-	} catch (e) {
-		status.textContent = '';
-		alertBox('Could not create the key', String(e.message || e) + '\n\nChoose a folder without a signing-private.txt already in it.');
-	}
 }
 
 //---------------------------------------------------------------------------
@@ -477,7 +444,7 @@ function showFieldIssues() {
 	for (const sec of SECTIONS) {
 		const badge = document.querySelector(`[data-badge="${sec.id}"]`);
 		if (!badge) continue;
-		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], scenes: ['scenes'], output: ['output', 'engine'], signing: ['signing'], encryption: ['archive'], plan: [''] }[sec.id] || [];
+		const prefix = { game: ['identity'], platforms: ['platforms'], media: ['media'], contents: ['contents'], scenes: ['scenes'], output: ['output', 'engine'], keys: ['keys'], signing: ['signing'], encryption: ['archive'], plan: [''] }[sec.id] || [];
 		const mine = issues.filter((i) => prefix.some((p) => i.field.startsWith(p)));
 		const errs = mine.filter((i) => i.level === 'error').length;
 		badge.textContent = errs || mine.length || '';

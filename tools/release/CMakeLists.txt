@@ -69,6 +69,7 @@ add_executable(kagex-release
     src/Build.cpp
     src/Encrypt.cpp
     src/Media.cpp
+    src/Keys.cpp
     src/Sign.cpp
     src/Scripts.cpp
     src/Scenes.cpp

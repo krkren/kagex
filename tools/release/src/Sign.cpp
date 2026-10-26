@@ -106,15 +106,4 @@ bool verifyFileWith(const fs::path& file, const std::string& publicPem, std::str
 	return false;
 }
 
-bool readKeyText(const fs::path& file, std::string& text, std::string& error)
-{
-	if (!krt::readFile(file, text)) { error = "can't read " + krt::fromPath(file); return false; }
-	return true;
-}
-
-bool looksLikePrivateKey(const std::string& text)
-{
-	return text.find(kPrivBegin) != std::string::npos;
-}
-
 } // namespace kr

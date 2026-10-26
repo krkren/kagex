@@ -25,10 +25,4 @@ bool signFileWith(const std::filesystem::path& file, const std::string& privateP
 /// Verifies a file against a public key (true only when the signature is valid).
 bool verifyFileWith(const std::filesystem::path& file, const std::string& publicPem, std::string& error);
 
-/// Reads a key file as text (the PEM block may have other lines around it).
-bool readKeyText(const std::filesystem::path& file, std::string& text, std::string& error);
-
-/// A rough check that text holds an RSA private key block (for validation messages).
-bool looksLikePrivateKey(const std::string& text);
-
 } // namespace kr

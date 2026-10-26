@@ -17,18 +17,45 @@ kagex-release --cli init  [path]           # write release.json with the default
 kagex-release --cli check [release.json]   # problems in the settings, and what this computer can build
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
-kagex-release --cli keygen [folder]        # write a signing key pair (private.txt, public.txt)
-kagex-release --cli archive-keygen <keyfile>  # make an archive-encryption key
-kagex-release --cli scenes-keygen <file>   # a new key for encrypting compiled scenarios
+kagex-release --cli keygen <keys file>     # write the game's keys file, or add the keys it lacks
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
 release.json enables) and `--json`; `build` also takes `--engines=DIR` (engine packages to use
 instead of downloading them; `KAGEX_RELEASE_ENGINES` does the same, and without either an
-`engines/` folder next to the tool is used when there is one) and `--keep-work` (keep the staged
+`engines/` folder next to the game's `data/`, or else next to the tool, is used when there is one) and `--keep-work` (keep the staged
 files in `<output>/.work`).
-`keygen` takes `--bits=1024|2048|3072|4096` (default 2048), `--private=FILE`, `--public=FILE` and
-`--force`. Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
+`keygen` takes `--bits=1024|2048|3072|4096` (the signing key's length, default 2048) and `--force`
+(every key new). Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
+
+### The keys file
+
+Encrypting the archive, encrypting the compiled scenarios and signing each use a key of their
+own, and all three live in one file, the game's **keys file** (*Keys*, `keys.file`; the
+`KAGEX_KEYS_FILE` environment variable names it instead, for CI). So one key never opens
+another kind of protection, and there is one file to keep safe:
+
+```text
+# kagex-release keys. ...
+archive: 64 hexadecimal digits      (data.xp3, xp3crypt)
+scenes: 64 hexadecimal digits       (compiled scenarios, scnfile)
+signing:
+-----BEGIN RSA PRIVATE KEY-----      (signing, sigcheck)
+...
+-----END RSA PRIVATE KEY-----
+```
+
+*Create keys…* in the window (it starts outside the game's folder) or
+`kagex-release --cli keygen <file>` writes one with all three, or adds to an existing file the
+keys it lacks and keeps the rest; it never replaces a key unless given `--force`. Keep the file
+secret, outside the game's folder and out of its repository, and back it up: a game's patches and
+later builds need the keys it was released with, and anyone who has the file can read its
+encrypted files and sign files as the game. The check refuses a keys file inside `data/` (it
+would be packed into the game), one that lacks a key the settings use, and one whose archive and
+scenes keys are the same; it warns about one inside the game's folder. Nothing from the file is
+stored in `release.json`, and only what a game needs to read its files goes into its engines.
+The signing key is a PEM block that krkrz_tools' `krkrsign` reads out of the file as it is
+(`krkrsign --cli sign --key=<keys file> dlc.zip` signs a DLC zip for `KAGMountSignedPatchZip`).
 
 ### What a build makes
 
@@ -110,15 +137,11 @@ beside the executable), and every extra archive and patch. If any file is damage
 signed with a different key, the game shows a message naming the file and quits. A signed build
 also refuses the engine's REPL and debug options, so no console can be opened into it.
 
-- **Make a key pair** with *Create key pair…* in the window, or `kagex-release --cli keygen`. The
-  **private key signs** and must stay secret and out of version control; the **public key** is
-  written into `data.xp3` so the game can check itself. Lose the private key and you can't make
-  updates that verify against the same public key, so keep a backup.
-- **Set the key**: *Signing > Private key* (`signing.privateKey`, a path), or the
-  `KAGEX_SIGNING_KEY` environment variable (a path, or the key text itself) for CI. The key is
-  never stored in `release.json` or shipped. The tool refuses to build if the key sits inside
-  `data/` (it would be packed into the game), and a signed desktop build must ship an archive
-  (`data.xp3` or bound into the executable), not a loose `data/` folder.
+- **The key** is the signing key of the keys file (above): its **private key signs**, and the
+  **public key**, worked out from it, is written into `data.xp3` so the game can check itself.
+  Lose the keys file and you can't make updates that verify against the same public key, so keep a
+  backup. A signed desktop build must ship an archive (`data.xp3` or bound into the executable),
+  not a loose `data/` folder.
 - **Patches and extra archives** are signed too (`patch.zip` gets a `patch.zip.sig`). In a signed
   build they are verified and mounted only after the framework and `Config` load, so a patch can
   change scenarios, images and other assets, but the framework, `Config` and `Override` need a
@@ -145,24 +168,15 @@ With *Encrypt the archive* on (`archive.encrypt`), `data.xp3` is packed with eve
 built into the engine, decrypts each file as the engine reads it, so the game runs the same; the
 scripts and assets are no longer readable in the shipped archive.
 
-In the window, the *Encryption* section has the switch and the *Key file*: **Create key…** asks
-for a folder (it starts outside the game's folder) and a file name and saves a new random key there
-(it never replaces an existing file); **Browse…** picks a key you already have. From the command
-line:
-
-```bash
-kagex-release --cli keygen game.key        # make a key (64 hex digits; keep it out of the repo)
-```
+The key is the archive key of the keys file (above).
 
 **Hide names** (`archive.hideNames`, desktop only) goes further: the game ships as one encrypted
 archive `data.xpc` whose file names are hashed, so a generic tool sees neither the files nor their
 names. The engine reads it through the plugin's `xpcrypt://` storage medium, with a tiny plain
 `data/startup.tjs` that mounts it; the data mode can't be "bind".
 
-Point *Key file* (`archive.keyFile`) at it, or set `KAGEX_ARCHIVE_KEY` (which wins, for CI). The
-check refuses a key inside `data/` (it would be packed into the game) and warns about one inside
-the game's folder (it would likely end up in the repository). The
-build packs the encrypted `data.xp3` and writes the key into each platform's engine; the engine
+Hidden names can't be signed yet (a signed build checks `data.xp3` or the executable it's bound
+into). The build packs the encrypted `data.xp3` (and, when the data is split, its parts) and writes the key into each platform's engine; the engine
 must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
 key ships inside the game, so this keeps the files out of casual view rather than making them
 unrecoverable to a determined person. Encryption applies to files inside `data.xp3`, so a platform
@@ -184,13 +198,11 @@ package, and the game plays the compiled files (`doc/scn.txt`).
   reads (in plain text). The check says which it will be (a note on this computer's platform,
   and *To compile: ... to .scn* in the plan) once the engine is here, and marks a platform whose
   engine lacks the plugin as one that can't be built.
-- **Encryption.** With a key (*Key*, `scenes.keyFile`, or `KAGEX_SCENES_KEY` set to its 64
-  hexadecimal digits, which wins), the `.scn` files are encrypted (XChaCha20-Poly1305, scnfile's
-  `docs/format.md`) and the key is written into each package's copy of the plugin, before
-  signing and before the web build's id. *New key* (or `--cli keygen <file>`) makes one. Keep it,
-  out of the game's repository (it can't be inside `data/`): a patch has to be built with the
-  same key, and since the same file and key always encrypt to the same bytes, a patch holds only
-  the scripts that changed. The key is in the game too, as it must be for the game to read its
+- **Encryption.** With *Encrypt* on (`scenes.encrypt`), the `.scn` files are encrypted with the
+  scenes key of the keys file (above; XChaCha20-Poly1305, scnfile's `docs/format.md`) and the key
+  is written into each package's copy of the plugin, before signing and before the web build's
+  id. A patch has to be built with the same key, and since the same file and key always encrypt
+  to the same bytes, a patch holds only the scripts that changed. The key is in the game too, as it must be for the game to read its
   files: this keeps the scripts from plain view, not from a determined person.
 
 ### Media
@@ -260,7 +272,7 @@ and its Simulator build. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a 
 them instead (zips, or unpacked into folders of the same names), for working offline;
 `KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from. Without either, an `engines/`
 folder next to the game's `data/` is used when there is one (engine packages of your own, such
-as ones with the scnfile plugin).
+as ones with the scnfile or xp3crypt plugin), or else one next to the tool.
 
 ### release.json
 
@@ -269,11 +281,12 @@ as ones with the scnfile plugin).
 | `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
-| `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `keyFile` (the key that encrypts them; empty: not encrypted) |
+| `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
-| `signing` | `enabled` (check for tampering before the game starts), `privateKey` (the signing key file; `KAGEX_SIGNING_KEY` overrides it and is never stored), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
-| `archive` | `encrypt` (pack `data.xp3` encrypted; the engine needs the xp3crypt plugin), `keyFile` (the key, 64 hex digits; or `KAGEX_ARCHIVE_KEY`), `hideNames` (ship one `data.xpc` with hashed file names; desktop only) |
+| `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
+| `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
+| `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (ship one `data.xpc` with hashed file names; desktop only) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,

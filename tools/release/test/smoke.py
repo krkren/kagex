@@ -20,7 +20,7 @@
   written into the engine's scnfile plugin (where the host's engine package has it, else the
   .scn.json the engine writes without it), a patch of one changed script, and on Linux the
   sample played from the package by tools/smoketest.py --packaged
-- --tests cli,signing,server,build,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
+- --tests cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
 """
 import argparse
 import hashlib
@@ -800,22 +800,11 @@ def scenes_tests(exe, proj, args):
     s["media"]["audio"]["convert"] = "keep"
     s["media"]["images"].update(opaque="keep", alpha="keep")
 
-    key = proj / "scenes.key"
+    key = proj.parent / "keys" / "scenes-keys.txt"
     code, out = run(exe, "--cli", "keygen", str(key))
-    text = key.read_text() if key.exists() else ""
-    step("scenes: keygen writes a key", code == 0 and re.fullmatch(r"[0-9a-f]{64}\n", text) is not None, out.strip())
-    code, out = run(exe, "--cli", "keygen", str(key))
-    step("scenes: keygen refuses to replace a key", code == 2 and "already" in out, out.strip())
-    inside = proj / "data" / "scenes.key"
-    shutil.copyfile(key, inside)
-    s["scenes"] = {"compile": True, "keyFile": "data/scenes.key"}
-    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
-    code, out = run(exe, "--cli", "check", str(rel), "--json")
-    fields = [i["field"] for i in json.loads(out)["issues"] if i["level"] == "error"]
-    step("scenes: check refuses a key inside data/", code == 1 and "scenes.keyFile" in fields, ", ".join(fields))
-    inside.unlink()
-
-    s["scenes"]["keyFile"] = "scenes.key"
+    step("scenes: keygen writes the keys file", code == 0 and "scenes" in (keys_of(key) if key.exists() else {}), out.strip())
+    s["scenes"] = {"compile": True, "encrypt": True}
+    s["keys"] = {"file": os.path.relpath(key, proj)}
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
     code, out = run(exe, "--cli", "plan", str(rel), "--json")
     sc = json.loads(out)["data"].get("scenes", {})
@@ -867,7 +856,7 @@ def scenes_tests(exe, proj, args):
         left = [n for n in listed if (data / "scenario" / n).exists()] + \
                [n for n in ("parsermacro.ks", "parseroption.txt") if (data / "scenario" / n).exists()]
         step("scenes: the compiled scripts and the compiler's files are left out", not left, ", ".join(left))
-        want = bytes.fromhex(key.read_text().strip())
+        want = bytes.fromhex(keys_of(key)["scenes"])
         holders = [f for f in folder.rglob("*") if f.is_file() and not f.is_symlink() and "data" not in f.relative_to(folder).parts
                    and SLOT_MARKER in f.read_bytes()]
         keyed = [f for f in holders if f.read_bytes().split(SLOT_MARKER, 1)[1][:32] == want]
@@ -885,8 +874,10 @@ def scenes_tests(exe, proj, args):
     else:
         r, err = build()
         msg = err or (r or {}).get("error", "")
-        step("scenes: without the scnfile plugin an encrypted build is refused", r is not None and not r.get("ok") and ".scn.json" in msg, msg)
-        s["scenes"]["keyFile"] = ""
+        # refused when compiling gives .scn.json, or up front by a tool built without scnfile
+        step("scenes: without the scnfile plugin an encrypted build is refused", r is not None and not r.get("ok")
+             and (".scn.json" in msg or "without scnfile" in msg), msg)
+        s["scenes"]["encrypt"] = False
         rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
         r, err = build()
         step("scenes: without the plugin the scripts compile to .scn.json", r is not None and r.get("ok") and
@@ -926,7 +917,7 @@ def patch_tests(exe, proj):
     s["output"]["check"] = False
     s["contents"]["compileScripts"] = False   # compiling takes this computer's engine
     # the scripts as they are: compiling them needs an engine (scenes_tests)
-    s["scenes"] = {"compile": False, "keyFile": ""}
+    s["scenes"] = {"compile": False, "encrypt": False}
     out = proj / "release"
     out.mkdir(exist_ok=True)
     (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
@@ -1014,17 +1005,103 @@ def run_engine(pkgdir, exe_rel, extra_args, seconds=20):
     return verified, log
 
 
-def signing_cli_tests(exe, tmp):
-    """keygen and the signing validation rules (no engines needed)."""
-    kd = tmp / "keys"
-    kd.mkdir(exist_ok=True)
-    code, out = run(exe, "--cli", "keygen", str(kd), "--bits=2048")
-    step("keygen writes a key pair", code == 0 and (kd / "private.txt").exists() and (kd / "public.txt").exists()
-         and "BEGIN RSA PRIVATE KEY" in (kd / "private.txt").read_text() and "BEGIN PUBLIC KEY" in (kd / "public.txt").read_text(), out.strip())
-    code, out = run(exe, "--cli", "keygen", str(kd))
-    step("keygen won't overwrite without --force", code == 2 and "already" in out, out.strip())
-    code, out = run(exe, "--cli", "keygen", str(kd), "--force")
-    step("keygen --force replaces", code == 0, out.strip())
+KEYS_ENV = ("KAGEX_KEYS_FILE",)
+
+
+def keys_of(path):
+    """The keys in a keys file: {"archive": hex, "scenes": hex, "signing": PEM}"""
+    text = Path(path).read_text(encoding="utf-8")
+    out = {}
+    for name in ("archive", "scenes"):
+        m = re.search(r"^%s:\s*([0-9a-fA-F]{64})\s*$" % name, text, re.M)
+        if m:
+            out[name] = m.group(1).lower()
+    m = re.search(r"-----BEGIN RSA PRIVATE KEY-----.*?-----END RSA PRIVATE KEY-----", text, re.S)
+    if m:
+        out["signing"] = m.group(0)
+    return out
+
+
+def check_issues(exe, proj, settings, env_extra=None):
+    """--cli check of these settings: (exit code, {field: [messages]} of errors, ... of warnings)"""
+    f = proj / "keys-check.json"
+    f.write_text(json.dumps(settings), encoding="utf-8")
+    env = dict(os.environ)
+    for k in KEYS_ENV:
+        env.pop(k, None)
+    env.update(env_extra or {})
+    r = subprocess.run([str(exe), "--cli", "check", str(f), "--json"], capture_output=True, text=True, env=env, timeout=120)
+    f.unlink()
+    errs, warns = {}, {}
+    try:
+        for i in json.loads(r.stdout)["issues"]:
+            (errs if i["level"] == "error" else warns).setdefault(i["field"], []).append(i["message"])
+    except ValueError:
+        pass
+    return r.returncode, errs, warns
+
+
+def keys_tests(exe, proj, tmp):
+    """The keys file (no engines needed): keygen writes a key of its own for each kind of
+    protection, adds the ones a file lacks, and the check finds a missing, shared or misplaced key"""
+    kf = tmp / "keys" / "game-keys.txt"
+    code, out = run(exe, "--cli", "keygen", str(kf), "--bits=2048")
+    k = keys_of(kf) if kf.exists() else {}
+    step("keys: keygen writes the archive, scenes and signing keys", code == 0 and set(k) == {"archive", "scenes", "signing"}, out.strip())
+    step("keys: each kind of protection has a key of its own", k.get("archive") and k.get("archive") != k.get("scenes"), "")
+    if os.name == "posix":
+        step("keys: only the owner can read the file", kf.exists() and (kf.stat().st_mode & 0o077) == 0, oct(kf.stat().st_mode) if kf.exists() else "")
+    code, out = run(exe, "--cli", "keygen", str(kf))
+    step("keys: keygen won't replace keys", code == 2 and "already" in out and keys_of(kf) == k, out.strip())
+    # a file that lacks a key gets that one, and keeps the others
+    kf.write_text("".join(l for l in kf.read_text(encoding="utf-8").splitlines(True) if not l.startswith("scenes:")), encoding="utf-8")
+    code, out = run(exe, "--cli", "keygen", str(kf))
+    k2 = keys_of(kf)
+    step("keys: keygen adds the key a file lacks and keeps the rest", code == 0 and "scenes key" in out and k2.get("scenes")
+         and k2.get("scenes") != k["scenes"] and k2.get("archive") == k["archive"] and k2.get("signing") == k["signing"], out.strip())
+    code, out = run(exe, "--cli", "keygen", str(kf), "--force")
+    k3 = keys_of(kf)
+    step("keys: keygen --force makes every key new", code == 0 and k3.get("archive") != k2.get("archive") and k3.get("signing") != k2.get("signing"), out.strip())
+
+    rel = proj / "release.json"
+    base = json.loads(rel.read_text(encoding="utf-8"))
+    host = host_id()
+
+    def signed(keys_file=""):
+        st = json.loads(json.dumps(base))
+        for p in st["platforms"]:
+            st["platforms"][p]["enabled"] = p == host
+        st["signing"]["enabled"] = True
+        st["keys"] = {"file": keys_file}
+        return st
+
+    code, errs, _ = check_issues(exe, proj, signed())
+    step("keys: signing without a keys file is an error", "keys.file" in errs, json.dumps(errs))
+    code, errs, _ = check_issues(exe, proj, signed(os.path.relpath(kf, proj)))
+    step("keys: a keys file outside the game's folder passes", "keys.file" not in errs, json.dumps(errs))
+    code, errs, _ = check_issues(exe, proj, signed(), {"KAGEX_KEYS_FILE": str(kf)})
+    step("keys: KAGEX_KEYS_FILE names the keys file", "keys.file" not in errs, json.dumps(errs))
+    inside = proj / "data" / "game-keys.txt"
+    shutil.copyfile(kf, inside)
+    code, errs, _ = check_issues(exe, proj, signed("data/game-keys.txt"))
+    step("keys: a keys file inside data/ is an error", any("inside data/" in m for m in errs.get("keys.file", [])), json.dumps(errs))
+    inside.unlink()
+    nosign = tmp / "keys" / "no-signing.txt"
+    nosign.write_text("archive: %s\nscenes: %s\n" % (k3["archive"], k3["scenes"]), encoding="utf-8")
+    code, errs, _ = check_issues(exe, proj, signed(os.path.relpath(nosign, proj)))
+    step("keys: a keys file without the key a setting needs is an error", any("no signing key" in m for m in errs.get("keys.file", [])), json.dumps(errs))
+    same = tmp / "keys" / "same.txt"
+    same.write_text(kf.read_text(encoding="utf-8").replace(k3["scenes"], k3["archive"]), encoding="utf-8")
+    code, errs, _ = check_issues(exe, proj, signed(os.path.relpath(same, proj)))
+    step("keys: the archive and scenes keys can't be the same", any("the same" in m for m in errs.get("keys.file", [])), json.dumps(errs))
+    bad = tmp / "keys" / "bad.txt"
+    bad.write_text("archve: %s\n" % k3["archive"], encoding="utf-8")
+    code, errs, _ = check_issues(exe, proj, signed(os.path.relpath(bad, proj)))
+    step("keys: a misspelt key name is an error", any("archve" in m for m in errs.get("keys.file", [])), json.dumps(errs))
+    old = signed(os.path.relpath(kf, proj))
+    old["signing"]["privateKey"] = "private.txt"
+    code, errs, warns = check_issues(exe, proj, old)
+    step("keys: a release.json from before the keys file is told", "signing.privateKey" in warns, json.dumps(warns))
 
 
 def signing_validation_tests(exe, proj):
@@ -1038,7 +1115,8 @@ def signing_validation_tests(exe, proj):
         f = proj / "sign-check.json"
         f.write_text(json.dumps(s), encoding="utf-8")
         env = dict(os.environ)
-        env.pop("KAGEX_SIGNING_KEY", None)
+        for k in KEYS_ENV:
+            env.pop(k, None)
         r = subprocess.run([str(exe), "--cli", "check", str(f), "--json"], capture_output=True, text=True, env=env, timeout=120)
         f.unlink()
         try:
@@ -1049,39 +1127,30 @@ def signing_validation_tests(exe, proj):
         warns = [i["field"] for i in data["issues"] if i["level"] == "warning"]
         return r.returncode, errs, warns
 
-    def on(s, **kw):
+    keys = proj.parent / "keys" / "game-keys.txt"
+    if not keys.exists():
+        run(exe, "--cli", "keygen", str(keys))
+
+    def on(s, keys_file=None):
         for k in s["platforms"]:
             s["platforms"][k]["enabled"] = (k == host)
         s["signing"]["enabled"] = True
-        s["signing"]["privateKey"] = kw.get("privateKey", "")
+        s["keys"] = {"file": os.path.relpath(keys, proj) if keys_file is None else keys_file}
 
-    code, errs, warns = check(lambda s: on(s))
-    step("signing: no key is an error", "signing.privateKey" in errs, ", ".join(errs))
-    # a key inside data/ must be refused (it would be packed into the game)
-    (proj / "data" / "mykey.txt").write_text("-----BEGIN RSA PRIVATE KEY-----\nAA\n-----END RSA PRIVATE KEY-----\n")
-    code, errs, warns = check(lambda s: on(s, privateKey="data/mykey.txt"))
-    step("signing: a key inside data/ is an error", "signing.privateKey" in errs, ", ".join(errs))
-    (proj / "data" / "mykey.txt").unlink()
+    code, errs, warns = check(lambda s: on(s, ""))
+    step("signing: no keys file is an error", "keys.file" in errs, ", ".join(errs))
     # a folder data mode for a signed desktop build is refused
     if host != "macos":
-        def folder(s):
-            on(s, privateKey="")
-            s["platforms"][host]["data"] = "folder"
-            s["signing"]["privateKey"] = ""
-        # supply a key via a real file so only the folder rule trips
-        key = proj / "k.txt"
-        key.write_text("-----BEGIN RSA PRIVATE KEY-----\nAA\n-----END RSA PRIVATE KEY-----\n")
-        code, errs, warns = check(lambda s: (on(s, privateKey="k.txt"), s["platforms"].__setitem__(host, {**s["platforms"][host], "data": "folder"})))
+        code, errs, warns = check(lambda s: (on(s), s["platforms"].__setitem__(host, {**s["platforms"][host], "data": "folder"})))
         step("signing: a signed desktop build can't use a data folder", ("platforms.%s.data" % host) in errs, ", ".join(errs))
-        key.unlink()
     # web enabled under signing warns that it isn't checked
-    code, errs, warns = check(lambda s: (on(s, privateKey=""), s["signing"].__setitem__("privateKey", ""), s["platforms"]["web"].__setitem__("enabled", True)))
+    code, errs, warns = check(lambda s: (on(s), s["platforms"]["web"].__setitem__("enabled", True)))
     step("signing: web build warns it isn't signature-checked", "signing.enabled" in warns, "warns=" + ", ".join(warns))
     # a framework without SignatureCheck.tjs is refused
     sc = proj / "template" / "system" / "SignatureCheck.tjs"
     saved = sc.read_bytes()
     sc.unlink()
-    code, errs, warns = check(lambda s: on(s, privateKey=""))
+    code, errs, warns = check(lambda s: on(s))
     sc.write_bytes(saved)
     step("signing: a framework without SignatureCheck.tjs is refused", "signing.enabled" in errs, ", ".join(errs))
 
@@ -1092,7 +1161,8 @@ def signing_build_tests(exe, proj, args):
         print("skip signing build tests: not a Linux host")
         return
     keydir = Path(tempfile.mkdtemp())
-    code, out = run(exe, "--cli", "keygen", str(keydir), "--bits=2048")
+    keys = keydir / "game-keys.txt"
+    code, out = run(exe, "--cli", "keygen", str(keys), "--bits=2048")
     if code != 0:
         step("signing build: keygen", False, out)
         return
@@ -1104,10 +1174,10 @@ def signing_build_tests(exe, proj, args):
     s["output"]["check"] = True
     s["output"]["archive"] = "none"
     s["signing"]["enabled"] = True
-    s["signing"]["privateKey"] = ""
+    s["keys"] = {"file": ""}
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
     env = dict(os.environ)
-    env["KAGEX_SIGNING_KEY"] = str(keydir / "private.txt")
+    env["KAGEX_KEYS_FILE"] = str(keys)
     r = subprocess.run([str(exe), "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json"],
                        capture_output=True, text=True, env=env, timeout=1800)
     try:
@@ -1131,7 +1201,9 @@ def signing_build_tests(exe, proj, args):
          "data.xp3.sig" in names and "kagex-sample.sigfiles" in names and "kagex-sample.sigfiles.sig" in names
          and "kagex-sample.sig" in names and (pkg / "plugin").exists(), ", ".join(sorted(n for n in names if n.endswith(".sig") or n.endswith(".sigfiles"))[:6]))
     # SignatureKey.tjs is inside data.xp3, not loose in the package
-    step("signing build: no private key shipped", not (pkg / "private.txt").exists() and not any(n.endswith("private.txt") for n in names))
+    needle = keys_of(keys)["signing"].splitlines()[1].strip().encode()   # a line of the private key
+    step("signing build: no keys shipped", not any(n.endswith("keys.txt") for n in names)
+         and not any(needle in f.read_bytes() for f in pkg.rglob("*") if f.is_file() and f.stat().st_size < 50_000_000))
 
     exe_rel = "kagex-sample"
     # 1. the untouched build starts
@@ -1181,12 +1253,13 @@ def signing_build_tests(exe, proj, args):
                 ks = cand
                 break
     if ks:
-        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(keydir / "private.txt"), str(patch)], capture_output=True)
+        # krkrsign reads the signing key's PEM block out of the keys file as it is
+        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(keys), str(patch)], capture_output=True)
         ok, log = run_engine(pkg, exe_rel, [])
         step("signing run: a correctly signed patch mounts", ok and "Patch mounted" in log, "verified=%s; mounted=%s" % (ok, "Patch mounted" in log))
-        otherkeys = Path(tempfile.mkdtemp())
+        otherkeys = Path(tempfile.mkdtemp()) / "other-keys.txt"
         run(exe, "--cli", "keygen", str(otherkeys))
-        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(otherkeys / "private.txt"), str(patch)], capture_output=True)
+        subprocess.run([str(ks), "--cli", "sign", "--key=" + str(otherkeys), str(patch)], capture_output=True)
         verified, log = run_engine(pkg, exe_rel, [])
         step("signing run: a patch signed with another key stops the game", (not verified) and "Signature check:" in log, "verified=%s" % verified)
     patch.unlink(missing_ok=True)
@@ -1369,7 +1442,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,signing,server,build,web,android,ios,media,scripts,scenes,patch (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -1381,8 +1454,9 @@ def main():
         # init (in cli_tests) writes the release.json every other group starts from
         if want("cli") or not (proj / "release.json").exists():
             cli_tests(exe, proj)
+        if want("keys"):
+            keys_tests(exe, proj, Path(t))
         if want("signing"):
-            signing_cli_tests(exe, Path(t))
             signing_validation_tests(exe, proj)
         if want("server"):
             server_tests(exe, proj, args)

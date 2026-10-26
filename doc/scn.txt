@@ -158,14 +158,16 @@ they're .scn.json, which every engine reads. The tool's check says which it will
 engines the tool downloads don't have the plugin yet: engine packages that do go in engines/
 next to data/, which the tool uses before its downloads.
 
-A key encrypts the .scn files (Scenarios > Key, scenes.keyFile; or the variable
-KAGEX_SCENES_KEY, 64 hexadecimal digits, which wins). New key in the window, or
-kagex-release --cli keygen <file>, makes one. The build writes the key into each package's
-copy of the plugin (or of an engine with the plugin built in), before signing and before the
-web build's id, so each game's engines open only that game's files. The key can't be inside
-data/. Encrypting the same file with the same key gives the same bytes, so a patch
-(output.patchFrom) holds only the scripts that changed, and it has to be built with the key
-the game was: keep the key, and keep it out of the game's repository. The format is
+With Scenarios > Encrypt (scenes.encrypt) the .scn files are encrypted with the scenes key
+of the game's keys file (Keys > keys file, keys.file, or the variable KAGEX_KEYS_FILE; Create
+keys... in the window, or kagex-release --cli keygen <file>, makes one). The file holds a
+key of its own for each kind of protection: the archive, the scenarios and signing. The build
+writes the scenes key into each package's copy of the plugin (or of an engine with the plugin
+built in), before signing and before the web build's id, so each game's engines open only
+that game's files. The keys file can't be inside data/. Encrypting the same file with the
+same key gives the same bytes, so a patch (output.patchFrom) holds only the scripts that
+changed, and it has to be built with the key the game was: keep the keys file, and keep it out
+of the game's repository. The format is
 scnfile's docs/format.md (XChaCha20-Poly1305: a changed byte makes the file refuse to open).
 The key is in the game, as any key a game reads its own files with has to be: this keeps the
 scripts from being read with a text editor or a PSB viewer, not from someone determined.

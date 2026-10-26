@@ -52,58 +52,6 @@ bool dataFolder(const std::string& name)
 
 bool canEncryptArchive() { return true; }
 
-bool readArchiveKey(const Json& s, const Project& p, ArchiveKey& key, bool& have, std::string& error)
-{
-	have = false;
-	std::string text = getEnv("KAGEX_ARCHIVE_KEY");
-	std::string from = "KAGEX_ARCHIVE_KEY";
-	if (text.empty()) {
-		const std::string file = str(s, "archive.keyFile");
-		if (file.empty()) return true;
-		from = file;
-		if (!krt::readFile(p.root / krt::toPath(file), text)) { error = "Can't read the archive key " + file; return false; }
-	}
-	std::string why;
-	if (!xp3crypt::parseKey(text, key, why)) {
-		std::fill(text.begin(), text.end(), '\0');
-		error = "The archive key (" + from + ") isn't a key: " + why;
-		return false;
-	}
-	std::fill(text.begin(), text.end(), '\0');
-	have = true;
-	return true;
-}
-
-bool makeArchiveKey(const fs::path& file, std::string& error)
-{
-	std::error_code ec;
-	if (fs::exists(file, ec)) { error = krt::fromPath(file) + " is already there: a key isn't replaced by mistake"; return false; }
-	try {
-		xp3crypt::Key key = xp3crypt::randomKey();
-		std::string text = xp3crypt::formatKey(key) + "\n";
-		xp3crypt::wipe(key);
-		fs::create_directories(file.parent_path(), ec);
-		const bool ok = krt::writeFile(file, text);
-		std::fill(text.begin(), text.end(), '\0');
-		if (!ok) { error = "Can't write " + krt::fromPath(file); return false; }
-	} catch (const std::exception& e) {
-		error = e.what();
-		return false;
-	}
-	return true;
-}
-
-bool checkArchiveKeyFile(const fs::path& file, std::string& error)
-{
-	std::string text;
-	if (!krt::readFile(file, text)) { error = "it can't be read"; return false; }
-	xp3crypt::Key key;
-	const bool ok = xp3crypt::parseKey(text, key, error);
-	xp3crypt::wipe(key);
-	std::fill(text.begin(), text.end(), '\0');
-	return ok;
-}
-
 bool packEncrypted(const fs::path& stageDir, const fs::path& output, const ArchiveKey& key, bool hashNames, int& files, uint64_t& bytes, std::string& error)
 {
 	xp3crypt::PackOptions opt;   // store everything (encrypted)
@@ -156,26 +104,6 @@ void wipeArchiveKey(ArchiveKey& key) { xp3crypt::wipe(key); }
 #else
 
 bool canEncryptArchive() { return false; }
-
-bool readArchiveKey(const Json& s, const Project&, ArchiveKey&, bool& have, std::string& error)
-{
-	have = false;
-	if (getEnv("KAGEX_ARCHIVE_KEY").empty() && str(s, "archive.keyFile").empty()) return true;
-	error = "This kagex-release was built without xp3crypt, so it can't encrypt the archive";
-	return false;
-}
-
-bool makeArchiveKey(const fs::path&, std::string& error)
-{
-	error = "This kagex-release was built without xp3crypt, so it can't make archive keys";
-	return false;
-}
-
-bool checkArchiveKeyFile(const fs::path&, std::string& error)
-{
-	error = "this kagex-release was built without xp3crypt";
-	return false;
-}
 
 bool packEncrypted(const fs::path&, const fs::path&, const ArchiveKey&, bool, int&, uint64_t&, std::string& error)
 {

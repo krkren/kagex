@@ -263,7 +263,7 @@ Json makePlan(const Json& s, const Project& p)
 	}
 	scenes.set("compile", Json(compile));
 	scenes.set("scripts", Json(listed));
-	scenes.set("encrypted", Json(compile && (!str(s, "scenes.keyFile").empty() || !getEnv("KAGEX_SCENES_KEY").empty())));
+	scenes.set("encrypted", Json(compile && flag(s, "scenes.encrypt")));
 	// .scn with the scnfile plugin in this computer's engine, else .scn.json; "" when that
 	// engine isn't here yet
 	{

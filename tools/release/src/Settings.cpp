@@ -7,6 +7,7 @@
 
 #include "Encrypt.h"
 #include "Engine.h"
+#include "Keys.h"
 #include "Media.h"
 #include "Scenes.h"
 #include "Sign.h"
@@ -153,7 +154,7 @@ Json defaultSettings(const Project& p)
 	// compiled when the game lists scripts to compile and its framework compiles them
 	s.set("scenes", obj({
 		{ "compile", Json(!p.sceneList.empty() && p.frameworkCompiles) },
-		{ "keyFile", Json("") },
+		{ "encrypt", Json(false) },
 	}));
 	s.set("output", obj({
 		{ "folder", Json("release") },
@@ -162,16 +163,16 @@ Json defaultSettings(const Project& p)
 		{ "check", Json(true) },
 		{ "patchFrom", Json("") },
 	}));
+	// The game's keys file (Keys.h): the archive, scenes and signing keys, each its own, kept
+	// outside the game's folder. KAGEX_KEYS_FILE wins, for CI
+	s.set("keys", obj({ { "file", Json("") } }));
 	s.set("signing", obj({
 		{ "enabled", Json(false) },
-		{ "privateKey", Json("") },
 		{ "splitArchives", Json(false) },
 	}));
-	// Encrypted data.xp3 (the xp3crypt plugin decrypts it; the engine must have the plugin).
-	// The key is 64 hexadecimal digits in the file keyFile names, or in KAGEX_ARCHIVE_KEY.
+	// Encrypted data.xp3 (the xp3crypt plugin decrypts it; the engine must have the plugin)
 	s.set("archive", obj({
 		{ "encrypt", Json(false) },
-		{ "keyFile", Json("") },
 		{ "hideNames", Json(false) },
 	}));
 	Json pl = Json::object();
@@ -348,37 +349,23 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 
 	// compiled scenarios
 	const bool compile = flag(s, "scenes.compile");
-	const std::string keyFile = str(s, "scenes.keyFile");
-	const bool keyFromEnv = !getEnv("KAGEX_SCENES_KEY").empty();
 	if (compile && p.sceneList.empty())
 		error("scenes.compile", "The game has no !scnlist.txt (the list of scripts to compile, usually data/scenario/!scnlist.txt; doc/scn.txt)");
 	else if (compile && !p.frameworkCompiles)
 		error("scenes.compile", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
 		      ") has no SceneParser.tjs: it predates compiled scenarios. Update it from a newer KAGEX's template/system");
-	if (!keyFile.empty() || keyFromEnv) {
-		const std::string field = keyFile.empty() ? "scenes" : "scenes.keyFile";
-		if (!canEncryptScenes()) error(field, "This kagex-release was built without scnfile, so it can't encrypt scenarios");
-		else if (!keyFile.empty() && !keyFromEnv && !exists(keyFile)) error(field, "The key " + keyFile + " doesn't exist (New key makes one)");
+	if (flag(s, "scenes.encrypt")) {
+		if (!compile) warn("scenes.encrypt", "Only compiled scenarios are encrypted: turn Compile on");
+		else if (!canEncryptScenes()) error("scenes.encrypt", "This kagex-release was built without scnfile, so it can't encrypt scenarios");
 		else {
-			SceneKey key;
-			bool have = false;
-			std::string err;
-			if (!readSceneKey(s, p, key, have, err)) error(field, err);
-			wipeSceneKey(key);
+			// this computer's engine compiles them: without the scnfile plugin, to .scn.json
+			const fs::path engine = engineIfPresent(hostPlatform(), flag(s, "engine.debug"), localEngines({}, p.root));
+			if (!engine.empty() && !engineHasScnfile(engine))
+				error("scenes.encrypt", "This computer's engine has no scnfile plugin, so the scenarios would compile to .scn.json, which can't be encrypted. "
+				                        "Engine packages with the plugin go in engines/ next to data/ (" + krt::fromPath(engine) + ")");
 		}
-		if (!keyFile.empty()) {
-			fs::path k = fs::weakly_canonical(p.root / krt::toPath(keyFile), ec);
-			auto rel = fs::relative(k, fs::weakly_canonical(p.data, ec), ec);
-			if (!ec && !rel.empty() && *rel.begin() != "..") error(field, "The key can't be inside data/: it would be packed into the game");
-		}
-		if (!compile) warn(field, "The key is only used for compiled scenarios");
-		// this computer's engine compiles them: without the scnfile plugin, to .scn.json
-		const fs::path engine = engineIfPresent(hostPlatform(), flag(s, "engine.debug"), localEngines({}, p.root));
-		if (compile && !engine.empty() && !engineHasScnfile(engine))
-			error(field, "This computer's engine has no scnfile plugin, so the scenarios would compile to .scn.json, which can't be encrypted. "
-			             "Engine packages with the plugin go in engines/ next to data/ (" + krt::fromPath(engine) + ")");
 	} else if (compile) {
-		warn("scenes.keyFile", "Without a key the compiled scenarios aren't encrypted: a PSB viewer opens them");
+		warn("scenes.encrypt", "The compiled scenarios aren't encrypted: a PSB viewer opens them");
 	}
 
 	// output
@@ -394,26 +381,34 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const std::string patchFrom = str(s, "output.patchFrom");
 	if (!patchFrom.empty() && !exists(patchFrom)) error("output.patchFrom", "The file list " + patchFrom + " doesn't exist (a build writes <file name>-<version>-files.json beside its packages)");
 
-	// archive encryption: a named key file must exist and hold a key (the key may instead come
-	// from KAGEX_ARCHIVE_KEY, which Build checks at build time)
-	if (flag(s, "archive.encrypt")) {
-		const std::string keyFile = str(s, "archive.keyFile");
-		if (!canEncryptArchive()) error("archive.encrypt", "This kagex-release was built without xp3crypt, so it can't encrypt the archive");
-		else if (keyFile.empty()) {
-			if (getEnv("KAGEX_ARCHIVE_KEY").empty()) error("archive.keyFile", "Choose the key file, or create one (Create key…)");
-		} else if (!exists(keyFile)) {
-			error("archive.keyFile", "The key file " + keyFile + " doesn't exist (Create key… makes one)");
-		} else {
-			const fs::path key = fs::weakly_canonical(p.root / krt::toPath(keyFile), ec);
-			std::string why;
-			if (!checkArchiveKeyFile(key, why)) error("archive.keyFile", keyFile + " isn't a key: " + why);
-			const auto inside = [&](const fs::path& dir) {
-				const auto rel = fs::relative(key, fs::weakly_canonical(dir, ec), ec);
-				return !ec && !rel.empty() && *rel.begin() != "..";
-			};
-			if (inside(p.data)) error("archive.keyFile", "The key is inside data/, so it would be packed into the game: keep it outside the game's folder");
-			else if (inside(p.root)) warn("archive.keyFile", "The key is inside the game's folder: keep it out of the game's repository (anyone with it can read the encrypted files)");
+	// archive encryption (the key comes from the keys file, below)
+	if (flag(s, "archive.encrypt") && !canEncryptArchive())
+		error("archive.encrypt", "This kagex-release was built without xp3crypt, so it can't encrypt the archive");
+
+	// the keys file: every key the settings use, each one its own (Keys.h)
+	{
+		const KeysNeeded need = keysNeeded(s);
+		std::string from;
+		const fs::path file = keysFile(s, p, &from);
+		if (need.any()) {
+			GameKeys keys;
+			std::string err;
+			if (!loadKeys(s, p, need, keys, err)) error("keys.file", err);
 		}
+		if (!file.empty()) {
+			const fs::path key = fs::weakly_canonical(file, ec);
+			const auto inside = [&](const fs::path& dir) {
+				std::error_code e;
+				const auto rel = fs::relative(key, fs::weakly_canonical(dir, e), e);
+				return !e && !rel.empty() && *rel.begin() != "..";
+			};
+			const std::string which = from == "KAGEX_KEYS_FILE" ? "KAGEX_KEYS_FILE points inside" : "The keys file is inside";
+			if (inside(p.data)) error("keys.file", which + " data/, so it would be packed into the game: keep it outside the game's folder");
+			else if (inside(p.root)) warn("keys.file", which + " the game's folder: keep it out of the game's repository (anyone with it can read the encrypted files and sign as the game)");
+		}
+		// release.json from before the keys file
+		for (const char* old : { "archive.keyFile", "scenes.keyFile", "signing.privateKey" })
+			if (!str(s, old).empty()) warn(old, "No longer used: every key is in the keys file (Keys, keys.file)");
 	}
 
 	// hidden file names (one encrypted, name-hashed archive served through the xpcrypt:// medium)
@@ -504,38 +499,6 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 
 	// signing
 	if (flag(s, "signing.enabled")) {
-		const char* envKey = std::getenv("KAGEX_SIGNING_KEY");
-		const bool envInline = envKey && *envKey && std::string(envKey).find("BEGIN") != std::string::npos;
-		const std::string keyPath = str(s, "signing.privateKey");
-		// the key must never be inside data/ (it would be packed into the game) and should not sit
-		// in the project at all (it could be committed)
-		auto under = [&](const fs::path& key, const fs::path& dir) {
-			std::error_code e1, e2;
-			const fs::path rel = fs::relative(fs::weakly_canonical(key, e1), fs::weakly_canonical(dir, e2), e2);
-			return !e1 && !e2 && !rel.empty() && *rel.begin() != "..";
-		};
-		if (keyPath.empty() && (!envKey || !*envKey)) {
-			error("signing.privateKey", "Signing needs your private key (a file, or the KAGEX_SIGNING_KEY environment variable). "
-			      "Make one with \"Create key pair\" (or --cli keygen). Keep it out of the game folder and out of version control");
-		} else if (!keyPath.empty()) {
-			const fs::path key = p.root / krt::toPath(keyPath);
-			if (!fs::exists(key, ec)) {
-				error("signing.privateKey", "The private key " + keyPath + " doesn't exist");
-			} else {
-				if (under(key, p.data))
-					error("signing.privateKey", "The private key is inside data/ — it would be packed into the game, exposing it. Move it outside the game folder");
-				else if (under(key, p.root))
-					warn("signing.privateKey", "The private key is inside the project folder, where it could be committed by accident. Keeping it elsewhere is safer");
-				std::string text, kerr;
-				if (readKeyText(key, text, kerr) && !looksLikePrivateKey(text))
-					error("signing.privateKey", keyPath + " doesn't look like an RSA private key (expected a \"-----BEGIN RSA PRIVATE KEY-----\" block)");
-			}
-		} else if (envKey && *envKey && !envInline) {
-			// KAGEX_SIGNING_KEY is a path: it must not point inside data/ either
-			const fs::path key = krt::toPath(envKey);
-			if (fs::exists(key, ec) && under(key, p.data))
-				error("signing.enabled", "KAGEX_SIGNING_KEY points at a key inside data/ — it would be packed into the game. Move it outside the game folder");
-		}
 		if (!p.framework.empty() && !frameworkSupportsSigning(p.framework))
 			error("signing.enabled", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
 			      ") has no SignatureCheck.tjs: it predates KAGEX 0.9.0's signing. Update it from KAGEX 0.9.0's template/system, or turn signing off");
@@ -560,24 +523,6 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	}
 
 	return out;
-}
-
-bool signingPrivateKey(const Json& s, const Project& p, std::string& privPem, std::string& error)
-{
-	const char* env = std::getenv("KAGEX_SIGNING_KEY");
-	if (env && *env) {
-		const std::string v = env;
-		if (v.find("BEGIN") != std::string::npos && v.find("PRIVATE KEY") != std::string::npos) { privPem = v; return true; }
-		std::error_code ec;
-		if (!fs::exists(krt::toPath(v), ec)) { error = "KAGEX_SIGNING_KEY points at " + v + ", which doesn't exist"; return false; }
-		if (!krt::readFile(krt::toPath(v), privPem)) { error = "Can't read the key from KAGEX_SIGNING_KEY (" + v + ")"; return false; }
-		return true;
-	}
-	const std::string keyPath = str(s, "signing.privateKey");
-	if (keyPath.empty()) { error = "No signing key (set signing.privateKey or KAGEX_SIGNING_KEY)"; return false; }
-	const fs::path key = p.root / krt::toPath(keyPath);
-	if (!krt::readFile(key, privPem)) { error = "Can't read the private key " + keyPath; return false; }
-	return true;
 }
 
 bool hasErrors(const std::vector<Issue>& issues)

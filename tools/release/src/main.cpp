@@ -6,13 +6,13 @@
 //   kagex-release --cli check [<release.json>] [--json]       the settings, and what this computer can build
 //   kagex-release --cli plan  [<release.json>] [--json]       what a build would make
 //   kagex-release --cli build [<release.json>] [--json]       builds the packages
-//   kagex-release --cli keygen [<folder>] [--bits=N]          writes a signing key pair
-//   kagex-release --cli archive-keygen <keyfile>             writes a new archive-encryption key
-//   kagex-release --cli scenes-keygen <file>                  makes a key for encrypting compiled scenarios
+//   kagex-release --cli keygen <keys file> [--bits=N]          writes the game's keys file (archive,
+//                                                             scenes and signing keys), or adds the
+//                                                             keys an existing one lacks
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
-// (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits,
-// --private, --public and --force.
+// (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits
+// (the signing key's length) and --force (every key new).
 // Without a path it uses the current folder, or else the folder above the tool (a KAGEX
 // package keeps the tool in tools/). CLI exit codes: 0 = fine, 1 = problems found, 2 = failed.
 //---------------------------------------------------------------------------
@@ -26,6 +26,7 @@
 #include "Build.h"
 #include "Encrypt.h"
 #include "Host.h"
+#include "Keys.h"
 #include "Plan.h"
 #include "Project.h"
 #include "Scenes.h"
@@ -54,7 +55,6 @@ struct Options {
 	std::string engines;             // --engines=DIR
 	std::vector<std::string> only;   // --platform=a,b
 	int bits = 2048;                 // keygen
-	std::string keyPrivate, keyPublic;
 };
 
 // The settings file and project for a path given on the command line (or none)
@@ -174,42 +174,19 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 	}
 	const std::string cmd = args[0];
 
-	// archive-keygen makes an archive-encryption key; it needs no project or release.json
-	if (cmd == "archive-keygen") {
-		if (args.size() < 2) { std::fprintf(stderr, "usage: kagex-release --cli archive-keygen <keyfile>\n"); return 2; }
-		std::string kerr;
-		if (!makeArchiveKey(krt::toPath(args[1]), kerr)) { std::fprintf(stderr, "error: %s\n", kerr.c_str()); return 2; }
-		std::printf("Wrote a new archive key to %s (keep it out of the game's repository)\n", args[1].c_str());
-		return 0;
-	}
-
 	const std::string path = args.size() > 1 ? args[1] : std::string();
+	std::string err;
 
 	if (cmd == "keygen") {
-		// A key pair, independent of any game. --private / --public set the files (default
-		// private.txt / public.txt in <path> or the current folder); --bits the length.
-		std::error_code ec;
-		const fs::path dir = path.empty() ? fs::current_path(ec) : krt::toPath(path);
-		const fs::path priv = o.keyPrivate.empty() ? dir / "private.txt" : krt::toPath(o.keyPrivate);
-		const fs::path pub = o.keyPublic.empty() ? dir / "public.txt" : krt::toPath(o.keyPublic);
-		if ((fs::exists(priv, ec) || fs::exists(pub, ec)) && !o.force) {
-			std::fprintf(stderr, "error: %s or %s already exists (--force replaces them)\n",
-			             krt::fromPath(priv).c_str(), krt::fromPath(pub).c_str());
-			return 2;
-		}
-		std::string pubPem, privPem, gerr;
-		if (!generateSigningKeys(o.bits, pubPem, privPem, gerr)) { std::fprintf(stderr, "error: %s\n", gerr.c_str()); return 2; }
-		if (!krt::writeFile(priv, privPem) || !krt::writeFile(pub, pubPem)) { std::fprintf(stderr, "error: couldn't write the key files\n"); return 2; }
-		std::printf("Wrote the private key to %s and the public key to %s (%d-bit).\n", krt::fromPath(priv).c_str(), krt::fromPath(pub).c_str(), o.bits);
-		std::printf("Keep the private key safe and out of version control; set it as the signing key in release.json.\n");
-		return 0;
-	}
-
-	std::string err;
-	if (cmd == "scenes-keygen") {
-		if (path.empty()) { std::fprintf(stderr, "usage: kagex-release --cli scenes-keygen <file>\n"); return 2; }
-		if (!makeSceneKey(krt::toPath(path), err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
-		std::printf("Wrote a new key to %s: name it in release.json's scenes.keyFile, and keep it out of the game's repository\n", path.c_str());
+		// the game's keys file, independent of any project or release.json
+		if (path.empty()) { std::fprintf(stderr, "usage: kagex-release --cli keygen <keys file> [--bits=N] [--force]\n"); return 2; }
+		std::vector<std::string> added;
+		if (!makeKeys(krt::toPath(path), o.bits, o.force, added, err)) { std::fprintf(stderr, "error: %s\n", err.c_str()); return 2; }
+		std::string names;
+		for (size_t i = 0; i < added.size(); ++i) names += (i ? (i + 1 == added.size() ? " and " : ", ") : "") + added[i];
+		std::printf("Wrote the %s key%s to %s.\n", names.c_str(), added.size() == 1 ? "" : "s", path.c_str());
+		std::printf("Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. "
+		            "Name it in release.json's keys.file (or KAGEX_KEYS_FILE).\n");
 		return 0;
 	}
 	Target t;
@@ -413,66 +390,27 @@ public:
 			return appserve::Response::json(Json::object());
 		});
 
-		// Makes a signing key pair and writes it (body: { bits, privatePath, publicPath, force }).
-		// Paths are relative to the project; returns the written paths and the public key text.
+		// Writes the game's keys file, or adds the keys an existing one lacks (body: { path, bits },
+		// path absolute or relative to the game's folder). Never replaces a key: a released game's
+		// patches need the keys it was built with
 		reg.route("/api/release/keygen", appserve::Affinity::Any, [this](const appserve::Request& req) {
-			Project p;
-			{
-				std::lock_guard<std::mutex> lk(mu_);
-				if (!have_) return appserve::Response::error(400, targetError_);
-				p = target_.project;
-			}
-			const int bits = (int)req.json()["bits"].asInt(2048);
-			std::string privRel = req.json()["privatePath"].asStr();
-			std::string pubRel = req.json()["publicPath"].asStr();
-			if (privRel.empty()) privRel = "signing-private.txt";
-			if (pubRel.empty()) pubRel = "signing-public.txt";
-			auto resolve = [&](const std::string& r) {
-				const fs::path pth = krt::toPath(r);
-				return pth.is_absolute() ? pth : p.root / pth;
-			};
-			const fs::path priv = resolve(privRel), pub = resolve(pubRel);
-			std::error_code ec;
-			if ((fs::exists(priv, ec) || fs::exists(pub, ec)) && !req.json()["force"].asBool())
-				return appserve::Response::error(409, "A key file is already there. Choose another name, or allow replacing it.");
-			std::string pubPem, privPem, err;
-			if (!generateSigningKeys(bits, pubPem, privPem, err)) return appserve::Response::error(400, err);
-			if (!krt::writeFile(priv, privPem) || !krt::writeFile(pub, pubPem))
-				return appserve::Response::error(400, "Couldn't write the key files.");
-			Json out = Json::object();
-			out.set("privatePath", Json(krt::fromPath(priv)));
-			out.set("publicPath", Json(krt::fromPath(pub)));
-			out.set("publicKey", Json(pubPem));
-			return appserve::Response::json(out);
-		});
-
-		// Makes a new archive-encryption key file (body: { path }, absolute or relative to the
-		// game's folder). Refuses to replace a file: a lost or replaced key can't be recovered
-		reg.route("/api/release/archive-keygen", [this](const appserve::Request& req) {
 			const std::string path = req.json()["path"].asStr();
-			if (krt::trim(path).empty()) return appserve::Response::error(400, "Choose where to save the key");
+			if (krt::trim(path).empty()) return appserve::Response::error(400, "Choose where to save the keys");
 			fs::path file = krt::toPath(path);
 			if (file.is_relative()) {
 				std::lock_guard<std::mutex> lk(mu_);
 				if (!have_) return appserve::Response::error(400, targetError_);
 				file = target_.project.root / file;
 			}
+			std::vector<std::string> added;
 			std::string err;
-			if (!makeArchiveKey(file, err)) return appserve::Response::error(400, err);
+			if (!makeKeys(file, (int)req.json()["bits"].asInt(2048), false, added, err)) return appserve::Response::error(400, err);
 			std::error_code ec;
 			Json out = Json::object();
 			out.set("path", Json(krt::fromPath(fs::weakly_canonical(file, ec))));
-			return appserve::Response::json(out);
-		});
-
-		// Makes a key for encrypting compiled scenarios (body: { path }, relative to the project)
-		reg.route("/api/release/scenes-keygen", [this](const appserve::Request& req) {
-			if (!have_) return appserve::Response::error(400, targetError_);
-			const fs::path file = target_.project.root / krt::toPath(req.json()["path"].asStr());
-			std::string err;
-			if (!makeSceneKey(file, err)) return appserve::Response::error(400, err);
-			Json out = Json::object();
-			out.set("file", Json(krt::fromPath(file.lexically_normal())));
+			Json names = Json::array();
+			for (const auto& n : added) names.push(Json(n));
+			out.set("added", std::move(names));
 			return appserve::Response::json(out);
 		});
 
@@ -540,7 +478,7 @@ int main(int argc, char** argv)
 	Options o;
 	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
-	app.addOption({ "force", "", "init: replace an existing release.json",
+	app.addOption({ "force", "", "init: replace an existing release.json; keygen: make every key new",
 	                [&o](const std::string&) { o.force = true; return true; } });
 	app.addOption({ "json", "", "check, plan, build: print JSON",
 	                [&o](const std::string&) { o.json = true; return true; } });
@@ -548,12 +486,8 @@ int main(int argc, char** argv)
 	                [&o](const std::string& v) { o.engines = v; return true; } });
 	app.addOption({ "keep-work", "", "build: keep the staged files (<output>/.work)",
 	                [&o](const std::string&) { o.keepWork = true; return true; } });
-	app.addOption({ "bits", "N", "keygen: key length 1024/2048/3072/4096 (default 2048)",
+	app.addOption({ "bits", "N", "keygen: the signing key's length, 1024/2048/3072/4096 (default 2048)",
 	                [&o](const std::string& v) { o.bits = std::atoi(v.c_str()); return true; } });
-	app.addOption({ "private", "FILE", "keygen: where to write the private key (default private.txt)",
-	                [&o](const std::string& v) { o.keyPrivate = v; return true; } });
-	app.addOption({ "public", "FILE", "keygen: where to write the public key (default public.txt)",
-	                [&o](const std::string& v) { o.keyPublic = v; return true; } });
 	app.addOption({ "platform", "LIST", "check, plan, build: only these platforms (windows,linux,steam,macos,web,android,ios)",
 	                [&o](const std::string& v) {
 		                size_t start = 0;

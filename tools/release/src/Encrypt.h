@@ -2,10 +2,9 @@
 // Encrypted data.xp3 (the xp3crypt plugin decrypts it at run time). The encryption is
 // xp3crypt's own library (../../xp3crypt/lib, built in when CMake finds it: KR_HAVE_XP3CRYPT).
 //
-// A game's key is 32 bytes, written as 64 hexadecimal digits: in the file archive.keyFile names,
-// or in KAGEX_ARCHIVE_KEY (which wins, for CI). kagex-release packs the staged data into an
-// encrypted data.xp3 and writes the key into each platform's engine (the engine must have the
-// xp3crypt plugin, which holds the key slot).
+// The key is the archive key of the game's keys file (Keys.h): 32 bytes. kagex-release packs the
+// staged data into an encrypted data.xp3 and writes the key into each platform's engine (the
+// engine must have the xp3crypt plugin, which holds the key slot).
 //---------------------------------------------------------------------------
 #pragma once
 #include <array>
@@ -22,15 +21,6 @@ using ArchiveKey = std::array<uint8_t, 32>;
 
 /// Whether this build of the tool can encrypt (it was built with xp3crypt)
 bool canEncryptArchive();
-
-/// The game's key, from KAGEX_ARCHIVE_KEY or archive.keyFile. have is false when neither is set
-bool readArchiveKey(const Json& settings, const Project& project, ArchiveKey& key, bool& have, std::string& error);
-
-/// Writes a new random key to file (refuses to replace one)
-bool makeArchiveKey(const std::filesystem::path& file, std::string& error);
-
-/// Whether file holds a key (64 hexadecimal digits); the key itself isn't kept
-bool checkArchiveKeyFile(const std::filesystem::path& file, std::string& error);
 
 /// Packs the staged folder into an encrypted archive at `output`. hashNames also hashes the file
 /// names (the game runs it through the xpcrypt:// medium). files/bytes get the counts

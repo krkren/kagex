@@ -54,50 +54,6 @@ bool dataFolder(const std::string& name)
 
 bool canEncryptScenes() { return true; }
 
-bool readSceneKey(const Json& s, const Project& p, SceneKey& key, bool& have, std::string& error)
-{
-	have = false;
-	std::string text = getEnv("KAGEX_SCENES_KEY");
-	std::string from = "KAGEX_SCENES_KEY";
-	if (text.empty()) {
-		const std::string file = str(s, "scenes.keyFile");
-		if (file.empty()) return true;
-		from = file;
-		if (!krt::readFile(p.root / krt::toPath(file), text)) { error = "Can't read the scenario key " + file; return false; }
-	}
-	try {
-		key = scnseal::parseKey(text);
-	} catch (const scnseal::Error& e) {
-		std::fill(text.begin(), text.end(), '\0');
-		std::string why = e.what();
-		if (why.rfind("scnseal: ", 0) == 0) why = why.substr(9);
-		error = "The scenario key (" + from + ") isn't a key: " + why;
-		return false;
-	}
-	std::fill(text.begin(), text.end(), '\0');
-	have = true;
-	return true;
-}
-
-bool makeSceneKey(const fs::path& file, std::string& error)
-{
-	std::error_code ec;
-	if (fs::exists(file, ec)) { error = krt::fromPath(file) + " is already there: a key isn't replaced by mistake"; return false; }
-	try {
-		scnseal::Key key = scnseal::randomKey();
-		std::string text = scnseal::formatKey(key) + "\n";
-		scnseal::wipe(key);
-		fs::create_directories(file.parent_path(), ec);
-		const bool ok = krt::writeFile(file, text);
-		std::fill(text.begin(), text.end(), '\0');
-		if (!ok) { error = "Can't write " + krt::fromPath(file); return false; }
-	} catch (const std::exception& e) {
-		error = e.what();
-		return false;
-	}
-	return true;
-}
-
 bool sealScene(const fs::path& file, const SceneKey& key, std::string& error)
 {
 	std::string text;
@@ -185,20 +141,6 @@ void wipeSceneKey(SceneKey& key) { scnseal::wipe(key); }
 #else
 
 bool canEncryptScenes() { return false; }
-
-bool readSceneKey(const Json& s, const Project&, SceneKey&, bool& have, std::string& error)
-{
-	have = false;
-	if (getEnv("KAGEX_SCENES_KEY").empty() && str(s, "scenes.keyFile").empty()) return true;
-	error = "This kagex-release was built without scnfile, so it can't encrypt scenarios";
-	return false;
-}
-
-bool makeSceneKey(const fs::path&, std::string& error)
-{
-	error = "This kagex-release was built without scnfile, so it can't make scenario keys";
-	return false;
-}
 
 bool sealScene(const fs::path&, const SceneKey&, std::string& error)
 {

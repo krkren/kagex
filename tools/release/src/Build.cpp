@@ -13,6 +13,7 @@
 #include "Engine.h"
 #include "Host.h"
 #include "Icons.h"
+#include "Keys.h"
 #include "Media.h"
 #include "Plan.h"
 #include "Sign.h"
@@ -219,7 +220,12 @@ namespace {
 class Builder {
 public:
 	Builder(const Json& s, const Project& p, const BuildOptions& o, krt::Progress& pr) : s_(s), p_(p), o_(o), pr_(pr) {}
-	~Builder() { wipeArchiveKey(archiveKey_); wipeSceneKey(key_); }
+	~Builder()
+	{
+		wipeArchiveKey(archiveKey_);
+		wipeSceneKey(key_);
+		std::fill(privPem_.begin(), privPem_.end(), '\0');
+	}
 
 	Json execute()
 	{
@@ -249,22 +255,29 @@ public:
 			mustRemove(work_);
 			mustMkdirs(work_);
 
-			// signing: resolve the keys up front, so a bad key stops the build before it does work
-			signing_ = flag(s_, "signing.enabled");
-			if (signing_) {
+			// the keys, from the game's keys file, up front: a bad or missing key stops the build
+			// before it does any work. Each kind of protection has a key of its own (Keys.h)
+			{
+				const KeysNeeded need = keysNeeded(s_);
+				GameKeys keys;
 				std::string err;
-				if (!signingPrivateKey(s_, p_, privPem_, err)) throw Failure{ "Signing: " + err };
-				if (!derivePublicKey(privPem_, pubPem_, err)) throw Failure{ "Signing: " + err };
-			}
-			if (flag(s_, "archive.encrypt")) {
-				std::string err;
-				if (!readArchiveKey(s_, p_, archiveKey_, haveArchiveKey_, err)) throw Failure{ err };
-				if (!haveArchiveKey_) throw Failure{ "archive.encrypt is on but there's no key: set archive.keyFile or KAGEX_ARCHIVE_KEY (make one with: kagex-release --cli keygen <file>)" };
-				hashNames_ = flag(s_, "archive.hideNames");
-			}
-			if (flag(s_, "scenes.compile")) {
-				std::string err;
-				if (!readSceneKey(s_, p_, key_, haveKey_, err)) throw Failure{ err };
+				if (!loadKeys(s_, p_, need, keys, err)) throw Failure{ err };
+				signing_ = need.signing;
+				if (signing_) {
+					privPem_ = keys.signing;
+					if (!derivePublicKey(privPem_, pubPem_, err)) throw Failure{ "Signing: " + err };
+				}
+				if (need.archive) {
+					if (!canEncryptArchive()) throw Failure{ "This kagex-release was built without xp3crypt, so it can't encrypt the archive" };
+					archiveKey_ = keys.archive;
+					haveArchiveKey_ = true;
+					hashNames_ = flag(s_, "archive.hideNames");
+				}
+				if (need.scenes) {
+					if (!canEncryptScenes()) throw Failure{ "This kagex-release was built without scnfile, so it can't encrypt scenarios" };
+					key_ = keys.scenes;
+					haveKey_ = true;
+				}
 			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));

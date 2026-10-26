@@ -3,8 +3,7 @@
 // the key into the engines' scnfile plugin. The encryption is scnfile's own code
 // (plugins/scnfile/seal.cpp, built in when CMake finds scnfile: KR_HAVE_SCNFILE)
 //
-// The key is 32 bytes, written as 64 hexadecimal digits: in the file scenes.keyFile names, or
-// in KAGEX_SCENES_KEY (which wins, for CI).
+// The key is the scenes key of the game's keys file (Keys.h): 32 bytes.
 //---------------------------------------------------------------------------
 #pragma once
 #include <array>
@@ -21,12 +20,6 @@ using SceneKey = std::array<uint8_t, 32>;
 
 /// Whether this build of the tool can encrypt (it was built with scnfile)
 bool canEncryptScenes();
-
-/// The game's key, from KAGEX_SCENES_KEY or scenes.keyFile. have is false when neither is set
-bool readSceneKey(const Json& settings, const Project& project, SceneKey& key, bool& have, std::string& error);
-
-/// Writes a new random key to file (refuses to replace one)
-bool makeSceneKey(const std::filesystem::path& file, std::string& error);
 
 /// Encrypts a compiled scenario (.scn, a PSB) where it is: removed, then written, as staged
 /// files are hard links to the game's own
