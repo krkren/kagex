@@ -13,7 +13,7 @@
 //     "scenes":   { compile, encrypt },
 //     "output":   { folder, archive, checksums, check, patchFrom },
 //     "keys":     { file },
-//     "signing":  { enabled, splitArchives },
+//     "signing":  { enabled },
 //     "archive":  { encrypt, hideNames },
 //     "platforms": { windows: { enabled, data, ... }, linux, steam, macos, web, android, ios }
 //   }

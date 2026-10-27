@@ -26,6 +26,13 @@ std::vector<GameFile> collectGameFiles(const Json& settings, const Project& proj
 /// pattern without '/' is matched against the file name only; one ending in '/' names a folder
 bool matchExclude(const std::string& pattern, const std::string& path, bool isDir);
 
+/// The top-level folders a desktop build packs into archives of their own beside data.xp3
+/// (bgimage.xp3, voice.xp3..., as Wamsoft's games ship): those the framework looks for as
+/// <folder>.xp3 (Initialize.tjs), but for the framework, the main scripts and the start-up data,
+/// which a signed build reads before it has checked the archives and so stay in data.xp3.
+/// Matched by exact (lower-case) name, as the framework asks for them
+const std::vector<std::string>& splitFolderNames();
+
 /// The plan as JSON (shown by the screen and by --cli plan)
 Json makePlan(const Json& settings, const Project& project);
 

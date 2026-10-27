@@ -30,10 +30,11 @@
 //   KAGSignedPatchZip         .zip patches to verify and mount
 //   KAGSignedMountOK          set true only while the verified patches/archives are being mounted
 //
-// With hidden file names (kagex-release's archive.hideNames) the game is data.xpc, read through
-// the xpcrypt:// medium, and a plain data/startup.tjs (hashed-bootstrap.tjs) that mounts it: the
-// key and the self-test are inside data.xpc (kagexHashedArchive), and the check verifies data.xpc
-// and the bootstrap in place of the archive.
+// With hidden file names (kagex-release's archive.hideNames) the files in data.xp3 and in the
+// archives split out beside it are stored under hashed names and read through the xp3crypt
+// plugin's xpcrypt:// medium; only data.xp3's startup.tjs (hashed-bootstrap.tjs) keeps its name.
+// The key and the self-test are in data.xp3 under hashed names (read as kagexHashedArchive +
+// name), and a verified split archive is mounted through the plugin (KAGSignedUseHashedArchive).
 
 var KAGSignatureKeyFile = "SignatureKey.tjs";
 // The injection options a signed build refuses: a REPL opens a script console in the running game,
@@ -99,7 +100,7 @@ function KAGSignatureInit()
 
 
 // The hidden-names archive's folder (xpcrypt://data/), where the key and the self-test are, or ""
-// for a game in data.xp3 or a folder. The bootstrap sets it before Initialize.tjs runs
+// for a game whose names aren't hidden. The bootstrap sets it before Initialize.tjs runs
 function KAGSignatureHashedArchive()
 {
 	return typeof global.kagexHashedArchive == "String" ? global.kagexHashedArchive : "";
@@ -112,6 +113,16 @@ function KAGSignedUseArchive(name, arcname)
 	for (var i = 0; i < KAGSignedParts.count; i++)
 		if (KAGSignedParts[i].storage == arcname) { KAGSignedParts[i].paths.add(arcname + ">"); return true; }
 	KAGSignedParts.add(%[ "storage" => arcname, "paths" => [ arcname + ">" ] ]);
+	return true;
+}
+
+// useArchiveIfExists, when signed and the names are hidden: record the archive to verify, and
+// mount it through the xp3crypt plugin as xpcrypt://<name>/ once it has (KAGSignatureAllPassed).
+function KAGSignedUseHashedArchive(name, arcname)
+{
+	for (var i = 0; i < KAGSignedParts.count; i++)
+		if (KAGSignedParts[i].storage == arcname) return true;
+	KAGSignedParts.add(%[ "storage" => arcname, "paths" => [ "xpcrypt://" + name + "/" ], "domain" => name ]);
 	return true;
 }
 
@@ -158,16 +169,13 @@ function KAGSignatureVerifyAndStart(cont)
 
 	// The archive the running scripts were loaded from (data.xp3, or the executable it is bound
 	// into). The engine prefers a data.xp3 next to it over a bound copy, so checking the archive
-	// actually in use catches a planted data.xp3. With hidden names, data.xpc and its bootstrap.
+	// actually in use catches a planted data.xp3. With hidden names that's data.xp3 too: its
+	// startup.tjs, the one name it keeps, is what the engine ran.
 	var hashed = KAGSignatureHashedArchive();
-	if (hashed != "") {
-		global.KAGSignedArchive = typeof global.kagexHashedArchiveFile == "String" ? global.kagexHashedArchiveFile : "";
-	} else {
-		var placed = Storages.getPlacedPath("startup.tjs");
-		if (placed == "") placed = Storages.getPlacedPath("system/Initialize.tjs");
-		var at = placed.indexOf(">");
-		global.KAGSignedArchive = at >= 0 ? placed.substring(0, at) : System.exeName;
-	}
+	var placed = Storages.getPlacedPath("startup.tjs");
+	if (placed == "") placed = Storages.getPlacedPath("system/Initialize.tjs");
+	var at = placed.indexOf(">");
+	global.KAGSignedArchive = at >= 0 ? placed.substring(0, at) : System.exeName;
 
 	// A decoy: a file whose .sig was made for different content, so a correct plugin reports a
 	// mismatch (0). A plugin stubbed to always succeed would return 1 here and be caught; one that
@@ -177,13 +185,7 @@ function KAGSignatureVerifyAndStart(cont)
 		"expect" => "mismatch", "kind" => "decoy" ]);
 
 	KAGSigQueue.add(%[ "storage" => KAGSignedArchive, "label" => "the game data (" +
-		(KAGSignedArchive != "" ? Storages.extractStorageName(KAGSignedArchive) : "data.xpc") + ")", "expect" => "pass", "kind" => "archive" ]);
-	// the plain bootstrap that mounts data.xpc runs first, so it is checked too
-	if (hashed != "") {
-		var boot = typeof global.kagexHashedBootstrap == "String" ? global.kagexHashedBootstrap : "";
-		KAGSigQueue.add(%[ "storage" => boot, "label" => "the game's start-up script (startup.tjs)",
-			"expect" => "pass", "kind" => "archive" ]);
-	}
+		Storages.extractStorageName(KAGSignedArchive) + ")", "expect" => "pass", "kind" => "archive" ]);
 
 	// The engine files, from the signed list beside the executable (<exe>.sigfiles). Verified as a
 	// whole; the files it names are appended to the queue once it passes (so the list can't be
@@ -304,6 +306,12 @@ function KAGSignatureAllPassed()
 	global.KAGSignedMountOK = true;
 	for (var i = 0; i < KAGSignedParts.count; i++) {
 		var part = KAGSignedParts[i];
+		// hidden names: the archive is served through the xp3crypt plugin as xpcrypt://<domain>/
+		if (part.domain !== void && (typeof global.XP3Crypt == "undefined" || !XP3Crypt.mount(part.domain, part.storage))) {
+			global.KAGSignedMountOK = false;
+			KAGSignatureQuit("The game data (" + Storages.extractStorageName(part.storage) + ") could not be opened.");
+			return;
+		}
 		for (var j = 0; j < part.paths.count; j++) Storages.addAutoPath(part.paths[j]);
 		dm("Signed archive mounted: " + part.storage);
 	}

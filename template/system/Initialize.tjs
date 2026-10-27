@@ -204,7 +204,31 @@ var archive_exists = %[]; // Cache whether the archive exists
 
 
 
-function useArchiveIfExists(name)
+// Where the folders' archives (bgimage.xp3, voice.xp3...) are: beside the data.xp3 the game was
+// read from (next to the executable, or in a macOS app's Resources), or beside the executable
+// when the game runs from a folder or from data bound into the executable.
+
+global.KAGArchivePath = System.exePath;
+
+{
+
+	var placed = Storages.getPlacedPath("startup.tjs");
+
+	var at = placed.indexOf(">");
+
+	if (at >= 0) {
+
+		var arc = placed.substring(0, at);
+
+		if (Storages.extractStorageExt(arc).toLowerCase() == ".xp3") global.KAGArchivePath = Storages.extractStoragePath(arc);
+
+	}
+
+}
+
+
+
+function useArchiveIfExists(name, patch = false)
 
 {
 
@@ -212,13 +236,26 @@ function useArchiveIfExists(name)
 
 	with (Storages) name = .chopStorageExt(.extractStorageName(name));
 
-	// Use the archive if name exists
+	// Use the archive if name exists (a patch: next to the executable, with plain names)
 
-	var arcname = System.exePath + name + ".xp3";
+	var arcname = (patch ? System.exePath : KAGArchivePath) + name + ".xp3";
 
 	if(Storages.isExistentStorage(arcname)) {
 
 		archive_exists[name.toLowerCase()] = true;
+
+		// hidden file names: the archive's names are hashed, so the xp3crypt plugin serves it as
+		// xpcrypt://<name>/ (KAGMountHashedArchive)
+
+		if (global.kagexHashedArchive != "" && !patch) {
+
+			if (global.KAGSigned === true) KAGSignedUseHashedArchive(name, arcname);
+
+			else KAGMountHashedArchive(name, arcname);
+
+			return;
+
+		}
 
 		if (global.KAGSigned === true) { KAGSignedUseArchive(name, arcname); return; }
 
@@ -230,16 +267,45 @@ function useArchiveIfExists(name)
 
 
 
+// A folder's archive with hidden file names (<name>.xp3, its names hashed): mounted through the
+// xp3crypt plugin as xpcrypt://<name>/, then its subfolders' paths. Returns false when the plugin
+// can't open it
+
+function KAGMountHashedArchive(name, arcname, subs*)
+
+{
+
+	if (typeof global.XP3Crypt == "undefined" || !XP3Crypt.mount(name, arcname)) {
+
+		Debug.message("xp3crypt: " + arcname + " could not be opened");
+
+		return false;
+
+	}
+
+	Storages.addAutoPath("xpcrypt://" + name + "/");
+
+	for (var i = 0; i < subs.count; i++) Storages.addAutoPath("xpcrypt://" + name + "/" + subs[i] + "/");
+
+	return true;
+
+}
+
+
+
 function addArchive(name)
 
 {
 
 	// Hashed-name archive mode (the bootstrap startup.tjs set kagexHashedArchive to
-	// "xpcrypt://data/"): the folder lives in that one archive, served by the xpcrypt plugin.
+	// "xpcrypt://data/"): the folder is in data.xp3, or in its own <name>.xp3 beside it, both
+	// served by the xpcrypt plugin.
 
 	if (global.kagexHashedArchive != "") {
 
 		Storages.addAutoPath(global.kagexHashedArchive + name + "/");
+
+		useArchiveIfExists(name);
 
 		return;
 
@@ -261,9 +327,11 @@ function addArchiveWithSubFolder(name, arr*)
 
 {
 
-	var arcname = System.exePath + name + ".xp3";
+	var arcname = KAGArchivePath + name + ".xp3";
 
-	var isexist = (global.kagexHashedArchive == "") && archive_exists[name.toLowerCase()];
+	var isexist = archive_exists[name.toLowerCase()];
+
+	var hashed = global.kagexHashedArchive != "";
 
 	for (var i = 0; i < arr.count; i++) {
 
@@ -271,9 +339,19 @@ function addArchiveWithSubFolder(name, arr*)
 
 		if (sub == "") continue;
 
-		if (global.kagexHashedArchive != "") {
+		if (hashed) {
 
 			Storages.addAutoPath(global.kagexHashedArchive + name + "/" + sub + "/");
+
+			if (isexist) {
+
+				var hpath = "xpcrypt://" + name + "/" + sub + "/";
+
+				if (global.KAGSigned === true) KAGSignedDeferSubPath(arcname, hpath);
+
+				else Storages.addAutoPath(hpath);
+
+			}
 
 			continue;
 
@@ -454,7 +532,7 @@ if(Storages.isExistentStorage("Storages.tjs"))
 // Patch archive (*patch contents are flattened; subfolders within the patch cannot be used)
 // (zip patches, patch.zip and on, come after the plugins below: KAGMountPatchZip)
 
-useArchiveIfExists("patch.xp3");
+useArchiveIfExists("patch.xp3", true);
 
 
 

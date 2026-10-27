@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.2
+
+### Changed
+
+- **The desktop builds are split as Wamsoft's games are**: kagex-release's Windows, Linux, Steam and macOS builds with `xp3` (or `bind`) data ship `data.xp3` (`startup.tjs`, `system/`, `main/`, `init/`, `sysscn/` and the top-level files) and an archive per media folder beside it: `bgimage.xp3`, `bgm.xp3`, `effect.xp3`, `evimage.xp3`, `face.xp3`, `fgimage.xp3`, `image.xp3`, `others.xp3`, `rule.xp3`, `scenario.xp3`, `sound.xp3`, `thum.xp3`, `uipsd.xp3`, `video.xp3`, `voice.xp3` (those the game has), always, with or without encryption and signing. Signing > *Split large archives* is gone. A signed build checks each archive and mounts the media ones once they have. The web, Android and iOS builds keep the whole game in one `data.xp3`.
+- **Hidden names are in `data.xp3`**: with Encryption > *Hide names*, the files in `data.xp3` and in the media archives are stored under keyed hashes of their paths, and only `data.xp3`'s `startup.tjs` keeps its name (still encrypted): the engine opens `data.xp3` as usual, runs it, and it mounts the archives through the xp3crypt plugin's `xpcrypt://` medium. No more `data.xpc`, and no `data/` folder: the package is the archives. Signing covers them as it covers any archives.
+- Each encrypted archive of a game has its own range of per-file keys ([xp3crypt](https://github.com/krkren/xp3crypt)'s new `saltBase`), so no two files share a keystream.
+- The framework finds the media archives beside the `data.xp3` it was read from (`KAGArchivePath`), not beside the executable, so a macOS app's archives go in its `Resources`. kagex-release splits a macOS build only for a framework that does (0.9.2's), and hides names only with 0.9.2's framework (`hashed-bootstrap.tjs`, `Initialize.tjs`, `SignatureCheck.tjs`): update a game's `data/system` from `template/system`.
+
 ## 0.9.1
 
 ### Fixed

@@ -52,10 +52,13 @@ bool dataFolder(const std::string& name)
 
 bool canEncryptArchive() { return true; }
 
-bool packEncrypted(const fs::path& stageDir, const fs::path& output, const ArchiveKey& key, bool hashNames, int& files, uint64_t& bytes, std::string& error)
+bool packEncrypted(const fs::path& stageDir, const fs::path& output, const ArchiveKey& key, bool hashNames,
+                   const std::set<std::string>& plainNames, uint32_t saltBase, int& files, uint64_t& bytes, std::string& error)
 {
 	xp3crypt::PackOptions opt;   // store everything (encrypted)
 	opt.hashNames = hashNames;
+	opt.plainNames = plainNames;
+	opt.saltBase = saltBase;
 	if (hashNames) opt.compressIndex = false;   // the plugin reads the index without zlib
 	xp3crypt::PackResult r;
 	if (!xp3crypt::pack(stageDir, output, key, opt, r, error, {})) return false;
@@ -105,7 +108,7 @@ void wipeArchiveKey(ArchiveKey& key) { xp3crypt::wipe(key); }
 
 bool canEncryptArchive() { return false; }
 
-bool packEncrypted(const fs::path&, const fs::path&, const ArchiveKey&, bool, int&, uint64_t&, std::string& error)
+bool packEncrypted(const fs::path&, const fs::path&, const ArchiveKey&, bool, const std::set<std::string>&, uint32_t, int&, uint64_t&, std::string& error)
 {
 	error = "This kagex-release was built without xp3crypt, so it can't encrypt the archive";
 	return false;

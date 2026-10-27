@@ -287,8 +287,7 @@ public:
 			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.21, 0.22));
 			fileList(PartProgress(pr_, 0.22, 0.25));
 			if (!str(s_, "output.patchFrom").empty()) outputs.push(patch(PartProgress(pr_, 0.25, 0.25)));
-			if (hashNames_) packHashed(PartProgress(pr_, 0.25, 0.35));
-			else if (needsXp3()) { splitIfNeeded(PartProgress(pr_, 0.25, 0.27)); packXp3(PartProgress(pr_, 0.27, 0.35)); }
+			packArchives(PartProgress(pr_, 0.25, 0.35));
 			prepareIcons();
 
 			const double span = 0.6 / std::max<size_t>(1, chosen_.size());
@@ -795,63 +794,173 @@ private:
 		return linked_.count(stem) > 0;
 	}
 
-	bool needsXp3()
+	// Whether a platform ships its data in archives (xp3, or bound into the executable)
+	bool xp3Mode(const std::string& id)
 	{
-		for (const auto& id : chosen_) {
-			const std::string d = str(s_, "platforms." + id + ".data");
-			if (d == "xp3" || d == "bind") return true;
+		const std::string d = str(s_, "platforms." + id + ".data");
+		return d == "xp3" || d == "bind";
+	}
+
+	// Whether a platform's data is split into an archive per folder (data.xp3, bgimage.xp3,
+	// voice.xp3..., as Wamsoft's games ship): always on the desktops. The web, Android and iOS
+	// engines load one data.xp3 (preloaded, or from the app's assets). macOS finds the archives
+	// beside data.xp3 in its Resources from KAGEX 0.9.2's framework on (KAGArchivePath); an older
+	// framework looks beside the executable, so its macOS build keeps one data.xp3
+	bool splitsData(const std::string& id)
+	{
+		if (!xp3Mode(id)) return false;
+		if (id == "windows" || id == "linux" || id == "steam") return true;
+		return id == "macos" && frameworkFindsSplitArchives(p_.framework);
+	}
+
+	// Packs one archive from a folder: plain, encrypted, or (with hidden names) encrypted with the
+	// names hashed but for `plain`. saltBase keeps each encrypted archive's cipher salts apart
+	void packOne(const fs::path& from, const fs::path& to, uint32_t saltBase, const std::set<std::string>& plain,
+	             const std::string& label, krt::Progress& pr)
+	{
+		std::error_code ec;
+		if (haveArchiveKey_) {
+			int files = 0;
+			uint64_t bytes = 0;
+			std::string err;
+			if (!packEncrypted(from, to, archiveKey_, hashNames_, plain, saltBase, files, bytes, err))
+				throw Failure{ "Couldn't pack the encrypted " + label + ": " + err };
+			if (!fs::is_regular_file(to, ec) || files == 0) throw Failure{ "Couldn't pack the encrypted " + label };
+			pr_.log(label + ": " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted" +
+			        (hashNames_ ? " with hidden names" : ""));
+			return;
+		}
+		const auto r = krt::xp3::pack(from, to, krt::xp3::PackOptions::defaults(), pr);
+		if (r.canceled) throw Failure{ "Canceled" };
+		if (!fs::is_regular_file(to, ec) || r.files == 0) throw Failure{ "Couldn't pack " + label };
+		pr_.log(label + ": " + std::to_string(r.files) + " files, " + std::to_string(r.arcBytes / 1048576) + " MB");
+	}
+
+	static bool hasFiles(const fs::path& dir)
+	{
+		std::error_code ec;
+		for (fs::recursive_directory_iterator it(dir, ec), end; it != end; it.increment(ec)) {
+			if (ec) return false;
+			const std::string n = krt::fromPath(it->path().filename());
+			if (!n.empty() && n[0] == '.') { if (it->is_directory(ec)) it.disable_recursion_pending(); continue; }
+			if (it->is_regular_file(ec)) return true;
 		}
 		return false;
 	}
 
-	void packXp3(krt::Progress&& pr)
+	// The archives. The desktops' data is split: data.xp3 with the start-up script, the framework
+	// and the main scripts, and an archive per media folder beside it (splitFolders). The web,
+	// Android and iOS get the whole data in one data.xp3. With hidden names every archive stores
+	// its files under keyed hashes of their paths, and data.xp3's startup.tjs is the bootstrap
+	// (hashed-bootstrap.tjs, the one name kept) that mounts them through the xp3crypt plugin.
+	// The staged folder is left as it was, for the platforms that ship it as files.
+	void packArchives(krt::Progress&& pr)
 	{
-		xp3_ = work_ / "data.xp3";
-		if (haveArchiveKey_) {
-			pr.progress(0, "Packing data.xp3 (encrypted)");
-			int files = 0;
-			uint64_t bytes = 0;
-			std::string err;
-			if (!packEncrypted(stage_, xp3_, archiveKey_, false, files, bytes, err)) throw Failure{ "Couldn't pack the encrypted data.xp3: " + err };
-			std::error_code ec;
-			if (!fs::is_regular_file(xp3_, ec) || files == 0) throw Failure{ "Couldn't pack the encrypted data.xp3" };
-			pr.log("data.xp3: " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted");
-			return;
+		bool whole = false, split = false;
+		for (const auto& id : chosen_) {
+			if (!xp3Mode(id) && !hashNames_) continue;
+			if (hashNames_ || splitsData(id)) split = true;
+			else whole = true;
 		}
-		pr.progress(0, "Packing data.xp3");
-		const auto r = krt::xp3::pack(stage_, xp3_, krt::xp3::PackOptions::defaults(), pr);
-		if (r.canceled) throw Failure{ "Canceled" };
+		if (!whole && !split) return;
 		std::error_code ec;
-		if (!fs::is_regular_file(xp3_, ec) || r.files == 0) throw Failure{ "Couldn't pack data.xp3" };
-		pr.log("data.xp3: " + std::to_string(r.files) + " files, " + std::to_string(r.arcBytes / 1048576) + " MB");
+		const uint64_t signLimit = 2000ULL * 1048576;   // the engine's ~2 GB signature-check limit
+
+		if (whole) {
+			// one data.xp3 of everything (salts from 0: the platforms that get it get no other archive)
+			pr.progress(0, haveArchiveKey_ ? "Packing data.xp3 (encrypted)" : "Packing data.xp3");
+			mustMkdirs(work_ / "whole");
+			xp3Whole_ = work_ / "whole" / "data.xp3";
+			packOne(stage_, xp3Whole_, 0, {}, "data.xp3 (" + wholeFor() + ")", pr);
+		}
+		if (!split) return;
+
+		// move the split folders out of the staged data while data.xp3 is packed, and back after
+		const fs::path aside = work_ / "split";
+		mustRemove(aside);
+		mustMkdirs(aside);
+		std::vector<std::string> moved;
+		std::string gameStartup;   // with hidden names, the game's own startup.tjs (set aside for the bootstrap)
+		auto restore = [&]() {
+			std::error_code e;
+			for (const auto& n : moved) fs::rename(aside / krt::toPath(n), stage_ / krt::toPath(n), e);
+			if (!gameStartup.empty()) {
+				fs::remove(stage_ / "startup.tjs", e);
+				fs::rename(aside / ".startup.tjs", stage_ / "startup.tjs", e);
+			}
+		};
+		try {
+			uint32_t base = 0;
+			for (const auto& n : splitFolderNames()) {
+				const fs::path dir = stage_ / krt::toPath(n);
+				if (!fs::is_directory(dir, ec) || !hasFiles(dir)) continue;
+				const uint64_t size = treeSize(dir);
+				if (signing_ && size >= signLimit)
+					throw Failure{ "The " + n + " folder is " + humanGB(size) + " on its own; a signed build can't put 2 GB or more into one archive "
+						"(the engine's signature check uses 32-bit sizes). Split that folder's contents across smaller folders" };
+				pr.progress(-1, "Packing " + n + ".xp3");
+				const fs::path part = work_ / krt::toPath(n + ".xp3");
+				base += 0x01000000;   // 16 million files an archive
+				packOne(dir, part, base, {}, n + ".xp3", pr);
+				partXp3_[n] = part;
+				partNames_.push_back(n);
+				fs::rename(dir, aside / krt::toPath(n), ec);
+				if (ec) throw Failure{ "Couldn't move " + n + " aside while packing data.xp3: " + ec.message() };
+				moved.push_back(n);
+			}
+			std::set<std::string> plain;
+			if (hashNames_) {
+				// data.xp3's startup.tjs is the bootstrap (compiled with the other scripts), the one
+				// file whose name the engine has to find
+				std::string bootstrap;
+				if (!krt::readFile(stage_ / "system" / "hashed-bootstrap.tjs", bootstrap) || bootstrap.empty())
+					throw Failure{ "Hiding the file names needs system/hashed-bootstrap.tjs in the framework (update it from KAGEX's template/system)" };
+				if (fs::exists(stage_ / "startup.tjs", ec)) {
+					fs::rename(stage_ / "startup.tjs", aside / ".startup.tjs", ec);
+					if (ec) throw Failure{ "Couldn't set the game's startup.tjs aside: " + ec.message() };
+					gameStartup = "startup.tjs";
+				}
+				writeText(stage_ / "startup.tjs", bootstrap);
+				plain.insert("startup.tjs");
+			}
+			pr.progress(0.5, "Packing data.xp3");
+			xp3_ = work_ / "data.xp3";
+			packOne(stage_, xp3_, 0, plain, "data.xp3", pr);
+			if (signing_ && fs::file_size(xp3_, ec) >= signLimit)
+				throw Failure{ "This signed build's data.xp3 is " + humanGB(fs::file_size(xp3_, ec)) + " without the media folders: the engine's signature check "
+					"can't read an archive of 2 GB or more. Move more of the data into the folders that get archives of their own (" + joinNames(splitFolderNames()) + ")" };
+		} catch (...) {
+			restore();
+			throw;
+		}
+		restore();
 	}
 
-	// Hidden file names: one encrypted, name-hashed archive (data.xpc) the game reads through the
-	// xpcrypt:// medium, plus a plain bootstrap startup.tjs that mounts it. The game's folders are
-	// inside data.xpc with their names hashed, so nothing is readable in the package but the engine
-	void packHashed(krt::Progress&& pr)
+	static std::string joinNames(const std::vector<std::string>& v)
 	{
-		// the plain bootstrap: template/system/hashed-bootstrap.tjs, copied into the staged data
-		std::error_code ec;
-		if (!krt::readFile(stage_ / "system" / "hashed-bootstrap.tjs", bootstrap_) || bootstrap_.empty())
-			throw Failure{ "Hiding the file names needs template/system/hashed-bootstrap.tjs in the framework (update template/system)" };
-		xpc_ = work_ / "data.xpc";
-		pr.progress(0, "Packing data.xpc (encrypted, names hidden)");
-		int files = 0;
-		uint64_t bytes = 0;
-		std::string err;
-		if (!packEncrypted(stage_, xpc_, archiveKey_, true, files, bytes, err)) throw Failure{ "Couldn't pack data.xpc: " + err };
-		if (!fs::is_regular_file(xpc_, ec) || files == 0) throw Failure{ "Couldn't pack data.xpc" };
-		// the engine's signature check reads sizes as 32-bit numbers, and data.xpc can't be split
-		if (signing_ && fs::file_size(xpc_, ec) >= 2000ULL * 1048576)
-			throw Failure{ "This signed build's data.xpc is " + humanGB(fs::file_size(xpc_, ec)) + ": with hidden file names the data is one archive, "
-				"and the engine's signature check can't read 2 GB or more of it. Turn Hide names off (the data is then split into archives under 2 GB), or reduce the data" };
-		pr.log("data.xpc: " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted with hidden names");
+		std::string out;
+		for (const auto& n : v) out += (out.empty() ? "" : ", ") + n;
+		return out;
+	}
+
+	// The platforms that get the whole data.xp3, for its log line
+	std::string wholeFor()
+	{
+		std::string out;
+		for (const auto& id : chosen_)
+			if (xp3Mode(id) && !splitsData(id)) out += (out.empty() ? "" : ", ") + id;
+		return out;
+	}
+
+	// The data.xp3 a platform ships: the desktops' (split), or the whole one
+	const fs::path& xp3For(const std::string& id)
+	{
+		return (hashNames_ || splitsData(id)) ? xp3_ : xp3Whole_;
 	}
 
 	// Write the game's key into the platform's engine, which must have the xp3crypt plugin (its
 	// key slot). root: the platform's own copy of the engine. Called when the platform ships the
-	// encrypted data.xp3 (xp3 or bind data mode), or a hashed data.xpc
+	// encrypted data.xp3 and its split archives (xp3 or bind data mode)
 	void archiveKeyInto(const std::string& id, const fs::path& root)
 	{
 		if (!haveArchiveKey_) return;
@@ -875,7 +984,7 @@ private:
 	bool encryptedXp3For(const std::string& id)
 	{
 		if (!haveArchiveKey_) return false;
-		if (hashNames_) return true;   // the hashed data.xpc is always read through the medium, so the engine needs the key
+		if (hashNames_) return true;   // hidden names: always the hashed archives, read through the plugin
 		const std::string d = str(s_, "platforms." + id + ".data");
 		return d == "xp3" || d == "bind";
 	}
@@ -939,74 +1048,6 @@ private:
 		if (!verifyFileWith(f, pubPem_, err)) throw Failure{ "The signature for " + krt::fromPath(f.filename()) + " didn't verify: " + err };
 	}
 
-	uint64_t splitThresholdBytes()
-	{
-		const std::string env = getEnv("KAGEX_RELEASE_SPLIT_THRESHOLD_MB");
-		const long long mb = env.empty() ? 2000 : std::atoll(env.c_str());
-		return (uint64_t)(mb > 0 ? mb : 2000) * 1048576ULL;
-	}
-
-	// Splits the biggest media folders out of data.xp3 into their own archives beside it, so no
-	// archive reaches the engine's 2 GB signature-check limit. Forced on for a signed build whose
-	// data is that large; otherwise follows signing.splitArchives. Windows and Linux only (the
-	// parts sit beside the engine, where the framework looks for them).
-	void splitIfNeeded(krt::Progress&& pr)
-	{
-		bool want = flag(s_, "signing.splitArchives");
-		const uint64_t threshold = splitThresholdBytes();
-		const uint64_t dataBytes = treeSize(stage_);
-		const bool mustSplit = signing_ && dataBytes >= threshold;
-		if (mustSplit) want = true;
-		if (!want) return;
-		for (const auto& id : chosen_)
-			if (id == "macos" || id == "android" || id == "ios" || id == "web")
-				throw Failure{ std::string(mustSplit ? "This signed build's data is " + humanGB(dataBytes) + ", so data.xp3 must be split to stay under the engine's 2 GB signature-check limit. " : "") +
-					"Splitting the data into separate archives is supported for Windows and Linux only; build " + id + " on its own, or turn splitting off" };
-
-		static const std::set<std::string> splittable = {
-			"video", "bgm", "voice", "sound", "bgimage", "fgimage", "image", "evimage", "thum" };
-		struct Folder { std::string name; uint64_t size; };
-		std::vector<Folder> folders;
-		std::error_code ec;
-		for (const auto& e : fs::directory_iterator(stage_, ec)) {
-			if (!e.is_directory(ec)) continue;
-			const std::string n = krt::fromPath(e.path().filename());
-			if (splittable.count(lower(n))) folders.push_back({ n, treeSize(e.path()) });
-		}
-		std::sort(folders.begin(), folders.end(), [](const Folder& a, const Folder& b) { return a.size > b.size; });
-
-		const uint64_t signLimit = 2000ULL * 1048576;   // the engine's ~2 GB signature-check limit (fixed, not the test threshold)
-		uint64_t remaining = dataBytes;
-		for (const auto& f : folders) {
-			if (mustSplit && remaining < threshold) break;   // enough moved out already
-			if (signing_ && f.size >= signLimit)
-				throw Failure{ "The " + f.name + " folder is " + humanGB(f.size) + " on its own; a signed build can't put 2 GB or more into one archive "
-					"(the engine's signature check uses 32-bit sizes). Split that folder's contents across smaller folders" };
-			pr.progress(-1, "Splitting out " + f.name + ".xp3");
-			const fs::path part = work_ / krt::toPath(f.name + ".xp3");
-			if (haveArchiveKey_) {
-				// an encrypted build encrypts its parts too (the plugin decrypts every XP3 read)
-				int files = 0;
-				uint64_t bytes = 0;
-				std::string err;
-				if (!packEncrypted(stage_ / krt::toPath(f.name), part, archiveKey_, false, files, bytes, err))
-					throw Failure{ "Couldn't pack the encrypted " + f.name + ".xp3: " + err };
-			} else {
-				const auto r = krt::xp3::pack(stage_ / krt::toPath(f.name), part, krt::xp3::PackOptions::defaults(), pr);
-				if (r.canceled) throw Failure{ "Canceled" };
-			}
-			if (!fs::is_regular_file(part, ec)) throw Failure{ "Couldn't pack " + f.name + ".xp3" };
-			partXp3_[f.name] = part;
-			partNames_.push_back(f.name);
-			mustRemove(stage_ / krt::toPath(f.name));
-			remaining -= f.size;
-			pr_.log("Split out " + f.name + ".xp3 (" + humanGB(f.size) + ")");
-		}
-		if (mustSplit && remaining >= threshold)
-			throw Failure{ "Couldn't get data.xp3 under 2 GB by moving the media folders out (" + humanGB(remaining) + " left). "
-				"Reduce the data, or move more of it into the media folders that can be split (video, bgm, voice, sound, image, bgimage, fgimage, evimage, thum)" };
-	}
-
 	void copyParts(const fs::path& dir)
 	{
 		for (const auto& [name, part] : partXp3_) copyFile(part, dir / krt::toPath(name + ".xp3"));
@@ -1043,11 +1084,7 @@ private:
 		writeText(dir / krt::toPath(exeLeaf + ".sigfiles"), manifest);
 		signChecked(dir / krt::toPath(exeLeaf + ".sigfiles"));
 
-		if (hashNames_) {
-			// hidden names: data.xpc and the plain bootstrap that mounts it
-			signChecked(dir / "data.xpc");
-			signChecked(dir / "data" / "startup.tjs");
-		} else if (str(s_, "platforms." + id + ".data") != "bind") signChecked(dir / "data.xp3");   // a bound exe is signed above
+		if (str(s_, "platforms." + id + ".data") != "bind") signChecked(dir / "data.xp3");   // a bound exe is signed above
 		for (const auto& name : partNames_) signChecked(dir / krt::toPath(name + ".xp3"));
 		pr_.log("Signed " + std::to_string(rel.size()) + " engine files, the archive" +
 		        (partNames_.empty() ? std::string() : " and " + std::to_string(partNames_.size()) + " part(s)"));
@@ -1058,16 +1095,16 @@ private:
 	// their embedded signatures a moment later, which would break a krt::sig .sig, so the app's own
 	// code signature (Developer ID, or ad hoc) is what vouches for them. codesign records a hash of
 	// data.xp3 without changing its bytes, so its .sig stays valid; the framework skips the engine
-	// file list on macOS (SignatureCheck.tjs). Splitting is disabled on macOS, so there are no parts.
+	// file list on macOS (SignatureCheck.tjs). The folders' archives sit beside data.xp3.
 	void signMacosApp(const fs::path& contents)
 	{
 		if (!signing_) return;
 		pr_.progress(-1, "Signing macOS");
-		if (hashNames_) {
-			signChecked(contents / "Resources" / "data.xpc");
-			signChecked(contents / "Resources" / "data" / "startup.tjs");
-		} else signChecked(contents / "Resources" / "data.xp3");
-		pr_.log("Signed the game archive (macOS; codesign seals the engine)");
+		signChecked(contents / "Resources" / "data.xp3");
+		const bool parts = hashNames_ || splitsData("macos");
+		if (parts) for (const auto& name : partNames_) signChecked(contents / "Resources" / krt::toPath(name + ".xp3"));
+		pr_.log("Signed the game archive" + std::string(parts && !partNames_.empty() ? " and " + std::to_string(partNames_.size()) + " folder archive(s)" : "") +
+		        " (macOS; codesign seals the engine)");
 	}
 
 	//-----------------------------------------------------------------------
@@ -1113,16 +1150,15 @@ private:
 		package = archive(id, folder);
 	}
 
+	// The data beside the engine (dir): data.xp3 and, on the desktops, the folders' archives, or
+	// the data/ folder. With hidden names data.xp3's startup.tjs is the bootstrap: no data/ folder
 	void dataInto(const std::string& id, const fs::path& dir)
 	{
-		if (hashNames_) {
-			// data.xpc next to the engine, and a plain data/ with just the bootstrap startup.tjs
-			copyFile(xpc_, dir / "data.xpc");
-			writeText(dir / "data" / "startup.tjs", bootstrap_);
-			return;
-		}
 		const std::string mode = str(s_, "platforms." + id + ".data");
-		if (mode == "xp3") { copyFile(xp3_, dir / "data.xp3"); copyParts(dir); }
+		if (mode == "xp3" || hashNames_) {
+			copyFile(xp3For(id), dir / "data.xp3");
+			if (hashNames_ || splitsData(id)) copyParts(dir);
+		}
 		else if (mode == "folder") copyTree(stage_, dir / "data");
 	}
 
@@ -1149,7 +1185,8 @@ private:
 		if (left) pr_.log("Plugins: " + std::to_string(kept) + " linked by the scripts, " + std::to_string(left) + " left out");
 	}
 
-	// Appends data.xp3 to the executable, at a 16-byte boundary (where the engine looks)
+	// Appends data.xp3 to the executable, at a 16-byte boundary (where the engine looks); the
+	// folders' archives go beside it (copyParts)
 	void bind(const fs::path& exe)
 	{
 		std::string a, b;
@@ -1402,8 +1439,8 @@ private:
 			const fs::path dir = work_ / "android-data";
 			fs::create_directories(dir, ec);
 			fs::remove(dir / "data.xp3", ec);
-			fs::create_hard_link(xp3_, dir / "data.xp3", ec);
-			if (ec) copyFile(xp3_, dir / "data.xp3");
+			fs::create_hard_link(xp3For("android"), dir / "data.xp3", ec);
+			if (ec) copyFile(xp3For("android"), dir / "data.xp3");
 			source("flatten", dir, "", "data.xp3");
 		} else {
 			source("mirror", stage_, "data", nullptr);
@@ -1678,8 +1715,8 @@ private:
 		}
 		if (!flag(s_, "engine.debug")) args += " -debugwin=no";
 		if (xp3) {
-			copyFile(xp3_, dir / "krkrz.data");
-			if (!preload(fs::file_size(xp3_, ec))) throw Failure{ "This web engine's krkrz.js doesn't load krkrz.data as data.xp3; choose files for the web data" };
+			copyFile(xp3For("web"), dir / "krkrz.data");
+			if (!preload(fs::file_size(xp3For("web"), ec))) throw Failure{ "This web engine's krkrz.js doesn't load krkrz.data as data.xp3; choose files for the web data" };
 		} else {
 			// the files, in lower case (the site asks for every file in lower case)
 			std::map<std::string, std::string> lowerNames;
@@ -2127,13 +2164,12 @@ private:
 	// signing
 	bool signing_ = false;
 	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)
-	std::vector<std::string> partNames_;          ///< folders split out of data.xp3 (signed/large builds)
+	std::vector<std::string> partNames_;          ///< folders packed into archives of their own (bgimage.xp3...) beside data.xp3
 	std::map<std::string, fs::path> partXp3_;     ///< part name -> work_/<name>.xp3
 	ArchiveKey archiveKey_{};     ///< the game's key for an encrypted data.xp3 (when haveArchiveKey_)
 	bool haveArchiveKey_ = false;
-	bool hashNames_ = false;      ///< one encrypted, name-hashed archive (data.xpc) + a plain bootstrap
-	fs::path xpc_;                ///< the hashed archive (work/data.xpc)
-	std::string bootstrap_;       ///< the plain bootstrap startup.tjs that mounts it
+	bool hashNames_ = false;      ///< archives whose files are stored under hashed names; data.xp3's startup.tjs is the bootstrap
+	fs::path xp3Whole_;           ///< the whole data in one data.xp3, for the platforms that don't split (work/whole)
 	SceneKey key_{};             ///< the game's key for compiled scenarios (when haveKey_)
 	bool haveKey_ = false;
 	bool scenesPsb_ = false;     ///< scenarios compiled to .scn: the engines need the scnfile plugin

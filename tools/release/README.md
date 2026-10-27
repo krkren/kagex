@@ -61,9 +61,19 @@ The signing key is a PEM block that krkrz_tools' `krkrsign` reads out of the fil
 
 For each platform, `<output>/<file name>-<version>-<platform>/` and its package next to it:
 
+- **The desktops' archives.** With `xp3` data (or `bind`), the Windows, Linux, Steam and macOS
+  builds split the game the way Wamsoft's games ship: `data.xp3` holds `startup.tjs`, the framework
+  (`system/`), `main/`, `init/`, `sysscn/` and the files at the top of `data/`, and each media
+  folder gets an archive of its own beside it: `bgimage.xp3`, `bgm.xp3`, `effect.xp3`,
+  `evimage.xp3`, `face.xp3`, `fgimage.xp3`, `image.xp3`, `others.xp3`, `rule.xp3`,
+  `scenario.xp3`, `sound.xp3`, `thum.xp3`, `uipsd.xp3`, `video.xp3`, `voice.xp3` (those the game
+  has). The framework (`Initialize.tjs`) finds each beside `data.xp3`; a subfolder named in
+  `Storages.tjs` stays a folder inside its archive. There's no `data/` folder. On macOS this needs
+  KAGEX 0.9.2's framework (an older one looks beside the executable, so its macOS build keeps one
+  `data.xp3`). The web, Android and iOS builds get the whole game in one `data.xp3`.
 - **Windows**: `<file name>.exe` (with the game's icon, title, version and copyright when the tool
-  runs on Windows), `<file name>.cf`, `SDL3.dll`, `plugin/`, and `data.xp3` (or `data/`, or the
-  data bound into the exe); a zip.
+  runs on Windows), `<file name>.cf`, `SDL3.dll`, `plugin/`, and the archives (or `data/`, or
+  `data.xp3` bound into the exe with the media archives beside it); a zip.
 - **Linux, Steam**: `<file name>`, `<file name>.cf`, `libSDL3.so.0`, `plugin/`, the data, and for
   Linux a `.desktop` file with a 256x256 icon; a tar.gz, which keeps the executable flag.
 - **macOS**: `<title>.app` with the game's name, bundle ID, version and icon (`AppIcon.icns`), the
@@ -140,12 +150,12 @@ also refuses the engine's REPL and debug options, so no console can be opened in
 - **The key** is the signing key of the keys file (above): its **private key signs**, and the
   **public key**, worked out from it, is written into `data.xp3` so the game can check itself.
   Lose the keys file and you can't make updates that verify against the same public key, so keep a
-  backup. A signed desktop build must ship an archive (`data.xp3` or bound into the executable,
-  or `data.xpc` with hidden names), not a loose `data/` folder.
-- **With hidden names** (*Hide names*, below) the check covers `data.xpc` and the small plain
-  `data/startup.tjs` that mounts it (`data.xpc.sig` and `data/startup.tjs.sig`), so neither can be
-  swapped. This needs the framework of KAGEX 0.9.1 or later (`SignatureCheck.tjs` and
-  `hashed-bootstrap.tjs`); the check says so for an older `data/system`.
+  backup. A signed desktop build must ship archives (`data.xp3` or bound into the executable),
+  not a loose `data/` folder.
+- **The archives** each have a signature (`data.xp3.sig`, `bgimage.xp3.sig`...). The game checks
+  `data.xp3` first; the media archives are mounted only once they have verified, so everything
+  the game reads before that (the framework, `main/`, `init/`) is in `data.xp3`. With hidden names
+  (*Hide names*, below) it's the same files and the same check.
 - **Patches and extra archives** are signed too (`patch.zip` gets a `patch.zip.sig`). In a signed
   build they are verified and mounted only after the framework and `Config` load, so a patch can
   change scenarios, images and other assets, but the framework, `Config` and `Override` need a
@@ -158,14 +168,11 @@ also refuses the engine's REPL and debug options, so no console can be opened in
   unofficial patches and mods, and a swapped engine or plugin. It can't protect the code that runs
   the check: anyone who can rebuild `data.xp3` (or the engine itself) can take the check out. It
   raises the effort to tamper with a release; it isn't DRM.
-- **Large games — splitting.** The engine's check uses 32-bit sizes, so no single archive may reach
-  2 GB. When a signed build's data would, the biggest media folders (`video`, `bgm`, `voice`,
-  `sound`, `image`, `bgimage`, `fgimage`, `evimage`, `thum`) are moved into their own signed
-  archives beside `data.xp3` automatically; you can also turn this on yourself (*Signing > Split
-  large archives*). Splitting is for the Windows and Linux packages; build macOS on its own if its
-  data is that large. If one folder alone is 2 GB or more, split its contents across subfolders.
-  Hidden names keep everything in one `data.xpc`, so a signed build with hidden names stops when
-  that would reach 2 GB.
+- **Large games.** The engine's check uses 32-bit sizes, so no single archive may reach 2 GB.
+  The media folders each have their own archive, so that's per folder: a signed build stops when
+  one folder (or what stays in `data.xp3`) is 2 GB or more. Split such a folder's contents across
+  subfolders of another media folder (`voice/` and `bgm/`, say), or move them to a folder the
+  framework packs on its own.
 
 ### Encrypted game files
 
@@ -176,13 +183,18 @@ scripts and assets are no longer readable in the shipped archive.
 
 The key is the archive key of the keys file (above).
 
-**Hide names** (`archive.hideNames`, desktop only) goes further: the game ships as one encrypted
-archive `data.xpc` whose file names are hashed, so a generic tool sees neither the files nor their
-names. The engine reads it through the plugin's `xpcrypt://` storage medium, with a tiny plain
-`data/startup.tjs` that mounts it; the data mode can't be "bind". It can be signed (above): the
-signatures then cover `data.xpc` and that `startup.tjs`.
+**Hide names** (`archive.hideNames`, desktop only, `xp3` data) goes further: every file in
+`data.xp3` and in the media archives is stored under a keyed hash of its path, so a generic tool
+sees neither the files nor their names. Only `data.xp3`'s `startup.tjs` keeps its name (encrypted
+like the rest): the engine opens `data.xp3` as usual and runs it, and it mounts the archives
+through the plugin's `xpcrypt://` storage medium, which finds each file by its hash. The package
+looks like any other: the archives, and no `data/` folder. It needs KAGEX 0.9.2's framework
+(`hashed-bootstrap.tjs`, `Initialize.tjs`, `SignatureCheck.tjs`); 0.9.0 and 0.9.1 shipped a
+`data.xpc` with a loose `data/startup.tjs` instead, and the check asks an older `data/system` to be
+updated. It can be signed (above).
 
-The build packs the encrypted `data.xp3` (and, when the data is split, its parts) and writes the key into each platform's engine; the engine
+The build packs the encrypted archives (each with its own range of per-file keys, so no two files
+share a keystream) and writes the key into each platform's engine; the engine
 must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
 key ships inside the game, so this keeps the files out of casual view rather than making them
 unrecoverable to a determined person. Encryption applies to files inside `data.xp3`, so a platform
@@ -291,8 +303,8 @@ as ones with the scnfile or xp3crypt plugin), or else one next to the tool.
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
-| `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts), `splitArchives` (move large media folders into their own archives; forced on past 2 GB) |
-| `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (ship one `data.xpc` with hashed file names; desktop only) |
+| `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |
+| `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (store the files in `data.xp3` and the media archives under hashed names; desktop only) |
 | `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,

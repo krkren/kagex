@@ -1,22 +1,28 @@
-// Hashed-name archive bootstrap. kagex-release ships this as data/startup.tjs when the game is
-// packed as one encrypted, name-hashed archive (data.xpc). The engine finds this plain startup
-// before any plugin loads; everything else of the game lives in data.xpc, with its file names
-// hashed, and is served by the xpcrypt plugin (xpcrypt://). See xp3crypt and doc/scn.txt.
+// Hashed-name archive bootstrap. kagex-release ships this as the startup.tjs inside data.xp3 when
+// the file names are hidden (archive.hideNames): every other file in data.xp3, and in the archives
+// split out beside it (bgimage.xp3, voice.xp3...), is stored under a keyed hash of its path, and
+// only this script keeps its own name, so the engine opens data.xp3 as usual and runs it. It then
+// mounts the same archive through the xp3crypt plugin's xpcrypt:// medium, which finds the files by
+// their hashes (Initialize.tjs mounts the split archives the same way). See xp3crypt's README.
 
 // The plugin is normally built into the engine (TVP_PLUGINS_STATIC); for a desktop build that
 // ships it as a file instead, link it here. (Built in, this link just fails and is ignored.)
 try { Plugins.link("xp3crypt.dll"); } catch (e) { }
 
-// What a signed build checks before the game starts (SignatureCheck.tjs): this file and the archive
-global.kagexHashedBootstrap = Storages.getPlacedPath("startup.tjs");
-global.kagexHashedArchiveFile = System.exePath + "data.xpc";
+// The archive this script was read from (data.xp3, wherever the engine found it: next to the
+// executable, or in a macOS app's Resources); its folder holds the split archives too
+var kagexHashedPlaced = Storages.getPlacedPath("startup.tjs");
+var kagexHashedAt = kagexHashedPlaced.indexOf(">");
+global.kagexHashedArchiveFile = kagexHashedAt >= 0 ? kagexHashedPlaced.substring(0, kagexHashedAt) : System.exePath + "data.xp3";
+global.kagexHashedLayout = 2;   // 2: the names hidden in data.xp3 and its split archives (KAGEX 0.9.2)
 
 if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", global.kagexHashedArchiveFile)) {
 	// no plugin, no key, or the archive is missing or damaged
-	Debug.message("xp3crypt: the game data (data.xpc) could not be opened");
+	Debug.message("xp3crypt: the game data (" + global.kagexHashedArchiveFile + ") could not be opened");
 	System.exit();
 } else {
-	// the folders of the game are xpcrypt://data/<folder>; Initialize.tjs reads kagexHashedArchive
+	// the folders of the game are xpcrypt://data/<folder> (or xpcrypt://<folder>/ for one split
+	// out into <folder>.xp3); Initialize.tjs reads kagexHashedArchive
 	global.kagexHashedArchive = "xpcrypt://data/";
 	Storages.addAutoPath("xpcrypt://data/system/");   // so Initialize.tjs itself resolves
 	Scripts.execStorage("Initialize.tjs");

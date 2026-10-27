@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -23,9 +24,12 @@ using ArchiveKey = std::array<uint8_t, 32>;
 bool canEncryptArchive();
 
 /// Packs the staged folder into an encrypted archive at `output`. hashNames also hashes the file
-/// names (the game runs it through the xpcrypt:// medium). files/bytes get the counts
+/// names (the game runs it through the xpcrypt:// medium), but for the paths in plainNames (the
+/// startup.tjs the engine opens). saltBase starts the files' cipher salts past it: each archive of
+/// a game needs its own range. files/bytes get the counts
 bool packEncrypted(const std::filesystem::path& stageDir, const std::filesystem::path& output, const ArchiveKey& key,
-                   bool hashNames, int& files, uint64_t& bytes, std::string& error);
+                   bool hashNames, const std::set<std::string>& plainNames, uint32_t saltBase,
+                   int& files, uint64_t& bytes, std::string& error);
 
 /// The files under root (a platform's folder, app or project) that hold the xp3crypt key slot:
 /// the engine with the plugin built in (or a plugin shipped beside it). Data folders aren't searched

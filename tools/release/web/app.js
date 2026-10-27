@@ -33,6 +33,8 @@ const formatSize = (n) => n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : n < 1073
 // What the screen shows
 //---------------------------------------------------------------------------
 const DATA_XP3 = ['xp3', 'data.xp3 (one archive)'];
+// the desktops split the data as Wamsoft's games ship: data.xp3 and an archive per media folder
+const DATA_XP3_SPLIT = ['xp3', 'Archives (data.xp3, bgimage.xp3, voice.xp3...)'];
 const DATA_FOLDER = ['folder', 'data folder (the files as they are)'];
 
 const SECTIONS = [
@@ -116,8 +118,8 @@ const SECTIONS = [
 		fields: [
 			{ type: 'note', label: '', text: 'This kagex-release was built without xp3crypt, so it can\'t encrypt.', showIf: () => !state.canEncrypt },
 			{ path: 'archive.encrypt', label: 'Encrypt', type: 'check', text: 'Encrypt the files in data.xp3 with the archive key (Keys; platforms whose data is data.xp3 or bound into the executable)', showIf: () => state.canEncrypt },
-			{ path: 'archive.hideNames', label: 'Hide names', type: 'check', text: 'Also hide the file names (one archive, data.xpc, with hashed names)', showIf: (s) => state.canEncrypt && s.archive.encrypt,
-			  help: 'The game ships as one encrypted archive whose file names are hashed, so a generic tool sees neither the files nor their names. Desktop only, and the data mode can\'t be "bind". The game reads it through the plugin\'s xpcrypt:// medium' },
+			{ path: 'archive.hideNames', label: 'Hide names', type: 'check', text: 'Also hide the file names (data.xp3 and the folders\' archives store their files under hashed names)', showIf: (s) => state.canEncrypt && s.archive.encrypt,
+			  help: 'Every file in data.xp3 and in the folders\' archives (bgimage.xp3, voice.xp3...) is stored under a keyed hash of its path, so a generic tool sees neither the files nor their names. Only data.xp3\'s startup.tjs keeps its name: the engine runs it, and it opens the archives through the plugin\'s xpcrypt:// medium. Desktop only, with "xp3" data' },
 		],
 	},
 	{ id: 'plan', title: 'Check', intro: 'What a build would make, and anything that would stop it.', render: renderPlan },
@@ -125,23 +127,22 @@ const SECTIONS = [
 
 const SIGNING_FIELDS = [
 	{ path: 'enabled', label: 'Signing', type: 'check', text: 'Sign the release with the signing key (Keys) and check it at start-up' },
-	{ path: 'splitArchives', label: 'Split large archives', type: 'check', showIf: (s) => s.enabled, text: 'Put large media folders in their own archives (done automatically once the data passes 2 GB)' },
 ];
 
 const PLATFORM_FIELDS = {
 	windows: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER, ['bind', 'Bound into the exe (one file)']] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3_SPLIT, DATA_FOLDER, ['bind', 'data.xp3 bound into the exe, the media archives beside it']] },
 		{ path: 'versionInfo', label: 'Icon and version', type: 'check', text: 'Put the icon, title, version and copyright into the exe (when this tool runs on Windows)' },
 	],
 	linux: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER, ['bind', 'Bound into the executable (one file)']] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3_SPLIT, DATA_FOLDER, ['bind', 'data.xp3 bound into the executable, the media archives beside it']] },
 		{ path: 'desktopEntry', label: 'Menu entry', type: 'check', text: 'Include a .desktop file and the icon' },
 	],
 	steam: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER, ['bind', 'Bound into the executable (one file)']] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3_SPLIT, DATA_FOLDER, ['bind', 'data.xp3 bound into the executable, the media archives beside it']] },
 	],
 	macos: [
-		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER] },
+		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3_SPLIT, DATA_FOLDER] },
 		{ path: 'bundleId', label: 'Bundle ID', type: 'text', help: 'Like com.studio.game' },
 		{ path: 'signing', label: 'Signing', type: 'select', options: [['adhoc', 'Ad hoc (no Apple account; players allow it once)'], ['developer-id', 'Developer ID (Apple Developer Program)']] },
 		{ path: 'identity', label: 'Certificate', type: 'text', showIf: (p) => p.signing === 'developer-id', help: 'Developer ID Application: Your Name (TEAMID)' },

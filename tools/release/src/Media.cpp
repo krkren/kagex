@@ -471,11 +471,19 @@ bool frameworkSupportsSigning(const fs::path& framework)
 	return fs::is_regular_file(framework / "SignatureCheck.tjs", ec);
 }
 
-bool frameworkSignsHiddenNames(const fs::path& framework)
+bool frameworkHidesNamesInXp3(const fs::path& framework)
 {
-	std::string check, boot;
-	if (!krt::readFile(framework / "SignatureCheck.tjs", check) || !krt::readFile(framework / "hashed-bootstrap.tjs", boot)) return false;
-	return check.find("kagexHashedBootstrap") != std::string::npos && boot.find("kagexHashedBootstrap") != std::string::npos;
+	std::string init, check, boot;
+	if (!krt::readFile(framework / "Initialize.tjs", init) || !krt::readFile(framework / "SignatureCheck.tjs", check) ||
+	    !krt::readFile(framework / "hashed-bootstrap.tjs", boot)) return false;
+	return boot.find("kagexHashedLayout") != std::string::npos && init.find("KAGMountHashedArchive") != std::string::npos &&
+	       check.find("KAGSignedUseHashedArchive") != std::string::npos;
+}
+
+bool frameworkFindsSplitArchives(const fs::path& framework)
+{
+	std::string init;
+	return krt::readFile(framework / "Initialize.tjs", init) && init.find("KAGArchivePath") != std::string::npos;
 }
 
 bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress, MediaResult& result, std::string& error)

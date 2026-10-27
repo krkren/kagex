@@ -168,7 +168,6 @@ Json defaultSettings(const Project& p)
 	s.set("keys", obj({ { "file", Json("") } }));
 	s.set("signing", obj({
 		{ "enabled", Json(false) },
-		{ "splitArchives", Json(false) },
 	}));
 	// Encrypted data.xp3 (the xp3crypt plugin decrypts it; the engine must have the plugin)
 	s.set("archive", obj({
@@ -411,22 +410,22 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			if (!str(s, old).empty()) warn(old, "No longer used: every key is in the keys file (Keys, keys.file)");
 	}
 
-	// hidden file names (one encrypted, name-hashed archive served through the xpcrypt:// medium)
+	// hidden file names: data.xp3 and the folders' archives store their files under hashed names,
+	// served through the xp3crypt plugin's xpcrypt:// medium; data.xp3's startup.tjs, the one
+	// name kept, is the bootstrap that mounts them
 	if (flag(s, "archive.hideNames")) {
 		if (!flag(s, "archive.encrypt")) error("archive.hideNames", "Hiding the file names needs encryption on (Encrypt)");
-		// a signed build then checks data.xpc and its plain bootstrap (data/startup.tjs) in place of
-		// data.xp3, which needs KAGEX 0.9.1's SignatureCheck.tjs and hashed-bootstrap.tjs
-		if (flag(s, "signing.enabled") && !p.framework.empty() && !frameworkSignsHiddenNames(p.framework))
+		if (!p.framework.empty() && !frameworkHidesNamesInXp3(p.framework))
 			error("archive.hideNames", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
-			      ") can't check the signatures of a game with hidden file names: it predates KAGEX 0.9.1. Update it from KAGEX 0.9.1's template/system, or turn Hide names or Signing off");
+			      ") can't run a game with hidden file names in data.xp3: it predates KAGEX 0.9.2. Update it from KAGEX 0.9.2's template/system, or turn Hide names off");
 		for (const auto& pl : platforms()) {
 			const std::string base = std::string("platforms.") + pl.id + ".";
 			if (!flag(s, base + "enabled")) continue;
 			const std::string id = pl.id;
 			if (id == "web" || id == "android" || id == "ios")
 				error(base + "enabled", std::string(pl.title) + " can't hide the file names yet (desktop only)");
-			else if (str(s, base + "data") == "bind")
-				error(base + "data", std::string(pl.title) + " can't bind the data into the executable with hidden file names; use \"xp3\"");
+			else if (str(s, base + "data") != "xp3")
+				error(base + "data", std::string(pl.title) + " hides the file names in data.xp3 and the folders' archives: use \"xp3\" data");
 		}
 	}
 

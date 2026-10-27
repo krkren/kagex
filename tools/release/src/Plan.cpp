@@ -7,6 +7,7 @@
 
 #include "Engine.h"
 #include "Host.h"
+#include "Media.h"
 #include "Subprocess.h"
 #include "krt/app/Text.h"
 
@@ -207,6 +208,14 @@ std::string packageBaseName(const Json& s, const std::string& platform)
 	return str(s, "identity.exeName") + "-" + str(s, "identity.version") + "-" + platform;
 }
 
+const std::vector<std::string>& splitFolderNames()
+{
+	static const std::vector<std::string> names = {
+		"bgimage", "bgm", "effect", "evimage", "face", "fgimage", "image", "others", "rule",
+		"scenario", "sound", "thum", "uipsd", "video", "voice" };
+	return names;
+}
+
 Json makePlan(const Json& s, const Project& p)
 {
 	Json plan = Json::object();
@@ -227,6 +236,16 @@ Json makePlan(const Json& s, const Project& p)
 		if (isImageSource(ext) && !imagesKept) ++images;
 		if (ext == ".tjs" && flag(s, "contents.compileScripts")) ++scripts;
 	}
+	// the folders a desktop build packs into archives of their own
+	std::vector<std::string> parts;
+	for (const auto& n : splitFolderNames()) {
+		const std::string prefix = n + "/";
+		for (const auto& f : files)
+			if (f.name.compare(0, prefix.size(), prefix) == 0) { parts.push_back(n + ".xp3"); break; }
+	}
+	std::string partList;
+	for (const auto& n : parts) partList += (partList.empty() ? "" : ", ") + n;
+	const bool hidden = flag(s, "archive.encrypt") && flag(s, "archive.hideNames");
 	Json data = Json::object();
 	data.set("files", Json((long long)files.size()));
 	data.set("bytes", Json((long long)bytes));
@@ -289,9 +308,17 @@ Json makePlan(const Json& s, const Project& p)
 		std::string folder = out + "/" + name, package, kind;
 		Json contents = Json::array();
 		auto add = [&](const std::string& c) { contents.push(Json(c)); };
+		// a desktop's archives: data.xp3 (its startup.tjs the one name kept, with hidden names) and
+		// the folders' archives beside it
+		const bool splits = (dataMode == "xp3" || dataMode == "bind") &&
+			(id == "windows" || id == "linux" || id == "steam" || (id == "macos" && frameworkFindsSplitArchives(p.framework)));
+		auto partsEntry = [&](const std::string& where) {
+			if (splits && !partList.empty()) add(where + partList);
+		};
 		auto dataEntry = [&]() {
-			if (dataMode == "xp3") add("data.xp3");
+			if (dataMode == "xp3") add(hidden ? "data.xp3 (the names hidden; its startup.tjs opens the archives)" : "data.xp3");
 			else if (dataMode == "folder" || dataMode == "files") add("data/");
+			partsEntry("");
 		};
 		auto archived = [&](const std::string& autoKind) {
 			const std::string k = archive == "auto" ? autoKind : archive;
@@ -317,6 +344,7 @@ Json makePlan(const Json& s, const Project& p)
 			const std::string app = str(s, "identity.title") + ".app";
 			add(app);
 			add("  Contents/MacOS/krkrz, Contents/Resources/" + std::string(dataMode == "xp3" ? "data.xp3" : "data/"));
+			partsEntry("  Contents/Resources/");
 			package = str(s, base + "format") == "dmg" ? folder + ".dmg" : archived("zip");
 		} else if (id == "web") {
 			add("index.html, krkrz.js, krkrz.wasm, coi-serviceworker.js, manifest.webmanifest, icons");

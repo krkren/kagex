@@ -287,6 +287,9 @@ def build_tests(exe, proj, args):
         step("windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3",
              z.testzip() is None and {n + "kagex-sample.exe", n + "kagex-sample.cf", n + "SDL3.dll", n + "data.xp3"} <= set(z.namelist())
              and any(x.startswith(n + "plugin/") for x in z.namelist()))
+        step("windows: an archive per media folder beside data.xp3, and no data folder",
+             {n + f for f in SPLIT_PARTS} <= set(z.namelist()) and not any(x.startswith(n + "data/") for x in z.namelist()),
+             " ".join(sorted(x[len(n):] for x in z.namelist() if x.startswith(n) and x.endswith(".xp3"))))
         step("windows: the .cf", cf_ok(z.read(n + "kagex-sample.cf").decode()), z.read(n + "kagex-sample.cf").decode().replace("\n", " | "))
         if host_id() == "windows":
             exe_data = z.read(n + "kagex-sample.exe")
@@ -301,6 +304,7 @@ def build_tests(exe, proj, args):
             step(p + ": tar.gz with an executable engine", n + "kagex-sample" in m and m[n + "kagex-sample"].mode & 0o111 != 0
                  and n + "libSDL3.so.0" in m and n + "data.xp3" in m, oct(m[n + "kagex-sample"].mode) if n + "kagex-sample" in m else "missing")
             step(p + ": the .cf", cf_ok(tf.extractfile(n + "kagex-sample.cf").read().decode()))
+            step(p + ": an archive per media folder beside data.xp3", {n + f for f in SPLIT_PARTS} <= set(m))
             if p == "linux":
                 step("linux: menu entry and icon", n + "kagex-sample.desktop" in m and n + "kagex-sample.png" in m)
     if "macos" in names:
@@ -312,6 +316,7 @@ def build_tests(exe, proj, args):
             plist = z.read(app + "Info.plist").decode() if app + "Info.plist" in nl else ""
             step("macos: the app with data.xp3, its icon and .cf",
                  {app + "Resources/data.xp3", app + "Resources/AppIcon.icns", app + "MacOS/krkrz.cf", app + "MacOS/krkrz"} <= nl)
+            step("macos: an archive per media folder beside data.xp3 in Resources", {app + "Resources/" + f for f in SPLIT_PARTS} <= nl)
             step("macos: Info.plist", "com.krkren.kagexsample" in plist and "<string>KAGEX Sample</string>" in plist)
             app_dir = outdir / (base + "macos") / "KAGEX Sample.app"
             c, o = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app_dir)], capture_output=True, text=True).returncode, ""
@@ -351,6 +356,7 @@ def build_tests(exe, proj, args):
         at = data.rfind(XP3_MARK)
         step("windows: data bound into the exe", at > original // 2 and at % 16 == 0 and n + "data.xp3" not in z.namelist(),
              "engine %d bytes, xp3 at %d of %d" % (original, at, len(data)))
+        step("windows: the media archives beside the bound exe", {n + f for f in SPLIT_PARTS} <= set(z.namelist()))
         plugins = [x for x in z.namelist() if x.startswith(n + "plugin/") and not x.endswith("/")]
         step("windows: only the linked plugins", 0 < len(plugins) < 27, "%d plugins" % len(plugins))
     lz = outdir / (base + "steam.zip")
@@ -360,6 +366,9 @@ def build_tests(exe, proj, args):
         info = z.getinfo(n + "kagex-sample")
         step("steam: zip with a data folder and the executable flag", n + "data/startup.tjs" in z.namelist() and n + "data/system/Initialize.tjs" in z.namelist()
              and (info.external_attr >> 16) & 0o111 != 0)
+        step("steam: the data folder has the media folders the other platforms' archives took",
+             all(any(x.startswith(n + "data/" + f[:-4] + "/") for x in z.namelist()) for f in SPLIT_PARTS)
+             and not any(x.endswith(".xp3") for x in z.namelist()))
     if args.out and (outdir / "test-run.log").exists():
         shutil.copyfile(outdir / "test-run.log", Path(args.out) / "test-run-bound.log")
     if host_id() in ("windows", "linux"):
@@ -1272,15 +1281,17 @@ def _signing_build_tests(exe, proj, args):
     step("signing build: data.xp3.sig, the engine list and its sig, engine .sig files",
          "data.xp3.sig" in names and "kagex-sample.sigfiles" in names and "kagex-sample.sigfiles.sig" in names
          and "kagex-sample.sig" in names and (pkg / "plugin").exists(), ", ".join(sorted(n for n in names if n.endswith(".sig") or n.endswith(".sigfiles"))[:6]))
+    step("signing build: every media folder's archive, signed", all(f in names and f + ".sig" in names for f in SPLIT_PARTS),
+         " ".join(sorted(n for n in names if n.endswith(".xp3"))))
     # SignatureKey.tjs is inside data.xp3, not loose in the package
     needle = keys_of(keys)["signing"].splitlines()[1].strip().encode()   # a line of the private key
     step("signing build: no keys shipped", not any(n.endswith("keys.txt") for n in names)
          and not any(needle in f.read_bytes() for f in pkg.rglob("*") if f.is_file() and f.stat().st_size < 50_000_000))
 
     exe_rel = "kagex-sample"
-    # 1. the untouched build starts
-    ok, _ = run_engine(pkg, exe_rel, [])
-    step("signing run: the untouched build starts", ok)
+    # 1. the untouched build starts, with its archives mounted once verified
+    ok, log = run_engine(pkg, exe_rel, [])
+    step("signing run: the untouched build starts", ok, "mounted %d archives" % log.count("Signed archive mounted"))
 
     def tamper_case(label, mutate, restore):
         mutate()
@@ -1291,8 +1302,11 @@ def _signing_build_tests(exe, proj, args):
 
     data = pkg / "data.xp3"
     orig = data.read_bytes()
+    # a byte added at the end: the engine still reads the archive (its index is found from the
+    # header), so it's the signature check that stops it. (A changed script that the game reads
+    # before the check, the framework in data.xp3, stops it with that script's error instead.)
     tamper_case("a changed data.xp3",
-                lambda: data.write_bytes(orig[:20000] + b"\x00" + orig[20001:]),
+                lambda: data.write_bytes(orig + b"\x00"),
                 lambda: data.write_bytes(orig))
     sig = pkg / "data.xp3.sig"
     sbak = sig.read_bytes()
@@ -1305,10 +1319,16 @@ def _signing_build_tests(exe, proj, args):
         tamper_case("a changed engine file",
                     lambda: plug.write_bytes(porig + b"\x00"),
                     lambda: plug.write_bytes(porig))
-    # a stray unsigned archive beside the engine
+    # a changed folder archive
+    part = pkg / "bgimage.xp3"
+    porig2 = part.read_bytes()
+    tamper_case("a changed bgimage.xp3",
+                lambda: part.write_bytes(porig2[:len(porig2) // 2] + bytes([porig2[len(porig2) // 2] ^ 0xFF]) + porig2[len(porig2) // 2 + 1:]),
+                lambda: part.write_bytes(porig2))
+    # a stray unsigned archive beside the engine (a folder the game has no archive for)
     tamper_case("an unsigned extra archive",
-                lambda: shutil.copyfile(data, pkg / "scenario.xp3"),
-                lambda: (pkg / "scenario.xp3").unlink())
+                lambda: shutil.copyfile(data, pkg / "uipsd.xp3"),
+                lambda: (pkg / "uipsd.xp3").unlink())
     # -replfile is refused
     verified, log = run_engine(pkg, exe_rel, ["-replfile=" + str(pkg / "_ch")])
     step("signing run: -replfile is refused", (not verified) and "not allowed" in log, "verified=%s" % verified)
@@ -1337,26 +1357,8 @@ def _signing_build_tests(exe, proj, args):
     patch.unlink(missing_ok=True)
     (pkg / "patch.zip.sig").unlink(missing_ok=True)
 
-    # splitting: with the checkbox on, the media folders move into their own signed archives
-    s["signing"]["splitArchives"] = True
-    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
-    r = subprocess.run([str(exe), "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json"],
-                       capture_output=True, text=True, env=env, timeout=1800)
-    try:
-        res = json.loads(r.stdout[r.stdout.index("{"):])
-    except ValueError:
-        res = {"ok": False, "error": r.stdout[-1500:]}
-    pkg2 = proj / "release" / ("kagex-sample-%s-linux" % s["identity"]["version"])
-    parts = sorted(p.name for p in pkg2.iterdir() if p.suffix == ".xp3" and p.name != "data.xp3") if pkg2.exists() else []
-    step("signing build: split produces signed part archives", res.get("ok") and parts
-         and all((pkg2 / (p + ".sig")).exists() for p in parts), "parts=%s" % parts)
-    if pkg2.exists():
-        ok, log = run_engine(pkg2, "kagex-sample", [])
-        step("signing run: the split signed build starts", ok, "verified=%s; mounted=%d" % (ok, log.count("Signed archive mounted")))
-    s["signing"]["splitArchives"] = False
-
-    # signed, encrypted, with the file names hidden: data.xpc and its plain bootstrap are checked
-    # in place of data.xp3 (engines with xp3crypt built in: 0.9.0 and later)
+    # signed, encrypted, with the file names hidden in data.xp3 and the folders' archives (engines
+    # with xp3crypt built in: 0.9.0 and later)
     if engine_has_xp3crypt(args.engines):
         hidden_signing_tests(exe, proj, args, s, env)
     else:
@@ -1379,6 +1381,49 @@ def engine_has_xp3crypt(engines):
     with _zip.ZipFile(pkg) as z:
         names = [n for n in z.namelist() if n.split("/")[-1] == "krkrz"]
         return bool(names) and XP3CRYPT_MARKER in z.read(names[0])
+
+
+# The sample's media folders, each packed into an archive of its own beside data.xp3 on the
+# desktops (Plan.cpp's splitFolderNames, those of them the sample has)
+SPLIT_PARTS = ["bgimage.xp3", "bgm.xp3", "effect.xp3", "fgimage.xp3", "image.xp3", "rule.xp3",
+               "scenario.xp3", "thum.xp3", "video.xp3", "voice.xp3"]
+
+
+def xp3_names(path):
+    """The stored names in an XP3 archive's (uncompressed or zlib) index"""
+    import zlib
+    d = path.read_bytes()
+    pos = 11
+    index = b""
+    for _ in range(16):
+        ofs = int.from_bytes(d[pos:pos + 8], "little")
+        flag = d[ofs]
+        if flag & 7 == 1:
+            clen = int.from_bytes(d[ofs + 1:ofs + 9], "little")
+            index += zlib.decompress(d[ofs + 17:ofs + 17 + clen])
+            ip = ofs + 17 + clen
+        else:
+            ilen = int.from_bytes(d[ofs + 1:ofs + 9], "little")
+            index += d[ofs + 9:ofs + 9 + ilen]
+            ip = ofs + 9 + ilen
+        if flag & 0x80:
+            pos = ip
+            continue
+        break
+    names, i = [], 0
+    while i + 12 <= len(index):
+        tag, size = index[i:i + 4], int.from_bytes(index[i + 4:i + 12], "little")
+        body = index[i + 12:i + 12 + size]
+        if tag == b"File":
+            j = 0
+            while j + 12 <= len(body):
+                t, sz = body[j:j + 4], int.from_bytes(body[j + 4:j + 12], "little")
+                if t == b"info":
+                    n = int.from_bytes(body[j + 12 + 20:j + 12 + 22], "little")
+                    names.append(body[j + 12 + 22:j + 12 + 22 + n * 2].decode("utf-16-le"))
+                j += 12 + sz
+        i += 12 + size
+    return names
 
 
 def hidden_signing_tests(exe, proj, args, s, env):
@@ -1404,10 +1449,20 @@ def hidden_signing_tests(exe, proj, args, s, env):
         return
     chk = res.get("check", {})
     step("signed hidden-names build: the signed test run verifies", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
-    step("signed hidden-names build: data.xpc and its bootstrap are signed",
-         (pkg / "data.xpc.sig").exists() and (pkg / "data" / "startup.tjs.sig").exists() and not (pkg / "data.xp3").exists())
-    ok, _ = run_engine(pkg, "kagex-sample", [])
-    step("signed hidden-names run: the untouched build starts", ok)
+    archives = ["data.xp3"] + SPLIT_PARTS
+    step("signed hidden-names build: data.xp3 and the folders' archives, signed, and no data folder or data.xpc",
+         all((pkg / a).exists() and (pkg / (a + ".sig")).exists() for a in archives)
+         and not (pkg / "data").exists() and not (pkg / "data.xpc").exists(),
+         " ".join(sorted(p.name for p in pkg.iterdir() if ".xp" in p.name)))
+    # every name in every archive is a hash, but data.xp3's startup.tjs
+    plain = {}
+    for a in archives:
+        names = xp3_names(pkg / a)
+        plain[a] = [n for n in names if not re.fullmatch(r"[0-9a-f]{32}", n)]
+    step("signed hidden-names build: only data.xp3's startup.tjs keeps its name",
+         plain["data.xp3"] == ["startup.tjs"] and all(not v for k, v in plain.items() if k != "data.xp3"), "%s" % {k: v for k, v in plain.items() if v})
+    ok, log = run_engine(pkg, "kagex-sample", [])
+    step("signed hidden-names run: the untouched build starts", ok, "mounted %d archives" % log.count("Signed archive mounted"))
 
     def tamper_case(label, mutate, restore):
         mutate()
@@ -1415,15 +1470,11 @@ def hidden_signing_tests(exe, proj, args, s, env):
         restore()
         step("signed hidden-names run: %s stops the game" % label, (not verified) and "Signature check:" in log, "verified=%s" % verified)
 
-    xpc = pkg / "data.xpc"
-    orig = xpc.read_bytes()
-    tamper_case("a changed data.xpc", lambda: xpc.write_bytes(orig[:len(orig) // 2] + bytes([orig[len(orig) // 2] ^ 0xFF]) + orig[len(orig) // 2 + 1:]),
-                lambda: xpc.write_bytes(orig))
-    boot = pkg / "data" / "startup.tjs"
-    borig = boot.read_bytes()
-    # a bootstrap of the attacker's own: the framework's, in source, with a line added
-    src = (proj / "template" / "system" / "hashed-bootstrap.tjs").read_bytes() + b"\n// changed\n"
-    tamper_case("a replaced start-up script", lambda: boot.write_bytes(src), lambda: boot.write_bytes(borig))
+    for a in ("data.xp3", "fgimage.xp3"):
+        f = pkg / a
+        orig = f.read_bytes()
+        tamper_case("a changed " + a, lambda f=f, orig=orig: f.write_bytes(orig[:len(orig) // 2] + bytes([orig[len(orig) // 2] ^ 0xFF]) + orig[len(orig) // 2 + 1:]),
+                    lambda f=f, orig=orig: f.write_bytes(orig))
 
 
 # A game whose Initialize.tjs checks, as it runs, what the compiled scripts give: constants
