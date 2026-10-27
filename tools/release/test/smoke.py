@@ -63,6 +63,7 @@ def make_project(tmp):
     (proj / "data" / "work").mkdir()
     (proj / "data" / "work" / "draft.txt").write_text("left out by the exclusions")
     (proj / "data" / "image" / "layers.psd").write_bytes(b"8BPS")
+    (proj / "data" / "image" / "layers.bak").write_bytes(b"8BPS")
     return proj
 
 
@@ -139,7 +140,9 @@ def cli_tests(exe, proj):
     step("plan: the chosen platforms", [o["platform"] for o in plan["outputs"]] == ["windows", "linux", "web", "android", "ios"],
          ", ".join(o["platform"] for o in plan["outputs"]))
     d = plan["data"]
-    step("plan: exclusions (work/ isn't excluded by default, *.psd is)", d["excluded"] >= 1, "%d files, %d excluded" % (d["files"], d["excluded"]))
+    psd = sum(e["files"] for e in d["byExtension"] if e["ext"] == ".psd")
+    step("plan: exclusions (*.bak by default; work/ and *.psd aren't)", d["excluded"] >= 1 and psd == 1,
+         "%d files, %d excluded, %d .psd" % (d["files"], d["excluded"], psd))
     step("plan: images and sounds to convert", d["convertImages"] > 50, "%d images, %d sounds" % (d["convertImages"], d["convertAudio"]))
     step("plan: framework copied in", "template/system" in d["framework"], d["framework"])
     code, out = run(exe, "--cli", "plan", str(rel), "--platform=nowhere")
@@ -1014,8 +1017,22 @@ def patch_tests(exe, proj):
     listed = json.loads(files.read_text(encoding="utf-8"))["files"]
     names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")}
     step("patch: from an empty list it holds every file", names == set(listed), "%d in the zip, %d listed" % (len(names), len(listed)))
-    step("patch: a .clip a script loads layers from is kept, a .psd nothing names isn't",
-         "fgimage/emblem.clip" in listed and not any(n.endswith(".psd") for n in listed))
+    step("patch: the defaults keep .clip and .psd files", "fgimage/emblem.clip" in listed and "image/layers.psd" in listed)
+
+    # *.psd and *.clip in the list: a .clip a script loads layers from goes in all the same, a
+    # .psd nothing names doesn't. The list up to 0.9.2's defaults is taken as the new defaults
+    old_defaults = ["*.psd", "*.clip", "*.bak", "*.tmp", "Thumbs.db", "desktop.ini", ".DS_Store"]
+    for exclude, kept in ((old_defaults + ["*.zzz"], False), (old_defaults, True)):
+        s["contents"]["exclude"] = exclude
+        r, err = build("1.0.0", "release/nothing-files.json")
+        listed = json.loads(files.read_text(encoding="utf-8"))["files"] if r is not None and r.get("ok") else {}
+        if kept:
+            step("patch: a release.json with 0.9.2's default exclusions keeps .psd files",
+                 "image/layers.psd" in listed and "image/layers.bak" not in listed, err)
+        else:
+            step("patch: with *.psd and *.clip left out, a .clip a script loads layers from is kept, a .psd nothing names isn't",
+                 "fgimage/emblem.clip" in listed and "image/layers.psd" not in listed, err)
+    s["contents"]["exclude"] = old_defaults[2:]
 
     layer = proj / "data" / "scenario" / "layer.ks"
     layer.write_bytes(layer.read_bytes() + b"\n; changed for the patch test\n")

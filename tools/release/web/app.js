@@ -75,7 +75,7 @@ const SECTIONS = [
 			{ path: 'contents.licenses', label: 'Licenses', type: 'check', text: 'Include the engine\'s license files (its libraries ask for them)' },
 			{ path: 'contents.plugins', label: 'Plugins', type: 'select', options: [['all', 'All the engine\'s plugins'], ['linked', 'Only the ones the scripts link']] },
 			{ path: 'contents.compileScripts', label: 'Scripts', type: 'check', text: 'Compile the TJS scripts to bytecode (this computer\'s engine does it)', help: 'The packages then carry no readable TJS (strings and names still show), and they start a little faster. Errors in compiled scripts name the function but not the line, and @if switches are decided when building' },
-			{ path: 'contents.exclude', label: 'Leave out', type: 'lines', help: 'One pattern per line: *.psd matches anywhere, bgimage/raw/** a folder\'s contents, work/ a folder' },
+			{ path: 'contents.exclude', label: 'Leave out', type: 'lines', help: 'One pattern per line: *.bak matches anywhere, bgimage/raw/** a folder\'s contents, work/ a folder' },
 			{ path: 'contents.extraFiles', label: 'Extra files', type: 'lines', help: 'Files next to data/ to put beside the executable (a readme, a manual), one per line' },
 		],
 	},

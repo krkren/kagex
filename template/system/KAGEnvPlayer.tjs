@@ -746,37 +746,57 @@ class KAGEnvPlayer
 	 * @return %[compiled, skipped, failed, errors:[...], warnings]
 	 */
 	function compileAll(force = false) {
+		return compileList(getFileList(), force);
+	}
+
+	/**
+	 * Compiles the scripts of a list (as !scnlist.txt lists them) that need it, all of them
+	 * with force. A script starts from the World the scripts that go to it leave (its entry
+	 * state, SceneParser.entryFor), so one whose entry has changed since is compiled again,
+	 * round by round until none has (a script compiled before the one that goes to it, say)
+	 * @return %[compiled, skipped, failed, errors:[...], warnings]
+	 */
+	function compileList(list, force = false) {
 		var ret = %[compiled:0, skipped:0, failed:0, errors:[], warnings:0];
 		if (parser === void) {
 			ret.errors.add("there's no compiler (SceneParser.tjs)");
 			ret.failed++;
 			return ret;
 		}
-		var list = getFileList();
 		parser.initDepend(list);
 		var w = parser.warnings.count;
-		for (var i=0;i<list.count;i++) {
-			var name = list[i];
-			try {
-				if (!Storages.isExistentStorage(name)) {
-					// a release without its scripts (kagex-release): the compiled file is all there is
-					if (scnFindCompiled(name) === void) throw new Exception("not found");
-					ret.skipped++;
-					continue;
+		var compiled = %[], failed = %[];
+		for (var round = 0; round < 4; round++) {
+			var again = false;
+			for (var i=0;i<list.count;i++) {
+				var name = list[i], key = name.toLowerCase();
+				if (failed[key]) continue;
+				try {
+					if (!Storages.isExistentStorage(name)) {
+						// a release without its scripts (kagex-release): the compiled file is all there is
+						if (scnFindCompiled(name) === void) throw new Exception("not found");
+						continue;
+					}
+					parser.prepare("parsermacro.ks", "parseroption.txt");
+					if ((force && round == 0) || parser.isNeedParse(name) || parser.outputPath(name) === void) {
+						clearStorage();
+						parser.parse(name);
+						compiled[key] = true;
+						again = true;
+					}
+				} catch (e) {
+					failed[key] = true;
+					ret.errors.add(name + ": " + e.message);
+					dm(name + ":Scenario conversion error:" + e.message);
 				}
-				parser.prepare("parsermacro.ks", "parseroption.txt");
-				if (force || parser.isNeedParse(name) || parser.outputPath(name) === void) {
-					clearStorage();
-					parser.parse(name);
-					ret.compiled++;
-				} else {
-					ret.skipped++;
-				}
-			} catch (e) {
-				ret.failed++;
-				ret.errors.add(name + ": " + e.message);
-				dm(name + ":Scenario conversion error:" + e.message);
 			}
+			if (!again) break;
+		}
+		for (var i=0;i<list.count;i++) {
+			var key = list[i].toLowerCase();
+			if (failed[key]) ret.failed++;
+			else if (compiled[key]) ret.compiled++;
+			else ret.skipped++;
 		}
 		ret.warnings = parser.warnings.count - w;
 		currentMap = %[];
@@ -2897,15 +2917,10 @@ class KAGEnvPlayer
 
 			kag.textWriteEnabled = true;
 
-			currentRubyCount = 0;
-			currentRuby = void;
-			currentText = "";
-			// filled in below, before KAG draws the characters
-			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
-			var wrapLine = "", wrapNewline = false;
-
-			// after a jump the message window starts empty: a text that carried it on starts it
+			// after a jump (going back, a load) the message window starts empty: a text that
+			// carried it on gets the window's earlier lines back first (redrawPage), or starts it
 			var cont = (flag & TEXTFLAG_CONT) && !freshMessage;
+			if ((flag & TEXTFLAG_CONT) && freshMessage) cont = redrawPage(getHistoryCount() - 1);
 			freshMessage = false;
 			// the backlog line what this click shows starts on goes back to it
 			addTag(%[tagname:"scnhistmark", pos:getHistoryCount() - 1]) if unitStart;
@@ -2916,14 +2931,42 @@ class KAGEnvPlayer
 				// Display name
 				addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
 			}
+			emitChars(text.text, !cont);
+		}
+
+		// Wait process entry
+		if (!(flag & TEXTFLAG_NOWAIT)) {
+			if ((flag & TEXTFLAG_LINE)) {
+				addTag(%[tagname:"l", voicewait:true]);
+				addTagSimple("afterline");
+			} else {
+				if ((flag & TEXTFLAG_NOER)) {
+					kag.noErOnce = true;
+				}
+				addTag(%[tagname:"p", nosave:true]);
+			}
+		}
+	}
+
+	/**
+	 * A text's characters as tags (ch, r, font, ruby, indent), with the wrap they're drawn with
+	 * @param t the text
+	 * @param firstCh it starts the message (auto-indent)
+	 * @param redraw it's drawn again from the history (redrawPage): its click waits (\k) are left out
+	 */
+	function emitChars(t, firstCh, redraw = false) {
+			currentRubyCount = 0;
+			currentRuby = void;
+			currentText = "";
+			// filled in below, before KAG draws the characters
+			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
+			var wrapLine = "", wrapNewline = false;
 
 			var indentCharacter = void;
 			var indentLevel = 0;
 
 			// Expand text
-			var t = text.text;
 			var l = t.length;
-			var firstCh = !cont;
 			//dm("Display text:" + t);
 			for (var i=0;i<l;) {
 				var ch = t.charAt(i++);
@@ -2940,7 +2983,7 @@ class KAGEnvPlayer
 						literal = true;
 						break;
 					case "k":
-						addTag(%[tagname:"l"]);
+						addTag(%[tagname:"l"]) if !redraw;
 					default:
 						continue;
 					}
@@ -3014,20 +3057,131 @@ class KAGEnvPlayer
 			}
 			// with a new line in it the character wrap does it, as for a scenario line with [r]
 			currentWrap.line = wrapNewline ? "" : wrapLine;
-		}
+	}
 
-		// Wait process entry
-		if (!(flag & TEXTFLAG_NOWAIT)) {
-			if ((flag & TEXTFLAG_LINE)) {
-				addTag(%[tagname:"l", voicewait:true]);
-				addTagSimple("afterline");
-			} else {
-				if ((flag & TEXTFLAG_NOER)) {
-					kag.noErOnce = true;
-				}
-				addTag(%[tagname:"p", nosave:true]);
+	// -----------------------------------------------------------
+	// The message window after a jump: a click in the middle of a window (its text carries the
+	// window on, TEXTFLAG_CONT) gets the window's earlier lines back, drawn at once from the
+	// history, as the window showed them when the game was there (going back, a load)
+	// -----------------------------------------------------------
+
+	// What clears the message window between two texts: KAG's clearing tags (a [p] of its own
+	// clears it unless *noer comes before it)
+	var pageClears = %[cm:true, ct:true, er:true, clearlayers:true, msgoff:true];
+	var maxPageTexts = 50;
+
+	// A scene's data (its lines and texts) by its name
+	function sceneOf(sceneName) {
+		var storage = getStorage(sceneName);
+		var sd = scnStorage;
+		if (sd === void || sd.storage != storage) {
+			if (storageCache === void || storageCache.storage != storage) {
+				invalidate storageCache if storageCache !== void;
+				storageCache = new StorageData(storage);
 			}
+			sd = storageCache;
 		}
+		return sd.findScene(getLabel(sceneName));
+	}
+
+	// Where text id is in a scene's lines (-1: nowhere)
+	function textLine(scene, id) {
+		var lines = scene.lines;
+		for (var i = 0; i < lines.count; i++) if (lines[i] === id) return i;
+		return -1;
+	}
+
+	// The steps between two texts of a scene's lines (from after index a to before index b):
+	// how many [r]s they hold, or -1 when one of them clears the message window
+	function stepsBetween(lines, a, b, rs) {
+		var noer = false;
+		for (var i = a + 1; i < b; i++) {
+			var obj = lines[i];
+			if (typeof obj != "Object" || typeof obj[SAVE_POINT] == "Integer") continue;
+			var name = obj[0];
+			if (typeof name != "String") continue;
+			if (name == "*noer") { noer = true; continue; }
+			if (name == "r") rs++;
+			else if (pageClears[name] || (name == "p" && !noer)) return -1;
+			if (name == "p") noer = false;
+		}
+		return rs;
+	}
+
+	// The texts the message window showed before the text at history position pos, which
+	// carries it on: %[text, rs] (rs: the [r]s after it), oldest first; empty when it starts
+	// the window. Back through the history while the window wasn't cleared: a text that waited
+	// with [p] (unless NOER), a clearing tag between two texts, a choice, a text that opened
+	// the window (no TEXTFLAG_CONT, which is taken), or another script
+	function pageBefore(pos) {
+		var page = [];
+		var b = historyBlock(pos);
+		if (b === void || b.text !== void) return page;
+		var bScene = b.scene, bId = b.idx + (pos - b.startNo);
+		var bData = sceneOf(bScene);
+		if (bData === void) return page;
+		var bLine = textLine(bData, bId);
+		var pendingRs = 0; // [r]s after a text that isn't drawn (TEXTFLAG_NOTEXT)
+		for (var p = pos - 1; p >= 0 && page.count < maxPageTexts; p--) {
+			var a = historyBlock(p);
+			if (a === void || a.text !== void) break;
+			var aScene = a.scene, aId = a.idx + (p - a.startNo);
+			if (getStorage(aScene).toLowerCase() != getStorage(bScene).toLowerCase()) break;
+			var aData = sceneOf(aScene);
+			if (aData === void || aData.texts === void) break;
+			var at = convertSceneText(aData.texts[aId - 1]);
+			if (at === void) break;
+			var aFlag = +at.flag;
+			// its own wait: [p] clears the window (but with NOER), [l] and none carry it on
+			if (!(aFlag & (TEXTFLAG_LINE | TEXTFLAG_NOWAIT)) && !(aFlag & TEXTFLAG_NOER)) break;
+			var aLine = textLine(aData, aId);
+			if (aLine < 0 || bLine < 0) break;
+			var rs;
+			if (aScene == bScene) {
+				rs = stepsBetween(aData.lines, aLine, bLine, 0);
+			} else {
+				// the end of one scene, then the start of the next
+				rs = stepsBetween(aData.lines, aLine, aData.lines.count, 0);
+				rs = stepsBetween(bData.lines, -1, bLine, rs) if rs >= 0;
+			}
+			if (rs < 0) break;
+			if (!(aFlag & TEXTFLAG_NOTEXT)) {
+				page.unshift(%[text:changeAlias(at), rs:rs + pendingRs]);
+				pendingRs = 0;
+			} else {
+				pendingRs += rs;
+			}
+			if (!(aFlag & TEXTFLAG_CONT)) break; // it opened the window
+			bScene = aScene;
+			bData = aData;
+			bLine = aLine;
+		}
+		return page;
+	}
+
+	/**
+	 * Draws the message window's earlier lines again before the text at history position pos
+	 * (pageBefore): at once, without voices, waits or the backlog (it has them already)
+	 * @return whether there were any (the text then carries the window on)
+	 */
+	function redrawPage(pos) {
+		if (kag.skipNoDisp) return false;
+		var page = pageBefore(pos);
+		if (page.count == 0) return false;
+		var first = page[0].text;
+		addTagSimple("msgon");
+		addTag(%[tagname:"dispname", name:first.name, disp:first.disp]);
+		var history = kag.historyWriteEnabled;
+		addTag(%[tagname:"history", output:0]) if history;
+		addTagSimple("nowait");
+		for (var i = 0; i < page.count; i++) {
+			var e = page[i];
+			emitChars(e.text.text, i == 0, true);
+			for (var r = 0; r < e.rs; r++) addTagSimple("r");
+		}
+		addTagSimple("endnowait");
+		addTag(%[tagname:"history", output:1]) if history;
+		return true;
 	}
 
 	// -----------------------------------------------------------

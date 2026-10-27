@@ -72,8 +72,8 @@ bool isScript(const std::string& ext)
 {
 	return ext == ".ks" || ext == ".tjs" || ext == ".csv" || ext == ".txt" || ext == ".asd" || ext == ".json" || ext == ".func";
 }
-// Files the game reads layers from: clipfile's clip:// and psdfile's psd://. They're art sources,
-// left out by default (*.clip, *.psd), unless a script names one
+// Files the game reads layers from: clipfile's clip:// and psdfile's psd://. A pattern that
+// leaves them out (*.clip, *.psd: art sources) doesn't take one a script names
 bool isLayeredSource(const std::string& ext) { return ext == ".clip" || ext == ".psd"; }
 
 std::string extOf(const std::string& name)

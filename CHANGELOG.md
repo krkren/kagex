@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.3
+
+### Added
+
+- **A compiled script starts from the World the scripts that go to it leave**: each compiled file records the World it leaves at every jump and choice to another script, and a script that the listed scripts going to it all leave the same World in is compiled from that World. So a script that carries on from another's screen (a character still standing there, the stage, the music) has it in its saved states, and going back, loading or a thumbnail there shows it. When they leave different ones (the demo menu, which every demo comes back to), the script starts from an empty World as before. `-scncompile=all` compiles again the scripts whose starting World changed, until they all hold. The compiled format is version 2 (`entry`, `exits`; `doc/scn.txt`, "Where a script starts").
+- **Going back to the middle of a message window draws the window as it was**: BACK, a backlog mark or a load at a line that carries on a window (layer.ks's lines, which build up in one window) draws that window's earlier lines first, without their voices and without adding them to the backlog again. It used to show the line alone (`doc/scn.txt`, "Going back").
+- [krkren/scnfile](https://github.com/krkren/scnfile) tests itself on every push: its PSB codec and encryption on Linux (also with AddressSanitizer and UBSan), macOS and Windows, and the plugin and scn2ks (a compiled scenario back to a script) in the newest kagex release's Linux engine.
+
+### Changed
+
+- **kagex-release no longer leaves out `.psd` and `.clip` files by default**: Contents > *Leave out* is `*.bak`, `*.tmp`, `Thumbs.db`, `desktop.ini` and `.DS_Store`. A `release.json` that has 0.9.2's default list gets the new one; a list you changed stays as it is (and a `.clip` or `.psd` that a script loads layers from still goes in when a pattern of yours matches it).
+- kagex-release 0.9.3 downloads the 0.9.3 engines.
+
 ## 0.9.2
 
 ### Changed

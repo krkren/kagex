@@ -619,6 +619,12 @@ def effekseer_framework(eng):
     return eng.tjs('return typeof global.KAGEffekseerOf != "undefined" ? 1 : 0;') == 1
 
 
+def page_framework(eng):
+    """Whether the scene player draws a message window's earlier lines again after a jump
+    (KAGEnvPlayer.redrawPage, 0.9.3)"""
+    return eng.tjs('return typeof world_object.player.redrawPage != "undefined" ? 1 : 0;') == 1
+
+
 def animated_framework(eng):
     """Whether the sample has the Animated Character demo (0.8.0 and later; pages.yml may test an
     older release's site)"""
@@ -680,6 +686,37 @@ def sample_steps(eng):
         if r[1] != "0" or r[0] == "0":
             raise SmokeError("compiling failed: " + r[4])
         eng.compiled = True
+
+    @step("a compiled script starts from the World the script that goes to it leaves")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof world_object.player.compileList != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes here, or a framework from before entry states)", flush=True)
+            return
+        # two scripts in the save folder: A puts Ai on the road and jumps to B, which shows
+        # text only. Compiled B before A (round two compiles B again), B's first save point holds
+        # what A left (SceneParser.entryFor), as playing the scripts would
+        r = str(eng.tjs(r'''
+            var dir = System.dataPath;
+            [ "*start|Carry A", "[initscene]", "[road normal]", "[ai standard center]", "Ai is here.[p]",
+              "[jump storage=zz_carry_b.ks]" ].save(dir + "zz_carry_a.ks");
+            [ "*start|Carry B", "Still here.[p]" ].save(dir + "zz_carry_b.ks");
+            Storages.addAutoPath(dir);
+            var p = world_object.player;
+            var c = p.compileList([ "zz_carry_b.ks", "zz_carry_a.ks" ], true);
+            if (c.failed > 0) return "failed: " + c.errors.join(" / ");
+            var d = new StorageData("zz_carry_b.ks");
+            var sp = d.root.scenes[0].lines[0], st = sp[1], ai = 0, stage = "";
+            if (typeof st == "Object" && st.characters !== void)
+                for (var i = 0; i < st.characters.count; i++) if (st.characters[i].name == "ai") ai++;
+            if (typeof st == "Object" && st.stage !== void) stage = "yes";
+            var again = p.parser.isNeedParse("zz_carry_b.ks") || p.parser.isNeedParse("zz_carry_a.ks");
+            var ret = [ c.compiled, ai, stage, d.root.entry, again ? 1 : 0 ].join(",");
+            invalidate d;
+            return ret;''', timeout=120))
+        print("     compiled, Ai in B's first state, its stage, B's entry key, still to compile: " + r, flush=True)
+        f = r.split(",")
+        if len(f) < 5 or f[0] != "2" or f[1] != "1" or f[2] == "" or f[3] == "" or f[4] != "0":
+            raise SmokeError("B didn't start from what A left: " + r)
 
     for demo in DEMOS:
         @step("demo " + demo + " plays to the end")
@@ -825,9 +862,14 @@ def sample_steps(eng):
         # going back restores KAG's state from the click it goes to (KAGEnvPlayer.storeKagState)
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
         eng.wait("layer.ks", 'world_object.player !== void && world_object.player.working', timeout=20)
+        # the timer also notes where each text left the message window's pen (kag.current.y):
+        # layer.ks's lines build up in one window, each on a line of its own
         eng.tjs("""
+            global.__smokePen = %[];
             global.__smokeToText = new Timer(function() {
-                if (world_object.player.curLabel == "*label2") { global.__smokeToText.enabled = false; return; }
+                var p = world_object.player;
+                if (kag.inStable && p.curTextId !== void) global.__smokePen[p.curLabel + ":" + p.curTextId] = kag.current.y;
+                if (p.curLabel == "*label2") { global.__smokeToText.enabled = false; return; }
                 kag.onPrimaryClick();
             }, "");
             __smokeToText.interval = 50;
@@ -836,15 +878,46 @@ def sample_steps(eng):
         eng.wait("Rotation", 'world_object.player.curLabel == "*label2" && kag.inStable', timeout=60)
         eng.tjs("invalidate global.__smokeToText; return 1;")
         layer = ('var l = kag.fore.layers[0], p = world_object.player;'
-                 ' return [p.curLabel, p.curTextId, l.visible ? 1 : 0, l.opacity].join(",");')
+                 ' return [p.curLabel, p.curTextId, l.visible ? 1 : 0, l.opacity, kag.current.y].join(",");')
         at = str(eng.tjs(layer))
         eng.wait("BACK to be enabled", 'canRollBack()', timeout=10)
         eng.tjs("rollBack(); return 1;")
         eng.wait("Translucency", 'world_object.player.curLabel == "*label1" && kag.inStable', timeout=20)
         back = str(eng.tjs(layer))
-        print("     layer 0 at %s, after BACK %s (label, text, visible, opacity)" % (at, back), flush=True)
-        if back.split(",")[2:] != ["1", "200"]:
+        print("     layer 0 at %s, after BACK %s (label, text, visible, opacity, pen y)" % (at, back), flush=True)
+        if back.split(",")[2:4] != ["1", "200"]:
             raise SmokeError("after BACK, layer 0 is %s, not the translucent picture of *label1" % back)
+        # "Translucent" is the second line of its window ("Start" above it): going back draws
+        # "Start" again, so the pen is where playing left it (KAGEnvPlayer.redrawPage)
+        if page_framework(eng):
+            pens = str(eng.tjs('var a = [], d = global.__smokePen; return [d["*start:2"], d["*label1:1"]].join(",");')).split(",")
+            print("     the pen at Start and Translucent while playing: %s" % ",".join(pens), flush=True)
+            if pens[1] == "" or pens[0] == pens[1]:
+                raise SmokeError("while playing, Translucent wasn't below Start (%s)" % pens)
+            if back.split(",")[4] != pens[1]:
+                raise SmokeError("after BACK the pen is at %s, not at %s where Translucent was drawn below Start"
+                                 % (back.split(",")[4], pens[1]))
+            # drawn again without writing to the backlog, which has it once already
+            starts = eng.tjs('var hl = kag.historyLayer, n = 0; for (var i = 0; i < hl.dataLines; i++)'
+                             ' { var l = hl.getLine(i); if (typeof l == "String" && l == "Start") n++; } return n;')
+            if starts != 1:
+                raise SmokeError("after BACK the backlog has %s lines \"Start\"" % starts)
+            # a load there draws the page again too
+            eng.tjs("kag.saveBookMark(2); return 1;")
+            eng.wait("data2 to be written",
+                     "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(2))", timeout=10)
+            eng.tjs('kag.goToStart(); return 1;')
+            eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+            eng.tjs("loadFunction(2); return 1;")
+            eng.wait("the save to load", 'world_object.player.working && world_object.player.curLabel == "*label1"'
+                     ' && world_object.player.curTextId == 1 && kag.inStable', timeout=30)
+            loaded = str(eng.tjs(layer))
+            starts = eng.tjs('var hl = kag.historyLayer, n = 0; for (var i = 0; i < hl.dataLines; i++)'
+                             ' { var l = hl.getLine(i); if (typeof l == "String" && l == "Start") n++; } return n;')
+            print("     loaded there: %s, %s line(s) \"Start\" in the backlog" % (loaded, starts), flush=True)
+            if loaded.split(",")[4] != pens[1] or starts != 1:
+                raise SmokeError("after a load at Translucent the pen is at %s (not %s), the backlog has %s lines \"Start\""
+                                 % (loaded.split(",")[4], pens[1], starts))
 
     @step("the animated character blinks, and its mouth follows its voice")
     def _():

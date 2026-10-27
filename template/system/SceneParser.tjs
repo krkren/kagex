@@ -11,6 +11,12 @@
 // Macros are expanded as KAG does, from parsermacro.ks (or the game's macros without it).
 // World tags are run through the player's headless World (KAGEnvForParse) to record its
 // state; every other tag is kept as a step for the game to run.
+//
+// A script starts from the World another listed script leaves when it goes there (a [jump]
+// or a choice to its start): its entry state. Each compiled file records where it goes and
+// the World then (exits); a script reached that way from scripts that all leave the same
+// World starts from it, otherwise from an empty World. compileAll compiles a script again
+// when its entry state has changed, until they all hold (entryFor, doc/scn.txt).
 
 // Text flags (KAGEnvPlayer.TEXTFLAG_*)
 var SCN_TEXTFLAG_LINE   = 0x01;
@@ -21,8 +27,8 @@ var SCN_TEXTFLAG_STAGE  = 0x10;
 var SCN_TEXTFLAG_NOTEXT = 0x20;
 var SCN_TEXTFLAG_CONT   = 0x40;
 
-// Compiled format version, part of every compiled file's source key
-var SCN_FORMAT_VERSION = 1;
+// Compiled format version, part of every compiled file's source key (2: exits and entry)
+var SCN_FORMAT_VERSION = 2;
 
 // FNV-1a over a string, as 8 hex digits
 function scnHashString(s)
@@ -455,7 +461,8 @@ class SceneParser
 	var options = %[];
 	var baseMacros = %[];
 	var macroKey = "";
-	var keyCache = %[]; // storage -> source key of its compiled file
+	var keyCache = %[]; // storage -> %[hash, entry] of its compiled file
+	var exitCache = %[]; // storage -> the exits its compiled file records (exitsOf)
 	var warnings = [];
 	var prepared = false; // prepare() has run
 
@@ -574,7 +581,8 @@ class SceneParser
 		}
 	}
 
-	// Each compiled file holds the key of what it was compiled from, so no dependency file
+	// Each compiled file holds the key of what it was compiled from, and its exits, so no
+	// dependency file
 	function loadDepend(file) {}
 	function saveDepend(file) {}
 
@@ -588,15 +596,132 @@ class SceneParser
 		return targetMap[((string)storage).toLowerCase()] !== void;
 	}
 
+	/**
+	 * The scripts to compile before storage, then storage: the listed scripts that go to its
+	 * start (its entry state comes from them), with theirs when recursive
+	 */
 	function getAllDependStorageList(storage, recursive, list, map) {
 		list = [] if list === void;
 		map = %[] if map === void;
 		var key = ((string)storage).toLowerCase();
-		if (map[key] === void) {
-			map[key] = true;
-			list.add(storage);
+		if (map[key] !== void) return list;
+		map[key] = true;
+		var from = predecessors(storage);
+		for (var i = 0; i < from.count; i++) {
+			if (recursive) getAllDependStorageList(from[i], true, list, map);
+			else if (map[from[i].toLowerCase()] === void) {
+				map[from[i].toLowerCase()] = true;
+				list.add(from[i]);
+			}
 		}
+		list.add(storage);
 		return list;
+	}
+
+	// ------------------------------------------------------------------
+	// Entry states: the World a script starts from
+	// ------------------------------------------------------------------
+
+	// The exits a listed script's compiled file records (%[storage, target, state]), cached
+	// by the file's key; [] when it isn't compiled
+	function exitsOf(storage) {
+		var lkey = ((string)storage).toLowerCase();
+		var path = typeof global.scnFindCompiled != "undefined" ? scnFindCompiled(storage) : void;
+		if (path === void) {
+			delete exitCache[lkey];
+			return [];
+		}
+		var c = exitCache[lkey];
+		if (c !== void && c.path == path) return c.exits;
+		var exits = [];
+		try {
+			var root = readCompiled(path);
+			if (root !== void && root.exits !== void) exits.assignStruct(root.exits);
+		} catch (e) {
+			dm(storage + ": its compiled file can't be read for its exits: " + e.message);
+		}
+		exitCache[lkey] = %[ path:path, exits:exits ];
+		return exits;
+	}
+
+	// A script's start label: the first label, when nothing but comments and macro definitions
+	// comes before it (a [jump] to it enters the script at its start); "" otherwise
+	function startLabel(storage) {
+		if (!Storages.isExistentStorage(storage)) return "";
+		var lines = [].load(storage);
+		var inMacro = false;
+		for (var i = 0; i < lines.count; i++) {
+			var t = ((string)lines[i]).trim();
+			if (t == "" || t.charAt(0) == ";") continue;
+			if (!inMacro && (t.indexOf("[macro ") == 0 || t.indexOf("@macro ") == 0)) inMacro = true;
+			if (inMacro) {
+				if (t.indexOf("[endmacro]") >= 0 || t.indexOf("@endmacro") == 0) inMacro = false;
+				continue;
+			}
+			if (t.charAt(0) != "*") return "";
+			var bar = t.indexOf("|");
+			return bar >= 0 ? t.substr(0, bar) : t;
+		}
+		return "";
+	}
+
+	// The exits of the other listed scripts into storage's start
+	function exitsInto(storage) {
+		var ret = [];
+		var lkey = ((string)storage).toLowerCase();
+		var start = startLabel(storage);
+		for (var i = 0; i < targets.count; i++) {
+			var from = targets[i];
+			if (from.toLowerCase() == lkey) continue;
+			var exits = exitsOf(from);
+			for (var j = 0; j < exits.count; j++) {
+				var e = exits[j];
+				if (((string)e.storage).toLowerCase() != lkey) continue;
+				var t = e.target !== void ? (string)e.target : "";
+				if (t != "" && t != start) continue;
+				ret.add(%[ from:from, state:e.state ]);
+			}
+		}
+		return ret;
+	}
+
+	// The listed scripts that go to storage's start
+	function predecessors(storage) {
+		var ret = [], seen = %[];
+		var into = exitsInto(storage);
+		for (var i = 0; i < into.count; i++) {
+			var k = into[i].from.toLowerCase();
+			if (seen[k] === void) {
+				seen[k] = true;
+				ret.add(into[i].from);
+			}
+		}
+		return ret;
+	}
+
+	/**
+	 * The World storage starts from: the state the scripts that go to its start leave, when
+	 * they all leave the same one; void (an empty World) when none does, or they differ (a
+	 * menu that every chapter comes back to sets its own screen up)
+	 */
+	function entryFor(storage) {
+		var into = exitsInto(storage);
+		if (into.count == 0) return;
+		var key = Scripts.toJSONString(into[0].state);
+		for (var i = 1; i < into.count; i++) {
+			if (Scripts.toJSONString(into[i].state) != key) {
+				dm(storage + ": the scripts that go to it leave different screens, so it starts from an empty World");
+				return;
+			}
+		}
+		// an empty World is no entry state
+		if (key == Scripts.toJSONString(%[])) return;
+		return into[0].state;
+	}
+
+	// The key of an entry state ("" for an empty World)
+	function entryKey(entry) {
+		return entry === void ? "" : scnHashString(Scripts.toJSONString(entry));
 	}
 
 	// Whether compiled files are .scn (PSB, through the scnfile plugin) or .scn.json
@@ -651,12 +776,13 @@ class SceneParser
 			if (!Storages.isExistentStorage(out)) return true;
 			try {
 				var root = readCompiled(out);
-				keyCache[lkey] = root !== void ? root.hash : "";
+				keyCache[lkey] = %[ hash:(root !== void ? root.hash : ""), entry:(root !== void && root.entry !== void ? root.entry : "") ];
 			} catch (e) {
 				return true;
 			}
 		}
-		return keyCache[lkey] != key;
+		// compiled from something else, or the World it starts from has changed
+		return keyCache[lkey].hash != key || keyCache[lkey].entry != entryKey(entryFor(storage));
 	}
 
 	/**
@@ -675,16 +801,18 @@ class SceneParser
 		var out = outputPath(storage);
 		if (out === void) throw new Exception(storage + ": its folder isn't writable, so it can't be compiled");
 		var t = System.getTickCount();
-		var root = compile(storage);
+		var root = compile(storage, entryFor(storage));
 		if (writesPsb) SCNFile.save(root, out);
 		else Scripts.saveJSON(out, root, true, 1);
 		// one compiled file per script: the player would read a .scn before a .scn.json
 		var other = out.substr(out.length - 5) == ".json" ? out.substr(0, out.length - 5) : out + ".json";
 		Storages.deleteFile(other) if Storages.isExistentStorage(other);
-		keyCache[((string)storage).toLowerCase()] = root.hash;
+		keyCache[((string)storage).toLowerCase()] = %[ hash:root.hash, entry:(root.entry !== void ? root.entry : "") ];
 		// a new file isn't found through the auto path until its cache is rebuilt
 		Storages.addAutoPath(System.exePath + "dummy/");
 		Storages.removeAutoPath(System.exePath + "dummy/");
+		var found = typeof global.scnFindCompiled != "undefined" ? scnFindCompiled(storage) : void;
+		exitCache[((string)storage).toLowerCase()] = %[ path:found, exits:(root.exits !== void ? root.exits : []) ] if found !== void;
 		var ntexts = 0;
 		for (var i = 0; i < root.scenes.count; i++) ntexts += root.scenes[i].texts.count;
 		dm("%s: %d scenes, %d texts, %d warnings (%d ms) -> %s".sprintf(storage, root.scenes.count, ntexts,
@@ -732,13 +860,20 @@ class SceneParser
 	var voiceMap = %[];
 	var nextVoiceList = [];
 
+	// where the script goes to other scripts, and the World then (%[storage, target, state])
+	var exits = [];
+
 	// the message being put together
 	var msg;
 	var pendingName;
 	var lastName;
 	var lastDisp;
 
-	function compile(storage) {
+	/**
+	 * Compiles a script
+	 * @param entry the World it starts from (entryFor), or void for an empty one
+	 */
+	function compile(storage, entry) {
 		cstorage = storage;
 		cline = 0;
 		var wcount = warnings.count;
@@ -759,7 +894,9 @@ class SceneParser
 		lastName = lastDisp = void;
 
 		env.initEnv(,,false);
+		env.onRestore(entry,,,false) if entry !== void;
 		env.clearSFlags();
+		exits = [];
 
 		var macros = %[];
 		(Dictionary.assign incontextof macros)(baseMacros);
@@ -793,6 +930,8 @@ class SceneParser
 			if (s.label == "" && s.texts.count == 0 && s.lines.count <= 1 && s.nexts.count <= 1) scenes.erase(0);
 		}
 		var root = %[ version:SCN_FORMAT_VERSION, storage:storage, hash:sourceKey(storage), scenes:[] ];
+		root.entry = entryKey(entry) if entry !== void;
+		root.exits = exits if exits.count > 0;
 		for (var i = 0; i < scenes.count; i++) {
 			var s = scenes[i];
 			var d = %[ label:s.label, title:s.title, firstLine:s.firstLine, startLine:s.firstLine,
@@ -1491,6 +1630,7 @@ class SceneParser
 			if (elm.__cond === void) markDead();
 			return;
 		}
+		addExit(next.storage, next.target);
 		if (elm.__cond !== void || ifStack.count > 0) {
 			// a jump that may not happen, or one inside [if]: a step of its own
 			var step = [ "next", 0 ];
@@ -1512,6 +1652,17 @@ class SceneParser
 		scene.nexts.add(next);
 		scene.closed = true;
 		markDead();
+	}
+
+	// A jump or a choice to another script: the World it finds there (entryFor)
+	function addExit(storage, target) {
+		if (storage === void || storage == "") return;
+		storage = Storages.extractStorageName(storage);
+		if (storage.toLowerCase() == ((string)cstorage).toLowerCase()) return;
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		var st = %[];
+		env.onStore(st);
+		exits.add(%[ storage:storage, target:(target !== void ? target : ""), state:st ]);
 	}
 
 	function markDead() {
@@ -1549,6 +1700,7 @@ class SceneParser
 			if (c.type != type) warn("[" + elm.tagname + "] with choices of the other kind");
 			c.type = type;
 			scene.nexts.add(c);
+			addExit(c.storage, c.target);
 		}
 		scene.choices.clear();
 		scene.closed = true;

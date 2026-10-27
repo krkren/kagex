@@ -17,8 +17,8 @@ also takes Wamsoft's PSBFile) reads and writes. A build without the plugin compi
 reads <script>.scn.json instead, through the json plugin every build has. kagex-release
 compiles a game's listed scripts, encrypts the .scn files with the game's key and ships them
 without the scripts (Releases, below). A compiled script plays without its .ks: the .ks of a
-script in !scnlist.txt only has to be there to compile it. Still to come: the plugin on every
-platform (only Linux builds it so far, and the engine packages don't have it yet).
+script in !scnlist.txt only has to be there to compile it. Every package's engine has the
+plugin (since KAGEX 0.9.0).
 
 
 
@@ -37,13 +37,15 @@ data/scenario/char.ks.scn (or char.ks.scn.json without the plugin, or with forma
 writing one removes the other). The files are made from the scripts and aren't committed
 (.gitignore). A script is compiled again when it has changed, or the macros, the options,
 envinit.tjs, charinit.csv or the compiler have: each compiled file holds the key of what it
-was compiled from (hash).
+was compiled from (hash). So is a script whose starting World has changed (Where a script
+starts, under What the compiler does).
 
 - In debug mode (the default; -debugwin=no turns it off), a listed script that changed is
   compiled when the game goes to it.
 - -scncompile compiles every listed script that changed, writes what happened to the console
   and exits (with 1 if one failed); -scncompile=all compiles all of them. The game's window
-  stays hidden.
+  stays hidden. Scripts whose starting World changed with another one's compile are compiled
+  again, until they all hold (at most 4 rounds).
 - KAGCompileScenarios(force) does the same from a running game, and returns
   %[compiled, skipped, failed, errors, warnings].
 
@@ -94,7 +96,11 @@ it (pflags and pcflags, what a save holds), and going back to one restores that 
 so KAG's layers, sounds and the like are as they were too. Before those, or after a load, it
 restores the World's state at that save point and the game's flags only: a script that draws on
 KAG's own layers (layer.ks) shows them as they are, not as they were. Either way the message
-window starts empty, with the text gone back to (and its name), as after a load.
+window shows the text gone back to (and its name). When that text carries on a message window
+from earlier texts (a line after [l] or [r] in one window, flag 0x40 below), those are drawn
+first, as they were shown, without their voices and without writing them to the backlog again
+(KAGEnvPlayer.redrawPage): from the text that opened the window, back to the last page that
+cleared it, a choice or another script, at most 50 texts. A load does the same.
 
 - player.rollback() goes back to what the click before the one on the screen showed (at a
   choice, to the text the choice came with); player.canRollback says whether there is one. The
@@ -210,8 +216,20 @@ player's own that draws nothing (KAGEnvForParse). Loading a save point puts the 
 it was and plays on from there, so the tags between it and the text play again. Each text
 holds the state while it's shown, for thumbnails and for going back.
 
-A script is compiled from an empty World. A script that carries on from what another one left
-on the screen starts with an empty screen when played compiled.
+◇ Where a script starts
+
+A script is compiled from the World the scripts that go to its start leave: a [jump] or a
+choice to it without a target, or to its first label when only comments and macro
+definitions come before that. Each compiled file records the World it leaves at every jump
+and choice to another script (exits), so a script that carries on from what another one left
+on the screen (a character still standing there, the stage, the music) has that in its saved
+states, and going back or loading in it brings it back.
+
+When the listed scripts that go to it leave different Worlds (a menu every chapter comes back
+to), or none goes to it, a script starts from an empty World. Only listed scripts are seen:
+not kag.process() from the title screen or a script that isn't compiled. A script that's
+jumped to from a listed one and also started from the title screen starts with what the
+listed one leaves, so start such a script with the tags that set its screen up.
 
 ◇ Tags
 
@@ -259,9 +277,12 @@ put back from the saved state when the skip ends) or most other tags. It still r
 https://github.com/krkren/scnfile describes in docs/format.md (Dictionaries are PSB objects,
 Arrays lists, void null). The root:
 
-    version     1
+    version     2 (1 up to KAGEX 0.9.2: no entry or exits)
     storage     the script
     hash        the key of what it was compiled from
+    entry       the key of the World it starts from (none: an empty one)
+    exits       where it goes to other scripts: %[storage, target, state], the World's
+                state there (none: it doesn't)
     scenes      the scenes, in order
 
 A scene:

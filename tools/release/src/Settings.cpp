@@ -27,6 +27,9 @@ Json strings(std::initializer_list<const char*> items)
 	return a;
 }
 
+// contents.exclude's defaults: files a game is never made of
+Json defaultExclude() { return strings({ "*.bak", "*.tmp", "Thumbs.db", "desktop.ini", ".DS_Store" }); }
+
 Json obj(std::initializer_list<std::pair<const char*, Json>> members)
 {
 	Json o = Json::object();
@@ -133,7 +136,7 @@ Json defaultSettings(const Project& p)
 		{ "framework", Json(true) },
 		{ "font", Json(true) },
 		{ "licenses", Json(true) },
-		{ "exclude", strings({ "*.psd", "*.clip", "*.bak", "*.tmp", "Thumbs.db", "desktop.ini", ".DS_Store" }) },
+		{ "exclude", defaultExclude() },
 		{ "extraFiles", Json::array() },
 		{ "plugins", Json("all") },
 		{ "compileScripts", Json(true) },
@@ -540,6 +543,16 @@ bool loadSettings(const fs::path& file, Json& out, std::string& error)
 	std::string err;
 	if (!Json::parse(text, out, &err)) { error = krt::fromPath(file) + ": " + err; return false; }
 	if (!out.isObj()) { error = krt::fromPath(file) + ": not a settings file"; return false; }
+	// Up to 0.9.2 the default list also left out *.psd and *.clip: a file that still has that
+	// list as it was gets the new one (a list the developer changed stays as it is)
+	const Json& contents = at(out, "contents");
+	std::vector<std::string> exclude;
+	for (const auto& e : at(contents, "exclude").elements()) exclude.push_back(e.asStr());
+	if (exclude == std::vector<std::string>{ "*.psd", "*.clip", "*.bak", "*.tmp", "Thumbs.db", "desktop.ini", ".DS_Store" }) {
+		Json c = contents;
+		c.set("exclude", defaultExclude());
+		out.set("contents", c);
+	}
 	return true;
 }
 
