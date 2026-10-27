@@ -18,6 +18,12 @@
 
 
 
+; Drawn again from here in another language (redisplayScreen, Override.tjs)
+
+*buttons
+
+
+
 ; Load base image
 
 [stoptrans]

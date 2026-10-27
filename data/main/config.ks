@@ -24,55 +24,61 @@
 ; Button placement
 
 ; Screen Mode
-[locate x=322 y=278]
+[locate x=322 y=266]
 [button name="config_window"     exp='setScreenButton(true)']
-[locate x=578 y=278]
+[locate x=578 y=266]
 [button name="config_fullscreen" exp='setScreenButton(false)']
 
 ; Text Speed
-[locate x=402 y=428]
+[locate x=402 y=396]
 [slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.textspeed nohilight]
 
 ; Auto Speed
-[locate x=402 y=578]
+[locate x=402 y=526]
 [slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.autospeed nohilight]
 
 ; Screen Effects
-[locate x=322 y=728]
+[locate x=322 y=656]
 [button name=config_effecton exp="setNoEffectButton(false)"]
-[locate x=578 y=728]
+[locate x=578 y=656]
 [button name=config_effectoff exp="setNoEffectButton(true)"]
 
 ; Skip
-[locate x=322 y=878]
+[locate x=322 y=786]
 [button name="config_skipall" exp="setSkipButton(true)"]
-[locate x=578 y=878]
+[locate x=578 y=786]
 [button name="config_skipalrdy" exp="setSkipButton(false)"]
 
+; Language: the screen is drawn again in the one chosen (setLanguageButton, Override.tjs)
+[locate x=322 y=916]
+[button name="config_lang_en" exp="setLanguageButton('en')"]
+[locate x=578 y=916]
+[button name="config_lang_ja" exp="setLanguageButton('ja')"]
+
 ; BGM Volume
-[locate x=1102 y=278]
+[locate x=1102 y=266]
 [slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.bgmvolume nohilight]
 
 ; SE Volume
-[locate x=1102 y=428]
+[locate x=1102 y=396]
 [slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.sevolume nohilight]
 
 ; VOICE Volume
-[locate x=1102 y=578]
+[locate x=1102 y=526]
 [slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.voicevolume nohilight]
 
 ; Voice Buttons
-[locate x=1022 y=728]
+[locate x=1022 y=656]
 [button name="config_voice0" normal="config_voice0_on" exp="setVoiceOnButton('voice0')"]
-[locate x=1218 y=728]
+[locate x=1218 y=656]
 [button name="config_voice1" normal="config_voice1_on" exp="setVoiceOnButton('voice1')"]
-[locate x=1414 y=728]
+[locate x=1414 y=656]
 [button name="config_voice2" normal="config_voice2_on" exp="setVoiceOnButton('voice2')"]
-[locate x=1022 y=804]
+[locate x=1022 y=732]
 [button name="config_voice3" normal="config_voice3_on" exp="setVoiceOnButton('voice3')"]
-[locate x=1218 y=804]
+[locate x=1218 y=732]
 [button name="config_voice4" normal="config_voice4_on" exp="setVoiceOnButton('voice4')"]
-[locate x=1414 y=804]
+[locate x=1414 y=732]
 [button name="config_voice5" normal="config_voice5_on" exp="setVoiceOnButton('voice5')"]
 
 ; Default, Title and Return, right-aligned in the header

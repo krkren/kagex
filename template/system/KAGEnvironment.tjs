@@ -2276,6 +2276,11 @@ class KAGEnvironment extends KAGEnvTrans {
 				dispName = name;
 			}
 
+			// The name in the language shown (Language.tjs: the table's names), keeping the
+			// one it was written as, to draw the name again in another language
+			var nameSource = dispName;
+			if (global.KAGLanguage !== void) dispName = KAGLanguage.speaker(dispName);
+
 			// Name filter processing
 			if (typeof global.dispNameFilter !== 'undefined') {
 				dispName = global.dispNameFilter(dispName);
@@ -2290,7 +2295,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 			// Expression change process
 			if (!skipNoDisp) {
-				drawName(dispName, nextVoiceList);
+				drawName(dispName, nextVoiceList, nameSource);
 				redrawFace(ch, false);
 			}
         }

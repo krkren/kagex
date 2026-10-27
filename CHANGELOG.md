@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Languages, switched while playing**: a game lists its languages in `Config.tjs` (`KAGLanguageList`, the language its scenarios are written in first), and the player switches between them at any time with **F9**, the controller's **L2** or a button of the game's: the message on screen (and its speaker's name), the choices on show, the message window's buttons and the screen on show are drawn again in the other language, and the backlog keeps each line in the language it was shown in. Each other language has a folder, `data/lang/<code>/`, put on the search path while the game shows it: its table, `lang.json` (interface strings, speakers' names and story text by script, keyed by the source text), and any file that stands in for one of the same name, such as the screens' images with words on them. Story text is translated a piece at a time (a scenario line's text between its tags, a text of the scene player), both when KAG plays a script and when the scene player plays it compiled. Until the player chooses a language, the game takes the one the system prefers (`System.uiLanguage`, then `System.uiLanguageCandidates`); the choice is saved with the system variables. The framework's own strings (the Yes/No prompts, About, the backlog's "Choice:") are in `system/kagex_ja.json`. `doc/kagex.txt`, "Languages".
+- **The sample in Japanese as well as English**: every demo's text (the original KAGEX sample's Japanese where it had the line), the speakers' names, the demo menu, scene titles in Replay, Search and the save slots, and the title, Config, save/load and Extras screens and the message window's buttons, drawn in Japanese by `tools/assets/make_ui.py --lang ja` into `data/lang/ja/`. The Config screen has a Language row (English, 日本語); its rows are a little closer together to make room.
+- `tools/assets/subset_fonts.py` makes the Japanese subsets of Noto Sans CJK JP that `make_ui.py` draws the Japanese labels with (`tools/assets/fonts/NotoSansCJKjp-*-Japanese.otf`).
+- `tools/smoketest.py` switches the title screen, a line of `char.ks`, the demo menu's choices and the Config screen to Japanese and back, and checks that the backlog keeps what was shown. It puts the sample in English first: under a C locale the engine's candidates are Japanese.
+
 ## 0.9.3
 
 ### Added

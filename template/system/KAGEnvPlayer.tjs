@@ -1005,7 +1005,7 @@ class KAGEnvPlayer
 				newcur++;
 			}
 		}
-		askYesNo(@"error:Save data inconsistency detected. Normal operation is not guaranteed. Restart from the beginning of this scene?",
+		askYesNo("error:Save data inconsistency detected. Normal operation is not guaranteed. Restart from the beginning of this scene?",
 				 "Confirm",
 				 function(param) { cur=0; } incontextof this,
 				 function(param) { clearInfo(); } incontextof this);
@@ -1028,7 +1028,7 @@ class KAGEnvPlayer
 			}
 			newcur++;
 		}
-		askYesNo(@"error:Cannot move to specified text ${text}. Restart from the beginning of the scenario?",
+		askYesNo("error:" + tr("Cannot move to specified text %s. Restart from the beginning of the scenario?").sprintf(text),
 				 "Confirm",
 				 function(param) { cur=0; } incontextof this,
 				 function(param) { clearInfo(); } incontextof this);
@@ -1061,7 +1061,7 @@ class KAGEnvPlayer
 			}
 			newcur++;
 		}
-		askYesNo(@"error:Cannot move to specified line ${line}. Restart from the beginning of the scenario?",
+		askYesNo("error:" + tr("Cannot move to specified line %s. Restart from the beginning of the scenario?").sprintf(line),
 				 "Confirm",
 				 function(param) { cur=0; } incontextof this,
 				 function(param) { clearInfo(); } incontextof this);
@@ -1237,7 +1237,7 @@ class KAGEnvPlayer
 			// a block keeps the flags of its start, so going back to a text in it (goToHistory)
 			// gives the flags it had: a change of flags starts a new block
 			if (last.text === void && curSceneName == last.scene && idx == last.idx + last.num &&
-				scnSameStruct(last.flags, kag.flags)) {
+				last.lang == shownLanguage && scnSameStruct(last.flags, kag.flags)) {
 				last.num++;
 				return;
 			}
@@ -1246,7 +1246,15 @@ class KAGEnvPlayer
 		// New history data
 		var flags = %[];
 		(Dictionary.assignStruct incontextof flags)(kag.flags);
-		histories.push(%[startNo:startNo, scene:curSceneName, title:title, idx:idx, num:1, flags:flags]);
+		histories.push(%[startNo:startNo, scene:curSceneName, title:title, idx:idx, num:1, flags:flags,
+			lang:shownLanguage]);
+	}
+
+	// The language the texts are shown in (Language.tjs), kept with each history block so the
+	// backlog written again from the history (rebuildBacklog) keeps what was shown; void with
+	// one language
+	property shownLanguage {
+		getter() { return global.KAGLanguage !== void && KAGLanguage.available ? KAGLanguage.current : void; }
 	}
 
 	// Flag info at start of choice
@@ -1266,7 +1274,8 @@ class KAGEnvPlayer
 			var last = lastHistory;
 			startNo = last.startNo + last.num;
 		}
-		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice: " + text, num:1, flags:selectFlags]);
+		histories.push(%[startNo:startNo, scene:curSceneName, title:title, text:"Choice: " + text, num:1, flags:selectFlags,
+			choice:text, lang:shownLanguage]);
 	}
 
 	/**
@@ -1343,15 +1352,20 @@ class KAGEnvPlayer
 				i++;
 			}
 			if (h.text !== void) {
-				// Choice part
+				// Choice part ("Choice: " and the label, in the language it was shown in)
 				var ret = %[];
 				ret.text = h.text;
+				if (h.choice !== void && global.KAGLanguage !== void)
+					ret.text = KAGLanguage.ui("Choice: %s", h.lang).sprintf(KAGLanguage.story(getStorage(h.scene), h.choice, h.lang));
 				ret.state = getLastState(h.scene);
 				ret.title = h.title;
+				ret.lang = h.lang;
 				return ret;
 			} else {
 				// History text part
 				var ret = getTextData(h.scene, h.idx + (pos - h.startNo), true);
+				ret.lang = h.lang if ret !== void;
+				ret.storage = getStorage(h.scene) if ret !== void;
 				return ret;
 			}
 		}
@@ -1704,6 +1718,7 @@ class KAGEnvPlayer
 			if (newMessage) {
 				open = true;
 				var name = d.disp != "" ? d.disp : d.name;
+				if (name != "" && global.KAGLanguage !== void) name = KAGLanguage.speaker(name, d.lang);
 				if (name != "" && typeof global.dispNameFilter != "undefined") name = global.dispNameFilter(name);
 				if (typeof hl.storeName != "undefined") hl.storeName(name);
 				else if (name != "") hl.store(name + " ");
@@ -1713,7 +1728,8 @@ class KAGEnvPlayer
 				env.extractVoice(d.voice, list);
 				hl.setNewAction(kag.getVoicePlayingScript(list)) if list.count > 0;
 			}
-			storeBacklogText(hl, d.text);
+			// in the language it was shown in
+			storeBacklogText(hl, global.KAGLanguage !== void ? KAGLanguage.story(d.storage, d.text, d.lang) : d.text);
 		}
 		endBacklogMessage(hl) if open;
 	}
@@ -1879,7 +1895,7 @@ class KAGEnvPlayer
 				return data.title;
 			}
 		}
-		return "Unknown Title";
+		return tr("Unknown Title");
 	}
 
 	// -------------------------------------------------------------
@@ -2247,9 +2263,16 @@ class KAGEnvPlayer
 					if (readOnly && read < i + 1) break;
 					var t = changeAlias(convertSceneText(texts[i]));
 					if ((+t.flag & TEXTFLAG_NOTEXT)) continue;
-					var shown = plainText(t.text);
-					var name = t.disp != "" ? t.disp : t.name;
-					if (shown.toLowerCase().indexOf(key) < 0 && ((string)name).toLowerCase().indexOf(key) < 0) continue;
+					// the line and the name as shown, in the language shown (Language.tjs); a
+					// line is found by what it says in the language it's written in too
+					var source = plainText(t.text), shown = source;
+					var name = t.disp != "" ? t.disp : t.name, sourceName = name;
+					if (global.KAGLanguage !== void && KAGLanguage.available) {
+						shown = plainText(KAGLanguage.story(storage, t.text));
+						name = KAGLanguage.speaker(name) if name != "";
+					}
+					if (shown.toLowerCase().indexOf(key) < 0 && ((string)name).toLowerCase().indexOf(key) < 0 &&
+						source.toLowerCase().indexOf(key) < 0 && ((string)sourceName).toLowerCase().indexOf(key) < 0) continue;
 					ret.add(%[storage:storage, label:scene.label, scene:sceneKey, title:scene.title, idx:i + 1, name:name, text:shown]);
 				}
 			}
@@ -2931,7 +2954,7 @@ class KAGEnvPlayer
 				// Display name
 				addTag(%[tagname:"dispname", name:text.name, disp:text.disp, voice:text.voice]);
 			}
-			emitChars(text.text, !cont);
+			emitText(curStorage, text.text, !cont);
 		}
 
 		// Wait process entry
@@ -2946,6 +2969,25 @@ class KAGEnvPlayer
 				addTag(%[tagname:"p", nosave:true]);
 			}
 		}
+	}
+
+	/**
+	 * A text drawn in the language shown (Language.tjs): its translation from the language
+	 * table, as a text unit (the textunit and endtextunit tags), so the window can draw it
+	 * again in another language
+	 * @param storage the script it's from (whose table has it)
+	 */
+	function emitText(storage, t, firstCh, redraw = false) {
+		if (global.KAGLanguage === void || !KAGLanguage.available) {
+			emitChars(t, firstCh, redraw);
+			return;
+		}
+		var lang = KAGLanguage.current;
+		addTag(%[tagname:"textunit", storage:storage, source:t, lang:lang]);
+		emitChars(KAGLanguage.story(storage, t, lang), firstCh, redraw);
+		// a language without spaces between its words breaks lines anywhere (KAG's own wrap)
+		if (!KAGLanguage.wordWrap(lang)) currentWrap.line = "";
+		addTagSimple("endtextunit");
 	}
 
 	/**
@@ -3146,7 +3188,7 @@ class KAGEnvPlayer
 			}
 			if (rs < 0) break;
 			if (!(aFlag & TEXTFLAG_NOTEXT)) {
-				page.unshift(%[text:changeAlias(at), rs:rs + pendingRs]);
+				page.unshift(%[text:changeAlias(at), rs:rs + pendingRs, storage:getStorage(aScene)]);
 				pendingRs = 0;
 			} else {
 				pendingRs += rs;
@@ -3176,7 +3218,7 @@ class KAGEnvPlayer
 		addTagSimple("nowait");
 		for (var i = 0; i < page.count; i++) {
 			var e = page[i];
-			emitChars(e.text.text, i == 0, true);
+			emitText(e.storage, e.text.text, i == 0, true);
 			for (var r = 0; r < e.rs; r++) addTagSimple("r");
 		}
 		addTagSimple("endnowait");
@@ -3218,7 +3260,7 @@ class KAGEnvPlayer
 			addHistorySelect(text);
 			var hl = kag.historyLayer;
 			if (kag.historyWriteEnabled && hl !== void) {
-				storeBacklogText(hl, lastHistory.text);
+				storeBacklogText(hl, getHistoryData(getHistoryCount() - 1).text);
 				endBacklogMessage(hl);
 			}
 		}

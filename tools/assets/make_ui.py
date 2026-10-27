@@ -3,7 +3,11 @@
 Extras, history) at 1920x1080 in one style: the lavender panels, violet borders and hard
 shadows of the Yes/No dialogs in template/system.
 
-usage: python3 tools/assets/make_ui.py [group ...]    (no groups: all of them)
+usage: python3 tools/assets/make_ui.py [--lang en,ja] [group ...]    (no groups: all of them)
+
+With --lang, only those languages: English goes to data/image, another language's images with
+words on them to data/lang/<code>/ (LABELS below). Without it, English and then every language
+LABELS has.
 
 Needs NumPy and Pillow. Labels use the Noto Sans CJK JP subsets in tools/assets/fonts. The
 title screen and the Replay thumbnail are drawn from data/bgimage/bg01_01.png and
@@ -37,15 +41,108 @@ def rgba(c, a=255):
     return tuple(c[:3]) + (a,)
 
 
+# --- languages -------------------------------------------------------------------------
+# The images are drawn in English into data/image, and those with words on them again in each
+# other language into data/lang/<code>/, which the game puts on its search path while it shows
+# that language (Initialize.tjs, KAGLanguage): `make_ui.py --lang ja config`. Labels are
+# translated through LABELS, keyed by the English; the Japanese ones are drawn with the
+# Japanese subsets in fonts/ (subset_fonts.py makes them).
+LANG = "en"
+LANGUAGE_NAMES = [("en", "English"), ("ja", "日本語")]   # the Config screen's language buttons
+LABELS = {
+    "ja": {
+        # title
+        "START": "はじめから", "CONTINUE": "つづきから", "EXTRA": "おまけ", "CONFIG": "設定", "EXIT": "終了",
+        # the message window's buttons
+        "SAVE": "セーブ", "LOAD": "ロード", "BACK": "戻る", "SKIP": "スキップ", "AUTO": "オート", "LOG": "ログ",
+        "HIDE": "消す",
+        # config
+        "Config": "設定", "Screen Mode": "画面モード", "Text Speed": "文字速度", "Auto Speed": "オート速度",
+        "Effect Speed": "演出速度", "Skip Mode": "スキップ", "Language / 言語": "言語 / Language", "BGM Volume": "BGM 音量",
+        "SE Volume": "効果音 音量", "Voice Volume": "ボイス 音量", "Voice Settings": "ボイス設定",
+        "Slow": "遅い", "Fast": "速い", "Min": "小", "Max": "大",
+        "Click a voice to mute or unmute it.": "ボイスをクリックすると消音／解除します。",
+        "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
+        "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
+        "Default": "初期設定", "Title": "タイトル", "Return": "戻る",
+        # save / load
+        "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
+        # Extras
+        "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG",
+        "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
+        "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
+        "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
+        "Repeat All": "全曲リピート",
+    },
+}
+
+
+def L(label):
+    """a label in the language being drawn"""
+    if LANG == "en":
+        return label
+    table = LABELS[LANG]
+    if label not in table:
+        raise SystemExit("no %s label for %r (LABELS in make_ui.py)" % (LANG, label))
+    return table[label]
+
+
+def all_labels(lang):
+    """every label drawn in a language (subset_fonts.py: the characters its fonts need)"""
+    return list(LABELS.get(lang, {}).values()) + [name for _, name in LANGUAGE_NAMES] + ["0123456789"]
+
+
+def out(name, words=True):
+    """where an image goes: data/image in English; in another language, data/lang/<code>/ for
+    an image with words on it and nowhere for one without (the English one serves every language)"""
+    if LANG == "en":
+        return name if os.path.isabs(name) else os.path.join(IMAGE, name)
+    if not words:
+        return None
+    folder = os.path.join(REPO, "data", "lang", LANG)
+    os.makedirs(folder, exist_ok=True)
+    return os.path.join(folder, os.path.basename(name))
+
+
 _fonts = {}
 
 
 def font(weight, size):
-    key = (weight, size)
+    key = (weight, size, LANG)
     if key not in _fonts:
-        _fonts[key] = ImageFont.truetype(os.path.join(HERE, "fonts", "NotoSansCJKjp-%s-Latin.otf" % weight),
-                                         int(round(size * SS)))
+        _fonts[key] = ImageFont.truetype(font_file(weight, LANG != "en"), int(round(size * SS)))
     return _fonts[key]
+
+
+def font_file(weight, japanese=False):
+    return os.path.join(HERE, "fonts", "NotoSansCJKjp-%s-%s.otf" % (weight, "Japanese" if japanese else "Latin"))
+
+
+def missing_glyphs(f, s):
+    """the characters of s that font f draws as .notdef"""
+    from fontTools.ttLib import TTFont
+    path = f.path
+    if path not in _cmaps:
+        _cmaps[path] = TTFont(path).getBestCmap()
+    cmap = _cmaps[path]
+    return [ch for ch in s if ord(ch) not in cmap and not ch.isspace()]
+
+
+_cmaps = {}
+
+
+def glyph_font(f, s):
+    """f, or its Japanese subset when the text has a character the Latin one lacks (the
+    language buttons' names); stops when neither has it: run subset_fonts.py"""
+    if not missing_glyphs(f, s):
+        return f
+    if f.path.endswith("-Latin.otf"):
+        j = ImageFont.truetype(f.path.replace("-Latin.otf", "-Japanese.otf"), f.size)
+        if not missing_glyphs(j, s):
+            return j
+        f = j
+    raise SystemExit("%s has no %s: run tools/assets/subset_fonts.py" % (os.path.basename(f.path),
+                                                                        "".join(missing_glyphs(f, s))))
 
 
 def px(v):
@@ -129,6 +226,7 @@ class Canvas:
         if shadow:
             dx, dy, col = shadow
             self.text((xy[0] + dx, xy[1] + dy), s, f, col, anchor, stroke, col, tracking)
+        f = glyph_font(f, s)
         x, y = px(xy[0]), px(xy[1])
         sw = px(stroke)
         tr = px(tracking)
@@ -162,6 +260,7 @@ class Canvas:
         self.comp(lay, bx0, by0)
 
     def text_width(self, s, f, tracking=0):
+        f = glyph_font(f, s)
         return (sum(f.getlength(ch) for ch in s) + px(tracking) * (len(s) - 1)) / SS
 
     def pattern(self, box, spacing, r, color, fade=False):
@@ -228,6 +327,8 @@ class Canvas:
         return Image.fromarray(np.clip(np.concatenate(rows, 0) + 0.5, 0, 255).astype(np.uint8), "RGBA")
 
     def save(self, path, opaque=False, under=None):
+        if path is None:  # an image without words, drawn for another language (out())
+            return
         img = self.image()
         if under is not None:
             base = under.convert("RGBA")
@@ -382,12 +483,12 @@ def make_title():
     c.text((160, 430), "Sample", font("Black", 66), rgba(VIOLET), anchor="ls", stroke=5,
            stroke_fill=rgba(WHITE), tracking=2)
     c.text((440, 428), "for Kirikiri Z · SDL3", font("Bold", 30), rgba(INK), anchor="ls")
-    c.save(os.path.join(IMAGE, "title.png"), opaque=True, under=under)
+    c.save(out("title.png", False), opaque=True, under=under)
 
     for name, label in TITLE_BUTTONS:
         for st in ("normal", "over"):
-            button(400, 68, label, st, size=30, weight="Black", r=12, shadow=8, tracking=4).save(
-                os.path.join(IMAGE, "%s_%s.png" % (name, st)))
+            button(400, 68, L(label), st, size=30, weight="Black", r=12, shadow=8, tracking=4).save(
+                out("%s_%s.png" % (name, st)))
 
 
 def make_logo():
@@ -401,14 +502,14 @@ def make_logo():
     emblem(c, x0, 430, s)
     wordmark(c, x0 + s + gap, 600, 168)
     c.text((960, 730), "A KAG3 extension for Kirikiri Z", font("Bold", 36), rgba(INK), anchor="ms")
-    c.save(os.path.join(IMAGE, "logo.png"), opaque=True)
+    c.save(out("logo.png", False), opaque=True)
 
     # about.ks's 400x200 window (only with aboutInWindow = false); the text goes bottom right
     c = Canvas(400, 200)
     c.rrect((0, 0, 400, 200), 0, fill=rgba(LAV_PALE))
     emblem(c, 24, 22, 76)
     wordmark(c, 118, 90, 60)
-    c.save(os.path.join(IMAGE, "about_logo.png"), opaque=True)
+    c.save(out("about_logo.png", False), opaque=True)
 
 
 # --- the message window ----------------------------------------------------------------
@@ -421,26 +522,26 @@ def make_message():
     c.panel((0, 0, w - 12, h - 12), r=18, fill=rgba(LAV, 228), border=VIOLET, bw=5, shadow=12)
     # a highlight along the top, inside the border (its inner edge is rounded too: 18 - 5)
     c.gradient((5, 5, w - 17, 90), (255, 255, 255, 60), (255, 255, 255, 0), clip=((5, 5, w - 17, h - 17), 13))
-    c.save(os.path.join(IMAGE, "messagewindow.png"))
+    c.save(out("messagewindow.png", False))
 
     # the speaker's name, behind NameLayer's text ([position nameframe=namebox])
     c = Canvas(300, 64)
     c.panel((0, 0, 292, 56), r=14, fill=VIOLET, border=WHITE, bw=4, shadow=8, shadow_color=NAVY)
-    c.save(os.path.join(IMAGE, "namebox.png"))
+    c.save(out("namebox.png", False))
 
     for name in MSG_BUTTONS:
         for st in ("normal", "over"):
-            button(124, 42, name.upper(), st, size=19, r=10, bw=3, tracking=1.5).save(
-                os.path.join(IMAGE, "msg_%s_%s.png" % (name, st)))
+            button(124, 42, L(name.upper()), st, size=19, r=10, bw=3, tracking=1.5).save(
+                out("msg_%s_%s.png" % (name, st)))
     for name in ("auto", "skip"):  # latched while auto mode / skipping is on
-        button(124, 42, name.upper(), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
-               icon_size=8).save(os.path.join(IMAGE, "msg_%s_on.png" % name))
+        button(124, 42, L(name.upper()), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
+               icon_size=8).save(out("msg_%s_on.png" % name))
 
     # the choices ([selopt] in first.ks)
     for st, fill, border, sh in (("normal", rgba(LAV, 238), VIOLET, VIOLET), ("over", rgba(VIOLET), WHITE, NAVY)):
         c = Canvas(900, 74)
         c.panel((0, 0, 892, 66), r=16, fill=fill, border=border, bw=4, shadow=8, shadow_color=sh)
-        c.save(os.path.join(IMAGE, "select_%s.png" % st))
+        c.save(out("select_%s.png" % st, False))
 
     # click-wait glyphs: 43x43 cells, 16 frames that the .asd plays forwards and back
     for name, direction in (("LineBreak", "down"), ("PageBreak", "right")):
@@ -449,8 +550,8 @@ def make_message():
             t = i / 15
             e = math.sin(t * math.pi / 2)
             frames.paste(break_glyph(direction, e), 43 * i, 0)
-        frames.save(os.path.join(SYSTEM, name + "_a.png"))
-        break_glyph(direction, 1.0).save(os.path.join(SYSTEM, name + ".png"))
+        frames.save(out(os.path.join(SYSTEM, name + "_a.png"), False))
+        break_glyph(direction, 1.0).save(out(os.path.join(SYSTEM, name + ".png"), False))
 
 
 def break_glyph(direction, e):
@@ -468,56 +569,62 @@ def break_glyph(direction, e):
 
 
 # --- config ----------------------------------------------------------------------------
-CFG_L, CFG_R, CFG_TOP, CFG_ROW, CFG_W = 290, 990, 206, 150, 640
+# six rows of 130 a column (config.ks: a row's buttons at its top + 60, a slider at top + 60 and
+# its track's centre at top + 90); the right column's last three rows are the voice buttons
+CFG_L, CFG_R, CFG_TOP, CFG_ROW, CFG_W = 290, 990, 206, 130, 640
 
 
 def make_config():
     c = Canvas(1920, 1080)
     screen_bg(c)
-    header(c, "Config")
-    left = ["Screen Mode", "Text Speed", "Auto Speed", "Effect Speed", "Skip Mode"]
+    header(c, L("Config"))
+    left = ["Screen Mode", "Text Speed", "Auto Speed", "Effect Speed", "Skip Mode", "Language / 言語"]
     right = ["BGM Volume", "SE Volume", "Voice Volume", "Voice Settings"]
     sliders = {(CFG_L, 1): ("Slow", "Fast"), (CFG_L, 2): ("Slow", "Fast"),
                (CFG_R, 0): ("Min", "Max"), (CFG_R, 1): ("Min", "Max"), (CFG_R, 2): ("Min", "Max")}
-    bottom = CFG_TOP + CFG_ROW * 5
+    bottom = CFG_TOP + CFG_ROW * 6
     for x0, labels in ((CFG_L, left), (CFG_R, right)):
         c.panel((x0, CFG_TOP, x0 + CFG_W, bottom))
         for i, label in enumerate(labels):
             top = CFG_TOP + CFG_ROW * i
             if i:
                 c.rrect((x0 + 24, top - 1, x0 + CFG_W - 24, top + 1), 1, fill=rgba(WHITE, 120))
-            outlined(c, (x0 + 32, top + 16), label, 36)
+            outlined(c, (x0 + 32, top + 8), L(label), 33)
             if (x0, i) in sliders:
                 lo, hi = sliders[(x0, i)]
-                sx, cy = x0 + 112, top + 102
-                outlined(c, (sx - 12, cy), lo, 26, anchor="rm", stroke=2.5)
-                outlined(c, (sx + 416 + 12, cy), hi, 26, anchor="lm", stroke=2.5)
+                sx, cy = x0 + 112, top + 90
+                outlined(c, (sx - 12, cy), L(lo), 26, anchor="rm", stroke=2.5)
+                outlined(c, (sx + 416 + 12, cy), L(hi), 26, anchor="lm", stroke=2.5)
                 # the slider's tab centre travels from sx + 15 to sx + 416 - 15 (SliderLayer)
                 c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
-    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 236), "Click a voice to mute or unmute it.", 26,
+    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 262), L("Click a voice to mute or unmute it."), 26,
              stroke=2.5)
-    c.save(os.path.join(IMAGE, "config_base.png"), opaque=True)
+    c.save(out("config_base.png"), opaque=True)
 
     # the slider's tab
     for st, fill, border in (("", WHITE, VIOLET), ("_over", VIOLET, WHITE)):
         t = Canvas(30, 44)
         t.rrect((0, 0, 30, 44), 10, fill=rgba(border))
         t.rrect((4, 4, 26, 40), 7, fill=rgba(fill))
-        t.save(os.path.join(IMAGE, "slidebar%s.png" % st))
+        t.save(out("slidebar%s.png" % st, False))
 
     toggles = [("window", "Window"), ("fullscreen", "Full Screen"), ("effecton", "Normal"), ("effectoff", "Skip"),
                ("skipall", "All"), ("skipalrdy", "Read Only")]
     for name, label in toggles:
         for st in ("normal", "over"):
-            button(240, 60, label, st, size=28).save(os.path.join(IMAGE, "config_%s_%s.png" % (name, st)))
+            button(240, 60, L(label), st, size=28).save(out("config_%s_%s.png" % (name, st)))
+    # a language's button says its name in that language, the same in every language
+    for code, label in LANGUAGE_NAMES:
+        for st in ("normal", "over"):
+            button(240, 60, label, st, size=28).save(out("config_lang_%s_%s.png" % (code, st), False))
     for i in range(6):
-        button(180, 60, "Voice %d" % i, "over", size=26, icon=ic_dot, icon_size=14).save(
-            os.path.join(IMAGE, "config_voice%d_on.png" % i))
-        button(180, 60, "Voice %d" % i, "muted", size=26, icon=ic_ring, icon_size=14).save(
-            os.path.join(IMAGE, "config_voice%d_off.png" % i))
+        button(180, 60, L("Voice %d") % i, "over", size=26, icon=ic_dot, icon_size=14).save(
+            out("config_voice%d_on.png" % i))
+        button(180, 60, L("Voice %d") % i, "muted", size=26, icon=ic_ring, icon_size=14).save(
+            out("config_voice%d_off.png" % i))
     for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return")):
         for st in ("normal", "over"):
-            nav_button(label, st).save(os.path.join(IMAGE, "%s_%s.png" % (name, st)))
+            nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
 
 
 def nav_button(label, st, w=180):
@@ -529,8 +636,8 @@ def make_saveload():
     for name, title in (("save", "Save"), ("load", "Load")):
         c = Canvas(1920, 1080)
         screen_bg(c, alpha=234)
-        header(c, title)
-        c.save(os.path.join(IMAGE, "%s_base.png" % name))
+        header(c, L(title))
+        c.save(out("%s_base.png" % name))
 
     def slot(over):
         c = Canvas(650, 149)
@@ -538,23 +645,23 @@ def make_saveload():
         c.rrect((4 + over, 4 + over, 646 - over, 145 - over), 9, fill=rgba(WHITE if not over else (250, 248, 255), 245))
         # the thumbnail well (fileDataButton draws a 234x132 thumbnail at 9, 9)
         c.rrect((9, 9, 243, 141), 4, fill=rgba(LAV_SOFT))
-        c.text((126, 75), "NO DATA", font("Black", 22), rgba(WHITE), anchor="mm", tracking=2)
+        c.text((126, 75), L("NO DATA"), font("Black", 22), rgba(WHITE), anchor="mm", tracking=2)
         c.rrect((260, 74, 626, 76), 1, fill=rgba(LAV_SOFT))
         return c
-    slot(0).save(os.path.join(IMAGE, "sl_win_base.png"))
+    slot(0).save(out("sl_win_base.png"))
     for name in ("save", "load"):
-        slot(1).save(os.path.join(IMAGE, "%s_win_over.png" % name))
+        slot(1).save(out("%s_win_over.png" % name))
 
     c = Canvas(95, 40)
     c.rrect((0, 0, 95, 40), 20, fill=rgba(WHITE))
     c.rrect((3, 3, 92, 37), 17, fill=rgba(VIOLET))
     c.text((47.5, 20), "NEW", font("Black", 21), rgba(WHITE), anchor="mm", tracking=2)
-    c.save(os.path.join(IMAGE, "newdata.png"))
+    c.save(out("newdata.png", False))
 
     for i in range(1, 10):
         for st in ("normal", "over"):
             button(56, 64, str(i), st, size=30, weight="Black", r=10, bw=3).save(
-                os.path.join(IMAGE, "page%d_%s.png" % (i, st)))
+                out("page%d_%s.png" % (i, st), False))
 
 
 # --- Extras ----------------------------------------------------------------------------
@@ -566,14 +673,14 @@ def make_extras():
     for name, title in (("cgmode", "CG Mode"), ("replaymode", "Replay")):
         c = Canvas(1920, 1080)
         screen_bg(c)
-        header(c, title)
+        header(c, L(title))
         # behind the 4x4 thumbnails (681 + 245 x, 322 + 154 y, 214x123)
         c.panel((652, 294, 1630 + 26, 907 + 28), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
-        c.save(os.path.join(IMAGE, "%s_base.png" % name), opaque=True)
+        c.save(out("%s_base.png" % name), opaque=True)
 
     c = Canvas(1920, 1080)
     screen_bg(c)
-    header(c, "Music")
+    header(c, L("Music"))
     c.panel((290, 262, 800, 960))
     c.panel((840, 262, 1630, 960), fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
     # a record, above the player buttons
@@ -583,67 +690,67 @@ def make_extras():
         c.ellipse((cx - r, cy - r, cx + r, cy + r), outline=rgba(WHITE, 40), width=2)
     c.ellipse((cx - 70, cy - 70, cx + 70, cy + 70), fill=rgba(WHITE))
     ic_note(c, cx, cy, 80, rgba(VIOLET))
-    c.save(os.path.join(IMAGE, "musicmode_base.png"), opaque=True)
+    c.save(out("musicmode_base.png"), opaque=True)
 
     # Search: the field (searchmode.ks puts an [edit] in it), its button, and the results'
     # panel with 7 rows of 1314x76 (316 + 86 y) and the replay arrows beside them
     c = Canvas(1920, 1080)
     screen_bg(c)
-    header(c, "Search")
+    header(c, L("Search"))
     c.panel((290, 206, 1190, 270), r=12, fill=rgba(WHITE), border=VIOLET, bw=4, shadow=6)
     c.panel((290, 300, 1656, 936), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
-    c.save(os.path.join(IMAGE, "searchmode_base.png"), opaque=True)
+    c.save(out("searchmode_base.png"), opaque=True)
     for st in ("normal", "over"):
-        nav_button("Search", st).save(os.path.join(IMAGE, "search_go_%s.png" % st))
+        nav_button(L("Search"), st).save(out("search_go_%s.png" % st))
     for st, fill, border in (("normal", rgba(WHITE, 235), LAV), ("over", rgba(VIOLET), VIOLET)):
         c = Canvas(1314, 76)
         c.rrect((0, 0, 1314, 76), 12, fill=rgba(border))
         c.rrect((3, 3, 1311, 73), 9, fill=fill)
-        c.save(os.path.join(IMAGE, "search_row_%s.png" % st))
+        c.save(out("search_row_%s.png" % st, False))
 
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
-            nav_button(label, st).save(os.path.join(IMAGE, "%s_%s.png" % (name, st)))
+            nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
     pages = ["Character 1", "Character 2", "Character 3", "Character 4", "Character 5", "Other"]
     for i, label in enumerate(pages):
         for st in ("normal", "over"):
-            button(330, 80, label, st, size=30, r=12).save(os.path.join(IMAGE, "cgmode_page%d_%s.png" % (i, st)))
+            button(330, 80, L(label), st, size=30, r=12).save(out("cgmode_page%d_%s.png" % (i, st)))
 
     # Replay's tabs, labelled at run time from replaylist.csv (Override.tjs), and the arrows
     # beside its tiles for a tab with more than one page of them (replay.ks)
     for st in ("normal", "over"):
-        button(330, 80, "", st, size=30, r=12).save(os.path.join(IMAGE, "replay_tab_%s.png" % st))
+        button(330, 80, "", st, size=30, r=12).save(out("replay_tab_%s.png" % st, False))
         for name, up in (("prev", True), ("next", False)):
             fill, border, fg, _ = STYLE[st]
             b = Canvas(64, 64)
             b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
             b.rrect((3, 3, 61, 61), 9, fill=fill)
             chevron(b, 32, 32, 30, rgba(fg), up)
-            b.save(os.path.join(IMAGE, "replay_%s_%s.png" % (name, st)))
+            b.save(out("replay_%s_%s.png" % (name, st), False))
 
     for st, border in (("normal", LAV), ("over", VIOLET)):
         c = Canvas(214, 123)
         c.rrect((0, 0, 214, 123), 4, fill=rgba(border))
         c.rrect((3, 3, 211, 120), 2, fill=rgba(LAV_PALE))
         c.text((107, 62), "?", font("Black", 56), rgba(LAV_SOFT), anchor="mm")
-        c.save(os.path.join(IMAGE, "cgmode_thum_%s.png" % st))
+        c.save(out("cgmode_thum_%s.png" % st, False))
         # an unlocked Replay scene that has no thumbnail (replaylist.csv): playable, so not a "?"
         c = Canvas(214, 123)
         c.rrect((0, 0, 214, 123), 4, fill=rgba(border))
         c.rrect((3, 3, 211, 120), 2, fill=rgba(LAV_PALE))
         c.ellipse((107 - 30, 61.5 - 30, 107 + 30, 61.5 + 30), fill=rgba(VIOLET))
         ic_play(c, 110, 61.5, 26, rgba(WHITE))
-        c.save(os.path.join(IMAGE, "replay_thum_%s.png" % st))
+        c.save(out("replay_thum_%s.png" % st, False))
 
     for i in range(12):
         for st in ("normal", "over"):
-            button(730, 46, "Track %02d" % (i + 1), st, size=24, r=10, bw=3, icon=ic_note, icon_size=24).save(
-                os.path.join(IMAGE, "track%02d_%s.png" % (i + 1, st)))
+            button(730, 46, L("Track %02d") % (i + 1), st, size=24, r=10, bw=3, icon=ic_note, icon_size=24).save(
+                out("track%02d_%s.png" % (i + 1, st)))
     for name, label, icon in (("stop", "Stop", ic_stop), ("play", "Play", ic_play), ("repeat", "Repeat", ic_repeat_one),
                               ("allrepeat", "Repeat All", ic_repeat)):
         for st in ("normal", "over"):
-            button(210, 60, label, st, size=26, icon=icon, icon_size=24).save(
-                os.path.join(IMAGE, "musicmode_%s_%s.png" % (name, st)))
+            button(210, 60, L(label), st, size=26, icon=icon, icon_size=24).save(
+                out("musicmode_%s_%s.png" % (name, st)))
 
 
 # --- the message history ---------------------------------------------------------------
@@ -655,7 +762,7 @@ def make_history():
     c.rrect((1750, 42, 1898, 1037), 20, fill=rgba(WHITE, 26))
     # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 178-905
     c.rrect((1817, 198, 1830, 885), 6, fill=rgba(WHITE, 70))
-    c.save(os.path.join(IMAGE, "log_base.png"))
+    c.save(out("log_base.png", False))
 
     for name, up, double in (("first", True, True), ("uppage", True, False), ("downpage", False, False),
                              ("last", False, True)):
@@ -665,26 +772,26 @@ def make_history():
             b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
             b.rrect((3, 3, 112, 51), 9, fill=fill)
             chevron(b, 57.5, 27, 30, rgba(fg), up, double)
-            b.save(os.path.join(IMAGE, "log_%s_%s.png" % (name, st)))
+            b.save(out("log_%s_%s.png" % (name, st), False))
     for st, fill, border in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
         t = Canvas(43, 48)
         t.rrect((0, 0, 43, 48), 12, fill=rgba(border))
         t.rrect((4, 4, 39, 44), 9, fill=rgba(fill))
         for y in (18, 24, 30):
             t.rrect((14, y - 1, 29, y + 1), 1, fill=rgba(border))
-        t.save(os.path.join(IMAGE, "log_bar_%s.png" % st))
+        t.save(out("log_bar_%s.png" % st, False))
     # the marks left of a line, a line high (MyHistoryLayer.tjs: lineHeight 42): playing its
     # voice, and going back to the message (compiled scenes)
     for st, fill, fg in (("normal", VIOLET, WHITE), ("over", WHITE, VIOLET)):
         p = Canvas(42, 42)
         p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(WHITE if st == "normal" else VIOLET), width=2.5)
         ic_play(p, 22.5, 21, 16, rgba(fg))
-        p.save(os.path.join(IMAGE, "log_play_%s.png" % st))
+        p.save(out("log_play_%s.png" % st, False))
     for st, fill, fg in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
         p = Canvas(42, 42)
         p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(VIOLET if st == "normal" else WHITE), width=2.5)
         ic_back(p, 21, 21, 22, rgba(fg))
-        p.save(os.path.join(IMAGE, "log_jump_%s.png" % st))
+        p.save(out("log_jump_%s.png" % st, False))
 
 
 # --- thumbnails drawn from the upscaled art --------------------------------------------
@@ -814,12 +921,29 @@ GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "conf
           "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview}
 
 
+# the groups whose images have words on them, drawn again for each other language
+LANGUAGE_GROUPS = ["title", "message", "config", "saveload", "extras"]
+
+
 def main():
-    names = sys.argv[1:] or list(GROUPS)
-    for n in names:
-        if n not in GROUPS:
-            raise SystemExit("unknown group %s; groups: %s" % (n, " ".join(GROUPS)))
-        GROUPS[n]()
+    global LANG
+    args = sys.argv[1:]
+    langs = None
+    if "--lang" in args:
+        i = args.index("--lang")
+        langs = args[i + 1].split(",")
+        del args[i:i + 2]
+    for lang in langs or ["en"] + sorted(LABELS):
+        if lang != "en" and lang not in LABELS:
+            raise SystemExit("no labels for %s; languages: en %s" % (lang, " ".join(LABELS)))
+        LANG = lang
+        names = args or (list(GROUPS) if lang == "en" else LANGUAGE_GROUPS)
+        for n in names:
+            if n not in GROUPS:
+                raise SystemExit("unknown group %s; groups: %s" % (n, " ".join(GROUPS)))
+            if lang != "en" and n not in LANGUAGE_GROUPS:
+                continue
+            GROUPS[n]()
 
 
 if __name__ == "__main__":

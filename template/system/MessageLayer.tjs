@@ -2811,6 +2811,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 		delete ml; delete mt; delete mw; delete mh;
 
 
+		// A game with more than one language keeps what each page draws, to draw it again in
+
+		// another (redrawTextIn)
+
+		redrawTextEnabled = true if (global.KAGLanguage !== void && KAGLanguage.available);
+
+
 
 		// Set layer type
 
@@ -4213,6 +4220,134 @@ class MessageLayer extends AnimKAGLayerTransMove
 		dic.noFaceRestore = true;
 
 		storeRedrawTextState("restore", dic);
+
+	}
+
+
+
+	// ---- languages (Language.tjs) ------------------------------------------------------
+
+	// A text unit: text from the scenario drawn as one piece (a scenario line's text between
+
+	// its tags, or a text of the scene player), noted with where it's from and the language it
+
+	// was drawn in, so redrawTextIn can draw it again in another one. The redraw information
+
+	// records it between beginTextUnit and endTextUnit; the window draws the characters.
+
+	var textUnitOpen = false;
+
+	function beginTextUnit(info) {
+
+		if (textUnitOpen) endTextUnit();
+
+		textUnitOpen = true;
+
+		storeRedrawTextState("beginTextUnit", info);
+
+	}
+
+	function endTextUnit() {
+
+		if (!textUnitOpen) return;
+
+		textUnitOpen = false;
+
+		storeRedrawTextState("endTextUnit");
+
+	}
+
+	// The speaker's name before it was put into a language (the next processName)
+
+	function setNameSource(name) {
+
+		storeRedrawTextState("setNameSource", name);
+
+	}
+
+	// Draws the page again in another language: what was drawn since the page was cleared
+
+	// (the redraw information), with each text unit's text and the speaker's name in that
+
+	// language (the window's drawTextUnitNow draws a unit's characters). Returns whether
+
+	// there was anything to draw.
+
+	function redrawTextIn(lang) {
+
+		if (!redrawTextEnabled || redrawTextStates.count == 0) return false;
+
+		var ops = [];
+
+		ops.assignStruct(redrawTextStates);
+
+		var nameSource, inUnit = false;
+
+		textUnitOpen = false;
+
+		for (var i = 0; i < ops.count; i++) {
+
+			var op = ops[i], name = op[0];
+
+			if (inUnit) {
+
+				// a unit's own operations (its characters, the wraps between its words) are
+
+				// drawn again from its text
+
+				inUnit = name != "endTextUnit";
+
+				continue;
+
+			}
+
+			if (name == "beginTextUnit") {
+
+				inUnit = true;
+
+				window.drawTextUnitNow(this, op[1], lang);
+
+				continue;
+
+			}
+
+			if (name == "endTextUnit") continue;
+
+			if (name == "setNameSource") {
+
+				nameSource = op[1];
+
+				setNameSource(nameSource);
+
+				continue;
+
+			}
+
+			if (name == "processName" && nameSource !== void) {
+
+				var n = KAGLanguage.speaker(nameSource, lang);
+				if (typeof global.dispNameFilter != "undefined") n = global.dispNameFilter(n);
+				processName(n);
+
+				nameSource = void;
+
+				continue;
+
+			}
+
+			var args = [];
+
+			args.assign(op);
+
+			args.erase(0);
+
+			this[name](args*);
+
+		}
+
+		endTextUnit();
+
+		return true;
 
 	}
 
@@ -7190,11 +7325,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
      */
 
-    function addSystemButton(elm) {
+    // A system button's images, as its tag ([sysbutton]) gives them
 
-        var object = new SystemButtonLayer(window, this);
-
-        object.name =  elm.name != "" ? elm.name : ("sysbutton" + buttons_save.count);
+    function loadSystemButtonImages(object, elm) {
 
         if (elm.uistates !== void) {
 
@@ -7239,6 +7372,42 @@ class MessageLayer extends AnimKAGLayerTransMove
             }
 
         }
+
+    }
+
+
+
+    // Loads the system buttons' images again: the language changed, and with it the images
+
+    // these names find (Language.tjs)
+
+    function reloadSystemButtonImages() {
+
+        for (var i = 0; i < buttons_save.count; i++) {
+
+            var elm = buttons_save[i];
+
+            var object = buttons[elm.name != "" ? elm.name : ("sysbutton" + i)];
+
+            if (object === void || !isvalid object) continue;
+
+            try { loadSystemButtonImages(object, elm); }
+
+            catch (e) { dm("reloadSystemButtonImages: " + object.name + ": " + e.message); }
+
+        }
+
+    }
+
+
+
+    function addSystemButton(elm) {
+
+        var object = new SystemButtonLayer(window, this);
+
+        object.name =  elm.name != "" ? elm.name : ("sysbutton" + buttons_save.count);
+
+        loadSystemButtonImages(object, elm);
 
         object.setPos(elm.x, elm.y);
 

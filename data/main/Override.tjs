@@ -393,7 +393,7 @@ function fileDataButton(name, work)
 
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
-        var savedatatitle = kag.getBookMarkPageName(savedatanum);
+        var savedatatitle = tr(kag.getBookMarkPageName(savedatanum)); // the scene's title, in the language shown
         target.font.height=36;
         // Yu Gothic on Windows, else the bundled Noto Sans JP. The SDL engine draws an unknown
         // face with an icon font (arrows), so list fonts it does register; it skips the others.
@@ -552,6 +552,40 @@ function setVoiceOnButton(name, init=void)
     }
 }
 
+// --------------------------------------------------------
+// Languages (Language.tjs; F9, the controller's L2, Config's Language buttons)
+// --------------------------------------------------------
+
+// The screens are drawn by their scripts, with images that have words on them (data/lang/ja/
+// has the Japanese ones), so a screen on show is drawn again in another language from the
+// label that draws it (kag.languageChangeHook, AfterInit.tjs). The game's own message window,
+// choices and buttons the framework draws again itself.
+var screenRedrawLabels = %[
+    "title.ks" => "*titleloop", "config.ks" => "*buttons", "save.ks" => "*buttons", "load.ks" => "*buttons",
+    "cgmode.ks" => "*loop", "replay.ks" => "*loop", "musicmode.ks" => "*loop", "searchmode.ks" => ""
+    ];
+
+function redisplayScreen(code, previous)
+{
+    var storage = kag.conductor.curStorage;
+    var label = screenRedrawLabels[storage];
+    if (label === void) return;
+    if (storage == "cgmode.ks" && isCgView()) return; // a CG shown full screen has no words
+    kag.process(storage, label);
+}
+
+/**
+ * Set the language buttons' state; with a language, show the game in it (KAGLanguage, which
+ * draws this screen again through redisplayScreen)
+ */
+function setLanguageButton(work=void)
+{
+    if (work !== void && global.KAGLanguage !== void) kag.setLanguage(work);
+    var cur = global.KAGLanguage !== void ? KAGLanguage.current : "en";
+    setButtonOver("config_lang_en", cur == "en");
+    setButtonOver("config_lang_ja", cur == "ja");
+}
+
 /**
  * Initialize variables
  */
@@ -586,6 +620,7 @@ function configInit()
     setVoiceOnButton("voice3", true);
     setVoiceOnButton("voice4", true);
     setVoiceOnButton("voice5", true);
+    setLanguageButton();
 }
 
 // --------------------------------------------------------
@@ -986,6 +1021,7 @@ function drawReplayTile(button, info)
         }
     }
     if (info.title == "") return;
+    var title = tr(info.title); // in the language shown
     var hold = button.holdAlpha;
     button.holdAlpha = true;
     button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
@@ -993,12 +1029,12 @@ function drawReplayTile(button, info)
     // smaller where the title doesn't fit
     var band = 30, size = 20;
     button.font.height = size;
-    while (size > 13 && button.font.getTextWidth(info.title) > pw - 12) button.font.height = --size;
-    var w = button.font.getTextWidth(info.title), th = button.font.getTextHeight(info.title);
+    while (size > 13 && button.font.getTextWidth(title) > pw - 12) button.font.height = --size;
+    var w = button.font.getTextWidth(title), th = button.font.getTextHeight(title);
     for (var st = 0; st < 3; st++) {
         var x = button.width * st + b;
         button.fillRect(x, b + ph - band, pw, band, st == 0 ? 0xc8010062 : 0xe85025ff);
-        button.drawText(x + (pw - w) \ 2, b + ph - band + (band - th) \ 2, info.title, 0xffffff, 255, true);
+        button.drawText(x + (pw - w) \ 2, b + ph - band + (band - th) \ 2, title, 0xffffff, 255, true);
     }
     button.holdAlpha = hold;
 }
@@ -1024,7 +1060,7 @@ function setReplayPage(tab = void, page = void)
         }
         var current = i == tf.replayTab;
         button.loadButtons(current ? "replay_tab_over" : "replay_tab_normal", "replay_tab_over");
-        drawButtonLabel(button, replayTabs[i], current ? [0xffffff, 0xffffff, 0xffffff] : [0x5025ff, 0xffffff, 0xffffff]);
+        drawButtonLabel(button, tr(replayTabs[i]), current ? [0xffffff, 0xffffff, 0xffffff] : [0x5025ff, 0xffffff, 0xffffff]);
     }
     var prev = kag.current.names["replay_prev"], next = kag.current.names["replay_next"];
     if (prev !== void) prev.visible = prev.enabled = tf.replayPage > 0;
@@ -1111,16 +1147,16 @@ function searchInit()
     searchFound = [];
     var text = ((string)tf.searchText).trim();
     if (!searchAvailable()) {
-        tf.searchStatus = "Search looks through compiled scenes, and this game has none";
+        tf.searchStatus = tr("Search looks through compiled scenes, and this game has none");
     } else if (text == "") {
-        tf.searchStatus = "Type a word or a name, then press Return";
+        tf.searchStatus = tr("Type a word or a name, then press Return");
     } else {
         world_object.initPlayer();
         searchFound = world_object.player.searchTexts(text, !tf.allseen, searchMax);
         var n = searchFound.count;
-        tf.searchStatus = n == 0 ? "No line read so far has \"" + text + "\"" :
-            (n == 1 ? "1 line" : "%d lines".sprintf(n)) + (n >= searchMax ? " (the first %d)".sprintf(searchMax) : "") +
-            " with \"" + text + "\": choose one to play from it";
+        tf.searchStatus = n == 0 ? tr("No line read so far has \"%s\"").sprintf(text) :
+            (n == 1 ? tr("1 line") : tr("%d lines").sprintf(n)) + (n >= searchMax ? tr(" (the first %d)").sprintf(searchMax) : "") +
+            tr(" with \"%s\": choose one to play from it").sprintf(text);
     }
 }
 
@@ -1171,7 +1207,7 @@ function drawSearchRow(button, info, key)
     var left = 24, w = button.width - left * 2;
     // the demo (replaylist.csv's title for its script) and the scene, then who speaks
     var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
-    var head = script === void || script == "" ? info.title : info.title == "Start" ? script : script + "  ›  " + info.title;
+    var head = script === void || script == "" ? tr(info.title) : info.title == "Start" ? tr(script) : tr(script) + "  ›  " + tr(info.title);
     head += "  ·  " + info.name if info.name != "";
     var m = info.text.toLowerCase().indexOf(key);
     for (var st = 0; st < 3; st++) {

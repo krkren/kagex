@@ -9,7 +9,15 @@ The sample's images are generated here rather than edited by hand.
   `template/system`: lavender panels, violet borders, hard violet shadows, white buttons that
   turn violet when hovered or selected. The colours, sizes and labels are at the top of each
   function; the positions match the `.ks` files that place the images, so a layout change
-  touches both.
+  touches both. The images with words on them are drawn again in each other language into
+  `data/lang/<code>/` (the game's language folder, `doc/kagex.txt`, "Languages"), with the
+  labels from `LABELS` (keyed by the English): `--lang ja` draws only those, `--lang en,ja`
+  both; with no `--lang`, every language.
+- `subset_fonts.py` makes the Japanese subsets `make_ui.py` draws Japanese labels with
+  (`fonts/NotoSansCJKjp-*-Japanese.otf`: Latin, the kana and every character of the Japanese
+  labels) from the full Noto Sans CJK JP, the system's (`fonts-noto-cjk`, `noto-fonts-cjk`) or
+  `--source <folder>`. Run it after adding a label with a character they don't have:
+  `make_ui.py` stops on one.
 - `make_effects.py` makes the Effekseer effects in `data/effect` (sparkle, petals, fireworks,
   shockwave, magiccircle) and their textures in `data/effect/Texture` (a glow, a sparkle, a dot,
   a ring band, a petal and a magic circle, drawn in NumPy). Each effect is a function
@@ -45,6 +53,8 @@ The sample's images are generated here rather than edited by hand.
 python3 tools/assets/upscale.py          # sprites, backgrounds, CG thumbnail
 python3 tools/assets/make_ui.py          # all UI images; or name groups: title logo message
                                          # config saveload extras history star thumbs icons preview
+                                         # (--lang ja: only the Japanese ones)
+python3 tools/assets/subset_fonts.py     # the Japanese label fonts (needs fontTools)
 python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
@@ -54,4 +64,5 @@ python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the
 upscaled background and sprite. Both need NumPy and Pillow; the `icons` group also needs fontTools, for the K's outline. The labels use the subset Noto
-Sans CJK JP fonts in `fonts/` (SIL OFL 1.1, `fonts/OFL.txt`); the game doesn't load them.
+Sans CJK JP fonts in `fonts/` (SIL OFL 1.1, `fonts/OFL.txt`), Latin and Japanese; the game
+doesn't load them.
