@@ -692,6 +692,11 @@ def sample_steps(eng):
         if not eng.compiled or eng.tjs('return typeof world_object.player.compileList != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: no compiled scenes here, or a framework from before entry states)", flush=True)
             return
+        # the web and the phones play the scenarios CI compiled: they don't compile (readonlydb),
+        # and their save folder isn't on the auto path
+        if eng.tjs("return world_object.player.readonlydb ? 1 : 0;") == 1:
+            print("     (skipped: a read-only package doesn't compile)", flush=True)
+            return
         # two scripts in the save folder: A puts Ai on the road and jumps to B, which shows
         # text only. Compiled B before A (round two compiles B again), B's first save point holds
         # what A left (SceneParser.entryFor), as playing the scripts would
