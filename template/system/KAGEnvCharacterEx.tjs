@@ -42,6 +42,20 @@ var lipVowelHold = 0.08;
 // such a voice plays, the track moves the mouth, rather than the voice's level and getVowel
 // (which reads few voices right, UPSTREAM.md)
 var lipSyncTracks = true;
+// A lip track can also be what Rhubarb Lip Sync (https://github.com/DanielSWolf/rhubarb-lip-sync,
+// MIT) writes for a recorded voice: run it with -f tsv and save its output as the voice's .lip
+// ("<seconds><tab><shape>" lines). Its mouth shapes are read as these mouths and openings
+var lipRhubarbShapes = %[
+	A : ["n", 0], // closed: p, b, m
+	B : ["i", 1], // slightly open, teeth together: most consonants, "ee"
+	C : ["e", 2], // open: "eh", "ae"
+	D : ["a", 2], // wide open: "aa"
+	E : ["o", 1], // slightly rounded: "ao", "er"
+	F : ["u", 1], // puckered: "uw", "ow", "w"
+	G : ["-", 1], // upper teeth on the lower lip: f, v
+	H : ["-", 2], // tongue raised behind the teeth: a long l
+	X : ["-", 0]  // at rest: pauses
+];
 
 // Loading psdlayer
 KAGLoadScript("psdlayer.tjs");
@@ -2943,7 +2957,8 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 
 	/**
 	 * A voice's lip track (lipSyncTracks): %[times, mouths, levels], each mark's time (ms), mouth
-	 * and how open it is, or void when it has none
+	 * and how open it is, or void when it has none. Rhubarb Lip Sync's TSV is read too
+	 * (lipRhubarbShapes)
 	 */
 	function loadLipTrack(storage) {
 		if (!lipSyncTracks || storage === void || storage == "") {
@@ -2967,12 +2982,25 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 				continue;
 			}
 			var f = line.split("\t");
-			if (f.count >= 2 && (times.count == 0 || +f[0] >= times[times.count-1])) {
-				var mouth = f[1].trim();
-				times.add(+f[0]);
-				mouths.add(mouth);
+			if (f.count < 2) {
+				continue;
+			}
+			var mouth = f[1].trim(), t, level;
+			var shape = lipRhubarbShapes[mouth];
+			if (shape !== void) {
+				// Rhubarb's: seconds and a mouth shape (A-H, X)
+				t = (int)(+f[0] * 1000 + 0.5);
+				mouth = shape[0];
+				level = shape[1];
+			} else {
+				t = +f[0];
 				// how open: as given, or wide for a vowel, closed for n, half for anything else
-				levels.add(f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1);
+				level = f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1;
+			}
+			if (times.count == 0 || t >= times[times.count-1]) {
+				times.add(t);
+				mouths.add(mouth);
+				levels.add(level);
 			}
 		}
 		return times.count > 0 ? %[times:times, mouths:mouths, levels:levels] : void;

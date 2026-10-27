@@ -1251,9 +1251,28 @@ While the voice plays, the track moves the mouth, in place of the voice's level 
 Each lipFlipTime, the mouth is what the track says halfway through that time, where the level
 would be read: a vowel's layer on a face with mouths by vowel (the half-open or open mouth on
 others) as open as the mark says, n closed, and - as open as it says, shaped like the vowel the
-time holds longest. The track is timed from when the voice starts. tools/assets/make_pip.py writes Pip's from the syllables it babbles (each one's vowel,
-closed lips for its p or m, and how open from how loud it is); a track can also be written by
-hand, or from a speech synthesizer's phoneme timings. lipSyncTracks (false) leaves them unread.
+time holds longest. The track is timed from when the voice starts. tools/assets/make_pip.py
+writes Pip's from the syllables it babbles (each one's vowel, closed lips for its p or m, and how
+open from how loud it is); a track can also be written by hand, or from a speech synthesizer's
+phoneme timings. lipSyncTracks (false) leaves them unread.
+
+
+
+For recorded voices, Rhubarb Lip Sync (https://github.com/DanielSWolf/rhubarb-lip-sync, MIT)
+makes the lip track: its TSV output is read as a .lip as it is (seconds, a tab and one of its
+mouth shapes, A to H or X, which lipRhubarbShapes in KAGEnvCharacterEx.tjs turns into mouths
+and how open they are). For one voice, or all of them:
+
+    rhubarb -f tsv -o data/voice/ai000001.lip data/voice/ai000001.ogg
+    for f in data/voice/*.ogg; do rhubarb -f tsv -o "${f%.ogg}.lip" "$f"; done
+
+It reads WAVE and Ogg Vorbis files; -d with a text file of the line can help it, and -r phonetic
+is for languages other than English. How well it does was measured on lines from a speech
+synthesizer, whose sounds' times are known, as the share of the time the mouth on screen
+matches what the voice says. English: the mouth is open or shut as it should be 78% of the time
+and shows the right vowel 56% of the time, against 67% and 23% with no track. Japanese (phonetic):
+71% and 22%, against 68% and 24%, so a Japanese voice gains little. A perfect track reaches 87%
+and about 80% (the mouth changes once every lipFlipTime).
 
 
 

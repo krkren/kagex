@@ -927,6 +927,18 @@ def sample_steps(eng):
                              % (" ".join(sorted(said)), vowels or "none"))
         elif by_vowel and source == "level" and len(vowels) < 2:
             raise SmokeError("Pip's mouth didn't follow the vowels of its voice (vowels seen: %s)" % (vowels or "none"))
+        # a lip track as Rhubarb Lip Sync writes it (-f tsv: seconds and mouth shapes), beside a
+        # voice in the save folder: read as mouths and openings (lipRhubarbShapes)
+        if isinstance(eng, DesktopEngine) and eng.tjs('return typeof global.lipRhubarbShapes != "undefined" ? 1 : 0;') == 1:
+            with open(os.path.join(eng.savedir, "smokerhubarb.lip"), "w", newline="\n") as f:
+                f.write("0.00\tX\n0.12\tD\n0.30\tA\n0.37\tB\n0.52\tF\n0.70\tX\n")
+            got = str(eng.tjs('var t = world_object.env.characters["pip"].loadLipTrack("%s");'
+                              ' if (t === void) return "none"; var r = [];'
+                              ' for (var i = 0; i < t.times.count; i++) r.add(t.times[i] + t.mouths[i] + t.levels[i]);'
+                              ' return r.join(" ");' % storage_name(os.path.join(eng.savedir, "smokerhubarb.ogg"))))
+            print("     Rhubarb's output read as: %s" % got, flush=True)
+            if got != "0-0 120a2 300n0 370i1 520u1 700-0":
+                raise SmokeError("a lip track in Rhubarb's format didn't read as expected: %s" % got)
         eng.clicker(True, until="s0001.ks")
         eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
         eng.clicker(False)
