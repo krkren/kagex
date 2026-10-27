@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAGEX Lip Sync</title>
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<header class="top">
+	<div class="brand">KAGEX Lip Sync <span id="version" class="muted"></span></div>
+	<div class="project">
+		<span id="projectPath" class="path"></span>
+		<button id="openProject" title="Open another game">Open…</button>
+	</div>
+	<div class="actions">
+		<button id="read" title="Read the lines each voice says from the game's scripts again">Read the scripts</button>
+		<button id="make" class="primary" disabled>Make vowel data</button>
+	</div>
+</header>
+<div id="fatal" class="fatal" hidden></div>
+<main>
+	<section class="card">
+		<p class="intro">Pick the voices whose characters should shape their mouths to the vowels they say. Each gets a <code>.lip</code> file beside it, worked out from the voice and its line in the scripts; the game reads it while developing and in a release. Every other voice opens and shuts the mouth by its loudness alone, which needs nothing.</p>
+		<div class="summary" id="summary"></div>
+		<div class="toolbar">
+			<input type="text" id="filter" placeholder="Filter: voice, character or line" spellcheck="false">
+			<select id="character"><option value="">Every character</option></select>
+			<select id="status">
+				<option value="">Any state</option>
+				<option value="none">No vowel data</option>
+				<option value="current">Vowel data</option>
+				<option value="stale">Out of date</option>
+				<option value="manual">Hand-written</option>
+				<option value="missing">Voice not found</option>
+			</select>
+			<span class="spacer"></span>
+			<button id="selectShown">Select shown</button>
+			<button id="selectNone">Select none</button>
+			<button id="remove" disabled>Remove vowel data</button>
+		</div>
+		<div id="notice" class="notice" hidden></div>
+		<table class="voices">
+			<thead><tr><th class="pick"><input type="checkbox" id="pickAll" aria-label="Select the voices shown"></th><th>Voice</th><th>Character</th><th>Line</th><th>Vowel data</th></tr></thead>
+			<tbody id="rows"></tbody>
+		</table>
+		<div id="empty" class="muted empty" hidden></div>
+	</section>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

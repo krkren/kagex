@@ -283,6 +283,14 @@ desktop builds can read.
 `kagex-release --cli split <file.psd|.clip> <folder> [--format=tlg6|tlg5|png]` writes what a
 build would make of one file, to look at.
 
+### Lip tracks
+
+A voice's `.lip` beside it (the mouths' vowels for a character drawn from layers) goes in like any
+file, and still applies once the voice is converted to Opus (the game looks for it by the voice's
+name without the extension). kagex-lipsync (`../lipsync`), which ships beside this tool, makes
+them; the check warns about a track kagex-lipsync made for a voice that has changed since, which
+no longer fits it (make it again: *Out of date* in kagex-lipsync, or `--cli make --stale`).
+
 ### Compiled scripts
 
 After the media conversion (which rewrites names in scripts), every `.tjs` in the staged data is
@@ -363,7 +371,7 @@ It uses krkrz_tools' libraries (xp3, audio, images) from krkrz_dev's submodule, 
 ```bash
 cd tools/release
 cmake --preset linux                 # windows (Developer Command Prompt), macos (Apple Silicon)
-cmake --build --preset linux-rel     # -> build/linux/Release/kagex-release
+cmake --build --preset linux-rel     # -> build/linux/Release/kagex-release, kagex-lipsync and lipsync/
 python3 test/smoke.py build/linux/Release/kagex-release --browser   # --browser needs Playwright
 ```
 

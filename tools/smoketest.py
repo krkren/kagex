@@ -883,9 +883,8 @@ def sample_steps(eng):
         if not {"0", "2"} <= set(seen):
             raise SmokeError("Pip's eyes didn't blink (eye levels seen: %s)" % sorted(seen))
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
-        # while it plays (asking through the REPL is too slow on some targets)
-        # Its plain face has a mouth for each vowel (KAGEnvCharacterEx.tjs's lipSyncVowels), and
-        # the voice has a lip track (pip000001.lip, make_pip.py) naming the vowel of each syllable
+        # while it plays (asking through the REPL is too slow on some targets). Pip's babble has
+        # no lip track, so its mouth opens and shuts by loudness alone: no vowel mouths
         eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[];'
                 ' global.__smokeLipTimer = new Timer(function() {'
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
@@ -904,41 +903,52 @@ def sample_steps(eng):
                         ' for (var i = 0; i < v.count; i += 2) vs.add(v[i]);'
                         ' var c = world_object.env.characters["pip"];'
                         ' return [__smokeLips.join(" "), n.count \\ 2, lipSyncSource, vs.join(" "),'
-                        ' typeof global.lipSyncVowels != "undefined" && lipSyncVowels ? 1 : 0,'
-                        ' typeof c.lipTrack == "undefined" ? -1 : c.lipTrack !== void ? c.lipTrack.times.count : 0,'
-                        ' typeof c.lipTrack != "undefined" && c.lipTrack !== void ? c.lipTrack.mouths.join(" ") : ""].join(",");')).split(",")
+                        ' typeof global.lipEngineVowels != "undefined" && lipEngineVowels ? 1 : 0,'
+                        ' typeof c.lipTrack == "undefined" ? -1 : c.lipTrack !== void ? c.lipTrack.times.count : 0].join(",");')).split(",")
         levels = [int(v) for v in r[0].split()] if r[0].strip() else []
         positions, source = int(r[1]), r[2]
-        vowels, by_vowel, track = r[3].split(), r[4] == "1", int(r[5])
-        said = set(r[6].split()) & set("aiueo")   # the vowels its track names
+        vowels, engine_vowels, track = r[3].split(), r[4] == "1", int(r[5])
         print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
               % ("its lip track (%d marks)" % track if track > 0 else source or "(random)", len(levels),
                  " ".join(str(v) for v in levels[:60]), positions), flush=True)
-        if by_vowel:
-            print("     vowel mouths shown: %s" % (" ".join(sorted(vowels)) or "none"), flush=True)
         if positions <= 1:
             print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
         elif not {0, 2} <= set(levels):
             raise SmokeError("Pip's mouth didn't open and close with its voice (levels seen: %s)" % sorted(set(levels)))
-        elif track == 0:
-            raise SmokeError("Pip's voice has a lip track (pip000001.lip), but it wasn't read")
-        elif by_vowel and track > 0 and (len(vowels) < 2 or not set(vowels) <= said):
-            raise SmokeError("Pip's mouth didn't follow its lip track's vowels (%s; vowels seen: %s)"
-                             % (" ".join(sorted(said)), vowels or "none"))
-        elif by_vowel and source == "level" and len(vowels) < 2:
-            raise SmokeError("Pip's mouth didn't follow the vowels of its voice (vowels seen: %s)" % (vowels or "none"))
-        # a lip track as Rhubarb Lip Sync writes it (-f tsv: seconds and mouth shapes), beside a
-        # voice in the save folder: read as mouths and openings (lipRhubarbShapes)
-        if isinstance(eng, DesktopEngine) and eng.tjs('return typeof global.lipRhubarbShapes != "undefined" ? 1 : 0;') == 1:
-            with open(os.path.join(eng.savedir, "smokerhubarb.lip"), "w", newline="\n") as f:
-                f.write("0.00\tX\n0.12\tD\n0.30\tA\n0.37\tB\n0.52\tF\n0.70\tX\n")
-            got = str(eng.tjs('var t = world_object.env.characters["pip"].loadLipTrack("%s");'
-                              ' if (t === void) return "none"; var r = [];'
-                              ' for (var i = 0; i < t.times.count; i++) r.add(t.times[i] + t.mouths[i] + t.levels[i]);'
-                              ' return r.join(" ");' % storage_name(os.path.join(eng.savedir, "smokerhubarb.ogg"))))
-            print("     Rhubarb's output read as: %s" % got, flush=True)
-            if got != "0-0 120a2 300n0 370i1 520u1 700-0":
-                raise SmokeError("a lip track in Rhubarb's format didn't read as expected: %s" % got)
+        elif track == 0 and not engine_vowels and vowels:
+            raise SmokeError("Pip's babble has no lip track, but its mouth made vowels (%s)" % " ".join(sorted(vowels)))
+        # its one synthesized line (anim.ks, voice=9) has a lip track kagex-lipsync made from the
+        # voice and its text (pip000009.lip): its mouths follow the track's vowels
+        speech = eng.tjs('return typeof world_object.env.characters["pip"].lipTrackAt != "undefined"'
+                         ' && (Storages.isExistentStorage("pip000009.ogg") || Storages.isExistentStorage("pip000009.opus")) ? 1 : 0;') == 1
+        if speech and eng.tjs('return Storages.isExistentStorage("pip000009.lip") ? 1 : 0;') != 1:
+            raise SmokeError("Pip's synthesized line (pip000009) has no lip track here (pip000009.lip)")
+        if positions > 1 and speech:
+            eng.tjs('global.__smokeVowels2 = %[]; global.__smokeLips3 = [];'
+                    ' global.__smokeLipTimer3 = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") { global.__smokeLips3.add(c.lipLevel);'
+                    ' if (c.lipVowel !== void) global.__smokeVowels2[c.lipVowel] = 1; }'
+                    ' }, ""); __smokeLipTimer3.interval = 20; __smokeLipTimer3.enabled = true;'
+                    ' world_object.env.characters["pip"].playVoice("pip000009"); return 1;')
+            end = time.time() + 14
+            seen = []
+            while time.time() < end:
+                time.sleep(0.5)
+                seen = str(eng.tjs('var v = []; v.assign(__smokeVowels2); var vs = []; for (var i = 0; i < v.count; i += 2) vs.add(v[i]); return vs.join(" ");')).split()
+                if len(seen) >= 3 or eng.tjs('return __smokeLips3.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimer3.enabled = false; invalidate __smokeLipTimer3; var c = world_object.env.characters["pip"];'
+                            ' var said = %[]; if (c.lipTrack !== void) for (var i = 0; i < c.lipTrack.mouths.count; i++) said[c.lipTrack.mouths[i]] = 1;'
+                            ' var s = []; s.assign(said); var ss = []; for (var i = 0; i < s.count; i += 2) ss.add(s[i]);'
+                            ' c.soundBuffer.stop();'
+                            ' return [c.lipTrack === void ? 0 : c.lipTrack.times.count, ss.join(" "), __smokeLips3.count].join(",");')).split(",")
+            marks, said = int(r[0]), set(r[1].split()) & set("aiueo")
+            print("     its synthesized line: a lip track of %d marks; vowel mouths shown: %s" % (marks, " ".join(sorted(seen)) or "none"), flush=True)
+            if marks == 0:
+                raise SmokeError("pip000009.lip wasn't read for Pip's synthesized line")
+            if len(seen) < 2 or not set(seen) <= said:
+                raise SmokeError("Pip's mouth didn't follow pip000009.lip's vowels (%s; seen: %s)" % (" ".join(sorted(said)), " ".join(sorted(seen)) or "none"))
         # a voice with no lip track (Ai's, said by Pip): its level read where the clock says it
         # is playing (KAGEnvCharacterEx.readVoice), the mouth opening and closing with it
         if positions > 1 and eng.tjs('return typeof world_object.env.characters["pip"].readVoice != "undefined" ? 1 : 0;') == 1:

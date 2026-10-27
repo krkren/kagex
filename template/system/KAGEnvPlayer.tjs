@@ -783,6 +783,91 @@ class KAGEnvPlayer
 		return ret;
 	}
 
+	/**
+	 * The voiced lines of scripts, for kagex-lipsync (tools/lipsync), which times each voice's
+	 * mouths by its line: each script is compiled (nothing written) and every message with a
+	 * voice gives the voice's file, its character, the script, and the message as shown and as
+	 * read (a ruby's reading in place of the character under it)
+	 * @param list the scripts; empty: !scnlist.txt's
+	 * @return %[lines:["<voice>\t<character>\t<script>\t<text>\t<reading>"...], scripts, failed, errors:[...]]
+	 */
+	function voiceLines(list) {
+		var ret = %[lines:[], scripts:0, failed:0, errors:[]];
+		if (parser === void) {
+			ret.errors.add("there's no compiler (SceneParser.tjs)");
+			ret.failed++;
+			return ret;
+		}
+		if (list === void || list.count == 0) list = getFileList();
+		parser.initDepend(list);
+		for (var i=0;i<list.count;i++) {
+			var name = list[i];
+			try {
+				parser.prepare("parsermacro.ks", "parseroption.txt");
+				clearStorage();
+				var root = parser.compile(name);
+				ret.scripts++;
+				for (var s=0;s<root.scenes.count;s++) {
+					var texts = root.scenes[s].texts;
+					for (var t=0;t<texts.count;t++) {
+						var d = texts[t];
+						if (d[3] === void || d[3].count == 0) continue;
+						// the message: this text and those that carry it on after a tag
+						var text = d[2];
+						while (t + 1 < texts.count && (texts[t + 1][4] & TEXTFLAG_CONT) && (texts[t + 1][3] === void || texts[t + 1][3].count == 0))
+							text += texts[++t][2];
+						var voices = [];
+						env.extractVoice(d[3], voices);
+						var shown = plainText(text).trim(), read = readingText(text).trim();
+						for (var v=0;v<voices.count;v++) {
+							var file = voices[v].voice + (voices[v].ext !== void ? voices[v].ext : "");
+							ret.lines.add([file, voices[v].name, name, shown, read].join("\t"));
+						}
+					}
+				}
+			} catch (e) {
+				ret.failed++;
+				ret.errors.add(name + ": " + e.message);
+			}
+		}
+		return ret;
+	}
+
+	/**
+	 * A compiled text as it's read: plainText, but a ruby's reading ("[reading]" before the
+	 * character it's over) in place of that character
+	 */
+	function readingText(t) {
+		var l = t.length, ret = "", i = 0, ruby;
+		while (i < l) {
+			var ch = t.charAt(i++);
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch != "\\" && ch != "%" && ch != "[") continue;
+			} else if (ch == "%") {
+				if (i < l && /[0-9]/.test(t.charAt(i))) {
+					while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+				} else {
+					i++;
+				}
+				continue;
+			} else if (ch == "[") {
+				var r = "";
+				while (i < l && t.charAt(i) != "]") r += t.charAt(i++);
+				i++;
+				ruby = r;
+				continue;
+			}
+			if (ruby !== void) {
+				ret += ruby;
+				ruby = void;
+			} else {
+				ret += ch == "\n" ? " " : ch;
+			}
+		}
+		return ret;
+	}
+
 	// Convert all files
 	function convertAll() {
 		if (!readonlydb && parser !== void) {

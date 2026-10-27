@@ -8,6 +8,7 @@
 #include "Encrypt.h"
 #include "Engine.h"
 #include "Keys.h"
+#include "LipTracks.h"
 #include "Media.h"
 #include "Scenes.h"
 #include "Sign.h"
@@ -521,6 +522,17 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			warn("signing.enabled", "The web, Android and iOS builds aren't signature-checked (there's no plugin for them): they rely on the app store's or your site's own integrity, and a signed build doesn't load patches from the save folder there");
 		if (!anyDesktop && enabled)
 			warn("signing.enabled", "None of the enabled platforms are signature-checked, so signing has no effect on this build");
+	}
+
+	// lip tracks (kagex-lipsync) made for a voice that has changed since: they no longer fit it
+	const auto stale = staleLipTracks(p);
+	if (!stale.empty()) {
+		std::string names;
+		for (size_t i = 0; i < stale.size() && i < 5; ++i) names += (i ? ", " : "") + krt::fromPath(stale[i].filename());
+		if (stale.size() > 5) names += " and " + std::to_string(stale.size() - 5) + " more";
+		warn("lipsync", std::to_string(stale.size()) + (stale.size() == 1 ? " lip track was" : " lip tracks were") +
+		     " made for a voice that has changed since (" + names + "): make " + (stale.size() == 1 ? "it" : "them") +
+		     " again with kagex-lipsync (Out of date, or --cli make --stale)");
 	}
 
 	return out;

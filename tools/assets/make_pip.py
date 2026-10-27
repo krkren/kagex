@@ -21,14 +21,13 @@ NumPy, so each level is drawn at its own size rather than scaled.
 
 The voice lines (data/voice/pip000001.ogg ...) are babble: syllables of a glottal pulse through
 vowel formants, in a high voice, with a consonant before most, one line for each of LINES,
-encoded with ffmpeg's libvorbis. Each comes with a lip track (data/voice/pip000001.lip ...):
-the vowel of each syllable, closed lips for its p or m, and how open from how loud it is there,
-which KAGEnvCharacterEx.tjs follows while the voice plays. `vowels` measures how often the
-engine's WaveSoundBuffer.getVowel, which a voice without a lip track relies on, hears them.
+encoded with ffmpeg's libvorbis. They open and shut Pip's mouth by their loudness alone. `speech`
+makes one more line in a real voice, synthesized (data/voice/pip000009.ogg, below), whose vowels
+kagex-lipsync works out (tools/lipsync): that line shows the mouths by vowel.
 
-usage: python3 tools/assets/make_pip.py [art] [voice] [vowels]
+usage: python3 tools/assets/make_pip.py [art] [voice] [speech]
 """
-import math, os, shutil, subprocess, sys, tempfile, wave
+import math, os, shutil, subprocess, sys, tempfile, urllib.request, wave
 
 import numpy as np
 from PIL import Image
@@ -779,31 +778,27 @@ def bandpass_noise(rng, n, f, bw):
 
 
 def consonant(rng):
-    """a short consonant: a plosive's burst, a fricative's hiss or a nasal's hum, and which"""
+    """a short consonant: a plosive's burst, a fricative's hiss or a nasal's hum"""
     kind = rng.choice(["p", "t", "k", "s", "sh", "m", "n", ""], p=[.15, .15, .12, .12, .08, .14, .12, .12])
     if kind == "":
-        return np.zeros(0), kind
+        return np.zeros(0)
     if kind in ("p", "t", "k"):
         n = int(RATE * rng.uniform(0.012, 0.02))
         f = {"p": 1200, "t": 4200, "k": 2400}[kind]
         x = bandpass_noise(rng, n, f, 1800) * np.exp(-np.arange(n) / (n / 4))
-        return np.concatenate([np.zeros(int(RATE * 0.012)), x * 0.5]), kind
+        return np.concatenate([np.zeros(int(RATE * 0.012)), x * 0.5])
     if kind in ("s", "sh"):
         n = int(RATE * rng.uniform(0.05, 0.08))
         f = 6200 if kind == "s" else 3200
-        return bandpass_noise(rng, n, f, 2200) * np.hanning(n) * 0.22, kind
+        return bandpass_noise(rng, n, f, 2200) * np.hanning(n) * 0.22
     n = int(RATE * rng.uniform(0.04, 0.06))   # m, n: a low hum
     t = np.arange(n) / RATE
     hum = np.sin(2 * math.pi * 260 * t) + 0.3 * np.sin(2 * math.pi * 520 * t)
-    return hum * np.hanning(n) * 0.18, kind
+    return hum * np.hanning(n) * 0.18
 
 
-def babble(text, seed, marks=None):
-    """the line's samples; with marks (a list), each piece's first sample and what the mouth
-    does there is added to it: a vowel, "n" for the lips closed (p, m), "-" for anything else"""
+def babble(text, seed):
     rng = np.random.default_rng(seed)
-    if marks is None:
-        marks = []
     nsyl, nwords = syllable_count(text)
     question = text.rstrip().endswith("?")
     exclaim = text.rstrip().endswith("!")
@@ -812,8 +807,6 @@ def babble(text, seed, marks=None):
     for _ in range(nsyl - nwords):
         sizes[rng.integers(nwords)] += 1
     out = [np.zeros(int(RATE * 0.08))]
-    at = len(out[0])
-    marks.append((0, "-"))
     k = 0
     for wi, size in enumerate(sizes):
         for si in range(size):
@@ -842,15 +835,9 @@ def babble(text, seed, marks=None):
             env = np.minimum(1, t / 0.012) * np.minimum(1, (dur - t) / 0.035).clip(0)
             env *= 0.8 + 0.2 * np.sin(math.pi * t / dur)
             v = v / (np.max(np.abs(v)) + 1e-9) * env * rng.uniform(0.45, 1.0)   # some syllables softer
-            c, kind = consonant(rng)
-            out.append(np.concatenate([c, v]))
-            marks.append((at, "n" if kind in ("p", "m") else "-"))
-            marks.append((at + len(c), vowel))
-            at += len(c) + len(v)
+            out.append(np.concatenate([consonant(rng), v]))
             k += 1
         out.append(np.zeros(int(RATE * rng.uniform(0.06, 0.11))))
-        marks.append((at, "-"))
-        at += len(out[-1])
     out.append(np.zeros(int(RATE * 0.12)))
     y = np.concatenate(out)
     # soften the very top (above 9 kHz) and normalise
@@ -865,8 +852,7 @@ def make_voice():
     work = tempfile.mkdtemp(prefix="make-pip-")
     try:
         for i, text in enumerate(LINES):
-            marks = []
-            y = babble(text, 20261025 + i, marks)
+            y = babble(text, 20261025 + i)
             wav = os.path.join(work, "%d.wav" % i)
             with wave.open(wav, "wb") as w:
                 w.setnchannels(1)
@@ -877,101 +863,94 @@ def make_voice():
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "3",
                             "-fflags", "+bitexact", "-flags:a", "+bitexact", "-map_metadata", "-1", out],
                            check=True)
-            track = lip_track(marks, y)
-            with open(os.path.join(VOICE, "pip%06d.lip" % (i + 1)), "w", encoding="ascii", newline="\n") as f:
-                f.write("# The mouth over pip%06d.ogg, from the syllables tools/assets/make_pip.py babbles\n"
-                        "# ms, then the mouth from then on (a i u e o, n for the lips closed, - for any other sound)\n"
-                        "# and how open it is (0 closed, 1 half, 2 wide), by how loud the voice is there\n" % (i + 1))
-                for ms, mouth, level in track:
-                    f.write("%d\t%s\t%d\n" % (ms, mouth, level))
-            print("voice %d: %.1f s, %d mouths, %s" % (i + 1, len(y) / RATE, len(track), text), flush=True)
+            print("voice %d: %.1f s, %s" % (i + 1, len(y) / RATE, text), flush=True)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
 
-def lip_track(marks, y):
-    """[(ms, mouth, open)]: the mouth from each time on and how open it is (0 closed, 1 half, 2
-    wide, by the voice's RMS there, at KAGEnvCharacterEx.tjs's lipSyncHalfLevel 0.03 and
-    lipSyncOpenLevel 0.12), as a .lip file lists them"""
-    marks = marks + [(len(y), "-")]
-    track = []
-    for k, (s, m) in enumerate(marks[:-1]):
-        e = marks[k + 1][0]
-        rms = math.sqrt(float(np.mean(y[s:e] ** 2))) if e > s else 0.0
-        level = 0 if m == "n" else 2 if rms > 0.12 else 1 if rms > 0.03 else 0
-        ms = round(s * 1000 / RATE)
-        while track and track[-1][0] >= ms:   # the later of two at one time
-            track.pop()
-        if not track or track[-1][1:] != (m, level):
-            track.append((ms, m, level))
-    return track
+# ---------------------------------------------------------------- speech
+
+# One line in a real voice, to show the mouths by vowel (anim.ks, voice=9: pip000009.ogg), spoken
+# by Kokoro, a speech synthesizer (Kokoro-82M v1.0, Apache-2.0; run with ONNX Runtime from
+# kokoro-onnx's release of the model, MIT, downloaded once into tools/assets/.cache/kokoro). Its
+# vowels come from kagex-lipsync, as any voice's would (pip000009.lip):
+#   kagex-lipsync --cli make pip000009.ogg
+SPEECH = ("Hi again! Listen closely. When I speak with a real voice, my mouth makes the shape of every vowel I say. "
+          "Ah, ee, ooh, eh, oh. Isn't that so much better than mumbling?")
+# what Kokoro says: phonemes in misaki's notation, which Kokoro was trained on, from misaki's US
+# dictionary (A = eɪ, I = aɪ, O = oʊ, W = aʊ, Y = ɔɪ, ᵊ a short schwa, ˈ and ˌ stress the vowel after)
+SPEECH_PHONEMES = ("hˈI əɡˈɛn! lˈɪsᵊn klˈOsli. wˌɛn ˌI spˈik wɪð ɐ ɹˈiᵊl vˈYs, mI mˈWθ mˈAks ðə ʃˈAp ʌv "
+                   "ˈɛvəɹi vˈWᵊl ˌI sˈA. ˈɑ, ˈi, ˈu, ˈɛ, ˈO. ˈɪzᵊnt ðæt sˌO mˈʌʧ bˈɛɾəɹ ðən mˈʌmbᵊlɪŋ?")
+SPEECH_VOICE = "af_heart"
+KOKORO_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+KOKORO_FILES = ["kokoro-v1.0.onnx", "voices-v1.0.bin"]
+KOKORO_RATE = 24000
+# the model's token for each phoneme and mark English uses (its vocabulary, config.json "vocab")
+KOKORO_TOKENS = {
+    ";": 1, ":": 2, ",": 3, ".": 4, "!": 5, "?": 6, "—": 9, "…": 10, '"': 11, "(": 12, ")": 13,
+    "“": 14, "”": 15, " ": 16, "A": 24, "I": 25, "O": 31, "W": 39, "Y": 41, "ᵊ": 42, "a": 43,
+    "b": 44, "d": 46, "e": 47, "f": 48, "h": 50, "i": 51, "j": 52, "k": 53, "l": 54, "m": 55,
+    "n": 56, "o": 57, "p": 58, "s": 61, "t": 62, "u": 63, "v": 64, "w": 65, "z": 68, "ɑ": 69,
+    "ɐ": 70, "æ": 72, "ɔ": 76, "ð": 81, "ʤ": 82, "ə": 83, "ɚ": 85, "ɛ": 86, "ɜ": 87, "ɡ": 92,
+    "ɪ": 102, "ŋ": 112, "θ": 119, "ɹ": 123, "ɾ": 125, "ʃ": 131, "ʧ": 133, "ʊ": 135, "ʌ": 138,
+    "ʒ": 147, "ʔ": 148, "ˈ": 156, "ˌ": 157, "ᵻ": 177,
+}
 
 
-def read_lip(path):
-    track = []
-    with open(path, encoding="ascii") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                ms, mouth = line.split("\t")[:2]
-                track.append((int(ms), mouth))   # (how open it is, a third column, isn't needed here)
-    return track
-
-
-def engine_vowel(x, rate):
-    """the engine's WaveSoundBuffer.getVowel (QueueSoundBufferImpl.cpp) on 1024 samples: the
-    energy around each vowel's F1 and F2 (+-15% + 50 Hz) of a Hann-windowed FFT, as weights that
-    add up to 1, or None for silence"""
-    n = 1024
-    w = 0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n) / (n - 1))
-    mag = np.abs(np.fft.rfft(x[:n] * w)) / n
-
-    def around(hz):
-        bw = hz * 0.15 + 50
-        i0, i1 = max(1, int((hz - bw) * n / rate)), min(n // 2, int((hz + bw) * n / rate))
-        return float(np.sum(mag[i0:i1] ** 2)) if i1 > i0 else 0.0
-    f1, f2 = (800, 300, 350, 500, 500), (1200, 2300, 1200, 1900, 900)
-    sc = [around(f1[v]) + around(f2[v]) for v in range(5)]
-    total = sum(sc)
-    return None if total <= 1e-9 else [x / total for x in sc]
-
-
-def measure_vowels():
-    """How often the engine's getVowel names the vowel the lip track says, every 30 ms where
-    lip-sync opens the mouth (an RMS over lipSyncHalfLevel, 0.03): what the mouth would show
-    without the lip tracks"""
-    right = total = 0
-    picks = [0] * 5
-    for i, text in enumerate(LINES):
-        name = os.path.join(VOICE, "pip%06d" % (i + 1))
-        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", name + ".ogg", "-f", "f32le", "-ac", "1",
-                              "-ar", str(RATE), "-"], check=True, capture_output=True).stdout
-        y = np.frombuffer(raw, "<f4").astype(np.float64)
-        track = read_lip(name + ".lip")
-        r = t = 0
-        for pos in range(0, len(y) - 1024, int(RATE * 0.03)):
-            ms = (pos + 512) * 1000 / RATE
-            mouth = [m for s, m in track if s <= ms][-1]
-            seg = y[pos:pos + 1024]
-            if mouth not in "aiueo" or math.sqrt(float(np.mean(seg ** 2))) <= 0.03:
-                continue
-            w = engine_vowel(seg, RATE)
-            if w is None:
-                continue
-            pick = int(np.argmax(w))
-            picks[pick] += 1
-            t += 1
-            r += "aiueo"[pick] == mouth
-        print("line %d: %d of %d right, %s" % (i + 1, r, t, text), flush=True)
-        right, total = right + r, total + t
-    print("getVowel names the vowel %d%% of the time (it picked %s)"
-          % (100 * right // max(total, 1), ", ".join("%s %d" % (v, n) for v, n in zip("aiueo", picks))), flush=True)
+def make_speech():
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        sys.exit("make_pip.py speech needs ONNX Runtime (pip install onnxruntime)")
+    if not shutil.which("ffmpeg"):
+        sys.exit("make_pip.py speech needs ffmpeg (with libvorbis)")
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache", "kokoro")
+    os.makedirs(folder, exist_ok=True)
+    for name in KOKORO_FILES:
+        path = os.path.join(folder, name)
+        if not os.path.exists(path):
+            print("downloading %s%s" % (KOKORO_URL, name), flush=True)
+            with urllib.request.urlopen(KOKORO_URL + name) as r, open(path + ".part", "wb") as f:
+                shutil.copyfileobj(r, f)
+            os.replace(path + ".part", path)
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1   # the same samples every time
+    sess = ort.InferenceSession(os.path.join(folder, KOKORO_FILES[0]), options, providers=["CPUExecutionProvider"])
+    voices = np.load(os.path.join(folder, KOKORO_FILES[1]))
+    tokens = [KOKORO_TOKENS[c] for c in SPEECH_PHONEMES]
+    style = voices[SPEECH_VOICE][len(tokens) - 1]   # a style for each length
+    y = sess.run(None, {"tokens": np.array([[0, *tokens, 0]], np.int64), "style": style,
+                        "speed": np.array([1.0], np.float32)})[0].ravel().astype(np.float64)
+    # from 60 ms before it starts to 150 ms after it ends
+    frame = KOKORO_RATE // 100
+    rms = np.sqrt(np.convolve(y ** 2, np.ones(frame) / frame, "same"))
+    loud = np.nonzero(rms > rms.max() * 0.02)[0]
+    y = y[max(0, loud[0] - int(KOKORO_RATE * 0.06)):min(len(y), loud[-1] + int(KOKORO_RATE * 0.15))]
+    # an RMS of 0.1 where it's voiced, like Pip's other lines, the peaks no higher than 0.95
+    frame = KOKORO_RATE // 50
+    rms = np.array([math.sqrt(float(np.mean(y[i:i + frame] ** 2))) for i in range(0, len(y) - frame, frame)])
+    voiced = rms[rms > rms.max() * 0.1]
+    y = y * min(0.1 / math.sqrt(float(np.mean(voiced ** 2))), 0.95 / float(np.max(np.abs(y))))
+    work = tempfile.mkdtemp(prefix="make-pip-")
+    try:
+        wav = os.path.join(work, "speech.wav")
+        with wave.open(wav, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(KOKORO_RATE)
+            w.writeframes((np.clip(y, -1, 1) * 32767).round().astype("<i2").tobytes())
+        out = os.path.join(VOICE, "pip000009.ogg")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "4",
+                        "-fflags", "+bitexact", "-flags:a", "+bitexact", "-map_metadata", "-1", out], check=True)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    print("speech: %.1f s, %s (now make its vowels: kagex-lipsync --cli make pip000009.ogg)" % (len(y) / KOKORO_RATE, SPEECH), flush=True)
 
 
 def main():
     what = sys.argv[1:] or ["art", "voice"]
     for w in what:
-        {"art": make_art, "voice": make_voice, "vowels": measure_vowels}[w]()
+        {"art": make_art, "voice": make_voice, "speech": make_speech}[w]()
 
 
 if __name__ == "__main__":

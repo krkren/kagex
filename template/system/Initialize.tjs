@@ -1306,6 +1306,39 @@ if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile")
 	System.exit(r.failed > 0 ? 1 : 0);
 }
 
+/*
+    Listing the voices' lines (kagex-lipsync): -voicelines=<file> compiles the scripts named in
+    <file> (a native path; a script a line, or none for !scnlist.txt's) without writing them,
+    writes every voiced message to <file>.out (a line each: the voice's file, its character, the
+    script, the text as shown and as read, tab-separated; UTF-16) and exits, with 1 if a script
+    failed
+*/
+function KAGListVoiceLines(file)
+{
+	if (typeof global.world_object == "undefined") throw new Exception("listing the voices' lines needs the World (KAGWorldPlugin)");
+	world_object.initPlayer();
+	var storage = kag.localStorageName(file);
+	var list = [];
+	if (Storages.isExistentStorage(storage)) {
+		var names = [];
+		names.load(storage);
+		for (var i = 0; i < names.count; i++) {
+			var n = names[i].trim();
+			list.add(Storages.extractStorageName(n)) if n != "" && n.charAt(0) != "#";
+		}
+	}
+	var r = world_object.player.voiceLines(list);
+	r.lines.save(storage + ".out");
+	dm("Voice lines: %d voices in %d scripts, %d failed".sprintf(r.lines.count, r.scripts, r.failed));
+	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	return r;
+}
+if (System.getArgument("-voicelines") != "") {
+	var r = KAGListVoiceLines(System.getArgument("-voicelines"));
+	KAGUnlinkPluginsBeforeExit();
+	System.exit(r.failed > 0 ? 1 : 0);
+}
+
 // In a signed build, verify the archives, the engine files and the patches first, then start the
 // game from the completion (the check is asynchronous and can't be waited on inline). An unsigned
 // build starts straight away. See SignatureCheck.tjs.

@@ -16,11 +16,13 @@ var lipSyncOpenLevel = 0.12;
 
 // Mouths by vowel: while the voice is loud enough to open the mouth, a face whose mouth group
 // has a layer for the vowel it says shows that layer instead of the half-open or open mouth.
-// The vowel comes from the voice's lip track (below) or else the engine's
-// WaveSoundBuffer.getVowel (how much the voice sounds like a, i, u, e and o); the layers go by
-// these names, in English or in kana. A mouth group needs "Closed Mouth" and either the
-// half-open and open mouths or at least one vowel
-var lipSyncVowels = typeof WaveSoundBuffer.getVowel != "undefined";
+// The vowel comes from the voice's lip track (below), which kagex-lipsync makes for the voices
+// a game picks; the layers go by these names, in English or in kana. A mouth group needs
+// "Closed Mouth" and either the half-open and open mouths or at least one vowel.
+// A voice without a track opens and shuts its mouth by loudness alone, unless lipEngineVowels
+// is set: then the engine's WaveSoundBuffer.getVowel picks a vowel, but it mostly hears how
+// high the voice is, not what it says (UPSTREAM.md)
+var lipEngineVowels = false;
 var lipVowelLayerNames = %[
 	a : ["Mouth A", "あ"],
 	i : ["Mouth I", "い"],
@@ -34,32 +36,16 @@ var lipVowelList = ["a", "i", "u", "e", "o"];
 var lipVowelHold = 0.08;
 
 // Lip tracks: a voice can come with one, a text file beside it named like it with ".lip"
-// (pip000001.ogg's is pip000001.lip) whose lines are "<ms><tab><mouth>[<tab><open>]": the mouth
+// (ai000001.ogg's is ai000001.lip) whose lines are "<ms><tab><mouth>[<tab><open>]": the mouth
 // from that time on, a, i, u, e or o, n for the lips closed or "-" for any other sound, and how
 // open it is, 0 closed, 1 half or 2 wide (without it: 2 for a vowel, 0 for n, 1 for "-"); "#"
-// starts a comment. One can be written by hand, from a speech synthesizer's phoneme timings,
-// or by whatever made the voice (tools/assets/make_pip.py writes Pip's from its babble). While
-// such a voice plays, the track moves the mouth, rather than the voice's level and getVowel
-// (which reads few voices right, UPSTREAM.md)
+// starts a comment. kagex-lipsync (tools/lipsync) writes them from the voice and its line; one
+// can also be written by hand. While such a voice plays, the track moves the mouth, rather than
+// the voice's level
 var lipSyncTracks = true;
 // How many frames ahead readVoice reads a voice, and how finely it keeps the readings (ms)
 var lipReadAhead = 3;
 var lipReadStep = 20;
-// A lip track can also be what Rhubarb Lip Sync (https://github.com/DanielSWolf/rhubarb-lip-sync,
-// MIT) writes for a recorded voice: run it with -f tsv and save its output as the voice's .lip
-// ("<seconds><tab><shape>" lines). Its mouth shapes are read as these mouths and openings
-var lipRhubarbShapes = %[
-	A : ["n", 0], // closed: p, b, m
-	B : ["i", 1], // slightly open, teeth together: most consonants, "ee"
-	C : ["e", 2], // open: "eh", "ae"
-	D : ["a", 2], // wide open: "aa"
-	E : ["o", 1], // slightly rounded: "ao", "er"
-	F : ["u", 1], // puckered: "uw", "ow", "w"
-	G : ["-", 1], // upper teeth on the lower lip: f, v
-	H : ["-", 2], // tongue raised behind the teeth: a long l
-	X : ["-", 0]  // at rest: pauses
-];
-
 // Loading psdlayer
 KAGLoadScript("psdlayer.tjs");
 
@@ -355,7 +341,7 @@ class ExStandInfoParser extends CSVParser
 												fgName.eyes = true;
 											} else if (layCond.substr(0,3) == "lip") {
 												fgName.lips = true;
-												// lipa ... lipo: the mouth for a vowel (lipSyncVowels)
+												// lipa ... lipo: the mouth for a vowel (mouths by vowel)
 												var vowel = layCond.substr(3);
 												if (lipVowelLayerNames[vowel] !== void) {
 													if (fgName.vowels === void) {
@@ -1106,7 +1092,7 @@ class StandLayer extends PSDLayer {
 		this.lipLevel = lipLevel;
 	}
 
-	// Specify the vowel for a face with a mouth for each (lipSyncVowels)
+	// Specify the vowel for a face with a mouth for each (mouths by vowel)
 	function setLipVowel(lipVowel) {
 		this.lipVowel = lipVowel;
 	}
@@ -2315,7 +2301,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 
 	// Parameters for eye blink/lip-sync
 	var lipLevel;
-	var lipVowel; // the vowel the voice says, for a face with a mouth for each (lipSyncVowels)
+	var lipVowel; // the vowel the voice says, for a face with a mouth for each (mouths by vowel)
 	var eyeLevel;
 	
 	var noconvdress;
@@ -2917,7 +2903,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	}
 
 	/**
-	 * Whether the face shown has a mouth for each vowel (lipSyncVowels): only then is the voice's
+	 * Whether the face shown has a mouth for each vowel (mouths by vowel): only then is the voice's
 	 * vowel worth working out
 	 */
 	function faceHasVowels() {
@@ -2963,8 +2949,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 
 	/**
 	 * A voice's lip track (lipSyncTracks): %[times, mouths, levels], each mark's time (ms), mouth
-	 * and how open it is, or void when it has none. Rhubarb Lip Sync's TSV is read too
-	 * (lipRhubarbShapes)
+	 * and how open it is, or void when it has none
 	 */
 	function loadLipTrack(storage) {
 		if (!lipSyncTracks || storage === void || storage == "") {
@@ -2991,18 +2976,10 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			if (f.count < 2) {
 				continue;
 			}
-			var mouth = f[1].trim(), t, level;
-			var shape = lipRhubarbShapes[mouth];
-			if (shape !== void) {
-				// Rhubarb's: seconds and a mouth shape (A-H, X)
-				t = (int)(+f[0] * 1000 + 0.5);
-				mouth = shape[0];
-				level = shape[1];
-			} else {
-				t = +f[0];
-				// how open: as given, or wide for a vowel, closed for n, half for anything else
-				level = f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1;
-			}
+			var mouth = f[1].trim();
+			var t = +f[0];
+			// how open: as given, or wide for a vowel, closed for n, half for anything else
+			var level = f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1;
 			if (times.count == 0 || t >= times[times.count-1]) {
 				times.add(t);
 				mouths.add(mouth);
@@ -3339,7 +3316,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 				} else if (lipSyncSource == "level") {
 					// The level around the middle of the time the mouth is shown, and the vowel
 					// it says, for a face with a mouth for each (readVoice)
-					var wantVowel = lipSyncVowels && faceHasVowels();
+					var wantVowel = lipEngineVowels && typeof WaveSoundBuffer.getVowel != "undefined" && faceHasVowels();
 					var r = readVoice(System.getTickCount() - lipTrackStart + lipflipTime / 2, wantVowel);
 					if (r[0] > lipSyncOpenLevel) {
 						voiceLevel = 2;
