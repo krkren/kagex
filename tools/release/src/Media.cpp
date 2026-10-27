@@ -480,6 +480,12 @@ bool frameworkHidesNamesInXp3(const fs::path& framework)
 	       check.find("KAGSignedUseHashedArchive") != std::string::npos;
 }
 
+bool frameworkRunsGameStartup(const fs::path& framework)
+{
+	std::string boot;
+	return krt::readFile(framework / "hashed-bootstrap.tjs", boot) && boot.find("startup-game.tjs") != std::string::npos;
+}
+
 bool frameworkFindsSplitArchives(const fs::path& framework)
 {
 	std::string init;

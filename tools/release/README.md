@@ -193,6 +193,20 @@ looks like any other: the archives, and no `data/` folder. It needs KAGEX 0.9.2'
 `data.xpc` with a loose `data/startup.tjs` instead, and the check asks an older `data/system` to be
 updated. It can be signed (above).
 
+The game's own `startup.tjs` goes into `data.xp3` as `startup-game.tjs` (its name hashed too),
+and 0.9.4's `hashed-bootstrap.tjs` runs it once the archives are mounted, so the game starts as it
+does from plain archives. With an older framework (0.9.2's or 0.9.3's) the bootstrap runs
+`Initialize.tjs` in its place, and whatever else `startup.tjs` does is left out: the check warns
+about that; update `data/system/hashed-bootstrap.tjs` from 0.9.4's `template/system`.
+
+In such a build a name with a folder (`system/Initialize.tjs`) isn't found where it is, since the
+archive's own names are hashed: the engine looks its file name up in the auto paths instead
+(`system/` and the folders `Initialize.tjs` adds). A script in a folder that isn't an auto path
+needs its full name: `global.kagexHashedArchive + "folder/name.tjs"` (`xpcrypt://data/...`).
+File names in any language can be hidden, on every host (up to 0.9.3 a Windows host couldn't
+encrypt a name outside its ANSI code page), and names are matched without regard to case, as in a
+plain archive (`image.PNG` loads as `image.png`).
+
 The build packs the encrypted archives (each with its own range of per-file keys, so no two files
 share a keystream) and writes the key into each platform's engine; the engine
 must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
@@ -287,7 +301,8 @@ The engines come from the KAGEX release of the tool's version: `kagex_engine_<pl
 `scripts/engine-package.py`; for Android by `scripts/android-engine.py` from krkrz_android
 and the release's APK; for iOS by `scripts/ios-engine.py` from krkrz_ios's unsigned device build
 and its Simulator build. `--engines=DIR` or `KAGEX_RELEASE_ENGINES` points at a folder of
-them instead (zips, or unpacked into folders of the same names), for working offline;
+them instead (zips, or unpacked into folders of the same names; absolute, or relative to the
+current folder), for working offline;
 `KAGEX_RELEASE_ENGINE_URL` changes where they are downloaded from. Without either, an `engines/`
 folder next to the game's `data/` is used when there is one (engine packages of your own, such
 as ones with the scnfile or xp3crypt plugin), or else one next to the tool.

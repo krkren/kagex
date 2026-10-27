@@ -421,6 +421,10 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 		if (!p.framework.empty() && !frameworkHidesNamesInXp3(p.framework))
 			error("archive.hideNames", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
 			      ") can't run a game with hidden file names in data.xp3: it predates KAGEX 0.9.2. Update it from KAGEX 0.9.2's template/system, or turn Hide names off");
+		else if (!p.framework.empty() && !frameworkRunsGameStartup(p.framework))
+			warn("archive.hideNames", "With the file names hidden, this game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+			     ") starts with system/hashed-bootstrap.tjs in place of startup.tjs, so anything startup.tjs does besides starting Initialize.tjs "
+			     "is left out. KAGEX 0.9.4's template/system runs startup.tjs too");
 		for (const auto& pl : platforms()) {
 			const std::string base = std::string("platforms.") + pl.id + ".";
 			if (!flag(s, base + "enabled")) continue;

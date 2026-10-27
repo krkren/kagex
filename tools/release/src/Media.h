@@ -56,6 +56,10 @@ bool frameworkSupportsSigning(const std::filesystem::path& framework);
 /// archives (KAGEX 0.9.2's hashed-bootstrap.tjs, Initialize.tjs and SignatureCheck.tjs; 0.9.0
 /// and 0.9.1 shipped a data.xpc with a loose data/startup.tjs instead)
 bool frameworkHidesNamesInXp3(const std::filesystem::path& framework);
+/// Whether a framework folder's hashed-bootstrap.tjs runs the game's own startup.tjs, which a
+/// build with hidden names keeps in data.xp3 as startup-game.tjs (KAGEX 0.9.4); an older one runs
+/// Initialize.tjs in its place
+bool frameworkRunsGameStartup(const std::filesystem::path& framework);
 /// Whether a framework folder looks for the folders' archives (bgimage.xp3...) beside the
 /// data.xp3 it was read from (KAGEX 0.9.2's KAGArchivePath), which a macOS app's Resources
 /// needs; an older one looks beside the executable

@@ -3,7 +3,14 @@
 // split out beside it (bgimage.xp3, voice.xp3...), is stored under a keyed hash of its path, and
 // only this script keeps its own name, so the engine opens data.xp3 as usual and runs it. It then
 // mounts the same archive through the xp3crypt plugin's xpcrypt:// medium, which finds the files by
-// their hashes (Initialize.tjs mounts the split archives the same way). See xp3crypt's README.
+// their hashes (Initialize.tjs mounts the split archives the same way), and runs the game's own
+// startup.tjs, which the build keeps as startup-game.tjs (KAGEX 0.9.4; before that the bootstrap
+// ran Initialize.tjs in its place). See xp3crypt's README.
+//
+// In such a build a name with a folder ("system/Initialize.tjs") isn't found where it is, since
+// the archive's own names are hashed: the engine then looks its file name up in the auto paths
+// (xpcrypt://data/system/ below, and the folders Initialize.tjs adds). A script in a folder that
+// isn't an auto path needs its full name, global.kagexHashedArchive + "folder/name.tjs".
 
 // The plugin is normally built into the engine (TVP_PLUGINS_STATIC); for a desktop build that
 // ships it as a file instead, link it here. (Built in, this link just fails and is ignored.)
@@ -14,7 +21,9 @@ try { Plugins.link("xp3crypt.dll"); } catch (e) { }
 var kagexHashedPlaced = Storages.getPlacedPath("startup.tjs");
 var kagexHashedAt = kagexHashedPlaced.indexOf(">");
 global.kagexHashedArchiveFile = kagexHashedAt >= 0 ? kagexHashedPlaced.substring(0, kagexHashedAt) : System.exePath + "data.xp3";
-global.kagexHashedLayout = 2;   // 2: the names hidden in data.xp3 and its split archives (KAGEX 0.9.2)
+// 2: the names hidden in data.xp3 and its split archives (KAGEX 0.9.2); 3: and the game's own
+// startup.tjs run (KAGEX 0.9.4)
+global.kagexHashedLayout = 3;
 
 if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", global.kagexHashedArchiveFile)) {
 	// no plugin, no key, or the archive is missing or damaged
@@ -25,5 +34,9 @@ if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", global.kag
 	// out into <folder>.xp3); Initialize.tjs reads kagexHashedArchive
 	global.kagexHashedArchive = "xpcrypt://data/";
 	Storages.addAutoPath("xpcrypt://data/system/");   // so Initialize.tjs itself resolves
-	Scripts.execStorage("Initialize.tjs");
+	// the game's own startup.tjs, as the build kept it; a build without one starts Initialize.tjs
+	if (Storages.isExistentStorage("xpcrypt://data/startup-game.tjs"))
+		Scripts.execStorage("xpcrypt://data/startup-game.tjs");
+	else
+		Scripts.execStorage("Initialize.tjs");
 }

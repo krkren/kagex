@@ -50,6 +50,17 @@ bool unpack(const fs::path& zip, const fs::path& dest, std::string& error)
 	return true;
 }
 
+// A folder of engine packages from --engines or KAGEX_RELEASE_ENGINES, relative to the current
+// folder when it isn't absolute. Made absolute here: later steps resolve paths against other
+// folders (the Windows icon and version step against the package's), where a relative one
+// pointed at nothing (krkrz_tools' "not a Windows executable" error for krkrz.exe)
+fs::path absoluteFolder(const fs::path& dir)
+{
+	std::error_code ec;
+	const fs::path abs = fs::absolute(dir, ec);
+	return ec ? dir : abs;
+}
+
 } // namespace
 
 std::string engineAssetName(const std::string& platform, bool debug)
@@ -95,9 +106,9 @@ bool download(const std::string& url, const fs::path& file, krt::Progress& progr
 
 fs::path localEngines(const fs::path& dir, const fs::path& projectRoot)
 {
-	if (!dir.empty()) return dir;
+	if (!dir.empty()) return absoluteFolder(dir);
 	const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
-	if (!env.empty()) return krt::toPath(env);
+	if (!env.empty()) return absoluteFolder(krt::toPath(env));
 	std::error_code ec;
 	if (!projectRoot.empty() && fs::is_directory(projectRoot / "engines", ec)) return projectRoot / "engines";
 	const fs::path beside = krt::selfPath().parent_path() / "engines";
@@ -111,10 +122,10 @@ fs::path engineIfPresent(const std::string& platform, bool debug, const fs::path
 	if (debug && !hasDebugEngine(platform)) debug = false;
 	const std::string asset = engineAssetName(platform, debug);
 	const std::string stem = asset.substr(0, asset.size() - 4);
-	fs::path local = localDir;
+	fs::path local = localDir.empty() ? fs::path() : absoluteFolder(localDir);
 	if (local.empty()) {
 		const std::string env = getEnv("KAGEX_RELEASE_ENGINES");
-		if (!env.empty()) local = krt::toPath(env);
+		if (!env.empty()) local = absoluteFolder(krt::toPath(env));
 	}
 	if (!local.empty()) {
 		if (fs::is_regular_file(local / stem / "engine.json", ec)) return local / stem;

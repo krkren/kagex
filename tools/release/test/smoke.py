@@ -10,8 +10,11 @@
   the check filled in, a setting changed and saved with Ctrl+S; screenshots go to --out
 - --engines: builds with those engine packages (kagex_engine_*.zip): Windows, Linux and Steam
   (and macOS on a Mac), with the test run; then data bound into the exe, a data folder and only
-  the linked plugins; the packages are checked. Then the media: WAV, FLAC (with loop points) and
-  images converted, files the scripts name kept and then rewritten, the conversion cache, and on
+  the linked plugins; the packages are checked; on Windows, an unpacked engine package given to
+  --engines relative to the current folder. Then hidden file names on this computer (Windows or
+  Linux): a file named in Japanese packed, the game's startup.tjs run, and with 0.9.4 engines or
+  newer an image with an upper-case extension loaded. Then the media: WAV, FLAC (with loop
+  points) and images converted, files the scripts name kept and then rewritten, the conversion cache, and on
   Linux the converted build in the engine (a button's hover image found, the button highlighted).
   Then compiled scripts: a small game of its own whose scripts check, when it runs, the
   constants beyond 32 bits, expression scripts, UTF-16LE and Shift_JIS scripts; and a patch of
@@ -20,7 +23,7 @@
   written into the engine's scnfile plugin (where the host's engine package has it, else the
   .scn.json the engine writes without it), a patch of one changed script, and on Linux the
   sample played from the package by tools/smoketest.py --packaged
-- --tests cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
+- --tests cli,keys,signing,server,build,hidden,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
 """
 import argparse
 import hashlib
@@ -1494,6 +1497,137 @@ def hidden_signing_tests(exe, proj, args, s, env):
                     lambda f=f, orig=orig: f.write_bytes(orig))
 
 
+def engine_version(engines, platform):
+    """The KAGEX version in an engine package's engine.json ("" when there's no package)"""
+    pkg = Path(engines) / ("kagex_engine_%s.zip" % platform)
+    if not pkg.is_file():
+        return ""
+    with zipfile.ZipFile(pkg) as z:
+        for n in z.namelist():
+            if n.split("/")[-1] == "engine.json":
+                return json.loads(z.read(n)).get("version", "")
+    return ""
+
+
+def version_key(v):
+    return tuple(int(x) for x in re.findall(r"\d+", v)[:3])
+
+
+# Appended to a copy of the sample's startup.tjs by hidden_names_tests: says it ran, then loads an
+# image named in Japanese with an upper-case extension by its lower-case name
+HIDDEN_PROBE = r"""
+// kagex-release smoke test (hidden_names_tests)
+Debug.message("kagex-test: startup.tjs ran");
+try {
+	var probe = new global.Layer(kag, kag.fore.base);
+	probe.loadImages("名前テスト.png");
+	Debug.message("kagex-test: an upper-case extension loads " + probe.imageWidth);
+	invalidate probe;
+} catch (e) {
+	Debug.message("kagex-test: an upper-case extension fails: " + e.message);
+}
+"""
+
+
+def hidden_names_tests(exe, proj, args):
+    """A build with hidden file names for this computer (Windows too: up to 0.9.3 xp3crypt's packer
+    took names through the ANSI code page there, and a name in Japanese stopped the build), run by
+    the test run: the game's startup.tjs must run (0.9.2's bootstrap ran Initialize.tjs in its
+    place), and an image named in Japanese with an upper-case extension must load by its lower-case
+    name (the engine picks the decoder by the extension as spelt, and the xpcrypt:// medium handed
+    names back as stored up to xp3crypt 08ad5f7, the 0.9.4 engines)"""
+    host = host_id()
+    if host not in ("windows", "linux"):
+        print("skip hidden-names tests: the test run needs a Windows or Linux host")
+        return
+    # details escaped: the names are Japanese, and a Windows console (or a pipe from it) may not take them
+    esc = lambda text: text.encode("ascii", "backslashreplace").decode("ascii")
+    game = proj.parent / "Hidden Game"
+    if game.exists():
+        shutil.rmtree(game)
+    shutil.copytree(proj, game, ignore=shutil.ignore_patterns("release", "release-*"))
+    image = sorted((game / "data" / "bgimage").glob("*.png"))[0]
+    shutil.copyfile(image, game / "data" / "image" / "名前テスト.PNG")
+    startup = game / "data" / "startup.tjs"
+    startup.write_bytes(startup.read_bytes() + HIDDEN_PROBE.encode("utf-8"))
+    keys = proj.parent / "hidden-keys.txt"
+    code, out = run(exe, "--cli", "keygen", str(keys))
+    if code != 0:
+        step("hidden names: keygen", False, out)
+        return
+    rel = game / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = (p == host)
+    s["platforms"][host]["data"] = "xp3"
+    s["output"].update({"archive": "none", "check": True})
+    s["signing"]["enabled"] = False
+    s["archive"].update({"encrypt": True, "hideNames": True})
+    s["keys"] = {"file": str(keys)}
+    # the image as it is: a converted one would be 名前テスト.tlg, and the check is about the name
+    s["media"]["images"].update({"opaque": "keep", "alpha": "keep"})
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+    try:
+        r = json.loads(out[out.index("{"):])
+    except ValueError:
+        step("hidden names (%s): built" % host, False, esc(out[-2000:]))
+        return
+    prot = r.get("protection", {})
+    step("hidden names (%s): built with a file named in Japanese, encrypted with the names hidden" % host,
+         r.get("ok") is True and prot.get("archive") == "encrypted, names hidden",
+         esc(r.get("error", "") + "; ".join(o.get("error", "") for o in r.get("outputs", [])) + " %s" % prot))
+    chk = r.get("check", {})
+    step("hidden names: the test run starts the game", chk.get("ok") is True,
+         esc(chk.get("message", "") + " " + "; ".join(chk.get("errors", []))))
+    logf = game / "release" / "test-run.log"
+    log = logf.read_text(encoding="utf-8", errors="replace") if logf.exists() else ""
+    if args.out and logf.exists():
+        shutil.copyfile(logf, Path(args.out) / "test-run-hidden.log")
+    # the probe's own lines (an exception's code dump lists the script's strings too, after "//")
+    said = [l.strip() for l in log.splitlines() if "kagex-test:" in l and "//" not in l]
+    probe = esc(" | ".join(said))
+    step("hidden names: the game's startup.tjs runs", any(l.endswith("kagex-test: startup.tjs ran") for l in said), probe)
+    loaded = any("kagex-test: an upper-case extension loads" in l for l in said)
+    ev = engine_version(args.engines, host)
+    if version_key(ev) >= (0, 9, 4):
+        step("hidden names: an image named in Japanese with an upper-case extension loads", loaded, probe)
+    else:
+        print("note: the %s engine is from KAGEX %s, before xp3crypt 08ad5f7: the upper-case extension %s"
+              % (host, ev or "?", "loads" if loaded else "doesn't load (as expected there)"), flush=True)
+
+
+def relative_engines_test(exe, proj, args):
+    """An unpacked engine package in a folder given to --engines relative to the current folder: up
+    to 0.9.3 the Windows icon and version step resolved its krkrz.exe against the package's folder
+    and failed (a zip was unpacked into the cache, an absolute path, so it never showed here)"""
+    if host_id() != "windows" or not (Path(args.engines) / "kagex_engine_windows.zip").is_file():
+        return
+    pk = proj / "engine-packages"
+    with zipfile.ZipFile(Path(args.engines) / "kagex_engine_windows.zip") as z:
+        z.extractall(pk / "kagex_engine_windows")
+    s = json.loads((proj / "release.json").read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = (p == "windows")
+    s["platforms"]["windows"].update({"data": "xp3", "versionInfo": True})
+    s["output"].update({"folder": "release-relative", "archive": "none", "check": False})
+    rel = proj / "release-relative.json"
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "build", rel.name, "--engines=engine-packages", "--json", cwd=str(proj))
+    shutil.rmtree(pk, ignore_errors=True)
+    rel.unlink()
+    try:
+        r = json.loads(out[out.index("{"):])
+    except ValueError:
+        step("windows: a relative --engines", False, out[-2000:])
+        return
+    built = proj / "release-relative" / ("kagex-sample-%s-windows" % s["identity"]["version"]) / "kagex-sample.exe"
+    step("windows: a relative --engines, with the icon and version info",
+         r.get("ok") is True and built.is_file() and "KAGEX Sample".encode("utf-16-le") in built.read_bytes(),
+         r.get("error", "") + "; ".join(o.get("error", "") for o in r.get("outputs", [])))
+    shutil.rmtree(proj / "release-relative", ignore_errors=True)
+
+
 # A game whose Initialize.tjs checks, as it runs, what the compiled scripts give: constants
 # beyond 32 bits (with values equal to theirs cut to 32 bits beside them), strings and regular
 # expressions that look like them, expression scripts read with Scripts.evalStorage, UTF-16LE and
@@ -1652,7 +1786,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,hidden,web,android,ios,media,scripts,scenes,patch (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -1674,6 +1808,7 @@ def main():
             os.environ["KAGEX_RELEASE_CACHE"] = str(Path(t) / "cache")
             if want("build"):
                 build_tests(exe, proj, args)
+                relative_engines_test(exe, proj, args)
             if want("web") and (Path(args.engines) / "kagex_engine_web.zip").exists():
                 web_tests(exe, proj, args)
             if want("android") and (Path(args.engines) / "kagex_engine_android.zip").exists():
@@ -1684,6 +1819,8 @@ def main():
                 media_tests(exe, proj, args)
             if want("signing"):
                 signing_build_tests(exe, proj, args)
+            if want("hidden"):
+                hidden_names_tests(exe, proj, args)
             if want("scripts"):
                 script_tests(exe, Path(t), args)
             if want("scenes"):

@@ -880,11 +880,17 @@ private:
 		mustRemove(aside);
 		mustMkdirs(aside);
 		std::vector<std::string> moved;
-		std::string gameStartup;   // with hidden names, the game's own startup.tjs (set aside for the bootstrap)
+		// with hidden names, where the game's own startup.tjs went while the bootstrap takes its
+		// name: "startup-game.tjs" (packed, for a framework whose bootstrap runs it) or
+		// "startup.tjs" (set aside, for an older framework)
+		std::string gameStartup;
 		auto restore = [&]() {
 			std::error_code e;
 			for (const auto& n : moved) fs::rename(aside / krt::toPath(n), stage_ / krt::toPath(n), e);
-			if (!gameStartup.empty()) {
+			if (gameStartup == "startup-game.tjs") {
+				fs::remove(stage_ / "startup.tjs", e);
+				fs::rename(stage_ / "startup-game.tjs", stage_ / "startup.tjs", e);
+			} else if (!gameStartup.empty()) {
 				fs::remove(stage_ / "startup.tjs", e);
 				fs::rename(aside / ".startup.tjs", stage_ / "startup.tjs", e);
 			}
@@ -916,9 +922,20 @@ private:
 				if (!krt::readFile(stage_ / "system" / "hashed-bootstrap.tjs", bootstrap) || bootstrap.empty())
 					throw Failure{ "Hiding the file names needs system/hashed-bootstrap.tjs in the framework (update it from KAGEX's template/system)" };
 				if (fs::exists(stage_ / "startup.tjs", ec)) {
-					fs::rename(stage_ / "startup.tjs", aside / ".startup.tjs", ec);
-					if (ec) throw Failure{ "Couldn't set the game's startup.tjs aside: " + ec.message() };
-					gameStartup = "startup.tjs";
+					if (frameworkRunsGameStartup(p_.framework)) {
+						// the bootstrap runs the game's own startup.tjs once it has mounted the
+						// archives (KAGEX 0.9.4): it goes into data.xp3 as startup-game.tjs, its name
+						// hashed like the rest
+						if (fs::exists(stage_ / "startup-game.tjs", ec))
+							throw Failure{ "The game has a startup-game.tjs, the name a build with hidden file names keeps its startup.tjs under: rename that file" };
+						fs::rename(stage_ / "startup.tjs", stage_ / "startup-game.tjs", ec);
+						if (ec) throw Failure{ "Couldn't keep the game's startup.tjs as startup-game.tjs: " + ec.message() };
+						gameStartup = "startup-game.tjs";
+					} else {
+						fs::rename(stage_ / "startup.tjs", aside / ".startup.tjs", ec);
+						if (ec) throw Failure{ "Couldn't set the game's startup.tjs aside: " + ec.message() };
+						gameStartup = "startup.tjs";
+					}
 				}
 				writeText(stage_ / "startup.tjs", bootstrap);
 				plain.insert("startup.tjs");
