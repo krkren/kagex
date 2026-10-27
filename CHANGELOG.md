@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.4
+
+### Fixed
+
+- **kagex-release encrypts and hides names on Windows, whatever language the file names are in**: [xp3crypt](https://github.com/krkren/xp3crypt)'s packer took names through Windows' ANSI code page, so a game with a file named in Japanese, built on an English Windows, stopped with "No mapping for the Unicode character exists in the target multi-byte code page". It takes them through UTF-8 now (xp3crypt 08ad5f7).
+- **Archives with hidden names match names without regard to case**, as plain archives do: an image stored as `title.PNG` and loaded as `title.png` failed with "Unknown graphic format", because the engine picks an image's decoder by its extension as spelt and the `xpcrypt://` medium handed names back as stored. The 0.9.4 engines have the fixed plugin.
+- **A game's own `startup.tjs` runs in a build with hidden names**: kagex-release shipped `system/hashed-bootstrap.tjs` in its place, so anything `startup.tjs` did besides starting `Initialize.tjs` was left out, without a word. It now goes into `data.xp3` as `startup-game.tjs` (its name hashed like the rest), and 0.9.4's `hashed-bootstrap.tjs` runs it once the archives are mounted. Update a game's `data/system/hashed-bootstrap.tjs` from `template/system`; with an older one the check warns that `startup.tjs` won't run.
+- **kagex-release's `--engines` (and `KAGEX_RELEASE_ENGINES`) can be relative to the current folder**: with unpacked engine packages, the Windows icon and version step looked for `krkrz.exe` relative to the package's own folder and failed, saying it wasn't a Windows executable.
+
+### Changed
+
+- The release tool's smoke test builds a game with hidden names on Windows as well as Linux (a file named in Japanese, an image with an upper-case extension, and `startup.tjs` run), and a Windows build from an unpacked engine package given by a relative path.
+- kagex-release 0.9.4 downloads the 0.9.4 engines.
+
 ## 0.9.3
 
 ### Added
