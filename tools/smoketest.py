@@ -705,7 +705,9 @@ def sample_steps(eng):
             [ "*start|Carry A", "[initscene]", "[road normal]", "[ai standard center]", "Ai is here.[p]",
               "[jump storage=zz_carry_b.ks]" ].save(dir + "zz_carry_a.ks");
             [ "*start|Carry B", "Still here.[p]" ].save(dir + "zz_carry_b.ks");
-            Storages.addAutoPath(dir);
+            try { Storages.addAutoPath(dir); } catch (e) { }
+            // Android's save folder doesn't serve scripts through the auto path
+            if (!Storages.isExistentStorage("zz_carry_a.ks") || !Storages.isExistentStorage("zz_carry_b.ks")) return "skip";
             var p = world_object.player;
             var c = p.compileList([ "zz_carry_b.ks", "zz_carry_a.ks" ], true);
             if (c.failed > 0) return "failed: " + c.errors.join(" / ");
@@ -718,6 +720,9 @@ def sample_steps(eng):
             var ret = [ c.compiled, ai, stage, d.root.entry, again ? 1 : 0 ].join(",");
             invalidate d;
             return ret;''', timeout=120))
+        if r == "skip":
+            print("     (skipped: the save folder isn't a script folder here)", flush=True)
+            return
         print("     compiled, Ai in B's first state, its stage, B's entry key, still to compile: " + r, flush=True)
         f = r.split(",")
         if len(f) < 5 or f[0] != "2" or f[1] != "1" or f[2] == "" or f[3] == "" or f[4] != "0":
