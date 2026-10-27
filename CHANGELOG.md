@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- Lip-sync for a voice with no lip track was out of time now and then: the engine reads a playing voice's level at its own idea of the play position, which runs half a second ahead about a quarter of the time (`UPSTREAM.md`). The mouth now reads the part of the voice the clock says is playing, and keeps readings of the next frames for those moments: measured on synthesized lines, it's open or shut as it should be 77% of the time instead of 67% (80% would be perfect readings, with the mouth changing every `lipFlipTime`). Nothing to prepare: it's the voice file as it is.
 - A character drawn from layers kept its eyes and mouth still while its own change (pose, outfit or face: `charTrans`, 300 ms in the sample) faded in, so a line said with a change lost its start. They move during it now.
 - `clip://` found a layer inside a folder by its name alone (`root/layer`), not by its folder path, and of two layers of one name took the upper one, unlike the plugin.
 

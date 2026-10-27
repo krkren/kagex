@@ -42,6 +42,9 @@ var lipVowelHold = 0.08;
 // such a voice plays, the track moves the mouth, rather than the voice's level and getVowel
 // (which reads few voices right, UPSTREAM.md)
 var lipSyncTracks = true;
+// How many frames ahead readVoice reads a voice, and how finely it keeps the readings (ms)
+var lipReadAhead = 3;
+var lipReadStep = 20;
 // A lip track can also be what Rhubarb Lip Sync (https://github.com/DanielSWolf/rhubarb-lip-sync,
 // MIT) writes for a recorded voice: run it with -f tsv and save its output as the voice's .lip
 // ("<seconds><tab><shape>" lines). Its mouth shapes are read as these mouths and openings
@@ -2859,6 +2862,9 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	var lipTrack;
 	var lipTrackVoice;
 	var lipTrackStart;
+
+	// The voice's level and vowel read ahead, by position (readVoice)
+	var lipReadings;
 	
 	// For timing control
 	var flipEyeNextTime;
@@ -3004,6 +3010,84 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			}
 		}
 		return times.count > 0 ? %[times:times, mouths:mouths, levels:levels] : void;
+	}
+
+	/**
+	 * The voice's level (RMS) and vowel weights (getVowel, when vowels is true) at ms into it, as
+	 * [rms, weights]. The engine reads both at its own idea of where the voice is playing,
+	 * samplePosition, plus an offset; that runs half a second (a buffer) ahead of the sound now
+	 * and then (UPSTREAM.md), which put the mouth out of time. What it reads is at
+	 * samplePosition plus the offset all the same, so the offset that reaches the part wanted is
+	 * that part's position less samplePosition: but while the engine is ahead, that part is
+	 * gone from its buffers. So each frame also reads the parts the next frames will want, while
+	 * they're there, and keeps them (lipReadings, every lipReadStep ms)
+	 */
+	function readVoice(at, vowels) {
+		var b = soundBuffer;
+		var rate = b.frequency;
+		if (b.speed != 1 || lipReadings === void || rate <= 0) {
+			// a changed speed (the phase vocoder) maps positions otherwise: as the engine has it
+			var ahead = (int)(rate * lipflipTime / 2000);
+			return [b.getSoundLevel(ahead).rms, vowels ? b.getVowel(ahead) : void];
+		}
+		var sp = b.samplePosition;
+		// The engine decodes a voice into buffers of half a second each, from its start, and
+		// what it reads past the end of the one samplePosition is in can be an older part of
+		// the voice: so only that one is read, from samplePosition to its end. Never before
+		// samplePosition: a negative offset can read outside the buffer, and crashed the engine
+		var size = rate \ 2;
+		var end = (sp \ size + 1) * size;
+		var now;
+		for (var k = 0; k <= lipReadAhead; k++) {
+			var key = (int)((at + k * lipflipTime) / lipReadStep + 0.5);
+			if (k > 0) {
+				var r = lipReadings[(string)key];
+				if (r !== void && (r[1] !== void || !vowels)) {
+					continue;
+				}
+			}
+			var pos = (int)(key * lipReadStep * rate / 1000);
+			if (pos < sp || pos >= end) {
+				continue;
+			}
+			if (pos + 1024 > end) {
+				// a reading reaching past the end: the one just before it
+				pos = end - 1024;
+				if (pos < sp) {
+					continue;
+				}
+			}
+			var r = [b.getSoundLevel(pos - sp).rms, vowels ? b.getVowel(pos - sp) : void];
+			if (Math.abs(b.samplePosition - sp) > rate / 10) {
+				break; // the engine moved a buffer on meanwhile: what it read is in doubt
+			}
+			lipReadings[(string)key] = r;
+			if (k == 0) {
+				now = r;
+			}
+		}
+		if (now !== void) {
+			lipReadings.last = now;
+			return now;
+		}
+		// the part wanted is gone: read before, or else as the frame before
+		var key = (int)(at / lipReadStep + 0.5);
+		for (var d = 0; d <= 1; d++) {
+			var r = lipReadings[(string)(key - d)];
+			if (r === void) {
+				r = lipReadings[(string)(key + d)];
+			}
+			if (r !== void) {
+				lipReadings.last = r;
+				return r;
+			}
+		}
+		// not read in time: as the frame before
+		if (lipReadings.last !== void) {
+			return lipReadings.last;
+		}
+		var ahead = (int)(rate * lipflipTime / 2000);
+		return [b.getSoundLevel(ahead).rms, vowels ? b.getVowel(ahead) : void];
 	}
 
 	/**
@@ -3253,17 +3337,17 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 						vowel = mouth[0];
 					}
 				} else if (lipSyncSource == "level") {
-					// The level half a frame ahead, around the middle of the time the mouth is shown
-					var ahead = (int)(soundBuffer.frequency * lipflipTime / 2000);
-					var a = soundBuffer.getSoundLevel(ahead).rms;
-					if (a > lipSyncOpenLevel) {
+					// The level around the middle of the time the mouth is shown, and the vowel
+					// it says, for a face with a mouth for each (readVoice)
+					var wantVowel = lipSyncVowels && faceHasVowels();
+					var r = readVoice(System.getTickCount() - lipTrackStart + lipflipTime / 2, wantVowel);
+					if (r[0] > lipSyncOpenLevel) {
 						voiceLevel = 2;
-					} else if (a > lipSyncHalfLevel) {
+					} else if (r[0] > lipSyncHalfLevel) {
 						voiceLevel = 1;
 					}
-					// and the vowel it says, for a face with a mouth for each
-					if (voiceLevel > 0 && lipSyncVowels && faceHasVowels()) {
-						vowel = pickLipVowel(soundBuffer.getVowel(ahead));
+					if (voiceLevel > 0 && wantVowel) {
+						vowel = pickLipVowel(r[1]);
 					}
 				} else if (lipSyncSource == "sample") {
 					var a = soundBuffer.sampleValue;
@@ -3590,6 +3674,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			lipTrack = loadLipTrack(lipTrackVoice);
 		}
 		lipTrackStart = System.getTickCount();
+		lipReadings = %[];
 		if (ret > 0 && lipstate == 3) {
 			startUpdateHandler();
 		}

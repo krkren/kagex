@@ -939,6 +939,27 @@ def sample_steps(eng):
             print("     Rhubarb's output read as: %s" % got, flush=True)
             if got != "0-0 120a2 300n0 370i1 520u1 700-0":
                 raise SmokeError("a lip track in Rhubarb's format didn't read as expected: %s" % got)
+        # a voice with no lip track (Ai's, said by Pip): its level read where the clock says it
+        # is playing (KAGEnvCharacterEx.readVoice), the mouth opening and closing with it
+        if positions > 1 and eng.tjs('return typeof world_object.env.characters["pip"].readVoice != "undefined" ? 1 : 0;') == 1:
+            eng.tjs('global.__smokeLips2 = []; var c = world_object.env.characters["pip"];'
+                    ' global.__smokeLipTimer2 = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") global.__smokeLips2.add(c.lipLevel);'
+                    ' }, ""); __smokeLipTimer2.interval = 20; __smokeLipTimer2.enabled = true;'
+                    ' c.playVoice("ai000001"); return 1;')
+            end = time.time() + 8
+            while time.time() < end:
+                time.sleep(0.5)
+                if eng.tjs('return __smokeLips2.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimer2.enabled = false; invalidate __smokeLipTimer2; var c = world_object.env.characters["pip"];'
+                            ' return [__smokeLips2.join(" "), c.lipTrack === void ? 1 : 0, c.lipReadings !== void && c.lipReadings.last !== void ? 1 : 0].join(",");')).split(",")
+            levels2 = [int(v) for v in r[0].split()] if r[0].strip() else []
+            print("     a voice with no lip track: %d mouth samples (%s)" % (len(levels2), " ".join(str(v) for v in levels2[:60])), flush=True)
+            if r[1] != "1" or r[2] != "1" or not ({0} < set(levels2)):
+                raise SmokeError("Pip's mouth didn't follow a voice with no lip track (levels %s, no track %s, read %s)"
+                                 % (sorted(set(levels2)), r[1], r[2]))
         eng.clicker(True, until="s0001.ks")
         eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
         eng.clicker(False)
