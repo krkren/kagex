@@ -70,16 +70,25 @@ class Engine:
         raise NotImplementedError
 
     def tjs(self, body, timeout=30.0):
-        """Runs TJS statements on the main thread; 'return x;' gives the result."""
-        cmd = "(function() {\n" + body + "\n})()"
+        """Runs TJS statements on the main thread; 'return x;' gives the result. The REPLs print a
+        string result as a TJS literal (EscapeC), where an apostrophe is \\', which JSON refuses
+        (the web build's language step failed on "It's"), so a string comes back as the hex of
+        its UTF-16 code units"""
+        cmd = ("(function(r) { if (typeof r != 'String') return r; var a = [];"
+               " for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
+               " return 'S:' + a.join(''); })((function() {\n" + body + "\n})())")
         j = self._eval(cmd, timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         result = j.get("result", "")
         try:
-            return json.loads(result)
+            value = json.loads(result)
         except ValueError:
             return result
+        if isinstance(value, str) and value.startswith("S:"):
+            h = value[2:]
+            return b"".join(int(h[i:i + 4], 16).to_bytes(2, "little") for i in range(0, len(h) - 3, 4)).decode("utf-16-le", "replace")
+        return value
 
     def wait(self, what, expr, timeout=60.0, interval=0.25):
         """Polls a TJS expression until it is true."""
