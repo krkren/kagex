@@ -45,7 +45,7 @@ env:
   # kagex's own plugins (setup.sh clones them next to krkrz_dev): xp3crypt, built into every
   # engine, decrypts data.xp3; scnfile reads compiled scenarios. kagex-release writes each game's
   # keys into them
-  XP3CRYPT_SHA: 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
+  XP3CRYPT_SHA: bce47103c73374c583068c07a4945e63e3888fe6
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
   # CMake 4 (the macOS runners) refuses the old cmake_minimum_required of some engine
   # dependencies (krkrz_vorbis)
