@@ -1043,11 +1043,13 @@ def sample_steps(eng):
         if not {"0", "2"} <= set(seen):
             raise SmokeError("Pip's eyes didn't blink (eye levels seen: %s)" % sorted(seen))
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
-        # while it plays (asking through the REPL is too slow on some targets)
-        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [];'
+        # while it plays (asking through the REPL is too slow on some targets). Pip's babble has
+        # no lip track, so its mouth opens and shuts by loudness alone: no vowel mouths
+        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[];'
                 ' global.__smokeLipTimer = new Timer(function() {'
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
-                ' if (b !== void && b.status == "play") { global.__smokeLips.add(c.lipLevel); global.__smokeVoice.add(b.position); }'
+                ' if (b !== void && b.status == "play") { global.__smokeLips.add(c.lipLevel); global.__smokeVoice.add(b.position);'
+                ' if (typeof c.lipVowel != "undefined" && c.lipVowel !== void) global.__smokeVowels[c.lipVowel] = 1; }'
                 ' }, ""); __smokeLipTimer.interval = 20; __smokeLipTimer.enabled = true; return 1;')
         eng.tjs('kag.onPrimaryClick(); return 1;')
         end = time.time() + 6
@@ -1057,19 +1059,151 @@ def sample_steps(eng):
                 break
         r = str(eng.tjs('__smokeLipTimer.enabled = false; invalidate __smokeLipTimer;'
                         ' var p = %[]; for (var i = 0; i < __smokeVoice.count; i++) p[__smokeVoice[i]] = 1;'
-                        ' var n = []; n.assign(p);'
-                        ' return [__smokeLips.join(" "), n.count \\ 2, lipSyncSource].join(",");')).split(",")
+                        ' var n = []; n.assign(p); var v = []; v.assign(__smokeVowels); var vs = [];'
+                        ' for (var i = 0; i < v.count; i += 2) vs.add(v[i]);'
+                        ' var c = world_object.env.characters["pip"];'
+                        ' return [__smokeLips.join(" "), n.count \\ 2, lipSyncSource, vs.join(" "),'
+                        ' typeof global.lipEngineVowels != "undefined" && lipEngineVowels ? 1 : 0,'
+                        ' typeof c.lipTrack == "undefined" ? -1 : c.lipTrack !== void ? c.lipTrack.times.count : 0].join(",");')).split(",")
         levels = [int(v) for v in r[0].split()] if r[0].strip() else []
         positions, source = int(r[1]), r[2]
+        vowels, engine_vowels, track = r[3].split(), r[4] == "1", int(r[5])
         print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
-              % (source or "(random)", len(levels), " ".join(str(v) for v in levels[:60]), positions), flush=True)
+              % ("its lip track (%d marks)" % track if track > 0 else source or "(random)", len(levels),
+                 " ".join(str(v) for v in levels[:60]), positions), flush=True)
         if positions <= 1:
             print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
         elif not {0, 2} <= set(levels):
             raise SmokeError("Pip's mouth didn't open and close with its voice (levels seen: %s)" % sorted(set(levels)))
+        elif track == 0 and not engine_vowels and vowels:
+            raise SmokeError("Pip's babble has no lip track, but its mouth made vowels (%s)" % " ".join(sorted(vowels)))
+        # its one synthesized line (anim.ks, voice=9) has a lip track kagex-lipsync made from the
+        # voice and its text (pip000009.lip): its mouths follow the track's vowels
+        speech = eng.tjs('return typeof world_object.env.characters["pip"].lipTrackAt != "undefined"'
+                         ' && (Storages.isExistentStorage("pip000009.ogg") || Storages.isExistentStorage("pip000009.opus")) ? 1 : 0;') == 1
+        if speech and eng.tjs('return Storages.isExistentStorage("pip000009.lip") ? 1 : 0;') != 1:
+            raise SmokeError("Pip's synthesized line (pip000009) has no lip track here (pip000009.lip)")
+        if positions > 1 and speech:
+            eng.tjs('global.__smokeVowels2 = %[]; global.__smokeLips3 = [];'
+                    ' global.__smokeLipTimer3 = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") { global.__smokeLips3.add(c.lipLevel);'
+                    ' if (c.lipVowel !== void) global.__smokeVowels2[c.lipVowel] = 1; }'
+                    ' }, ""); __smokeLipTimer3.interval = 20; __smokeLipTimer3.enabled = true;'
+                    ' world_object.env.characters["pip"].playVoice("pip000009"); return 1;')
+            end = time.time() + 14
+            seen = []
+            while time.time() < end:
+                time.sleep(0.5)
+                seen = str(eng.tjs('var v = []; v.assign(__smokeVowels2); var vs = []; for (var i = 0; i < v.count; i += 2) vs.add(v[i]); return vs.join(" ");')).split()
+                if len(seen) >= 3 or eng.tjs('return __smokeLips3.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimer3.enabled = false; invalidate __smokeLipTimer3; var c = world_object.env.characters["pip"];'
+                            ' var said = %[]; if (c.lipTrack !== void) for (var i = 0; i < c.lipTrack.mouths.count; i++) said[c.lipTrack.mouths[i]] = 1;'
+                            ' var s = []; s.assign(said); var ss = []; for (var i = 0; i < s.count; i += 2) ss.add(s[i]);'
+                            ' c.soundBuffer.stop();'
+                            ' return [c.lipTrack === void ? 0 : c.lipTrack.times.count, ss.join(" "), __smokeLips3.count].join(",");')).split(",")
+            marks, said = int(r[0]), set(r[1].split()) & set("aiueo")
+            print("     its synthesized line: a lip track of %d marks; vowel mouths shown: %s" % (marks, " ".join(sorted(seen)) or "none"), flush=True)
+            if marks == 0:
+                raise SmokeError("pip000009.lip wasn't read for Pip's synthesized line")
+            if len(seen) < 2 or not set(seen) <= said:
+                raise SmokeError("Pip's mouth didn't follow pip000009.lip's vowels (%s; seen: %s)" % (" ".join(sorted(said)), " ".join(sorted(seen)) or "none"))
+        # a voice with no lip track (Ai's, said by Pip): its level read where the clock says it
+        # is playing (KAGEnvCharacterEx.readVoice), the mouth opening and closing with it
+        if positions > 1 and eng.tjs('return typeof world_object.env.characters["pip"].readVoice != "undefined" ? 1 : 0;') == 1:
+            eng.tjs('global.__smokeLips2 = []; var c = world_object.env.characters["pip"];'
+                    ' global.__smokeLipTimer2 = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") global.__smokeLips2.add(c.lipLevel);'
+                    ' }, ""); __smokeLipTimer2.interval = 20; __smokeLipTimer2.enabled = true;'
+                    ' c.playVoice("ai000001"); return 1;')
+            end = time.time() + 8
+            while time.time() < end:
+                time.sleep(0.5)
+                if eng.tjs('return __smokeLips2.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimer2.enabled = false; invalidate __smokeLipTimer2; var c = world_object.env.characters["pip"];'
+                            ' return [__smokeLips2.join(" "), c.lipTrack === void ? 1 : 0, c.lipReadings !== void && c.lipReadings.last !== void ? 1 : 0].join(",");')).split(",")
+            levels2 = [int(v) for v in r[0].split()] if r[0].strip() else []
+            print("     a voice with no lip track: %d mouth samples (%s)" % (len(levels2), " ".join(str(v) for v in levels2[:60])), flush=True)
+            if r[1] != "1" or r[2] != "1" or not ({0} < set(levels2)):
+                raise SmokeError("Pip's mouth didn't follow a voice with no lip track (levels %s, no track %s, read %s)"
+                                 % (sorted(set(levels2)), r[1], r[2]))
         eng.clicker(True, until="s0001.ks")
         eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
         eng.clicker(False)
+
+    @step("a character's layers read from a PSD match its layer structure, vowel mouths included")
+    def _():
+        if not isinstance(eng, DesktopEngine) or not animated_framework(eng):
+            print("     (skipped: it writes a PSD beside a desktop engine's save data)", flush=True)
+            return
+        if eng.tjs('return typeof global.findStandLayerFile != "undefined" && typeof global.allStandInfoMap != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates characters from PSD files)", flush=True)
+            return
+        if eng.tjs('if (typeof global.PSD == "undefined") { try { Plugins.link("plugin/psdfile.dll"); } catch (e) {} }'
+                   ' return typeof global.PSD != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no psdfile plugin)", flush=True)
+            return
+        # Pip's pose at level "0" (data/fgimage/pip/pip_0.txt and its pictures), written as a PSD
+        # with folders (tools/assets/psdwrite.py), as smokepip_0.psd in the save folder: then
+        # findStandLayerFile finds the PSD for "smokepip_0", which has no .txt
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets"))
+        import psdwrite
+        pip = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "fgimage", "pip", "pip_0.txt")
+        psdwrite.structure_to_psd(pip, os.path.join(eng.savedir, "smokepip_0.psd"))
+        r = str(eng.tjs(
+            'var base = "%s"; var found = findStandLayerFile(base + "_0");'
+            ' var info = %%[]; (Dictionary.assign incontextof info)(allStandInfoMap.pip.map.standard); info.filename = base;'
+            ' var levels = [%%[name:"0"]], a = new StandPSDInfo(kag, info, 0, levels),'
+            ' b = new StandPSDInfo(kag, allStandInfoMap.pip.map.standard, 0, levels);'
+            ' var structure = 0;'
+            ' if (a.layers.count != b.layers.count || a.groups.count != b.groups.count) structure = -1;'
+            ' else for (var i = 0; i < a.layers.count; i++) { var x = a.layers[i], y = b.layers[i];'
+            ' if (x.name != y.name || x.layer_id != y.layer_id || x.left != y.left || x.top != y.top || x.group_layer_id != y.group_layer_id) structure++; }'
+            ' var res = [];'
+            ' for (var v = 0; v < 2; v++) { var ls = [];'
+            ' for (var k = 0; k < 2; k++) { var l = new StandLayer(kag, k ? b : a, "standard", 0);'
+            ' l.setDress("plain"); l.setDiff("rest"); l.setLipLevel(2); l.setLipVowel(v ? "o" : void); l.setEyeLevel(2);'
+            ' l.setFace("neutral"); l.updateImage(); ls.add(l); }'
+            ' var d = 0, n = 0; for (var y = 0; y < ls[0].imageHeight; y += 3) for (var x = 0; x < ls[0].imageWidth; x += 3) {'
+            ' n++; if (ls[0].getMainPixel(x, y) != ls[1].getMainPixel(x, y) || ls[0].getMaskPixel(x, y) != ls[1].getMaskPixel(x, y)) d++; }'
+            ' res.add([d, n, ls[0].getVisible("Mouth/Mouth O") ? 1 : 0, ls[0].getVisible("Mouth/Open Mouth") ? 1 : 0].join(" "));'
+            ' invalidate ls[0]; invalidate ls[1]; }'
+            ' var count = a.layers.count; invalidate a; invalidate b;'
+            ' return [found, count, structure, res[0], res[1]].join(",");' % storage_name(os.path.join(eng.savedir, "smokepip"))))
+        found, count, structure, plain, vowel = r.split(",")
+        print("     found %s: %s layers, %s differing from pip_0.txt" % (found.rsplit("/", 1)[-1], count, structure), flush=True)
+        d0, n0, o0, open0 = [int(v) for v in plain.split()]
+        d1, n1, o1, open1 = [int(v) for v in vowel.split()]
+        print("     composited: %d of %d samples differ with the open mouth, %d of %d with the O mouth" % (d0, n0, d1, n1), flush=True)
+        if not found.endswith(".psd") or structure != "0" or int(count) < 40:
+            raise SmokeError("the PSD didn't read as Pip's layer structure: %s" % r)
+        if d0 or d1:
+            raise SmokeError("Pip drawn from the PSD doesn't look as drawn from pip_0.txt: %s" % r)
+        if not (open0 and not o0 and o1 and not open1):
+            raise SmokeError("the vowel mouth didn't replace the open mouth (open %d/%d, O %d/%d)" % (open0, open1, o0, o1))
+        # psd:// (what a KAG or World layer loads, AffineLayer.tjs): from the PSD through psdfile
+        # (by folder and name, and by ID), and from a split layer structure, pip_0.txt, as if
+        # pip_0.psd had been split (Mouth O is 47); the clip:// step shows such a layer drawn
+        r = str(eng.tjs(
+            'var dir = "%s/"; Storages.addAutoPath(dir); var res = [];'
+            ' var want = new global.Layer(kag, kag.primaryLayer); want.loadImages("pip_0_47");'
+            ' var names = ["psd://smokepip_0.psd/root/mouth/mouth o.bmp", "psd://smokepip_0.psd/id/47.bmp", "psd://pip_0.psd/root/Mouth/Mouth O.bmp"];'
+            ' for (var i = 0; i < names.count; i++) { var d = -1, t = new global.Layer(kag, kag.primaryLayer);'
+            ' try { affineLoadLayeredLayer(t, names[i]);'
+            ' if (t.imageWidth == want.imageWidth && t.imageHeight == want.imageHeight) { d = 0;'
+            ' for (var y = 0; y < t.imageHeight; y++) for (var x = 0; x < t.imageWidth; x++)'
+            ' if (t.getMaskPixel(x, y) != want.getMaskPixel(x, y) || (want.getMaskPixel(x, y) && t.getMainPixel(x, y) != want.getMainPixel(x, y))) d++; }'
+            ' else dm("psd:// " + names[i] + ": " + t.imageWidth + "x" + t.imageHeight + ", not " + want.imageWidth + "x" + want.imageHeight);'
+            ' } catch (e) { dm("psd:// " + names[i] + ": " + e.message); }'
+            ' invalidate t; res.add(d); }'
+            ' invalidate want; Storages.removeAutoPath(dir);'
+            ' return res.join(",");' % storage_name(eng.savedir)))
+        print("     psd:// Mouth O differs in %s pixels (by name, by ID, from the split pip_0.txt; -1: didn't load)" % r, flush=True)
+        if r != "0,0,0":
+            raise SmokeError("psd:// didn't load the layer: %s" % r)
 
     @step("extrans's and extNagano's transitions are there, not crossfades")
     def _():
@@ -1146,11 +1280,16 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.affineLoadClipLayer != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates clip:// images)", flush=True)
             return
-        if eng.tjs('return typeof global.CLIP != "undefined" ? 1 : 0;') != 1:
+        # from emblem.clip through the clipfile plugin, or, in a build kagex-release made, from the
+        # pictures it split the file into (emblem.txt and emblem_<layer id>), with or without it
+        split = eng.tjs('return typeof global.affineLoadLayeredLayer != "undefined"'
+                        ' && Storages.isExistentStorage("emblem.txt") && !Storages.isExistentStorage("emblem.clip") ? 1 : 0;') == 1
+        if not split and eng.tjs('return typeof global.CLIP != "undefined" ? 1 : 0;') != 1:
             if eng.opts.clip == "required":
                 raise SmokeError("clip:// images are unavailable: no clipfile plugin")
             print("     clip://: unavailable (no clipfile plugin)", flush=True)
             return
+        print("     from %s" % ("the pictures kagex-release split emblem.clip into" if split else "emblem.clip, through clipfile"), flush=True)
         # emblem.clip (tools/assets/make_clip.py): the badge and the star, drawn as in emblem.svg.
         # The plugin's own clip:// BMPs don't load outside Windows (AffineLayer.tjs reads the
         # layer through CLIP.getLayerData instead)

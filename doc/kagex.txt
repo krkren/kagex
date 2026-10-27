@@ -394,15 +394,25 @@ Attributes
 
 		  the Windows-only engine has.
 
-		・A layer of a CLIP STUDIO PAINT file, through the clipfile plugin:
+		・A layer of a CLIP STUDIO PAINT or Photoshop file, through the clipfile or
 
-		  clip://name.clip/root/folder/layer.bmp (names match in any case, and a
+		  psdfile plugin: clip://name.clip/root/folder/layer.bmp (names match in any
 
-		  "/" in a name is written "_"; the file is found like any other storage), or
+		  case, and a "/" in a name is written "_"; the file is found like any other
 
-		  clip://name.clip/id/LayerId.bmp. Only the layer's own picture is used:
+		  storage; of two layers of one name, the lower one), or
 
-		  its opacity and blend mode in the file are not.
+		  clip://name.clip/id/LayerId.bmp, and psd://name.psd/... the same way.
+
+		  Only the layer's own picture is used: its opacity and blend mode in the
+
+		  file are not. Only the desktop engines have the plugins, so kagex-release
+
+		  splits such a file into name.txt (its layer structure) and a picture per
+
+		  layer, name_<LayerId>, which these names then load on every platform
+
+		  (the file itself comes first where it's there).
 
 		・When *.psb is specified, motion data is loaded.
 

@@ -7,6 +7,7 @@
 
 #include "Engine.h"
 #include "Host.h"
+#include "Layered.h"
 #include "Media.h"
 #include "Subprocess.h"
 #include "krt/app/Text.h"
@@ -134,6 +135,53 @@ std::set<std::string> layeredFilesNamed(const std::vector<GameFile>& files)
 	return named;
 }
 
+// The names characters drawn from layers take their poses from: the files column of
+// charinit.csv (character,pose,files,...), lower case, without a folder. A pose's layers at a level
+// are <files>_<level>.txt, or, when there's none, <files>_<level>.psd or .clip
+// (KAGEnvCharacterEx.tjs's findStandLayerFile), and <files>.txt etc. without levels
+std::set<std::string> charinitFiles(const std::vector<GameFile>& files)
+{
+	std::set<std::string> names;
+	for (const auto& f : files) {
+		if (lower(leafOf(f.name)) != "charinit.csv") continue;
+		std::string raw;
+		if (!krt::readFile(f.source, raw)) continue;
+		std::string text = scriptText(raw);
+		if (text.size() >= 3 && text.compare(0, 3, "\xEF\xBB\xBF") == 0) text.erase(0, 3);
+		size_t pos = 0;
+		while (pos < text.size()) {
+			size_t end = text.find('\n', pos);
+			if (end == std::string::npos) end = text.size();
+			const std::string line = text.substr(pos, end - pos);
+			pos = end + 1;
+			std::vector<std::string> cols;
+			size_t start = 0;
+			for (;;) {
+				const size_t comma = line.find(',', start);
+				std::string c = krt::trim(line.substr(start, comma == std::string::npos ? std::string::npos : comma - start));
+				if (c.size() >= 2 && c.front() == '"' && c.back() == '"') c = c.substr(1, c.size() - 2);
+				cols.push_back(c);
+				if (comma == std::string::npos) break;
+				start = comma + 1;
+			}
+			if (cols.size() < 3 || cols[0].empty() || cols[0][0] == '#' || cols[2].empty()) continue;
+			names.insert(lower(leafOf(cols[2])));
+		}
+	}
+	return names;
+}
+
+// Whether a .psd or .clip (its lower-case leaf) is a pose's layers by charinit.csv's names
+bool namedByCharinit(const std::string& leaf, const std::set<std::string>& names)
+{
+	const size_t dot = leaf.rfind('.');
+	const std::string stem = leaf.substr(0, dot);
+	for (const auto& n : names) {
+		if (stem == n || (stem.size() > n.size() + 1 && stem.compare(0, n.size() + 1, n + "_") == 0)) return true;
+	}
+	return false;
+}
+
 } // namespace
 
 bool matchExclude(const std::string& pattern, const std::string& path, bool isDir)
@@ -151,7 +199,7 @@ bool matchExclude(const std::string& pattern, const std::string& path, bool isDi
 	return matchParts(split(pat), 0, split(path), 0);
 }
 
-std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* excluded)
+std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* excluded, std::vector<std::string>* shadowed)
 {
 	std::vector<GameFile> files;
 	std::vector<std::string> patterns;
@@ -189,14 +237,44 @@ std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* exc
 	};
 	walk(p.data, "");
 	if (!p.frameworkInData && !p.framework.empty() && flag(s, "contents.framework")) walk(p.framework, "system/");
-	// ... go in after all when a script loads layers from them (clip://, psd://)
+	// ... go in after all when a script loads layers from them (clip://, psd://), or when they're
+	// the poses charinit.csv names and the game has no layer structure of that name (.txt) the
+	// framework would read first. kagex-release splits them into the structure and pictures
+	// (Layered.h), which KAGEX 0.11.0's framework and later read
 	if (!layered.empty()) {
 		const std::set<std::string> named = layeredFilesNamed(files);
+		std::set<std::string> poses, have;
+		if (!p.framework.empty() && frameworkReadsSplitLayers(p.framework)) {
+			poses = charinitFiles(files);
+			for (const auto& f : files) have.insert(lower(leafOf(f.name)));
+		}
 		for (auto& f : layered) {
-			if (!named.count(lower(leafOf(f.name)))) continue;
+			const std::string leaf = lower(leafOf(f.name));
+			const bool pose = namedByCharinit(leaf, poses) && !have.count(leaf.substr(0, leaf.rfind('.')) + ".txt");
+			if (!named.count(leaf) && !pose) continue;
 			files.push_back(std::move(f));
 			--skipped;
 		}
+	}
+	// ... and stay out when the game has their layers already: a layer structure of their name
+	// (<stem>.txt, as psdlayer.tjs's saveImages exports and kagex-release splits into), which
+	// the framework reads in their place (findStandLayerFile; affineLayeredFromPieces when the
+	// file isn't there)
+	if (!p.framework.empty() && frameworkReadsSplitLayers(p.framework)) {
+		std::map<std::string, fs::path> structures;
+		for (const auto& f : files) {
+			const std::string leaf = lower(leafOf(f.name));
+			if (extOf(leaf) == ".txt") structures.emplace(leaf, f.source);
+		}
+		files.erase(std::remove_if(files.begin(), files.end(), [&](const GameFile& f) {
+			const std::string leaf = lower(leafOf(f.name));
+			if (!isLayeredSource(extOf(leaf))) return false;
+			const auto t = structures.find(leaf.substr(0, leaf.rfind('.')) + ".txt");
+			if (t == structures.end() || !isLayerStructure(t->second)) return false;
+			if (shadowed) shadowed->push_back(f.name);
+			++skipped;
+			return true;
+		}), files.end());
 	}
 	std::sort(files.begin(), files.end(), [](const GameFile& a, const GameFile& b) { return a.name < b.name; });
 	if (excluded) *excluded = skipped;
@@ -223,7 +301,7 @@ Json makePlan(const Json& s, const Project& p)
 	const auto files = collectGameFiles(s, p, &excluded);
 	uint64_t bytes = 0;
 	std::map<std::string, std::pair<int, uint64_t>> byExt;
-	int images = 0, audio = 0, scripts = 0;
+	int images = 0, audio = 0, scripts = 0, layeredFiles = 0;
 	const std::string audioTo = str(s, "media.audio.convert");
 	const bool imagesKept = str(s, "media.images.opaque") == "keep" && str(s, "media.images.alpha") == "keep";
 	for (const auto& f : files) {
@@ -235,6 +313,7 @@ Json makePlan(const Json& s, const Project& p)
 		if (isAudioSource(ext) && audioTo != "keep") ++audio;
 		if (isImageSource(ext) && !imagesKept) ++images;
 		if (ext == ".tjs" && flag(s, "contents.compileScripts")) ++scripts;
+		if (isLayeredSource(ext)) ++layeredFiles;
 	}
 	// the folders a desktop build packs into archives of their own
 	std::vector<std::string> parts;
@@ -253,6 +332,8 @@ Json makePlan(const Json& s, const Project& p)
 	data.set("convertImages", Json(images));
 	data.set("convertAudio", Json(audio));
 	data.set("compileScripts", Json(scripts));
+	// .psd and .clip files split into layer pictures (Layered.h), when the framework reads them
+	data.set("splitLayered", Json(p.framework.empty() || frameworkReadsSplitLayers(p.framework) ? layeredFiles : 0));
 	data.set("framework", Json(p.frameworkInData ? "data/system" : flag(s, "contents.framework") ? "template/system, copied in as data/system" : "not included"));
 	Json exts = Json::array();
 	std::vector<std::pair<std::string, std::pair<int, uint64_t>>> sorted(byExt.begin(), byExt.end());

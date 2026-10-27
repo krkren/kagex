@@ -19,8 +19,11 @@ struct GameFile {
 };
 
 /// The game's files: data/ (without the exclusions and the output folder) plus, when the game
-/// has no data/system, the framework as system/
-std::vector<GameFile> collectGameFiles(const Json& settings, const Project& project, int* excluded = nullptr);
+/// has no data/system, the framework as system/. A .psd or .clip whose layers the game has
+/// already (a layer structure of its name, Layered.h's isLayerStructure) stays out, listed in
+/// shadowed
+std::vector<GameFile> collectGameFiles(const Json& settings, const Project& project, int* excluded = nullptr,
+                                       std::vector<std::string>* shadowed = nullptr);
 
 /// Glob match on a '/' path: '*' and '?' stay within a folder name, "**" spans folders. A
 /// pattern without '/' is matched against the file name only; one ending in '/' names a folder

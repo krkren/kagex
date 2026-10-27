@@ -689,7 +689,8 @@ KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
 
 // CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
 // clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
-// psdfile's psd:// does for Photoshop's
+// psdfile's psd:// does for Photoshop's (linked when one is first shown). A release reads such
+// layers from the pictures kagex-release splits the file into (AffineLayer.tjs)
 KAGLinkPlugin("plugin/clipfile.dll") if typeof global.CLIP == "undefined";
 
 // Patches and DLC as zip files (the minizip plugin), after the .xp3 patches above, so a later
@@ -1324,6 +1325,40 @@ function KAGCompileScenarios(force = false)
 }
 if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") {
 	var r = KAGCompileScenarios(System.getArgument("-scncompile") == "all");
+	KAGUnlinkPluginsBeforeExit();
+	System.exit(r.failed > 0 ? 1 : 0);
+}
+
+/*
+    Listing the voices' lines (kagex-lipsync): -voicelines=<file> compiles the scripts named in
+    <file> (a native path; a script a line, or none for !scnlist.txt's) without writing them,
+    writes every voiced message to <file>.out (a line each: the voice's file, its character, the
+    script, the text as shown and as read, and its language, tab-separated: a line in each of
+    the game's languages, the source language first; UTF-16) and exits, with 1 if a script
+    failed
+*/
+function KAGListVoiceLines(file)
+{
+	if (typeof global.world_object == "undefined") throw new Exception("listing the voices' lines needs the World (KAGWorldPlugin)");
+	world_object.initPlayer();
+	var storage = kag.localStorageName(file);
+	var list = [];
+	if (Storages.isExistentStorage(storage)) {
+		var names = [];
+		names.load(storage);
+		for (var i = 0; i < names.count; i++) {
+			var n = names[i].trim();
+			list.add(Storages.extractStorageName(n)) if n != "" && n.charAt(0) != "#";
+		}
+	}
+	var r = world_object.player.voiceLines(list);
+	r.lines.save(storage + ".out");
+	dm("Voice lines: %d voices in %d scripts, %d failed".sprintf(r.lines.count, r.scripts, r.failed));
+	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	return r;
+}
+if (System.getArgument("-voicelines") != "") {
+	var r = KAGListVoiceLines(System.getArgument("-voicelines"));
 	KAGUnlinkPluginsBeforeExit();
 	System.exit(r.failed > 0 ? 1 : 0);
 }

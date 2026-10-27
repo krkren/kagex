@@ -2402,11 +2402,12 @@ class KAGWindow extends Window
 
 
 
-			// a run that only compiles scenarios (-scncompile, as kagex-release does) stays hidden
+			// a run that only compiles scenarios (-scncompile, as kagex-release does) or lists the
+			// voices' lines (-voicelines, as kagex-lipsync does) stays hidden
 
 			var compileArg = System.getArgument("-scncompile");
 
-			visible = !invisible && (compileArg == "" || compileArg == "no");
+			visible = !invisible && (compileArg == "" || compileArg == "no") && System.getArgument("-voicelines") == "";
 
 
 

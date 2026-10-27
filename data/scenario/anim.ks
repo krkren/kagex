@@ -13,6 +13,9 @@ Pip is drawn from layers, put together as it's shown: a body, two outfits, three
 [pip rest voice=2]
 【pip】I blink by myself, and my mouth moves with my voice.
 Its eyes blink every few seconds, and while it speaks, its mouth opens as wide as its voice is loud.
+[pip neutral voice=9]
+【pip】Hi again! Listen closely. When I speak with a real voice, my mouth makes the shape of every vowel I say. Ah, ee, ooh, eh, oh. Isn't that so much better than mumbling?
+For that line, kagex-lipsync worked out from the voice and its text when each vowel is said, and wrote pip000009.lip beside the voice. Every other voice moves the mouth by its loudness alone.
 [pip xsurprised voice=3]
 【pip】Oh! A new face!
 An x in front of a face, as in xsurprised, closes the eyes while the face changes.

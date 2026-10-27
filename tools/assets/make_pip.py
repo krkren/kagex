@@ -10,7 +10,8 @@ and whose mouth follows its voice. This writes, into data/fgimage/pip:
   psdlayer.tjs's text format (the first line after the canvas size is the top layer). The eyes
   and mouths are groups holding "Open Eyes"/"Half-closed Eyes"/"Closed Eyes" and
   "Closed Mouth"/"Half-open Mouth"/"Open Mouth", which is what makes them move; the top one of
-  each shows while they don't.
+  each shows while they don't. The plain face's mouth also has one for each vowel, "Mouth A"
+  ... "Mouth O", which show while the voice says that vowel.
 - pip_<level>_<layer id>.png: each layer's picture, trimmed to what it draws.
 - pip_info.txt: the outfits ("dress"), arm poses ("diff") and faces, by layer name.
 
@@ -20,11 +21,13 @@ NumPy, so each level is drawn at its own size rather than scaled.
 
 The voice lines (data/voice/pip000001.ogg ...) are babble: syllables of a glottal pulse through
 vowel formants, in a high voice, with a consonant before most, one line for each of LINES,
-encoded with ffmpeg's libvorbis.
+encoded with ffmpeg's libvorbis. They open and shut Pip's mouth by their loudness alone. `speech`
+makes one more line in a real voice, synthesized (data/voice/pip000009.ogg, below), whose vowels
+kagex-lipsync works out (tools/lipsync): that line shows the mouths by vowel.
 
-usage: python3 tools/assets/make_pip.py [art] [voice]
+usage: python3 tools/assets/make_pip.py [art] [voice] [speech]
 """
-import math, os, shutil, subprocess, sys, tempfile, wave
+import math, os, shutil, subprocess, sys, tempfile, urllib.request, wave
 
 import numpy as np
 from PIL import Image
@@ -565,6 +568,39 @@ def mouth_frames(group, kind):
     return [closed, half, opened]   # the top one shows when lip-sync is off
 
 
+def teeth(l, m, cx, y0, y1, half):
+    """upper teeth: a white band from y0 down to y1, inside the open mouth m"""
+    band = Poly([(cx - half, y0), (cx + half, y0), (cx + half, y1), (cx - half, y1)])
+    l.fill(band & m, WHITE, 0.95)
+
+
+def vowel_frames(group):
+    """A mouth for each vowel (KAGEnvCharacterEx.tjs's lipVowelLayerNames): while Pip speaks,
+    the one for the vowel its voice says shows in place of the half-open and open mouths"""
+    cx, cy = MOUTH_C
+    a, i, u, e, o = (Layer("Mouth %s" % v, group) for v in "AIUEO")
+    open_mouth(a, cx, cy - 8, 27, 34)                       # wide open
+    for l, half, depth, sag in ((i, 32, 9, 5), (e, 28, 17, 5)):
+        top = arc(cx, cy - 4, half, sag)
+        bottom = bezier((cx + half, cy - 4), (cx + half * 0.9, cy - 4 + depth * 1.3),
+                        (cx - half * 0.9, cy - 4 + depth * 1.3), (cx - half, cy - 4))
+        m = Poly(list(top) + list(bottom))
+        l.fill(m.grow(5), NAVY)
+        l.fill(m, MOUTH)
+        teeth(l, m, cx, cy - 12, cy - 4 + sag + (5 if l is i else 6), half)
+        if l is e:
+            l.fill(Ellipse(cx, cy - 4 + depth * 0.95, half * 0.55, depth * 0.38) & m, TONGUE)
+    for l, rx, ry, dy in ((u, 9, 10, 2), (o, 17, 23, 6)):   # rounded: a small pout, a big O
+        m = Ellipse(cx, cy + dy, rx, ry)
+        l.fill(m.grow(5), NAVY)
+        l.fill(m, MOUTH)
+        if ry > 12:
+            l.fill(Ellipse(cx, cy + dy + ry * 0.62, rx * 0.65, ry * 0.36) & m, TONGUE)
+    for l in (a, i, u, e, o):
+        l.added = True   # numbered after the layers made before them (make_art)
+    return [a, i, u, e, o]
+
+
 # brows -----------------------------------------------------------------------------------
 
 def brows(name, kind):
@@ -592,7 +628,7 @@ def build():
     layers = [sweat_layer(), cheeks_layer("Blush", 0.62, True),
               brows("Brows Neutral", "neutral"), brows("Brows Raised", "raised"),
               brows("Brows Worried", "worried"), brows("Brows Angry", "angry")]
-    layers += mouth_frames("Mouth", "smile") + mouth_frames("Mouth Grin", "grin")
+    layers += mouth_frames("Mouth", "smile") + vowel_frames("Mouth") + mouth_frames("Mouth Grin", "grin")
     layers += mouth_frames("Mouth O", "o") + mouth_frames("Mouth Frown", "frown")
     layers += eye_frames("Eyes") + wide_eye_frames("Eyes Wide")
     layers += eye_frames("Eyes Droop", droop_lid) + eye_frames("Eyes Glare", glare_lid)
@@ -653,10 +689,15 @@ def make_art():
         shutil.rmtree(OUT)
     os.makedirs(OUT)
     gid = {g: 1000 + i for i, g in enumerate(groups)}
+    # layer IDs (the pictures' names) top down, but the layers added later (the vowel mouths)
+    # after the others, so the older pictures keep their names
+    ids = {}
+    for layer in sorted(layers, key=lambda l: getattr(l, "added", False)):
+        ids[id(layer)] = len(ids) + 1
     for level, scale in LEVELS:
         lines = [HEADER, "\t\t\t\t%d\t%d" % (round(W * scale), round(H * scale))]
-        for i, layer in enumerate(layers):
-            lid = i + 1
+        for layer in layers:
+            lid = ids[id(layer)]
             left, top, img = layer.render(scale)
             if img is None:
                 sys.exit("layer %s draws nothing" % layer.name)
@@ -827,10 +868,89 @@ def make_voice():
         shutil.rmtree(work, ignore_errors=True)
 
 
+# ---------------------------------------------------------------- speech
+
+# One line in a real voice, to show the mouths by vowel (anim.ks, voice=9: pip000009.ogg), spoken
+# by Kokoro, a speech synthesizer (Kokoro-82M v1.0, Apache-2.0; run with ONNX Runtime from
+# kokoro-onnx's release of the model, MIT, downloaded once into tools/assets/.cache/kokoro). Its
+# vowels come from kagex-lipsync, as any voice's would (pip000009.lip):
+#   kagex-lipsync --cli make pip000009.ogg
+SPEECH = ("Hi again! Listen closely. When I speak with a real voice, my mouth makes the shape of every vowel I say. "
+          "Ah, ee, ooh, eh, oh. Isn't that so much better than mumbling?")
+# what Kokoro says: phonemes in misaki's notation, which Kokoro was trained on, from misaki's US
+# dictionary (A = eɪ, I = aɪ, O = oʊ, W = aʊ, Y = ɔɪ, ᵊ a short schwa, ˈ and ˌ stress the vowel after)
+SPEECH_PHONEMES = ("hˈI əɡˈɛn! lˈɪsᵊn klˈOsli. wˌɛn ˌI spˈik wɪð ɐ ɹˈiᵊl vˈYs, mI mˈWθ mˈAks ðə ʃˈAp ʌv "
+                   "ˈɛvəɹi vˈWᵊl ˌI sˈA. ˈɑ, ˈi, ˈu, ˈɛ, ˈO. ˈɪzᵊnt ðæt sˌO mˈʌʧ bˈɛɾəɹ ðən mˈʌmbᵊlɪŋ?")
+SPEECH_VOICE = "af_heart"
+KOKORO_URL = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/"
+KOKORO_FILES = ["kokoro-v1.0.onnx", "voices-v1.0.bin"]
+KOKORO_RATE = 24000
+# the model's token for each phoneme and mark English uses (its vocabulary, config.json "vocab")
+KOKORO_TOKENS = {
+    ";": 1, ":": 2, ",": 3, ".": 4, "!": 5, "?": 6, "—": 9, "…": 10, '"': 11, "(": 12, ")": 13,
+    "“": 14, "”": 15, " ": 16, "A": 24, "I": 25, "O": 31, "W": 39, "Y": 41, "ᵊ": 42, "a": 43,
+    "b": 44, "d": 46, "e": 47, "f": 48, "h": 50, "i": 51, "j": 52, "k": 53, "l": 54, "m": 55,
+    "n": 56, "o": 57, "p": 58, "s": 61, "t": 62, "u": 63, "v": 64, "w": 65, "z": 68, "ɑ": 69,
+    "ɐ": 70, "æ": 72, "ɔ": 76, "ð": 81, "ʤ": 82, "ə": 83, "ɚ": 85, "ɛ": 86, "ɜ": 87, "ɡ": 92,
+    "ɪ": 102, "ŋ": 112, "θ": 119, "ɹ": 123, "ɾ": 125, "ʃ": 131, "ʧ": 133, "ʊ": 135, "ʌ": 138,
+    "ʒ": 147, "ʔ": 148, "ˈ": 156, "ˌ": 157, "ᵻ": 177,
+}
+
+
+def make_speech():
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        sys.exit("make_pip.py speech needs ONNX Runtime (pip install onnxruntime)")
+    if not shutil.which("ffmpeg"):
+        sys.exit("make_pip.py speech needs ffmpeg (with libvorbis)")
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache", "kokoro")
+    os.makedirs(folder, exist_ok=True)
+    for name in KOKORO_FILES:
+        path = os.path.join(folder, name)
+        if not os.path.exists(path):
+            print("downloading %s%s" % (KOKORO_URL, name), flush=True)
+            with urllib.request.urlopen(KOKORO_URL + name) as r, open(path + ".part", "wb") as f:
+                shutil.copyfileobj(r, f)
+            os.replace(path + ".part", path)
+    options = ort.SessionOptions()
+    options.intra_op_num_threads = 1   # the same samples every time
+    sess = ort.InferenceSession(os.path.join(folder, KOKORO_FILES[0]), options, providers=["CPUExecutionProvider"])
+    voices = np.load(os.path.join(folder, KOKORO_FILES[1]))
+    tokens = [KOKORO_TOKENS[c] for c in SPEECH_PHONEMES]
+    style = voices[SPEECH_VOICE][len(tokens) - 1]   # a style for each length
+    y = sess.run(None, {"tokens": np.array([[0, *tokens, 0]], np.int64), "style": style,
+                        "speed": np.array([1.0], np.float32)})[0].ravel().astype(np.float64)
+    # from 60 ms before it starts to 150 ms after it ends
+    frame = KOKORO_RATE // 100
+    rms = np.sqrt(np.convolve(y ** 2, np.ones(frame) / frame, "same"))
+    loud = np.nonzero(rms > rms.max() * 0.02)[0]
+    y = y[max(0, loud[0] - int(KOKORO_RATE * 0.06)):min(len(y), loud[-1] + int(KOKORO_RATE * 0.15))]
+    # an RMS of 0.1 where it's voiced, like Pip's other lines, the peaks no higher than 0.95
+    frame = KOKORO_RATE // 50
+    rms = np.array([math.sqrt(float(np.mean(y[i:i + frame] ** 2))) for i in range(0, len(y) - frame, frame)])
+    voiced = rms[rms > rms.max() * 0.1]
+    y = y * min(0.1 / math.sqrt(float(np.mean(voiced ** 2))), 0.95 / float(np.max(np.abs(y))))
+    work = tempfile.mkdtemp(prefix="make-pip-")
+    try:
+        wav = os.path.join(work, "speech.wav")
+        with wave.open(wav, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(KOKORO_RATE)
+            w.writeframes((np.clip(y, -1, 1) * 32767).round().astype("<i2").tobytes())
+        out = os.path.join(VOICE, "pip000009.ogg")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "4",
+                        "-fflags", "+bitexact", "-flags:a", "+bitexact", "-map_metadata", "-1", out], check=True)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    print("speech: %.1f s, %s (now make its vowels: kagex-lipsync --cli make pip000009.ogg)" % (len(y) / KOKORO_RATE, SPEECH), flush=True)
+
+
 def main():
     what = sys.argv[1:] or ["art", "voice"]
     for w in what:
-        {"art": make_art, "voice": make_voice}[w]()
+        {"art": make_art, "voice": make_voice, "speech": make_speech}[w]()
 
 
 if __name__ == "__main__":

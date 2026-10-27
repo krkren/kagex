@@ -8,12 +8,13 @@
 #   cmake --preset linux            (windows: from a Developer Command Prompt; macos: Apple Silicon)
 #   cmake --build --preset linux-rel
 #
-# The output is build/<preset>/Release/kagex-release(.exe), one file with the screen embedded.
+# The output is build/<preset>/Release/kagex-release(.exe), one file with the screen embedded, and
+# beside it kagex-lipsync(.exe) with its lipsync/ folder (../lipsync; -DKAGEX_LIPSYNC=OFF leaves it out).
 # KRKRZ_TOOLS_DIR is krkrz_tools; by default the one in ../krkrz_dev next to this repository.
 #---------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.21)
 
-project(kagex_release VERSION 0.10.0 LANGUAGES C CXX)
+project(kagex_release VERSION 0.11.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,8 +57,8 @@ else()
     message(STATUS "xp3crypt not found at ${XP3CRYPT_DIR}: archive encryption off (set XP3CRYPT_DIR)")
 endif()
 
-add_executable(kagex-release
-    src/main.cpp
+# Everything but the command line and the window, which kagex-lipsync (../lipsync) uses too
+add_library(kagex_release_core STATIC
     src/Settings.cpp
     src/Project.cpp
     src/Host.cpp
@@ -69,11 +70,15 @@ add_executable(kagex-release
     src/Build.cpp
     src/Encrypt.cpp
     src/Media.cpp
+    src/Layered.cpp
     src/Keys.cpp
     src/Sign.cpp
     src/Scripts.cpp
     src/Scenes.cpp
+    src/LipTracks.cpp
 )
+add_executable(kagex-release src/main.cpp)
+target_link_libraries(kagex-release PRIVATE kagex_release_core)
 find_package(ZLIB REQUIRED)
 # dr_flac (FLAC sources; header only)
 find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h" REQUIRED)
@@ -82,19 +87,21 @@ find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h" REQUIRED)
 find_path(LIBTOMCRYPT_INCLUDE_DIR tomcrypt.h REQUIRED)
 find_library(LIBTOMCRYPT_LIBRARY tomcrypt REQUIRED)
 find_library(LIBTOMMATH_LIBRARY tommath REQUIRED)
-target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS} ${LIBTOMCRYPT_INCLUDE_DIR})
-target_compile_definitions(kagex-release PRIVATE LTM_DESC)
-target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop krt_sig
-    ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
+target_include_directories(kagex_release_core PUBLIC src ${DRLIBS_INCLUDE_DIRS} ${LIBTOMCRYPT_INCLUDE_DIR})
+target_compile_definitions(kagex_release_core PUBLIC LTM_DESC)
+# psdparse and clipparse (krkrz_tools' submodules, the libraries the psdfile and clipfile plugins
+# wrap): splitting .psd and .clip files into layer pictures (src/Layered.cpp)
+target_link_libraries(kagex_release_core PUBLIC krt_app krt_xp3 krt_audio krt_image krt_loop krt_sig
+    psdparse clipparse ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
 if(_have_xp3crypt)
-    target_link_libraries(kagex-release PRIVATE xp3crypt_lib)
-    target_compile_definitions(kagex-release PRIVATE KR_HAVE_XP3CRYPT)
+    target_link_libraries(kagex_release_core PUBLIC xp3crypt_lib)
+    target_compile_definitions(kagex_release_core PUBLIC KR_HAVE_XP3CRYPT)
 endif()
-target_compile_definitions(kagex-release PRIVATE KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(kagex_release_core PUBLIC KAGEX_RELEASE_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     # the exe's icon and version info (Windows resource APIs)
-    target_link_libraries(kagex-release PRIVATE krt_release)
-    target_compile_definitions(kagex-release PRIVATE KR_HAVE_RELEASE_LIB)
+    target_link_libraries(kagex_release_core PUBLIC krt_release)
+    target_compile_definitions(kagex_release_core PUBLIC KR_HAVE_RELEASE_LIB)
 endif()
 # Encrypting compiled scenarios and writing the game's key into the scnfile plugin: scnfile's own
 # code (https://github.com/krkren/scnfile, plugins/scnfile), by default from ../scnfile next to
@@ -103,16 +110,16 @@ get_filename_component(_scnfile_default "${_kagex_root}/../scnfile" ABSOLUTE)
 set(SCNFILE_DIR "${_scnfile_default}" CACHE PATH "scnfile (for encrypting compiled scenarios; optional)")
 if(EXISTS "${SCNFILE_DIR}/plugins/scnfile/seal.cpp")
     set(_scn "${SCNFILE_DIR}/plugins/scnfile")
-    target_sources(kagex-release PRIVATE "${_scn}/seal.cpp" "${_scn}/seal_random.cpp" "${_scn}/psb.cpp")
+    target_sources(kagex_release_core PRIVATE "${_scn}/seal.cpp" "${_scn}/seal_random.cpp" "${_scn}/psb.cpp")
     # one Monocypher in the tool: xp3crypt_core has its own copy (the same 4.x API), and two
     # copies' symbols clash at link time
     if(NOT _have_xp3crypt)
-        target_sources(kagex-release PRIVATE "${_scn}/monocypher/monocypher.c")
+        target_sources(kagex_release_core PRIVATE "${_scn}/monocypher/monocypher.c")
     endif()
-    target_include_directories(kagex-release PRIVATE "${_scn}")
-    target_compile_definitions(kagex-release PRIVATE KR_HAVE_SCNFILE SCNFILE_HAVE_ZLIB)
+    target_include_directories(kagex_release_core PUBLIC "${_scn}")
+    target_compile_definitions(kagex_release_core PUBLIC KR_HAVE_SCNFILE SCNFILE_HAVE_ZLIB)
     if(WIN32)
-        target_link_libraries(kagex-release PRIVATE bcrypt)
+        target_link_libraries(kagex_release_core PUBLIC bcrypt)
     endif()
     message(STATUS "kagex-release: encrypting scenarios with scnfile from ${SCNFILE_DIR}")
 else()
@@ -134,7 +141,7 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/KagexWebJs.h.tmp"
     "static const unsigned char kKagexWebJs[] = { ${_webjs_bytes} };\n")
 # copied only when it changed, so a configure doesn't rebuild Build.cpp for nothing
 configure_file("${CMAKE_CURRENT_BINARY_DIR}/KagexWebJs.h.tmp" "${CMAKE_CURRENT_BINARY_DIR}/generated/KagexWebJs.h" COPYONLY)
-target_include_directories(kagex-release PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_include_directories(kagex_release_core PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 # The screen: appserve's client library and web/, zipped into the exe
 set(_stage "${CMAKE_CURRENT_BINARY_DIR}/web")
@@ -149,3 +156,9 @@ foreach(_f IN LISTS _libfiles)
     configure_file("${_lib}/${_f}" "${_stage}/lib/${_f}" COPYONLY)
 endforeach()
 appserve_embed_web(kagex-release WEB_DIR "${_stage}" NAME kagex_release_web)
+
+# kagex-lipsync, beside kagex-release: the mouths' vowels for the voices a game picks
+option(KAGEX_LIPSYNC "Build kagex-lipsync (../lipsync) too" ON)
+if(KAGEX_LIPSYNC)
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../lipsync" lipsync-build)
+endif()
