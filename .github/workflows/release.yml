@@ -25,8 +25,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.9.1"
-  KAGEX_SHA: 1a6d8c176bc0024696dda4c7b522f83958376539
+  RELEASE_TAG: "0.9.2"
+  KAGEX_SHA: c4ec1aee1f62f1282e6cae3488d47b71e20c9977
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -34,7 +34,7 @@ env:
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
   # kagex's own plugins, built into the engines (as platforms.yml pins them): xp3crypt
   # (encrypted data.xp3, built into the engine) and scnfile (compiled scenarios, a plugin)
-  XP3CRYPT_SHA: bda2affc0594ab6f07655d913fbb41bf99d78b84
+  XP3CRYPT_SHA: bce47103c73374c583068c07a4945e63e3888fe6
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
 
 jobs:
@@ -601,11 +601,14 @@ jobs:
           build encrypted
           python3 - <<'EOF'
           import glob, json, re, sys
-          # stored uncompressed, so an unencrypted script would show in the archive as it is
-          xp3 = glob.glob("game/release-encrypted/*-linux/data.xp3")
-          data = open(xp3[0], "rb").read() if xp3 else b""
+          # stored uncompressed, so an unencrypted script would show in an archive as it is: data.xp3
+          # and the media archives beside it (scenario.xp3...)
+          arcs = sorted(glob.glob("game/release-encrypted/*-linux/*.xp3"))
+          data = b"".join(open(a, "rb").read() for a in arcs)
           leak = [w for w in (b"sf.software_title", b"KAGLinkPlugin", b"macro name") if w in data]
-          print("data.xp3:", len(data), "bytes; plain text found:", leak or "none")
+          print("archives:", " ".join(a.rsplit("/", 1)[1] for a in arcs), len(data), "bytes; plain text found:", leak or "none")
+          if not any(a.endswith("/data.xp3") for a in arcs) or not any(a.endswith("/bgimage.xp3") for a in arcs):
+              sys.exit("no data.xp3 and bgimage.xp3: the desktop build should be split")
           # what the build says it did
           t = open("results/build-encrypted.json").read()
           prot = json.loads(t[re.search(r"^\{", t, re.M).start():]).get("protection", {})
@@ -631,12 +634,44 @@ jobs:
           print("protection:", prot)
           sys.exit(0 if prot.get("archive") == "encrypted, names hidden" and prot.get("scenes") == "encrypted" else 1)
           EOF
-          ls -la game/release-hidden/*-linux game/release-hidden/*-linux/data | tee results/hidden-names.txt
-          test -f game/release-hidden/*-linux/data.xpc
-          test "$(ls game/release-hidden/*-linux/data)" = startup.tjs
+          ls -la game/release-hidden/*-linux | tee results/hidden-names.txt
+          # data.xp3 and the media archives, every name in them hashed but data.xp3's startup.tjs,
+          # and no data folder or data.xpc
+          test -f game/release-hidden/*-linux/data.xp3
+          test -f game/release-hidden/*-linux/bgimage.xp3
+          test ! -e game/release-hidden/*-linux/data
+          test ! -e game/release-hidden/*-linux/data.xpc
+          python3 - <<'EOF' | tee -a results/hidden-names.txt
+          import glob, re, sys, zlib
+          def names(path):
+              d = open(path, "rb").read()
+              ofs = int.from_bytes(d[11:19], "little")
+              while d[ofs] & 0x80:   # the "continue" header of the cushion form
+                  ofs = int.from_bytes(d[ofs + 9:ofs + 17], "little")
+              flag, n = d[ofs], int.from_bytes(d[ofs + 1:ofs + 9], "little")
+              index = zlib.decompress(d[ofs + 17:ofs + 17 + n]) if flag & 7 == 1 else d[ofs + 9:ofs + 9 + n]
+              out, i = [], 0
+              while i + 12 <= len(index):
+                  size = int.from_bytes(index[i + 4:i + 12], "little")
+                  body, j = index[i + 12:i + 12 + size], 0
+                  while j + 12 <= len(body):
+                      sz = int.from_bytes(body[j + 4:j + 12], "little")
+                      if body[j:j + 4] == b"info":
+                          k = int.from_bytes(body[j + 32:j + 34], "little")
+                          out.append(body[j + 34:j + 34 + k * 2].decode("utf-16-le"))
+                      j += 12 + sz
+                  i += 12 + size
+              return out
+          bad = {}
+          for a in sorted(glob.glob("game/release-hidden/*-linux/*.xp3")):
+              plain = [n for n in names(a) if not re.fullmatch(r"[0-9a-f]{32}", n)]
+              print(a.rsplit("/", 1)[1], len(names(a)), "names, kept:", plain)
+              if plain != (["startup.tjs"] if a.endswith("/data.xp3") else []): bad[a] = plain
+          sys.exit("names not hidden: %s" % bad if bad else 0)
+          EOF
           # signed as well (the keys file has the signing key too): every protection at once, then
           # signed and encrypted without the names hidden. The Linux test runs must report the
-          # signatures verified (SignatureCheck.tjs checks data.xpc and its bootstrap, or data.xp3)
+          # signatures verified (SignatureCheck.tjs checks data.xp3, then each media archive)
           signed() {  # signed <name> <hide names: 0|1>
             python3 - "$1" "$2" <<'EOF'
           import json, sys
@@ -660,10 +695,12 @@ jobs:
           EOF
           }
           signed signed 1
-          test -f game/release-signed/*-linux/data.xpc.sig
-          test -f game/release-signed/*-linux/data/startup.tjs.sig
+          test -f game/release-signed/*-linux/data.xp3.sig
+          test -f game/release-signed/*-linux/bgimage.xp3.sig
+          test ! -e game/release-signed/*-linux/data
           signed signed-xp3 0
           test -f game/release-signed-xp3/*-linux/data.xp3.sig
+          test -f game/release-signed-xp3/*-linux/voice.xp3.sig
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-engine-packages
