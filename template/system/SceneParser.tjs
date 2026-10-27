@@ -17,6 +17,12 @@
 // the World then (exits); a script reached that way from scripts that all leave the same
 // World starts from it, otherwise from an empty World. compileAll compiles a script again
 // when its entry state has changed, until they all hold (entryFor, doc/scn.txt).
+//
+// A game in more than one language (KAGLanguageList, Language.tjs) has its other languages
+// built into each compiled file, as Wamsoft's multi-language games do: each script's
+// translation into a language, lang/<code>/scenario/<script> (a copy of the script with the
+// text in that language), is compiled too, and its texts, display names, choices and titles go
+// into the script's, scene by scene (addLanguages, doc/scn.txt "Languages").
 
 // Text flags (KAGEnvPlayer.TEXTFLAG_*)
 var SCN_TEXTFLAG_LINE   = 0x01;
@@ -27,8 +33,9 @@ var SCN_TEXTFLAG_STAGE  = 0x10;
 var SCN_TEXTFLAG_NOTEXT = 0x20;
 var SCN_TEXTFLAG_CONT   = 0x40;
 
-// Compiled format version, part of every compiled file's source key (2: exits and entry)
-var SCN_FORMAT_VERSION = 2;
+// Compiled format version, part of every compiled file's source key (2: exits and entry; 3: a
+// game's other languages in its texts, choices and titles)
+var SCN_FORMAT_VERSION = 3;
 
 // FNV-1a over a string, as 8 hex digits
 function scnHashString(s)
@@ -39,6 +46,64 @@ function scnHashString(s)
 		h = ((h ^ #s.charAt(i)) * 16777619) & 0xffffffff;
 	}
 	return "%08x".sprintf(h);
+}
+
+/**
+ * A compiled text as plain text: without its escapes (\\, \%, \[ and \k), font commands
+ * (%<size>, %r) and ruby, new lines as spaces. With ruby, what is read out: each ruby in place
+ * of the characters it goes with ([ruby] before one character, [ruby,n] before n + 1, as the
+ * scene player draws them)
+ */
+function scnPlainText(t, ruby = false)
+{
+	var l = t.length, ret = "", i = 0, covered = 0;
+	while (i < l) {
+		var ch = t.charAt(i++);
+		if (ch == "\\") {
+			ch = i < l ? t.charAt(i++) : "";
+			if (ch != "\\" && ch != "%" && ch != "[") continue;
+		} else if (ch == "%") {
+			if (i < l && /[0-9]/.test(t.charAt(i))) {
+				while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+			} else {
+				i++;
+			}
+			continue;
+		} else if (ch == "[") {
+			var r = "";
+			while (i < l && (ch = t.charAt(i++)) != "]") r += ch;
+			if (ruby) {
+				var p = r.indexOf(",");
+				covered = (p >= 0 ? +r.substr(p + 1) : 0) + 1;
+				ret += p >= 0 ? r.substr(0, p) : r;
+			}
+			continue;
+		} else if (ch == "\n") {
+			ch = " ";
+		}
+		if (covered > 0) {
+			covered--;
+			continue;
+		}
+		ret += ch;
+	}
+	return ret;
+}
+
+// A text's entry for one language, as Wamsoft's multi-language scenes have it: [display name,
+// text, length, speech text (ruby read out), search text (as it's shown)]
+function scnLanguageEntry(disp, text)
+{
+	var search = scnPlainText(text);
+	return [ disp, text, search.length, scnPlainText(text, true), search ];
+}
+
+// A choice's text in one language: %[text, speechtext, searchtext, textlength]
+function scnChoiceEntry(text)
+{
+	var shown = text.charAt(0) == "@" ? text.substr(1) : text; // @: a choice without a frame
+	var search = scnPlainText(shown);
+	return %[ text:text, speechtext:scnPlainText(shown, true), searchtext:search, textlength:search.length ];
 }
 
 /**
@@ -491,6 +556,13 @@ class SceneParser
 		throw new Exception("%s(%d): %s".sprintf(cstorage, cline + 1, msg));
 	}
 
+	// A problem with a file as a whole (a translation)
+	function warnFile(file, msg) {
+		var w = file + ": " + msg;
+		warnings.add(w);
+		dm("warning: " + w);
+	}
+
 	// ------------------------------------------------------------------
 	// Settings: macros and options
 	// ------------------------------------------------------------------
@@ -748,12 +820,148 @@ class SceneParser
 		return root;
 	}
 
-	// The key of everything a script's compile depends on
+	// The key of everything a script's compile depends on: with more than one language, its
+	// translations too
 	function sourceKey(storage) {
 		var key = "%d:%s:%s".sprintf(SCN_FORMAT_VERSION, macroKey, fileHash(storage));
 		key += ":" + fileHash("envinit.tjs");
 		key += ":" + fileHash("charinit.csv") if Storages.isExistentStorage("charinit.csv");
+		var langs = otherLanguages;
+		if (langs.count > 0) {
+			key += ":" + KAGLanguage.source;
+			for (var i = 0; i < langs.count; i++) {
+				var t = translationOf(storage, langs[i]);
+				key += "," + langs[i] + "=" + (t !== void ? fileHash(t) : "-");
+			}
+		}
 		return key;
+	}
+
+	// ------------------------------------------------------------------
+	// Languages (doc/scn.txt, "Languages")
+	// ------------------------------------------------------------------
+
+	// The game's languages after the one its scripts are written in (KAGLanguageList)
+	property otherLanguages {
+		getter() {
+			var ret = [];
+			if (global.KAGLanguage !== void)
+				for (var i = 1; i < KAGLanguage.list.count; i++) ret.add(KAGLanguage.list[i]);
+			return ret;
+		}
+	}
+
+	// Where a script's translation into a language goes: lang/<code>/scenario/<script>
+	function translationName(storage, lang) {
+		return "lang/" + lang + "/scenario/" + Storages.extractStorageName(storage);
+	}
+
+	// A script's translation into a language: in the game's data, or a zip patch with a lang/
+	// folder (the last first); void when there's none. Not isExistentStorage, which finds a
+	// missing lang/ja/scenario/char.ks as the script itself (KAGStorageAt)
+	function translationOf(storage, lang) {
+		var roots = typeof global.KAGLanguageRoots != "undefined" ? KAGLanguageRoots : [ "" ];
+		var name = translationName(storage, lang);
+		for (var i = roots.count - 1; i >= 0; i--) {
+			if (KAGStorageAt(roots[i] + name, name)) return roots[i] + name;
+		}
+	}
+
+	// A scene's choices ([seladd], [mseladd]), in order
+	function choicesOf(scene) {
+		var ret = [];
+		var nexts = scene.nexts;
+		for (var i = 0; nexts !== void && i < nexts.count; i++) {
+			if (nexts[i].type == 1 || nexts[i].type == 2) ret.add(nexts[i]);
+		}
+		return ret;
+	}
+
+	// Why a scene's translation doesn't fit it, text for text (void when it does): a translation
+	// has the texts of its script, in the same order, each said by the same character
+	function translationMismatch(s, ts) {
+		var label = s.label != "" ? s.label : "the start";
+		if (ts === void) return "it has no " + label;
+		if (ts.texts.count != s.texts.count)
+			return "%s has %d texts in it, %d in the script".sprintf(label, ts.texts.count, s.texts.count);
+		for (var j = 0; j < s.texts.count; j++) {
+			var a = s.texts[j][0], b = ts.texts[j][0];
+			if (a != b) return "text %d of %s is %s's in it, %s's in the script (line %d)".sprintf(j + 1, label,
+				b != "" ? b : "nobody", a != "" ? a : "nobody", s.lines.count > 0 ? textLineOf(s, j + 1) + 1 : 0);
+		}
+		var c = choicesOf(s).count, tc = choicesOf(ts).count;
+		if (c != tc) return "%s has %d choices in it, %d in the script".sprintf(label, tc, c);
+	}
+
+	// The line a text of a scene comes from (its save point's)
+	function textLineOf(scene, id) {
+		var lines = scene.lines;
+		for (var i = 0; i < lines.count; i++) {
+			var l = lines[i];
+			if (typeof l == "Object" && l instanceof "Array" && typeof l[0] == "Integer" && l[2] === id) return l[4];
+		}
+		return scene.firstLine;
+	}
+
+	/**
+	 * Puts a script's translations into its compiled data, as Wamsoft's multi-language scenes
+	 * have them: languages lists the other languages' codes, and a text's display name and text
+	 * become a list of entries, the source language's first, each [display name, text, length,
+	 * speech text, search text]; a choice gets language, a list of %[text, speechtext,
+	 * searchtext, textlength] (void first: the source language's is its text); a title becomes a
+	 * list. A translation is matched scene by scene (by label), then text by text and choice by
+	 * choice; a scene it doesn't fit (translationMismatch), and every scene of a language without
+	 * a translation, keeps the source language's text in that language.
+	 * @param langs the other languages
+	 * @param translated each one's translation compiled (compileScript), or void
+	 * @param names where each one's translation is
+	 */
+	function addLanguages(root, langs, translated, names) {
+		root.languages = [];
+		root.languages.assign(langs);
+		var maps = [];
+		for (var k = 0; k < langs.count; k++) {
+			var m = void, t = translated[k];
+			if (t !== void) {
+				m = %[];
+				for (var i = 0; i < t.scenes.count; i++) m[t.scenes[i].label] = t.scenes[i];
+			}
+			maps.add(m);
+		}
+		for (var si = 0; si < root.scenes.count; si++) {
+			var s = root.scenes[si];
+			var texts = s.texts;
+			var entries = [];
+			for (var j = 0; j < texts.count; j++) entries.add([ scnLanguageEntry(texts[j][1], texts[j][2]) ]);
+			var titles = [ s.title ];
+			var choices = choicesOf(s);
+			var choiceEntries = [];
+			for (var c = 0; c < choices.count; c++) choiceEntries.add([ void ]);
+			for (var k = 0; k < langs.count; k++) {
+				var ts = void;
+				if (maps[k] !== void) {
+					ts = maps[k][s.label];
+					var why = translationMismatch(s, ts);
+					if (why !== void) {
+						warnFile(names[k], why + ", so that scene is shown as written in " + langs[k]);
+						ts = void;
+					}
+				}
+				titles.add(ts !== void ? ts.title : s.title);
+				for (var j = 0; j < texts.count; j++) {
+					var t = ts !== void ? ts.texts[j] : texts[j];
+					entries[j].add(scnLanguageEntry(t[1], t[2]));
+				}
+				var tc = ts !== void ? choicesOf(ts) : choices;
+				for (var c = 0; c < choices.count; c++) choiceEntries[c].add(scnChoiceEntry((string)tc[c].text));
+			}
+			for (var j = 0; j < texts.count; j++) {
+				var t = texts[j];
+				texts[j] = [ t[0], entries[j], t[3], t[4], t[5] ];
+			}
+			for (var c = 0; c < choices.count; c++) choices[c].language = choiceEntries[c];
+			s.title = titles;
+		}
 	}
 
 	function fileHash(storage) {
@@ -870,13 +1078,47 @@ class SceneParser
 	var lastDisp;
 
 	/**
-	 * Compiles a script
+	 * Compiles a script, with its translations into the game's other languages
 	 * @param entry the World it starts from (entryFor), or void for an empty one
 	 */
 	function compile(storage, entry) {
+		var wcount = warnings.count;
+		var root = compileScript(storage, entry);
+		var langs = otherLanguages;
+		if (langs.count > 0) {
+			// each translation, from the same World (its exits and its key are the script's)
+			var translated = [], names = [];
+			for (var i = 0; i < langs.count; i++) {
+				var path = translationOf(storage, langs[i]), t = void;
+				names.add(path !== void ? path : translationName(storage, langs[i]));
+				if (path === void) {
+					warnFile(storage, "no translation into " + langs[i] + " (" + names[i] + "), so it's shown as written in " + langs[i]);
+				} else {
+					try {
+						t = compileScript(path, entry);
+					} catch (e) {
+						var w = e.message + " (so the translation isn't used, and the script is shown as written in " + langs[i] + ")";
+						warnings.add(w);
+						dm("warning: " + w);
+					}
+				}
+				translated.add(t);
+			}
+			cstorage = storage;
+			cline = 0;
+			addLanguages(root, langs, translated, names);
+		}
+		cwarnings = warnings.count - wcount;
+		return root;
+	}
+
+	/**
+	 * Compiles one script (a script, or its translation)
+	 * @param entry the World it starts from, or void for an empty one
+	 */
+	function compileScript(storage, entry) {
 		cstorage = storage;
 		cline = 0;
-		var wcount = warnings.count;
 		scenes = [];
 		scene = void;
 		dead = false;
@@ -939,7 +1181,6 @@ class SceneParser
 			d.nexts = s.nexts if s.nexts.count > 0;
 			root.scenes.add(d);
 		}
-		cwarnings = warnings.count - wcount;
 		return root;
 	}
 

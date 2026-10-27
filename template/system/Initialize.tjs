@@ -706,6 +706,10 @@ KAGLinkPlugin("plugin/minizip.dll") if typeof Storages.mountZip == "undefined";
 // archives, the engine and the patches before kag.process at the very end).
 KAGLinkPlugin("plugin/sigcheck.dll") if (global.KAGSigned === true && typeof global.Window.checkSignature == "undefined");
 var KAGPatchZips = [];  // the zip files mounted, in order
+// Where a language's folder (lang/<code>/) can be: the game's data, then each zip patch that has
+// one. KAGLanguage (Language.tjs) puts the shown language's folders on the search path after
+// every other path, so a zip patch's lang/ folders aren't searched like its other folders
+var KAGLanguageRoots = [ global.kagexHashedArchive ];
 function KAGMountPatchZip(storage) {
 	if (global.KAGSigned === true && global.KAGSignedMountOK !== true) {
 		dm("Refused to mount an unverified patch in a signed build: " + storage + " (signed DLC uses KAGMountSignedPatchZip)");
@@ -732,19 +736,25 @@ function KAGMountPatchZip(storage) {
 		dm("Could not mount " + storage);
 		return false;
 	}
-	// the root, then every folder in it (an entry's parents too: not every zip lists folders)
-	var root = "zip://" + name + "/", folders = %[], order = [];
+	// the root, then every folder in it (an entry's parents too: not every zip lists folders),
+	// but lang/ and the language folders in it: those are the languages' (KAGLanguageRoots)
+	var root = "zip://" + name + "/", folders = %[], order = [], langs = false;
 	Storages.addAutoPath(root);
 	for (var i = 0; i < files.count; i++) {
 		var path = files[i].filename.replace(/\\/g, "/");
 		for (var at = path.indexOf("/"); at > 0; at = path.indexOf("/", at + 1)) {
 			var dir = path.substring(0, at + 1);
+			if (dir.substring(0, 5) == "lang/") { langs = true; continue; }
 			if (folders[dir] === void) folders[dir] = true, order.add(dir);
 		}
 	}
 	order.sort();
 	for (var i = 0; i < order.count; i++) Storages.addAutoPath(root + order[i]);
 	KAGPatchZips.add(storage);
+	if (langs) {
+		KAGLanguageRoots.add(root);
+		if (typeof global.KAGLanguage == "Object") KAGLanguage.applyPaths(), KAGLanguage.loadTable();
+	}
 	dm("Patch mounted: " + storage + " (" + files.count + " files)");
 	return true;
 }
@@ -891,6 +901,19 @@ if(typeof global.config_version == "undefined" || config_version != kagVersion)
 	KAGLoadScript("UpdateConfig.tjs");
 
 }
+
+
+
+/*
+
+	Languages (Language.tjs): the ones Config.tjs lists (KAGLanguageList, the source language
+	first), shown in the one the system prefers until the window reads the player's choice
+
+*/
+
+KAGLoadScript("Language.tjs");
+KAGLanguage = new KAGLanguageManager(typeof global.KAGLanguageList == "String" ? global.KAGLanguageList : "en");
+KAGLanguage.set(KAGLanguage.preferred(), false);
 
 
 

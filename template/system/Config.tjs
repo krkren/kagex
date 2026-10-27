@@ -50,6 +50,15 @@
 
 ;System.graphicCacheLimit = gcsAuto; // Graphic cache limit
 
+// ◆ Languages
+// The languages the game can be shown in, as language codes ("en", "ja", "zh-tw"...), the
+// first the one its scenarios are written in. Each other language reads its strings and
+// images from data/lang/<code>/ (doc/kagex.txt, "Languages"). The player switches with F9,
+// the controller's L2 or the Config screen, and the choice is saved; until then the game
+// follows the system (System.uiLanguage, then System.uiLanguageCandidates).
+// A game written in English that also has data/lang/ja/ would list "en,ja".
+;global.KAGLanguageList = "en";
+
 
 
 

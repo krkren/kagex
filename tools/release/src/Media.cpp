@@ -630,10 +630,13 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 	for (auto& t : threads) t.join();
 	if (progress.canceled()) { error = "Canceled"; return false; }
 
-	// put the results in place of the sources, first come first served for each name
+	// put the results in place of the sources, first come first served for each name. Files of the
+	// same name in different folders (a language's folder, lang/<code>/, standing in for
+	// image/'s) become the same new name, as they had the same name before
 	std::map<std::string, std::string> renamed;   // lower old leaf -> new leaf (for the scripts)
-	std::set<std::string> taken;                  // lower leaves in the stage after this
-	for (const auto& f : files) taken.insert(lower(f.leaf));
+	std::map<std::string, int> taken;             // lower leaves in the stage after this, and how many have each
+	std::map<std::string, std::map<std::string, int>> made;   // lower new leaf -> the lower old leaves made into it, how many each
+	for (const auto& f : files) ++taken[lower(f.leaf)];
 	int failed = 0;
 	for (auto& j : jobs) {
 		if (j.skipped) continue;
@@ -645,11 +648,15 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		if (j.cached) ++result.fromCache;
 		const std::string leaf = leafOf(j.name), stem = stemOf(leaf);
 		const fs::path dir = j.source.parent_path();
-		// names the outputs would take, which no other file may have
+		// names the outputs would take, which no other file may have (but one converted from a
+		// file of the same name)
 		bool clash = false;
 		for (const auto& o : j.outputs) {
 			const std::string nl = lower(stem + o.first);
-			if (nl != lower(leaf) && taken.count(nl)) clash = true;
+			if (nl == lower(leaf)) continue;
+			const auto t = taken.find(nl);
+			const int same = made.count(nl) && made[nl].count(lower(leaf)) ? made[nl][lower(leaf)] : 0;
+			if (t != taken.end() && t->second > same) clash = true;
 		}
 		if (clash) {
 			result.notes.push_back(j.name + " was kept as it is: another file already has the name it would get");
@@ -657,13 +664,14 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		}
 		const uint64_t before = fs::file_size(j.source, ec);
 		fs::remove(j.source, ec);
-		taken.erase(lower(leaf));
+		if (--taken[lower(leaf)] <= 0) taken.erase(lower(leaf));
 		uint64_t after = 0;
 		for (const auto& o : j.outputs) {
 			const fs::path to = dir / krt::toPath(stem + o.first);
 			if (!replaceStaged(to, o.second, error)) return false;
 			after += fs::file_size(to, ec);
-			taken.insert(lower(stem + o.first));
+			++taken[lower(stem + o.first)];
+			++made[lower(stem + o.first)][lower(leaf)];
 		}
 		result.bytesBefore += before;
 		result.bytesAfter += after;

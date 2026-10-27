@@ -1162,6 +1162,26 @@ class KAGWindow extends Window
 
 	}
 
+
+
+	// The page name in every language, by code: a compiled scenario's titles (doc/scn.txt,
+
+	// "Languages"); void otherwise
+
+	var _currentPageNames;
+
+	property currentPageNames {
+
+		getter() {
+
+			var ret = forEachFunctionHook("getCurrentPageNames");
+
+			return ret !== void ? ret : _currentPageNames;
+
+		}
+
+	}
+
 	
 
 	var currentRecordName = ""; // Current record name (trail_storage_label)
@@ -2180,6 +2200,12 @@ class KAGWindow extends Window
 
 		stableHandlers.add(defaultStableHandler);
 
+		// Languages (Language.tjs): this window draws itself again in another one
+		if (global.KAGLanguage !== void) {
+			KAGLanguage.addListener(this);
+			stableHandlers.add(languageStableHandler);
+		}
+
 		runHandlers.add(defaultRunHandler);
 
 
@@ -2883,7 +2909,9 @@ class KAGWindow extends Window
 
 		// X (□) shows the message history and Y (△) switches auto mode. R1 skips to the next
 
-		// choice or unread text, and holding R2 skips like Ctrl. createPadKeyMap adds the stick.
+		// choice or unread text, and holding R2 skips like Ctrl. L2 shows the game in its next
+
+		// language, as F9 does (KAGLanguageList). createPadKeyMap adds the stick.
 
 		// If a function is specified, that function is called when the button is pressed.
 
@@ -2906,6 +2934,8 @@ class KAGWindow extends Window
 		VK_PAD4 =>			switchAutoModeByKey, // Y
 
 		VK_PAD6 =>			skipToNextStopByKey, // R1
+
+		VK_PAD7 =>			switchLanguageByKey, // L2: the next language (Language.tjs)
 
 		VK_PAD8 =>			VK_CONTROL, // R2: held, skips like Ctrl (getKeyState reads it through padKeyMapReverse)
 
@@ -5391,6 +5421,12 @@ class KAGWindow extends Window
 
 		// (Excluding full-screen related)
 
+		// The language the player chose (Language.tjs); without one, the system's stays
+		if (global.KAGLanguage !== void && typeof scflags.language == "String" && KAGLanguage.has(scflags.language)) {
+			KAGLanguage.chosen = true;
+			KAGLanguage.set(scflags.language, false);
+		}
+
 		if(scflags.autoModePageWait !== void)
 
 		{
@@ -5781,6 +5817,9 @@ class KAGWindow extends Window
 
 
 
+		// The language, when the player chose one (otherwise the game follows the system's)
+		if (global.KAGLanguage !== void) scflags.language = KAGLanguage.chosen ? KAGLanguage.current : void;
+
 		// Full-screen
 
 		scflags.fullScreen = fullScreened;
@@ -6083,6 +6122,8 @@ class KAGWindow extends Window
 
 		// [end_store_vars]
 
+		f.currentPageNames = currentPageNames; // the page name in every language (Language.tjs)
+
 
 
 		// Several things not automatically processed by the perl script.
@@ -6384,6 +6425,8 @@ class KAGWindow extends Window
 		currentPageName = f.currentPageName if f.currentPageName !== void;
 
 		// [end_restore_vars]
+
+		_currentPageNames = f.currentPageNames;
 
 
 
@@ -7283,7 +7326,18 @@ class KAGWindow extends Window
 
 	//                                                                     Index tag         Value when data does not exist
 
-	function getBookMarkPageName      (num) { return getBookMarkIndex(num, "Name",           "(Not set)"); } // Get bookmark name of bookmark num
+	function getBookMarkPageName      (num) { // Get bookmark name of bookmark num: in the language shown, when the save has it (Language.tjs)
+
+		var names = getBookMarkIndex(num, "Names", void);
+
+		if (typeof names == "Object" && names !== null && global.KAGLanguage !== void && typeof names[KAGLanguage.current] == "String")
+
+			return names[KAGLanguage.current];
+
+		return getBookMarkIndex(num, "Name", tr("(Not set)"));
+
+	}
+
 
 	function getBookMarkDate          (num) { return getBookMarkIndex(num, "Date",           void);        } // Get date of bookmark num
 
@@ -7748,6 +7802,8 @@ class KAGWindow extends Window
 			var set = setBookMarkIndex;
 
 			set(num, "Name",     dic.currentPageName);
+
+			set(num, "Names",    dic.currentPageNames); // in every language (getBookMarkPageName)
 
 			set(num, "Storage",  dic.currentStorage);
 
@@ -9917,6 +9973,8 @@ class KAGWindow extends Window
 
 			currentPageName = page;
 
+			_currentPageNames = void;
+
 		}
 
 		if(page !== void)
@@ -10888,14 +10946,19 @@ class KAGWindow extends Window
 		}
 	}
 	
-	// Name drawing process. Also registered to history
-	function drawName(name, nextVoice) {
+	// Name drawing process. Also registered to history. names: the name in every language, by
+	// code, for drawing it again in another (a compiled scenario's, Language.tjs); void otherwise
+	function drawName(name, nextVoice, names) {
 		//dm("Voice state updated!:" + name + ":" + nextVoice);
 		currentVoice = [] if (currentVoice === void);
 		currentVoice.assign(nextVoice) if (nextVoice !== void);
 		if (textWriteEnabled) {
+			current.setNameSource(names) if names !== void;
 			current.processName(name);
-			if(currentWithBack) current.comp.processName(name);
+			if(currentWithBack) {
+				current.comp.setNameSource(names) if names !== void;
+				current.comp.processName(name);
+			}
 		}
 		// For history
 		if (historyWriteEnabled) {
@@ -12903,6 +12966,13 @@ class KAGWindow extends Window
 			}
 		}
 
+		if(key == VK_F9 && shift == 0)
+		{
+			// The next language (Language.tjs)
+			switchLanguageByKey();
+			return;
+		}
+
 		if(key == #'R' || (shift == ssShift && key == VK_UP))
 		{
 			// Show message history
@@ -13003,6 +13073,188 @@ class KAGWindow extends Window
 	function switchAutoModeByKey()
 	{
 		menuItemClickByKey("autoModeMenuItem");
+	}
+
+	//--------------------------------------------------- Languages (Language.tjs) --
+
+	// F9 and the controller's L2: the game in its next language (KAGLanguageList)
+	function switchLanguageByKey()
+	{
+		if (languageAvailable) setLanguage(KAGLanguage.next);
+	}
+
+	var languageChangeHook = []; // called once the game is drawn in another language: (code, previous)
+	var languagePending;         // the language asked for, shown once the game is stable
+	var languageTrigger;         // shows it outside the event or tag that asked for it
+	var languageSerial = 0;      // wrap keys for text drawn again
+
+	property languageAvailable { getter() { return global.KAGLanguage !== void && KAGLanguage.available; } }
+
+	// The player chose a language (F9, L2, a button): it's saved with the system variables and
+	// the game is drawn in it: the message, the choices, the screen (onLanguageChange). That
+	// waits while the game isn't stable (text still being drawn, a transition), so it happens at
+	// the next click wait, and it doesn't happen while a Yes/No prompt is open.
+	function setLanguage(code)
+	{
+		if (!languageAvailable || currentDialog !== void) return false;
+		var c = KAGLanguage.match(code);
+		if (c === void) return false;
+		KAGLanguage.chosen = true;
+		languagePending = c;
+		if (languageTrigger === void) languageTrigger = new AsyncTrigger(applyPendingLanguage, "");
+		languageTrigger.trigger() if inStable;
+		return true;
+	}
+
+	// at a stable state, the language asked for (stableHandlers)
+	function languageStableHandler()
+	{
+		if (languagePending !== void && languageTrigger !== void) languageTrigger.trigger();
+	}
+
+	function applyPendingLanguage()
+	{
+		if (languagePending === void) return;
+		if (!inStable || currentDialog !== void || transCount > 0) return; // at the next stable state
+		var c = languagePending;
+		languagePending = void;
+		KAGLanguage.set(c);
+		// the player's choice, kept at once (a phone may stop the game without an exit)
+		try { saveSystemVariables(); } catch (e) { dm("Language: system variables not saved: " + e.message); }
+	}
+
+	// KAGLanguage changed the language: the page in the message window is drawn again in it (the
+	// recorded text units, MessageLayer.redrawTextIn), the system buttons get the language's
+	// images, the choices on show their labels, and languageChangeHook tells the game (the sample
+	// draws the screen on show again)
+	function onLanguageChange(code, previous)
+	{
+		// every message layer showing scenario text (a screen opened over the game is on
+		// another layer, and the game's page waits under it), but none with buttons or links,
+		// which redrawing clears
+		for (var p = 0; p < 2; p++) {
+			var msgs = (p ? back : fore).messages;
+			for (var i = 0; i < msgs.count; i++) {
+				var m = msgs[i];
+				if (m.redrawTextEnabled && m.numLinks == 0 && hasTextUnits(m))
+					m.redrawTextIn(code); // its "restore" brings back its system buttons too
+				else
+					m.reloadSystemButtonImages();
+			}
+		}
+		// the click-wait glyph where the page's text now ends
+		var glyphLayer = typeof lastClickGlyphMessageNum != "Integer" ? void :
+			(lastClickGlyphMessagePage ? back : fore).messages[lastClickGlyphMessageNum];
+		if (conductor == mainConductor && clickWaiting && lastClickGlyphVisible && glyphLayer !== void && hasTextUnits(glyphLayer)) {
+			if (lastClickGlyphWhich == "page") glyphLayer.showPageBreakGlyph(pageBreak);
+			else glyphLayer.showLineBreakGlyph(lineBreak);
+		}
+		if (selectShowing && _selectLayer !== void) selectLayer.relabel();
+		setMenuAccessibleAll();
+		callHook(languageChangeHook, code, previous);
+	}
+
+	function hasTextUnits(layer)
+	{
+		var ops = layer.redrawTextStates;
+		for (var i = 0; ops !== void && i < ops.count; i++) if (ops[i][0] == "beginTextUnit") return true;
+		return false;
+	}
+
+	// The items of a text in a language: characters, new lines, ruby and font commands, with the
+	// scene player's escapes (\\, \%, \[ and \k), as KAGEnvPlayer.emitChars reads a text
+	function languageTextItems(t)
+	{
+		var items = [], l = t.length;
+		for (var i = 0; i < l;) {
+			var ch = t.charAt(i++);
+			if (ch == "\\") {
+				ch = i < l ? t.charAt(i++) : "";
+				if (ch == "\\" || ch == "%" || ch == "[") items.add(["ch", ch]);
+				continue;
+			}
+			if (ch == "\n") { items.add(["r"]); continue; }
+			if (ch == "%" && i < l) {
+				var c = t.charAt(i++);
+				if (/[0-9]/.test(c)) {
+					var v = c;
+					while (i < l && /[0-9]/.test(t.charAt(i))) v += t.charAt(i++);
+					items.add(["font", +v ? string(+v) : "default"]);
+				} else if (c == "r") items.add(["resetfont"]);
+				continue;
+			}
+			if (ch == "[") {
+				var r = "";
+				while (i < l && (ch = t.charAt(i++)) != "]") r += ch;
+				var at = r.indexOf(",");
+				items.add(["ruby", at >= 0 ? r.substring(0, at) : r]);
+				continue;
+			}
+			items.add(["ch", ch]);
+		}
+		return items;
+	}
+
+	// what the word wrap measures a text by: its characters, or nothing (the character wrap)
+	// when it has a new line, as KAGEnvPlayer.emitChars does, or is in a language without
+	// spaces between its words (KAGLanguage.wordWrap)
+	function languageWrapLine(items, lang)
+	{
+		if (!KAGLanguage.wordWrap(lang)) return "";
+		var line = "";
+		for (var i = 0; i < items.count; i++) {
+			if (items[i][0] == "r") return "";
+			if (items[i][0] == "ch") line += items[i][1];
+		}
+		return line;
+	}
+
+	// A text unit drawn again at once in another language (MessageLayer.redrawTextIn): its
+	// text in that language (a compiled scenario's, which holds every language's), with the
+	// word wrap, without the backlog or waits
+	function drawTextUnitNow(layer, unit, lang)
+	{
+		var texts = unit.texts;
+		if (texts === void) return;
+		var text = texts[lang];
+		if (text === void) text = texts[KAGLanguage.source];
+		if (text === void) return;
+		layer.beginTextUnit(unit);
+		var items = languageTextItems(text);
+		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items, lang)]];
+		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
+		var hist = historyWriteEnabled, tw = textWriteEnabled, cur = current;
+		var wrapState = [wrapKey, wrapSplitLine, wrapNum, wrapBreakWrap, wrapPos, wrapPosHist, wrapWordWidth,
+			wrapWordWidthHist, wrapResume, wrapResumeDropHist, wrapDropSpace, wrapDropSpaceHist];
+		historyWriteEnabled = false;
+		textWriteEnabled = true;
+		current = layer;
+		wrapResume = false;
+		try {
+			for (var i = 0; i < items.count; i++) {
+				var it = items[i];
+				switch (it[0]) {
+				case "r": if (layer.processReturn()) i = items.count; break;
+				case "font": tagHandlers.font(%[size:it[1]]); break;
+				case "resetfont": tagHandlers.resetfont(%[]); break;
+				case "ruby": layer.setRuby(it[1]); break;
+				default:
+					var ch = it[1];
+					if (needsToBeWrapped(ch, w)) { i = items.count; break; } // the page is full
+					if (!(wrapDropSpace && ch == spaceChar) && layer.processCh(ch, 0)) i = items.count;
+				}
+			}
+		} catch (e) {
+			dm("drawTextUnitNow: " + e.message);
+		}
+		historyWriteEnabled = hist;
+		textWriteEnabled = tw;
+		current = cur;
+		wrapKey = wrapState[0], wrapSplitLine = wrapState[1], wrapNum = wrapState[2], wrapBreakWrap = wrapState[3];
+		wrapPos = wrapState[4], wrapPosHist = wrapState[5], wrapWordWidth = wrapState[6];
+		wrapWordWidthHist = wrapState[7], wrapResume = wrapState[8], wrapResumeDropHist = wrapState[9];
+		wrapDropSpace = wrapState[10], wrapDropSpaceHist = wrapState[11];
+		layer.endTextUnit();
 	}
 
 	function onKeyDown(key, shift)
@@ -15079,6 +15331,26 @@ class KAGWindow extends Window
 			}
 		}
 		return acs * actskipspeed;
+	} incontextof this,
+
+    // A text unit (Language.tjs): a compiled scenario's text drawn as one piece, noted with the
+    // text in every language (texts, by code) so the page can be drawn again in another one
+    // (KAGEnvPlayer.emitText, MessageLayer.redrawTextIn)
+    textunit : function(elm)
+    {
+		if (skipNoDisp || !textWriteEnabled) return 0;
+		var info = %[texts:elm.texts];
+		current.beginTextUnit(info);
+		current.comp.beginTextUnit(info) if currentWithBack;
+		return 0;
+	} incontextof this,
+
+    endtextunit : function(elm)
+    {
+		if (skipNoDisp) return 0;
+		current.endTextUnit();
+		current.comp.endTextUnit() if currentWithBack;
+		return 0;
 	} incontextof this,
 
     dispname : function(elm)
@@ -17717,8 +17989,8 @@ class KAGWindow extends Window
 	savefail: "Could not save to file (File cannot be opened or is write-protected)",
 	loadfail:  "Attempted to load data from a different system",
 	loadforce:  %[ message:"Save data ID mismatch, but forcing load due to debug mode", caption:"Warning" ],
-	loadexception: %[ exp:function(mes) { return @"Could not load bookmark, data is corrupted, or it's a different format (${mes})"; } ],
-	initexception: %[ exp:function(mes) { return @"Could not load system variables or they are corrupted (${mes})\nStarting with full initialization."; } ],
+	loadexception: %[ exp:function(mes) { return tr("Could not load bookmark, data is corrupted, or it's a different format (%s)").sprintf(mes); } ],
+	initexception: %[ exp:function(mes) { return tr("Could not load system variables or they are corrupted (%s)\nStarting with full initialization.").sprintf(mes); } ],
 	savemydoc: %[ message:"No write permission. Saving data under My Documents.", caption:"Information" ],
 	readonly:  %[ message:"No write permission. Running in Read-Only Mode.",          caption:"Warning" ],
 		];
@@ -17731,7 +18003,7 @@ class KAGWindow extends Window
 			msg = .exp(*)  if (typeof .exp     != "undefined");
 			msg = .message if (typeof .message != "undefined");
 		}
-		internalErrorInform(msg, cap);
+		internalErrorInform(tr(msg), tr(cap)); // in the language shown (Language.tjs)
 	}
 	function internalErrorInform(msg, cap) {
 		System.inform(msg, cap + ":" + System.title);

@@ -30,6 +30,14 @@
 // If gcsAuto is specified, it is determined automatically.
 ;System.graphicCacheLimit = gcsAuto; // Image cache limit
 
+// ◆ Languages
+// The languages the game can be shown in, as language codes ("en", "ja", "zh-tw"...), the
+// first the one its scenarios are written in. Each other language reads its strings and
+// images from data/lang/<code>/ (doc/kagex.txt, "Languages"). The player switches with F9,
+// the controller's L2 or the Config screen, and the choice is saved; until then the game
+// follows the system (System.uiLanguage, then System.uiLanguageCandidates).
+;global.KAGLanguageList = "en,ja";
+
 
 // ◆ global Additional Settings
 // If there are additional setting items, 

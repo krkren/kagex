@@ -621,8 +621,23 @@ private:
 			fs::remove(krt::toPath(script), ec);
 		}
 		for (const auto& f : compilerFiles) fs::remove(f, ec);
+		// and their translations into the game's other languages, lang/<code>/scenario/<script>,
+		// which the compiler built into them (doc/scn.txt, "Languages")
+		size_t translations = 0;
+		const fs::path langs = stage_ / "lang";
+		if (fs::is_directory(langs, ec)) {
+			for (const auto& l : fs::directory_iterator(langs, ec)) {
+				const fs::path dir = l.path() / "scenario";
+				if (!fs::is_directory(dir, ec)) continue;
+				std::vector<fs::path> gone;
+				for (const auto& e : fs::directory_iterator(dir, ec))
+					if (e.is_regular_file(ec) && done.count(lower(krt::fromPath(e.path().filename())))) gone.push_back(e.path());
+				for (const auto& g : gone) if (fs::remove(g, ec)) ++translations;
+				if (fs::is_empty(dir, ec)) fs::remove(dir, ec);
+			}
+		}
 		pr.log("Scenarios: " + std::to_string(compiled.size()) + " compiled to " + (json ? ".scn.json" : ".scn") +
-		       (haveKey_ ? ", encrypted" : "") + "; their scripts are left out");
+		       (haveKey_ ? ", encrypted" : "") + "; their scripts" + (translations ? " and translations" : "") + " are left out");
 		if (json) notes_.push_back("Scenarios: compiled to .scn.json (plain text), as the " + host + " engine has no scnfile plugin");
 		else if (!haveKey_) notes_.push_back("Scenarios: compiled, not encrypted (no key)");
 	}

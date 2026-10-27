@@ -466,7 +466,7 @@ class YesNoFrameDialogWindow extends Window
 
 		yesButton.left = yesNoButtonX(choice.frame, 0);
 
-		drawYesNoLabel(yesButton, "Yes");
+		drawYesNoLabel(yesButton, tr("Yes"));
 
 		yesButton.visible = true;
 
@@ -482,7 +482,7 @@ class YesNoFrameDialogWindow extends Window
 
 		noButton.left = yesNoButtonX(choice.frame, 1);
 
-		drawYesNoLabel(noButton, "No");
+		drawYesNoLabel(noButton, tr("No"));
 
 		noButton.visible = true;
 
@@ -706,9 +706,9 @@ class YesNoDialogLayer extends DialogLayer
 
         addButton(%[ name:"no",  x:yesNoButtonX(frame, 1), y:frame.buttonY, normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
 
-        drawYesNoLabel(names.yes, "Yes");
+        drawYesNoLabel(names.yes, tr("Yes"));
 
-        drawYesNoLabel(names.no,  "No");
+        drawYesNoLabel(names.no,  tr("No"));
 
     }
 
@@ -808,7 +808,9 @@ class YesNoDialogLayer extends DialogLayer
 
 // Shorter wording for the prompts the system and the sample ask. Any other message is shown
 
-// as it is, word-wrapped (a long one gets the wide frame)
+// as it is, word-wrapped (a long one gets the wide frame). Either is then shown in the language
+
+// of the game (tr: the language table's strings, keyed by the English shown here)
 
 var yesnoMap = %[
 
@@ -910,6 +912,8 @@ function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, don
 
     if (text.substring(0, 6) == "error:") text = text.substring(6); // KAGEnvPlayer's error prompts
 
+    text = tr(text); // in the language shown (Language.tjs)
+
     if (kag.isMoviePlaying() && yesNoCanUseFrameWindow()) {
 
         // An overlay movie covers the layers, so this one uses a separate, shaped window
@@ -1004,7 +1008,7 @@ class AboutDialogLayer extends DialogLayer
 
         var year = aboutText(sf.software_year);
 
-        if (version != "") lines.add([ "Version " + version, yesnoLabelSize ]);
+        if (version != "") lines.add([ tr("Version %s").sprintf(version), yesnoLabelSize ]);
 
         if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, yesnoLabelSize ]);
 
@@ -1058,7 +1062,7 @@ class AboutDialogLayer extends DialogLayer
 
                      normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
 
-        drawYesNoLabel(names.close, "Close");
+        drawYesNoLabel(names.close, tr("Close"));
 
     }
 

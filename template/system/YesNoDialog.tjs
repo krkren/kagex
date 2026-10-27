@@ -79,10 +79,10 @@ class YesNoDialogWindow extends Window
 
 		// Yes button
 		var bw = int(70 * u), gap = int(10 * u), by = th + int(35 * u);
-		add(yesButton = createButton("Yes",    (w - (bw*2 + gap) >>1),            by));
+		add(yesButton = createButton(tr("Yes"), (w - (bw*2 + gap) >>1),            by));
 
 		// No button
-		add(noButton =  createButton("No", ((w - (bw*2 + gap))>>1) + bw + gap, by));
+		add(noButton =  createButton(tr("No"), ((w - (bw*2 + gap))>>1) + bw + gap, by));
 	}
 
 	function createButton(caption, x, y, w, h)

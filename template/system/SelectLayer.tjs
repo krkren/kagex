@@ -1198,9 +1198,47 @@ class SelectLayer {
 
     }
 
+	// A choice's label in the language shown: a compiled scenario's choice has it in every
+
+	// language (texts, by code: KAGEnvPlayer.choiceTexts); any other is shown as written
+
+	function selectText(elm) {
+
+		var texts = elm.texts;
+
+		if (texts !== void && global.KAGLanguage !== void && typeof texts[KAGLanguage.current] == "String")
+
+			return texts[KAGLanguage.current];
+
+		return elm.text;
+
+	}
+
+
+
+	// The choices' labels drawn again, in the language now shown
+
+	function relabel() {
+
+		for (var i = 0; i < selects.count; i++) {
+
+			var sel = selects[i];
+
+			if (sel === void || !isvalid sel || sel.drawopt === void) continue;
+
+			sel.message = selectText(sel.drawopt);
+
+			sel.redraw();
+
+		}
+
+	}
+
+
+
 	function getSelectButtonLayer(elm) {
 
-		var r = global.getSelectButtonLayer(this, elm.text, elm);
+		var r = global.getSelectButtonLayer(this, selectText(elm), elm);
 
 		r.forceDisabled = elm.disabled;
 

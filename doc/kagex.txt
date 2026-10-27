@@ -104,6 +104,10 @@ data/           Data area
 
 
 
+    lang/       The languages other than the scenarios' own, lang/<code>/ each (● Languages)
+
+
+
     startup.tjs Kirikiri startup file
 
 
@@ -2301,6 +2305,158 @@ Attributes
 
 
 
+● Languages
+
+
+A game can be shown in more than one language, and the player can switch between them while
+playing: F9, the controller's L2 (VK_PAD7) or a button of the game's (the sample's Config
+screen has one) draws the message on screen, the choices on show and the screen on show again
+in the other language. The backlog keeps each line in the language it was shown in.
+
+The story is in the compiled scenarios (doc/scn.txt), as in Wamsoft's multi-language games:
+each script's translations are compiled into its .scn file with it, so one file holds every
+language's text, speakers' names, choices and scene titles, and the scene player shows the
+language shown. The interface (the screens' images with words on them, the prompts and labels
+the screens draw) is in each language's folder.
+
+
+◇ Setting up
+
+
+Config.tjs lists the languages, the one the scenarios and scripts are written in (the source
+language) first:
+
+
+    ;global.KAGLanguageList = "en,ja";
+
+
+With one language (the template's "en") nothing changes. Each other language has a folder,
+data/lang/<code>/ (lang/ja/ for Japanese):
+
+
+    lang/ja/scenario/   The scripts in !scnlist.txt, translated (◇ Translating the story)
+    lang/ja/lang.json   The interface strings (◇ The interface strings)
+    lang/ja/...         Anything else found by name, in that language: the screens' images
+                        with words on them (the sample's data/lang/ja/ has the Japanese title
+                        buttons, Config screen and the like, drawn by tools/assets/make_ui.py
+                        --lang ja), a CSV, a voice
+
+
+The folder (not its scenario/ folder) is on the search path while the game shows that
+language, after every other path: a file in it stands in for the file of the same name
+anywhere else. The image cache keys on the name a script loads, so a switch empties it
+(System.clearGraphicCache). A zip patch (patch.zip and on, or DLC through KAGMountPatchZip)
+can carry lang/<code>/ folders of its own, which join the language's.
+
+
+◇ Translating the story
+
+
+A script's translation is a copy of the script with its text in the other language, in
+lang/<code>/scenario/ under the script's file name: lang/ja/scenario/char.ks for char.ks. Only
+its text is used: the messages, the display names after a slash (【ai/？？？】), the choices'
+text ([seladd text=...]) and the scene titles (*label|Title). Everything else comes from the
+script, so the translation keeps the script's labels, tags and messages, in the same order,
+each said by the same character; where a tag splits a message ([emb], a World tag) the
+translation is split by it too. Line breaks ([r]), ruby and font commands can differ.
+
+
+    char.ks                                    lang/ja/scenario/char.ks
+
+    *start|Start                               *start|スタート
+    [ai standard center]                       [ai standard center]
+    【ai】If a voice number is specified...     【ai】ボイス番号が指定されていると...
+    【ai/???】To change the display name...    【ai/？？？】表示名を変更する場合は...
+
+
+The compiler (SceneParser.tjs) compiles each translation with its script and matches them
+scene by scene, then text by text and choice by choice. A scene that doesn't match (another
+number of texts or choices, a text said by someone else) shows the script's own text in that
+language, as does a script without a translation; the compiler says so (a warning in the log,
+or kagex-release's compile-scenarios.log). Changing a translation compiles its script again.
+A release leaves the translations out with the scripts (tools/release/README.md).
+
+A speaker's displayed name, when the line gives none, is the character's nameAlias in
+envinit.tjs, which can be a dictionary by language (the source language's stands in for a
+language it lacks):
+
+
+    "ai" => %[ "nameAlias" => %[ "en" => "Ai", "ja" => "あい" ], ... ],
+
+
+Scripts KAG plays itself (the title screen, the system screens, a script not in !scnlist.txt,
+or any with -scnplay=no) are shown as written, with the source language's names.
+
+
+◇ The interface strings
+
+
+lang/<code>/lang.json, JSON in UTF-8 (or UTF-16, with or without a BOM), holds the strings the
+screens draw at run time (tr(), below), keyed by the source text; a string it doesn't have is
+shown as written.
+
+
+    {
+      "name": "日本語",
+      "strings": { "Load this save?": "このデータをロードしますか？", "Characters": "キャラクタ" },
+      "wordWrap": false
+    }
+
+
+  name      The language's name in itself.
+  strings   Prompts, labels and messages, looked up as written, then without spaces at their
+            ends.
+  wordWrap  Whether the story's lines break between words (true) or anywhere, with KAG's
+            line-breaking rules (false). Default: false for Japanese and Chinese, true
+            otherwise.
+
+
+The framework's own strings (the Yes/No prompts, Yes and No, About, the backlog's "Choice:
+%s") are in system/kagex_<code>.json, which the game's table can change. A save slot shows the
+title of the scene it was saved in, in the language shown: a compiled scene's own title, or
+for a script KAG plays itself its title through the strings (getBookMarkPageName).
+
+
+◇ Which language
+
+
+Until the player chooses one, the game shows the language the system prefers: the engine's UI
+language (System.uiLanguage, the system locale or -language=), then
+System.uiLanguageCandidates, then the source language. The player's choice is saved with the
+system variables (scflags.language) and wins from then on.
+
+
+◇ Script interface
+
+
+  KAGLanguage.current           The language shown.
+  KAGLanguage.list              The languages, the source language first.
+  KAGLanguage.available         Whether there's more than one.
+  KAGLanguage.nameOf(code)      A language's name in itself.
+  kag.setLanguage(code)         The player's choice: saved, and shown now, or at the next
+                                click wait when text is still being drawn (not while a Yes/No
+                                prompt is open).
+  kag.switchLanguageByKey()     The next language (F9, L2).
+  kag.languageChangeHook        Functions called (code, previous) once the game is drawn in
+                                another language: draw the screen on show again here (the
+                                sample runs the label that draws it, redisplayScreen in
+                                Override.tjs).
+  tr(text)                      An interface string in the language shown (its strings).
+  KAGLanguage.ui(text[, lang])  The same, in the language given.
+  scnTitleIn(scene[, lang]), scnTitles(scene)
+                                A compiled scene's title in a language, and in every one by
+                                code (KAGEnvPlayer.tjs; the scenes of a StorageData).
+
+
+The message window records what each page draws (MessageLayer.redrawTextEnabled, on when
+there's more than one language), with each compiled text and the speaker's name in every
+language, and draws the page again from that record in the new language
+(MessageLayer.redrawTextIn). A message layer with buttons or links on it isn't drawn again:
+the screen it belongs to is (languageChangeHook). The system buttons ([sysbutton]) load their
+images again by name.
+
+
+
 ● KAGEX Operation System
 
 
@@ -2328,6 +2484,10 @@ KAGEX Shortcut List (Basically the same as KAG)
  L Follow bookmark (Activate Load)
 
  R or SHIFT+Up Display message history
+
+
+
+ F9 Show the game in its next language (● Languages)
 
 
 

@@ -2033,6 +2033,24 @@ class KAGEnvironment extends KAGEnvTrans {
 		return new KAGEnvCharacter(this, name, initName, init);
 	}
 	
+	/**
+	 * A character's displayed name (envinit.tjs nameAlias), "" for none: a name, or in a game in
+	 * more than one language a dictionary of names by language code ("en" => "Ai", "ja" =>
+	 * "あい"), whose source language's (KAGLanguageList's first) stands in for a language it
+	 * lacks. A name starting with & is an expression
+	 * @param lang the language (void: the source language)
+	 */
+	function nameAliasOf(ch, lang) {
+		var alias = ch.init.nameAlias;
+		if (typeof alias == "Object" && alias !== null) {
+			var a = lang !== void ? alias[lang] : void;
+			if (a === void && global.KAGLanguage !== void) a = alias[KAGLanguage.source];
+			alias = a;
+		}
+		if (typeof alias != "String" || alias == "") return "";
+		return alias.charAt(0) == "&" ? Scripts.eval(alias.substr(1)) : alias;
+	}
+
     /**
      * Returns the character with the specified name
      * @param name Name
@@ -2262,18 +2280,32 @@ class KAGEnvironment extends KAGEnvTrans {
 			var disp = elm.disp;
 			var ch = getCharacter(name);
 
-            // Name display process
+            // Name display process: in the language of the compiled scenario's text (lang)
 			var dispName;
 			if (disp !== void && disp != "") {
 				dispName = disp;
 			} else if (ch !== void) {
-				var alias = ch.init.nameAlias;
-				dispName = (alias.charAt(0) == "&" ? Scripts.eval(alias.substr(1)) : alias) if (alias != "");
+				dispName = nameAliasOf(ch, elm.lang);
 				dispName = name if (dispName == "");
 				// Set flag if character exists and the displayed name is the same
 				setSFlag("dispname_" + name) if (name == dispName);
 			} else {
 				dispName = name;
+			}
+
+			// A compiled scenario's text in more than one language (KAGEnvPlayer.nameTag): the
+			// name in every language, to draw it again in another one
+			var names;
+			if (elm.disps !== void) {
+				names = %[];
+				var list = [];
+				list.assign(elm.disps);
+				for (var i = 0; i < list.count; i += 2) {
+					var d = list[i + 1];
+					if (d === void || d == "") d = ch !== void ? nameAliasOf(ch, list[i]) : "";
+					d = name if (d == "");
+					names[list[i]] = d;
+				}
 			}
 
 			// Name filter processing
@@ -2290,7 +2322,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 			// Expression change process
 			if (!skipNoDisp) {
-				drawName(dispName, nextVoiceList);
+				drawName(dispName, nextVoiceList, names);
 				redrawFace(ch, false);
 			}
         }

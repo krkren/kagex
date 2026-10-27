@@ -611,6 +611,17 @@ def template_steps(eng):
         eng.wait("the REPL", "1", timeout=60)
         eng.wait("first.ks", 'kag.conductor.curStorage == "first.ks" && kag.inStable', timeout=60)
 
+    @step("one language (KAGLanguageList): F9 leaves it as it is")
+    def _():
+        if eng.tjs('return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates languages)", flush=True)
+            return
+        eng.key("VK_F9")
+        time.sleep(0.5)
+        r = str(eng.tjs('return KAGLanguage.list.join(",") + "|" + KAGLanguage.current + "|" + (KAGLanguage.chosen ? 1 : 0);'))
+        if r != "en|en|0":
+            raise SmokeError("languages, the one shown, chosen: %s" % r)
+
     prompt_steps(eng, step)
     return steps
 
@@ -641,6 +652,46 @@ def compiled_framework(eng):
     return eng.tjs('return typeof global.KAGCompileScenarios != "undefined" ? 1 : 0;') == 1
 
 
+def language_framework(eng):
+    """Whether the game can be shown in Japanese as well as English (Language.tjs, KAGLanguageList;
+    pages.yml may test an older release's site)"""
+    return eng.tjs('return typeof global.KAGLanguage == "Object" && KAGLanguage !== void && KAGLanguage.available'
+                   ' && KAGLanguage.has("ja") ? 1 : 0;') == 1
+
+
+# The text the message window shows (MessageLayer.redrawTextStates, Language.tjs): the speaker's
+# name as drawn, and each text unit, a compiled scenario's text with what it says in every
+# language (texts, by code) and what was drawn, as JSON (the json plugin reads the language
+# tables, so it's there)
+PAGE_TJS = r"""
+    var ops = kag.current.redrawTextStates, units = [], name = "", unit = void, drawn = "";
+    for (var i = 0; ops !== void && i < ops.count; i++) {
+        var op = ops[i];
+        if (op[0] == "processName") name = op[1];
+        else if (op[0] == "beginTextUnit") { unit = op[1]; drawn = ""; }
+        else if (op[0] == "processCh" && unit !== void) drawn += op[1];
+        else if (op[0] == "endTextUnit" && unit !== void) { units.add(%[texts:unit.texts, drawn:drawn]); unit = void; }
+    }
+    if (unit !== void) units.add(%[texts:unit.texts, drawn:drawn]);
+    return Scripts.toJSONString(%[name:name, units:units]);"""
+
+
+def page_text(eng):
+    """(name, [(texts by language code, drawn)...]) of the message window"""
+    page = json.loads(str(eng.tjs(PAGE_TJS)))
+    units = [((u.get("texts") or {}), u.get("drawn") or "") for u in (page.get("units") or [])]
+    return page.get("name") or "", units
+
+
+def switch_language(eng, lang, where):
+    """F9 (the sample has two languages) when the game isn't in lang, then waits for the screen
+    at where (a script) drawn again in it"""
+    if eng.tjs("return KAGLanguage.current;") != lang:
+        eng.key("VK_F9")
+    eng.wait(lang + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
+             ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (lang, where), timeout=20)
+
+
 def sample_steps(eng):
     steps, step = collector()
     eng.compiled = False
@@ -651,6 +702,21 @@ def sample_steps(eng):
         eng.clicker(True, until="title.ks")  # clicks through the logo
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
         eng.clicker(False)
+
+    @step("the sample is in English for the steps that read its text (KAGLanguageList)")
+    def _():
+        # the game takes the system's language until the player chooses one: under a C locale
+        # the engine's candidates are Japanese first
+        if not language_framework(eng):
+            print("     (skipped: this build has one language)", flush=True)
+            return
+        shown = eng.tjs("return KAGLanguage.current;")
+        print("     the system's language here: %s (System.uiLanguage \"%s\", candidates %s)"
+              % (shown, eng.tjs("return System.uiLanguage;"),
+                 eng.tjs('return System.uiLanguageCandidates.join(",");')), flush=True)
+        if shown != "en":
+            eng.tjs('kag.setLanguage("en"); return 1;')
+        switch_language(eng, "en", "title.ks")
 
     @step("Extras start locked")
     def _():
@@ -1342,6 +1408,130 @@ def sample_steps(eng):
         if lips and not any(x in ("1", "2") for x in lips):
             raise SmokeError("Pip's mouth didn't move while he spoke (levels %s)" % lips)
         eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("languages: F9 shows the title screen in Japanese, with its own images, then English again")
+    def _():
+        if not language_framework(eng):
+            print("     (skipped: this build has one language)", flush=True)
+            return
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        # the Start button against its image as the language's search path finds it now: the
+        # Japanese one from data/lang/ja/ (the image cache would give the English one again)
+        check = ('var b = kag.current.names["start"], t = new global.Layer(kag, kag.primaryLayer);'
+                 ' t.loadImages("start_normal"); var diff = 0;'
+                 ' for (var y = 4; y < t.imageHeight; y += 4) for (var x = 4; x < t.imageWidth; x += 4)'
+                 ' if ((b.getMainPixel(x, y) & 0xffffff) != (t.getMainPixel(x, y) & 0xffffff)) diff++;'
+                 ' invalidate t; return Storages.getPlacedPath("start_normal.png") + "|" + diff;')
+        switch_language(eng, "ja", "title.ks")
+        placed, diff = str(eng.tjs(check)).split("|")
+        print("     Japanese: start_normal from %s, %s samples unlike it" % (placed, diff), flush=True)
+        if "/lang/ja/" not in placed.replace("\\", "/") or diff != "0":
+            raise SmokeError("the title's Start button isn't data/lang/ja's image (%s, %s samples differ)" % (placed, diff))
+        switch_language(eng, "en", "title.ks")
+        placed, diff = str(eng.tjs(check)).split("|")
+        if "/lang/" in placed or diff != "0":
+            raise SmokeError("back in English, the Start button isn't data/image's (%s, %s samples differ)" % (placed, diff))
+
+    @step("languages: the line on screen is drawn again in the other language, and the backlog keeps what was shown")
+    def _():
+        if not language_framework(eng):
+            print("     (skipped: this build has one language)", flush=True)
+            return
+        # the other languages are in the compiled scenarios (doc/scn.txt, "Languages")
+        if eng.tjs('KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.scnFindCompiled == "undefined";'
+                   ' return scnFindCompiled("char.ks") !== void && world_object.scenePlayEnabled ? 1 : 0;') != 1:
+            print("     (skipped: char.ks isn't played compiled here)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.clickWaiting', timeout=30)
+        # click on to Ai's first line
+        for _ in range(12):
+            name, units = page_text(eng)
+            if name == "Ai" and units:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.2)
+            eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
+        else:
+            raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s)" % (name, units))
+        texts = units[-1][0]
+        source, ja = texts.get("en", ""), texts.get("ja", "")
+        print("     English: [%s] %s" % (name, units[-1][1]), flush=True)
+        # the space a line breaks at isn't drawn (the word wrap)
+        squeeze = lambda t: "".join(t.split())
+        if source == "" or ja == "" or ja == source or squeeze(units[-1][1]) != squeeze(source):
+            raise SmokeError("the line isn't drawn in English as written, with its Japanese in the compiled scene: %s" % (units,))
+        switch_language(eng, "ja", "char.ks")
+        name, units = page_text(eng)
+        print("     Japanese: [%s] %s" % (name, units[-1][1] if units else ""), flush=True)
+        if name != "あい" or not units or units[-1][0].get("en") != source or squeeze(units[-1][1]) != squeeze(ja):
+            raise SmokeError("after F9 the line isn't drawn again in Japanese: [%s] %s (the scene has %s)" % (name, units, ja))
+        if eng.tjs("return kag.clickWaiting && kag.lineBreak.visible || kag.pageBreak.visible ? 1 : 0;") != 1:
+            raise SmokeError("the click-wait glyph is gone after the redraw")
+        # the backlog has the line in English, as it was shown, and the next line in Japanese
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("the next line", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
+        name2, units2 = page_text(eng)
+        backlog = str(eng.tjs('var h = kag.historyLayer, r = [];'
+                              ' for (var i = 0; i < h.dataLines; i++) r.add(h.getLine(i)); r.add(h.currentLine);'
+                              ' return r.join("\\n");'))
+        print("     next: [%s] %s" % (name2, units2[-1][1] if units2 else ""), flush=True)
+        if squeeze(source) not in squeeze(backlog) or squeeze(ja) in squeeze(backlog):
+            raise SmokeError("the backlog doesn't keep the line as it was shown in English:\n" + backlog[-600:])
+        if not units2 or squeeze(units2[-1][1]) != squeeze(units2[-1][0].get("ja", "")) or \
+                squeeze(units2[-1][1]) not in squeeze(backlog):
+            raise SmokeError("the next line isn't in Japanese, in the window and the backlog: %s\n%s" % (units2, backlog[-600:]))
+        switch_language(eng, "en", "char.ks")
+        name3, units3 = page_text(eng)
+        if not units3 or squeeze(units3[-1][1]) != squeeze(units3[-1][0].get("en", "")):
+            raise SmokeError("F9 again didn't draw the line in English: %s" % (units3,))
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("languages: the demo menu's choices are drawn again in the other language")
+    def _():
+        if not language_framework(eng):
+            print("     (skipped: this build has one language)", flush=True)
+            return
+        eng.tjs('kag.process("s0001.ks", "*start"); return 1;')
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks" && kag.inStable && kag.selectShowing'
+                 ' && kag.transCount == 0', timeout=30)
+        labels = ('var s = kag.selectLayer, r = []; for (var i = 0; i < s.selects.count; i++)'
+                  ' r.add(s.selects[i].text + "=" + s.selects[i].message); return r.join("|");')
+        switch_language(eng, "ja", "s0001.ks")
+        ja = [x.split("=", 1) for x in str(eng.tjs(labels)).split("|")]
+        print("     %s" % ", ".join(m for _, m in ja[:3]), flush=True)
+        if not ja or any(t == m for t, m in ja):
+            raise SmokeError("a choice kept its English label: %s" % ja)
+        switch_language(eng, "en", "s0001.ks")
+        en = [x.split("=", 1) for x in str(eng.tjs(labels)).split("|")]
+        if any(t != m for t, m in en):
+            raise SmokeError("a choice isn't back in English: %s" % en)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("languages: Config's buttons choose one, the screen is drawn in it, and the choice is saved")
+    def _():
+        if not language_framework(eng) or eng.tjs('return typeof global.setLanguageButton != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build has one language)", flush=True)
+            return
+        eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
+        eng.wait("config.ks", 'kag.conductor.curStorage == "config.ks" && kag.inStable && kag.transCount == 0', timeout=20)
+        eng.tjs('kag.current.names["config_lang_ja"].onExecute(); return 1;'
+                if eng.tjs('return typeof kag.current.names["config_lang_ja"] == "Object" ? 1 : 0;') == 1
+                else 'setLanguageButton("ja"); return 1;')
+        eng.wait("Japanese", 'KAGLanguage.current == "ja" && kag.conductor.curStorage == "config.ks" && kag.inStable'
+                 ' && kag.transCount == 0', timeout=20)
+        r = str(eng.tjs('return [KAGLanguage.chosen ? 1 : 0, kag.scflags.language, Storages.getPlacedPath("config_base.png")].join("|");'))
+        print("     chosen, saved, config_base: %s" % r, flush=True)
+        chosen, saved, placed = r.split("|")
+        if chosen != "1" or saved != "ja" or "/lang/ja/" not in placed.replace("\\", "/"):
+            raise SmokeError("Config's 日本語 button didn't choose Japanese and keep it: %s" % r)
+        eng.tjs('setLanguageButton("en"); return 1;')
+        eng.wait("English", 'KAGLanguage.current == "en" && kag.conductor.curStorage == "config.ks" && kag.inStable'
+                 ' && kag.transCount == 0', timeout=20)
+        eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
     return steps

@@ -493,7 +493,7 @@ class HistoryLayer extends Layer
 
 			nextPageButton.height  = controlHeight-2;
 
-			nextPageButton.caption = "≪ Next Page ";
+			nextPageButton.caption = tr("≪ Next Page ");
 
 			nextPageButton.color   = 0x808080;
 
@@ -509,7 +509,7 @@ class HistoryLayer extends Layer
 
 			prevPageButton.height  = controlHeight-2;
 
-			prevPageButton.caption = " Prev Page ≫";
+			prevPageButton.caption = tr(" Prev Page ≫");
 
 			prevPageButton.color   = 0x808080;
 
@@ -529,7 +529,7 @@ class HistoryLayer extends Layer
 
 			prevPageButton.height  = controlHeight-2;
 
-			prevPageButton.caption = "≪ Prev Page ";
+			prevPageButton.caption = tr("≪ Prev Page ");
 
 			prevPageButton.color   = 0x808080;
 
@@ -545,7 +545,7 @@ class HistoryLayer extends Layer
 
 			nextPageButton.height  = controlHeight-2;
 
-			nextPageButton.caption = " Next Page ≫";
+			nextPageButton.caption = tr(" Next Page ≫");
 
 			nextPageButton.color   = 0x808080;
 
@@ -571,7 +571,7 @@ class HistoryLayer extends Layer
 
 		closeButton.visible   = true;
 
-		closeButton.hint      = "Close message history";
+		closeButton.hint      = tr("Close message history");
 
 		// Their captions in the history's face list and in proportion to the buttons: the button
 
