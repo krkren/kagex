@@ -620,7 +620,8 @@
 
 		"ai" => %[
 
-			"nameAlias" => "Ai", // displayed name for 【ai】 lines
+			// displayed name for 【ai】 lines, in each of the game's languages (KAGLanguageList)
+			"nameAlias" => %[ "en" => "Ai", "ja" => "あい" ],
 
 			// Pose registration (range where expression files are not used separately)
 
@@ -690,7 +691,7 @@
 
 		"pip" => %[
 
-			"nameAlias" => "Pip",
+			"nameAlias" => %[ "en" => "Pip", "ja" => "ピップ" ],
 
 			"yoffset" => 0, // the centre of its canvas goes to the centre of the screen
 

@@ -210,6 +210,14 @@ media conversion, by running this computer's engine on the staged data with
 compiled scripts and the compiler's `parsermacro.ks` and `parseroption.txt` are left out of the
 package, and the game plays the compiled files (`doc/scn.txt`).
 
+- **Languages.** A game in more than one language (`KAGLanguageList` in `Config.tjs`) has each
+  script's translations, `lang/<code>/scenario/<script>`, built into its `.scn` file as Wamsoft's
+  multi-language games have them: every language's text, names, choices and titles in one file,
+  the language shown picked as the game plays (`doc/scn.txt`, "Languages"). The translations are
+  left out of the package with the scripts. A translation that doesn't fit its script (a scene
+  with other texts or choices) is a warning in `compile-scenarios.log`, and that scene shows the
+  script's own text in that language.
+
 - **The scnfile plugin.** An engine with the scnfile plugin compiles to `.scn`, and then every
   platform's engine needs the plugin to play them: a platform whose engine package lacks it
   fails to build. Without the plugin the scripts compile to `.scn.json`, which every engine

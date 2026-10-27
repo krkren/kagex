@@ -4227,13 +4227,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	// ---- languages (Language.tjs) ------------------------------------------------------
 
-	// A text unit: text from the scenario drawn as one piece (a scenario line's text between
+	// A text unit: a compiled scenario's text drawn as one piece (KAGEnvPlayer.emitText), noted
 
-	// its tags, or a text of the scene player), noted with where it's from and the language it
+	// with the text in every language (texts, by code: the scene's own translations), so
 
-	// was drawn in, so redrawTextIn can draw it again in another one. The redraw information
+	// redrawTextIn can draw it again in another one. The redraw information records it between
 
-	// records it between beginTextUnit and endTextUnit; the window draws the characters.
+	// beginTextUnit and endTextUnit; the window draws the characters.
 
 	var textUnitOpen = false;
 
@@ -4257,11 +4257,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
-	// The speaker's name before it was put into a language (the next processName)
+	// The speaker's name in every language, by code (a compiled scenario's), for the next
 
-	function setNameSource(name) {
+	// processName
 
-		storeRedrawTextState("setNameSource", name);
+	function setNameSource(names) {
+
+		storeRedrawTextState("setNameSource", names);
 
 	}
 
@@ -4323,9 +4325,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			}
 
-			if (name == "processName" && nameSource !== void) {
+			if (name == "processName" && nameSource !== void && typeof nameSource[lang] == "String") {
 
-				var n = KAGLanguage.speaker(nameSource, lang);
+				var n = nameSource[lang];
 				if (typeof global.dispNameFilter != "undefined") n = global.dispNameFilter(n);
 				processName(n);
 
@@ -4334,6 +4336,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 				continue;
 
 			}
+
+			if (name == "processName") nameSource = void;
 
 			var args = [];
 

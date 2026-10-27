@@ -660,35 +660,27 @@ def language_framework(eng):
 
 
 # The text the message window shows (MessageLayer.redrawTextStates, Language.tjs): the speaker's
-# name as drawn, then each text unit as lang:source=drawn, "|" between them
+# name as drawn, and each text unit, a compiled scenario's text with what it says in every
+# language (texts, by code) and what was drawn, as JSON (the json plugin reads the language
+# tables, so it's there)
 PAGE_TJS = r"""
-    var ops = kag.current.redrawTextStates, out = [], name = "", unit = void, drawn = "";
+    var ops = kag.current.redrawTextStates, units = [], name = "", unit = void, drawn = "";
     for (var i = 0; ops !== void && i < ops.count; i++) {
         var op = ops[i];
         if (op[0] == "processName") name = op[1];
         else if (op[0] == "beginTextUnit") { unit = op[1]; drawn = ""; }
         else if (op[0] == "processCh" && unit !== void) drawn += op[1];
-        else if (op[0] == "endTextUnit" && unit !== void) { out.add(unit.lang + ":" + unit.source + "=" + drawn); unit = void; }
+        else if (op[0] == "endTextUnit" && unit !== void) { units.add(%[texts:unit.texts, drawn:drawn]); unit = void; }
     }
-    if (unit !== void) out.add(unit.lang + ":" + unit.source + "=" + drawn);
-    return name + "|" + out.join("|");"""
+    if (unit !== void) units.add(%[texts:unit.texts, drawn:drawn]);
+    return Scripts.toJSONString(%[name:name, units:units]);"""
 
 
 def page_text(eng):
-    """(name, [(lang, source, drawn)...]) of the message window"""
-    parts = str(eng.tjs(PAGE_TJS)).split("|")
-    units = []
-    for u in parts[1:]:
-        if ":" in u and "=" in u:
-            lang, rest = u.split(":", 1)
-            source, drawn = rest.split("=", 1)
-            units.append((lang, source, drawn))
-    return parts[0], units
-
-
-def tjs_string(text):
-    """text as a TJS string literal"""
-    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+    """(name, [(texts by language code, drawn)...]) of the message window"""
+    page = json.loads(str(eng.tjs(PAGE_TJS)))
+    units = [((u.get("texts") or {}), u.get("drawn") or "") for u in (page.get("units") or [])]
+    return page.get("name") or "", units
 
 
 def switch_language(eng, lang, where):
@@ -1446,6 +1438,11 @@ def sample_steps(eng):
         if not language_framework(eng):
             print("     (skipped: this build has one language)", flush=True)
             return
+        # the other languages are in the compiled scenarios (doc/scn.txt, "Languages")
+        if eng.tjs('KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.scnFindCompiled == "undefined";'
+                   ' return scnFindCompiled("char.ks") !== void && world_object.scenePlayEnabled ? 1 : 0;') != 1:
+            print("     (skipped: char.ks isn't played compiled here)", flush=True)
+            return
         eng.tjs('kag.process("char.ks", "*start"); return 1;')
         eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.clickWaiting', timeout=30)
         # click on to Ai's first line
@@ -1458,19 +1455,18 @@ def sample_steps(eng):
             eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
         else:
             raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s)" % (name, units))
-        source = units[-1][1]
-        print("     English: [%s] %s" % (name, units), flush=True)
+        texts = units[-1][0]
+        source, ja = texts.get("en", ""), texts.get("ja", "")
+        print("     English: [%s] %s" % (name, units[-1][1]), flush=True)
         # the space a line breaks at isn't drawn (the word wrap)
         squeeze = lambda t: "".join(t.split())
-        if units[-1][0] != "en" or squeeze(units[-1][2]) != squeeze(source):
-            raise SmokeError("the line isn't drawn in English as written: %s" % (units,))
+        if source == "" or ja == "" or ja == source or squeeze(units[-1][1]) != squeeze(source):
+            raise SmokeError("the line isn't drawn in English as written, with its Japanese in the compiled scene: %s" % (units,))
         switch_language(eng, "ja", "char.ks")
         name, units = page_text(eng)
-        ja = eng.tjs('return KAGLanguage.story("char.ks", %s);' % tjs_string(source))
-        print("     Japanese: [%s] %s" % (name, units), flush=True)
-        if name != "あい" or not units or units[-1][0] != "ja" or units[-1][1] != source or \
-                squeeze(units[-1][2]) != squeeze(ja) or ja == source:
-            raise SmokeError("after F9 the line isn't drawn again in Japanese: [%s] %s (the table has %s)" % (name, units, ja))
+        print("     Japanese: [%s] %s" % (name, units[-1][1] if units else ""), flush=True)
+        if name != "あい" or not units or units[-1][0].get("en") != source or squeeze(units[-1][1]) != squeeze(ja):
+            raise SmokeError("after F9 the line isn't drawn again in Japanese: [%s] %s (the scene has %s)" % (name, units, ja))
         if eng.tjs("return kag.clickWaiting && kag.lineBreak.visible || kag.pageBreak.visible ? 1 : 0;") != 1:
             raise SmokeError("the click-wait glyph is gone after the redraw")
         # the backlog has the line in English, as it was shown, and the next line in Japanese
@@ -1480,14 +1476,15 @@ def sample_steps(eng):
         backlog = str(eng.tjs('var h = kag.historyLayer, r = [];'
                               ' for (var i = 0; i < h.dataLines; i++) r.add(h.getLine(i)); r.add(h.currentLine);'
                               ' return r.join("\\n");'))
-        print("     next: [%s] %s" % (name2, units2), flush=True)
+        print("     next: [%s] %s" % (name2, units2[-1][1] if units2 else ""), flush=True)
         if squeeze(source) not in squeeze(backlog) or squeeze(ja) in squeeze(backlog):
             raise SmokeError("the backlog doesn't keep the line as it was shown in English:\n" + backlog[-600:])
-        if not units2 or units2[-1][0] != "ja" or squeeze(units2[-1][2]) not in squeeze(backlog):
+        if not units2 or squeeze(units2[-1][1]) != squeeze(units2[-1][0].get("ja", "")) or \
+                squeeze(units2[-1][1]) not in squeeze(backlog):
             raise SmokeError("the next line isn't in Japanese, in the window and the backlog: %s\n%s" % (units2, backlog[-600:]))
         switch_language(eng, "en", "char.ks")
         name3, units3 = page_text(eng)
-        if not units3 or units3[-1][0] != "en" or squeeze(units3[-1][2]) != squeeze(units3[-1][1]):
+        if not units3 or squeeze(units3[-1][1]) != squeeze(units3[-1][0].get("en", "")):
             raise SmokeError("F9 again didn't draw the line in English: %s" % (units3,))
         eng.tjs("kag.goToStart(); return 1;")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)

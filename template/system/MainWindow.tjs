@@ -1162,6 +1162,26 @@ class KAGWindow extends Window
 
 	}
 
+
+
+	// The page name in every language, by code: a compiled scenario's titles (doc/scn.txt,
+
+	// "Languages"); void otherwise
+
+	var _currentPageNames;
+
+	property currentPageNames {
+
+		getter() {
+
+			var ret = forEachFunctionHook("getCurrentPageNames");
+
+			return ret !== void ? ret : _currentPageNames;
+
+		}
+
+	}
+
 	
 
 	var currentRecordName = ""; // Current record name (trail_storage_label)
@@ -6102,6 +6122,8 @@ class KAGWindow extends Window
 
 		// [end_store_vars]
 
+		f.currentPageNames = currentPageNames; // the page name in every language (Language.tjs)
+
 
 
 		// Several things not automatically processed by the perl script.
@@ -6403,6 +6425,8 @@ class KAGWindow extends Window
 		currentPageName = f.currentPageName if f.currentPageName !== void;
 
 		// [end_restore_vars]
+
+		_currentPageNames = f.currentPageNames;
 
 
 
@@ -7302,7 +7326,18 @@ class KAGWindow extends Window
 
 	//                                                                     Index tag         Value when data does not exist
 
-	function getBookMarkPageName      (num) { return getBookMarkIndex(num, "Name",           tr("(Not set)")); } // Get bookmark name of bookmark num
+	function getBookMarkPageName      (num) { // Get bookmark name of bookmark num: in the language shown, when the save has it (Language.tjs)
+
+		var names = getBookMarkIndex(num, "Names", void);
+
+		if (typeof names == "Object" && names !== null && global.KAGLanguage !== void && typeof names[KAGLanguage.current] == "String")
+
+			return names[KAGLanguage.current];
+
+		return getBookMarkIndex(num, "Name", tr("(Not set)"));
+
+	}
+
 
 	function getBookMarkDate          (num) { return getBookMarkIndex(num, "Date",           void);        } // Get date of bookmark num
 
@@ -7767,6 +7802,8 @@ class KAGWindow extends Window
 			var set = setBookMarkIndex;
 
 			set(num, "Name",     dic.currentPageName);
+
+			set(num, "Names",    dic.currentPageNames); // in every language (getBookMarkPageName)
 
 			set(num, "Storage",  dic.currentStorage);
 
@@ -9033,7 +9070,6 @@ class KAGWindow extends Window
 			(Dictionary.assign incontextof e)(elm,false);
 
 			e.tag = (currentRecordName+":"+subtag+":"+e.text) if (e.tag == "");
-			e.textStorage = conductor.curStorage; // whose language table has its label (SelectLayer.selectText)
 
 			e.selected = +sflags["select_"+e.tag];
 
@@ -9936,6 +9972,8 @@ class KAGWindow extends Window
 			if(page[0] == '&') page = Scripts.eval((page.substring(1)));
 
 			currentPageName = page;
+
+			_currentPageNames = void;
 
 		}
 
@@ -10908,17 +10946,19 @@ class KAGWindow extends Window
 		}
 	}
 	
-	// Name drawing process. Also registered to history
-	function drawName(name, nextVoice, source) {
+	// Name drawing process. Also registered to history. names: the name in every language, by
+	// code, for drawing it again in another (a compiled scenario's, Language.tjs); void otherwise
+	function drawName(name, nextVoice, names) {
 		//dm("Voice state updated!:" + name + ":" + nextVoice);
 		currentVoice = [] if (currentVoice === void);
 		currentVoice.assign(nextVoice) if (nextVoice !== void);
 		if (textWriteEnabled) {
-			// the name before it was put into the language shown (Language.tjs), for a redraw
-			var src = source !== void ? source : name;
-			current.setNameSource(src);
+			current.setNameSource(names) if names !== void;
 			current.processName(name);
-			if(currentWithBack) current.comp.setNameSource(src), current.comp.processName(name);
+			if(currentWithBack) {
+				current.comp.setNameSource(names) if names !== void;
+				current.comp.processName(name);
+			}
 		}
 		// For history
 		if (historyWriteEnabled) {
@@ -13046,7 +13086,6 @@ class KAGWindow extends Window
 	var languageChangeHook = []; // called once the game is drawn in another language: (code, previous)
 	var languagePending;         // the language asked for, shown once the game is stable
 	var languageTrigger;         // shows it outside the event or tag that asked for it
-	var languageUnit;            // the scenario line's text being drawn as a unit (KAG's parser)
 	var languageSerial = 0;      // wrap keys for text drawn again
 
 	property languageAvailable { getter() { return global.KAGLanguage !== void && KAGLanguage.available; } }
@@ -13171,11 +13210,16 @@ class KAGWindow extends Window
 	}
 
 	// A text unit drawn again at once in another language (MessageLayer.redrawTextIn): its
-	// characters, with the word wrap, without the backlog or waits
+	// text in that language (a compiled scenario's, which holds every language's), with the
+	// word wrap, without the backlog or waits
 	function drawTextUnitNow(layer, unit, lang)
 	{
-		var text = KAGLanguage.story(unit.storage, unit.source, lang);
-		layer.beginTextUnit(%[storage:unit.storage, source:unit.source, lang:lang]);
+		var texts = unit.texts;
+		if (texts === void) return;
+		var text = texts[lang];
+		if (text === void) text = texts[KAGLanguage.source];
+		if (text === void) return;
+		layer.beginTextUnit(unit);
 		var items = languageTextItems(text);
 		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items, lang)]];
 		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
@@ -13211,68 +13255,6 @@ class KAGWindow extends Window
 		wrapWordWidthHist = wrapState[7], wrapResume = wrapState[8], wrapResumeDropHist = wrapState[9];
 		wrapDropSpace = wrapState[10], wrapDropSpaceHist = wrapState[11];
 		layer.endTextUnit();
-	}
-
-	// The ch tag, for a character of a scenario line read by KAG's own parser: the line's text
-	// from there to its next tag is a text unit, drawn in the language shown. When the language
-	// table has it, its translation goes ahead of the parser as tags of its own (the scene
-	// player's texts come as those already), and the line's characters are passed over.
-	// Returns -1 for a character passed over, 1 for the last one of a unit, 0 for the others
-	// (each tag once: -3 and -5 run a tag again).
-	function languageCh(elm)
-	{
-		if (elm.langResult !== void) return elm.langResult;
-		var r = 0;
-		var c = conductor, line = c.curLineStr, pos = c.curPos - 1;
-		if (elm.wrap === void && elm.langunit === void && typeof line == "String" &&
-			pos >= 0 && pos < line.length && line.charAt(pos) == elm.text) {
-			var key = c.curStorage + ":" + c.curLine;
-			var u = languageUnit;
-			if (u !== void && u.key == key && pos > u.start && pos <= u.end) {
-				r = u.skip ? -1 : (pos >= u.end ? 1 : 0);
-			} else {
-				// a new unit: the text up to the line's next tag ("[[" is a "[")
-				var text = "", i = pos, n = line.length, start = pos;
-				if (elm.text == "[" && pos > 0 && line.charAt(pos - 1) == "[") { text = "["; i = pos + 1; start = pos - 1; }
-				while (i < n) {
-					var ch = line.charAt(i);
-					if (ch == "[") {
-						if (i + 1 < n && line.charAt(i + 1) == "[") { text += "["; i += 2; continue; }
-						break;
-					}
-					text += ch;
-					i++;
-				}
-				u = languageUnit = %[key:key, start:start, end:i - 1, skip:false];
-				var lang = KAGLanguage.current;
-				var shown = KAGLanguage.story(c.curStorage, text, lang);
-				if (shown != text) {
-					u.skip = true;
-					var items = languageTextItems(shown);
-					var tags = [ %[tagname:"textunit", storage:c.curStorage, source:text, lang:lang] ];
-					var w = %[key:"language:" + key + ":" + start + ":" + lang, line:languageWrapLine(items, lang)];
-					for (var j = 0; j < items.count; j++) {
-						var it = items[j];
-						switch (it[0]) {
-						case "r": tags.add(%[tagname:"r"]); break;
-						case "font": tags.add(%[tagname:"font", size:it[1]]); break;
-						case "resetfont": tags.add(%[tagname:"resetfont"]); break;
-						case "ruby": tags.add(%[tagname:"ruby", text:it[1]]); break;
-						default: tags.add(%[tagname:"ch", text:it[1], wrap:w, langunit:true]);
-						}
-					}
-					tags.add(%[tagname:"endtextunit"]);
-					for (var j = tags.count - 1; j >= 0; j--) c.pushTag(tags[j]);
-					r = -1;
-				} else {
-					current.beginTextUnit(%[storage:c.curStorage, source:text, lang:lang]);
-					current.comp.beginTextUnit(%[storage:c.curStorage, source:text, lang:lang]) if currentWithBack;
-					r = pos >= u.end ? 1 : 0;
-				}
-			}
-		}
-		elm.langResult = r;
-		return r;
 	}
 
 	function onKeyDown(key, shift)
@@ -15322,14 +15304,6 @@ class KAGWindow extends Window
 			}
 		}
 		@endif
-		// Languages: a scenario line's text is drawn as a text unit, in the language shown
-		// (languageCh); -1 is a character its translation stands in for
-		var unitEnds = false;
-		if (textWriteEnabled && languageAvailable) {
-			var lr = languageCh(elm);
-			if (lr < 0) return 0;
-			unitEnds = lr > 0;
-		}
 		// Word wrap after every early return above: -3 and -5 run this tag again, and a
 		// space counted twice would put the wrap one word out
 		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
@@ -15347,10 +15321,6 @@ class KAGWindow extends Window
 			historyLayer.autoReline() if (repage === false && typeof historyLayer.autoReline == "Object");
 			historyLayer.store(text);
 		}
-		if (unitEnds) {
-			current.endTextUnit();
-			current.comp.endTextUnit() if currentWithBack;
-		}
 		if(autoWCEnabled && skipMode <= SKIP_STOP)
 		{
 			// Auto-wait
@@ -15363,13 +15333,13 @@ class KAGWindow extends Window
 		return acs * actskipspeed;
 	} incontextof this,
 
-    // A text unit (Language.tjs): text from the scenario drawn as one piece, noted so the page
-    // can be drawn again in another language (KAGEnvPlayer.extractText, and languageCh for
-    // the translated text of a scenario line)
+    // A text unit (Language.tjs): a compiled scenario's text drawn as one piece, noted with the
+    // text in every language (texts, by code) so the page can be drawn again in another one
+    // (KAGEnvPlayer.emitText, MessageLayer.redrawTextIn)
     textunit : function(elm)
     {
 		if (skipNoDisp || !textWriteEnabled) return 0;
-		var info = %[storage:elm.storage, source:elm.source, lang:elm.lang];
+		var info = %[texts:elm.texts];
 		current.beginTextUnit(info);
 		current.comp.beginTextUnit(info) if currentWithBack;
 		return 0;

@@ -35,9 +35,9 @@ title screen, the system screens, macro files) are played as before.
 The compiled file of a script goes next to it: data/scenario/char.ks is compiled into
 data/scenario/char.ks.scn (or char.ks.scn.json without the plugin, or with format=json below;
 writing one removes the other). The files are made from the scripts and aren't committed
-(.gitignore). A script is compiled again when it has changed, or the macros, the options,
-envinit.tjs, charinit.csv or the compiler have: each compiled file holds the key of what it
-was compiled from (hash). So is a script whose starting World has changed (Where a script
+(.gitignore). A script is compiled again when it has changed, or its translations (Languages,
+below), the macros, the options, envinit.tjs, charinit.csv or the compiler have: each compiled
+file holds the key of what it was compiled from (hash). So is a script whose starting World has changed (Where a script
 starts, under What the compiler does).
 
 - In debug mode (the default; -debugwin=no turns it off), a listed script that changed is
@@ -139,22 +139,45 @@ end; EXIT comes back too.
 
 player.searchTexts(text, readOnly, max) finds the texts of the compiled scripts in
 !scnlist.txt that hold a string, or whose speaker's name does (letter case ignored), as they're
-shown: without font commands, ruby and escapes. With readOnly only texts that have been read
-count (the read marks), so a search gives nothing away. Each result is %[storage, label, scene,
-title, idx, name, text]; player.seek(storage, label, idx, true) plays from it. doSearch,
-getSearchData and goToSearch use the same search.
+shown: without font commands, ruby and escapes, in the language shown or the one the script is
+written in. With readOnly only texts that have been read count (the read marks), so a search
+gives nothing away. Each result is %[storage, label, scene, title, shownTitle, idx, name, text]
+(shownTitle, name and text in the language shown); player.seek(storage, label, idx, true) plays
+from it. doSearch, getSearchData and goToSearch use the same search.
 
 The sample's Search screen (Extras, searchmode.ks) takes a word in an [edit] field (Return
 searches: [edit enter=], doc/kagex.txt), lists the lines read that hold it, 7 a page, with the
 demo and scene each is in (replaylist.csv's titles), and plays from the one chosen to the end of
 its scene, then comes back to Search. tf.allseen searches every line.
 
+◇ Languages
+
+A game in more than one language (KAGLanguageList, doc/kagex.txt "Languages") has its other
+languages built into its compiled files, as Wamsoft's multi-language games do. Each listed
+script's translation into a language is a copy of the script with its text in that language,
+data/lang/<code>/scenario/<script> (lang/ja/scenario/char.ks for char.ks). The compiler
+compiles each translation from the same World as its script and takes its texts, display
+names, choices and scene titles into the script's compiled file, matching them scene by scene
+(by label), then text by text and choice by choice; everything else (steps, voices, waits,
+states) is the script's. A scene whose translation has other texts (another number of them,
+or one said by someone else) or another number of choices, and every scene of a script without
+a translation, has the script's own text in that language; the compiler says which (a
+warning).
+
+The player shows each text, name, choice and title in the language shown, and in the one it
+was shown in when it writes the backlog again (going back, a load). Switching the language
+draws the message on screen and the choices on show again from the compiled file
+(MessageLayer.redrawTextIn). A speaker's name the line doesn't give is the character's
+nameAlias, which can be a dictionary by language (doc/kagex.txt). Saves keep the scene's title
+in every language, for the save screen (kag.getBookMarkPageName).
+
 ◇ Releases
 
 kagex-release compiles the listed scripts as it builds (Scenarios > Compile, scenes.compile in
 release.json; on by default when the game has a !scnlist.txt): after the media conversion it
 runs this computer's engine on the game's files with -scncompile=all, then leaves out each
-compiled script and the compiler's own parsermacro.ks and parseroption.txt. !scnlist.txt
+compiled script, its translations (lang/<code>/scenario/<script>, built into it) and the
+compiler's own parsermacro.ks and parseroption.txt. !scnlist.txt
 stays: the game reads it to know which scripts are compiled. The compiled files the game
 folder already has are left out and every script compiled again.
 
@@ -277,25 +300,36 @@ put back from the saved state when the skip ends) or most other tags. It still r
 https://github.com/krkren/scnfile describes in docs/format.md (Dictionaries are PSB objects,
 Arrays lists, void null). The root:
 
-    version     2 (1 up to KAGEX 0.9.2: no entry or exits)
+    version     3 (2 up to KAGEX 0.9.3: no languages; 1 up to 0.9.2: no entry or exits)
     storage     the script
     hash        the key of what it was compiled from
     entry       the key of the World it starts from (none: an empty one)
     exits       where it goes to other scripts: %[storage, target, state], the World's
                 state there (none: it doesn't)
+    languages   with more than one language, the codes of the others (KAGLanguageList after
+                its first), in order; none with one
     scenes      the scenes, in order
 
 A scene:
 
     label       its label ("*start"), or "" for the part before the first label
-    title       its title
+    title       its title; with more than one language a list, one a language: the source
+                language's, then the others' in the order of languages
     firstLine   its label's line (lines count from 0, as KAG's do)
     startLine   the same
     lastLine    its last line
     spCount     the number of its last save point
-    texts       its messages: [name, display name, text, voice, flag, state]
+    texts       its messages: [name, display name, text, voice, flag, state]; with more
+                than one language [name, [entry...], voice, flag, state], with an entry a
+                language, in the same order as a title's: [display name, text, length,
+                speech text, search text]
     lines       its steps, below
     nexts       where it goes when it ends, below (none: the story stops)
+
+That is Wamsoft's layout for its multi-language games: an entry's length is its search text's,
+the speech text is the text as it's read out (each ruby in place of the characters it goes
+with) and the search text as it's shown (without ruby, escapes and font commands, new lines as
+spaces).
 
 A text's display name is null unless the script gave one; its voice is null or a list of
 %[name, voice, noplayvoice]; its state is the World's state (KAGEnvironment.onStore), or the
@@ -342,3 +376,6 @@ nexts: one or more of
     eval      a condition
     text, onceflag, tag
               a choice's text and flags, as [seladd] takes them
+    language  with more than one language, the choice in each, in the same order as a
+              title's: %[text, speechtext, searchtext, textlength], null for the source
+              language (its text)

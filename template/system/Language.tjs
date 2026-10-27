@@ -1,26 +1,30 @@
 // Language.tjs - the languages a game is shown in (doc/kagex.txt, "Languages")
 //
 // A game lists its languages in Config.tjs (global.KAGLanguageList, "en,ja"): the first is the
-// one its scenarios and scripts are written in, the source language, which needs no table. Each
-// other language has a folder, data/lang/<code>/, which is put on the search path while the
-// game shows that language, so any file in it stands in for the file of the same name elsewhere
-// (the screens' images with words on them, a CSV), and which holds that language's table,
-// lang.json:
+// one its scenarios and scripts are written in, the source language.
+//
+// The story is in the compiled scenarios, as in Wamsoft's multi-language games: each script in
+// !scnlist.txt has a translation into each other language, data/lang/<code>/scenario/<script>
+// (the script with its text in that language), and the compiler builds every language's texts,
+// speakers' names, choices and titles into the script's .scn (SceneParser.addLanguages,
+// doc/scn.txt "Languages"); the scene player shows the language shown. Speakers' names that
+// come from envinit.tjs (nameAlias) can be a dictionary by language. Scripts KAG plays itself
+// (the title screen, the system screens, a script not in !scnlist.txt) are shown as written.
+//
+// The interface is in each other language's folder, data/lang/<code>/, which is put on the
+// search path while the game shows that language, so any file in it stands in for the file of
+// the same name elsewhere (the screens' images with words on them, a CSV), and which holds
+// that language's table of interface strings, lang.json:
 //
 //   {
-//     "name": "日本語",                    the language's name, in that language
-//     "strings": { "Load?": "ロードしますか？", ... },     the interface: prompts, buttons,
-//                                              scene titles, choices; keyed by the source text
-//     "names": { "Ai": "あい", ... },        speakers' names
-//     "text": {                              story text, by script ("*": any script)
-//       "char.ks": { "Character appearance": "キャラクタ出現", ... },
-//       "*": { ... }
-//     }
+//     "name": "日本語",                      the language's name, in that language
+//     "strings": { "Load?": "ロードしますか？", ... }    prompts, labels and messages a
+//                                            screen draws (tr()), keyed by the source text
 //   }
 //
 // The framework's own strings (the Yes/No prompts, About, the backlog's "Choice: ") are in
-// system/kagex_<code>.json, read before the game's table, which can change them. Text a table
-// doesn't have is shown as written.
+// system/kagex_<code>.json, read before the game's table, which can change them. A string a
+// table doesn't have is shown as written.
 //
 // KAGLanguage.set(code) switches the language while the game runs: the search path and the
 // table change, then every object registered with addListener gets onLanguageChange(code,
@@ -33,7 +37,7 @@ class KAGLanguageManager
 	var source = "en";      // the language the scenarios are written in
 	var current;            // the language shown
 	var chosen = false;     // whether the player chose it (saved; otherwise the system's)
-	var table;              // current's tables, merged: %[ strings, names, text ]
+	var table;              // current's tables, merged: %[ name, strings ]
 	var paths = [];         // the search paths added for current
 	var listeners = [];     // objects told of a change (onLanguageChange)
 	var generation = 0;     // counts the changes (caches keyed on the language check it)
@@ -177,7 +181,7 @@ class KAGLanguageManager
 		}
 	}
 
-	function emptyTable() { return %[ name: "", strings: %[], names: %[], text: %[] ]; }
+	function emptyTable() { return %[ name: "", strings: %[] ]; }
 
 	// A JSON table, or void where there isn't one (or it isn't JSON). The json plugin's
 	// evalJSONStorage fails on any character beyond ASCII ("can't convert to a UNICODE string",
@@ -219,8 +223,8 @@ class KAGLanguageManager
 	{
 		var t = emptyTable();
 		mergeInto(t, readTable("kagex_" + lang + ".json"));
-		var roots = global.KAGLanguageRoots;
-		for (var i = 0; i < roots.count; i++) mergeInto(t, readTable(roots[i] + "lang/" + lang + "/lang.json"));
+		var roots = global.KAGLanguageRoots, rel = "lang/" + lang + "/lang.json";
+		for (var i = 0; i < roots.count; i++) if (KAGStorageAt(roots[i] + rel, rel)) mergeInto(t, readTable(roots[i] + rel));
 		return t;
 	}
 
@@ -232,11 +236,9 @@ class KAGLanguageManager
 	}
 
 	// ---- looking up -----------------------------------------------------------------------
-	// Each lookup is in the language shown, or in the one given (lang): the backlog keeps text
-	// in the language it was shown in (KAGEnvPlayer.tjs). Text a table doesn't have is shown as
-	// written. A key is looked up as it is, then without spaces at its ends (the spaces English
-	// puts between the parts of a line that tags split): then the translation is used as it is
-	// written, so it has the spaces its language needs.
+	// In the language shown, or in the one given (lang): the backlog keeps a choice's "Choice:"
+	// in the language it was shown in (KAGEnvPlayer.tjs). A string a table doesn't have is shown
+	// as written. A key is looked up as it is, then without spaces at its ends.
 
 	// another language's tables (read once; the language shown has `table`)
 	var otherTables = %[];
@@ -267,45 +269,23 @@ class KAGLanguageManager
 		var r = find(tableFor(lang).strings, text);
 		return r !== void ? r : text;
 	}
+}
 
-	// A speaker's displayed name
-	function speaker(name, lang)
-	{
-		if (typeof name != "String" || name == "") return name;
-		if (lang === void) lang = current;
-		if (lang == source) return name;
-		var r = find(tableFor(lang).names, name);
-		return r !== void ? r : name;
-	}
-
-	// Story text from a script (storage): that script's table, then the one for every script
-	// ("*"), then the interface strings
-	function story(storage, text, lang)
-	{
-		if (typeof text != "String" || text == "") return text;
-		if (lang === void) lang = current;
-		if (lang == source) return text;
-		var r = storyLookup(tableFor(lang), storage, text);
-		if (r !== void) return r;
-		// a text of several lines (a scene player's text with [r] in it): each line
-		if (text.indexOf("\n") >= 0) {
-			var lines = text.split("\n"), any = false;
-			for (var i = 0; i < lines.count; i++) {
-				if ((r = storyLookup(tableFor(lang), storage, lines[i])) !== void) lines[i] = r, any = true;
-			}
-			if (any) return lines.join("\n");
-		}
-		return text;
-	}
-
-	function storyLookup(t, storage, text)
-	{
-		var r;
-		if (typeof storage == "String" && storage != "" &&
-			(r = find(t.text[Storages.extractStorageName(storage).toLowerCase()], text)) !== void) return r;
-		if ((r = find(t.text["*"], text)) !== void) return r;
-		return find(t.strings, text);
-	}
+// Whether storage (a name with a folder: root + path) is there at that path. The engine looks a
+// name with a folder up by its file name on the auto path when there's no such file there
+// (lang/ja/scenario/effect.ks was found as data/scenario/effect.ks), so the file it finds has to
+// be at path
+function KAGStorageAt(storage, path)
+{
+	var placed = Storages.getPlacedPath(storage);
+	if (placed == "") return false;
+	placed = placed.toLowerCase();
+	path = ((string)path).toLowerCase();
+	var n = placed.length - path.length;
+	if (n < 0 || placed.substr(n) != path) return false;
+	if (n == 0) return true;
+	var c = placed.charAt(n - 1);
+	return c == "/" || c == ">" || c == "\\";
 }
 
 // The game's languages. Created by Initialize.tjs after Config.tjs, showing the language the

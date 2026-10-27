@@ -928,8 +928,10 @@ def scenes_tests(exe, proj, args):
         step("scenes: a .scn for each listed script, encrypted", len(scn) == len(listed) and
              all(f.read_bytes()[:4] == b"KSCN" for f in scn), ", ".join(f.name for f in scn))
         left = [n for n in listed if (data / "scenario" / n).exists()] + \
-               [n for n in ("parsermacro.ks", "parseroption.txt") if (data / "scenario" / n).exists()]
-        step("scenes: the compiled scripts and the compiler's files are left out", not left, ", ".join(left))
+               [n for n in ("parsermacro.ks", "parseroption.txt") if (data / "scenario" / n).exists()] + \
+               [f.relative_to(data).as_posix() for f in (data / "lang").glob("*/scenario/*") if f.name in listed]
+        step("scenes: the compiled scripts, their translations (built into them) and the compiler's files are left out",
+             not left, ", ".join(left))
         want = bytes.fromhex(keys_of(key)["scenes"])
         holders = [f for f in folder.rglob("*") if f.is_file() and not f.is_symlink() and "data" not in f.relative_to(folder).parts
                    and SLOT_MARKER in f.read_bytes()]

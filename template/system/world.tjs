@@ -842,6 +842,13 @@ class KAGWorldPlugin extends KAGPlugin
 		}
 	}
 
+	// The page name in every language (a compiled scenario's titles, doc/scn.txt "Languages")
+	function getCurrentPageNames() {
+		if (playerWorking) {
+			return player.titles;
+		}
+	}
+
 	/**
 	 * Hook for overriding scenario execution system
 	 * @param execFile Script for execution (needs to call scenestart/sceneplay internally)

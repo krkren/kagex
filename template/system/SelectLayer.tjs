@@ -1198,13 +1198,19 @@ class SelectLayer {
 
     }
 
-	// A choice's label in the language shown (Language.tjs: the table's text for the script
+	// A choice's label in the language shown: a compiled scenario's choice has it in every
 
-	// that added it, MainWindow.addSelect)
+	// language (texts, by code: KAGEnvPlayer.choiceTexts); any other is shown as written
 
 	function selectText(elm) {
 
-		return global.KAGLanguage !== void ? KAGLanguage.story(elm.textStorage, elm.text) : elm.text;
+		var texts = elm.texts;
+
+		if (texts !== void && global.KAGLanguage !== void && typeof texts[KAGLanguage.current] == "String")
+
+			return texts[KAGLanguage.current];
+
+		return elm.text;
 
 	}
 
