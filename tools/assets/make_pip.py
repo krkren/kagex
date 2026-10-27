@@ -10,7 +10,8 @@ and whose mouth follows its voice. This writes, into data/fgimage/pip:
   psdlayer.tjs's text format (the first line after the canvas size is the top layer). The eyes
   and mouths are groups holding "Open Eyes"/"Half-closed Eyes"/"Closed Eyes" and
   "Closed Mouth"/"Half-open Mouth"/"Open Mouth", which is what makes them move; the top one of
-  each shows while they don't.
+  each shows while they don't. The plain face's mouth also has one for each vowel, "Mouth A"
+  ... "Mouth O", which show while the voice says that vowel.
 - pip_<level>_<layer id>.png: each layer's picture, trimmed to what it draws.
 - pip_info.txt: the outfits ("dress"), arm poses ("diff") and faces, by layer name.
 
@@ -18,11 +19,13 @@ and data/main/charinit.csv, the line that names those files, and data/main/chara
 animation (waving: the arm poses in turn). Every shape is a signed distance field evaluated in
 NumPy, so each level is drawn at its own size rather than scaled.
 
-The voice lines (data/voice/pip000001.ogg ...) are babble: syllables of a glottal pulse through
-vowel formants, in a high voice, with a consonant before most, one line for each of LINES,
-encoded with ffmpeg's libvorbis.
+The voice lines (data/voice/pip000001.ogg ...) are babble: syllables of a breathy glottal pulse
+through vowel formants, in a high voice, with a consonant before most, one line for each of
+LINES, encoded with ffmpeg's libvorbis. The formants are the ones the engine's
+WaveSoundBuffer.getVowel looks for, and the breath fills in the spectrum between the voice's
+harmonics, so it tells the vowels apart (`python3 tools/assets/make_pip.py vowels` measures it).
 
-usage: python3 tools/assets/make_pip.py [art] [voice]
+usage: python3 tools/assets/make_pip.py [art] [voice] [vowels]
 """
 import math, os, shutil, subprocess, sys, tempfile, wave
 
@@ -565,6 +568,39 @@ def mouth_frames(group, kind):
     return [closed, half, opened]   # the top one shows when lip-sync is off
 
 
+def teeth(l, m, cx, y0, y1, half):
+    """upper teeth: a white band from y0 down to y1, inside the open mouth m"""
+    band = Poly([(cx - half, y0), (cx + half, y0), (cx + half, y1), (cx - half, y1)])
+    l.fill(band & m, WHITE, 0.95)
+
+
+def vowel_frames(group):
+    """A mouth for each vowel (KAGEnvCharacterEx.tjs's lipVowelLayerNames): while Pip speaks,
+    the one for the vowel its voice says shows in place of the half-open and open mouths"""
+    cx, cy = MOUTH_C
+    a, i, u, e, o = (Layer("Mouth %s" % v, group) for v in "AIUEO")
+    open_mouth(a, cx, cy - 8, 27, 34)                       # wide open
+    for l, half, depth, sag in ((i, 32, 9, 5), (e, 28, 17, 5)):
+        top = arc(cx, cy - 4, half, sag)
+        bottom = bezier((cx + half, cy - 4), (cx + half * 0.9, cy - 4 + depth * 1.3),
+                        (cx - half * 0.9, cy - 4 + depth * 1.3), (cx - half, cy - 4))
+        m = Poly(list(top) + list(bottom))
+        l.fill(m.grow(5), NAVY)
+        l.fill(m, MOUTH)
+        teeth(l, m, cx, cy - 12, cy - 4 + sag + (5 if l is i else 6), half)
+        if l is e:
+            l.fill(Ellipse(cx, cy - 4 + depth * 0.95, half * 0.55, depth * 0.38) & m, TONGUE)
+    for l, rx, ry, dy in ((u, 9, 10, 2), (o, 17, 23, 6)):   # rounded: a small pout, a big O
+        m = Ellipse(cx, cy + dy, rx, ry)
+        l.fill(m.grow(5), NAVY)
+        l.fill(m, MOUTH)
+        if ry > 12:
+            l.fill(Ellipse(cx, cy + dy + ry * 0.62, rx * 0.65, ry * 0.36) & m, TONGUE)
+    for l in (a, i, u, e, o):
+        l.added = True   # numbered after the layers made before them (make_art)
+    return [a, i, u, e, o]
+
+
 # brows -----------------------------------------------------------------------------------
 
 def brows(name, kind):
@@ -592,7 +628,7 @@ def build():
     layers = [sweat_layer(), cheeks_layer("Blush", 0.62, True),
               brows("Brows Neutral", "neutral"), brows("Brows Raised", "raised"),
               brows("Brows Worried", "worried"), brows("Brows Angry", "angry")]
-    layers += mouth_frames("Mouth", "smile") + mouth_frames("Mouth Grin", "grin")
+    layers += mouth_frames("Mouth", "smile") + vowel_frames("Mouth") + mouth_frames("Mouth Grin", "grin")
     layers += mouth_frames("Mouth O", "o") + mouth_frames("Mouth Frown", "frown")
     layers += eye_frames("Eyes") + wide_eye_frames("Eyes Wide")
     layers += eye_frames("Eyes Droop", droop_lid) + eye_frames("Eyes Glare", glare_lid)
@@ -653,10 +689,15 @@ def make_art():
         shutil.rmtree(OUT)
     os.makedirs(OUT)
     gid = {g: 1000 + i for i, g in enumerate(groups)}
+    # layer IDs (the pictures' names) top down, but the layers added later (the vowel mouths)
+    # after the others, so the older pictures keep their names
+    ids = {}
+    for layer in sorted(layers, key=lambda l: getattr(l, "added", False)):
+        ids[id(layer)] = len(ids) + 1
     for level, scale in LEVELS:
         lines = [HEADER, "\t\t\t\t%d\t%d" % (round(W * scale), round(H * scale))]
-        for i, layer in enumerate(layers):
-            lid = i + 1
+        for layer in layers:
+            lid = ids[id(layer)]
             left, top, img = layer.render(scale)
             if img is None:
                 sys.exit("layer %s draws nothing" % layer.name)
@@ -699,9 +740,10 @@ LINES = [
     "Bye for now!",
 ]
 
-# vowel formants (Hz), raised for a small voice
-VOWELS = {"a": (850, 1350, 2700), "i": (330, 2600, 3300), "u": (380, 1200, 2500),
-          "e": (560, 2100, 2900), "o": (520, 950, 2600)}
+# vowel formants (Hz): F1 and F2 are the ones the engine's WaveSoundBuffer.getVowel looks for
+# (QueueSoundBufferImpl.cpp), so it tells Pip's vowels apart (`make_pip.py vowels`)
+VOWELS = {"a": (800, 1200, 2700), "i": (300, 2300, 3300), "u": (350, 1200, 2500),
+          "e": (500, 1900, 2900), "o": (500, 900, 2600)}
 
 
 def resonator(x, f, bw):
@@ -756,7 +798,8 @@ def consonant(rng):
     return hum * np.hanning(n) * 0.18
 
 
-def babble(text, seed):
+def babble(text, seed, labels=False):
+    """the line's samples (and with labels, each sample's vowel, "aiueo"'s index, or -1)"""
     rng = np.random.default_rng(seed)
     nsyl, nwords = syllable_count(text)
     question = text.rstrip().endswith("?")
@@ -766,6 +809,7 @@ def babble(text, seed):
     for _ in range(nsyl - nwords):
         sizes[rng.integers(nwords)] += 1
     out = [np.zeros(int(RATE * 0.08))]
+    lab = [np.full(len(out[0]), -1)]
     k = 0
     for wi, size in enumerate(sizes):
         for si in range(size):
@@ -783,26 +827,73 @@ def babble(text, seed):
                 f0 += 40
             f0 = f0 * (1 + 0.03 * np.sin(2 * math.pi * 5.5 * t) + 0.04 * (t / dur) * (-1 if si == size - 1 else 1))
             phase = np.cumsum(f0 / RATE) % 1.0
-            # a glottal pulse (open for 60% of each period, then closed) and a little breath
+            # a glottal pulse (open for 60% of each period, then closed) and much breath, which
+            # fills in the spectrum between the harmonics of such a high voice, where the formants
+            # are; then tilted up, so the fundamental doesn't outweigh them
             open_q = 0.6
             src = np.where(phase < open_q, np.sin(math.pi * phase / open_q) ** 2, 0.0)
-            src = np.diff(src, prepend=0.0) * 20 + 0.02 * rng.standard_normal(n)
-            vowel = "aiueo"[rng.integers(5)]
-            fs = VOWELS[vowel]
-            v = (resonator(src, fs[0] * 1.15, 80) + 1.1 * resonator(src, fs[1] * 1.15, 110)
-                 + 0.7 * resonator(src, fs[2] * 1.1, 160) + 0.3 * resonator(src, 4300, 250))
+            src = np.diff(src, prepend=0.0)
+            src = src / (np.std(src) + 1e-12) + 2.0 * rng.standard_normal(n)
+            src[1:] -= 0.97 * src[:-1].copy()
+            vi = int(rng.integers(5))
+            fs = VOWELS["aiueo"[vi]]
+            v = (resonator(src, fs[0], 60) + 1.6 * resonator(src, fs[1], 90)
+                 + 0.4 * resonator(src, fs[2], 160) + 0.15 * resonator(src, 4300, 250))
             env = np.minimum(1, t / 0.012) * np.minimum(1, (dur - t) / 0.035).clip(0)
             env *= 0.8 + 0.2 * np.sin(math.pi * t / dur)
             v = v / (np.max(np.abs(v)) + 1e-9) * env * rng.uniform(0.45, 1.0)   # some syllables softer
-            out.append(np.concatenate([consonant(rng), v]))
+            c = consonant(rng)
+            out.append(np.concatenate([c, v]))
+            lab.append(np.concatenate([np.full(len(c), -1), np.full(n, vi)]))
             k += 1
         out.append(np.zeros(int(RATE * rng.uniform(0.06, 0.11))))
+        lab.append(np.full(len(out[-1]), -1))
     out.append(np.zeros(int(RATE * 0.12)))
+    lab.append(np.full(len(out[-1]), -1))
     y = np.concatenate(out)
     # soften the very top (above 9 kHz) and normalise
     y = np.convolve(y, np.array([0.25, 0.5, 0.25]), "same")
     y = y / np.max(np.abs(y)) * 0.6
-    return y
+    return (y, np.concatenate(lab)) if labels else y
+
+
+def engine_vowel(x):
+    """the engine's WaveSoundBuffer.getVowel (QueueSoundBufferImpl.cpp) on 1024 samples: the
+    energy around each vowel's F1 and F2 (+-15% + 50 Hz) of a Hann-windowed FFT, as weights that
+    add up to 1, or None for silence"""
+    n = 1024
+    w = 0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n) / (n - 1))
+    mag = np.abs(np.fft.rfft(x[:n] * w)) / n
+
+    def around(hz):
+        bw = hz * 0.15 + 50
+        i0, i1 = max(1, int((hz - bw) * n / RATE)), min(n // 2, int((hz + bw) * n / RATE))
+        return float(np.sum(mag[i0:i1] ** 2)) if i1 > i0 else 0.0
+    f1, f2 = (800, 300, 350, 500, 500), (1200, 2300, 1200, 1900, 900)
+    sc = [around(f1[v]) + around(f2[v]) for v in range(5)]
+    total = sum(sc)
+    return None if total <= 1e-9 else [x / total for x in sc]
+
+
+def measure_vowels():
+    """How often the engine's getVowel names the vowel each line says, where lip-sync opens the
+    mouth (an RMS over lipSyncHalfLevel, 0.03), every 30 ms"""
+    right = total = 0
+    for i, text in enumerate(LINES):
+        y, lab = babble(text, 20261025 + i, labels=True)
+        r = t = 0
+        for pos in range(0, len(y) - 1024, int(RATE * 0.03)):
+            seg, vi = y[pos:pos + 1024], lab[pos + 512]
+            if vi < 0 or math.sqrt(float(np.mean(seg ** 2))) <= 0.03:
+                continue
+            w = engine_vowel(seg)
+            if w is None:
+                continue
+            t += 1
+            r += int(np.argmax(w)) == vi
+        print("line %d: %d of %d right, %s" % (i + 1, r, t, text), flush=True)
+        right, total = right + r, total + t
+    print("getVowel names the vowel %d%% of the time" % (100 * right // max(total, 1)), flush=True)
 
 
 def make_voice():
@@ -830,7 +921,7 @@ def make_voice():
 def main():
     what = sys.argv[1:] or ["art", "voice"]
     for w in what:
-        {"art": make_art, "voice": make_voice}[w]()
+        {"art": make_art, "voice": make_voice, "vowels": measure_vowels}[w]()
 
 
 if __name__ == "__main__":

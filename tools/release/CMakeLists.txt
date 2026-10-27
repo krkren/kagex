@@ -69,6 +69,7 @@ add_executable(kagex-release
     src/Build.cpp
     src/Encrypt.cpp
     src/Media.cpp
+    src/Layered.cpp
     src/Keys.cpp
     src/Sign.cpp
     src/Scripts.cpp
@@ -84,8 +85,10 @@ find_library(LIBTOMCRYPT_LIBRARY tomcrypt REQUIRED)
 find_library(LIBTOMMATH_LIBRARY tommath REQUIRED)
 target_include_directories(kagex-release PRIVATE src ${DRLIBS_INCLUDE_DIRS} ${LIBTOMCRYPT_INCLUDE_DIR})
 target_compile_definitions(kagex-release PRIVATE LTM_DESC)
+# psdparse and clipparse (krkrz_tools' submodules, the libraries the psdfile and clipfile plugins
+# wrap): splitting .psd and .clip files into layer pictures (src/Layered.cpp)
 target_link_libraries(kagex-release PRIVATE krt_app krt_xp3 krt_audio krt_image krt_loop krt_sig
-    ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
+    psdparse clipparse ${LIBTOMCRYPT_LIBRARY} ${LIBTOMMATH_LIBRARY} ZLIB::ZLIB)
 if(_have_xp3crypt)
     target_link_libraries(kagex-release PRIVATE xp3crypt_lib)
     target_compile_definitions(kagex-release PRIVATE KR_HAVE_XP3CRYPT)

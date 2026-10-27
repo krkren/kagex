@@ -1,11 +1,6 @@
 # To do
 
-Planned features, in three groups. The first two need only work in this repository (scripts, data and kagex-release): the plugins and engine features they use are already in krkrz_dev's default build and ship in the Linux package, and krkrz_dev itself isn't changed (`CLAUDE.md`). The third needs changes to the builds as well. The last section lists the plugins looked at and left out, and why.
-
-## From krkrz_dev: plugins and engine features
-
-- [ ] **Characters straight from PSD files** (`psdfile`): a character drawn from layers reads each pose's layers from psdlayer.tjs's text format, with a picture per layer (what `tools/assets/make_pip.py` writes for Pip). psdlayer.tjs can also read a `.psd` itself (`PSDInfo.loadPSD`, with psdfile's `PSD.getLayerData` rather than `psd://`, whose BMPs don't load outside Windows), so `StandPSDInfo` could take `<files>.psd` when there's no `.txt`, and artists could keep editing the PSD. Only the desktop builds have psdfile: either kagex-release writes the text format and pictures from the PSDs at build time (psdlayer.tjs's `saveImages` does it, but in the engine, with layerExSave and saveStruct), or the web, Android and iOS builds gain the plugin. kagex-release leaves `.psd` files out unless a script names them after `psd://`, so it would also keep the ones `charinit.csv` names. psdfile writes PSDs but can't make folders, so testing this needs a PSD writer of our own.
-- [ ] **Mouths by vowel**: the engine's `WaveSoundBuffer.getVowel` estimates how much the voice sounds like a, i, u, e and o, so a face could have a mouth for each vowel instead of three openings. No plugin needed.
+Planned features, in two groups. The first needs only work in this repository (scripts, data and kagex-release): the plugins and engine features it uses are already in krkrz_dev's default build and ship in the Linux package, and krkrz_dev itself isn't changed (`CLAUDE.md`). The second needs changes to the builds as well. The last section lists the plugins looked at and left out, and why.
 
 ## Interface, accessibility and languages
 

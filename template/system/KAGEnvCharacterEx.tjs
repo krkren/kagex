@@ -14,6 +14,24 @@ var lipFlipTime = 120;
 var lipSyncHalfLevel = 0.03;
 var lipSyncOpenLevel = 0.12;
 
+// Mouths by vowel: while the voice is loud enough to open the mouth, a face whose mouth group
+// has a layer for the vowel it says shows that layer instead of the half-open or open mouth.
+// The vowel comes from the engine's WaveSoundBuffer.getVowel (how much the voice sounds like
+// a, i, u, e and o); the layers go by these names, in English or in kana. A mouth group needs
+// "Closed Mouth" and either the half-open and open mouths or at least one vowel
+var lipSyncVowels = typeof WaveSoundBuffer.getVowel != "undefined";
+var lipVowelLayerNames = %[
+	a : ["Mouth A", "あ"],
+	i : ["Mouth I", "い"],
+	u : ["Mouth U", "う"],
+	e : ["Mouth E", "え"],
+	o : ["Mouth O", "お"]
+];
+var lipVowelList = ["a", "i", "u", "e", "o"];
+// How much more (of 1) another vowel has to weigh to replace the one shown, so the mouth
+// doesn't flicker between two vowels that sound alike
+var lipVowelHold = 0.08;
+
 // Loading psdlayer
 KAGLoadScript("psdlayer.tjs");
 
@@ -309,6 +327,14 @@ class ExStandInfoParser extends CSVParser
 												fgName.eyes = true;
 											} else if (layCond.substr(0,3) == "lip") {
 												fgName.lips = true;
+												// lipa ... lipo: the mouth for a vowel (lipSyncVowels)
+												var vowel = layCond.substr(3);
+												if (lipVowelLayerNames[vowel] !== void) {
+													if (fgName.vowels === void) {
+														fgName.vowels = %[];
+													}
+													fgName.vowels[vowel] = true;
+												}
 											}
 										}
 									} else {
@@ -618,6 +644,25 @@ function getFixedFaceName(info, currentFaceName, faceName)
 }
 
 /**
+ * The file a pose's layers come from at one level, from its name without an extension
+ * (<files>_<level name>): psdlayer.tjs's layer structure, <name>.txt (with a picture per layer,
+ * <name>_<layer id>), or when there's none, the Photoshop or CLIP STUDIO PAINT file itself,
+ * <name>.psd or <name>.clip, read through the psdfile or clipfile plugin, which only the desktop
+ * engines have. kagex-release splits such a file into the structure and pictures, so a release
+ * reads .txt on every platform. void if there's none of them
+ */
+var standLayerFileExtensions = [".txt", ".psd", ".clip"];
+function findStandLayerFile(name)
+{
+	for (var i=0;i<standLayerFileExtensions.count;i++) {
+		var file = name + standLayerFileExtensions[i];
+		if (Storages.isExistentStorage(file)) {
+			return file;
+		}
+	}
+}
+
+/**
  * Returns the expected level for the stand-alone image
  */
 function checkStandLayerLevel(level, levelMax, standInfo, levels, searchSmallLevel=true)
@@ -635,14 +680,12 @@ function checkStandLayerLevel(level, levelMax, standInfo, levels, searchSmallLev
 		var levelInfo;
 		var levelName;
 		if (levels !== void && (levelInfo = levels[l]) !== void && (levelName = levelInfo.name) !== void) {
-			var file = standInfo.filename + "_" + levelName + ".txt";
-			if (Storages.isExistentStorage(file)) {
+			if (findStandLayerFile(standInfo.filename + "_" + levelName) !== void) {
 				imageLevel = l;
 				break;
 			}
 		} else {
-			var file = standInfo.filename + "_" + l + ".txt";
-			if (Storages.isExistentStorage(file)) {
+			if (findStandLayerFile(standInfo.filename + "_" + l) !== void) {
 				imageLevel = l;
 				break;
 			}
@@ -653,14 +696,12 @@ function checkStandLayerLevel(level, levelMax, standInfo, levels, searchSmallLev
 			var levelInfo;
 			var levelName;
 			if (levels !== void && (levelInfo = levels[l]) !== void && (levelName = levelInfo.name) !== void) {
-				var file = standInfo.filename + "_" + (levelInfo.name) + ".txt";
-				if (Storages.isExistentStorage(file)) {
+				if (findStandLayerFile(standInfo.filename + "_" + (levelInfo.name)) !== void) {
 					imageLevel = l;
 					break;
 				}
 			} else {
-				var file = standInfo.filename + "_" + l + ".txt";
-				if (Storages.isExistentStorage(file)) {
+				if (findStandLayerFile(standInfo.filename + "_" + l) !== void) {
 					imageLevel = l;
 					break;
 				}
@@ -685,16 +726,19 @@ class StandPSDInfo extends PSDInfo {
 		this.imageLevel = imageLevel;
 		var filename;
 		if (imageLevel === void) {
-			filename = info.filename + ".txt";
+			filename = info.filename;
 		} else {
 			var levelInfo;
 			var levelName;
 			if (levels !== void && (levelInfo = levels[(int)+imageLevel]) !== void && (levelName = levelInfo.name) !== void) {
-				filename = info.filename + "_" + levelName + ".txt";
+				filename = info.filename + "_" + levelName;
 			} else {
-				filename = info.filename + "_" + imageLevel + ".txt";
+				filename = info.filename + "_" + imageLevel;
 			}
 		}
+		// the layer structure (.txt), or the PSD or CLIP STUDIO PAINT file when there's none
+		var file = findStandLayerFile(filename);
+		filename = file !== void ? file : filename + ".txt";
 		try {
 			loadImages(filename);
 		} catch(e) {
@@ -744,20 +788,40 @@ class StandPSDInfo extends PSDInfo {
 				if (.lipbase !== void && group.name == .lipbase) {
 					if (group.layers.count > 0) {
 						.defaultLip = .lipbase + "/" + group.layers[0].name;
-						if (group.layerMap["Closed Mouth"] !== void &&
-							(group.layerMap["Half-closed Mouth"] !== void || group.layerMap["Half-open Mouth"] !== void) &&
-							group.layerMap["Open Mouth"] !== void
-							) {
+						// a mouth for each vowel the group has a layer for (lipVowelLayerNames)
+						var vowels = %[], firstVowel;
+						for (var v=0;v<lipVowelList.count;v++) {
+							var names = lipVowelLayerNames[lipVowelList[v]];
+							for (var n=0;n<names.count;n++) {
+								if (group.layerMap[names[n]] !== void) {
+									vowels[lipVowelList[v]] = .lipbase + "/" + names[n];
+									if (firstVowel === void) {
+										firstVowel = vowels[lipVowelList[v]];
+									}
+									break;
+								}
+							}
+						}
+						var half;
+						if (group.layerMap["Half-closed Mouth"] !== void) {
+							half = .lipbase + "/Half-closed Mouth";
+						} else if (group.layerMap["Half-open Mouth"] !== void) {
+							half = .lipbase + "/Half-open Mouth";
+						}
+						var open = group.layerMap["Open Mouth"] !== void ? .lipbase + "/Open Mouth" : void;
+						if (group.layerMap["Closed Mouth"] !== void && ((half !== void && open !== void) || firstVowel !== void)) {
+							// without the half-open or open mouth, an open one is the "a" mouth, or the
+							// first vowel there is
+							var vowelOpen = vowels.a !== void ? vowels.a : firstVowel;
 							.lips = [];
 							.lips[0] = .lipbase + "/Closed Mouth";
-							if (group.layerMap["Half-closed Mouth"] !== void) {
-								.lips[1] = .lipbase + "/Half-closed Mouth";
-							} else if (group.layerMap["Half-open Mouth"] !== void) {
-								.lips[1] = .lipbase + "/Half-open Mouth";
+							.lips[1] = half !== void ? half : open !== void ? open : vowelOpen;
+							.lips[2] = open !== void ? open : half !== void ? half : vowelOpen;
+							if (firstVowel !== void) {
+								.vowels = vowels;
 							}
-							.lips[2] = .lipbase + "/Open Mouth";
 						}
-						//dm("Default Lips:" + .defaultLip + (.lips !== void ? " With lip-sync":""));
+						//dm("Default Lips:" + .defaultLip + (.lips !== void ? " With lip-sync":"") + (.vowels !== void ? " By vowel":""));
 					}
 					break;
 				}
@@ -788,6 +852,7 @@ class StandLayer extends PSDLayer {
 	var currentDiffName;  //< Current diff name
 	var currentFaceName;  //< Current expression name
 	var currentLipLevel;   //< Current lip-sync level
+	var currentLipVowel;   //< Current vowel mouth
 	var currentEyeLevel;   //< Current eye pattern level
 
 	var diffNames; //< Currently displayed diff layer name info
@@ -830,6 +895,7 @@ class StandLayer extends PSDLayer {
 		instance.currentDiffName  = currentDiffName;
 		instance.currentFaceName  = currentFaceName;
 		instance.currentLipLevel  = currentLipLevel;
+		instance.currentLipVowel  = currentLipVowel;
 		instance.currentEyeLevel  = currentEyeLevel;
 		(Array.assign incontextof instance.diffNames)(diffNames);
 		(Array.assign incontextof instance.faceNames)(faceNames);
@@ -1004,11 +1070,17 @@ class StandLayer extends PSDLayer {
 	// ---------------------------------------------------
 	
 	var lipLevel;
+	var lipVowel; // the vowel the voice says ("a" ... "o"), or void
 	var eyeLevel;
 
 	// Specify lip level
 	function setLipLevel(lipLevel) {
 		this.lipLevel = lipLevel;
+	}
+
+	// Specify the vowel for a face with a mouth for each (lipSyncVowels)
+	function setLipVowel(lipVowel) {
+		this.lipVowel = lipVowel;
 	}
 
 	// Specify eye level
@@ -1055,7 +1127,7 @@ class StandLayer extends PSDLayer {
 
 	// Setting expression
 	function setFace(faceName) {
-		if (faceName != currentFaceName || lipLevel !== currentLipLevel || eyeLevel !== currentEyeLevel) {
+		if (faceName != currentFaceName || lipLevel !== currentLipLevel || lipVowel !== currentLipVowel || eyeLevel !== currentEyeLevel) {
 			//dm("Expression changed!");
 			// Clearing previous expressions
 			for (var i=0;i<faceNames.count;i++) {
@@ -1104,6 +1176,9 @@ class StandLayer extends PSDLayer {
 						var lipname;
 						if (lipLevel === void || faceInfo.lips === void) {
 							lipname = faceInfo.defaultLip;
+						} else if (lipLevel > 0 && lipVowel !== void && faceInfo.vowels !== void && faceInfo.vowels[lipVowel] !== void) {
+							// the mouth for the vowel the voice says
+							lipname = faceInfo.vowels[lipVowel];
 						} else {
 							lipname = faceInfo.lips[lipLevel];
 						}
@@ -1134,17 +1209,24 @@ class StandLayer extends PSDLayer {
 							var fgName = info.fgNameMap[faces[i]];
 							if (fgName !== void) {
 								var list = fgName.baseList;
+								// Determination of conditions
+								var l = lipLevel === void ? 0 : lipLevel; // Default lips are closed
+								var e = eyeLevel === void ? 2 : eyeLevel; // Default eyes are open
+								// lipa ... lipo in place of lip1 and lip2 while the voice says a vowel
+								// the group has a mouth for
+								var v = l > 0 && lipVowel !== void && fgName.vowels !== void && fgName.vowels[lipVowel] ? lipVowel : void;
 								for (var j=0;j<list.count;j++) {
 									var info = list[j];
 									var name = info[0];
 									var cond = info[1];
-									// Determination of conditions
-									var l = lipLevel === void ? 0 : lipLevel; // Default lips are closed
-									var e = eyeLevel === void ? 2 : eyeLevel; // Default eyes are open
 									//dm("Display conditions: lipsLevel:" + l  + " eyelevel:" + e);
+									var lipCond;
+									if (cond !== void && cond.substr(0,3) == "lip") {
+										lipCond = cond.substr(3);
+									}
 									if (cond === void || cond == "" ||
 										(cond.substr(0,3) == "eye" && +cond.substr(3) == e) ||
-										(cond.substr(0,3) == "lip" && +cond.substr(3) == l)) {
+										(lipCond !== void && (lipVowelLayerNames[lipCond] !== void ? lipCond == v : v === void && +lipCond == l))) {
 										setFaceVisible(name);
 									}
 								}
@@ -1161,6 +1243,7 @@ class StandLayer extends PSDLayer {
 			
 			currentFaceName = faceName;
 			currentLipLevel = lipLevel;
+			currentLipVowel = lipVowel;
 			currentEyeLevel = eyeLevel;
 		}
 	}
@@ -2204,6 +2287,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 
 	// Parameters for eye blink/lip-sync
 	var lipLevel;
+	var lipVowel; // the vowel the voice says, for a face with a mouth for each (lipSyncVowels)
 	var eyeLevel;
 	
 	var noconvdress;
@@ -2235,6 +2319,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			standlayer.setAdd(addimage, true);
 			standlayer.setAddFace(addface, true);
 			standlayer.setLipLevel(lipLevel);
+			standlayer.setLipVowel(lipVowel);
 			standlayer.setEyeLevel(eyeLevel);
 			standlayer.setFace(face);
 			standlayer.updateImage();
@@ -2403,6 +2488,7 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 				facelayer.setAdd(addimage, true);
 				facelayer.setAddFace(addface, true);
 				facelayer.setLipLevel(lipLevel);
+				facelayer.setLipVowel(lipVowel);
 				facelayer.setEyeLevel(eyeLevel);
 				facelayer.setFace(face);
 				facelayer.updateImage();
@@ -2790,6 +2876,52 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			}
 			break;
 		}
+		lipVowel = void;
+	}
+
+	/**
+	 * Whether the face shown has a mouth for each vowel (lipSyncVowels): only then is the voice's
+	 * vowel worth working out
+	 */
+	function faceHasVowels() {
+		if (standlayer === void || !isvalid standlayer || face === void) {
+			return false;
+		}
+		var psdinfo = standlayer.psdinfo;
+		var faceInfo = psdinfo.getFaceInfo(face);
+		if (faceInfo !== void) {
+			return faceInfo.lipimage === void && faceInfo.vowels !== void;
+		}
+		if (face.indexOf(":") >= 0) {
+			var faces = face.split(":");
+			for (var i=0;i<faces.count;i++) {
+				var fgName = psdinfo.info.fgNameMap[faces[i]];
+				if (fgName !== void && fgName.vowels !== void) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The vowel to show from the weights WaveSoundBuffer.getVowel gives: the heaviest, unless it
+	 * doesn't outweigh the one shown by lipVowelHold
+	 */
+	function pickLipVowel(weights) {
+		if (weights === void || !weights.voiced) {
+			return void;
+		}
+		var best = lipVowel;
+		var bestWeight = best !== void ? weights[best] + global.lipVowelHold : -1;
+		for (var i=0;i<lipVowelList.count;i++) {
+			var v = lipVowelList[i];
+			if (weights[v] > bestWeight) {
+				best = v;
+				bestWeight = weights[v];
+			}
+		}
+		return best;
 	}
 
 	/**
@@ -2921,6 +3053,12 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	function updateLip(tick) {
 		var updateFlag = false;
 
+		// a vowel's mouth shows only while lip-syncing to a voice
+		if (lipVowel !== void && (lipflip > 0 || lipstate != 3)) {
+			lipVowel = void;
+			updateFlag = true;
+		}
+
 		// Forced processing
 		if (lipflip > 0) {
 			//dm("Forced blinking processing!");
@@ -2966,14 +3104,20 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			// Get and set volume level
 			// Only voices in a state reacting to labels are targeted
 			var voiceLevel = 0;
+			var vowel;
 			if (soundBuffer !== void && soundBuffer.status == "play" && soundBuffer.mode) {
 				if (lipSyncSource == "level") {
 					// The level half a frame ahead, around the middle of the time the mouth is shown
-					var a = soundBuffer.getSoundLevel((int)(soundBuffer.frequency * lipflipTime / 2000)).rms;
+					var ahead = (int)(soundBuffer.frequency * lipflipTime / 2000);
+					var a = soundBuffer.getSoundLevel(ahead).rms;
 					if (a > lipSyncOpenLevel) {
 						voiceLevel = 2;
 					} else if (a > lipSyncHalfLevel) {
 						voiceLevel = 1;
+					}
+					// and the vowel it says, for a face with a mouth for each
+					if (voiceLevel > 0 && lipSyncVowels && faceHasVowels()) {
+						vowel = pickLipVowel(soundBuffer.getVowel(ahead));
 					}
 				} else if (lipSyncSource == "sample") {
 					var a = soundBuffer.sampleValue;
@@ -2989,8 +3133,9 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 				}
 			}
 			// The mouth closes when the voice ends or is stopped
-			if (lipLevel !== voiceLevel) {
+			if (lipLevel !== voiceLevel || lipVowel !== vowel) {
 				lipLevel = voiceLevel;
+				lipVowel = vowel;
 				updateFlag = true;
 			}
 			break;

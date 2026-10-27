@@ -1014,8 +1014,9 @@ def patch_tests(exe, proj):
     listed = json.loads(files.read_text(encoding="utf-8"))["files"]
     names = {n for n in zipfile.ZipFile(zip_path).namelist() if not n.endswith("/")}
     step("patch: from an empty list it holds every file", names == set(listed), "%d in the zip, %d listed" % (len(names), len(listed)))
-    step("patch: a .clip a script loads layers from is kept, a .psd nothing names isn't",
-         "fgimage/emblem.clip" in listed and not any(n.endswith(".psd") for n in listed))
+    step("patch: a .clip a script loads layers from goes in split into its layers, a .psd nothing names stays out",
+         {"fgimage/emblem.txt", "fgimage/emblem_3.tlg", "fgimage/emblem_5.tlg"} <= set(listed)
+         and not any(n.endswith((".psd", ".clip")) for n in listed))
 
     layer = proj / "data" / "scenario" / "layer.ks"
     layer.write_bytes(layer.read_bytes() + b"\n; changed for the patch test\n")
@@ -1030,6 +1031,156 @@ def patch_tests(exe, proj):
     step("patch: says a file removed since stays in the game", "1 file removed since then stays" in notes, notes)
     pkg = [o for o in (r or {}).get("outputs", []) if o.get("platform") == "patch"]
     step("patch: listed with the outputs", len(pkg) == 1 and pkg[0].get("ok") and pkg[0].get("package", "").endswith("patch.zip"))
+
+
+def structure_rows(text):
+    """psdlayer.tjs's layer structure as comparable rows: the canvas, the layers top first, then
+    the folders by ID (psdlayer.tjs reads layers and folders apart; their places don't count)"""
+    rows, folders = [], []
+    for line in text.splitlines():
+        line = line.lstrip("﻿")
+        if not line.strip() or line.startswith("#"):
+            continue
+        c = (line.split("\t") + [""] * 11)[:11]
+        if c[0] == "2":
+            c[2:6] = ["0", "0", "0", "0"]
+            folders.append(tuple(c))
+        else:
+            rows.append(tuple(c))
+    return rows + sorted(folders, key=lambda c: int(c[9] or 0))
+
+
+def layered_tests(exe, tmp, args):
+    """Photoshop and CLIP STUDIO PAINT files (Layered.h): a game whose character's poses are PSDs
+    (Pip's, written by tools/assets/psdwrite.py from its layer structure) and whose layer.ks loads
+    emblem.clip's layers, built into its layer structures and pictures: the same structure and
+    pictures Pip's are made of. A patch alone needs no engines; with engines, the host's package
+    plays the sample with Pip drawn from the split PSDs"""
+    sys.path.insert(0, str(REPO / "tools" / "assets"))
+    import psdwrite
+    proj = tmp / "Layered Game"
+    shutil.copytree(REPO / "data", proj / "data")
+    shutil.copytree(REPO / "template" / "system", proj / "template" / "system")
+    shutil.copytree(REPO / "platform", proj / "platform")
+    shutil.copyfile(REPO / "krkrz.cf", proj / "krkrz.cf")
+    pip = proj / "data" / "fgimage" / "pip"
+    levels = sorted(p.stem.split("_")[1] for p in pip.glob("pip_*.txt") if p.stem != "pip_info")
+    for lv in levels:
+        psdwrite.structure_to_psd(str(pip / ("pip_%s.txt" % lv)), str(pip / ("pip_%s.psd" % lv)))
+        (pip / ("pip_%s.txt" % lv)).unlink()
+        for png in pip.glob("pip_%s_*.png" % lv):
+            png.unlink()
+    (proj / "data" / "image" / "layers.psd").write_bytes(b"8BPS")   # named by nothing: left out
+    code, out = run(exe, "--cli", "init", str(proj))
+    rel = proj / "release.json"
+    s = json.loads(rel.read_text(encoding="utf-8"))
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = False
+    s["output"].update({"check": False, "patchFrom": "release/nothing-files.json"})
+    s["contents"]["compileScripts"] = False
+    s["scenes"] = {"compile": False, "encrypt": False}
+    s["media"]["images"].update({"opaque": "png", "alpha": "png"})   # pictures the test can read
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    out_dir = proj / "release"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+
+    code, out = run(exe, "--cli", "plan", str(rel), "--json")
+    try:
+        plan = json.loads(out[out.index("{"):])
+    except ValueError:
+        plan = {"data": {}}
+    step("layered: the plan splits Pip's PSDs (charinit.csv's) and emblem.clip (layer.ks's)",
+         plan["data"].get("splitLayered") == len(levels) + 1, str(plan["data"].get("splitLayered")))
+
+    def build():
+        code, out = run(exe, "--cli", "build", str(rel), "--json")
+        try:
+            return json.loads(out[out.index("{"):])
+        except ValueError:
+            return {"ok": False, "error": out[-2000:], "outputs": []}
+
+    r = build()
+    version = s["identity"]["version"]
+    zip_path = out_dir / ("kagex-sample-%s-patch" % version) / "patch.zip"
+    step("layered: build", r.get("ok") and zip_path.exists(), r.get("error", "") + json.dumps(r.get("layered")))
+    if not r.get("ok") or not zip_path.exists():
+        return
+    z = zipfile.ZipFile(zip_path)
+    names = set(z.namelist())
+    step("layered: no .psd or .clip in the game", not any(n.lower().endswith((".psd", ".clip")) for n in names),
+         ", ".join(n for n in names if n.lower().endswith((".psd", ".clip"))))
+    lay = r.get("layered", {})
+    step("layered: the files and pictures split", lay.get("files") == len(levels) + 1 and lay.get("pictures", 0) > 40 * len(levels),
+         json.dumps(lay))
+    same = differ = 0
+    for lv in levels:
+        want = structure_rows((REPO / "data" / "fgimage" / "pip" / ("pip_%s.txt" % lv)).read_text(encoding="utf-8"))
+        got = structure_rows(z.read("fgimage/pip/pip_%s.txt" % lv).decode("utf-8")) if "fgimage/pip/pip_%s.txt" % lv in names else []
+        step("layered: pip_%s.psd split into pip_%s.txt, Pip's layer structure" % (lv, lv), got == want,
+             "%d rows, %d expected" % (len(got), len(want)))
+        for row in want:
+            if row[0] != "0":
+                continue
+            a = psdwrite.read_png(str(REPO / "data" / "fgimage" / "pip" / ("pip_%s_%s.png" % (lv, row[9]))))
+            n = "fgimage/pip/pip_%s_%s.png" % (lv, row[9])
+            if n not in names:
+                differ += 1
+                continue
+            p = tmp / "layered-picture.png"
+            p.write_bytes(z.read(n))
+            if psdwrite.read_png(str(p)) == a:
+                same += 1
+            else:
+                differ += 1
+    step("layered: Pip's pictures, pixel for pixel", differ == 0 and same > 0, "%d the same, %d not" % (same, differ))
+    emblem = structure_rows(z.read("fgimage/emblem.txt").decode("utf-8")) if "fgimage/emblem.txt" in names else []
+    step("layered: emblem.clip split into its badge (3) and star (5)",
+         sorted((row[1], row[9]) for row in emblem if row[0] == "0") == [("badge", "3"), ("star", "5")]
+         and {"fgimage/emblem_3.png", "fgimage/emblem_5.png"} <= names, str(emblem))
+
+    # a name the split would write that the game already has stops the build
+    clash = proj / "data" / "fgimage" / "emblem.txt"
+    clash.write_text("not a layer structure", encoding="utf-8")
+    r = build()
+    step("layered: a file named like the layer structure stops the build", not r.get("ok") and "emblem.txt" in r.get("error", ""),
+         r.get("error", ""))
+    clash.unlink()
+    # a pose with its own layer structure is read from that (findStandLayerFile), so its PSD stays out
+    shutil.copyfile(REPO / "data" / "fgimage" / "pip" / "pip_0.txt", pip / "pip_0.txt")
+    code, out = run(exe, "--cli", "plan", str(rel), "--json")
+    try:
+        plan = json.loads(out[out.index("{"):])
+    except ValueError:
+        plan = {"data": {}}
+    step("layered: a PSD whose pose has a .txt stays out", plan["data"].get("splitLayered") == len(levels),
+         str(plan["data"].get("splitLayered")))
+    (pip / "pip_0.txt").unlink()
+
+    # the game from a package, with Pip drawn from the split PSDs (and its vowel mouths)
+    host = host_id()
+    if not args.engines or host != "linux":
+        return
+    for p in s["platforms"]:
+        s["platforms"][p]["enabled"] = p == host
+    s["platforms"][host]["data"] = "xp3"
+    s["output"].update({"archive": "none", "patchFrom": ""})
+    s["media"]["images"].update({"opaque": "tlg6", "alpha": "tlg6"})
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
+    try:
+        r = json.loads(out[out.index("{"):])
+    except ValueError:
+        r = {"ok": False, "error": out[-2000:]}
+    step("layered: the Linux package", r.get("ok"), r.get("error", ""))
+    if not r.get("ok"):
+        return
+    exe_path = out_dir / ("kagex-sample-%s-%s" % (version, host)) / s["identity"]["exeName"]
+    p = subprocess.run([sys.executable, str(REPO / "tools" / "smoketest.py"), "--engine", str(exe_path), "--packaged", "--clip", "required"],
+                       cwd=REPO, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800)
+    fails = [l for l in p.stdout.splitlines() if l.startswith("FAIL")]
+    step("layered: the sample plays with Pip and the emblem from the split files (smoketest.py --packaged)", p.returncode == 0,
+         "; ".join(fails) or (p.stdout.strip().splitlines()[-1] if p.stdout.strip() else p.stderr[-500:]))
 
 
 def run_engine(pkgdir, exe_rel, extra_args, seconds=20):
@@ -1635,7 +1786,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,web,android,ios,media,scripts,scenes,patch,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -1673,6 +1824,8 @@ def main():
                 scenes_tests(exe, proj, args)
         if want("patch"):
             patch_tests(exe, proj)
+        if want("layered"):
+            layered_tests(exe, Path(t), args)
     print("%d failed" % len(failures) if failures else "all passed")
     sys.exit(1 if failures else 0)
 

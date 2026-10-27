@@ -18,6 +18,7 @@ kagex-release --cli check [release.json]   # problems in the settings, and what 
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
 kagex-release --cli keygen <keys file>     # write the game's keys file, or add the keys it lacks
+kagex-release --cli split <file> <folder>  # what a build splits a .psd or .clip into
 ```
 
 `check`, `plan` and `build` take `--platform=windows,linux,...` (only those platforms, whatever
@@ -26,7 +27,7 @@ instead of downloading them; `KAGEX_RELEASE_ENGINES` does the same, and without 
 `engines/` folder next to the game's `data/`, or else next to the tool, is used when there is one) and `--keep-work` (keep the staged
 files in `<output>/.work`).
 `keygen` takes `--bits=1024|2048|3072|4096` (the signing key's length, default 2048) and `--force`
-(every key new). Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
+(every key new); `split` takes `--format=tlg6|tlg5|png` (the pictures' format, default TLG6). Exit codes: 0 fine, 1 problems found (or a platform failed), 2 failed.
 
 ### The keys file
 
@@ -248,6 +249,40 @@ Before packing, lossless media in the staged data are converted (the sources are
 Results are cached by content and settings (in the cache folder below), so a later build only
 converts what changed.
 
+### Photoshop and CLIP STUDIO PAINT files
+
+A game can keep layers in the files they're drawn in: a character's poses as `.psd` or `.clip`
+files (`doc/world.txt`, "The layers in a PSD or CLIP STUDIO PAINT file"), and single layers named
+with `psd://name.psd/root/folder/layer.bmp` or `clip://name.clip/...` (`doc/kagex.txt`). The
+engine reads them through the psdfile and clipfile plugins, which only the desktop engines have,
+and they're large, so every build splits them, each in place of the file, into what the framework
+reads on every platform:
+
+- `<name>.txt`: the layer structure, in `psdlayer.tjs`'s text format: the layers (top first) and
+  folders, with their names (a `/` in one as `_`), places, blend modes, opacity, visibility and
+  IDs, as the plugins report them.
+- `<name>_<layer id>`: a picture of each layer that draws something, with its mask, in TLG6 (or
+  the format *Media* gives pictures, TLG5 or PNG; with JPEG the media conversion makes that from
+  the TLG6). Hidden layers are kept, and adjustment layers, a PSD's text layers and empty layers
+  left out, as the framework leaves them out when it reads the file.
+
+The layers are read with the libraries the plugins are made of (psdparse and clipparse), so they
+come out as the game reads them during development. Files are split again only when they change
+(the results are cached like the media's).
+
+Which files go in: `*.psd` and `*.clip` are excluded by default, but a file goes in all the same
+when a script names it after `psd://` or `clip://`, or when it's a pose `charinit.csv` names
+(`<files>.psd`, or `<files>_<level>.psd`, and the same with `.clip`) and the game has no
+`<files>_<level>.txt` of its own, which the framework would read first. A name the split would
+write that the game already has (`<name>.txt`, or `<name>_<number>` as a picture) stops the build,
+as do two such files of one name. Splitting needs a framework that reads the split files (the one
+after KAGEX 0.9.2: `AffineLayer.tjs`'s `affineLoadLayeredLayer`, `KAGEnvCharacterEx.tjs`'s
+`findStandLayerFile`); with an older `data/system` the files go in as they are, which only the
+desktop builds can read.
+
+`kagex-release --cli split <file.psd|.clip> <folder> [--format=tlg6|tlg5|png]` writes what a
+build would make of one file, to look at.
+
 ### Compiled scripts
 
 After the media conversion (which rewrites names in scripts), every `.tjs` in the staged data is
@@ -298,7 +333,7 @@ as ones with the scnfile or xp3crypt plugin), or else one next to the tool.
 |---|---|
 | `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
 | `engine` | `debug`: the debug engine instead of the release one |
-| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, goes in all the same), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
+| `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.psd` anywhere, `bgimage/raw/**`, `work/`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, or that is a pose `charinit.csv` names, goes in all the same, split into its layers: see "Photoshop and CLIP STUDIO PAINT files"), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |
 | `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |

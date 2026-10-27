@@ -31,12 +31,17 @@ The sample's images are generated here rather than edited by hand.
   into `.cache/`, or given with `--template`) and runs the engine, as `tools/smoketest.py` does,
   to edit it with the clipfile plugin: so it needs the engine next to `data/`.
 - `make_pip.py` draws Pip, the Animated Character demo's character, as layers (body, outfits,
-  arm poses, and faces whose eyes and mouths are groups of three frames) at the size of each
-  World level, writing each level's layer structure (`data/fgimage/pip/pip_<level>.txt`), a PNG
-  per layer, `pip_info.txt`, and `data/main/charinit.csv` and `charanim.csv`. Every shape is a
-  signed distance field in NumPy, so each level is drawn rather than scaled. `voice` makes its
-  voice lines (`data/voice/pip000001.ogg`...): babble, syllables of a glottal pulse through vowel
-  formants, encoded with ffmpeg's libvorbis (so it needs ffmpeg).
+  arm poses, and faces whose eyes and mouths are groups of three frames, the plain face's mouth
+  with one for each vowel too) at the size of each World level, writing each level's layer
+  structure (`data/fgimage/pip/pip_<level>.txt`), a PNG per layer, `pip_info.txt`, and
+  `data/main/charinit.csv` and `charanim.csv`. Every shape is a signed distance field in NumPy,
+  so each level is drawn rather than scaled. `voice` makes its voice lines
+  (`data/voice/pip000001.ogg`...): babble, syllables of a breathy glottal pulse through the vowel
+  formants the engine's `WaveSoundBuffer.getVowel` looks for, encoded with ffmpeg's libvorbis (so
+  it needs ffmpeg); `vowels` measures how often getVowel names the vowel each syllable says.
+- `psdwrite.py` writes a layer structure in psdlayer.tjs's text format, with its pictures, as a
+  PSD with folders (`psdwrite.py data/fgimage/pip/pip_0.txt pip_0.psd`), the other way round
+  from kagex-release's split. Standard library only; the smoke tests make Pip's PSDs with it.
 - `upscale.py` rebuilds the character sprites and the two backgrounds from the original
   800x600-era art in `src/` with Real-ESRGAN, run in NumPy (no PyTorch). It downloads the
   weights into `.weights/` on first use and takes about half an hour on two cores.
@@ -49,7 +54,8 @@ python3 tools/assets/make_effects.py     # effect textures and effects; or: text
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
-python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice
+python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice vowels
+python3 tools/assets/psdwrite.py <structure.txt> [out.psd]   # a layer structure as a PSD
 ```
 
 Run `upscale.py` first: the title screen and the Replay thumbnail are drawn from the

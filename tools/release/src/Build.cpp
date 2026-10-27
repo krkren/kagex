@@ -14,6 +14,7 @@
 #include "Host.h"
 #include "Icons.h"
 #include "Keys.h"
+#include "Layered.h"
 #include "Media.h"
 #include "Plan.h"
 #include "Sign.h"
@@ -281,7 +282,8 @@ public:
 			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));
-			media(PartProgress(pr_, 0.05, 0.2));
+			layered(PartProgress(pr_, 0.05, 0.08));   // before media: the pictures it writes are converted with the rest
+			media(PartProgress(pr_, 0.08, 0.2));
 			scenes(PartProgress(pr_, 0.2, 0.21));   // before signStage: a compiling run of a signed game would refuse its options
 			signStage();   // write the public key and the self-test into the data (before it is compiled/hashed/packed)
 			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.21, 0.22));
@@ -345,6 +347,7 @@ public:
 		result.set("outputs", std::move(outputs));
 		result.set("notes", Json::array(notes_));
 		if (media_.isObj()) result.set("media", media_);
+		if (layered_.isObj()) result.set("layered", layered_);
 		if (scripts_.isObj()) result.set("scripts", scripts_);
 		{
 			// what the packages are protected with (the keys file's keys)
@@ -381,6 +384,43 @@ private:
 		}
 		pr.log("Game files: " + std::to_string(files.size()));
 		linked_ = linkedPlugins();
+	}
+
+	//-----------------------------------------------------------------------
+	// Photoshop and CLIP STUDIO PAINT files, split into the layer structure and pictures the
+	// framework reads on every platform (Layered.h), so a release needs neither the files nor
+	// the plugins that read them, which only the desktop engines have
+	//-----------------------------------------------------------------------
+	void layered(krt::Progress&& pr)
+	{
+		std::error_code ec;
+		bool any = false;
+		for (fs::recursive_directory_iterator it(stage_, ec), end; it != end && !any; it.increment(ec)) {
+			if (ec) break;
+			const std::string e = lower(krt::fromPath(it->path().extension()));
+			any = it->is_regular_file(ec) && (e == ".psd" || e == ".clip");
+		}
+		if (!any) return;
+		if (!p_.framework.empty() && !frameworkReadsSplitLayers(p_.framework)) {
+			const std::string note = "The game's framework predates split PSD and CLIP files, so they go in as they are "
+			                         "(they need the psdfile and clipfile plugins, which only the desktop engines have)";
+			pr.log(note);
+			notes_.push_back(note);
+			return;
+		}
+		pr.progress(0, "Splitting PSD and CLIP files into layers");
+		LayeredResult r;
+		std::string err;
+		if (!splitLayeredFiles(s_, stage_, pr, r, err)) throw Failure{ "Splitting PSD and CLIP files: " + err };
+		const auto mb = [](uint64_t b) { return std::to_string((b + 524288) / 1048576) + " MB"; };
+		pr.log("Split " + std::to_string(r.files) + " PSD and CLIP files into " + std::to_string(r.pictures) +
+		       " layer pictures: " + mb(r.bytesBefore) + " -> " + mb(r.bytesAfter));
+		for (const auto& n : r.notes) { pr.log(n); notes_.push_back(n); }
+		layered_ = Json::object();
+		layered_.set("files", Json(r.files));
+		layered_.set("pictures", Json(r.pictures));
+		layered_.set("bytesBefore", Json((long long)r.bytesBefore));
+		layered_.set("bytesAfter", Json((long long)r.bytesAfter));
 	}
 
 	void media(krt::Progress&& pr)
@@ -2160,7 +2200,7 @@ private:
 	std::map<std::string, fs::path> built_;
 	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
 	bool patchFailed_ = false;
-	Json media_, scripts_;
+	Json media_, scripts_, layered_;
 	// signing
 	bool signing_ = false;
 	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)

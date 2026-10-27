@@ -689,7 +689,8 @@ KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
 
 // CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
 // clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
-// psdfile's psd:// does for Photoshop's
+// psdfile's psd:// does for Photoshop's (linked when one is first shown). A release reads such
+// layers from the pictures kagex-release splits the file into (AffineLayer.tjs)
 KAGLinkPlugin("plugin/clipfile.dll") if typeof global.CLIP == "undefined";
 
 // Patches and DLC as zip files (the minizip plugin), after the .xp3 patches above, so a later

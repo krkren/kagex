@@ -9,10 +9,12 @@
 //   kagex-release --cli keygen <keys file> [--bits=N]          writes the game's keys file (archive,
 //                                                             scenes and signing keys), or adds the
 //                                                             keys an existing one lacks
+//   kagex-release --cli split <file.psd|.clip> <folder>        what a build splits that file into: its
+//                                                             layer structure (.txt) and pictures
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits
-// (the signing key's length) and --force (every key new).
+// (the signing key's length) and --force (every key new); split takes --format=tlg6|tlg5|png.
 // Without a path it uses the current folder, or else the folder above the tool (a KAGEX
 // package keeps the tool in tools/). CLI exit codes: 0 = fine, 1 = problems found, 2 = failed.
 //---------------------------------------------------------------------------
@@ -27,6 +29,7 @@
 #include "Encrypt.h"
 #include "Host.h"
 #include "Keys.h"
+#include "Layered.h"
 #include "Plan.h"
 #include "Project.h"
 #include "Scenes.h"
@@ -55,6 +58,7 @@ struct Options {
 	std::string engines;             // --engines=DIR
 	std::vector<std::string> only;   // --platform=a,b
 	int bits = 2048;                 // keygen
+	std::string format = "tlg6";     // split: the pictures' format
 };
 
 // The settings file and project for a path given on the command line (or none)
@@ -169,7 +173,7 @@ bool selected(const Options& o, const std::string& id)
 int runCli(const Options& o, const std::vector<std::string>& args)
 {
 	if (args.empty()) {
-		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen [<path>] (see --help)\n");
+		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen|split [<path>] (see --help)\n");
 		return 2;
 	}
 	const std::string cmd = args[0];
@@ -187,6 +191,31 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		std::printf("Wrote the %s key%s to %s.\n", names.c_str(), added.size() == 1 ? "" : "s", path.c_str());
 		std::printf("Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. "
 		            "Name it in release.json's keys.file (or KAGEX_KEYS_FILE).\n");
+		return 0;
+	}
+	if (cmd == "split") {
+		// a .psd or .clip, split as a build splits it (Layered.h), into a folder of its own
+		if (path.empty() || args.size() < 3) { std::fprintf(stderr, "usage: kagex-release --cli split <file.psd|.clip> <folder> [--format=tlg6|tlg5|png]\n"); return 2; }
+		if (o.format != "tlg6" && o.format != "tlg5" && o.format != "png") { std::fprintf(stderr, "error: --format is tlg6, tlg5 or png\n"); return 2; }
+		Json st = Json::object();
+		Json media = Json::object(), images = Json::object();
+		images.set("opaque", Json(o.format));
+		images.set("alpha", Json(o.format));
+		media.set("images", std::move(images));
+		st.set("media", std::move(media));
+		const fs::path dir = krt::toPath(args[2]);
+		std::error_code ec;
+		fs::create_directories(dir, ec);
+		std::vector<fs::path> written;
+		if (!splitLayeredFile(krt::toPath(path), dir, st, written, err)) { std::fprintf(stderr, "error: %s: %s\n", path.c_str(), err.c_str()); return 2; }
+		if (o.json) {
+			Json list = Json::array();
+			for (const auto& w : written) list.push(Json(krt::fromPath(w)));
+			std::printf("%s\n", list.dump(1).c_str());
+		} else {
+			std::printf("%s: %s and %d layer pictures in %s\n", path.c_str(), krt::fromPath(written.front().filename()).c_str(),
+			            (int)written.size() - 1, krt::fromPath(dir).c_str());
+		}
 		return 0;
 	}
 	Target t;
@@ -254,6 +283,8 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		std::printf("Game files: %lld (%s), %lld excluded; framework: %s\n", (long long)d["files"].asInt(),
 		            humanSize(d["bytes"].asInt()).c_str(), (long long)d["excluded"].asInt(), d["framework"].asStr().c_str());
 		std::printf("Converted: %lld images, %lld sounds\n", (long long)d["convertImages"].asInt(), (long long)d["convertAudio"].asInt());
+		if (d["splitLayered"].asInt() > 0)
+			std::printf("Split into layer pictures: %lld PSD and CLIP files\n", (long long)d["splitLayered"].asInt());
 		if (d["scenes"]["compile"].asBool())
 			std::printf("Compiled: %lld scripts in !scnlist.txt%s%s\n", (long long)d["scenes"]["scripts"].asInt(),
 			            d["scenes"]["format"].asStr().empty() ? "" : (" to " + d["scenes"]["format"].asStr()).c_str(),
@@ -284,6 +315,10 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 			else
 				std::printf("%s: FAILED: %s\n", out["title"].asStr().c_str(), out["error"].asStr().c_str());
 		}
+		if (r.has("layered")) {
+			const Json& l = r["layered"];
+			std::printf("PSD and CLIP files: %lld split into %lld layer pictures\n", (long long)l["files"].asInt(), (long long)l["pictures"].asInt());
+		}
 		if (r.has("scripts")) {
 			const Json& sc = r["scripts"];
 			std::printf("Scripts: %lld compiled to bytecode, %d kept as source\n", (long long)sc["compiled"].asInt(), (int)sc["kept"].elements().size());
@@ -297,7 +332,7 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 		return r["ok"].asBool() ? 0 : 1;
 	}
 
-	std::fprintf(stderr, "error: unknown command %s (init, check, plan, build or keygen)\n", cmd.c_str());
+	std::fprintf(stderr, "error: unknown command %s (init, check, plan, build, keygen or split)\n", cmd.c_str());
 	return 2;
 }
 
@@ -476,7 +511,7 @@ int main(int argc, char** argv)
 	app.options().appName = "kagex-release";
 	app.options().appVersion = KAGEX_RELEASE_VERSION;
 	Options o;
-	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen) instead of opening the window",
+	app.addOption({ "cli", "", "Run a command (init, check, plan, build, keygen, split) instead of opening the window",
 	                [&o](const std::string&) { o.cli = true; return true; } });
 	app.addOption({ "force", "", "init: replace an existing release.json; keygen: make every key new",
 	                [&o](const std::string&) { o.force = true; return true; } });
@@ -488,6 +523,8 @@ int main(int argc, char** argv)
 	                [&o](const std::string&) { o.keepWork = true; return true; } });
 	app.addOption({ "bits", "N", "keygen: the signing key's length, 1024/2048/3072/4096 (default 2048)",
 	                [&o](const std::string& v) { o.bits = std::atoi(v.c_str()); return true; } });
+	app.addOption({ "format", "FMT", "split: the layer pictures' format, tlg6 (default), tlg5 or png",
+	                [&o](const std::string& v) { o.format = v; return true; } });
 	app.addOption({ "platform", "LIST", "check, plan, build: only these platforms (windows,linux,steam,macos,web,android,ios)",
 	                [&o](const std::string& v) {
 		                size_t start = 0;

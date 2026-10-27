@@ -1067,7 +1067,8 @@ One line per pose, comma separated (a line starting with # is a comment):
 
 
     files       Names the pose's files: <files>_info.txt, which says what its outfits,
-                diffs and faces are, and its layers, <files>_<level>.txt (below).
+                diffs and faces are, and its layers, <files>_<level>.txt or a PSD or CLIP
+                STUDIO PAINT file, <files>_<level>.psd or .clip (below).
     xoffset     Where the character's anchor is, from the centre of the canvas, at 100%
     yoffset     (right and down are +). The World places the anchor where it places any
                 character: xpos from the centre of the screen and yoffset (the character's
@@ -1126,6 +1127,33 @@ images, .siz) need the layerExSubImage plugin, which the SDL engines don't have.
 
 
 
+◇ The layers in a PSD or CLIP STUDIO PAINT file
+
+
+
+A level's layers can also be the file they're drawn in: when there's no <files>_<level>.txt,
+<files>_<level>.psd (Photoshop), then <files>_<level>.clip (CLIP STUDIO PAINT), the extension in
+lower case (and <files>.psd or .clip without levels). A layer of the file is a layer above, a
+folder a group, with the same names (a "/" in one is "_"), so Mouth/Open Mouth is the layer Open
+Mouth in the folder Mouth; Background, Origin and Area layers work as above. A layer's picture is
+what it draws with its mask, its blend mode and opacity are the file's, and layer_id is its ID
+(a PSD layer saved without one is given one, as the psdfile plugin's assignAutoIds gives it).
+Adjustment layers aren't used, nor are a PSD's text layers (rasterize them) or empty layers.
+Folders hidden in the file are shown all the same (each pose turns its layers on and off itself).
+
+
+
+The engine reads the file through the psdfile or clipfile plugin, which only the desktop engines
+have, so the web, Android and iOS builds can't: kagex-release splits such a file into the
+<files>_<level>.txt and pictures above, which every build reads (tools/release/README.md,
+"Photoshop and CLIP STUDIO PAINT files"). The file then stays the artists' to edit, and a
+release reads the layers it had when it was built. To see what a build makes of one,
+kagex-release --cli split <file> <folder> writes it out; tools/assets/psdwrite.py goes the other
+way, writing a layer structure and its pictures as a PSD with folders (psdfile writes PSDs, but
+not their folders).
+
+
+
 ◇ <files>_info.txt
 
 
@@ -1147,7 +1175,8 @@ group and name (Mouth/Open Mouth); names match exactly, case and spaces included
                                     "Half-closed Eyes" (or "Half-open Eyes") and "Closed Eyes".
                                     Those blink. With blinking off, the group's top layer shows.
     face    <face>  lip  <group>    The face's mouth: "Open Mouth", "Half-open Mouth" (or
-                                    "Half-closed Mouth") and "Closed Mouth". With lip-sync off,
+                                    "Half-closed Mouth") and "Closed Mouth", and, for mouths by
+                                    vowel (below), "Mouth A" ... "Mouth O". With lip-sync off,
                                     the group's top layer shows.
     face    <face>  eyeimage  <layer>
                                     Eyes that don't move (Pip's laugh has them drawn shut).
@@ -1171,6 +1200,8 @@ facegroup <prefix> defines a group of parts, fgname <part> <layer> [eye0|eye1|ey
 adds a layer to the part whose name starts with that prefix (shown at that eye or mouth level only,
 when given), and fgalias <name> <part> <part>... names a set of them. Such a face is given as
 part:part:part, one per group, or by a part's or an alias's name, which changes that group only.
+lipa, lipi, lipu, lipe and lipo show a layer while the voice says that vowel (mouths by vowel,
+below), in place of the part's lip1 and lip2 layers.
 
 
 
@@ -1184,6 +1215,29 @@ lines): every lipFlipTime ms (120), the mouth opens half above a level of lipSyn
 (0.03) and wide above lipSyncOpenLevel (0.12), measured as the RMS of the voice
 (WaveSoundBuffer.getSoundLevel). They're global variables in KAGEnvCharacterEx.tjs, so
 Override.tjs can change them; eyeFlipFreq is the chance that a frame starts a blink.
+
+
+
+Mouths by vowel: a mouth group can also have a layer for each vowel, "Mouth A", "Mouth I",
+"Mouth U", "Mouth E" and "Mouth O" (or あ, い, う, え and お). While the voice is loud enough to
+open the mouth, the layer for the vowel it sounds like shows in place of the half-open or open
+mouth, so the mouth makes the shapes of the words. The vowel comes from the engine's
+WaveSoundBuffer.getVowel, which weighs how much the voice sounds like each of the five; the
+heaviest shows, and stays until another outweighs it by lipVowelHold (0.08 of 1), so two that
+sound alike don't flicker. A group can have only some vowels: for one it hasn't, the half-open or
+open mouth shows as before. It can also have only vowels and "Closed Mouth": its half-open and
+open mouth are then the "Mouth A" layer, or the first vowel it has. lipSyncVowels turns it off
+(false), and lipVowelLayerNames holds the names, both in KAGEnvCharacterEx.tjs. Pip's plain face
+has them (Mouth/Mouth A ...).
+
+
+
+getVowel compares the voice's energy around the first two formants of Japanese vowels as a man
+says them (a 800 and 1200 Hz, i 300 and 2300, u 350 and 1200, e 500 and 1900, o 500 and 900), so
+it suits low, clear voices best; a high voice, whose harmonics are far apart, tends to read as o
+(UPSTREAM.md). Pip's babble is made with those formants and much breath, which fills in the
+spectrum between the harmonics (tools/assets/make_pip.py vowels measures how often getVowel
+gets it right).
 
 
 

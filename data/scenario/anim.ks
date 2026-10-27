@@ -12,7 +12,7 @@ Pip is drawn from layers, put together as it's shown: a body, two outfits, three
 【pip】Hi! I'm Pip.
 [pip rest voice=2]
 【pip】I blink by myself, and my mouth moves with my voice.
-Its eyes blink every few seconds, and while it speaks, its mouth opens as wide as its voice is loud.
+Its eyes blink every few seconds, and while it speaks, its mouth opens as wide as its voice is loud, shaped for the vowel it says.
 [pip xsurprised voice=3]
 【pip】Oh! A new face!
 An x in front of a face, as in xsurprised, closes the eyes while the face changes.

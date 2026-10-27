@@ -984,6 +984,16 @@ class PSDInfo {
 
 		}
 
+		// Layers some programs save without an ID get one, as kagex-release gives them when it
+
+		// splits a PSD into this text format and a picture per layer: groups and pictures go by ID
+
+		if (typeof psd.assignAutoIds != "undefined") {
+
+			psd.assignAutoIds();
+
+		}
+
 		var count = psd.layer_count-1 ;
 
 		for (var i=count;i>=0;i--) {
@@ -997,6 +1007,14 @@ class PSDInfo {
 			switch (info.layer_type) {
 
 			case PSD.layer_type_normal:
+
+				// An empty layer has no picture (getLayerData leaves the layer as it was)
+
+				if (info.width <= 0 || info.height <= 0) {
+
+					break;
+
+				}
 
 				{
 
@@ -1033,6 +1051,104 @@ class PSDInfo {
 
 
 		invalidate psd;
+
+	}
+
+
+
+	/**
+
+	 * CLIP STUDIO PAINT image load process (the clipfile plugin), the way loadPSD reads a PSD:
+
+	 * its layers are numbered as psdfile numbers a PSD's, bottom up with a folder after what it
+
+	 * holds, and give the same information, but for the layer type and the folder's ID
+
+	 * @param storage CLIP file to load
+
+	 */
+
+	function loadCLIP(storage) {
+
+		if (typeof global.CLIP == "undefined") {
+
+			try { Plugins.link("plugin/clipfile.dll"); } catch (e) {}
+
+			if (typeof global.CLIP == "undefined") {
+
+				throw new Exception("CLIP STUDIO PAINT files need the clipfile plugin, which this engine doesn't have: " + storage);
+
+			}
+
+		}
+
+		clear();
+
+		var clip = new CLIP();
+
+		if (!clip.load(storage)) {
+
+			throw new Exception("Failed to load CLIP STUDIO PAINT image:" + storage + (clip.error != "" ? " (" + clip.error + ")" : ""));
+
+		}
+
+		var ids = [];
+
+		for (var i=0;i<clip.layer_count;i++) {
+
+			ids[i] = clip.getLayerInfo(i).layer_id;
+
+		}
+
+		for (var i=clip.layer_count-1;i>=0;i--) {
+
+			var info = clip.getLayerInfo(i);
+
+			if (info.is_filter) {
+
+				continue; // adjustment layers have no picture
+
+			}
+
+			info.name = ((string)info.name).replace(/[\/]/g, "_");
+
+			if (info.parent_index >= 0) {
+
+				info.group_layer_id = ids[info.parent_index];
+
+			}
+
+			if (info.is_group) {
+
+				info.layer_type = 2; // PSD.layer_type_folder
+
+				groups.add(info);
+
+			} else if (info.width > 0 && info.height > 0) {
+
+				info.layer_type = 0; // PSD.layer_type_normal
+
+				var layer = new PSDInfoLayer(window);
+
+				clip.getLayerData(layer, i);
+
+				if (layer.type == ltPsNormal) {
+
+					layer.type = ltAlpha;
+
+				}
+
+				info.layer = layer;
+
+				layers.add(info);
+
+			}
+
+		}
+
+		initLayers(clip.width, clip.height);
+
+		invalidate clip;
 
 	}
 
@@ -1292,6 +1408,12 @@ class PSDInfo {
 
 				storage += ext;
 
+			} else if (Storages.isExistentStorage(storage + ".CLIP")) {
+
+				ext = ".CLIP";
+
+				storage += ext;
+
 			} else if (Storages.isExistentStorage(storage + ".TXT")) {
 
 				ext = ".TXT";
@@ -1311,6 +1433,10 @@ class PSDInfo {
 		if (ext == ".PSD") {
 
 			loadPSD(storage);
+
+		} else if (ext == ".CLIP") {
+
+			loadCLIP(storage);
 
 		} else if (ext == ".TXT") {
 
