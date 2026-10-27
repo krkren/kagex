@@ -1,0 +1,67 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/tmp/tmp430pwe5z/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/tmp/tmp430pwe5z/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-windows",
+   "package": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-windows.zip",
+   "bytes": 53057782
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-linux",
+   "package": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-linux.tar.gz",
+   "bytes": 67301606
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-steam",
+   "package": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-steam.tar.gz",
+   "bytes": 74808314
+  }
+ ],
+ "notes": [
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 455,
+  "sounds": 0,
+  "fromCache": 12,
+  "bytesBefore": 9114305,
+  "bytesAfter": 8588631,
+  "keptByReference": 3,
+  "keptForEffects": 6,
+  "rewrittenScripts": 0
+ },
+ "scripts": {
+  "compiled": 71,
+  "expressions": 2,
+  "fixed": 20,
+  "truncates": true,
+  "kept": [],
+  "log": "/tmp/tmp430pwe5z/My Game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": false
+ }
+}

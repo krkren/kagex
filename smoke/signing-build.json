@@ -1,0 +1,49 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/tmp/tmp430pwe5z/My Game/release/test-run.log",
+  "ok": true,
+  "message": "Signatures verified and the game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/tmp/tmp430pwe5z/My Game/release",
+ "outputs": [
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/tmp/tmp430pwe5z/My Game/release/kagex-sample-0.9.3-linux",
+   "package": "",
+   "bytes": 139111392
+  }
+ ],
+ "notes": [
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)"
+ ],
+ "media": {
+  "images": 458,
+  "sounds": 5,
+  "fromCache": 463,
+  "bytesBefore": 10314334,
+  "bytesAfter": 6889825,
+  "keptByReference": 0,
+  "keptForEffects": 6,
+  "rewrittenScripts": 4
+ },
+ "scripts": {
+  "compiled": 72,
+  "expressions": 2,
+  "fixed": 20,
+  "truncates": true,
+  "kept": [],
+  "log": "/tmp/tmp430pwe5z/My Game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": true
+ }
+}
