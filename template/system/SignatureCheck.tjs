@@ -10,7 +10,7 @@
 //   - It catches a damaged or edited archive, an engine or plugin swapped out, and patch/DLC or
 //     extra archive files that weren't signed with the developer's key.
 //   - It cannot protect the code that runs the check: whoever can rebuild data.xp3 (or the engine)
-//     can take the check out. Compiled scripts and an encrypted archive (TODO.md) raise that bar;
+//     can take the check out. Compiled scripts and an encrypted archive (kagex-release) raise that bar;
 //     this does not. So the archive's own check is "refuse to start if tampered", not a root of
 //     trust, and the real value is gating patches and extra archives (loaded from the already
 //     active, verify-or-refuse data.xp3).
