@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
 
 ### Added
 
@@ -8,6 +8,11 @@
 - **The sample in Japanese as well as English**: every demo's script translated (`data/lang/ja/scenario/`, the original KAGEX sample's Japanese where it had the line), the speakers' names, the demo menu, scene titles in Replay, Search and the save slots, and the title, Config, save/load and Extras screens and the message window's buttons, drawn in Japanese by `tools/assets/make_ui.py --lang ja` into `data/lang/ja/`. The Config screen has a Language row (English, 日本語); its rows are a little closer together to make room.
 - `tools/assets/subset_fonts.py` makes the Japanese subsets of Noto Sans CJK JP that `make_ui.py` draws the Japanese labels with (`tools/assets/fonts/NotoSansCJKjp-*-Japanese.otf`).
 - `tools/smoketest.py` switches the title screen, a line of `char.ks`, the demo menu's choices and the Config screen to Japanese and back, and checks that the backlog keeps what was shown. It puts the sample in English first: under a C locale the engine's candidates are Japanese.
+
+### Changed
+
+- **Compiled scenarios are format version 3**: a game's scripts compile again the first time, and a game in more than one language gets its languages in each `.scn`. With one language a compiled file is laid out as before. [scnfile](https://github.com/krkren/scnfile)'s `scn2ks` reads the new layout and writes any of its languages (`--lang=ja`).
+- kagex-release 0.10.0 downloads the 0.10.0 engines.
 
 ## 0.9.4
 
