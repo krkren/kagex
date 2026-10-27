@@ -52,5 +52,8 @@ bool frameworkFindsConvertedImages(const std::filesystem::path& framework);
 /// Whether a framework folder can verify signatures (it has SignatureCheck.tjs): the signing
 /// support added in KAGEX 0.9.0. A signed build needs it, or it would ship with no check.
 bool frameworkSupportsSigning(const std::filesystem::path& framework);
+// Whether its signature check verifies a game with hidden file names (data.xpc and its bootstrap):
+// KAGEX 0.9.1's SignatureCheck.tjs and hashed-bootstrap.tjs
+bool frameworkSignsHiddenNames(const std::filesystem::path& framework);
 
 } // namespace kr

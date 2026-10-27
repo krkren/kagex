@@ -471,6 +471,13 @@ bool frameworkSupportsSigning(const fs::path& framework)
 	return fs::is_regular_file(framework / "SignatureCheck.tjs", ec);
 }
 
+bool frameworkSignsHiddenNames(const fs::path& framework)
+{
+	std::string check, boot;
+	if (!krt::readFile(framework / "SignatureCheck.tjs", check) || !krt::readFile(framework / "hashed-bootstrap.tjs", boot)) return false;
+	return check.find("kagexHashedBootstrap") != std::string::npos && boot.find("kagexHashedBootstrap") != std::string::npos;
+}
+
 bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress, MediaResult& result, std::string& error)
 {
 	const std::string audioTo = str(s, "media.audio.convert");

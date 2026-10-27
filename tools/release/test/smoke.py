@@ -1353,7 +1353,77 @@ def _signing_build_tests(exe, proj, args):
     if pkg2.exists():
         ok, log = run_engine(pkg2, "kagex-sample", [])
         step("signing run: the split signed build starts", ok, "verified=%s; mounted=%d" % (ok, log.count("Signed archive mounted")))
+    s["signing"]["splitArchives"] = False
+
+    # signed, encrypted, with the file names hidden: data.xpc and its plain bootstrap are checked
+    # in place of data.xp3 (engines with xp3crypt built in: 0.9.0 and later)
+    if engine_has_xp3crypt(args.engines):
+        hidden_signing_tests(exe, proj, args, s, env)
+    else:
+        print("skip signed hidden-names build: these engine packages have no xp3crypt")
     shutil.rmtree(keydir, ignore_errors=True)
+
+
+XP3CRYPT_MARKER = bytes(~b & 0xFF for b in (0xA7, 0xAF, 0xCC, 0xBC, 0xAD, 0xA6, 0xAF, 0xAB, 0xD2, 0xB4, 0xBA, 0xA6, 0xAC, 0xB3, 0xB0, 0xAB))
+
+
+def engine_has_xp3crypt(engines):
+    """Whether the Linux engine package has xp3crypt built in (its key slot's marker)"""
+    import zipfile as _zip
+    folder = Path(engines) / "kagex_engine_linux" / "krkrz"
+    if folder.is_file():
+        return XP3CRYPT_MARKER in folder.read_bytes()
+    pkg = Path(engines) / "kagex_engine_linux.zip"
+    if not pkg.is_file():
+        return False
+    with _zip.ZipFile(pkg) as z:
+        names = [n for n in z.namelist() if n.split("/")[-1] == "krkrz"]
+        return bool(names) and XP3CRYPT_MARKER in z.read(names[0])
+
+
+def hidden_signing_tests(exe, proj, args, s, env):
+    rel = proj / "release.json"
+    s["archive"]["encrypt"] = True
+    s["archive"]["hideNames"] = True
+    rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+    r = subprocess.run([str(exe), "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json"],
+                       capture_output=True, text=True, env=env, timeout=1800)
+    try:
+        res = json.loads(r.stdout[r.stdout.index("{"):])
+    except ValueError:
+        step("signed hidden-names build: built", False, r.stdout[-2000:] + r.stderr[-500:])
+        return
+    if args.out:
+        (Path(args.out) / "signing-hidden-build.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+    prot = res.get("protection", {})
+    step("signed hidden-names build: built, encrypted with the names hidden and signed",
+         res.get("ok") and prot.get("archive") == "encrypted, names hidden" and prot.get("signed") is True,
+         res.get("error", "") + "; ".join(o.get("error", "") for o in res.get("outputs", [])) + " %s" % prot)
+    pkg = proj / "release" / ("kagex-sample-%s-linux" % s["identity"]["version"])
+    if not res.get("ok") or not pkg.exists():
+        return
+    chk = res.get("check", {})
+    step("signed hidden-names build: the signed test run verifies", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+    step("signed hidden-names build: data.xpc and its bootstrap are signed",
+         (pkg / "data.xpc.sig").exists() and (pkg / "data" / "startup.tjs.sig").exists() and not (pkg / "data.xp3").exists())
+    ok, _ = run_engine(pkg, "kagex-sample", [])
+    step("signed hidden-names run: the untouched build starts", ok)
+
+    def tamper_case(label, mutate, restore):
+        mutate()
+        verified, log = run_engine(pkg, "kagex-sample", [])
+        restore()
+        step("signed hidden-names run: %s stops the game" % label, (not verified) and "Signature check:" in log, "verified=%s" % verified)
+
+    xpc = pkg / "data.xpc"
+    orig = xpc.read_bytes()
+    tamper_case("a changed data.xpc", lambda: xpc.write_bytes(orig[:len(orig) // 2] + bytes([orig[len(orig) // 2] ^ 0xFF]) + orig[len(orig) // 2 + 1:]),
+                lambda: xpc.write_bytes(orig))
+    boot = pkg / "data" / "startup.tjs"
+    borig = boot.read_bytes()
+    # a bootstrap of the attacker's own: the framework's, in source, with a line added
+    src = (proj / "template" / "system" / "hashed-bootstrap.tjs").read_bytes() + b"\n// changed\n"
+    tamper_case("a replaced start-up script", lambda: boot.write_bytes(src), lambda: boot.write_bytes(borig))
 
 
 # A game whose Initialize.tjs checks, as it runs, what the compiled scripts give: constants

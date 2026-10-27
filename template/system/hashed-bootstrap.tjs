@@ -7,7 +7,11 @@
 // ships it as a file instead, link it here. (Built in, this link just fails and is ignored.)
 try { Plugins.link("xp3crypt.dll"); } catch (e) { }
 
-if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", System.exePath + "data.xpc")) {
+// What a signed build checks before the game starts (SignatureCheck.tjs): this file and the archive
+global.kagexHashedBootstrap = Storages.getPlacedPath("startup.tjs");
+global.kagexHashedArchiveFile = System.exePath + "data.xpc";
+
+if (typeof(global.XP3Crypt) == "undefined" || !XP3Crypt.mount("data", global.kagexHashedArchiveFile)) {
 	// no plugin, no key, or the archive is missing or damaged
 	Debug.message("xp3crypt: the game data (data.xpc) could not be opened");
 	System.exit();

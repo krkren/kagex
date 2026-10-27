@@ -414,9 +414,11 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	// hidden file names (one encrypted, name-hashed archive served through the xpcrypt:// medium)
 	if (flag(s, "archive.hideNames")) {
 		if (!flag(s, "archive.encrypt")) error("archive.hideNames", "Hiding the file names needs encryption on (Encrypt)");
-		// a signed build verifies data.xp3 (or the executable it's bound into) and refuses a loose
-		// data/ folder; the hidden-names layout is data.xpc with a plain data/startup.tjs
-		if (flag(s, "signing.enabled")) error("archive.hideNames", "Signing can't check a game with hidden file names yet (data.xpc and its plain startup.tjs): turn Hide names or Signing off");
+		// a signed build then checks data.xpc and its plain bootstrap (data/startup.tjs) in place of
+		// data.xp3, which needs KAGEX 0.9.1's SignatureCheck.tjs and hashed-bootstrap.tjs
+		if (flag(s, "signing.enabled") && !p.framework.empty() && !frameworkSignsHiddenNames(p.framework))
+			error("archive.hideNames", "This game's framework (" + std::string(p.frameworkInData ? "data/system" : "template/system") +
+			      ") can't check the signatures of a game with hidden file names: it predates KAGEX 0.9.1. Update it from KAGEX 0.9.1's template/system, or turn Hide names or Signing off");
 		for (const auto& pl : platforms()) {
 			const std::string base = std::string("platforms.") + pl.id + ".";
 			if (!flag(s, base + "enabled")) continue;

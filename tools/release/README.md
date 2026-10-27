@@ -140,8 +140,12 @@ also refuses the engine's REPL and debug options, so no console can be opened in
 - **The key** is the signing key of the keys file (above): its **private key signs**, and the
   **public key**, worked out from it, is written into `data.xp3` so the game can check itself.
   Lose the keys file and you can't make updates that verify against the same public key, so keep a
-  backup. A signed desktop build must ship an archive (`data.xp3` or bound into the executable),
-  not a loose `data/` folder.
+  backup. A signed desktop build must ship an archive (`data.xp3` or bound into the executable,
+  or `data.xpc` with hidden names), not a loose `data/` folder.
+- **With hidden names** (*Hide names*, below) the check covers `data.xpc` and the small plain
+  `data/startup.tjs` that mounts it (`data.xpc.sig` and `data/startup.tjs.sig`), so neither can be
+  swapped. This needs the framework of KAGEX 0.9.1 or later (`SignatureCheck.tjs` and
+  `hashed-bootstrap.tjs`); the check says so for an older `data/system`.
 - **Patches and extra archives** are signed too (`patch.zip` gets a `patch.zip.sig`). In a signed
   build they are verified and mounted only after the framework and `Config` load, so a patch can
   change scenarios, images and other assets, but the framework, `Config` and `Override` need a
@@ -160,6 +164,8 @@ also refuses the engine's REPL and debug options, so no console can be opened in
   archives beside `data.xp3` automatically; you can also turn this on yourself (*Signing > Split
   large archives*). Splitting is for the Windows and Linux packages; build macOS on its own if its
   data is that large. If one folder alone is 2 GB or more, split its contents across subfolders.
+  Hidden names keep everything in one `data.xpc`, so a signed build with hidden names stops when
+  that would reach 2 GB.
 
 ### Encrypted game files
 
@@ -173,10 +179,10 @@ The key is the archive key of the keys file (above).
 **Hide names** (`archive.hideNames`, desktop only) goes further: the game ships as one encrypted
 archive `data.xpc` whose file names are hashed, so a generic tool sees neither the files nor their
 names. The engine reads it through the plugin's `xpcrypt://` storage medium, with a tiny plain
-`data/startup.tjs` that mounts it; the data mode can't be "bind".
+`data/startup.tjs` that mounts it; the data mode can't be "bind". It can be signed (above): the
+signatures then cover `data.xpc` and that `startup.tjs`.
 
-Hidden names can't be signed yet (a signed build checks `data.xp3` or the executable it's bound
-into). The build packs the encrypted `data.xp3` (and, when the data is split, its parts) and writes the key into each platform's engine; the engine
+The build packs the encrypted `data.xp3` (and, when the data is split, its parts) and writes the key into each platform's engine; the engine
 must have the xp3crypt plugin built in (the build stops with a clear message if it doesn't). The
 key ships inside the game, so this keeps the files out of casual view rather than making them
 unrecoverable to a determined person. Encryption applies to files inside `data.xp3`, so a platform

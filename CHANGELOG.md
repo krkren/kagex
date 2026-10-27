@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.9.0
+## 0.9.1
+
+### Fixed
+
+- **kagex-release: signing works with hidden names.** A build can now be signed, encrypted and have its file names hidden at once (0.9.0 refused Signing with *Hide names*). The game checks `data.xpc` and the small plain `data/startup.tjs` that mounts it, each with its own signature (`data.xpc.sig`, `data/startup.tjs.sig`), so replacing either stops it. This needs the 0.9.1 framework (`SignatureCheck.tjs`, `hashed-bootstrap.tjs`): a game with an older `data/system` is told to update it.
+- **The sample's web, Android and iOS packages carry its compiled scenarios**, so Search, BACK, the backlog's going-back marks and Replay's scenes work there. Their data is read-only, so the game couldn't compile the scenarios as it went (as the Windows and Linux zips do) and played the demos from the scripts: Search found nothing and Replay had no scenes. CI now compiles them once (`.github/platforms/compile-scenarios.sh`) and every platform job (the Linux folder and macOS too) packs the same files.
 
 ### Added
 

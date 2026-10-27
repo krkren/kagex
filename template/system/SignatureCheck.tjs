@@ -29,6 +29,11 @@
 //   KAGSignedPatchXp3         .xp3 patches to verify and add to the path (each %[ storage, path ])
 //   KAGSignedPatchZip         .zip patches to verify and mount
 //   KAGSignedMountOK          set true only while the verified patches/archives are being mounted
+//
+// With hidden file names (kagex-release's archive.hideNames) the game is data.xpc, read through
+// the xpcrypt:// medium, and a plain data/startup.tjs (hashed-bootstrap.tjs) that mounts it: the
+// key and the self-test are inside data.xpc (kagexHashedArchive), and the check verifies data.xpc
+// and the bootstrap in place of the archive.
 
 var KAGSignatureKeyFile = "SignatureKey.tjs";
 // The injection options a signed build refuses: a REPL opens a script console in the running game,
@@ -52,9 +57,10 @@ function KAGSignatureInit()
 	global.KAGSignedMountOK = false;
 	global.KAGSignatureAborted = false;
 
-	if (!Storages.isExistentStorage(KAGSignatureKeyFile)) return;  // an unsigned build: nothing to do
+	var keyFile = KAGSignatureHashedArchive() + KAGSignatureKeyFile;
+	if (!Storages.isExistentStorage(keyFile)) return;  // an unsigned build: nothing to do
 	try {
-		Scripts.execStorage(KAGSignatureKeyFile);
+		Scripts.execStorage(keyFile);
 	} catch (e) {
 		KAGSignatureQuit("The signature key could not be read (" + e.message + ").");
 		return;
@@ -91,6 +97,13 @@ function KAGSignatureInit()
 	dm("Signed build: signatures will be checked before the game starts.");
 }
 
+
+// The hidden-names archive's folder (xpcrypt://data/), where the key and the self-test are, or ""
+// for a game in data.xp3 or a folder. The bootstrap sets it before Initialize.tjs runs
+function KAGSignatureHashedArchive()
+{
+	return typeof global.kagexHashedArchive == "String" ? global.kagexHashedArchive : "";
+}
 
 // useArchiveIfExists, when signed and the archive exists: record it to verify and defer its auto
 // path. Returns true when it handled the archive (the caller then does nothing).
@@ -145,21 +158,32 @@ function KAGSignatureVerifyAndStart(cont)
 
 	// The archive the running scripts were loaded from (data.xp3, or the executable it is bound
 	// into). The engine prefers a data.xp3 next to it over a bound copy, so checking the archive
-	// actually in use catches a planted data.xp3.
-	var placed = Storages.getPlacedPath("startup.tjs");
-	if (placed == "") placed = Storages.getPlacedPath("system/Initialize.tjs");
-	var at = placed.indexOf(">");
-	global.KAGSignedArchive = at >= 0 ? placed.substring(0, at) : System.exeName;
+	// actually in use catches a planted data.xp3. With hidden names, data.xpc and its bootstrap.
+	var hashed = KAGSignatureHashedArchive();
+	if (hashed != "") {
+		global.KAGSignedArchive = typeof global.kagexHashedArchiveFile == "String" ? global.kagexHashedArchiveFile : "";
+	} else {
+		var placed = Storages.getPlacedPath("startup.tjs");
+		if (placed == "") placed = Storages.getPlacedPath("system/Initialize.tjs");
+		var at = placed.indexOf(">");
+		global.KAGSignedArchive = at >= 0 ? placed.substring(0, at) : System.exeName;
+	}
 
 	// A decoy: a file whose .sig was made for different content, so a correct plugin reports a
 	// mismatch (0). A plugin stubbed to always succeed would return 1 here and be caught; one that
 	// always fails is caught on the real files below. It is always queued: a signed build always
 	// ships it, so its absence means the archive was repacked and is treated as a failure.
-	KAGSigQueue.add(%[ "storage" => "SignatureDecoy.bin", "label" => "the signature self-test",
+	KAGSigQueue.add(%[ "storage" => hashed + "SignatureDecoy.bin", "label" => "the signature self-test",
 		"expect" => "mismatch", "kind" => "decoy" ]);
 
 	KAGSigQueue.add(%[ "storage" => KAGSignedArchive, "label" => "the game data (" +
-		Storages.extractStorageName(KAGSignedArchive) + ")", "expect" => "pass", "kind" => "archive" ]);
+		(KAGSignedArchive != "" ? Storages.extractStorageName(KAGSignedArchive) : "data.xpc") + ")", "expect" => "pass", "kind" => "archive" ]);
+	// the plain bootstrap that mounts data.xpc runs first, so it is checked too
+	if (hashed != "") {
+		var boot = typeof global.kagexHashedBootstrap == "String" ? global.kagexHashedBootstrap : "";
+		KAGSigQueue.add(%[ "storage" => boot, "label" => "the game's start-up script (startup.tjs)",
+			"expect" => "pass", "kind" => "archive" ]);
+	}
 
 	// The engine files, from the signed list beside the executable (<exe>.sigfiles). Verified as a
 	// whole; the files it names are appended to the queue once it passes (so the list can't be

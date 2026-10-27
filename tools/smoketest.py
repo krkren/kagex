@@ -664,6 +664,11 @@ def sample_steps(eng):
             eng.compiled = True
             return
         if eng.tjs("return world_object.player.readonlydb ? 1 : 0;") == 1:
+            # the platform packages (web, phones) carry the sample's scenarios compiled by CI
+            if eng.tjs('return scnFindCompiled("s0001.ks") !== void ? 1 : 0;') == 1:
+                print("     (a read-only package with the scenarios compiled into it: the demos play those)", flush=True)
+                eng.compiled = True
+                return
             print("     (skipped: this build can't write compiled scenarios, so the demos play from the scripts)",
                   flush=True)
             return

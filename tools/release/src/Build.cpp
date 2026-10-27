@@ -842,6 +842,10 @@ private:
 		std::string err;
 		if (!packEncrypted(stage_, xpc_, archiveKey_, true, files, bytes, err)) throw Failure{ "Couldn't pack data.xpc: " + err };
 		if (!fs::is_regular_file(xpc_, ec) || files == 0) throw Failure{ "Couldn't pack data.xpc" };
+		// the engine's signature check reads sizes as 32-bit numbers, and data.xpc can't be split
+		if (signing_ && fs::file_size(xpc_, ec) >= 2000ULL * 1048576)
+			throw Failure{ "This signed build's data.xpc is " + humanGB(fs::file_size(xpc_, ec)) + ": with hidden file names the data is one archive, "
+				"and the engine's signature check can't read 2 GB or more of it. Turn Hide names off (the data is then split into archives under 2 GB), or reduce the data" };
 		pr.log("data.xpc: " + std::to_string(files) + " files, " + std::to_string(bytes / 1048576) + " MB, encrypted with hidden names");
 	}
 
@@ -1039,7 +1043,11 @@ private:
 		writeText(dir / krt::toPath(exeLeaf + ".sigfiles"), manifest);
 		signChecked(dir / krt::toPath(exeLeaf + ".sigfiles"));
 
-		if (str(s_, "platforms." + id + ".data") != "bind") signChecked(dir / "data.xp3");   // a bound exe is signed above
+		if (hashNames_) {
+			// hidden names: data.xpc and the plain bootstrap that mounts it
+			signChecked(dir / "data.xpc");
+			signChecked(dir / "data" / "startup.tjs");
+		} else if (str(s_, "platforms." + id + ".data") != "bind") signChecked(dir / "data.xp3");   // a bound exe is signed above
 		for (const auto& name : partNames_) signChecked(dir / krt::toPath(name + ".xp3"));
 		pr_.log("Signed " + std::to_string(rel.size()) + " engine files, the archive" +
 		        (partNames_.empty() ? std::string() : " and " + std::to_string(partNames_.size()) + " part(s)"));
@@ -1055,7 +1063,10 @@ private:
 	{
 		if (!signing_) return;
 		pr_.progress(-1, "Signing macOS");
-		signChecked(contents / "Resources" / "data.xp3");
+		if (hashNames_) {
+			signChecked(contents / "Resources" / "data.xpc");
+			signChecked(contents / "Resources" / "data" / "startup.tjs");
+		} else signChecked(contents / "Resources" / "data.xp3");
 		pr_.log("Signed the game archive (macOS; codesign seals the engine)");
 	}
 
