@@ -885,7 +885,7 @@ def sample_steps(eng):
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
         # while it plays (asking through the REPL is too slow on some targets)
         # Its plain face has a mouth for each vowel (KAGEnvCharacterEx.tjs's lipSyncVowels), and
-        # the voice has a lip track (pip000001.lip, make_pip.py): "Hi! I'm Pip" says a and i
+        # the voice has a lip track (pip000001.lip, make_pip.py) naming the vowel of each syllable
         eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[];'
                 ' global.__smokeLipTimer = new Timer(function() {'
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
@@ -905,10 +905,12 @@ def sample_steps(eng):
                         ' var c = world_object.env.characters["pip"];'
                         ' return [__smokeLips.join(" "), n.count \\ 2, lipSyncSource, vs.join(" "),'
                         ' typeof global.lipSyncVowels != "undefined" && lipSyncVowels ? 1 : 0,'
-                        ' typeof c.lipTrack == "undefined" ? -1 : c.lipTrack !== void ? c.lipTrack.times.count : 0].join(",");')).split(",")
+                        ' typeof c.lipTrack == "undefined" ? -1 : c.lipTrack !== void ? c.lipTrack.times.count : 0,'
+                        ' typeof c.lipTrack != "undefined" && c.lipTrack !== void ? c.lipTrack.mouths.join(" ") : ""].join(",");')).split(",")
         levels = [int(v) for v in r[0].split()] if r[0].strip() else []
         positions, source = int(r[1]), r[2]
         vowels, by_vowel, track = r[3].split(), r[4] == "1", int(r[5])
+        said = set(r[6].split()) & set("aiueo")   # the vowels its track names
         print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
               % ("its lip track (%d marks)" % track if track > 0 else source or "(random)", len(levels),
                  " ".join(str(v) for v in levels[:60]), positions), flush=True)
@@ -920,8 +922,9 @@ def sample_steps(eng):
             raise SmokeError("Pip's mouth didn't open and close with its voice (levels seen: %s)" % sorted(set(levels)))
         elif track == 0:
             raise SmokeError("Pip's voice has a lip track (pip000001.lip), but it wasn't read")
-        elif by_vowel and track > 0 and not {"a", "i"} <= set(vowels):
-            raise SmokeError("Pip's mouth didn't follow its lip track's vowels (vowels seen: %s)" % (vowels or "none"))
+        elif by_vowel and track > 0 and (len(vowels) < 2 or not set(vowels) <= said):
+            raise SmokeError("Pip's mouth didn't follow its lip track's vowels (%s; vowels seen: %s)"
+                             % (" ".join(sorted(said)), vowels or "none"))
         elif by_vowel and source == "level" and len(vowels) < 2:
             raise SmokeError("Pip's mouth didn't follow the vowels of its voice (vowels seen: %s)" % (vowels or "none"))
         eng.clicker(True, until="s0001.ks")

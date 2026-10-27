@@ -9,11 +9,12 @@
 - `psd://name.psd/root/folder/layer.bmp` and `psd://name.psd/id/<LayerId>.bmp` load a Photoshop file's layer into KAG and World layers on every engine with psdfile (the plugin's own BMPs only loaded on Windows), as `clip://` does; both read what kagex-release split the file into where the file or the plugin isn't there.
 - **Mouths by vowel**: a mouth group with a layer for each vowel ("Mouth A" ... "Mouth O", or あ ... お) shows the one for the vowel the voice says while it lip-syncs (face groups take `lipa` ... `lipo`). The vowel comes from the voice's lip track when it has one, and otherwise from the engine's `WaveSoundBuffer.getVowel` (`lipSyncVowels`, `lipVowelHold`), which hears most voices' pitch more than their vowels (`UPSTREAM.md`). Pip's plain face has them.
 - **Lip tracks**: a voice can come with `<voice>.lip`, the mouth over time (a vowel, `n` for the lips closed, or `-`, and how open), which then moves the mouth in place of the voice's level and getVowel, timed from when the voice starts (`lipSyncTracks`; `doc/world.txt`, "Blinking and lip-sync"). The engine reads a playing voice's position and level from the wrong part of it now and then (`UPSTREAM.md`), so voices without a track can still open and shut out of time.
-- **Pip speaks its lines**: the Animated Character demo's voice lines are spoken by a speech synthesizer, Kokoro (Kokoro-82M, Apache-2.0), in place of the babble, each with a lip track written from when it says each phoneme. `tools/assets/make_pip.py voice` makes them (it needs ONNX Runtime and downloads the model once); `make_pip.py vowels` measures how often getVowel would have heard them right (36%).
+- Pip's voice lines come with lip tracks, written by `tools/assets/make_pip.py voice` from the syllables it babbles (the babble itself is unchanged), so its plain face says their vowels; `make_pip.py vowels` measures how often getVowel would have heard them right (23%: it hears nearly every syllable as o).
 - `tools/assets/psdwrite.py` writes a layer structure and its pictures as a PSD with folders (standard library only); the smoke tests use it to check that a pose read from a PSD, and one kagex-release split, match the sample's own.
 
 ### Fixed
 
+- A character drawn from layers kept its eyes and mouth still while its own change (pose, outfit or face: `charTrans`, 300 ms in the sample) faded in, so a line said with a change lost its start. They move during it now.
 - `clip://` found a layer inside a folder by its name alone (`root/layer`), not by its folder path, and of two layers of one name took the upper one, unlike the plugin.
 
 ## 0.9.2

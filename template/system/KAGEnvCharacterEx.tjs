@@ -37,9 +37,10 @@ var lipVowelHold = 0.08;
 // (pip000001.ogg's is pip000001.lip) whose lines are "<ms><tab><mouth>[<tab><open>]": the mouth
 // from that time on, a, i, u, e or o, n for the lips closed or "-" for any other sound, and how
 // open it is, 0 closed, 1 half or 2 wide (without it: 2 for a vowel, 0 for n, 1 for "-"); "#"
-// starts a comment. One can be made from the times a speech synthesizer says each phoneme
-// (tools/assets/make_pip.py). While such a voice plays, the track moves the mouth, rather than
-// the voice's level and getVowel (which reads few voices right, UPSTREAM.md)
+// starts a comment. One can be written by hand, from a speech synthesizer's phoneme timings,
+// or by whatever made the voice (tools/assets/make_pip.py writes Pip's from its babble). While
+// such a voice plays, the track moves the mouth, rather than the voice's level and getVowel
+// (which reads few voices right, UPSTREAM.md)
 var lipSyncTracks = true;
 
 // Loading psdlayer
@@ -2978,54 +2979,56 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	}
 
 	/**
-	 * The mouth the lip track gives for the span (ms) from pos, as [mouth, how open]: the vowel
-	 * it shows longest then, when it shows one (a vowel is short beside the consonants around
-	 * it), as open as the widest mark there other than n; otherwise n, the lips closed, when it
-	 * lasts as long as the "-" there, or "-" as open as the widest "-"
+	 * The lip track's last mark at or before t (ms), or its first
+	 */
+	function lipTrackIndex(t) {
+		var times = lipTrack.times;
+		var lo = 0, hi = times.count - 1;
+		while (lo < hi) {
+			var m = (lo + hi + 1) \ 2;
+			if (times[m] <= t) {
+				lo = m;
+			} else {
+				hi = m - 1;
+			}
+		}
+		return lo;
+	}
+
+	/**
+	 * The mouth the lip track gives for the span (ms) from pos, as [mouth, how open]: the mark
+	 * in the middle of it, where the voice's level would be read; when that's a sound other
+	 * than a vowel ("-") with the mouth open, the vowel the span holds longest gives the shape
 	 */
 	function lipTrackAt(pos, span) {
 		var times = lipTrack.times, mouths = lipTrack.mouths, levels = lipTrack.levels;
 		var n = times.count;
-		// the last mark at or before pos
-		var lo = 0, hi = n - 1;
-		while (lo < hi) {
-			var mid = (lo + hi + 1) \ 2;
-			if (times[mid] <= pos) {
-				lo = mid;
-			} else {
-				hi = mid - 1;
+		var mid = pos + span / 2;
+		var k = lipTrackIndex(mid);
+		if (times[k] > mid || mouths[k] == "n" || levels[k] <= 0) {
+			return [mouths[k], 0];
+		}
+		var mouth = mouths[k];
+		if (lipVowelLayerNames[mouth] === void) {
+			var end = pos + span;
+			var best, bestWeight = 0, weights = %[];
+			for (var i=lipTrackIndex(pos);i<n && times[i] < end;i++) {
+				var v = mouths[i];
+				if (lipVowelLayerNames[v] !== void) {
+					var from = times[i] > pos ? times[i] : pos;
+					var to = i + 1 < n && times[i+1] < end ? times[i+1] : end;
+					weights[v] = (weights[v] !== void ? weights[v] : 0) + to - from;
+					if (weights[v] > bestWeight) {
+						best = v;
+						bestWeight = weights[v];
+					}
+				}
+			}
+			if (best !== void) {
+				mouth = best;
 			}
 		}
-		var end = pos + span;
-		var weights = %[];
-		var open = 0, otherOpen = 0;
-		for (var i=lo;i<n && times[i] < end;i++) {
-			var from = times[i] > pos ? times[i] : pos;
-			var to = i + 1 < n && times[i+1] < end ? times[i+1] : end;
-			var m = mouths[i];
-			weights[m] = (weights[m] !== void ? weights[m] : 0) + to - from;
-			if (m != "n" && levels[i] > open) {
-				open = levels[i];
-			}
-			if (m == "-" && levels[i] > otherOpen) {
-				otherOpen = levels[i];
-			}
-		}
-		var best, bestWeight = 0;
-		for (var i=0;i<lipVowelList.count;i++) {
-			var v = lipVowelList[i];
-			if (weights[v] !== void && weights[v] > bestWeight) {
-				best = v;
-				bestWeight = weights[v];
-			}
-		}
-		if (best !== void) {
-			return [best, open];
-		}
-		if (weights["n"] !== void && (weights["-"] === void || weights["n"] >= weights["-"])) {
-			return ["n", 0];
-		}
-		return ["-", otherOpen];
+		return [mouth, levels[k]];
 	}
 
 	/**
@@ -3613,8 +3616,11 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 
 		// Image update
 		if (updateFlag) {
-			// Forced redraw if target is fore layer
-			if (targetLayer !== void && env.isForeLayer(targetLayer)) {
+			// Forced redraw if target is fore layer, or the new picture of the character's own
+			// transition (a change of pose, outfit or face), which fades in from the back page:
+			// else its eyes and mouth stood still until the change was done, often for the
+			// first 300 ms of a line said with it
+			if (targetLayer !== void && (env.isForeLayer(targetLayer) || isInTransition())) {
 				drawLayer(targetLayer);
 				setSize(targetLayer);
 				if (updatePos) {
