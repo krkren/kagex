@@ -16,9 +16,10 @@ var lipSyncOpenLevel = 0.12;
 
 // Mouths by vowel: while the voice is loud enough to open the mouth, a face whose mouth group
 // has a layer for the vowel it says shows that layer instead of the half-open or open mouth.
-// The vowel comes from the engine's WaveSoundBuffer.getVowel (how much the voice sounds like
-// a, i, u, e and o); the layers go by these names, in English or in kana. A mouth group needs
-// "Closed Mouth" and either the half-open and open mouths or at least one vowel
+// The vowel comes from the voice's lip track (below) or else the engine's
+// WaveSoundBuffer.getVowel (how much the voice sounds like a, i, u, e and o); the layers go by
+// these names, in English or in kana. A mouth group needs "Closed Mouth" and either the
+// half-open and open mouths or at least one vowel
 var lipSyncVowels = typeof WaveSoundBuffer.getVowel != "undefined";
 var lipVowelLayerNames = %[
 	a : ["Mouth A", "あ"],
@@ -31,6 +32,15 @@ var lipVowelList = ["a", "i", "u", "e", "o"];
 // How much more (of 1) another vowel has to weigh to replace the one shown, so the mouth
 // doesn't flicker between two vowels that sound alike
 var lipVowelHold = 0.08;
+
+// Lip tracks: a voice can come with one, a text file beside it named like it with ".lip"
+// (pip000001.ogg's is pip000001.lip) whose lines are "<ms><tab><mouth>[<tab><open>]": the mouth
+// from that time on, a, i, u, e or o, n for the lips closed or "-" for any other sound, and how
+// open it is, 0 closed, 1 half or 2 wide (without it: 2 for a vowel, 0 for n, 1 for "-"); "#"
+// starts a comment. One can be made from the times a speech synthesizer says each phoneme
+// (tools/assets/make_pip.py). While such a voice plays, the track moves the mouth, rather than
+// the voice's level and getVowel (which reads few voices right, UPSTREAM.md)
+var lipSyncTracks = true;
 
 // Loading psdlayer
 KAGLoadScript("psdlayer.tjs");
@@ -2829,6 +2839,12 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 	// For lip-sync control
 	var lipPattern;
 	
+	// The lip track of the voice last played (loadLipTrack, lipSyncTracks), that voice, and
+	// when it started (System.getTickCount)
+	var lipTrack;
+	var lipTrackVoice;
+	var lipTrackStart;
+	
 	// For timing control
 	var flipEyeNextTime;
 	var flipLipNextTime;
@@ -2922,6 +2938,94 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			}
 		}
 		return best;
+	}
+
+	/**
+	 * A voice's lip track (lipSyncTracks): %[times, mouths, levels], each mark's time (ms), mouth
+	 * and how open it is, or void when it has none
+	 */
+	function loadLipTrack(storage) {
+		if (!lipSyncTracks || storage === void || storage == "") {
+			return void;
+		}
+		var name = Storages.chopStorageExt(storage) + ".lip";
+		if (!Storages.isExistentStorage(name)) {
+			return void;
+		}
+		var lines = [];
+		try {
+			lines.load(name);
+		} catch (e) {
+			dm("Couldn't read the lip track " + name + ": " + e.message);
+			return void;
+		}
+		var times = [], mouths = [], levels = [];
+		for (var i=0;i<lines.count;i++) {
+			var line = lines[i];
+			if (line == "" || line.charAt(0) == "#") {
+				continue;
+			}
+			var f = line.split("\t");
+			if (f.count >= 2 && (times.count == 0 || +f[0] >= times[times.count-1])) {
+				var mouth = f[1].trim();
+				times.add(+f[0]);
+				mouths.add(mouth);
+				// how open: as given, or wide for a vowel, closed for n, half for anything else
+				levels.add(f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1);
+			}
+		}
+		return times.count > 0 ? %[times:times, mouths:mouths, levels:levels] : void;
+	}
+
+	/**
+	 * The mouth the lip track gives for the span (ms) from pos, as [mouth, how open]: the vowel
+	 * it shows longest then, when it shows one (a vowel is short beside the consonants around
+	 * it), as open as the widest mark there other than n; otherwise n, the lips closed, when it
+	 * lasts as long as the "-" there, or "-" as open as the widest "-"
+	 */
+	function lipTrackAt(pos, span) {
+		var times = lipTrack.times, mouths = lipTrack.mouths, levels = lipTrack.levels;
+		var n = times.count;
+		// the last mark at or before pos
+		var lo = 0, hi = n - 1;
+		while (lo < hi) {
+			var mid = (lo + hi + 1) \ 2;
+			if (times[mid] <= pos) {
+				lo = mid;
+			} else {
+				hi = mid - 1;
+			}
+		}
+		var end = pos + span;
+		var weights = %[];
+		var open = 0, otherOpen = 0;
+		for (var i=lo;i<n && times[i] < end;i++) {
+			var from = times[i] > pos ? times[i] : pos;
+			var to = i + 1 < n && times[i+1] < end ? times[i+1] : end;
+			var m = mouths[i];
+			weights[m] = (weights[m] !== void ? weights[m] : 0) + to - from;
+			if (m != "n" && levels[i] > open) {
+				open = levels[i];
+			}
+			if (m == "-" && levels[i] > otherOpen) {
+				otherOpen = levels[i];
+			}
+		}
+		var best, bestWeight = 0;
+		for (var i=0;i<lipVowelList.count;i++) {
+			var v = lipVowelList[i];
+			if (weights[v] !== void && weights[v] > bestWeight) {
+				best = v;
+				bestWeight = weights[v];
+			}
+		}
+		if (best !== void) {
+			return [best, open];
+		}
+		if (weights["n"] !== void && (weights["-"] === void || weights["n"] >= weights["-"])) {
+			return ["n", 0];
+		}
+		return ["-", otherOpen];
 	}
 
 	/**
@@ -3106,7 +3210,18 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			var voiceLevel = 0;
 			var vowel;
 			if (soundBuffer !== void && soundBuffer.status == "play" && soundBuffer.mode) {
-				if (lipSyncSource == "level") {
+				if (lipTrack !== void && lipTrackVoice == soundBuffer.storage) {
+					// the voice's lip track: its mouth over the time this one is shown, in the
+					// voice's own time (a changed voice speed counted), by the clock since the
+					// voice started, not the buffer's position or level: they're read from the
+					// wrong part of the voice now and then as it plays (UPSTREAM.md)
+					var at = (System.getTickCount() - lipTrackStart) * soundBuffer.speed;
+					var mouth = lipTrackAt(at, lipflipTime * soundBuffer.speed);
+					voiceLevel = mouth[1];
+					if (voiceLevel > 0 && lipVowelLayerNames[mouth[0]] !== void && faceHasVowels()) {
+						vowel = mouth[0];
+					}
+				} else if (lipSyncSource == "level") {
 					// The level half a frame ahead, around the middle of the time the mouth is shown
 					var ahead = (int)(soundBuffer.frequency * lipflipTime / 2000);
 					var a = soundBuffer.getSoundLevel(ahead).rms;
@@ -3438,6 +3553,12 @@ class KAGEnvCharacterEx extends KAGEnvCharacter {
 			soundBuffer.useVisBuffer = true;
 		}
 		var ret = super.playVoice(...);
+		// and its lip track, read once for each voice, timed from now
+		if (soundBuffer !== void && soundBuffer.storage !== void && soundBuffer.storage != lipTrackVoice) {
+			lipTrackVoice = soundBuffer.storage;
+			lipTrack = loadLipTrack(lipTrackVoice);
+		}
+		lipTrackStart = System.getTickCount();
 		if (ret > 0 && lipstate == 3) {
 			startUpdateHandler();
 		}

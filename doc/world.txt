@@ -1221,23 +1221,49 @@ Override.tjs can change them; eyeFlipFreq is the chance that a frame starts a bl
 Mouths by vowel: a mouth group can also have a layer for each vowel, "Mouth A", "Mouth I",
 "Mouth U", "Mouth E" and "Mouth O" (or あ, い, う, え and お). While the voice is loud enough to
 open the mouth, the layer for the vowel it sounds like shows in place of the half-open or open
-mouth, so the mouth makes the shapes of the words. The vowel comes from the engine's
-WaveSoundBuffer.getVowel, which weighs how much the voice sounds like each of the five; the
-heaviest shows, and stays until another outweighs it by lipVowelHold (0.08 of 1), so two that
-sound alike don't flicker. A group can have only some vowels: for one it hasn't, the half-open or
-open mouth shows as before. It can also have only vowels and "Closed Mouth": its half-open and
-open mouth are then the "Mouth A" layer, or the first vowel it has. lipSyncVowels turns it off
-(false), and lipVowelLayerNames holds the names, both in KAGEnvCharacterEx.tjs. Pip's plain face
-has them (Mouth/Mouth A ...).
+mouth, so the mouth makes the shapes of the words. The vowel comes from the voice's lip track
+when it has one (below), and otherwise from the engine's WaveSoundBuffer.getVowel, which weighs
+how much the voice sounds like each of the five; the heaviest shows, and stays until another
+outweighs it by lipVowelHold (0.08 of 1), so two that sound alike don't flicker. A group can
+have only some vowels: for one it hasn't, the half-open or open mouth shows as before. It can
+also have only vowels and "Closed Mouth": its half-open and open mouth are then the "Mouth A"
+layer, or the first vowel it has. lipSyncVowels turns getVowel's vowels off (false), and
+lipVowelLayerNames holds the names, both in KAGEnvCharacterEx.tjs. Pip's plain face has them
+(Mouth/Mouth A ...).
+
+
+
+Lip tracks: a voice can come with a lip track, a text file beside it with its name and .lip
+(pip000001.ogg's is pip000001.lip, which still applies once a release makes it .opus). Each line
+is a time in ms, a tab and the mouth from then on: a, i, u, e or o, n for the lips closed (m, b,
+p), or - for any other sound; then, optionally, a tab and how open it is: 0 closed, 1 half, 2
+wide (without it, 2 for a vowel, 0 for n and 1 for -). # starts a comment:
+
+    # the start of pip000001.lip: "Hi! I'm Pip."
+    0	-	0
+    118	a	2
+    180	i	2
+    243	-	2
+    268	-	1
+    ...
+
+While the voice plays, the track moves the mouth, in place of the voice's level and getVowel.
+Each lipFlipTime, it shows the vowel the track shows longest over that time (a vowel is short
+beside the consonants around it, so any vowel there wins), as open as the widest mark there,
+with the vowel's layer on a face with mouths by vowel; with no vowel in that time, n closes the
+mouth when it lasts at least as long as the - there. The track is timed from when the voice
+starts. tools/assets/make_pip.py writes Pip's from the times Kokoro, the speech synthesizer that
+speaks its lines, says each phoneme, with how open from the voice's loudness there; a track can
+also be written by hand. lipSyncTracks (false) leaves them unread.
 
 
 
 getVowel compares the voice's energy around the first two formants of Japanese vowels as a man
 says them (a 800 and 1200 Hz, i 300 and 2300, u 350 and 1200, e 500 and 1900, o 500 and 900), so
-it suits low, clear voices best; a high voice, whose harmonics are far apart, tends to read as o
-(UPSTREAM.md). Pip's babble is made with those formants and much breath, which fills in the
-spectrum between the harmonics (tools/assets/make_pip.py vowels measures how often getVowel
-gets it right).
+it suits low, clear voices best. Most of a voice's energy is at its pitch and its first few
+harmonics, so it mostly hears the pitch: a woman's voice, around 200 to 250 Hz, reads as i, a
+higher one as o (UPSTREAM.md). Pip's voice reads right 36% of the time, mostly as i
+(tools/assets/make_pip.py vowels measures it), which is why its lines have lip tracks.
 
 
 

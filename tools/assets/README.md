@@ -36,9 +36,15 @@ The sample's images are generated here rather than edited by hand.
   structure (`data/fgimage/pip/pip_<level>.txt`), a PNG per layer, `pip_info.txt`, and
   `data/main/charinit.csv` and `charanim.csv`. Every shape is a signed distance field in NumPy,
   so each level is drawn rather than scaled. `voice` makes its voice lines
-  (`data/voice/pip000001.ogg`...): babble, syllables of a breathy glottal pulse through the vowel
-  formants the engine's `WaveSoundBuffer.getVowel` looks for, encoded with ffmpeg's libvorbis (so
-  it needs ffmpeg); `vowels` measures how often getVowel names the vowel each syllable says.
+  (`data/voice/pip000001.ogg`...), spoken by Kokoro, a speech synthesizer (Kokoro-82M,
+  Apache-2.0, run with ONNX Runtime from kokoro-onnx's release of the model, MIT, which it
+  downloads into `.cache/kokoro` once, about 350 MB), from the phonemes written beside each line
+  in `LINES`, and encoded with ffmpeg's libvorbis; each gets a lip track
+  (`data/voice/pip000001.lip`...), the mouth over time from when Kokoro says each phoneme, and
+  how open from the voice's loudness there, which the game follows while the voice plays. `vowels` measures how often the engine's
+  `WaveSoundBuffer.getVowel`, which a voice without a lip track relies on, names the vowel the
+  track says. Change a line in `anim.ks` and its phonemes (misaki's notation, as in its US
+  dictionary) together.
 - `psdwrite.py` writes a layer structure in psdlayer.tjs's text format, with its pictures, as a
   PSD with folders (`psdwrite.py data/fgimage/pip/pip_0.txt pip_0.psd`), the other way round
   from kagex-release's split. Standard library only; the smoke tests make Pip's PSDs with it.
@@ -54,7 +60,7 @@ python3 tools/assets/make_effects.py     # effect textures and effects; or: text
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
-python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice vowels
+python3 tools/assets/make_pip.py         # Pip's layers; or: art voice vowels (voice: pip install onnxruntime)
 python3 tools/assets/psdwrite.py <structure.txt> [out.psd]   # a layer structure as a PSD
 ```
 
