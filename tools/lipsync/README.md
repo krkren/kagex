@@ -82,7 +82,7 @@ kagex-release's check warns about tracks that are out of date.
 ## The .lip file
 
 ```text
-# kagex-lipsync 0.9.2: the mouth over pip000009.ogg, from its line (tools/lipsync)
+# kagex-lipsync 0.11.0: the mouth over pip000009.ogg, from its line (tools/lipsync)
 # voice: <the voice's SHA-256>
 # text: Hi again! Listen closely. ...
 # language: en

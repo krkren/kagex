@@ -47,7 +47,7 @@ bool splitLayeredFile(const std::filesystem::path& file, const std::filesystem::
 
 /// Whether a framework folder reads layers from such pictures: its AffineLayer.tjs finds psd://
 /// and clip:// layers in them (affineLayeredFromPieces) and KAGEnvCharacterEx.tjs looks for a
-/// pose's .txt before its .psd or .clip (findStandLayerFile), as KAGEX after 0.9.2 does
+/// pose's .txt before its .psd or .clip (findStandLayerFile), as KAGEX does from 0.11.0 on
 bool frameworkReadsSplitLayers(const std::filesystem::path& framework);
 
 } // namespace kr

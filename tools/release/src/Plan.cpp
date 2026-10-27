@@ -240,7 +240,7 @@ std::vector<GameFile> collectGameFiles(const Json& s, const Project& p, int* exc
 	// ... go in after all when a script loads layers from them (clip://, psd://), or when they're
 	// the poses charinit.csv names and the game has no layer structure of that name (.txt) the
 	// framework would read first. kagex-release splits them into the structure and pictures
-	// (Layered.h), which a framework from after KAGEX 0.9.2 reads
+	// (Layered.h), which KAGEX 0.11.0's framework and later read
 	if (!layered.empty()) {
 		const std::set<std::string> named = layeredFilesNamed(files);
 		std::set<std::string> poses, have;

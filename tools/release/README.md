@@ -275,8 +275,8 @@ when a script names it after `psd://` or `clip://`, or when it's a pose `charini
 (`<files>.psd`, or `<files>_<level>.psd`, and the same with `.clip`) and the game has no
 `<files>_<level>.txt` of its own, which the framework would read first. A name the split would
 write that the game already has (`<name>.txt`, or `<name>_<number>` as a picture) stops the build,
-as do two such files of one name. Splitting needs a framework that reads the split files (the one
-after KAGEX 0.9.2: `AffineLayer.tjs`'s `affineLoadLayeredLayer`, `KAGEnvCharacterEx.tjs`'s
+as do two such files of one name. Splitting needs a framework that reads the split files (KAGEX
+0.11.0's or later: `AffineLayer.tjs`'s `affineLoadLayeredLayer`, `KAGEnvCharacterEx.tjs`'s
 `findStandLayerFile`); with an older `data/system` the files go in as they are, which only the
 desktop builds can read.
 

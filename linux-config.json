@@ -2,7 +2,7 @@
     "comment": "krkrz_linux: the Linux package, built in Valve's Steam Linux Runtime 3.0 (sniper) SDK. PROJECT_DIR is this repository. The same files as the zip packages: krkrz, krkrz.cf, plugin/, data/ (with the framework copied in as data/system), template/ and doc/ for developers. cmake.options puts the archives freetype needs at the end of every C++ link: krkr_richtext's link line lists libfreetype.a again after harfbuzz, past them, so it built but wouldn't load (undefined png symbols)",
 
     "name": "KAGEX Sample",
-    "version": "0.9.2",
+    "version": "0.11.0",
     "exeName": "krkrz",
     "orgName": "krkren",
     "appName": "kagex",

@@ -45,7 +45,7 @@ bool findGameEngine(const Project& project, const std::filesystem::path& engines
                     std::filesystem::path& exe, std::string& error);
 
 /// The voiced lines of every script in the game (each .ks under data/), through the game's own
-/// compiler (the framework's -voicelines, since after 0.9.2); log is the engine's output
+/// compiler (the framework's -voicelines, since 0.11.0); log is the engine's output
 bool readVoiceLines(const Project& project, const std::filesystem::path& engine, krt::Progress& progress,
                     std::vector<VoiceLine>& lines, std::vector<std::string>& problems, std::string& log, std::string& error);
 
