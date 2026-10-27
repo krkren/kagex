@@ -421,10 +421,12 @@ class AndroidEngine(Engine):
         return r.stdout
 
     def _eval(self, cmd, timeout):
-        # one line in, one line of JSON out
+        # one line in, one line of JSON out: a // comment on a line of its own would comment
+        # out the rest
         self.sock.settimeout(timeout)
         try:
-            self.sock.sendall((" ".join(cmd.splitlines()) + "\n").encode("utf-8"))
+            lines = [l for l in cmd.splitlines() if not l.lstrip().startswith("//")]
+            self.sock.sendall((" ".join(lines) + "\n").encode("utf-8"))
             line = self.reader.readline()
         except OSError as e:
             raise SmokeError("REPL socket: %s" % e)
@@ -699,14 +701,14 @@ def sample_steps(eng):
             return
         # two scripts in the save folder: A puts Ai on the road and jumps to B, which shows
         # text only. Compiled B before A (round two compiles B again), B's first save point holds
-        # what A left (SceneParser.entryFor), as playing the scripts would
+        # what A left (SceneParser.entryFor), as playing the scripts would. Android's save folder
+        # doesn't serve scripts through the auto path: "skip"
         r = str(eng.tjs(r'''
             var dir = System.dataPath;
             [ "*start|Carry A", "[initscene]", "[road normal]", "[ai standard center]", "Ai is here.[p]",
               "[jump storage=zz_carry_b.ks]" ].save(dir + "zz_carry_a.ks");
             [ "*start|Carry B", "Still here.[p]" ].save(dir + "zz_carry_b.ks");
             try { Storages.addAutoPath(dir); } catch (e) { }
-            // Android's save folder doesn't serve scripts through the auto path
             if (!Storages.isExistentStorage("zz_carry_a.ks") || !Storages.isExistentStorage("zz_carry_b.ks")) return "skip";
             var p = world_object.player;
             var c = p.compileList([ "zz_carry_b.ks", "zz_carry_a.ks" ], true);
