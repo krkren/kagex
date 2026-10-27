@@ -25,8 +25,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.9.3"
-  KAGEX_SHA: f47fb647e8fb6f049d7556fc639fc93de66e91f5
+  RELEASE_TAG: "0.9.4"
+  KAGEX_SHA: 0ea944009525539452192acdd05a1d0c030c6e27
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -34,7 +34,7 @@ env:
   ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
   # kagex's own plugins, built into the engines (as platforms.yml pins them): xp3crypt
   # (encrypted data.xp3, built into the engine) and scnfile (compiled scenarios, a plugin)
-  XP3CRYPT_SHA: bce47103c73374c583068c07a4945e63e3888fe6
+  XP3CRYPT_SHA: 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
 
 jobs:
@@ -624,7 +624,26 @@ jobs:
           s["output"]["folder"] = "release-hidden"
           for k in s["platforms"]:
               s["platforms"][k]["enabled"] = k in ("windows", "linux")
+          # the probe's image stays as it is (converted, it would be 名前テスト.tlg)
+          s["media"]["images"].update({"opaque": "keep", "alpha": "keep"})
           json.dump(s, open(p, "w"), indent=2)
+          EOF
+          # the release's engines read an image named in Japanese with an upper-case extension by its
+          # lower-case name (xp3crypt 08ad5f7), and 0.9.4's bootstrap runs the game's startup.tjs:
+          # a probe at its end says both in the test run's log
+          cp "game/data/bgimage/$(ls game/data/bgimage | grep -m1 '\.png$')" "game/data/image/名前テスト.PNG"
+          cat >> game/data/startup.tjs <<'EOF'
+
+          // release workflow probe (tool-check, hidden names)
+          Debug.message("kagex-test: startup.tjs ran");
+          try {
+              var probe = new global.Layer(kag, kag.fore.base);
+              probe.loadImages("名前テスト.png");
+              Debug.message("kagex-test: an upper-case extension loads " + probe.imageWidth);
+              invalidate probe;
+          } catch (e) {
+              Debug.message("kagex-test: an upper-case extension fails: " + e.message);
+          }
           EOF
           build hidden
           python3 - <<'EOF'
@@ -668,6 +687,16 @@ jobs:
               print(a.rsplit("/", 1)[1], len(names(a)), "names, kept:", plain)
               if plain != (["startup.tjs"] if a.endswith("/data.xp3") else []): bad[a] = plain
           sys.exit("names not hidden: %s" % bad if bad else 0)
+          EOF
+          python3 - <<'EOF' | tee -a results/hidden-names.txt
+          import sys
+          # the probe's own lines (an exception's code dump lists the script's strings too, after "// *")
+          log = open("game/release-hidden/test-run.log", encoding="utf-8", errors="replace").read()
+          said = [l.strip() for l in log.splitlines() if "kagex-test:" in l and "// *" not in l]
+          print("probe:", " | ".join(said))
+          ran = any(l.endswith("kagex-test: startup.tjs ran") for l in said)
+          loads = any("kagex-test: an upper-case extension loads" in l for l in said)
+          sys.exit(0 if ran and loads else "the game's startup.tjs ran: %s; the upper-case extension loads: %s" % (ran, loads))
           EOF
           # signed as well (the keys file has the signing key too): every protection at once, then
           # signed and encrypted without the names hidden. The Linux test runs must report the
