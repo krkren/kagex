@@ -25,8 +25,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.9.0"
-  KAGEX_SHA: 0928bc883ea7241700558c69a47ca042c8cce0b9
+  RELEASE_TAG: "0.9.1"
+  KAGEX_SHA: 1a6d8c176bc0024696dda4c7b522f83958376539
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -634,6 +634,36 @@ jobs:
           ls -la game/release-hidden/*-linux game/release-hidden/*-linux/data | tee results/hidden-names.txt
           test -f game/release-hidden/*-linux/data.xpc
           test "$(ls game/release-hidden/*-linux/data)" = startup.tjs
+          # signed as well (the keys file has the signing key too): every protection at once, then
+          # signed and encrypted without the names hidden. The Linux test runs must report the
+          # signatures verified (SignatureCheck.tjs checks data.xpc and its bootstrap, or data.xp3)
+          signed() {  # signed <name> <hide names: 0|1>
+            python3 - "$1" "$2" <<'EOF'
+          import json, sys
+          p = "game/release.json"
+          s = json.load(open(p))
+          s["signing"]["enabled"] = True
+          s["archive"]["hideNames"] = sys.argv[2] == "1"
+          s["output"]["folder"] = "release-" + sys.argv[1]
+          for k in s["platforms"]:
+              s["platforms"][k]["enabled"] = k in ("windows", "linux")
+          json.dump(s, open(p, "w"), indent=2)
+          EOF
+            build "$1"
+            python3 - "$1" "$2" <<'EOF'
+          import json, re, sys
+          t = open("results/build-%s.json" % sys.argv[1]).read()
+          prot = json.loads(t[re.search(r"^\{", t, re.M).start():]).get("protection", {})
+          print("protection:", prot)
+          want = "encrypted, names hidden" if sys.argv[2] == "1" else "encrypted"
+          sys.exit(0 if prot.get("archive") == want and prot.get("scenes") == "encrypted" and prot.get("signed") is True else 1)
+          EOF
+          }
+          signed signed 1
+          test -f game/release-signed/*-linux/data.xpc.sig
+          test -f game/release-signed/*-linux/data/startup.tjs.sig
+          signed signed-xp3 0
+          test -f game/release-signed-xp3/*-linux/data.xp3.sig
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-engine-packages
@@ -646,7 +676,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp game/release/test-run.log game/release/android-build.log results/ 2>/dev/null || true
-          for d in release-encrypted release-hidden; do
+          for d in release-encrypted release-hidden release-signed release-signed-xp3; do
             for f in test-run.log compile-scenarios.log compile-scripts.log; do cp "game/$d/$f" "results/$d-$f" 2>/dev/null || true; done
           done
           ci/.github/windows-test/publish-results.sh release-results-tool-check "kagex-release with $RELEASE_TAG's engines, run ${{ github.run_id }} (${{ job.status }})"

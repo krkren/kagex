@@ -72,8 +72,38 @@ jobs:
           echo "list= $list " >> "$GITHUB_OUTPUT"
           echo "building: $list"
 
-  linux:
+  # The sample's scenarios compiled (compile-scenarios.sh), for every platform job to put into the
+  # project before it packages it: the web, Android and iOS packages can't compile them as they
+  # play, so without them going back, the Replay pictures and Search found nothing there
+  scenarios:
     needs: select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Install the libraries the engine loads
+        run: |
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
+            libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig > /dev/null
+      - name: Compile the scenarios
+        run: .github/platforms/compile-scenarios.sh . "$RUNNER_TEMP/scenarios.tgz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios.tgz
+          if-no-files-found: error
+      - name: Stop the whole run on a failure
+        if: failure() && github.workflow == 'Release packages'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }} || true
+
+  linux:
+    needs: [select, scenarios]
     if: contains(needs.select.outputs.list, ' linux ')
     runs-on: ubuntu-24.04
     timeout-minutes: 240
@@ -85,6 +115,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine and krkrz_linux
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_linux "$KRKRZ_LINUX_SHA"
       - name: Build the Steam Linux Runtime (sniper) image
@@ -137,7 +173,7 @@ jobs:
         run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   web:
-    needs: select
+    needs: [select, scenarios]
     if: contains(needs.select.outputs.list, ' web ')
     runs-on: ubuntu-24.04
     timeout-minutes: 240
@@ -150,6 +186,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine and krkrz_web
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
       - name: Set up emsdk and vcpkg
@@ -217,7 +259,7 @@ jobs:
         run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   android:
-    needs: select
+    needs: [select, scenarios]
     if: contains(needs.select.outputs.list, ' android ')
     runs-on: ubuntu-24.04
     timeout-minutes: 240
@@ -229,6 +271,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine and krkrz_android
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
       - uses: actions/setup-java@v4
@@ -332,7 +380,7 @@ jobs:
         run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   ios:
-    needs: select
+    needs: [select, scenarios]
     if: contains(needs.select.outputs.list, ' ios ')
     runs-on: macos-15
     timeout-minutes: 300
@@ -344,6 +392,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine and krkrz_ios
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
       - name: Set up vcpkg
@@ -417,7 +471,7 @@ jobs:
         run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
 
   macos:
-    needs: select
+    needs: [select, scenarios]
     if: contains(needs.select.outputs.list, ' macos ')
     runs-on: macos-15
     timeout-minutes: 300
@@ -429,6 +483,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: kagex-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine
         run: kirikiri/kagex/.github/platforms/setup.sh
       - name: Set up vcpkg and ninja
