@@ -1,0 +1,43 @@
+# Deletes the repository's old branches: everything but main, legacy and the two branches
+# releases need (ci/windows-release starts a release; ci/dev-libs-linux holds kagex-release's
+# Linux libraries). Run it from the Actions tab; it only lists the branches unless "confirm" is
+# "delete". The CI results branches (ci/platform-results-*, ci/release-results-*) come back with
+# the next CI run that pushes them.
+name: Delete old branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "delete" to delete them (anything else only lists them)'
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete every branch but main, legacy, ci/windows-release and ci/dev-libs-linux
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          repo="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          keep='^(main|legacy|ci/windows-release|ci/dev-libs-linux)$'
+          mapfile -t gone < <(git ls-remote --heads "$repo" | sed 's#.*refs/heads/##' | grep -Ev "$keep" | sort)
+          printf '%s\n' "${gone[@]}"
+          echo "${#gone[@]} branches to delete" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$CONFIRM" != delete ]; then
+            echo 'Only listed: run it again with "delete" to delete them' | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git init -q .
+          for ((i = 0; i < ${#gone[@]}; i += 20)); do
+            git push "$repo" --delete "${gone[@]:i:20}"
+          done
+          echo "Branches left:" | tee -a "$GITHUB_STEP_SUMMARY"
+          git ls-remote --heads "$repo" | sed 's#.*refs/heads/#- #' | tee -a "$GITHUB_STEP_SUMMARY"
