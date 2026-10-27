@@ -1,0 +1,43 @@
+5-ok   defaults from first.ks: KAGEX Sample / 0.9.3 / kagex-sample
+6-ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+7-ok   icon found: platform/icon-1024.png
+8:ok   init refuses to replace: error: /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release.json is already there (--force replaces it)
+9-ok   check: the defaults have no errors
+10-ok   check: the host platform is listed: macos
+11-ok   check: reports a bad version and reserved names: identity.version, identity.appName
+12-ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+13-ok   plan: the chosen platforms: windows, linux, web, android, ios
+14-ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 604 files, 1 excluded, 1 .psd
+15-ok   plan: images and sounds to convert: 464 images, 0 sounds
+16-ok   plan: framework copied in: template/system, copied in as data/system
+17-ok   an unknown platform is refused: unknown platform: nowhere
+18-ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/keys/game-keys.txt.
+19-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+20-ok   keys: each kind of protection has a key of its own
+21-ok   keys: only the owner can read the file: 0o100600
+22:ok   keys: keygen won't replace keys: error: /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+23-ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/keys/game-keys.txt.
+24-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+25-ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/keys/game-keys.txt.
+26-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+27:ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u2026 (kagex-release --cli keygen <file>)"]}
+28-ok   keys: a keys file outside the game's folder passes: {}
+29-ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+30:ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+31:ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/../keys/no-signing.txt has no signing key: Create keys\u2026 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+32-ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u2026 makes a new one)"]}
+33:ok   keys: a misspelt key name is an error: {"keys.file": ["/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+34-ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"], "platforms.macos.signing": ["Ad hoc signed apps open only after the player allows them (right-click > Open, or System Settings > Privacy & Security)"]}
+35:ok   signing: no keys file is an error: keys.file
+36-ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.macos.signing, platforms.web.url, signing.enabled
+37-ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+38-ok   the page is served
+39-ok   the client library is embedded
+40-ok   state: /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release.json
+41-ok   state: the tool encrypts archives and scenarios: archive True, scenarios True
+42-ok   check from the screen: scenes.encrypt; platforms.macos.signing; platforms.android.applicationId; platforms.android.keystore
+43-ok   host status for every platform: windows=True, linux=True, steam=True, macos=True, web=True, android=True, ios=False
+44-ok   save
+45-ok   build: every platform: windows=True; linux=True; steam=True; macos=True 
+46-ok   windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3
+47-ok   windows: an archive per media folder beside data.xp3, and no data folder: bgimage.xp3 bgm.xp3 data.xp3 effect.xp3 fgimage.xp3 image.xp3 rule.xp3 scenario.xp3 thum.xp3 video.xp3 voice.xp3

@@ -1,0 +1,75 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-windows",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-windows.zip",
+   "bytes": 53057782
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-linux",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-linux.tar.gz",
+   "bytes": 67301706
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-steam",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-steam.tar.gz",
+   "bytes": 74808335
+  },
+  {
+   "platform": "macos",
+   "title": "macOS",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-macos",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/kagex-sample-0.9.3-macos.zip",
+   "bytes": 55520513
+  }
+ ],
+ "notes": [
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 455,
+  "sounds": 0,
+  "fromCache": 12,
+  "bytesBefore": 9114305,
+  "bytesAfter": 8588631,
+  "keptByReference": 3,
+  "keptForEffects": 6,
+  "rewrittenScripts": 0
+ },
+ "scripts": {
+  "compiled": 71,
+  "expressions": 2,
+  "fixed": 20,
+  "truncates": true,
+  "kept": [],
+  "log": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpxot_3nwq/My Game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": false
+ }
+}
