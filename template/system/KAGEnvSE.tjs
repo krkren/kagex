@@ -17,6 +17,13 @@ class KAGEnvSE extends KAGEnvBase {
 	var loop;      // Whether it is looping
 	var volume;    // Volume specification
 	var count; // Referenced count value
+
+	// Where it sounds on the stage (positional sound, doc/world.txt "SE Object Functions"):
+	// void for everywhere (not positional), or %[ xpos, level, char ] from the tag's pos=
+	// (a position of envinit.tjs's), xpos= and level=, or char= (at that character, and with
+	// it as it moves while the sound plays on). KAGEnvironment.se3DPosition places it
+	var place;
+	var followTimer; // moves the sound with its character
 	
 	var play;
 	var stop;
@@ -29,7 +36,13 @@ class KAGEnvSE extends KAGEnvBase {
 		f.filename  = filename if filename !== void && loop;
 		f.loop      = loop   if loop !== void && loop != false;
 		f.volume    = volume if volume !== void && volume != 100;
+		f.place     = place  if place !== void && filename !== void && loop;
 		//f.count     = count  if count != 0;
+	}
+
+	function finalize() {
+		invalidate followTimer if followTimer !== void;
+		super.finalize(...);
 	}
 
 	function onRestore(f) {
@@ -40,6 +53,7 @@ class KAGEnvSE extends KAGEnvBase {
 			count = f.count !== void ? f.count : 0;
 			if (f.filename != "" && f.loop) {
 				setPlay(f.filename, %[loop:f.loop]);
+				place = f.place;
 				if (f.volume !== void) {
 					fade = %[] if (fade === void);
 					fade.volume = volume = f.volume;
@@ -54,6 +68,7 @@ class KAGEnvSE extends KAGEnvBase {
 	function onStop() {
 		filename = void;
 		loop = false;
+		stopFollowing();
 	}
 
 	// --------------------------------------------------------------------
@@ -65,6 +80,7 @@ class KAGEnvSE extends KAGEnvBase {
      */
 	function setPlay(param, elm) {
 		if (param !== void) {
+			place = placeOf(elm);
 			stop = void;
 			if (kag.skipMode<SKIP_STOP || elm.loop) { // XXX Workaround for skipNoDisp, but a different style should probably be considered, sync check is likely more appropriate
 				filename = param;
@@ -115,6 +131,10 @@ class KAGEnvSE extends KAGEnvBase {
     var secommands = %[
     tagname : null, 
     taglist : null, 
+    pos : null,   // positional sound: placeOf reads these
+    xpos : null,
+    level : null,
+    char : null,
     storage : setPlay incontextof this,
     play : setPlay incontextof this,
     stop : setStop incontextof this,
@@ -199,6 +219,7 @@ class KAGEnvSE extends KAGEnvBase {
 			var origName = filename; // [XXX] Because re-playing an already playing SE calls onStop and sets filename=void
 			if (skipMode<SKIP_STOP || play.loop || !env.isNoSE()) {
 				var time = +play.time;
+				applyPlace(se); // before it starts, so it doesn't start in the middle
 				if (time > 0)  {
 					if (se.volume <= 1) se.volume = 100;
 					se.fadeIn(%[ storage:filename, loop:play.loop, time:time, start:play.start]);
@@ -225,6 +246,71 @@ class KAGEnvSE extends KAGEnvBase {
 		return fading;
 	}
 	
+	// ------------------------------------------------------------------
+	// Positional sound
+	// ------------------------------------------------------------------
+
+	/**
+	 * Where a play tag puts the sound: void (everywhere) or %[ xpos, level, char ]
+	 */
+	function placeOf(elm) {
+		if (elm === void || (elm.pos === void && elm.xpos === void && elm.char === void)) return;
+		var p = %[];
+		if (elm.pos !== void) {
+			var info = env.positions !== void ? env.positions[elm.pos] : void;
+			if (info === void) dm("se: no position " + elm.pos + " (envinit.tjs positions)");
+			else {
+				p.xpos  = +info.xpos  if info.xpos  !== void;
+				p.level = +info.level if info.level !== void;
+			}
+		}
+		p.xpos  = +elm.xpos  if elm.xpos  !== void;
+		p.level = +elm.level if elm.level !== void;
+		p.char  = elm.char   if elm.char  !== void;
+		return p;
+	}
+
+	/**
+	 * Places buffer se where the sound is (or everywhere: 3D off), and has a looping sound
+	 * follow its character
+	 */
+	function applyPlace(se) {
+		var has3D = typeof se.use3D != "undefined" && typeof global.SoundListener != "undefined";
+		if (place === void || !has3D) {
+			try { se.use3D = false if has3D && se.use3D; } catch {}
+			stopFollowing();
+			return;
+		}
+		var xz = env.se3DPosition(place);
+		try {
+			se.use3D = true;
+			se.minDistance = env.se3DMinDistance;
+			se.maxDistance = env.se3DMaxDistance;
+			if (xz !== void) se.set3DPosition(xz[0], 0, xz[1]);
+		} catch (e) { dm("se: positional sound: " + e.message); return; }
+		if (place.char !== void && play !== void && play.loop) startFollowing();
+		else stopFollowing();
+	}
+
+	function startFollowing() {
+		if (followTimer === void) {
+			followTimer = new Timer(onFollow, "");
+			followTimer.interval = 50;
+		}
+		followTimer.enabled = true;
+	}
+
+	function stopFollowing() {
+		followTimer.enabled = false if followTimer !== void;
+	}
+
+	function onFollow() {
+		var se = env.getSEOBJ(id);
+		if (place === void || place.char === void || filename === void || se === void || !se.use3D) return stopFollowing();
+		var xz = env.se3DPosition(place);
+		if (xz !== void) se.set3DPosition(xz[0], 0, xz[1]);
+	}
+
 	function sync(elm, skipMode) {
 		var fading = update(skipMode);
 		// Check wait

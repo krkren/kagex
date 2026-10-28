@@ -272,6 +272,298 @@ function drawYesNoLabel(button, text)
 
 }
 
+
+
+// --------------------------------------------------------
+
+// The dialogs' look for screens drawn at run time: the controls list (Controls.tjs), the
+
+// screenshot notice
+
+// --------------------------------------------------------
+
+var yesnoPanelImage = "dialog_panel";   // a panel to stretch: corners and shadow kept (yesnoPanelInsets)
+
+var yesnoPanelInsets = [ 24, 24, 36, 36 ];
+
+var yesnoButtonInsets = [ 16, 16, 16, 16 ];
+
+var yesnoImageCache = %[];              // storage => a hidden layer holding the image
+
+
+
+function yesNoImage(storage)
+
+{
+
+    var lay = yesnoImageCache[storage];
+
+    if (lay !== void && isvalid lay) return lay;
+
+    lay = new global.Layer(kag, kag.primaryLayer);
+
+    lay.name = "yesNoImage " + storage;
+
+    lay.loadImages(storage);
+
+    lay.setSizeToImageSize();
+
+    lay.visible = false;
+
+    yesnoImageCache[storage] = lay;
+
+    return lay;
+
+}
+
+
+
+/**
+
+ * Draws image storage stretched to dw x dh at dx, dy on dst, by its middle: the corners, insets
+
+ * [left, top, right, bottom] in from its edges, are copied as they are (a nine-slice)
+
+ */
+
+function drawYesNoNineSlice(dst, dx, dy, dw, dh, storage, insets)
+
+{
+
+    var src = yesNoImage(storage);
+
+    var sw = src.imageWidth, sh = src.imageHeight;
+
+    var l = insets[0], t = insets[1], r = insets[2], b = insets[3];
+
+    var sx = [ 0, l, sw - r ], sws = [ l, sw - l - r, r ];
+
+    var sy = [ 0, t, sh - b ], shs = [ t, sh - t - b, b ];
+
+    var dxs = [ dx, dx + l, dx + dw - r ], dws = [ l, dw - l - r, r ];
+
+    var dys = [ dy, dy + t, dy + dh - b ], dhs = [ t, dh - t - b, b ];
+
+    for (var j = 0; j < 3; j++) for (var i = 0; i < 3; i++) {
+
+        if (dws[i] <= 0 || dhs[j] <= 0 || sws[i] <= 0 || shs[j] <= 0) continue;
+
+        if (dws[i] == sws[i] && dhs[j] == shs[j])
+
+            dst.copyRect(dxs[i], dys[j], src, sx[i], sy[j], sws[i], shs[j]);
+
+        else
+
+            dst.stretchCopy(dxs[i], dys[j], dws[i], dhs[j], src, sx[i], sy[j], sws[i], shs[j], stNearest);
+
+    }
+
+}
+
+
+
+/**
+
+ * The dialogs' panel (lavender, violet border, hard shadow) at x, y, w x h, the shadow included
+
+ */
+
+function drawYesNoPanel(dst, x, y, w, h)
+
+{
+
+    drawYesNoNineSlice(dst, x, y, w, h, yesnoPanelImage, yesnoPanelInsets);
+
+}
+
+
+
+/**
+
+ * A Yes/No button's frame at x, y, w wide (and the image's height): over for the hovered look
+
+ */
+
+function drawYesNoButtonFrame(dst, x, y, w, over)
+
+{
+
+    var storage = over ? "dialog_button_over" : "dialog_button_normal";
+
+    drawYesNoNineSlice(dst, x, y, w, yesNoImage(storage).imageHeight, storage, yesnoButtonInsets);
+
+}
+
+
+
+/**
+
+ * A notice in the bottom right corner for a moment, in a button's frame: a layer that fades
+
+ * out and goes by itself (invalidate it to take it away sooner)
+
+ */
+
+class YesNoNoticeLayer extends Layer
+
+{
+
+    var timer, shown;
+
+    function YesNoNoticeLayer(win, text)
+
+    {
+
+        super.Layer(win, win.primaryLayer);
+
+        name = "notice";
+
+        setYesNoFont(this, yesnoLabelSize);
+
+        var tw = measureYesNoText(this, text);
+
+        var bh = yesNoImage("dialog_button_normal").imageHeight;
+
+        var w = tw + 64, h = bh;
+
+        setImageSize(w, h);
+
+        setSizeToImageSize();
+
+        fillRect(0, 0, w, h, 0);
+
+        drawYesNoButtonFrame(this, 0, 0, w, false);
+
+        drawYesNoString(this, (w - tw) >> 1, (h - font.getTextHeight(text)) >> 1, text, yesnoLabelColor, yesnoLabelBase);
+
+        setPos(win.primaryLayer.width - w - 40, win.primaryLayer.height - h - 40);
+
+        hitType = htProvince; // the clicks go through
+
+        absolute = 2000000000;
+
+        a11yHidden = true;
+
+        visible = true;
+
+        shown = System.getTickCount();
+
+        timer = new Timer(onTimer, "");
+
+        timer.interval = 30;
+
+        timer.enabled = true;
+
+    }
+
+    function finalize()
+
+    {
+
+        invalidate timer if timer !== void;
+
+        super.finalize(...);
+
+    }
+
+    var a11yHidden;
+
+    function onTimer()
+
+    {
+
+        var t = System.getTickCount() - shown;
+
+        if (t < 1500) return;
+
+        if (t >= 2000) { timer.enabled = false; visible = false; return; } // the window drops it later
+
+        opacity = 255 * (2000 - t) \ 500;
+
+    }
+
+}
+
+function showYesNoNotice(win, text)
+
+{
+
+    return new YesNoNoticeLayer(win, text);
+
+}
+
+
+
+
+
+
+
+/**
+
+ * Screen readers (Accessibility.tjs): a prompt shows its message and its buttons, the one the
+
+ * keyboard is on focused (dialog.a11yText, dialog.a11yLabels by link number)
+
+ */
+
+function pushYesNoA11y(dialog)
+
+{
+
+    if (!KAGA11y.available || !(dialog isvalid) || !dialog.a11yOpen) return;
+
+    var nodes = [ %[ id:"dialog", role:"group", name:dialog.a11yText ] ], focus;
+
+    for (var i = 0; i < dialog.numLinks; i++) {
+
+        var link = dialog.links[i];
+
+        if (link === void || link.object === void || !(link.object isvalid)) continue;
+
+        var id = "button" + i;
+
+        nodes.add(%[ id:id, role:"button", name:dialog.a11yLabels[i], parent:"dialog",
+
+            states:"focusable", rect:KAGA11y.rectOf(link.object) ]);
+
+        focus = id if (dialog.keyLink == i);
+
+    }
+
+    KAGA11y.updateNodes(dialog, nodes, focus);
+
+}
+
+function openYesNoA11y(dialog)
+
+{
+
+    if (!KAGA11y.available) return;
+
+    dialog.a11yOpen = true;
+
+    KAGA11y.setNodes(dialog, [], void); // in front of what's behind it
+
+    pushYesNoA11y(dialog);
+
+    KAGA11y.announce(dialog.a11yText);
+
+}
+
+function yesNoA11yAction(dialog, id, action)
+
+{
+
+    if (id.substring(0, 6) != "button") return;
+
+    var n = +id.substring(6);
+
+    if (action == "focus") dialog.setFocusToLink(n, true);
+
+    else if (action == "click") dialog.onButtonClick(n);
+
+}
+
 /**
 
  * Window Version
@@ -710,11 +1002,15 @@ class YesNoDialogLayer extends DialogLayer
 
         drawYesNoLabel(names.no,  tr("No"));
 
+        a11yText = text, a11yLabels = [ tr("Yes"), tr("No") ];
+
     }
 
 
 
     function finalize() {
+
+        KAGA11y.removeNodes(this);
 
         super.finalize();
 
@@ -732,7 +1028,25 @@ class YesNoDialogLayer extends DialogLayer
 
         setFocusToLink(1,true);
 
+        openYesNoA11y(this);
+
     }
+
+
+
+    // Screen readers: the message, and the buttons (pushYesNoA11y)
+
+    var a11yOpen = false, a11yText = "", a11yLabels = [];
+
+    property keyLink {
+
+        getter { return super.keyLink; }
+
+        setter(v) { super.keyLink = v; pushYesNoA11y(this); }
+
+    }
+
+    function onA11yAction(id, action, arg) { yesNoA11yAction(this, id, action); }
 
 
 
@@ -753,6 +1067,8 @@ class YesNoDialogLayer extends DialogLayer
     function close() {
 
         if (!answered) { processLink(1); return; }
+
+        KAGA11y.removeNodes(this);
 
         super.close(...);
 
@@ -1064,13 +1380,51 @@ class AboutDialogLayer extends DialogLayer
 
         drawYesNoLabel(names.close, tr("Close"));
 
+        var said = [];
+
+        for (var i = 0; i < lines.count; i++) said.add(lines[i][0]);
+
+        a11yText = said.join("\n"), a11yLabels = [ tr("Close") ];
+
+    }
+
+    function finalize() {
+
+        KAGA11y.removeNodes(this);
+
+        super.finalize(...);
+
     }
 
     function onOpen() {
 
         setFocusToLink(0, true);
 
+        openYesNoA11y(this);
+
     }
+
+    function close() {
+
+        KAGA11y.removeNodes(this);
+
+        super.close(...);
+
+    }
+
+    // Screen readers: the lines, and the Close button (pushYesNoA11y)
+
+    var a11yOpen = false, a11yText = "", a11yLabels = [];
+
+    property keyLink {
+
+        getter { return super.keyLink; }
+
+        setter(v) { super.keyLink = v; pushYesNoA11y(this); }
+
+    }
+
+    function onA11yAction(id, action, arg) { yesNoA11yAction(this, id, action); }
 
     // Return and Space close it even without the keyboard focus on Close: on Android the button
 

@@ -1130,6 +1130,38 @@ Also, extensions have been made internally to support "Name Layer" and "Expressi
 
 
 
+◆ Line breaking
+
+
+
+English text (and any language with spaces between its words: KAGLanguage.wordWrap) breaks
+between words, not in the middle of one: the word wrap follows each scenario line as it's
+drawn, its tags taken out and [r] as a new line, so lines that start with a tag or a tab, have
+[r] in them, or go on to the next page wrap the same way. The space a line breaks at isn't
+drawn. Where krkr_richtext draws the message window (useRichText), the breaks come from its line
+breaker (RichText.ParagraphLayout, the one its StyledLayout uses), which lays out the whole line
+at once, as Config.tjs's lineBreakStrategy says:
+
+
+    ;lineBreakStrategy = "quality";
+
+
+  quality     Evens out ragged lines (minikin's HIGH_QUALITY: the last line can be short).
+  balanced    Makes the lines of a passage about the same length.
+  greedy      Fills each line as far as it goes.
+
+
+The rest of a line already begun (text that carries on after an earlier line of the script) is
+filled as far as it goes, then the remaining text is laid out. The plan is made again where the
+text goes somewhere it didn't expect (a new page, [r], another font), and text the line doesn't
+have ([emb], [ch], a macro) ends it for the rest of the line. Without krkr_richtext (the browser
+and iOS builds), and as a check on the plan, each word that won't fit on the line goes to the
+next one. KAG still draws each character, so the text speed, ruby, links and waits are as
+before; vertical text, and Japanese and Chinese, keep KAG's own line breaking (kinsoku). The
+history log wraps by its own width, a word at a time.
+
+
+
 ◆ linemode (New)
 
 
@@ -2467,6 +2499,190 @@ images again by name.
 
 
 
+● The Interface
+
+
+
+The SDL engine has no menu bar and no native dialogs, so the framework draws its own in the
+game window, which the mouse, the keyboard, a controller and a screen reader all work: the menu
+bar (in a window), the controls list, the Yes/No prompts and About. The menu bar and the
+controls list are drawn with the engine's Elements UI (ElementsDialog, ElementsPanel) in the
+dialogs' look; where the engine has no Elements UI they aren't there, and F10 does nothing.
+
+
+
+◇ Key bindings
+
+
+
+The keys the game window acts on are a list, kag.keyBindings, which the controls list reads, so
+a game that changes them gets a correct list. A game adds its own in AfterInit.tjs (the sample
+binds F1-F8 there):
+
+
+    kag.bindKey(VK_F2, 0, startSave, "Save");
+    kag.bindKey(VK_F5, 0, toggleFullScreenByKey, "Full screen or window", true, false,
+        function { return kag.displayMenu.enabled; });
+
+
+  kag.bindKey(key, shift, action, label, early = true, debug = false, when = void)
+    key       The key (VK_*).
+    shift     The modifier keys held, compared exactly (0, ssShift, ssCtrl, ssAlt or a sum: a
+              held key's repeats carry ssRepeat, so they don't match), or void for any.
+    action    A function, called with (key, shift), or an expression.
+    label     What it does, in English, for the controls list (shown through tr() in the
+              language shown); void leaves the key out of the list.
+    early     true: it runs before the layer with the keyboard focus gets the key, so it works
+              over the choices and dialogs too (as a keyDownHook function does). false: only
+              when nothing else took the key, as the framework's own.
+    debug     true: only in KAG's debug mode (debugWindowEnabled; -debugwin=no turns it off).
+    when      void, or a function: the binding is there while it returns true.
+  kag.unbindKey(key, shift)
+              Removes the binding of key with shift.
+
+
+A function written outside any object (in AfterInit.tjs) runs with the global object as this.
+The framework binds F, B, A, S and L (free save mode), R and Shift+Up, Esc, F9 (the next
+language), F10 (the menu bar's first menu, in a window), F12 and Print Screen (a screenshot),
+and in debug mode Shift+F12 (the
+debug window), Shift+F11 (the debug level) and Shift+Backspace (back to the last pass record).
+A key a keyDownHook function handles still works, but the controls list can't show it.
+
+A controller's buttons send keys (kag.padKeyMap, from initialPadKeyMap in MainWindow.tjs): the
+D-pad and the left stick the arrows, A Return, B Esc, X the message history, Y auto mode, R1
+skipping to the next choice or unread text, R2 held skipping (Ctrl), L2 the next language,
+and START and R3 (the right stick pressed) F10. A button mapped to a key does what the key does,
+so the controls list shows the button with the key's binding (a button mapped to a function,
+with the binding that has that function). A game changes the map in AfterInit.tjs (the sample's START,
+BACK and L1 are F4, F2 and F3):
+
+
+    kag.padKeyMap[VK_PAD10] = VK_F4;
+    kag.recreatePadKeyMap();
+
+
+
+◇ The menu bar
+
+
+
+In a window, the items KAGWindow_createMenus makes (Menus.tjs; a game's own in Override.tjs)
+show as a menu bar, as Kirikiri's Win32 menu bar did: the window is kag.menuBarHeight pixels
+taller than the game, the game is drawn under that strip (Window.setViewport), and the strip
+holds the top menus' titles. Full screen has no menu bar, as it had none in Kirikiri. The
+framework's menu has System, Display (a window or full screen, the window size, a
+screenshot), the message commands, Help (Controls, About) and, in debug mode, Debug.
+
+A click on a title drops its menu down over the game (a top item without a submenu does what
+it does at once); while a menu is open, moving the mouse to another title opens that one, and
+resting on an item with a submenu opens the submenu. F10, START and R3 open the first menu from
+the keyboard. In a menu the arrows or the D-pad move (Right opens a submenu or the next menu,
+Left closes a submenu or goes to the menu before), Return or A chooses, Esc or B closes a
+submenu or the menu, and a click outside it, a right-click or F10 closes it. Choosing an item
+closes the menu and then does what the item does. The items show as they are now (enabled,
+checked, the radio groups' choice).
+
+An item's caption is in English, with an "(&X)" accelerator and a "\t" shortcut after it, as
+for a menu bar: the bar takes the accelerator off, shows the caption through tr() in the
+language shown and the shortcut at the right ("Save(&S)\tF2" shows as Save, with F2). An item
+is left out while its visible is false (Menu_visible_config in Config.tjs) or its
+menuBarHidden is true, and so is Help > Contents without the help file.
+
+  kag.showMenuBar()         Opens the first menu, or closes the one open (F10; false: there's
+                            no bar now).
+  kag.menuBarShown          Whether the bar is there: in a window, with the menu visible, on an
+                            engine with the Elements UI and Window.setViewport.
+  kag.menu.visible          false takes the bar away (and the window loses the strip); true
+                            brings it back.
+  kag.menuBarEnabled        false: no menu bar, in a window either (F10 and START do nothing).
+                            Set it in AfterInit.tjs.
+  kag.menuBarHeight         The strip's height in screen pixels (30). Set it in AfterInit.tjs.
+  kag.updateMenuBar()       Draws the titles again, after a game changed its top menus.
+
+
+
+◇ The controls list
+
+
+
+The controls list shows what each key, mouse button and controller button does, read from the
+bindings themselves: the window's key bindings (above), the controller's map, and what the
+framework does in code for Return, Space, Ctrl, the arrows and the mouse; keys with the same
+action share a row. The controller's buttons are named by the controller in use
+(System.padStyle: ✕ ○ □ △ on a PlayStation pad, A B X Y elsewhere), and in debug mode the
+debug keys have a section of their own.
+
+  kag.showControls()        Opens it (Help > Controls; the sample's Config screen has a
+                            Controls button that calls it).
+  KAGControlsList(kag)      The list: an array of sections %[title, rows], each row
+                            %[keys, action, said] (said: the keys as a screen reader reads
+                            them, when it differs).
+
+
+
+◇ Screenshots
+
+
+
+F12 (and Print Screen, where the system passes it on) saves what the screen shows as a PNG,
+screenshot-<date>-<time>.png, in the save folder, and says so in a corner for a moment. Writing
+a 1920x1080 PNG takes about 90 ms, which shows as a hitch, so where the window has
+startSaveLayerImage (the layerExSave plugin, which Initialize.tjs links before the window is
+made) and the folder is a local one, the PNG is written on another thread; elsewhere it's
+written in one go.
+
+  kag.saveScreenshot()      Saves one; returns the file's name.
+  kag.screenshotEnabled     false: F12 does nothing.
+  kag.screenshotFolder      The folder (void: the save folder, System.dataPath).
+  kag.screenshotNotice      false: no notice.
+  kag.screenshotHook        Functions called with the file's name once it's written (void if
+                            it couldn't be).
+
+
+
+◇ Screen readers
+
+
+
+KAG has no screen reader support of its own. The framework passes the game's text and UI to the
+system's screen reader (Narrator, VoiceOver, Orca) through the engine's ElementsDialog (the
+engine guide's "Accessibility"):
+
+
+  ・The text of each message is read out with the speaker's name when it waits for a click (in
+    auto mode, when the wait starts). Text skipped through isn't read.
+  ・The choices are a list, which the screen reader can move through and choose from.
+  ・The Yes/No prompts and About show their text and buttons.
+  ・The menu bar's titles, its menus and the controls list are read as they are (Elements
+    screens).
+  ・Saving a screenshot is announced.
+
+
+Where the engine has no such interface (the browser build; the Android and iOS builds are made
+without it) all of this does nothing. A game shows its own UI drawn on layers through KAGA11y
+(Accessibility.tjs):
+
+  KAGA11y.available                     Whether the engine has the interface.
+  KAGA11y.announce(text, assertive)     Reads text out (assertive: interrupting).
+  KAGA11y.setNodes(owner, nodes, focus) Shows owner's UI, in front of everyone else's: nodes
+                                        as ElementsDialog.setGameA11y takes them (id, role,
+                                        name, states, rect, parent), focus the id of the node
+                                        the player is on. The screen reader's actions on them
+                                        (focus, click) come to owner.onA11yAction(id, action,
+                                        arg).
+  KAGA11y.updateNodes(owner, nodes, focus)
+                                        The same, where owner's nodes are now.
+  KAGA11y.removeNodes(owner)            Takes them away; the ones behind come back.
+  KAGA11y.rectOf(layer)                 A layer's place on the screen, for a node's rect.
+  kag.a11yReadText                      false: the messages aren't read out.
+
+
+To check without a screen reader, run the engine with a REPL and read Agent.a11yLog() (roughly
+what it would say) and Agent.a11yTree(), or press a node with Agent.a11yAction(id, "click")
+(tools/smoketest.py does).
+
+
+
 ● KAGEX Operation System
 
 
@@ -2498,6 +2714,12 @@ KAGEX Shortcut List (Basically the same as KAG)
 
 
  F9 Show the game in its next language (● Languages)
+
+ F10 The menu bar's first menu, in a window (● The Interface)
+
+ F12 Save a screenshot (● The Interface)
+
+ SHIFT+F12 / SHIFT+F11  In KAG's debug mode, the debug window and the debug level
 
 
 

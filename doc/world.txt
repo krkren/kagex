@@ -1522,6 +1522,30 @@ Inherits functions of layers.
         Auxiliary Parameter
         buf     Processing target buffer specification.
         time Time taken for fade.
+    Placing the sound on the stage (positional sound), with play or a storage name:
+        pos     A position of envinit.tjs's positions (pos=farleft): the sound is where a
+                character there would be, across the stage and at its level.
+        xpos    Where across the stage, as a character's xpos (0 is the middle).
+        level   The level it's at (envinit.tjs's levels): further back sounds further away.
+        char    At a character (char=ai); a looping sound follows it as it moves.
+
+
+
+A placed sound plays through the engine's 3D sound (WaveSoundBuffer.use3D, with the listener in
+the middle of the screen): it's panned to where it is across the screen, and comes from further
+away the further back its level is. A sound placed nowhere plays as before, and so does every
+sound on an engine without 3D sound. A looping sound keeps its place in save data. The
+Character demo (char.ks) plays a chime at the far left and the far right of the stage and
+footsteps that follow Ai as she walks:
+
+
+    [se storage=se_chime pos=farleft]
+    [se storage=se_steps loop=1 char=ai]
+    [ai posleft time=1500]
+    [se name=se_steps stop=300]
+
+
+envinit.tjs's "se3d" changes how far apart things sound (world_inst.txt, Creation of SE).
 
 
 

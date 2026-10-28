@@ -1,47 +1,35 @@
 ﻿/**
- * Key Function
- * Register this in AfterInit.tjs to KAG to intercept functions
+ * Key bindings: F1-F8 open the sample's screens and do what its message window's buttons do.
+ * kag.bindKey(key, shift, action, label) adds one to the window's bindings
+ * (KAGWindow.keyBindings), which the controls list reads (Help > Controls, Config's Controls
+ * button), so it lists these with what they do. The framework's own (F9 the next language,
+ * F10 the menu, F12 a screenshot, A, B, F, R, Esc...) are in createKeyBindings.
  */
-function keyFunc(key, shift)
+
+// F5: full screen or a window, while the Screen menu can be used
+function toggleFullScreenByKey()
 {
-    if (key == VK_F1 && shift < 1) {
-        showAbout(); // in the game window (YesNoDialogLayer.tjs)
-        return true;
-    } else if (key == VK_F2 && shift == 0 ) {
-        startSave();
-        return true;
-    } else if (key == VK_F3 && shift == 0) {
-        startLoad();
-        return true;
-    } else if (key == VK_F5 && kag.displayMenu.enabled && shift == 0) {
-        if (kag.fullScreened) {
-            kag.onWindowedMenuItemClick();
-        } else {
-            kag.onFullScreenMenuItemClick();
-        }
-        return true;
-    } else if (key == VK_F6 && shift == 0) {
-        kag.skipToNextStopByKey();
-        return true;
-    } else if (key == VK_F7 && shift == 0) {
-        kag.showHistoryByKey();
-        return true;
-    } else if (key == VK_F8 && shift == 0) {
-        kag.switchAutoModeByKey();
-        return true;
-    } else if (key == VK_F4 && shift == 0) {
-        startConfig();
-        return true;
+    if (kag.fullScreened) {
+        kag.onWindowedMenuItemClick();
+    } else {
+        kag.onFullScreenMenuItemClick();
     }
-    return false;
 }
 
-// Register key binds
-kag.keyDownHook.add(keyFunc);
+kag.bindKey(VK_F1, 0, showAbout, "About"); // in the game window (YesNoDialogLayer.tjs)
+kag.bindKey(VK_F2, 0, startSave, "Save");
+kag.bindKey(VK_F3, 0, startLoad, "Load");
+kag.bindKey(VK_F4, 0, startConfig, "Config");
+kag.bindKey(VK_F5, 0, toggleFullScreenByKey, "Full screen or window", true, false,
+    function { return kag.displayMenu.enabled; });
+kag.bindKey(VK_F6, 0, kag.skipToNextStopByKey, "Skip to the next choice or unread text");
+kag.bindKey(VK_F7, 0, kag.showHistoryByKey, "Message history");
+kag.bindKey(VK_F8, 0, kag.switchAutoModeByKey, "Auto mode on or off");
 
 // Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
-// screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1 and R2
-// (initialPadKeyMap in MainWindow.tjs).
+// screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1, R2, L2
+// and R3 (the menu bar's first menu, in a window) (initialPadKeyMap in MainWindow.tjs); the
+// framework's START opens that menu too, which the sample leaves to R3.
 kag.padKeyMap[VK_PAD10] = VK_F4;
 kag.padKeyMap[VK_PAD9]  = VK_F2;
 kag.padKeyMap[VK_PAD5]  = VK_F3;

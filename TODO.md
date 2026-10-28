@@ -4,12 +4,7 @@ Planned features, in two groups. The first needs only work in this repository (s
 
 ## Interface, accessibility and languages
 
-- [ ] Screen readers: KAG has no support of its own, so the message window should pass its text to `ElementsDialog.announce`, and the choice menu should expose its choices with `ElementsDialog.setGameA11y` (engine guide: Accessibility).
-- [ ] Line breaking with krkr_richtext's `StyledLayout` (`breakStrategy`, ruby, vertical text, per-character timing), in place of this fork's `needsToBeWrapped()` word wrap and its page-break edge cases.
-- [ ] Menus built with Elements panels (`ElementsPanel`), which draw into a game layer and work with a controller, in place of the Win32 menu bar on every platform.
-- [ ] A screenshot key that saves the screen as a PNG without a hitch: writing a 1920x1080 PNG takes about 90 ms, which shows, and `layerExSave`'s `startSaveLayerImage` writes it in the background (the plugin has to be linked before the game window is made, or the window lacks the method).
-- [ ] A controls list: a screen that shows what every key, mouse button and controller button does (F1-F9, Shift+F11/F12 in debug mode, the D-pad and face buttons, R1/R2, START/BACK/L1/L2), opened from Config and the menu above. It should read the bindings themselves (`AfterInit.tjs`'s `processKeys` hook and `padKeyMap`, `initialPadKeyMap` in `MainWindow.tjs`), so a game that changes them gets a correct list, and name the controller's buttons by the pad in use (✕/○ on a PlayStation pad, A/B elsewhere).
-- [ ] Positional sound effects on World stages (`WaveSoundBuffer.use3D`, `SoundListener`).
+- [ ] Drawing a page's text through krkr_richtext's `StyledLayout` itself (its ruby, vertical text and per-character timing) in place of KAG's character-by-character drawing. Line breaks come from its line breaker already (`needsToBeWrapped()`, `lineBreakStrategy`; `doc/kagex.txt`, "Line breaking"), but KAG still places and times each character, and vertical text, Japanese and Chinese keep KAG's own line breaking (kinsoku).
 
 ## Needing more than scripts
 

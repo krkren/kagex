@@ -483,6 +483,18 @@ function KAGWindow_config()
 
 
 
+// ◆ Line Breaking
+// How English text (and other languages with spaces between words) is broken into lines
+// where krkr_richtext draws it: "quality" evens out ragged lines, "balanced" makes the
+// lines of a passage about the same length, and "greedy" fills each line as far as it goes.
+// Where the plugin is missing, lines are filled as far as they go.
+
+;lineBreakStrategy = "quality";
+
+
+
+
+
 // Window and Behavior Additional Settings
 // If there are additional setting items, please write the settings in the section
 // enclosed by [start-window-additionals] and [end-window-additionals].

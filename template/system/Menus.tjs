@@ -1,33 +1,66 @@
 ﻿// Menus.tjs - Definition of menu creation functions
 // Copyright (C)2001-2008, W.Dee and contributors  Redistribution and modification are free.
 
-// Polyfill for missing Menu classes in SDL3 builds
+// Stand-ins for the menu classes, which the SDL engine doesn't have (it has no menu bar): they
+// hold the items KAGWindow_createMenus makes, with what they show (caption, checked, enabled,
+// visible, radio and group, the children of a submenu), so the menu bar drawn in a window
+// (MenuBar.tjs) can show them, and the code that enables and checks items works as with a
+// Win32 menu bar. Showing or hiding the whole menu (Menu.visible) gives the window the bar's
+// strip or takes it away
 if (typeof global.MenuItem == "undefined") {
     class MenuItem {
         var caption = "";
-        var checked = false;
+        var _checked = false;
         var enabled = true;
         var visible = true;
-        var children = []; // <-- Added array to hold submenus
+        var radio = false;
+        var group = 0;
+        var shortcut = "";
+        var parent;
+        var children = []; // the submenu's items
 
-        function MenuItem() {}
+        function MenuItem(window, caption) { this.caption = caption if caption !== void; }
         function finalize() {}
-        function add(item) { children.add(item); } // <-- Store added items
-        function insert() {}
-        function remove() {}
+        function add(item) { children.add(item); item.parent = this if typeof item == "Object"; }
+        function insert(item, index) { children.insert(index, item); item.parent = this if typeof item == "Object"; }
+        function remove(item) { children.remove(item, true); }
+        property index { getter { return parent !== void ? parent.children.find(this) : -1; } }
+        // checking an item of a radio group (group not 0) unchecks the others, as a menu bar does
+        property checked {
+            getter { return _checked; }
+            setter(v) {
+                _checked = !!v;
+                if (!_checked || group == 0 || parent === void) return;
+                var kids = parent.children;
+                for (var i = 0; i < kids.count; i++)
+                    if (kids[i] !== this && typeof kids[i] == "Object" && kids[i].group == group) kids[i]._checked = false;
+            }
+        }
     }
     global.MenuItem = MenuItem;
 }
 
 if (typeof global.Menu == "undefined") {
     class Menu {
-        var children = []; // <-- Added here as well
+        var window;
+        var _visible = true;
+        var children = []; // the menu bar's items
 
-        function Menu() {}
+        function Menu(window) { this.window = window; }
+        property visible {
+            getter { return _visible; }
+            setter(v) {
+                v = !!v;
+                if (v == _visible) return;
+                _visible = v;
+                if (typeof window == "Object" && window !== void && isvalid window && typeof window.onMenuBarVisibleChanged != "undefined")
+                    window.onMenuBarVisibleChanged();
+            }
+        }
         function finalize() {}
-        function add(item) { children.add(item); } // <-- Store added items
-        function insert() {}
-        function remove() {}
+        function add(item) { children.add(item); item.parent = this if typeof item == "Object"; }
+        function insert(item, index) { children.insert(index, item); item.parent = this if typeof item == "Object"; }
+        function remove(item) { children.remove(item, true); }
     }
     global.Menu = Menu;
 }
@@ -38,7 +71,7 @@ function KAGWindow_createMenus()
 
 	// The SDL engine's Window has no menu bar: build the menu on the stand-in Menu above,
 	// so the menu items (which other code enables and checks) still exist
-	if (typeof this.menu == "undefined") { this.menu = new global.Menu(); this.menuBarStandIn = true; }
+	if (typeof this.menu == "undefined") { this.menu = new global.Menu(this); this.menuBarStandIn = true; }
 
 	menu.add(this.systemMenu = new KAGMenuItem(this, "System(&S)", 0, "", false));
 
@@ -168,10 +201,17 @@ function KAGWindow_createMenus()
 		displayMenu.add(this.disableWindowResizeMenuItem = new KAGMenuItem(this, "Disable Resizing(&Z)", 0,
 			/**/           onDisableWinwodResizeMenuItemClick, false));
 
+		displayMenu.add(new MenuItem(this, "-"));
+
+		displayMenu.add(this.screenshotMenuItem = new KAGMenuItem(this, "Save Screenshot(&S)\tF12", 0,
+			/**/           saveScreenshot, false));
+
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
 		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Contents(&I) ...", 0,
 			onHelpIndexMenuItemClick, false));
+		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
+			showControls, false));
 		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 			onHelpAboutMenuItemClick, false));
 

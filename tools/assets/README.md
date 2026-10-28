@@ -3,7 +3,8 @@
 The sample's images are generated here rather than edited by hand.
 
 - `make_ui.py` draws the UI in `data/image` (title, logo, message window and its buttons,
-  choices, config, save/load, Extras, history), the click-wait glyphs in `template/system`,
+  choices, config, save/load, Extras, history), the click-wait glyphs and the panel the menu
+  and the controls list stretch (`dialog_panel.png`) in `template/system`,
   the World demo's star and the app icons in `platform/` (the Linux desktop entry's SVG, the
   iOS and macOS icon, Android's adaptive icon layers, the web build's home-screen icons in `platform/web`), and the web build's link-preview image (`platform/web/preview.jpg`, from `title.png`). Every screen uses the look of the Yes/No dialogs in
   `template/system`: lavender panels, violet borders, hard violet shadows, white buttons that
@@ -50,6 +51,10 @@ The sample's images are generated here rather than edited by hand.
   speech synthesizer (Kokoro-82M, Apache-2.0, run with ONNX Runtime; the model is downloaded
   into `.cache/kokoro` once), which shows the mouths by vowel: its `pip000009.lip` comes from
   kagex-lipsync (`kagex-lipsync --cli make pip000009.ogg`), as any voice's would.
+- `make_sounds.py` makes the Character demo's positional sound effects in `data/sound`: a
+  two-note chime (`se_chime.ogg`, played at the far left and far right of the stage) and
+  footsteps that loop (`se_steps.ogg`, following Ai as she walks), drawn in NumPy with fixed
+  seeds and encoded with ffmpeg's libvorbis, in mono: the engine pans a placed sound itself.
 - `psdwrite.py` writes a layer structure in psdlayer.tjs's text format, with its pictures, as a
   PSD with folders (`psdwrite.py data/fgimage/pip/pip_0.txt pip_0.psd`), the other way round
   from kagex-release's split. Standard library only; the smoke tests make Pip's PSDs with it.
@@ -61,6 +66,7 @@ The sample's images are generated here rather than edited by hand.
 python3 tools/assets/upscale.py          # sprites, backgrounds, CG thumbnail
 python3 tools/assets/make_ui.py          # all UI images; or name groups: title logo message
                                          # config saveload extras history star thumbs icons preview
+                                         # dialog
                                          # (--lang ja: only the Japanese ones)
 python3 tools/assets/subset_fonts.py     # the Japanese label fonts (needs fontTools)
 python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
@@ -68,6 +74,7 @@ python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
 python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice speech
+python3 tools/assets/make_sounds.py      # the Character demo's sound effects (needs ffmpeg)
 python3 tools/assets/psdwrite.py <structure.txt> [out.psd]   # a layer structure as a PSD
 ```
 

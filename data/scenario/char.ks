@@ -112,8 +112,22 @@ Movement with initial position specified (Center→Right)
 [ai posright:center opacity=255:0 time=500]
 Movement with initial position specified (Center→Right with opacity control)
 
+; The music fades out here, so the positional sounds below can be heard on their own
+[bgm stop=1500]
 [ai opacity=255:0 zoom=100:140 time=500]
 Combined with zoom
+
+; Positional sound: a sound placed on the stage is panned to where it is (doc/world.txt)
+[se storage=se_chime pos=farleft]
+A chime at the far left of the stage (positional sound)
+
+[se storage=se_chime pos=farright]
+And at the far right
+
+[se storage=se_steps loop=1 char=ai]
+[ai posleft time=1500]
+Footsteps that go with Ai as she walks
+[se name=se_steps stop=300]
 
 *label6|Character Action
 

@@ -64,7 +64,7 @@ LABELS = {
         "Click a voice to mute or unmute it.": "ボイスをクリックすると消音／解除します。",
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
-        "Default": "初期設定", "Title": "タイトル", "Return": "戻る",
+        "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
@@ -622,7 +622,8 @@ def make_config():
             out("config_voice%d_on.png" % i))
         button(180, 60, L("Voice %d") % i, "muted", size=26, icon=ic_ring, icon_size=14).save(
             out("config_voice%d_off.png" % i))
-    for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return")):
+    for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return"),
+                        ("config_controls", "Controls")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
 
@@ -900,6 +901,18 @@ def make_preview():
     print("wrote platform/web/preview.jpg", (w, h), flush=True)
 
 
+# --- the dialogs' panel, to stretch -----------------------------------------------------
+def make_dialog():
+    """template/system/dialog_panel.png: the Yes/No dialog's panel (lavender, a violet border, a
+    hard shadow down and to the right) on a transparent ground, small, for the screens drawn at
+    run time (the menu and the controls list, ElementsScreen.tjs) to stretch by its middle: its
+    corners, 24 px in from the top left and 36 from the bottom right with the shadow, stay as
+    they are (yesnoPanelInsets in YesNoDialogLayer.tjs)"""
+    c = Canvas(128, 128)
+    c.panel((0, 0, 116, 116), r=14, shadow=12)
+    c.save(os.path.join(SYSTEM, "dialog_panel.png"))
+
+
 # --- the star in the World demo --------------------------------------------------------
 def make_star():
     w, h = 371, 351
@@ -918,7 +931,7 @@ def make_star():
 
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
           "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
-          "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview}
+          "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview, "dialog": make_dialog}
 
 
 # the groups whose images have words on them, drawn again for each other language

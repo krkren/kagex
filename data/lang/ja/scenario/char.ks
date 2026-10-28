@@ -112,8 +112,22 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai posright:center opacity=255:0 time=500]
 初期位置指定で場所移動（中→右 透明度制御あり）
 
+; The music fades out here, so the positional sounds below can be heard on their own
+[bgm stop=1500]
 [ai opacity=255:0 zoom=100:140 time=500]
 ズームと複合
+
+; Positional sound: a sound placed on the stage is panned to where it is (doc/world.txt)
+[se storage=se_chime pos=farleft]
+ステージの左はしで鳴るチャイム（位置のある効果音）
+
+[se storage=se_chime pos=farright]
+右はしで鳴るチャイム
+
+[se storage=se_steps loop=1 char=ai]
+[ai posleft time=1500]
+歩くあいについていく足音
+[se name=se_steps stop=300]
 
 *label6|キャラアクション
 

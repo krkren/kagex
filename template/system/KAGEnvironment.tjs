@@ -1056,6 +1056,12 @@ class KAGEnvironment extends KAGEnvTrans {
 			faceFadeTime  = envinfo.faceFadeTime;
 			bothFace = envinfo.bothFace !== void ? envinfo.bothFace : true;
 			searchSmallLevel = envinfo.searchSmallLevel !== void ? envinfo.searchSmallLevel : true;
+			if (envinfo.se3d !== void) with (envinfo.se3d) {
+				se3DSpread      = +.spread      if .spread      !== void;
+				se3DDepth       = +.depth       if .depth       !== void;
+				se3DMinDistance = +.mindistance if .mindistance !== void;
+				se3DMaxDistance = +.maxdistance if .maxdistance !== void;
+			}
         
             // Character info initialization process
             if (envinfo.characters !== void) {
@@ -2457,6 +2463,49 @@ class KAGEnvironment extends KAGEnvTrans {
 		}
     }
     
+    // ------------------------------------------------------------------
+    // Positional sound (KAGEnvSE: [se storage=... pos=, xpos=, level=, char=]): a sound
+    // placed on the stage is panned to where it is, through the engine's 3D sound
+    // (WaveSoundBuffer.use3D, SoundListener). The listener is at the origin, facing -Z: the
+    // screen's half width is se3DSpread units, so a sound at the left edge is that far to the
+    // left; one at level zoom z% (envinit's levels) is se3DDepth * 100 / z units in front, a
+    // character further back further away; within se3DMinDistance units it isn't any quieter
+    // (across the screen it pans, off the screen it fades). envinit.tjs can change them:
+    // "se3d" => %[ "spread" => 2.0, "depth" => 1.0, "mindistance" => 3.0, "maxdistance" => 30.0 ]
+    // ------------------------------------------------------------------
+    var se3DSpread = 2.0, se3DDepth = 1.0, se3DMinDistance = 3.0, se3DMaxDistance = 30.0;
+
+    /**
+     * Where place (KAGEnvSE.place: %[ xpos, level, char ]) is in the listener's space, as
+     * [ x, z ]; void when there's nothing to place it by (its character isn't there)
+     */
+    function se3DPosition(place) {
+		var sx, level = place.level;
+		if (place.char !== void) {
+			var ch = characters[place.char];
+			if (ch === void || ch.deleteFlag) return;
+			level = ch.level if level === void && typeof ch.level != "undefined";
+			var lay = ch.targetLayer;
+			if (lay !== void && isvalid lay) {
+				// the character's anchor (its middle) on the screen
+				sx = (typeof lay._affineleft != "undefined" ? lay._affineleft : lay.left + (lay.width >> 1)) - xmax;
+			} else {
+				sx = ch.xpos !== void ? +ch.xpos * levelZoom(level) / 100 : 0;
+			}
+		} else {
+			sx = (place.xpos !== void ? +place.xpos : 0) * levelZoom(level) / 100;
+		}
+		var zoom = levelZoom(level);
+		return [ sx / xmax * se3DSpread, -se3DDepth * 100 / (zoom > 0 ? zoom : 100) ];
+    }
+
+	// a level's zoom (envinit's levels), in percent: how near it is
+	function levelZoom(level) {
+		if (level === void) level = defaultLevel;
+		var info = levels !== void ? levels[(int)level] : void;
+		return info !== void && info.zoom !== void ? +info.zoom : 100;
+	}
+
     var seCount = 0;
     /**
      * Get SE processing object

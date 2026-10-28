@@ -144,58 +144,62 @@ function KAGWindow_createMenus()
 
     // Polyfill missing window menu property for SDL3
     if (typeof this.menu == "undefined") {
-        this.menu = new global.Menu();
+        this.menu = new global.Menu(this); // (this: showing or hiding it gives the window the menu bar's strip)
         this.menuBarStandIn = true; // no real menu bar (Menus.tjs, standview.tjs)
     }
     if (typeof menu == "undefined") {
         var menu = this.menu;
     }
 
-	menu.add(this.systemMenu = new KAGMenuItem(this, "SYSTEM(&S)", 0, "", false));
+	// The menu bar above the game in a window (F10, R3 on a controller; MenuBar.tjs) shows
+	// these, their captions in the language shown (tr: data/lang/<code>/lang.json,
+	// system/kagex_<code>.json); the part after a tab is the key that does the same
+	menu.add(this.systemMenu = new KAGMenuItem(this, "System(&S)", 0, "", false));
 
-	systemMenu.add(this.storeMenu   = new KAGMenuItem(this, "SAVE(F2)", 0,"startSave()",false));
-	systemMenu.add(this.restoreMenu = new KAGMenuItem(this, "LOAD(F3)", 0,"startLoad()",false));
+	systemMenu.add(this.storeMenu   = new KAGMenuItem(this, "Save(&S)\tF2", 0,"startSave()",false));
+	systemMenu.add(this.restoreMenu = new KAGMenuItem(this, "Load(&L)\tF3", 0,"startLoad()",false));
 
-    systemMenu.add(this.configMenuItem  = new KAGMenuItem(this, "CONFIG(F4)", 0, "startConfig()", false));
+    systemMenu.add(this.configMenuItem  = new KAGMenuItem(this, "Config(&C)\tF4", 0, "startConfig()", false));
 	systemMenu.add(new MenuItem(this, "-"));
-	systemMenu.add(this.goToStartMenuItem = new KAGMenuItem(this, "TITLE(&R)", 0,
+	systemMenu.add(this.rightClickMenuItem = new KAGMenuItem(this, "Hide Message(&H)\tEsc", 0,
+		onRightClickMenuItemClick, false));
+	systemMenu.add(new MenuItem(this, "-"));
+	systemMenu.add(this.goToStartMenuItem = new KAGMenuItem(this, "Return to Title(&R)", 0,
 		onGoToStartMenuItemClick, false));
 	systemMenu.add(new MenuItem(this, "-"));
-	systemMenu.add(this.exitMenuItem = new KAGMenuItem(this, "EXIT(&X)", 0, onExitMenuItemClick, false));
+	systemMenu.add(this.exitMenuItem = new KAGMenuItem(this, "Exit(&X)", 0, onExitMenuItemClick, false));
 
-	systemMenu.add(this.rightClickMenuItem = new KAGMenuItem(this, "Hide Message(&S)", 0,
-		onRightClickMenuItemClick, false));
-
-	systemMenu.add(this.skipToNextStopMenuItem = new KAGMenuItem(this,
-		autoRecordPageShowing?"Skip to Next Choice/Unread(&F)":"Skip to Next Choice(&F)", 0,
-		onSkipToNextStopMenuItemClick, false));
-
-	systemMenu.add(this.autoModeMenuItem = new KAGMenuItem(this, "Auto Read(&A)", 0,
-		onAutoModeMenuItemClick, false));
-
-	menu.add(this.displayMenu = new KAGMenuItem(this, "DISPLAY(F5)", 0, void, false));
-		displayMenu.add(this.windowedMenuItem = new KAGMenuItem(this, "WINDOW(&W)", 1,
+	menu.add(this.displayMenu = new KAGMenuItem(this, "Display(&V)", 0, void, false));
+		displayMenu.add(this.windowedMenuItem = new KAGMenuItem(this, "Window(&W)\tF5", 1,
 			onWindowedMenuItemClick, false));
-		displayMenu.add(this.fullScreenMenuItem = new KAGMenuItem(this, "FULLSCREEN(&F)", 1,
+		displayMenu.add(this.fullScreenMenuItem = new KAGMenuItem(this, "Full Screen(&F)\tF5", 1,
 			onFullScreenMenuItemClick, false));
 
 		displayMenu.add(new MenuItem(this, "-"));
 
-		displayMenu.add(this.resetWindowSizeMenuItem = new KAGMenuItem(this, "DEFAULT SIZE(&R)", 0,
+		displayMenu.add(this.resetWindowSizeMenuItem = new KAGMenuItem(this, "Default Window Size(&D)", 0,
 			/**/           onResetWindowSizeMenuItemClick, false));
-		displayMenu.add(this.disableWindowResizeMenuItem = new KAGMenuItem(this, "DISABLE RESIZE(&Z)", 0,
+		displayMenu.add(this.disableWindowResizeMenuItem = new KAGMenuItem(this, "Disable Resizing(&Z)", 0,
 			/**/           onDisableWinwodResizeMenuItemClick, false));
 
-	menu.add(this.skipToNextStopMenuItem = new KAGMenuItem(this, "SKIP(F6)", 0, onSkipToNextStopMenuItemClick, false));
-	menu.add(this.showHistoryMenuItem = new KAGMenuItem(this, "BACKLOG(F7)", 0, onShowHistoryMenuItemClick, false));
-	menu.add(this.autoModeMenuItem = new KAGMenuItem(this, "AUTO(F8)", 0, onAutoModeMenuItemClick, false));
+		displayMenu.add(new MenuItem(this, "-"));
 
-	menu.add(this.helpMenu = new KAGMenuItem(this, "HELP(&H)", 0, void, false));
+		displayMenu.add(this.screenshotMenuItem = new KAGMenuItem(this, "Save Screenshot(&S)\tF12", 0,
+			/**/           saveScreenshot, false));
 
-		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "MANUAL", 0,
+	menu.add(this.skipToNextStopMenuItem = new KAGMenuItem(this, "Skip(&K)\tF6", 0, onSkipToNextStopMenuItemClick, false));
+	menu.add(this.showHistoryMenuItem = new KAGMenuItem(this, "Backlog(&B)\tF7", 0, onShowHistoryMenuItemClick, false));
+	menu.add(this.autoModeMenuItem = new KAGMenuItem(this, "Auto(&A)\tF8", 0, onAutoModeMenuItemClick, false));
+
+	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
+
+		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)", 0,
 			onHelpIndexMenuItemClick, false));
 
-		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "ABOUT(F1)", 0,
+		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
+			showControls, false));
+
+		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...\tF1", 0,
 		onHelpAboutMenuItemClick, false));
 
 	menu.add(this.debugMenu = new KAGMenuItem(this, "Debug(&D)", 0, void, false));

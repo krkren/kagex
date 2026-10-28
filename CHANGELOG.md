@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.12.0
+
+### Added
+
+- **A menu bar, in a window**: the game's menu (System, Display, the message commands, Help, and Debug in debug mode) shows as a menu bar in a strip above the game, as Kirikiri's Win32 menu bar did and in place of the one the SDL engine doesn't have: the window is the strip taller than the game, which is drawn under it, and full screen has no bar. A click on a title drops its menu down over the game, moving to another title opens that one, resting on a submenu opens it, and F10 (and the controller's START, in a game that leaves it to the framework, and R3) opens the first menu from the keyboard, where the arrows, Return and Esc work as on Windows. It's drawn with the engine's Elements UI in the dialogs' look, shows the items as they are (enabled, checked, the radio groups' choice, the shortcuts), works with a screen reader, and shows a game's own menu (`KAGWindow_createMenus` in `Override.tjs`) as it is, its captions in the language shown (`MenuBar.tjs`; `doc/kagex.txt`, "The menu bar"). Engines without the Elements UI or `Window.setViewport` don't show it.
+- **A controls list** (Help > Controls, and a Controls button on the sample's Config screen): what every key, mouse button and controller button does, read from the bindings themselves, with the controller's buttons named for the pad in use (✕ ○ □ △ on a PlayStation pad, A B X Y elsewhere) and the debug keys in debug mode. The window's keys are now a list of bindings that a game adds to with `kag.bindKey` (the sample's F1-F8, in `AfterInit.tjs`), so the list stays right for a game that changes them (`doc/kagex.txt`, "Key bindings" and "The controls list").
+- **Screenshots**: F12 (and Print Screen, where the system passes it on) saves the screen as a PNG in the save folder and says so in a corner. Where layerExSave gives the window `startSaveLayerImage` (now linked before the window is made), the PNG is written on another thread, so the game doesn't stop while it's written (`doc/kagex.txt`, "Screenshots").
+- **Screen readers**: each message is read out with its speaker's name, and the choices, the Yes/No prompts, About, the menu bar and the controls list are given to the system's screen reader (Narrator, VoiceOver, Orca) to read and press, through the engine's accessibility interface (`Accessibility.tjs`, `KAGA11y`, for a game's own UI too; `doc/kagex.txt`, "Screen readers"). The browser, Android and iOS builds don't have the interface.
+- **Positional sound**: `[se storage=... pos=farleft]`, `xpos=`, `level=` or `char=ai` places a sound on a World stage: it's panned to where it is and comes from further away the further back it is, and a looping sound at a character follows it as it moves (the engine's 3D sound; `doc/world.txt`, "SE Object Functions", and envinit.tjs's `se3d`). The Character demo plays a chime at the far left and the far right of the stage and footsteps that follow Ai as she walks (`tools/assets/make_sounds.py`).
+- **Line breaking by krkr_richtext**: where krkr_richtext draws the message window, English lines break where its line breaker (minikin's, which its `StyledLayout` uses) puts the breaks for the whole line, evening out ragged lines; Config.tjs's `lineBreakStrategy` chooses `quality`, `balanced` or `greedy` (`doc/kagex.txt`, "Line breaking").
+
+### Fixed
+
+- The word wrap only worked on plain lines of text: a script line that started with a tag or a tab, had `[r]` in it or ran into text from `[emb]` was left to KAG's character wrap, which split words, and a compiled message with a new line in it too. It follows the line as it's drawn now, finds its place again after text the line doesn't have (`[emb]`, text `[if]` leaves out), and doesn't break a line twice at a word that doesn't fit after KAG's own wrap has broken it.
+
+### Changed
+
+- The sample's F1-F8 are key bindings (`kag.bindKey` in `AfterInit.tjs`) instead of a `keyDownHook` function, and its menu captions (`Override.tjs`) have their shortcuts, for the menu bar. The framework's menu has Save Screenshot and Help > Controls.
+- The Character demo's music fades out before its positional sound part, so the chimes and footsteps are heard on their own, and the Animated Character demo has no music.
+
 ## 0.11.0
 
 ### Added
