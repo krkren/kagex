@@ -61,7 +61,7 @@ This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Live2D's
 [hiyori voice=1]
 [endif]
 【hiyori】Hello! I'm Hiyori. I blink by myself, and my mouth moves with my voice, just like Pip!
-Her pose, standard, plays the motions of the model's Idle group one after another, and her faces are values for its parameters, set in envinit.tjs, which fade into each other.
+Her pose, standard, plays the motions of the model's Idle group one after another, which move her head and body. Her face is the one the script gives her: values for the model's parameters, set in envinit.tjs, which fade into each other.
 [hiyori tap motionwait]
 tap plays the model's TapBody motion once, and motionwait waits for it to end. Then her Idle motions go on.
 [hiyori xsad]

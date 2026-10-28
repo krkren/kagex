@@ -741,21 +741,22 @@
 
 				"motions" => %[ "tap" => "TapBody" ],
 
-				// faces: values added to her parameters (an eye's is how open it is)
+				// faces: values for her parameters (an eye's is how open it is: 1 open, 0 shut), which
+				// hold whatever her motions do; a parameter a face doesn't name is at its default
 
 				"faces" => %[
 
 					"normal"    => %[],
 
-					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1 ],
+					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.45, "ParamCheek" => 0.5 ],
 
-					"laugh"     => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamCheek" => 1 ],
+					"laugh"     => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.5, "ParamCheek" => 1 ],
 
-					"sad"       => %[ "ParamBrowLY" => -0.5, "ParamBrowRY" => -0.5, "ParamBrowLForm" => -1, "ParamBrowRForm" => -1, "ParamMouthForm" => -1 ],
+					"sad"       => %[ "ParamEyeLOpen" => 0.75, "ParamEyeROpen" => 0.75, "ParamBrowLY" => -0.3, "ParamBrowRY" => -0.3, "ParamBrowLForm" => -1, "ParamBrowRForm" => -1, "ParamBrowLAngle" => -0.5, "ParamBrowRAngle" => -0.5, "ParamMouthForm" => -2 ],
 
-					"surprised" => %[ "ParamBrowLY" => 1, "ParamBrowRY" => 1, "ParamMouthForm" => -0.5 ],
+					"surprised" => %[ "ParamEyeLOpen" => 1.2, "ParamEyeROpen" => 1.2, "ParamBrowLY" => 0.8, "ParamBrowRY" => 0.8, "ParamMouthForm" => -2, "ParamMouthOpenY" => 0.6 ],
 
-					"blush"     => %[ "ParamCheek" => 1 ],
+					"blush"     => %[ "ParamEyeLOpen" => 0.85, "ParamEyeROpen" => 0.85, "ParamEyeLSmile" => 0.6, "ParamEyeRSmile" => 0.6, "ParamBrowLY" => -0.3, "ParamBrowRY" => -0.3, "ParamCheek" => 1 ],
 
 					],
 

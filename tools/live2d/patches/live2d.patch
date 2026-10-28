@@ -1,0 +1,13 @@
+diff --git a/src/LAppModel.cpp b/src/LAppModel.cpp
+index 3e1335e..d4d9258 100644
+--- a/src/LAppModel.cpp
++++ b/src/LAppModel.cpp
+@@ -7,6 +7,8 @@
+ 
+ #include "LAppModel.hpp"
+ #include <vector>
++#include <cstdarg>
++#include <cstdio>
+ #include <string>
+ #include <CubismModelSettingJson.hpp>
+ #include <Motion/CubismMotion.hpp>

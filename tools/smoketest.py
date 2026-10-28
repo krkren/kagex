@@ -901,9 +901,11 @@ def live2d_steps(eng):
     krkrlive2d plugin and her model (tools/assets/make_hiyori.py) it checks her picture as the
     plugin draws it; without them (every build kagex ships: the plugin needs Live2D's Cubism SDK)
     the demo has said so as the demos played, and the stand-in plugin (live2d-standin.tjs) takes
-    the plugin's place, so the framework's part is checked all the same: her picture, the pose's
-    motions, a motion played once, a face, blinking, lip-sync to a voice with a lip track, a save
-    and a load, and letting the model go when she leaves"""
+    the plugin's place, doing what the plugin's driver does with a model's parameters, so the
+    framework's part is checked all the same: her picture where the World puts her, upright, the
+    model's copy in step with her player, the pose's motions, a motion played once, a face fading
+    in and holding over her motions', blinking, lip-sync to a voice with a lip track, a save and
+    a load, and letting the model go when she leaves"""
     if eng.tjs('return typeof global.KAGEnvCharacterLive2D != "undefined" && typeof global.KAGLive2DOf != "undefined"'
                ' && world_object.env.characterInits["hiyori"] !== void ? 1 : 0;') != 1:
         print("     (skipped: this build's framework or sample predates Live2D characters)", flush=True)
@@ -952,52 +954,99 @@ def live2d_steps(eng):
                         ' for (var y = 0; y < l.imageHeight; y += 16) for (var x = 0; x < l.imageWidth; x += 16)'
                         ' if (l.getMaskPixel(x, y) > 0) n++;'
                         ' var left = (int)(t._affineleft - t.afx), top = (int)(t._affinetop - t.afy);'
-                        ' return [n, t.visible ? 1 : 0, left, top, left + l.imageWidth, top + l.imageHeight, c.lastDraw !== void ? 1 : 0].join(",");'))
-    n, visible, left, top, right, bottom, ticking = [int(v) for v in drawn.split(",")]
-    print("     Hiyori: %d of her picture's samples drawn, from (%d, %d) to (%d, %d)" % (n, left, top, right, bottom), flush=True)
-    if n < 100 or not visible or not left < 1440 < right or not top < 840 < bottom:
-        raise SmokeError("Hiyori isn't drawn where the World puts her: %s" % drawn)
+                        ' return [n, t.visible ? 1 : 0, left, top, l.imageWidth, l.imageHeight, c.lastDraw !== void ? 1 : 0].join(",");'))
+    n, visible, left, top, width, height, ticking = [int(v) for v in drawn.split(",")]
+    print("     Hiyori: %d of her picture's samples drawn, %dx%d at (%d, %d)" % (n, width, height, left, top), flush=True)
+    if n < 100 or not visible:
+        raise SmokeError("Hiyori isn't drawn: %s" % drawn)
+    if abs(left + width / 2 - 1440) > 2 or abs(top + height / 2 - 840) > 2:
+        raise SmokeError("Hiyori's picture is centred at (%d, %d), not at posright's (1440, 840)"
+                         % (left + width / 2, top + height / 2))
     # it goes on drawing: the model moves by itself
     eng.tjs(hiyori + 'global.__smokeL2DDraw = c.lastDraw; return 1;')
     time.sleep(1.0)
     if eng.tjs(hiyori + 'return c.lastDraw != global.__smokeL2DDraw ? 1 : 0;') != 1:
         raise SmokeError("Hiyori was drawn once, and not again as her model moved")
-    # blinking (eyeFlipFreq 1: a blink every frame or so) and a face that fades in
-    eng.tjs('global.__smokeL2D = %[ eyes : 1.0, open : 0.0, forms : %[], vowels : %[], voice : %[] ];'
+    # upright: a player of her model, with no motion, drawn with its eyes open and shut, differs
+    # where her eyes are, in the top part of the picture (her head's)
+    r = str(eng.tjs('var s = KAGLive2DOf(kag), file = s.findModel("hiyori"), p = s.newPlayer(file);'
+                    ' var w = 300, h = 420, a = new Layer(kag, kag.fore.base), b = new Layer(kag, kag.fore.base);'
+                    ' a.setImageSize(w, h); b.setImageSize(w, h);'
+                    ' p.progress(33); s.render(a, p);'
+                    ' p.setParameterValue("ParamEyeLOpen", 0); p.setParameterValue("ParamEyeROpen", 0);'
+                    ' p.progress(33); s.render(b, p); s.releasePlayer(p);'
+                    ' var n = 0, sy = 0;'
+                    ' for (var y = 0; y < h; y += 2) for (var x = 0; x < w; x += 2) {'
+                    '  var pa = a.getMainPixel(x, y), pb = b.getMainPixel(x, y), d = 0;'
+                    '  for (var k = 0; k < 32; k += 8) d += Math.abs(((pa >> k) & 255) - ((pb >> k) & 255));'
+                    '  if (d > 60) { n++; sy += y; } }'
+                    ' invalidate a; invalidate b; return [n, n > 0 ? sy / n / h : -1].join(",");')).split(",")
+    changed, eyes_at = int(r[0]), float(r[1])
+    print("     upright: shutting her eyes changes %d samples, %.0f%% of the way down" % (changed, eyes_at * 100), flush=True)
+    if changed < 10 or not 0.0 < eyes_at < 0.4:
+        raise SmokeError("Hiyori's eyes aren't near the top of her picture (upside down?): %s" % r)
+    # her copy without OpenGL (the shadow) plays the motions in step with her player
+    r = str(eng.tjs(hiyori + 'var d = 0; for (var i = 0; i < c.faceParams.count; i++) {'
+                    ' var p = c.faceParams[i], x = Math.abs(c.shadow.getParameterValue(p) - c.player.getParameterValue(p));'
+                    ' d = x if x > d; } return [c.faceParams.count, d].join(",");')).split(",")
+    print("     the World's parameters: %s; her copy is off by at most %s" % (r[0], r[1]), flush=True)
+    if int(r[0]) < 4 or float(r[1]) > 0.0001:
+        raise SmokeError("Hiyori's copy doesn't play her motions in step with her: %s" % r)
+    # blinking (eyeFlipFreq 1: a blink every frame or so), the eyes open the rest of the time, and
+    # a face that fades in
+    eng.tjs('global.__smokeL2D = %[ eyes : 9.0, eyesOpen : 0.0, open : 0.0, forms : %[], vowels : %[], voice : %[] ];'
             ' global.__smokeL2DTimer = new Timer(function() {'
             '  var c = world_object.env.characters["hiyori"]; if (c === void) return; var s = global.__smokeL2D;'
-            '  s.eyes = c.eyeValue if c.eyeValue < s.eyes;'
+            '  var e = c.faceTargets.ParamEyeLOpen; if (e !== void) { s.eyes = e if e < s.eyes; s.eyesOpen = e if e > s.eyesOpen; }'
             '  var b = c.soundBuffer; if (b !== void && b.status == "play") {'
-            '   s.open = c.mouthOpen if c.mouthOpen > s.open; s.forms["%.1f".sprintf(c.mouthForm)] = 1;'
+            '   s.open = c.mouthOpen if c.mouthOpen > s.open; s.forms["%.1f".sprintf(c.faceTargets.ParamMouthForm)] = 1;'
             '   s.voice[b.position] = 1; if (c.lipVowel !== void) s.vowels[c.lipVowel] = 1; }'
             ' }, ""); __smokeL2DTimer.interval = 20; __smokeL2DTimer.enabled = true;'
-            ' world_object.env.characters["hiyori"].setFace("smile", %[]); return 1;')
+            ' var c = world_object.env.characters["hiyori"]; c.setFace("smile", %[]);'
+            ' global.__smokeL2DMid = c.currentFaceValues(c.faceStart + live2dFaceFade / 2).ParamEyeLSmile; return 1;')
     time.sleep(1.5)
-    r = str(eng.tjs(hiyori + 'var v = c.currentFaceValues(System.getTickCount());'
-                    ' return [global.__smokeL2D.eyes, v.ParamEyeLSmile, c.face].join(",");')).split(",")
-    print("     blinking: the eyes down to %s; the smile face: ParamEyeLSmile %s" % (r[0], r[1]), flush=True)
+    r = str(eng.tjs(hiyori + 'var s = global.__smokeL2D;'
+                    ' return [s.eyes, s.eyesOpen, global.__smokeL2DMid, c.faceTargets.ParamEyeLSmile, c.face].join(",");')).split(",")
+    print("     blinking: the eyes from %s down to %s; the smile face: ParamEyeLSmile %s halfway through its fade, then %s"
+          % (r[1], r[0], r[2], r[3]), flush=True)
     if float(r[0]) > 0.2:
         raise SmokeError("Hiyori's eyes didn't close to blink (down to %s)" % r[0])
-    if r[1] in ("", "void") or abs(float(r[1]) - 1.0) > 0.01 or r[2] != "smile":
+    if float(r[1]) < 0.95:
+        raise SmokeError("Hiyori's eyes weren't open between blinks (at most %s): her motions' eyes won" % r[1])
+    if not 0.3 < float(r[2]) < 0.7 or abs(float(r[3]) - 1.0) > 0.01 or r[4] != "smile":
         raise SmokeError("Hiyori's smile face didn't fade in: %s" % r)
     # lip-sync to a voice with a lip track (Pip's synthesized line, which has pip000009.lip): her
-    # mouth opens, shaped by its vowels
+    # mouth opens, shaped by its vowels, and closes to the face's when it ends
     eng.tjs(hiyori + 'c.playVoice("pip000009"); return 1;')
     end = time.time() + 14
     while time.time() < end:
         time.sleep(0.5)
         if eng.tjs(hiyori + 'var b = c.soundBuffer; return b !== void && b.status != "play" ? 1 : 0;') == 1:
             break
-    r = str(eng.tjs('var s = global.__smokeL2D, f = [], v = [], p = []; f.assign(s.forms); v.assign(s.vowels); p.assign(s.voice);'
+    time.sleep(0.5)
+    r = str(eng.tjs(hiyori + 'var s = global.__smokeL2D, f = [], v = [], p = []; f.assign(s.forms); v.assign(s.vowels); p.assign(s.voice);'
                     ' var fs = [], vs = []; for (var i = 0; i < f.count; i += 2) fs.add(f[i]);'
                     ' for (var i = 0; i < v.count; i += 2) vs.add(v[i]);'
-                    ' return [s.open, fs.join(" "), vs.join(" "), p.count \\ 2].join(",");')).split(",")
+                    ' return [s.open, fs.join(" "), vs.join(" "), p.count \\ 2, c.faceTargets.ParamMouthOpenY,'
+                    ' c.faceValuesOf(c.face).ParamMouthOpenY].join(",");')).split(",")
     opened, forms, vowels, positions = float(r[0]), r[1].split(), r[2].split(), int(r[3])
-    print("     lip-sync: the mouth open up to %.2f, vowels %s, mouth forms %s" % (opened, " ".join(vowels) or "none", " ".join(forms)), flush=True)
+    after, face_mouth = float(r[4]), float(r[5]) if r[5] not in ("", "void") else 0.0
+    print("     lip-sync: the mouth open up to %.2f, vowels %s, mouth forms %s; after it %.2f (the face's %.2f)"
+          % (opened, " ".join(vowels) or "none", " ".join(forms), after, face_mouth), flush=True)
     if positions <= 1:
         print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
-    elif opened < 0.3 or len(vowels) < 2 or len([x for x in forms if float(x) != 0]) < 2:
+    elif opened < 0.3 or len(vowels) < 2 or len(set(forms)) < 2:
         raise SmokeError("Hiyori's mouth didn't follow pip000009.lip (open %.2f, vowels %s, forms %s)" % (opened, vowels, forms))
+    if abs(after - face_mouth) > 0.01:
+        raise SmokeError("Hiyori's mouth is at %.2f after the voice, not the face's %.2f" % (after, face_mouth))
+    if standin:
+        # what the stand-in drew: the World's values, not its motions' (half shut eyes, an open mouth)
+        r = str(eng.tjs('var s = Live2DStandIn, n = s.eyes.count, e = 9, eo = 0;'
+                        ' for (var i = 0; i < n; i++) { e = s.eyes[i] if s.eyes[i] < e; eo = s.eyes[i] if s.eyes[i] > eo; }'
+                        ' return [e, eo, s.mouths[n - 1]].join(",");')).split(",")
+        print("     the stand-in drew the eyes from %s down to %s, and the mouth last at %s" % (r[1], r[0], r[2]), flush=True)
+        if float(r[0]) > 0.2 or float(r[1]) < 0.95 or abs(float(r[2]) - face_mouth) > 0.01:
+            raise SmokeError("the stand-in didn't draw the World's eyes and mouth over its motions': %s" % r)
     # a motion played once (tap: TapBody), then the pose's again
     eng.tjs(hiyori + 'c.playOnce("tap", %[]); return 1;')
     eng.wait("the tap motion", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)

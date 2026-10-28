@@ -1340,8 +1340,8 @@ A character can be a Live2D model, made with Live2D's Cubism Editor. Its poses a
 go on, its motions play once, its faces are the model's expressions or values for its
 parameters, and it blinks and lip-syncs to its voice as a character drawn from layers does. The
 Animated Character demo's Hiyori is one (anim.ks; Live2D Inc.'s sample model, which
-tools/assets/make_hiyori.py fetches, since Live2D's licence doesn't let others put copies of its
-sample models online).
+tools/assets/make_hiyori.py fetches: Live2D's licence lets no one but Live2D hand out copies of
+its sample models' files).
 
 
 
@@ -1375,7 +1375,8 @@ The character's envinit.tjs entry has "live2d"; the rest is as for any character
         "motions" => %[ "tap" => "TapBody" ],
         "faces" => %[
             "normal" => %[],
-            "smile"  => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1 ],
+            "smile"  => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthOpenY" => 0.45 ],
+            "laugh"  => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1 ],
             "angry"  => "exp_03",        // an expression of the model
             ],
         "defaultFace" => "normal",
@@ -1388,7 +1389,9 @@ The character's envinit.tjs entry has "live2d"; the rest is as for any character
     model       The model's file, with or without .l2d: the folder Cubism Editor exports
                 (model3.json, the .moc3, the textures, the motions ...) zipped with its contents
                 at the top (model3.json not in a folder) and renamed .l2d, as krkrlive2d reads a
-                model. Keep the motions in the export's motions folder: krkrlive2d finds a
+                model. The file is named as its model3.json is (Hiyori.model3.json in
+                hiyori.l2d; the case doesn't matter): krkrlive2d reads <its name>.model3.json
+                from it. Keep the motions in the export's motions folder: krkrlive2d finds a
                 motion by its name there.
     canvas      The width and height of the model's canvas (Cubism Editor's Canvas settings),
                 for its shape: the picture is drawn that shape, the canvas filling it. Without
@@ -1406,19 +1409,21 @@ The character's envinit.tjs entry has "live2d"; the rest is as for any character
     defaultPose The pose it starts in.
     motions     Names, each for a motion played once, then the pose's again, given as for
                 poses (a group: one of its motions).
-    faces       Names, each for an expression of the model (its Name in model3.json) or for
-                values added to its parameters, by their IDs (ParamCheek) or display names, on
-                top of what its motions give: an eye parameter's value is how open the eye is
-                instead (0 to 1), which blinking closes further. A dictionary can have both, the
-                expression as "expression" => "<name>". Values fade into the next face's over
+    faces       Names, each for an expression of the model (its Name in model3.json), or for
+                values of its parameters, by their IDs (ParamCheek) or display names. A
+                dictionary can have both, the expression as "expression" => "<name>". The
+                value of an eye parameter is how open the eyes are: 1 the model's open eyes, 0
+                shut, more than 1 wider where the model goes that far; blinking closes them from
+                there. The value of a mouth parameter is how open the mouth is without the
+                voice, which opens it further. Values fade into the next face's over
                 live2dFaceFade ms (300); an expression fades as the model says.
     defaultFace The face it starts with (none without it).
     eyes        The eye parameters blinking closes (["ParamEyeLOpen", "ParamEyeROpen"]).
-    mouthForm   The parameter the voice's vowels shape ("ParamMouthForm"). The mouth opens
-                through the model's LipSync parameters (its model3.json group).
+    mouth       The mouth parameters the voice opens (["ParamMouthOpenY"]).
+    mouthForm   The parameter the voice's vowels shape ("ParamMouthForm").
     vowels      The mouth for each vowel: %[ a:[open, form], ... ], how open (a share of the
-                voice's level) and the mouth form added (live2dVowels: a [1, 0], i [0.45, 1],
-                u [0.35, -0.8], e [0.6, 0.6], o [0.8, -0.6]).
+                voice's level) and the mouth form added to the face's (live2dVowels: a [1, 0],
+                i [0.45, 1], u [0.35, -0.8], e [0.6, 0.6], o [0.8, -0.6]).
 
 
 
@@ -1428,22 +1433,39 @@ The character's envinit.tjs entry has "live2d"; the rest is as for any character
 
 While the character shows, the model is drawn again every live2dFrameTime ms (33: 30 times a
 second), each frame read back from OpenGL into the character's layer, at the size the level
-draws it. Its eyes and mouth go as a character drawn from layers' do (Blinking and lip-sync,
-above): the eyes' level (open, half, closed) closes its eye parameters, the mouth's opens its
-LipSync parameters, each eased over live2dEyeSmooth and live2dMouthSmooth ms (30, 50) so the
-steps become movement, and a lip track's vowels set the mouth form. The model's own blinking is
-off: the World blinks it, so the eye commands work as they do for every character.
+draws it.
+
+
+
+The face is the World's, and the motions move the rest. The parameters any of its faces name,
+its eyes' and its mouth's hold the face's values (a parameter's default where the face names
+none), whatever the motion playing does with them: a model whose idle motions blink, smile and
+talk (Hiyori's do) keeps the face the script gives it and its mouth shut while it isn't speaking,
+and its head, body and hair go on moving. Every other parameter is the motions'. The plugin adds
+a value to a parameter after the main motion, so a copy of the model without OpenGL plays the
+same motions a frame ahead, and what's added is the face's value less the motion's. An
+expression of the model goes on top, as the model says.
+
+
+
+Its eyes and mouth go as a character drawn from layers' do (Blinking and lip-sync, above): the
+eyes' level (open, half, closed) closes its eye parameters, the mouth's opens its mouth
+parameters, each eased over live2dEyeSmooth and live2dMouthSmooth ms (40, 50) so the steps
+become movement, and a lip track's vowels shape the mouth form. The model's own blinking is off:
+the World blinks it, so the eye commands work as they do for every character.
 
 
 
 Its pose and face are kept in a save, and a load starts the pose's motions again. A model is let
-go, with its OpenGL objects, when its character leaves the screen, and read again when it comes
-back; a model shown by several characters is read once. There's no face window (facewin) for a
-model. The settings are global variables in KAGEnvCharacterLive2D.tjs, which Override.tjs can
-change: live2dFrameTime, live2dMaxHeight, live2dMotionFade (how long a motion fades in and out,
-500 ms), live2dFaceFade, live2dEyeSmooth, live2dMouthSmooth and live2dVowels; and in
-GFX_Live2D.tjs live2dFlipY, which turns the picture read back upside down, should an engine read
-it back the other way up.
+go when its character leaves the screen (the plugin deletes its OpenGL objects as it draws the
+next frames, or with the window), and read again when it comes back; a model shown by several
+characters is read once. While a skip shows nothing, the character keeps its last picture, and
+a motion played once doesn't play. There's no face window (facewin) for a model. The settings
+are global variables in KAGEnvCharacterLive2D.tjs, which Override.tjs can change:
+live2dFrameTime, live2dMaxHeight, live2dMotionFade (how long a motion fades in and out, 500 ms),
+live2dFaceFade, live2dEyeSmooth, live2dMouthSmooth and live2dVowels; and in GFX_Live2D.tjs
+live2dFlipY, which turns the picture read back upside down, should an engine read it back the
+other way up.
 
 
 
@@ -1453,7 +1475,8 @@ it back the other way up.
 
     <pose>      Changes the pose (also pose=<pose>): its motions start, fading from the last.
     <motion>    Plays a motion once, then the pose's again (also motion=<motion>). With
-                motionwait the command waits for it to end; a click ends it.
+                motionwait the command waits for it to end; a click ends it. Nothing waits
+                when the model can't be drawn or effects are off.
     <face>      Changes the face (also face=<face>), fading.
     x<face>     Changes the face with a blink (also xface=<face>).
     eyeopen, eyeclose, eyeopento, eyecloseto, eyeflip, eyeflipon, eyeflipoff, lipopen,
@@ -1476,20 +1499,27 @@ Example
 
 
 
-The plugin is wamsoft/krkrlive2d (krkrz_dev has it, src/plugins/krkrlive2d, but doesn't build it
-at engine 2.6.5). To use it:
+The plugin is wamsoft/krkrlive2d, with the Live2D driver wtnbgo/live2d (krkrz_dev has it,
+src/plugins/krkrlive2d, but doesn't build it at engine 2.6.5). kagex builds it for you:
 
 
 
-1. Download the Cubism SDK for Native from Live2D's site, agreeing to its licences: its Core is
-   under the Live2D Proprietary Software License. The Live2D driver krkrlive2d builds on
-   (wtnbgo/live2d, which its CMake fetches) wants Core 06.00.0001 or newer.
-2. Build krkrlive2d with CUBISM_SDK_CORE set to the SDK's Core folder (CUBISM_SDK, the SDK's
-   own folder, for plugin commits before 8edeb8e), with its CMake presets (cmake --preset
-   x64-windows, then cmake --build). The driver builds for Windows, Android and iOS, not yet for
-   Linux, macOS or the web (UPSTREAM.md).
-3. Put krkrlive2d.dll in plugin/ next to the engine: the framework links plugin/krkrlive2d.dll
-   the first time a Live2D character is drawn.
+1. Download the Cubism SDK for Native from Live2D's site
+   (https://www.live2d.com/en/sdk/download/native/), agreeing to its licences: its Core is
+   under the Live2D Proprietary Software License. The driver wants Core 06.00.0001 or newer.
+2. Run, with git, CMake and a C++ compiler there:
+
+       python3 tools/live2d/build.py --sdk <the SDK's zip, or the folder it unzips to>
+
+   It fetches krkrlive2d, the driver, tp_stub and ncbind at the commits kagex is tested with,
+   applies kagex's fixes to them (tools/live2d/patches; UPSTREAM.md), builds them with the SDK's
+   Core and puts the plugin in plugin/: libkrkrlive2d.so on Linux, libkrkrlive2d.dylib on macOS,
+   krkrlive2d.dll on Windows (--arch: the engine's, arm64 or x86_64 on macOS, Win32 or x64 on
+   Windows). It's tested on Linux; the macOS and Windows builds aren't yet. The driver's own
+   CMake builds for Windows, Android and iOS, so on Linux and macOS it's built through
+   tools/live2d/driver. Android, iOS and the web aren't built yet (TODO.md).
+3. The framework links plugin/krkrlive2d.dll (the engine's name for the plugin on every
+   platform) the first time a Live2D character is drawn.
 4. Put each model's .l2d in the game's data, where its scripts find it (fgimage/, say).
 
 
@@ -1497,10 +1527,11 @@ at engine 2.6.5). To use it:
 Releasing a game with it: Live2D's Publication License (its "Cubism SDK Release License") is for
 a business with yearly sales of 10 million yen or more; individuals and smaller businesses
 release without one, but check Live2D's terms as they stand. The Core goes out inside the game
-only. A model is yours or one whose licence lets you ship it: Live2D's sample models, Hiyori
-among them, are under its Free Material License, which lets individuals and small businesses use
-them in their works, with "This content uses sample data owned and copyrighted by Live2D Inc."
-shown, and doesn't let anyone else put the files online.
+only: the plugin goes into the game's packages, never into anything handed to other developers.
+A model is yours or one whose licence lets you ship it: Live2D's sample models, Hiyori among
+them, are under its Free Material License, which lets individuals and small businesses use them
+in their works, a game shipping them inside it, with "This content uses sample data owned and
+copyrighted by Live2D Inc." shown; no one may hand out the model files themselves, as material.
 
 
 

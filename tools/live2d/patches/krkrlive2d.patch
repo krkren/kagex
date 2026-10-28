@@ -1,0 +1,46 @@
+diff --git a/src/Live2D.cpp b/src/Live2D.cpp
+index d599b1e..ef1c432 100644
+--- a/src/Live2D.cpp
++++ b/src/Live2D.cpp
+@@ -1,5 +1,6 @@
+ #include <ncbind.hpp>
+ #include <memory>
++#include <cstring>
+ 
+ #include "Live2D.h"
+ 
+@@ -49,7 +50,13 @@ public:
+     // Win32 の IStream ではなく iTJSBinaryStream を使うことで、
+     // 新旧いずれの tp_stub でもコンパイルできる。
+     ttstr name = convertUtf8StringToTtstr(filename, strlen(filename));
+-    mStream = TVPCreateStream(name, TJS_BS_READ);
++    // TVPCreateStream throws when there's no such file, and the driver asks for files that
++    // may not be there (<model>.vmotion3.json): that's a null stream to it
++    try {
++      mStream = TVPCreateStream(name, TJS_BS_READ);
++    } catch (...) {
++      mStream = nullptr;
++    }
+     if (mStream) {
+       mSize = (size_t)mStream->GetSize();
+       mPosition = 0;
+@@ -401,7 +408,7 @@ static void setFloatProp(iTJSDispatch2 *obj, const tjs_char *name,
+ }
+ 
+ // オブジェクトに文字列を格納
+-static void setStrProp(iTJSDispatch2 *obj, const tjs_char *name, ttstr &value) {
++static void setStrProp(iTJSDispatch2 *obj, const tjs_char *name, const ttstr &value) {
+   tTJSVariant var = value;
+   obj->PropSet(TJS_MEMBERENSURE, name, NULL, &var, obj);
+ }
+diff --git a/src/utils.cpp b/src/utils.cpp
+index 1777e53..53a490c 100644
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@ -1,5 +1,6 @@
+ #include <ncbind.hpp>
+ #include <string>
++#include <cstring>
+ 
+ // ttstrをUTF8文字列へ変換
+ std::string

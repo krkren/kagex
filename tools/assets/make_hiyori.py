@@ -5,8 +5,8 @@ and her voice line.
 Hiyori Momose is Live2D Inc.'s sample character (the model Neuro-sama first streamed as), a World
 character the krkrlive2d plugin draws (KAGEnvCharacterLive2D.tjs; doc/world.txt, "Live2D
 Characters"). Neither her model nor anything drawn from it is in this repository: Live2D's Free
-Material License doesn't let anyone but Live2D put copies of its sample models online, only
-works that use them, so a build that shows her fetches her.
+Material License lets no one but Live2D hand out its sample models' files (a work that uses them
+may ship them inside it), so a build that shows her fetches her.
 
 model --accept-license
     Fetches her from Live2D's CubismNativeSamples on GitHub, at the commit HIYORI_COMMIT, and

@@ -59,6 +59,8 @@ class KAGLive2D extends KAGPlugin
 	}
 
 	function release() {
+		// the GL objects go in the context they were made in
+		try { compositor.makeCurrent() if available; } catch {}
 		for (var i = players.count - 1; i >= 0; i--) {
 			try { invalidate players[i].player if isvalid players[i].player; } catch {}
 		}
@@ -95,7 +97,9 @@ class KAGLive2D extends KAGPlugin
 		if (ent === void) {
 			var model = new Live2DModel();
 			try {
-				model.load(path);
+				// by its name, without a folder: the plugin reads <name>.model3.json from the zip,
+				// <name> being what it's given less the extension
+				model.load(Storages.extractStorageName(path));
 			} catch (e) {
 				invalidate model;
 				dm(@"Live2D model ${storage} can't be read: ${e.message}");
@@ -120,6 +124,21 @@ class KAGLive2D extends KAGPlugin
 		ent.count++;
 		players.add(%[ player:player, path:path ]);
 		return player;
+	}
+
+	/**
+	 * A copy of a model file's model without OpenGL (Live2DModel), as newPlayer read it: void
+	 * when it hasn't been read. Its owner invalidates it
+	 */
+	function newShadow(storage) {
+		var ent = models[Storages.getPlacedPath(storage)];
+		if (ent === void) return void;
+		try {
+			return ent.model.clone();
+		} catch (e) {
+			dm(@"Live2D model ${storage} can't be copied: ${e.message}");
+			return void;
+		}
 	}
 
 	function releasePlayer(player) {

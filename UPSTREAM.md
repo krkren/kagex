@@ -2,7 +2,7 @@
 
 kagex never changes krkrz_dev, its submodules or its plugins (`CLAUDE.md`). This file lists the problems in them, and in Wamsoft's platform kits, that kagex can't work around: each one costs a feature or a platform until it's fixed upstream. They're sorted by importance, most important first. Bugs the scripts or the CI work around aren't listed here; `CLAUDE.md` describes them next to their workarounds.
 
-These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-core `7d91ba5`), the plugins it pins (krkr_richtext `52bbb5c`, krkreffekseer `f8197fa` with Effekseer `b6035eb`, extNagano `4b403e2`, krkrlive2d `dbdb29f` and its newest commit `8edeb8e`, with the Live2D driver at `58c4c66`), and the kits `platforms.yml` pins (krkrz_android `eff2b17`, krkrz_ios `003abad`). When one is fixed upstream, use the fix and delete the entry.
+These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-core `7d91ba5`), the plugins it pins (krkr_richtext `52bbb5c`, krkreffekseer `f8197fa` with Effekseer `b6035eb`, extNagano `4b403e2`, krkrlive2d `dbdb29f` and its newest commit `8edeb8e`, with the Live2D driver at `58c4c66` and tp_stub `35ef31a` and ncbind `256502b` for building it on its own), and the kits `platforms.yml` pins (krkrz_android `eff2b17`, krkrz_ios `003abad`). When one is fixed upstream, use the fix and delete the entry.
 
 ## 1. The REPL handles TJS values on its own thread
 
@@ -73,7 +73,7 @@ These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-
 ## 12. Live2D: the driver builds only for Windows, Android and iOS, and krkrz_dev doesn't build krkrlive2d
 
 - **Where:** krkrlive2d's CMake fetches its driver, wtnbgo/live2d, at `main` (`58c4c66` of 2026-10-26), whose `CMakeLists.txt` defines the `live2ddriver` target only under `WIN32`, `ANDROID` and `IOS` (its own notes say the Android and iOS builds are untested since its move to Cubism 5 R5). krkrz_dev lists krkrlive2d among its plugins with the line commented out (`CMakeLists.txt`: a driver at another commit wanted `find_package(minizip)`, which its vcpkg manifest lacks), so none of its builds has it. And Live2D's Cubism SDK for Native has no WebAssembly Core (its Core folder has Windows, Linux, macOS, Android and iOS libraries), so a web build would need Live2D's Cubism Core for Web bridged into the engine.
-- **What it costs:** Live2D characters (`KAGEnvCharacterLive2D.tjs`) need the plugin, which a game builds with its own Cubism SDK (Live2D's licence keeps the Core out of kagex's engines in any case), and only for Windows today: Linux, the Steam package, macOS and the web draw nothing for them. The smoke test checks the framework with a stand-in for the plugin (`tools/live2d-standin.tjs`).
+- **What it costs:** Live2D characters (`KAGEnvCharacterLive2D.tjs`) need the plugin, which a game builds with its own Cubism SDK (Live2D's licence keeps the Core out of kagex's engines in any case). kagex builds it with `tools/live2d/build.py`, which on Linux and macOS builds the driver through its own CMake (`tools/live2d/driver`: GLAD's GLES 2 loader and the Core's static library, as on Android); the web has no plugin. The smoke test checks the framework with a stand-in for the plugin (`tools/live2d-standin.tjs`) where there's no SDK.
 - **Fix:** build the driver for Linux and macOS as for Android (GLAD's GLES 2 loader, the Core's `lib/linux/x86_64` and `lib/macos/arm64` static libraries), pin the driver's commit in krkrlive2d's CMake, and build krkrlive2d in krkrz_dev when `CUBISM_SDK_CORE` is set.
 
 ## 13. krkrlive2d plays a motion given by number from the start of its group, and a model's Idle group as differences
@@ -155,3 +155,33 @@ Script features that need these log the missing plugin and carry on without the 
 - **Where:** `tTJSNI_QueueSoundBuffer::GetVowel` (`common/sound/QueueSoundBufferImpl.cpp`) scores each vowel by the energy of a 1024-point FFT within ±15% + 50 Hz of fixed first and second formants (a 800/1200, i 300/2300, u 350/1200, e 500/1900, o 500/900 Hz, a man's Japanese vowels) and divides by the total. A voice's energy is at its harmonics, its pitch apart, most of it in the lowest few, so the fundamental and the second harmonic land in one vowel's bands whatever the vowel is (i's and u's, 205 to 452 Hz, for a pitch of 200 to 250 Hz; o's and u's above about 300 Hz), and the formants, between harmonics, barely count; e almost never wins.
 - **What it costs:** mouths by vowel can't come from a voice as it plays: on synthesized lines in four Japanese and four English voices (women's and men's), getVowel named the vowel being said 22% and 39% of the time; a woman's voice (pitch around 200 to 250 Hz, in i's and u's first-formant bands) mostly reads as i, a higher one as o (Pip's babble, at about 440 Hz, 190 of 199 times). So kagex leaves it off (`lipEngineVowels`), and a voice's vowels come from a lip track made before (`<voice>.lip`, kagex-lipsync: 86% and 87% on the same lines), for the voices a game picks; the rest move the mouth by loudness only.
 - **Fix:** estimate the formants from the spectral envelope rather than the raw spectrum (cepstral smoothing or LPC), and place them relative to the voice's own range (or scale the table with its pitch), with wider bands.
+
+## 26. krkrlive2d and its driver don't compile outside Windows
+
+- **Where:** krkrlive2d's `src/utils.cpp` and `src/Live2D.cpp` use `strlen` and `memset` without `<cstring>`, and `Live2D.cpp`'s `setStrProp` takes a `ttstr &` that `Live2D_common.cpp` passes temporaries to, which only MSVC accepts. The driver's `src/LAppModel.cpp` uses `va_start` without `<cstdarg>`. And a plugin built on its own (not in krkrz_dev's tree) gets the Windows declarations of `tp_stub.h` (`IStream`, `WPARAM`) unless it's configured with `KRKRZ_VARIANT=SDL`, which `krkrz.cmake` needs to define `__GENERIC__`.
+- **What it costs:** GCC and Clang stop on them. kagex's build (`tools/live2d/build.py`) applies `tools/live2d/patches/` and passes `KRKRZ_VARIANT=SDL`.
+- **Fix:** include `<cstring>` and `<cstdarg>`, take `const ttstr &`, and have `krkrz.cmake` define `__GENERIC__` whenever the target isn't Windows.
+
+## 27. krkrlive2d can't read a model without a .vmotion3.json
+
+- **Where:** the driver asks the plugin for files that may not be there and expects no stream back: `LoadVariableMotion` opens `<model>.vmotion3.json` for every model, and for a model in a folder `exists()` opens files to test them. krkrlive2d's `PReadStream::OpenFile` (`src/Live2D.cpp`) calls `TVPCreateStream`, which throws when there's no such storage (engine 2.6.5), and nothing catches it.
+- **What it costs:** `Live2DModel.load` fails for every model without that file (Live2D's sample models among them): "ストレージ hiyori.vmotion3.json を開くことができません". kagex's patch catches the exception and returns no stream.
+- **Fix:** catch it (or test `TVPIsExistentStorage` first) in `OpenFile`.
+
+## 28. krkrlive2d reads a zipped model only by a bare name, named as its model3.json
+
+- **Where:** `LInfoModel::LoadAssets` (the driver's `LAppModel.cpp`) opens the zip it's given, then looks in it for `basenamex(filename) + ".model3.json"`, where `basenamex` drops only the extension. Given a placed path (`file://./game/data/fgimage/hiyori.l2d`), it looks for `file://./game/data/fgimage/hiyori.model3.json` in the zip.
+- **What it costs:** a model loads only by its storage name without a folder (`hiyori.l2d`, which the engine's auto path finds), and only when its model3.json has the file's name (the case doesn't matter). `GFX_Live2D.tjs` passes `Storages.extractStorageName`, and `doc/world.txt` says how to name a `.l2d`.
+- **Fix:** look for the model3.json by the file's name without its folder, or take the zip's only `*.model3.json`.
+
+## 29. A parameter can't be set over a motion
+
+- **Where:** krkrlive2d's extra values (`setDiffParameterValue`) are added to what the main motion sets, or multiply it (`setParameterType(p, 1)`), in `MyCubismModel::SaveParameters`; `setParameterValue` sets a value the motion then overwrites. There's no way to make a parameter a given value whatever the motion does (as a Cubism expression's `Overwrite` blend does).
+- **What it costs:** a model whose idle motions blink, smile and talk (Hiyori's) can't hold a face the script gives it, nor keep its mouth shut while it isn't speaking. `KAGEnvCharacterLive2D.tjs` keeps a copy of the model (`Live2DModel.clone`) playing the same motions a frame ahead and adds the face's value less the motion's, which updates every Live2D character's model twice a frame.
+- **Fix:** a parameter type that overwrites (`setParameterType(p, 2)`: `SaveParameters` sets the extra value as the parameter's).
+
+## 30. A .bmp the Linux engine saves says its pixels start 2 bytes late
+
+- **Where:** `TVPSaveAsBMP` (`common/visual/GraphicsLoaderIntf.cpp`) writes `bfSize` and `bfOffBits` from `sizeof(TVP_WIN_BITMAPFILEHEADER)`, which is 16 where the struct isn't packed (`GraphicsLoaderIntf.h` packs it only under `_WIN32`), not the file header's 14 bytes, and then writes the pixels right after the 54 bytes of headers.
+- **What it costs:** `Layer.saveLayerImage(file, "bmp")` writes files whose header points 2 bytes into the pixels: other programs read them with the colour channels shifted (ffmpeg and Pillow see a truncated file), and so would the engine's own loader, which seeks to `bfOffBits`. kagex saves screenshots as PNG; recording frames as .bmp means reading the pixels from the end of the file.
+- **Fix:** use 14 (or pack the struct) for the file header's size.
