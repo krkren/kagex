@@ -46,7 +46,7 @@ That wave is an animation: waving, in data/main/charanim.csv, steps through the 
 *live2d|Live2D
 ; A Live2D character: Hiyori, Live2D Inc.'s sample model, drawn by the krkrlive2d plugin
 ; (KAGEnvCharacterLive2D.tjs). Her model, data/fgimage/hiyori.l2d, comes from
-; tools/assets/make_hiyori.py, and her voice too, with its key for Azure's speech service. A
+; tools/assets/make_hiyori.py; her voice line is eSpeak NG's (make_hiyori.py speech). A
 ; build without the plugin or the model says so instead. See "Live2D Characters" in
 ; doc/world.txt.
 [if exp="!KAGLive2DCanDraw('hiyori')"]

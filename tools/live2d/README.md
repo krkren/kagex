@@ -5,6 +5,18 @@ Characters"), with your own copy of Live2D's Cubism SDK for Native. kagex holds 
 SDK: download it from Live2D (https://www.live2d.com/en/sdk/download/native/), which agrees to its
 licences, and keep it, and the plugin built with it, out of the repository.
 
+`setup.py` walks you through it: Live2D's licences, what this computer needs (and how to get
+what's missing), the SDK, the plugin built for the engine next to `data/` and into
+`plugins/<platform>/` for your game's packages, Hiyori if you want her, the notice for your
+players (`LIVE2D-NOTICE.txt`, added to release.json's extra files) and a quick check that the
+engine draws Live2D characters. It asks before each step; `--check` only reports.
+
+```sh
+python3 tools/live2d/setup.py
+```
+
+What it does, by hand:
+
 ## Windows, Linux and macOS
 
 ```sh

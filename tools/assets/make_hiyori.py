@@ -20,19 +20,18 @@ model --accept-license
     changed.
 
 speech
-    Makes her line, data/voice/hiyori000001.ogg, with Microsoft Azure's text to speech: the
-    en-US-AshleyNeural voice pitched up by 25%, the voice Neuro-sama speaks with. Each line is
-    anim.ks's 【hiyori】 line with voice=N before it. It needs an Azure Speech resource, given by
-    AZURE_SPEECH_KEY and AZURE_SPEECH_REGION (eastus, japaneast ...),
-    and ffmpeg with libvorbis. Then kagex-lipsync makes the line's lip track (tools/lipsync), so
-    her mouth takes the shapes of its vowels:
+    Makes her line, data/voice/hiyori000001.ogg, with eSpeak NG, a formant synthesizer (rules
+    and a model of the vocal tract, not a voice learned from recordings): its US English in the
+    "anika" variant, a young woman's voice. Each line is anim.ks's 【hiyori】 line with voice=N
+    before it. It needs espeak-ng (ESPEAK_NG names it when it isn't on the PATH; eSpeak NG
+    1.52.0 made the committed line) and ffmpeg with libvorbis. Then kagex-lipsync makes the
+    line's lip track (tools/lipsync), so her mouth takes the shapes of its vowels:
 
         kagex-lipsync --cli make hiyori000001.ogg
 
 usage: python3 tools/assets/make_hiyori.py model --accept-license | speech
 """
 import io, os, re, shutil, subprocess, sys, tempfile, urllib.error, urllib.request, zipfile
-from xml.sax.saxutils import escape
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MODEL = os.path.join(ROOT, "data", "fgimage", "hiyori.l2d")
@@ -57,9 +56,10 @@ HIYORI_FILES = [
     "Hiyori.2048/texture_01.png",
 ] + ["motions/Hiyori_m%02d.motion3.json" % i for i in range(1, 11)]
 
-# Azure's text to speech, in the voice Neuro-sama speaks with
-AZURE_VOICE = "en-US-AshleyNeural"
-AZURE_PITCH = "+25%"
+# eSpeak NG's voice for her: US English, the anika variant (pitch 200-300 Hz), a little slower
+# than its 175 words a minute
+ESPEAK_VOICE = "en-us+anika"
+ESPEAK_SPEED = 160
 
 
 def fetch_raw(path):
@@ -124,37 +124,24 @@ def lines():
 
 
 def speech(argv):
-    key, region = os.environ.get("AZURE_SPEECH_KEY"), os.environ.get("AZURE_SPEECH_REGION")
-    if not key or not region:
-        sys.exit("make_hiyori.py speech needs an Azure Speech resource: AZURE_SPEECH_KEY and AZURE_SPEECH_REGION")
+    espeak = os.environ.get("ESPEAK_NG") or shutil.which("espeak-ng")
+    if not espeak:
+        sys.exit("make_hiyori.py speech needs eSpeak NG (espeak-ng on the PATH, or ESPEAK_NG)")
     if not shutil.which("ffmpeg"):
         sys.exit("make_hiyori.py speech needs ffmpeg (with libvorbis)")
     todo = lines()
     if not todo:
         sys.exit("no voiced 【hiyori】 lines in " + SCRIPT)
-    url = "https://%s.tts.speech.microsoft.com/cognitiveservices/v1" % region
+    version = subprocess.run([espeak, "--version"], capture_output=True, text=True).stdout.strip()
+    print(version)
     with tempfile.TemporaryDirectory() as tmp:
         for n, text in sorted(todo.items()):
-            ssml = ('<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">'
-                    '<voice name="%s"><prosody pitch="%s">%s</prosody></voice></speak>' %
-                    (AZURE_VOICE, AZURE_PITCH, escape(text)))
-            req = urllib.request.Request(url, data=ssml.encode("utf-8"), method="POST", headers={
-                "Ocp-Apim-Subscription-Key": key,
-                "Content-Type": "application/ssml+xml",
-                "X-Microsoft-OutputFormat": "riff-48khz-16bit-mono-pcm",
-                "User-Agent": "kagex-make-hiyori",
-            })
-            try:
-                with urllib.request.urlopen(req, timeout=120) as r:
-                    wav_data = r.read()
-            except urllib.error.HTTPError as e:
-                sys.exit("Azure text to speech: %s %s" % (e.code, e.read()[:300]))
             wav = os.path.join(tmp, "line.wav")
-            with open(wav, "wb") as f:
-                f.write(wav_data)
+            subprocess.run([espeak, "-v", ESPEAK_VOICE, "-s", str(ESPEAK_SPEED), "-w", wav, text], check=True)
             out = os.path.join(VOICE, "hiyori%06d.ogg" % n)
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "4",
-                            "-ar", "48000", "-ac", "1", out], check=True)
+                            "-ar", "48000", "-ac", "1", "-map_metadata", "-1", "-fflags", "+bitexact",
+                            "-flags:a", "+bitexact", out], check=True)
             print("%s: %s" % (os.path.relpath(out, ROOT), text))
     print("Now make their lip tracks: kagex-lipsync --cli make " +
           " ".join("hiyori%06d.ogg" % n for n in sorted(todo)))
