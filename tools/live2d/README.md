@@ -28,6 +28,10 @@ the static runtime the Core's library is made for).
   library from the SDK, minizip-ng and KTX (read only). On Windows, Android and iOS it hands
   over to the driver's own.
 
+CI (`.github/workflows/live2d.yml`) builds it on Windows, Linux and macOS with the SDK from the
+private repository krkren/cubism-sdk (the `CUBISM_SDK_TOKEN` secret) and runs the smoke test
+with Live2D required; only logs leave the runner.
+
 The plugin holds the Cubism Core, which Live2D's licence lets a game ship inside the game, not
 in anything handed to other developers: put it in your game's packages only, with terms for
 your players that protect it as the licence says. A business with yearly sales of 10 million

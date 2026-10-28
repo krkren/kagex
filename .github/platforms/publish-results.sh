@@ -8,6 +8,8 @@ cd "$GITHUB_WORKSPACE/results"
 for d in /tmp/kagex-smoke-* "${TMPDIR:-/tmp}"/kagex-smoke-*; do
   [ -d "$d" ] || continue
   for f in "$d"/*.png "$d"/console.txt "$d"/logcat.txt "$d"/simulator.log "$d"/engine.log; do
+    # RESULTS_NO_PICTURES: logs only (the Live2D workflow's screens show Live2D's sample model)
+    [ -n "$RESULTS_NO_PICTURES" ] && [ "${f%.png}" != "$f" ] && continue
     [ -f "$f" ] && cp "$f" . 2>/dev/null || true
   done
 done
@@ -24,6 +26,7 @@ for f in *.log; do
   [ "$(wc -l < "$f")" -gt 600 ] && { head -n 100 "$f"; echo "..."; tail -n 500 "$f"; } > "$f.cut" && mv "$f.cut" "$f"
 done
 rm -f *.tail
+[ -n "$RESULTS_NO_PICTURES" ] && rm -f ./*.png ./*.bmp ./*.jpg
 git init -q -b results .
 git config user.name "kagex-ci"
 git config user.email "kagex-ci@users.noreply.github.com"
