@@ -29,7 +29,9 @@ class KAGAccessibility
 
 	function KAGAccessibility()
 	{
-		available = typeof global.ElementsDialog != "undefined" &&
+		// (not in a run whose window stays hidden: -scncompile, -voicelines; Initialize.tjs)
+		available = !(typeof global.KAGHiddenRun != "undefined" && KAGHiddenRun) &&
+			typeof global.ElementsDialog != "undefined" &&
 			typeof global.ElementsDialog.announce != "undefined" &&
 			typeof global.ElementsDialog.setGameA11y != "undefined";
 		if (available) {

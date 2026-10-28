@@ -28,6 +28,15 @@ var dm = Debug.message; // With this, dm("message"); can display the message in 
 
 
 
+// A run that only compiles scenarios (-scncompile, as kagex-release does) or lists the voices'
+// lines (-voicelines, as kagex-lipsync does): its window stays hidden (KAGWindow), and nothing
+// that needs a window on the screen starts (the menu bar, screen readers, layerExSave)
+
+var KAGHiddenRun = (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") ||
+	System.getArgument("-voicelines") != "";
+
+
+
 // Plugins are linked as "plugin/Foo.dll" so Windows finds them (the x64 engine's own plugin
 
 // folder is plugin64/). The SDL engine on Linux/macOS maps "Foo.dll" to "libFoo.so" but puts
@@ -670,7 +679,7 @@ KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "und
 // key (F12, KAGWindow.saveScreenshot) doesn't stop the game while a PNG is written. It gives
 // the method only to windows made after it's linked, so it's linked before the game window.
 // Where it's missing (the browser, Android and iOS builds) screenshots are written in one go
-KAGLinkPlugin("plugin/layerExSave.dll") if typeof global.Window.startSaveLayerImage == "undefined";
+KAGLinkPlugin("plugin/layerExSave.dll") if typeof global.Window.startSaveLayerImage == "undefined" && !KAGHiddenRun;
 // JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
 // <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
 KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";

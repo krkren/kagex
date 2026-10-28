@@ -13297,16 +13297,19 @@ class KAGWindow extends Window
 	var menuBarView;               // the bar (KAGMenuBar), once it has been shown
 	var menuDropDown;              // the menu dropped down from it (KAGMenuDropDown), while one is open
 	var menuBarFullScreen;         // the screen mode asked for last (fullScreened is set after the switch)
+	var menuBarViewport = false;   // the game is placed under a strip (setViewport "custom")
 	var menuChosen;                // the item the menu closed for, done once it has closed
 	var menuChoiceTrigger;
 
 	// Whether the bar is there: in windowed mode, with the menu visible, once the window is
 	// made (Initialize.tjs sets its size again at the end, and the bar draws with kag's fonts)
+	// and shown: a run that compiles scenarios or lists voice lines keeps its window hidden and
+	// starts no Elements UI (KAGHiddenRun, Initialize.tjs)
 	property menuBarShown
 	{
 		getter {
 			var full = menuBarFullScreen !== void ? menuBarFullScreen : fullScreened;
-			return menuBarEnabled && !full && typeof global.kag == "Object" && global.kag === this &&
+			return menuBarEnabled && !full && visible && typeof global.kag == "Object" && global.kag === this &&
 				typeof this.menu == "Object" && menu !== void && menu.visible && KAGMenuBarAvailable(this);
 		}
 	}
@@ -13323,9 +13326,12 @@ class KAGWindow extends Window
 	{
 		if (typeof this.setViewport == "undefined") return;
 		var strip = menuStripHeight;
+		// the viewport is the engine's own ("contain") until a strip first moves the game
+		if (strip == 0 && !menuBarViewport) return;
 		try {
 			if (strip > 0) setViewport("custom", zoomNumer / zoomDenom, 0.5, 0, 0, strip);
 			else setViewport("contain", 1.0, 0.5, 0.5, 0, 0);
+			menuBarViewport = strip > 0;
 		} catch (e) {
 			dm("The menu bar's strip: " + e.message);
 			return;
