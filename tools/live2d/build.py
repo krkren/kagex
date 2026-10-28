@@ -22,6 +22,11 @@ environment variable, when there's no --sdk). It needs git, CMake 3.22 or newer 
 minimum) and a C++17 compiler: on Windows, Visual Studio, run from its developer command prompt
 for the engine's architecture when Ninja is used (else --arch picks it).
 
+A Linux plugin needs the glibc of the system it's built on: --steamrt builds it in Valve's Steam
+Linux Runtime (sniper) SDK container (docker or podman; glibc 2.31, as krkrz_linux's Steam
+engine), so it loads on every Linux the engines run on and inside the Steam Runtime. Use it for a
+release.
+
 Linux, macOS, Android and iOS build the driver through tools/live2d/driver (its own CMake builds
 for Windows, Android and iOS only, and its iOS build wants the Core's libraries where Cubism 5
 R5 no longer has them); Windows builds it with its own. Android and iOS link every plugin into
@@ -29,7 +34,7 @@ the engine, so there the plugin is built with the engine by the platform's kit (
 krkrz_ios): --kit <the kit config> fetches and patches the sources, adds the plugin to the
 config and writes the environment the kit's build needs to <work>/kit.env.
 
-usage: python3 tools/live2d/build.py [--sdk PATH] [--out DIR] [--work DIR] [--arch ARCH] [--jobs N]
+usage: python3 tools/live2d/build.py [--sdk PATH] [--out DIR] [--work DIR] [--arch ARCH] [--jobs N] [--steamrt]
        python3 tools/live2d/build.py --sdk PATH --kit app-config.json|ios-config.json [--work DIR]
 """
 import argparse, glob, os, platform, shutil, subprocess, sys, zipfile
@@ -167,6 +172,62 @@ def kit(config, work, core, src):
     print("%s: krkrlive2d from %s; the kit's build needs the environment in %s" % (config, folder, envfile))
 
 
+# --steamrt: Valve's Steam Linux Runtime 3.0 (sniper) SDK, Debian 11 with glibc 2.31 and a
+# backported GCC 14, which krkrz_linux builds the Steam engine in: a plugin built there loads on
+# every Linux the engines run on and inside the Steam Runtime; one built on a newer system needs
+# that system's glibc. Its CMake is too old for KTX-Software, so a newer one is fetched
+STEAMRT_IMAGE = "registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest"
+STEAMRT_CMAKE = "3.31.7"
+STEAMRT_NINJA = "1.12.1"
+
+
+def steamrt(opts):
+    """Runs this build again in the Steam Runtime's SDK container (docker or podman), with the
+    folders it reads and writes at the same paths inside"""
+    tool = shutil.which("docker") or shutil.which("podman")
+    if not tool:
+        sys.exit("--steamrt needs docker or podman")
+    work, out = os.path.abspath(opts.work), os.path.abspath(opts.out)
+    os.makedirs(work, exist_ok=True)
+    os.makedirs(out, exist_ok=True)
+    sdk = os.path.abspath(os.path.expanduser(opts.sdk)) if opts.sdk else ""
+    paths = [ROOT, work, out] + ([sdk if os.path.isdir(sdk) else os.path.dirname(sdk)] if sdk else [])
+    mounts = []
+    for m in sorted(set(paths), key=len):
+        if not any(m == x or m.startswith(x + os.sep) for x in mounts):
+            mounts.append(m)
+    args = [tool, "run", "--rm", "--user", "%d:%d" % (os.getuid(), os.getgid()),
+            "-e", "HOME=/tmp", "-e", "CC=gcc-14", "-e", "CXX=g++-14"]
+    for m in mounts:
+        args += ["-v", "%s:%s" % (m, m)]
+    args += ["-w", ROOT, STEAMRT_IMAGE, "python3", "-B", os.path.join(HERE, "build.py"), "--in-steamrt",
+             "--work", work, "--out", out, "--jobs", str(opts.jobs)] + (["--sdk", sdk] if sdk else [])
+    run([tool, "pull", "-q", STEAMRT_IMAGE])
+    run(args)
+
+
+def steamrt_tools(work):
+    """Inside the Steam Runtime: CMake and Ninja new enough, from their GitHub releases, cached
+    in <work>/steamrt-tools, ahead of the image's on the PATH"""
+    import io, tarfile, urllib.request
+    base = os.path.join(work, "steamrt-tools")
+    cmake_dir = os.path.join(base, "cmake-%s-linux-x86_64" % STEAMRT_CMAKE)
+    if not os.path.exists(os.path.join(cmake_dir, "bin", "cmake")):
+        url = "https://github.com/Kitware/CMake/releases/download/v%s/cmake-%s-linux-x86_64.tar.gz" % (STEAMRT_CMAKE, STEAMRT_CMAKE)
+        print("fetching " + url, flush=True)
+        with urllib.request.urlopen(url) as r, tarfile.open(fileobj=io.BytesIO(r.read()), mode="r:gz") as t:
+            t.extractall(base)
+    ninja_dir = os.path.join(base, "ninja-" + STEAMRT_NINJA)
+    if not os.path.exists(os.path.join(ninja_dir, "ninja")):
+        url = "https://github.com/ninja-build/ninja/releases/download/v%s/ninja-linux.zip" % STEAMRT_NINJA
+        print("fetching " + url, flush=True)
+        with urllib.request.urlopen(url) as r, zipfile.ZipFile(io.BytesIO(r.read())) as z:
+            os.makedirs(ninja_dir, exist_ok=True)
+            z.extract("ninja", ninja_dir)
+        os.chmod(os.path.join(ninja_dir, "ninja"), 0o755)
+    os.environ["PATH"] = os.pathsep.join([os.path.join(cmake_dir, "bin"), ninja_dir, os.environ.get("PATH", "")])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--sdk", default=os.environ.get("CUBISM_SDK_CORE"),
@@ -179,7 +240,17 @@ def main():
                     help="Android and iOS: don't build; ready the sources for a kit's engine build "
                          "instead, adding the plugin to the kit config (app-config.json or "
                          "ios-config.json) and writing the environment it needs to <work>/kit.env")
+    ap.add_argument("--steamrt", action="store_true",
+                    help="Linux: build in the Steam Linux Runtime's SDK container (docker or podman), "
+                         "so the plugin loads on every Linux the engines run on, Steam's runtime too")
+    ap.add_argument("--in-steamrt", action="store_true", help=argparse.SUPPRESS)
     opts = ap.parse_args()
+    if opts.steamrt:
+        if not sys.platform.startswith("linux"):
+            sys.exit("--steamrt builds the Linux plugin, on Linux")
+        return steamrt(opts)
+    if opts.in_steamrt:
+        steamrt_tools(os.path.abspath(opts.work))
 
     for tool in ("git", "cmake"):
         if not shutil.which(tool):

@@ -58,6 +58,26 @@ def read_package(path):
     return files
 
 
+# Live2D's Cubism Core (the Live2D plugin, or an engine with it linked in) may go out inside a
+# game only, never in an engine package handed to other developers (tools/live2d/README.md):
+# this string is the Core's own
+CUBISM_CORE_MARK = b"Live2D Cubism SDK Core Version"
+
+
+def refuse_cubism_core(files, allowed):
+    """Stops when a file holds the Cubism Core, unless the package is the game's own
+    (--with-cubism-core): files is {name: (data, mode)}"""
+    held = sorted(n for n, (data, _mode) in files.items() if CUBISM_CORE_MARK in data)
+    if not held:
+        return
+    if not allowed:
+        sys.exit("%s hold%s Live2D's Cubism Core, which may go out inside a game only, never in an engine "
+                 "package for other developers. For your own game's engine package (engines/ next to data/), "
+                 "add --with-cubism-core" % (", ".join(held), "s" if len(held) == 1 else ""))
+    print("note: %s hold%s Live2D's Cubism Core: this package is for your game's own builds only"
+          % (", ".join(held), "s" if len(held) == 1 else ""))
+
+
 def keep(platform, name):
     parts = name.split("/")
     leaf = parts[-1]
@@ -91,6 +111,8 @@ def main():
     ap.add_argument("--version", required=True)
     ap.add_argument("--debug", action="store_true")
     ap.add_argument("--licenses-from")
+    ap.add_argument("--with-cubism-core", action="store_true",
+                    help="a package for your own game's builds may hold Live2D's Cubism Core (the Live2D plugin)")
     a = ap.parse_args()
 
     files = {n: v for n, v in read_package(a.package).items() if keep(a.platform, n)}
@@ -106,6 +128,7 @@ def main():
     if a.platform == "web" and not {"index.html", "krkrz.js", "krkrz.wasm", "webconfig.js"} <= set(files):
         sys.exit("%s isn't a krkrz_web site" % a.package)
     manifest = {"format": 1, "platform": a.platform, "version": a.version, "debug": a.debug}
+    refuse_cubism_core(files, a.with_cubism_core)
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         info = zipfile.ZipInfo("engine.json", date_time=(2026, 1, 1, 0, 0, 0))
         info.create_system = 3

@@ -53,7 +53,8 @@ jobs:
         include:
           # the engines are x64 on Windows and arm64 on macOS
           - { os: windows-2022, name: windows, arch: x64, video: windows }
-          - { os: ubuntu-24.04, name: linux, arch: '', video: offscreen }
+          # Linux in the Steam Runtime's SDK (glibc 2.31), as a game's release would build it
+          - { os: ubuntu-24.04, name: linux, arch: '', video: offscreen, buildopts: --steamrt }
           - { os: macos-15, name: macos, arch: arm64, video: cocoa }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -111,10 +112,15 @@ jobs:
           { cmake --version | head -1; ninja --version; } | tee results/toolchain.txt
           arch=(); [ -n "${{ matrix.arch }}" ] && arch=(--arch "${{ matrix.arch }}")
           .github/platforms/run-logged.sh build $PY -B tools/live2d/build.py --sdk "$WORK/cubism-sdk/$CUBISM_SDK_ZIP" \
-            --work "$WORK/live2d" --out "$WORK/live2d-plugin" "${arch[@]}"
+            --work "$WORK/live2d" --out "$WORK/live2d-plugin" "${arch[@]}" ${{ matrix.buildopts }}
           ls -l "$WORK/live2d-plugin" | tee results/plugin.txt
           case "$RUNNER_OS" in
-            Linux) nm -D --defined-only "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -v ' _' >> results/plugin.txt ;;
+            Linux)
+              nm -D --defined-only "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -v ' _' >> results/plugin.txt
+              # built in the Steam Runtime: it needs no newer glibc than 2.31
+              glibc=$(objdump -T "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -oE 'GLIBC_[0-9.]+' | sort -uV | tail -1)
+              echo "needs $glibc" | tee -a results/plugin.txt
+              printf '%s\n' "$glibc" "GLIBC_2.31" | sort -CV || { echo "::error title=glibc::the plugin needs $glibc, newer than the Steam Runtime's 2.31"; exit 1; } ;;
             macOS) otool -L "$WORK/live2d-plugin/libkrkrlive2d.dylib" >> results/plugin.txt; lipo -info "$WORK/live2d-plugin/libkrkrlive2d.dylib" >> results/plugin.txt ;;
           esac
       - name: The engine
