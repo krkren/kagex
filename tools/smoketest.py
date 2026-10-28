@@ -913,7 +913,9 @@ global.__smokeWrap = function(text, strategy, startX, lineCount) {
 	var hist = kag.historyWriteEnabled, tw = kag.textWriteEnabled;
 	try {
 		lay.useRichText = kag.fore.messages[0].useRichText;
-		lay.clear(); // the font size from the settings
+		// the font size from the settings (a comment of its own line: the Android harness sends
+		// the command as one line and leaves out lines that are only a comment)
+		lay.clear();
 		lay.setPosition(%[ left:0, top:0, width:1800, height:40 + lineCount * (lay.fontSize + lay.lineSpacing) + (lay.fontSize >> 1),
 			marginl:48, margint:20, marginr:60, marginb:20 ]);
 		lay.clear();
