@@ -18,3 +18,6 @@ __pycache__
 data/fgimage/hiyori.l2d
 # tools/live2d/build.py's sources and build (the plugin holds Live2D's Cubism Core)
 tools/live2d/build/
+# a game's own plugins for kagex-release (tools/release/README.md); the Live2D plugin holds the
+# Cubism Core, which must never be published from here
+/plugins/

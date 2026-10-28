@@ -10,11 +10,13 @@ python3 tools/live2d/build.py --sdk ~/Downloads/CubismSdkForNative-5-r.5.zip
 ```
 
 puts `libkrkrlive2d.so` (Linux), `libkrkrlive2d.dylib` (macOS) or `krkrlive2d.dll` (Windows) in
-`plugin/`. It needs git, CMake 3.22+ and a C++17 compiler (Visual Studio on Windows, from its
+`plugin/`, where the engine next to `data/` finds it. For a release, build it into
+`plugins/<platform>/` instead (`--out plugins/linux`, `plugins/windows`, `plugins/macos`), which
+kagex-release copies into that platform's packages (`tools/release/README.md`, "Your own
+plugins"). It needs git, CMake 3.22+ and a C++17 compiler (Visual Studio on Windows, from its
 developer command prompt when Ninja is there); `--arch` picks the engine's architecture on macOS
-(arm64, x86_64) and Windows (Win32, x64). Tested on Linux; the macOS and Windows builds are
-written but haven't been run yet. It builds as krkrlive2d's own presets do (C++17, and on Windows
-the static runtime the Core's library is made for).
+(arm64, x86_64) and Windows (Win32, x64). It builds as krkrlive2d's own presets do (C++17, and
+on Windows the static runtime the Core's library is made for).
 
 - `build.py` fetches the sources at the commits kagex is tested with (krkrlive2d, its driver
   wtnbgo/live2d with its submodules, tp_stub and ncbind) into `tools/live2d/build/`

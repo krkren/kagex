@@ -1516,12 +1516,16 @@ src/plugins/krkrlive2d, but doesn't build it at engine 2.6.5). kagex builds it f
    applies kagex's fixes to them (tools/live2d/patches; UPSTREAM.md), builds them with the SDK's
    Core and puts the plugin in plugin/: libkrkrlive2d.so on Linux, libkrkrlive2d.dylib on macOS,
    krkrlive2d.dll on Windows (--arch: the engine's, arm64 or x86_64 on macOS, Win32 or x64 on
-   Windows). It's tested on Linux; the macOS and Windows builds aren't yet. The driver's own
-   CMake builds for Windows, Android and iOS, so on Linux and macOS it's built through
+   Windows). CI builds and tests it on all three (.github/workflows/live2d.yml). The driver's
+   own CMake builds for Windows, Android and iOS, so on Linux and macOS it's built through
    tools/live2d/driver. Android, iOS and the web aren't built yet (TODO.md).
 3. The framework links plugin/krkrlive2d.dll (the engine's name for the plugin on every
    platform) the first time a Live2D character is drawn.
 4. Put each model's .l2d in the game's data, where its scripts find it (fgimage/, say).
+5. For a release, put each platform's plugin in plugins/<platform>/ next to data/ (build.py
+   --out plugins/linux, plugins/windows or plugins/macos): kagex-release copies a game's own
+   plugins from there into that platform's packages (tools/release/README.md, "Your own
+   plugins").
 
 
 

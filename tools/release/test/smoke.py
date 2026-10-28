@@ -152,6 +152,38 @@ def cli_tests(exe, proj):
     step("an unknown platform is refused", code != 0, out.strip().splitlines()[0] if out.strip() else "")
 
 
+def own_plugin_tests(exe, proj):
+    """The game's own plugins (plugins/<platform>/ next to data/): the plan lists a desktop's,
+    check warns about a file that isn't a plugin for its platform and about a folder for an
+    engine that has its plugins linked in. Leaves the desktops' plugins in place for build_tests"""
+    s = json.loads((proj / "release.json").read_text(encoding="utf-8"))
+    for d, n in (("windows", "krkrgame.dll"), ("linux", "libkrkrgame.so"), ("macos", "libkrkrgame.dylib")):
+        (proj / "plugins" / d).mkdir(parents=True, exist_ok=True)
+        (proj / "plugins" / d / n).write_bytes(b"not a real plugin")
+    if host_id() == "macos":
+        # codesign signs it with the app, so it has to be a library
+        src = proj / "plugins" / "krkrgame.c"
+        src.write_text("int krkrgame(void) { return 0; }\n")
+        subprocess.run(["cc", "-dynamiclib", "-arch", "arm64", "-o", str(proj / "plugins" / "macos" / "libkrkrgame.dylib"), str(src)], check=True)
+        src.unlink()
+    (proj / "plugins" / "linux" / "notes.txt").write_text("not a plugin")
+    (proj / "plugins" / "android").mkdir(parents=True, exist_ok=True)
+    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=windows,linux,steam,macos")
+    lines = {o["platform"]: " | ".join(o.get("contents", [])) for o in json.loads(out)["outputs"]}
+    step("own plugins: the plan lists them", "krkrgame.dll" in lines.get("windows", "") and "libkrkrgame.so" in lines.get("linux", "")
+         and "libkrkrgame.so" in lines.get("steam", "") and "libkrkrgame.dylib" in lines.get("macos", "")
+         and "notes.txt" not in lines.get("linux", ""), lines.get("linux", ""))
+    t = dict(s)
+    t["platforms"] = json.loads(json.dumps(s["platforms"]))
+    t["platforms"]["android"]["enabled"] = True
+    code, errs, warns = check_issues(exe, proj, t)
+    w = " ".join(warns.get("contents.plugins", []))
+    step("own plugins: check warns about a stray file and plugins/android", "notes.txt" in w and "plugins/android/" in w and
+         "contents.plugins" not in errs, w)
+    (proj / "plugins" / "linux" / "notes.txt").unlink()
+    shutil.rmtree(proj / "plugins" / "android")
+
+
 def server_tests(exe, proj, args):
     port = free_port()
     env = dict(os.environ)
@@ -313,6 +345,8 @@ def build_tests(exe, proj, args):
             step(p + ": an archive per media folder beside data.xp3", {n + f for f in SPLIT_PARTS} <= set(m))
             if p == "linux":
                 step("linux: menu entry and icon", n + "kagex-sample.desktop" in m and n + "kagex-sample.png" in m)
+            if (proj / "plugins" / "linux").is_dir():
+                step(p + ": the game's own plugin", n + "plugin/libkrkrgame.so" in m)
     if "macos" in names:
         mz = outdir / (base + "macos.zip")
         if mz.exists():
@@ -324,6 +358,8 @@ def build_tests(exe, proj, args):
                  {app + "Resources/data.xp3", app + "Resources/AppIcon.icns", app + "MacOS/krkrz.cf", app + "MacOS/krkrz"} <= nl)
             step("macos: an archive per media folder beside data.xp3 in Resources", {app + "Resources/" + f for f in SPLIT_PARTS} <= nl)
             step("macos: Info.plist", "com.krkren.kagexsample" in plist and "<string>KAGEX Sample</string>" in plist)
+            if (proj / "plugins" / "macos").is_dir():
+                step("macos: the game's own plugin beside the executable", app + "MacOS/libkrkrgame.dylib" in nl)
             app_dir = outdir / (base + "macos") / "KAGEX Sample.app"
             c, o = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app_dir)], capture_output=True, text=True).returncode, ""
             step("macos: the signature verifies", c == 0)
@@ -365,6 +401,8 @@ def build_tests(exe, proj, args):
         step("windows: the media archives beside the bound exe", {n + f for f in SPLIT_PARTS} <= set(z.namelist()))
         plugins = [x for x in z.namelist() if x.startswith(n + "plugin/") and not x.endswith("/")]
         step("windows: only the linked plugins", 0 < len(plugins) < 27, "%d plugins" % len(plugins))
+        if (proj / "plugins" / "windows").is_dir():
+            step("windows: the game's own plugin too", n + "plugin/krkrgame.dll" in z.namelist())
     lz = outdir / (base + "steam.zip")
     if lz.exists():
         z = zipfile.ZipFile(lz)
@@ -372,6 +410,8 @@ def build_tests(exe, proj, args):
         info = z.getinfo(n + "kagex-sample")
         step("steam: zip with a data folder and the executable flag", n + "data/startup.tjs" in z.namelist() and n + "data/system/Initialize.tjs" in z.namelist()
              and (info.external_attr >> 16) & 0o111 != 0)
+        if (proj / "plugins" / "linux").is_dir():
+            step("steam: the game's own plugin (plugins/linux)", n + "plugin/libkrkrgame.so" in z.namelist())
         step("steam: the data folder has the media folders the other platforms' archives took",
              all(any(x.startswith(n + "data/" + f[:-4] + "/") for x in z.namelist()) for f in SPLIT_PARTS)
              and not any(x.endswith(".xp3") for x in z.namelist()))
@@ -380,6 +420,8 @@ def build_tests(exe, proj, args):
     if host_id() in ("windows", "linux"):
         chk = r.get("check", {})
         step("test run with the data bound into the executable", chk.get("ok") is True, chk.get("message", "") + " " + "; ".join(chk.get("errors", [])))
+    # the other groups build without them
+    shutil.rmtree(proj / "plugins", ignore_errors=True)
 
 
 def web_tests(exe, proj, args):
@@ -1950,7 +1992,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,server,build,hidden,web,android,ios,media,scripts,scenes,patch,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -1966,6 +2008,8 @@ def main():
             keys_tests(exe, proj, Path(t))
         if want("signing"):
             signing_validation_tests(exe, proj)
+        if want("plugins") or (args.engines and want("build")):
+            own_plugin_tests(exe, proj)
         if want("server"):
             server_tests(exe, proj, args)
         if args.engines:

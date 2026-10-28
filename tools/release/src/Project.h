@@ -5,6 +5,7 @@
 #pragma once
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace kr {
 
@@ -38,5 +39,18 @@ bool findProject(const std::filesystem::path& dir, Project& out, std::string& er
 
 /// Lower case letters, digits and single '-' (for file and folder names)
 std::string slug(const std::string& s);
+
+/// Where the game keeps its own plugins for a desktop platform: plugins/<platform>/ next to
+/// data/ ("windows", "linux", "macos"; Steam takes Linux's). Plugins built for the game, such as
+/// krkrlive2d with its own Cubism SDK (tools/live2d), which the engine packages can't carry
+std::filesystem::path gamePluginFolder(const Project& project, const std::string& platform);
+
+/// Whether a file name is a plugin library for a desktop platform: a .dll (Windows), lib*.so
+/// (Linux, Steam), a .dylib (macOS); false for the others, whose engines link plugins in
+bool isPluginFor(const std::string& platform, const std::string& name);
+
+/// The game's own plugins for a platform (gamePluginFolder's libraries for it), by name; a build
+/// copies them in after the engine's, so one of a name the engine has replaces it
+std::vector<std::filesystem::path> gamePlugins(const Project& project, const std::string& platform);
 
 } // namespace kr

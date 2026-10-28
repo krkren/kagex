@@ -401,6 +401,12 @@ Json makePlan(const Json& s, const Project& p)
 			else if (dataMode == "folder" || dataMode == "files") add("data/");
 			partsEntry("");
 		};
+		// the game's own plugins, copied in beside the engine's (plugins/<platform>/)
+		auto ownPlugins = [&]() {
+			std::string names;
+			for (const auto& f : gamePlugins(p, id)) names += (names.empty() ? "" : ", ") + krt::fromPath(f.filename());
+			return names;
+		};
 		auto archived = [&](const std::string& autoKind) {
 			const std::string k = archive == "auto" ? autoKind : archive;
 			if (k == "none") return std::string();
@@ -410,14 +416,14 @@ Json makePlan(const Json& s, const Project& p)
 			add(exe + ".exe" + (dataMode == "bind" ? " (with the data bound in)" : ""));
 			add(exe + ".cf");
 			add("SDL3.dll");
-			add("plugin/");
+			add(ownPlugins().empty() ? "plugin/" : "plugin/ (with the game's own: " + ownPlugins() + ")");
 			dataEntry();
 			package = archived("zip");
 		} else if (id == "linux" || id == "steam") {
 			add(exe + (dataMode == "bind" ? " (with the data bound in)" : ""));
 			add(exe + ".cf");
 			add("libSDL3.so.0");
-			add("plugin/");
+			add(ownPlugins().empty() ? "plugin/" : "plugin/ (with the game's own: " + ownPlugins() + ")");
 			dataEntry();
 			if (flag(s, base + "desktopEntry") && id == "linux") add(exe + ".desktop, " + exe + ".png");
 			package = archived("tar.gz");
@@ -425,6 +431,7 @@ Json makePlan(const Json& s, const Project& p)
 			const std::string app = str(s, "identity.title") + ".app";
 			add(app);
 			add("  Contents/MacOS/krkrz, Contents/Resources/" + std::string(dataMode == "xp3" ? "data.xp3" : "data/"));
+			if (!ownPlugins().empty()) add("  Contents/MacOS/: the game's own plugins: " + ownPlugins());
 			partsEntry("  Contents/Resources/");
 			package = str(s, base + "format") == "dmg" ? folder + ".dmg" : archived("zip");
 		} else if (id == "web") {
