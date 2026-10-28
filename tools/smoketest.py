@@ -613,8 +613,8 @@ def prompt_steps(eng, step):
 
 
 def a11y_framework(eng):
-    """Whether screen readers are given the game's text and UI (Accessibility.tjs, after
-    0.11.0) and the engine lets the test see what they get (Agent.a11yTree: the desktop REPLs)"""
+    """Whether screen readers are given the game's text and UI (Accessibility.tjs, since
+    0.12.0) and the engine lets the test see what they get (Agent.a11yTree: the desktop REPLs)"""
     return eng.tjs('return typeof global.KAGA11y == "Object" && KAGA11y !== void && KAGA11y.available'
                    ' && typeof global.Agent != "undefined" && typeof Agent.a11yTree != "undefined" ? 1 : 0;') == 1
 
@@ -656,7 +656,7 @@ def a11y_said(eng, since):
 
 def elements_screens(eng):
     """Whether the steps for the menu bar and the controls list run here: on the desktop engines
-    (where they've been checked), with a framework that has them (after 0.11.0) and an engine
+    (where they've been checked), with a framework that has them (since 0.12.0) and an engine
     with ElementsPanel. Says why not"""
     if not isinstance(eng, DesktopEngine):
         print("     (skipped: checked on the desktop engines)", flush=True)
@@ -1124,7 +1124,7 @@ def sample_steps(eng):
         eng.tjs('kag.process("char.ks", "*start"); return 1;')
         eng.wait("char.ks's first text", 'world_object.player !== void && world_object.player.working'
                  ' && world_object.player.curTextId >= 1 && kag.inStable', timeout=20)
-        # (wrapText, the line as drawn, after 0.11.0; wrapSplitLine, its words, before)
+        # (wrapText, the line as drawn, since 0.12.0; wrapSplitLine, its words, before)
         r = str(eng.tjs('var t = world_object.player.curText.text, w = typeof kag.wrapText != "undefined"'
                         ' ? (kag.wrapText != "" ? kag.wrapText.split(" ").count : -1)'
                         ' : kag.wrapSplitLine !== void ? kag.wrapSplitLine.count : -1;'
