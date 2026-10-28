@@ -1156,9 +1156,32 @@ filled as far as it goes, then the remaining text is laid out. The plan is made 
 text goes somewhere it didn't expect (a new page, [r], another font), and text the line doesn't
 have ([emb], [ch], a macro) ends it for the rest of the line. Without krkr_richtext (the browser
 and iOS builds), and as a check on the plan, each word that won't fit on the line goes to the
-next one. KAG still draws each character, so the text speed, ruby, links and waits are as
-before; vertical text, and Japanese and Chinese, keep KAG's own line breaking (kinsoku). The
-history log wraps by its own width, a word at a time.
+next one. The history log wraps by its own width, a word at a time.
+
+Japanese and Chinese (no spaces between words) break where the same line breaker plans,
+filling each line as far as it goes (lineBreakStrategy is for text with spaces). It follows the
+Unicode rules with the language's: a closing bracket, a full stop, a comma or a small kana
+doesn't start a line, and a word in Latin letters isn't split. Where KAG let such a character
+hang into the margin at the end of the line (marginRCh), the line breaker takes the character
+before it to the next line, so the margin stays empty. Without krkr_richtext, and in vertical
+text, they keep KAG's own character wrap with its kinsoku, which also catches a line that runs
+too long. Text that isn't the line's ([emb], a macro) leaves the rest of the line to KAG's wrap.
+
+Where krkr_richtext draws the message window, the characters of a line are drawn together, as
+its line breaker lays them out: each time the text stops (after every character at the usual
+speed, once a line when it comes all at once), the line so far is laid out again (its
+StyledLayout) and drawn whole. So the characters are kerned and shaped together (ligatures,
+accents and emoji sequences made of several characters) and placed to a fraction of a pixel.
+It's on unless Config.tjs says otherwise:
+
+
+    ;useStyledLayout = true;
+
+
+KAG still places each character and times it, so the text speed, waits, links and the word wrap
+are as before: a run of characters is one font and colour on one line, and a character with
+ruby is a run of its own, with KAG's ruby (rubySize, rubyOffset) over it. Vertical text, a
+pitch ([style pitch]) and the character fade (hasChFadeLayer) draw a character at a time.
 
 
 

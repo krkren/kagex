@@ -49,7 +49,7 @@ These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-
 ## 8. Android can't link the engine with accessibility
 
 - **Where:** with `KRKRZ_USE_A11Y` (the `a11y` plugin), the engine's AccessKit setup can't find its Android library: `find_library` runs inside the NDK's find root. `libkrkrz.so` then doesn't link.
-- **What it costs:** the Android build has no screen reader support, which `TODO.md` plans for the other platforms.
+- **What it costs:** the Android build has no screen reader support, which the desktop builds have (since 0.12.0).
 - **Fix:** find AccessKit's Android library outside the NDK's find root (an imported target or an explicit path).
 
 ## 9. Errors in compiled scripts have no line numbers
@@ -84,49 +84,61 @@ Script features that need these log the missing plugin and carry on without the 
 - `windowEx`: the extended window events, hiding the menu bar, and the window-control menu icons (`MenuItem.bi*`). `MainWindow.tjs` and `Menus.tjs` skip those paths.
 - `flashPlayer`: Flash movies (`GFX_Flash.tjs`). Flash itself is long gone, so this matters only to old games being ported.
 
-## 14. A Yes/No prompt during an overlay movie can open under the movie
+## 14. StyledLayout's ruby can't be sized or placed
+
+- **Where:** krkr_richtext's `TextRenderer::drawStyledLayout` (`richtext/src/TextRenderer.cpp`) draws a `<ruby>`'s text at `parserOptions.rubyScale` (0.5) times the size of the text under it, with its descent on the text's ascent, centred over it. `TagParser::ParseOptions` (`rubyScale` and the rest) can't be set from TJS: the `StyledLayout` binding (`src/main.cpp`) has no options, and there is no gap or offset at all.
+- **What it costs:** KAG sizes and places ruby with `rubySize` and `rubyOffset` (the sample's 15 px, 3 px down, over 39 px text, between lines 5 px apart). StyledLayout's would be 19.5 px and reach into the line above, so where the message window draws a line's characters together (`useStyledLayout`, `MessageLayer.drawStyledRun`) a character with ruby is a run of its own and KAG draws its ruby as before; krkr_richtext doesn't lay out the ruby with the text.
+- **Fix:** bind the parse options (at least `rubyScale`) to `StyledLayout`, and give ruby an offset from the text (or a style of its own: `<ruby text='...' style='name'>`).
+
+## 15. krkr_richtext's Japanese line breaking is only for vertical text, which TJS can't reach
+
+- **Where:** krkr_richtext's JLReq typesetting (`richtext/src/vertical/`: `CharClass`, `LineBreaker`, `LineItemBuilder`, `VerticalParagraphLayout`, `BlockLayout`: kinsoku as penalties, hanging punctuation, punctuation spacing, ruby that widens its text, tate-chu-yoko) lays out vertical text only, and `src/main.cpp` binds none of it. Horizontal text goes through minikin (`ParagraphLayout`), whose line breaker follows UAX #14 with ICU's tailoring for the language: a closing bracket, a full stop or a small kana doesn't start a line, but nothing hangs into the margin and nothing is spaced or squeezed.
+- **What it costs:** vertical messages keep KAG's own drawing and its character wrap with kinsoku. Horizontal Japanese and Chinese lines break where `ParagraphLayout` says (`needsToBeWrapped`), so they end before `relinexpos`: the margin KAG keeps for hanging punctuation (`marginRCh`) stays empty, and a character that can't start a line takes the one before it to the next line, where KAG let it hang.
+- **Fix:** bind the vertical layout (a `VerticalStyledLayout` with `drawStyledLayout` and per-line results), and offer the JLReq line breaker (with hanging) for horizontal text too.
+
+## 16. A Yes/No prompt during an overlay movie can open under the movie
 
 - **Where:** the SDL engine's `Window.setMaskRegion` throws "not implemented", so `YesNoFrameDialogWindow`, the shaped window KAG shows over a playing movie, can't be used.
 - **What it costs:** on the SDL engine every prompt is a layer of the game window (`YesNoDialogLayer`), which an overlay movie can cover.
 - **Fix:** implement `setMaskRegion` (SDL3 has shaped windows: `SDL_SetWindowShape`).
 
-## 15. Full screen in the browser waits for the next tap
+## 17. Full screen in the browser waits for the next tap
 
 - **Where:** the browser build requests full screen from its own main loop rather than from a user event, and browsers only allow it during one.
 - **What it costs:** on Android and iPad, choosing full screen in the Config screen takes effect only on the next tap.
 - **Fix:** make the request from the input event that triggers it, or queue it to the next pointer event in JavaScript.
 
-## 16. Tests can't hold a key down
+## 18. Tests can't hold a key down
 
 - **Where:** keys injected through `Agent` or the REPL don't change `System.getKeyState`.
 - **What it costs:** the smoke tests press and release keys over two frames, but can't test anything that needs a key held: skipping while Ctrl or the controller's R2 is held.
 - **Fix:** have the injected key events update the key state that `getKeyState` reads.
 
-## 17. The sigcheck plugin keeps file sizes and offsets in 32-bit ints
+## 19. The sigcheck plugin keeps file sizes and offsets in 32-bit ints
 
 - **Where:** `src/plugins/sigcheck/main.cpp` (`SigChecker::CheckSignatureOfFile` and `CheckKrkrExecutable`) holds the file size, the running byte count and the mark offsets in `int`/`tjs_uint32`. krkrz_tools' `krt::sig` (the signing side) uses 64-bit offsets, so it signs any size correctly; only the engine-side verifier is 32-bit.
 - **What it costs:** signatures (`sigcheck`, used by `template/system/SignatureCheck.tjs`) can only be checked on files below 2 GB. From 2 GB the progress byte count overflows (odd or missing progress events, but the hash still verifies); past 4 GB the size is truncated to 32 bits (thousands of spurious progress events); and at an exact multiple of 4 GiB the size reads as 0 and the per-cent calculation divides by it. kagex-release works around it by keeping every signed archive under 2 GB — splitting a large game's media into separate archives (`Build.cpp`, `splitIfNeeded`) — and refusing a single folder of 2 GB or more. Confirmed on the 0.8.0 Linux engine: a 1 GB file verifies in ~12 s; 2.3 GB and 4.1 GB verify but with the byte-count problems above.
 - **Fix:** use `tjs_int64` for the size, the running offset and the mark offsets in the plugin, matching `krt::sig`.
 
-## 18. The sigcheck plugin reads each file several times per check
+## 20. The sigcheck plugin reads each file several times per check
 
 - **Where:** `SigChecker::CheckSignature` calls `CheckKrkrExecutable` three times (searching for the `XOPT_EMBED_AREA_`, `XRELEASE_SIG____` and XP3 marks), each a full scan from the start of the file, before `CheckSignatureOfFile` reads the whole file once more to hash it.
 - **What it costs:** start-up of a signed build (`SignatureCheck.tjs`) reads the game archive and every engine file about four times over. For a large archive that is seconds of disk I/O before the game appears; splitting (above) spreads it across several files but doesn't reduce the total. The mark search also has no business running on a plain data file (only an executable carries the marks), but the plugin runs it on everything.
 - **Fix:** scan for all three marks in one pass, skip the executable-mark search for a file that isn't an executable, and reuse that read for the hash.
 
-## 19. Bytecode indexes are 16 bits
+## 21. Bytecode indexes are 16 bits
 
 - **Where:** `ExportByteCode` writes each function's code words and each constant's table index as 16-bit numbers (`Add2ByteToVector`, `(tjs_int16)constarray.PutVariant(...)`), and `tTJSByteCodeLoader` reads them back signed.
 - **What it costs:** a script with a function of more than 32767 code words, or with more than 32767 different strings or numbers, would load wrong, so kagex-release leaves one as source. KAGEX's largest, `MainWindow.tjs`, has 2259 strings and at most 3469 code words in a function.
 - **Fix:** 32-bit code words and indexes, in a new version of the bytecode format.
 
-## 20. A playing voice's position and level come from the wrong part of it now and then
+## 22. A playing voice's position and level come from the wrong part of it now and then
 
 - **Where:** `tTJSNI_QueueSoundBuffer::GetSamplePosition`, `GetCurrentPlayingPosition` and `GetVisBuffer` (`common/sound/QueueSoundBufferImpl.cpp`), behind `position`, `samplePosition`, `getVisBuffer`, `getSoundLevel` and `getVowel`, take the samples the stream has played modulo the sample count of the first buffer still in `Samples`, and read that buffer at that offset. That's right only while the first buffer in `Samples` is the one playing and every buffer before it had the same count. A played buffer leaves `Samples` when the stream's callback releases it (`ReleasePlayedSample`), so for a while after the stream moves on, the offset into the new buffer is read in the old one (the likely cause; the jumps seen go both ways). Measured with a voice playing: `samplePosition` is within about 30 ms of the time since `play()` three quarters of the time and half a second (one buffer) ahead the rest, and reading 8192 samples from it with `getVisBuffer` shows the samples past the end of the half-second buffer it falls in are often from half a second earlier, not the next part.
 - **What it costs:** lip-sync by level read the wrong part of the voice. In the Animated Character demo under auto mode, a 3-second voice line reported positions of 469, 1097, 1460 and 1066 ms within 600 ms of play, and Pip's mouth stayed shut through most of it. Measured in the engine on synthesized lines in eight voices, the mouth was open or shut as the voice called for 68-69% of the time, against 77-81% with the right readings. kagex works around it (`readVoice` in `KAGEnvCharacterEx.tjs`): what the engine reads is at `samplePosition` plus the offset given, so it asks for the part the clock since the voice started says is playing, only within the half-second buffer `samplePosition` is in, and keeps readings of the next frames for when the engine is a buffer ahead and that part is gone: 72-73% on the same lines. Lip tracks (`<voice>.lip`) are timed by the clock alone.
 - **Fix:** count the samples of the buffers released so far (or note the stream's played count where each buffer starts) and take the offset from that rather than modulo the first buffer's count, and release a buffer under the same lock the played count is read with; and have `GetVisBuffer` go on into the buffer that really follows in the voice (past the first one it can return an older part).
 
-## 21. getVowel hears a voice's pitch more than its vowels
+## 23. getVowel hears a voice's pitch more than its vowels
 
 - **Where:** `tTJSNI_QueueSoundBuffer::GetVowel` (`common/sound/QueueSoundBufferImpl.cpp`) scores each vowel by the energy of a 1024-point FFT within ±15% + 50 Hz of fixed first and second formants (a 800/1200, i 300/2300, u 350/1200, e 500/1900, o 500/900 Hz, a man's Japanese vowels) and divides by the total. A voice's energy is at its harmonics, its pitch apart, most of it in the lowest few, so the fundamental and the second harmonic land in one vowel's bands whatever the vowel is (i's and u's, 205 to 452 Hz, for a pitch of 200 to 250 Hz; o's and u's above about 300 Hz), and the formants, between harmonics, barely count; e almost never wins.
 - **What it costs:** mouths by vowel can't come from a voice as it plays: on synthesized lines in four Japanese and four English voices (women's and men's), getVowel named the vowel being said 22% and 39% of the time; a woman's voice (pitch around 200 to 250 Hz, in i's and u's first-formant bands) mostly reads as i, a higher one as o (Pip's babble, at about 440 Hz, 190 of 199 times). So kagex leaves it off (`lipEngineVowels`), and a voice's vowels come from a lip track made before (`<voice>.lip`, kagex-lipsync: 86% and 87% on the same lines), for the voices a game picks; the rest move the mouth by loudness only.

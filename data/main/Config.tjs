@@ -809,6 +809,14 @@ function MessageLayer_config()
 
 
 
+// ◆ Whether to draw each line's characters together (with krkr_richtext)
+// Specify true if yes, false if no. The characters are shaped and placed together
+// (kerning, ligatures, accents, emoji), as its line breaker laid them out.
+;useStyledLayout = true;
+
+
+
+
 
 // ◆ Image file for click waiting glyph
 // See the animation layer (AnimationLayer.tjs) for how to make images. 

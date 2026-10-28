@@ -68,14 +68,20 @@ class KAGWindow extends Window
 	// the plan below, made again when the text goes somewhere it didn't expect (a new page,
 	// [r], another font). Elsewhere, and as a check on the plan, a word that won't fit on
 	// the message line goes to the next one. The history log wraps by its own width, a word
-	// at a time. KAG still draws each character (its speed, ruby, links, waits), and vertical
-	// text and Japanese and Chinese (KAGLanguage.wordWrap) keep KAG's own character wrap.
-	// The space the line broke at is dropped: the ch handler checks wrapDropSpace and
-	// wrapDropSpaceHist (assigning to text inside this function has no effect there).
+	// at a time. Japanese and Chinese (KAGLanguage.wordWrap: no spaces between words) break
+	// where the line breaker plans, greedily, with its rules for them (a closing bracket or
+	// a small kana doesn't start a line, a word in Latin letters isn't split); without
+	// krkr_richtext, and in vertical text, they keep KAG's own character wrap (kinsoku),
+	// which also catches a line the plan let run too long. KAG places each character (its
+	// speed, ruby, links, waits), and MessageLayer draws a line's characters together
+	// (useStyledLayout). The space the line broke at is dropped: the ch handler checks
+	// wrapDropSpace and wrapDropSpaceHist (assigning to text inside this function has no
+	// effect there).
 	// Text from the scene player (compiled scenarios) isn't on the conductor's line: its ch
 	// tags carry wrap = %[key, line], the message as it's drawn (KAGEnvPlayer.emitChars).
 	var lineBreakStrategy = "quality"; // the plan's line breaking (Config.tjs): "quality", "balanced" or "greedy"
 	var wrapKey = void;             // "storage:line" of the scenario line the state below is for
+	var wrapWords = true;           // the line breaks between words; false: Japanese or Chinese, where the plan says
 	var wrapText = "";              // that line as drawn: no tags, "\n" for [r]
 	var wrapAt = 0;                 // index in wrapText of the next character
 	var wrapLastAt = 0;             // where the last character was: the conductor may run that ch again
@@ -116,13 +122,14 @@ class KAGWindow extends Window
 		wrapText = wrapDrawnWord = "";
 		wrapAt = wrapLastAt = wrapBreakWrap = 0;
 		wrapResume = wrapResumeDropHist = wrapBroke = wrapPlanning = false;
+		wrapWords = true;
 	}
 	// The word wrap's state, kept while another text is drawn (drawTextUnitNow)
 	function saveWordWrap() {
 		return [ wrapKey, wrapText, wrapAt, wrapLastAt, wrapBreakWrap, wrapWordStart, wrapSegStart, wrapPos,
 			wrapPosHist, wrapWordWidth, wrapWordWidthHist, wrapResume, wrapResumeDropHist, wrapBroke,
 			wrapPlanning, wrapPlan, wrapPlanStyle, wrapPlanX, wrapPlanY, wrapDropSpace, wrapDropSpaceHist, wrapPosLine,
-			wrapDrawnWord ];
+			wrapDrawnWord, wrapWords ];
 	}
 	function restoreWordWrap(s) {
 		wrapKey = s[0], wrapText = s[1], wrapAt = s[2], wrapLastAt = s[3], wrapBreakWrap = s[4];
@@ -130,7 +137,7 @@ class KAGWindow extends Window
 		wrapWordWidth = s[9], wrapWordWidthHist = s[10], wrapResume = s[11], wrapResumeDropHist = s[12];
 		wrapBroke = s[13], wrapPlanning = s[14], wrapPlan = s[15], wrapPlanStyle = s[16];
 		wrapPlanX = s[17], wrapPlanY = s[18], wrapDropSpace = s[19], wrapDropSpaceHist = s[20], wrapPosLine = s[21];
-		wrapDrawnWord = s[22];
+		wrapDrawnWord = s[22], wrapWords = s[23];
 	}
 	// The scenario line as the player reads it: no [tags] ([r] a new line), no \ escapes, no
 	// leading 【name】, nor the tabs KAG skips at the start of a line; [[ is a [
@@ -207,14 +214,34 @@ class KAGWindow extends Window
 		wrapPos = wrapLinePos(), wrapPosLine = wrapLineOf();
 		wrapPosHist = histTextWidth(historyLayer.currentLine);
 	}
-	function wrapStartLine(key, clean) {
+	// Whether the game's own language puts spaces between its words (KAGLanguage.wordWrap): KAG
+	// shows a script's text as it's written, in the source language
+	function wrapLanguageWords() {
+		return typeof global.KAGLanguage != "Object" || KAGLanguage.wordWrap(KAGLanguage.source);
+	}
+	// words: the line breaks between words (otherwise only where the plan says)
+	function wrapStartLine(key, clean, words = true) {
 		wrapKey = key, wrapText = clean, wrapDrawnWord = "";
 		wrapAt = wrapLastAt = 0;
 		wrapResume = wrapBroke = false;
-		wrapBreakWrap = clean.indexOf(spaceChar) == -1 ? 1 : 0;
+		wrapWords = words;
+		wrapBreakWrap = words && clean.indexOf(spaceChar) == -1 ? 1 : 0;
 		wrapPlan = wrapPlanStyle = void;
 		wrapPlanning = !wrapBreakWrap && !current.vertical && typeof current.getRichTextApp != "undefined";
+		if (!words && !wrapPlanning) wrapBreakWrap = 1; // KAG's own character wrap
 		wrapNewWord(0);
+	}
+	// In Japanese or Chinese text, a break between two letters of a word in Latin letters or
+	// digits (the line breaker splits a word that doesn't fit the width at all) is one before
+	// the word
+	function wrapLetter(c) {
+		var n = #c;
+		return (n >= 0x30 && n <= 0x39) || (n >= 0x41 && n <= 0x5a) || (n >= 0x61 && n <= 0x7a) || (n >= 0xc0 && n <= 0x24f);
+	}
+	function wrapBeforeWord(text, e) {
+		if (e <= 0 || e >= text.length || !wrapLetter(text.charAt(e - 1)) || !wrapLetter(text.charAt(e))) return e;
+		while (e > 0 && wrapLetter(text.charAt(e - 1))) e--;
+		return e;
 	}
 	// Where a RichText.ParagraphLayout breaks text laid out width wide (how: a
 	// lineBreakStrategy name): the index of each line's first character after the first
@@ -249,7 +276,10 @@ class KAGWindow extends Window
 	}
 	// Plans the breaks of wrapText from index from on, from where the message line is now:
 	// what fits of it on the rest of this line, then whole lines. Lines end 2 pixels short
-	// of where the check below breaks, for the rounding of each character's advance
+	// of where the check below breaks, for the rounding of each character's advance (in
+	// Japanese and Chinese short of relinexpos too: no character hangs into the margin KAG
+	// keeps for its kinsoku, marginRCh). Japanese and Chinese lines are filled as far as
+	// they go (lineBreakStrategy is for text with spaces)
 	function wrapMakePlan(from, rta) {
 		var cur = current;
 		wrapPlan = void;
@@ -268,12 +298,13 @@ class KAGWindow extends Window
 		}
 		if (cur.x > start) {
 			var first = end - cur.x, e;
-			if (first <= 0 || msgTextWidth(text.substring(0, wrapWordEndAt(from) - from)) >= first) {
+			if (first <= 0 || wrapWords && msgTextWidth(text.substring(0, wrapWordEndAt(from) - from)) >= first) {
 				e = 0; // not even the first word fits
 			} else {
 				// the rest of a line is filled as far as it goes
 				var b = wrapLayoutBreaks(text, first, style, "greedy");
 				e = b.count > 0 ? b[0] : n;
+				if (!wrapWords) e = wrapBeforeWord(text, e);
 				// all of it up to a new line fits here: plan again after that, on its own line
 				var nl = text.indexOf("\n");
 				if (nl >= 0 && nl < e) return;
@@ -283,7 +314,7 @@ class KAGWindow extends Window
 			plan[from + off] = true;
 		}
 		var rest = off > 0 ? text.substring(off) : text;
-		var b = wrapLayoutBreaks(rest, end - start, style, lineBreakStrategy);
+		var b = wrapLayoutBreaks(rest, end - start, style, wrapWords ? lineBreakStrategy : "greedy");
 		for (var i = 0; i < b.count; i++) plan[from + off + b[i]] = true;
 	}
 	function needsToBeWrapped(text, elm) {
@@ -293,19 +324,22 @@ class KAGWindow extends Window
 		if (wrap !== void) {
 			// A message from the scene player: its text, already without tags
 			line = wrap.line;
-			if (line == "" || line.indexOf(spaceChar) == -1) return false;
+			if (line == "") return false;
 			key = wrap.key;
 		} else {
 			line = conductor.curLineStr;
 			if (line === void || line == "") return false;
 			var c0 = line[0];
-			if (c0 == "*" || c0 == ";" || line.indexOf(spaceChar) == -1) return false;
+			if (c0 == "*" || c0 == ";") return false;
 			key = conductor.curStorage + ":" + conductor.curLine;
 		}
 
 		// A new scenario line. Lines are told apart by position, not by content, so two
-		// identical lines in a row each get their own pass
-		if (key != wrapKey) wrapStartLine(key, wrap !== void ? line : wrapCleanLine(line));
+		// identical lines in a row each get their own pass. The player's messages say whether
+		// their language puts spaces between words; the conductor's are in the source language
+		if (key != wrapKey)
+			wrapStartLine(key, wrap !== void ? line : wrapCleanLine(line),
+				wrap !== void && wrap.wordWrap !== void ? +wrap.wordWrap : wrapLanguageWords());
 		if (wrapBreakWrap) return false;
 
 		var cur = current, resumed = wrapResume, i;
@@ -368,8 +402,10 @@ class KAGWindow extends Window
 			else if (wrapPlan === void || rta.style !== wrapPlanStyle || cur.y != wrapPlanY || cur.x < wrapPlanX) wrapMakePlan(i, rta);
 			wrapPlanX = cur.x;
 		}
+		// Japanese and Chinese break only where the plan says (KAG's own wrap without one)
+		if (!wrapWords && !wrapPlanning) return false;
 
-		if (historyWriteEnabled) {
+		if (historyWriteEnabled && wrapWords) {
 			if (wrapWordWidthHist === void)
 				wrapWordWidthHist = histTextWidth(wrapText.substring(wrapWordStart, wrapWordEndAt(wrapWordStart) - wrapWordStart));
 			if (wrapPosHist + wrapWordWidthHist >= historyLayer.relinePos && wrapWordWidthHist <= historyLayer.relinePos &&
@@ -392,9 +428,14 @@ class KAGWindow extends Window
 			if (wrapPlan[b]) {
 				delete wrapPlan[b];
 				brk = planned = true;
+			} else {
+				// a break planned inside what is drawn at once (the characters under a ruby):
+				// before it, then plan again from there
+				if (!wrapAtLineStart())
+					for (var j = b + 1; j < i + text.length; j++) if (wrapPlan[j]) { brk = true; break; }
 			}
 		}
-		if (!brk) {
+		if (!brk && wrapWords) {
 			if (wrapWordWidth === void) wrapWordWidth = msgTextWidth(wrapText.substring(wrapSegStart, wrapSegEnd() - wrapSegStart));
 			brk = wrapPos + wrapWordWidth >= cur.relinexpos && !wrapAtLineStart();
 		}
@@ -13780,11 +13821,9 @@ class KAGWindow extends Window
 	}
 
 	// what the word wrap measures a text by: its characters and new lines, as
-	// KAGEnvPlayer.emitChars does, or nothing (the character wrap) in a language without
-	// spaces between its words (KAGLanguage.wordWrap)
-	function languageWrapLine(items, lang)
+	// KAGEnvPlayer.emitChars does
+	function languageWrapLine(items)
 	{
-		if (!KAGLanguage.wordWrap(lang)) return "";
 		var line = "";
 		for (var i = 0; i < items.count; i++) {
 			if (items[i][0] == "r") line += "\n";
@@ -13805,7 +13844,7 @@ class KAGWindow extends Window
 		if (text === void) return;
 		layer.beginTextUnit(unit);
 		var items = languageTextItems(text);
-		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items, lang)]];
+		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items), wordWrap:KAGLanguage.wordWrap(lang)]];
 		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
 		var hist = historyWriteEnabled, tw = textWriteEnabled, cur = current;
 		var wrapState = saveWordWrap();

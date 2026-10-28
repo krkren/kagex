@@ -923,9 +923,10 @@ PAGE_TJS = r"""
 # character wrap ended it)], limit: where the wrap breaks, planning: krkr_richtext planned it,
 # rich: krkr_richtext draws there, pages)
 WRAP_TJS = r"""
-// global.__smokeWrap(texts, strategy, startX, lines): draws each text through the word wrap on a
-// message layer of its own, lines high, and returns what it drew as JSON
-global.__smokeWrap = function(text, strategy, startX, lineCount) {
+// global.__smokeWrap(texts, strategy, startX, lines, words): draws each text through the word wrap
+// on a message layer of its own, lines high (words: its language has spaces between words), and
+// returns what it drew as JSON
+global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1) {
 	var lay = new MessageLayer(kag, kag.back.base, "smoke line breaking", 99, true);
 	var r = %[ lines:[], pages:0 ];
 	var cur = kag.current, saved = kag.saveWordWrap(), strat = kag.lineBreakStrategy;
@@ -942,7 +943,7 @@ global.__smokeWrap = function(text, strategy, startX, lineCount) {
 		kag.historyWriteEnabled = false, kag.textWriteEnabled = true;
 		if (startX >= 0) lay.x = startX;
 		r.limit = lay.relinexpos;
-		var w = %[ wrap:%[ key:"smoke:" + System.getTickCount() + ":" + Math.random(), line:text ] ];
+		var w = %[ wrap:%[ key:"smoke:" + System.getTickCount() + ":" + Math.random(), line:text, wordWrap:words ] ];
 		var line = "", y = lay.y, x = lay.x;
 		for (var i = 0; i < text.length; i++) {
 			var ch = text[i];
@@ -976,12 +977,52 @@ global.__smokeWrap = function(text, strategy, startX, lineCount) {
 		r.lines.add(%[ text:line, end:x ]);
 		r.planning = kag.wrapPlanning ? 1 : 0;
 		r.rich = lay.getRichTextApp(lay.lineLayer) !== void ? 1 : 0;
+		r.runs = typeof lay.styledRunCount != "undefined" ? lay.styledRunCount : -1;
 	} catch (e) {
 		r.error = e.message;
 	}
 	kag.current = cur, kag.lineBreakStrategy = strat;
 	kag.historyWriteEnabled = hist, kag.textWriteEnabled = tw;
 	kag.restoreWordWrap(saved);
+	invalidate lay;
+	return Scripts.toJSONString(r);
+};
+"""
+
+
+STYLED_TJS = r"""
+// global.__smokeStyled(text, styled): draws text a character at a time on a message layer of its
+// own, its characters together (useStyledLayout) or one at a time, and returns as JSON where each
+// character went, the runs drawn and how far the line layer's ink reaches
+global.__smokeStyled = function(text, styled) {
+	var lay = new MessageLayer(kag, kag.back.base, "smoke text drawing", 98, true);
+	var r = %[];
+	try {
+		lay.useRichText = kag.fore.messages[0].useRichText;
+		lay.useStyledLayout = styled;
+		lay.clear();
+		lay.setPosition(%[ left:0, top:0, width:1200, height:200, marginl:30, margint:40, marginr:30, marginb:20 ]);
+		lay.clear();
+		var xs = [];
+		for (var i = 0; i < text.length; i++) {
+			lay.processCh(text[i], 0);
+			xs.add(lay.x);
+		}
+		r.xs = xs.join(",");
+		r.runs = lay.styledRunCount;
+		r.rich = lay.getRichTextApp(lay.lineLayer) !== void ? 1 : 0;
+		// the run is drawn once the conductor stops: now, for this test
+		if (typeof lay.flushStyledRun != "undefined") lay.flushStyledRun();
+		var ll = lay.lineLayer, w = ll.imageWidth, h = ll.imageHeight, right = -1, ink = 0;
+		for (var x = 0; x < w; x++) {
+			var col = 0;
+			for (var y = 0; y < h; y += 2) col += ll.getMaskPixel(x, y);
+			if (col > 0) right = x, ink += col;
+		}
+		r.right = right, r.ink = ink;
+	} catch (e) {
+		r.error = e.message;
+	}
 	invalidate lay;
 	return Scripts.toJSONString(r);
 };
@@ -1191,6 +1232,75 @@ def sample_steps(eng):
                 raise SmokeError("%s: the new line isn't where the text has it: %s" % (what, drawn))
             if lines == 3 and r.get("pages", 0) < 1:
                 raise SmokeError("%s: the text didn't fill a page: %s" % (what, drawn))
+
+    @step("Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese")
+    def _():
+        # (since 0.12.1; KAG's own character wrap before, and where krkr_richtext doesn't draw)
+        if eng.tjs('return typeof kag.wrapBeforeWord != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's Japanese keeps KAG's character wrap)", flush=True)
+            return
+        eng.tjs(WRAP_TJS + "return 1;")
+        latin = "\u3042" * 30 + "\u3053\u308c\u306fREADMEFILE\u306e\u8aac\u660e\u3067\u3059\u3002" * 4
+        # each: the text, where it starts, a character no line may start with, one no line may end with
+        cases = [("\u3042\u3002" * 60, -1, "\u3002", None),    # a full stop
+                 ("\u3042\u300c\u3044\u300d" * 30, -1, "\u300d", "\u300c"),  # brackets
+                 ("\u304d\u3083" * 60, -1, "\u3083", None),    # a small kana
+                 (latin, -1, None, None), (latin, 900, None, None)]
+        for text, start, nostart, noend in cases:
+            r = json.loads(str(eng.tjs("return __smokeWrap(%s, \"quality\", %d, 20, 0);" % (tjs_string(text), start))))
+            if r.get("error"):
+                raise SmokeError("the line breaking failed: %s" % r["error"])
+            drawn = [l.get("text") or "" for l in r.get("lines") or []]
+            what = "%r... from %s" % (text[:6], "the line's start" if start < 0 else "x %d" % start)
+            print("     %s: %d lines (%s), %s" % (what, len(drawn), ", ".join(str(len(l)) for l in drawn),
+                  "planned by krkr_richtext" if r.get("planning") else "KAG's character wrap"), flush=True)
+            if "".join(drawn) != text:
+                raise SmokeError("%s: characters were lost: %s" % (what, drawn))
+            if not r.get("rich"):
+                continue
+            if not r.get("planning"):
+                raise SmokeError("%s: krkr_richtext draws the text, but didn't plan its lines" % what)
+            for i, l in enumerate(r["lines"]):
+                t = l.get("text") or ""
+                if l.get("kag"):
+                    raise SmokeError("%s: KAG's character wrap broke a line the plan had: %s" % (what, drawn))
+                if t != "" and l.get("end", 0) >= r.get("limit", 0):
+                    raise SmokeError("%s: a line runs past %s: %s" % (what, r.get("limit"), l))
+                if nostart and i > 0 and t.startswith(nostart):
+                    raise SmokeError("%s: a line starts with %r: %s" % (what, nostart, drawn))
+                if noend and i < len(drawn) - 1 and t.endswith(noend):
+                    raise SmokeError("%s: a line ends with %r: %s" % (what, noend, drawn))
+            if "READMEFILE" in text and sum(l.count("READMEFILE") for l in drawn) != text.count("READMEFILE"):
+                raise SmokeError("%s: a word in Latin letters was split: %s" % (what, drawn))
+
+    @step("krkr_richtext draws a line's characters together, where KAG put them")
+    def _():
+        # (useStyledLayout, since 0.12.1)
+        if eng.tjs('return typeof MessageLayer.drawStyledRun != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build draws a character at a time)", flush=True)
+            return
+        eng.tjs(STYLED_TJS + "return 1;")
+        text = "AVAWAY Tolkien's office: fi fl ffi, cafe\u0301, nai\u0308ve, \u4e8c\u884c\u76ee\u3002 HHH"
+        runs = json.loads(str(eng.tjs("return __smokeStyled(%s, 1);" % tjs_string(text))))
+        each = json.loads(str(eng.tjs("return __smokeStyled(%s, 0);" % tjs_string(text))))
+        for r in (runs, each):
+            if r.get("error"):
+                raise SmokeError("drawing the text failed: %s" % r["error"])
+        if not runs.get("rich"):
+            print("     (skipped: krkr_richtext doesn't draw here)", flush=True)
+            return
+        print("     %d run(s); ink to x %d (%d) together, %d (%d) a character at a time" % (
+            runs.get("runs", 0), runs.get("right", -1), runs.get("ink", 0), each.get("right", -1), each.get("ink", 0)),
+            flush=True)
+        if runs.get("runs", 0) < 1 or each.get("runs", 0) != 0:
+            raise SmokeError("useStyledLayout didn't choose how the text is drawn: %s, %s" % (runs, each))
+        if runs.get("xs") != each.get("xs"):
+            raise SmokeError("the characters went elsewhere: %s against %s" % (runs.get("xs"), each.get("xs")))
+        if abs(runs.get("right", -1) - each.get("right", -1)) > 3 or each.get("right", -1) < 0:
+            raise SmokeError("the line drawn together doesn't reach as far (its last character is missing?):"
+                             " x %s against %s" % (runs.get("right"), each.get("right")))
+        if not 0.85 * each.get("ink", 0) <= runs.get("ink", 0) <= 1.15 * each.get("ink", 0):
+            raise SmokeError("the line drawn together has %s of ink against %s" % (runs.get("ink"), each.get("ink")))
 
     @step("a compiled scene saves in the middle and loads where it was")
     def _():

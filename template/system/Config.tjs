@@ -950,6 +950,16 @@ function MessageLayer_config()
 
 
 
+// ◆ Draw a Line's Characters Together?
+// With krkr_richtext, each line's characters are shaped and placed together
+// (kerning, ligatures, accents, emoji), as its line breaker laid them out.
+// KAG still places and times each character.
+
+;useStyledLayout = true;
+
+
+
+
 
 // ◆ Click Waiting Glyph Image Files
 // See AnimationLayer.tjs for how to create images. Do not specify extension.

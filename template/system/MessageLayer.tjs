@@ -2308,6 +2308,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	var richTextApp; // RichTextFontApp, created on first use
 
+	/*C*/var useStyledLayout = true; // With useRichText: draw a line's characters together, through krkr_richtext's StyledLayout (drawStyledRun)
+
+	var styledRun; // the run of characters drawStyledRun is drawing, or void
+
+	var styledRunBack, styledRunLayout; // what the line layer had under the run; the run's RichText.StyledLayout
+
+	var styledRunCount = 0; // runs drawn (for tests)
+
 	/*CS*/var vertical = false; // True when in vertical writing mode
 
 	/*C*/var currentRuby = ""; // Ruby for the next character
@@ -2996,6 +3004,12 @@ class MessageLayer extends AnimKAGLayerTransMove
         invalidate textLayer if (textLayer !== void);
 
         invalidate richTextApp if (richTextApp !== void);
+
+        invalidate styledRunBack if (styledRunBack !== void);
+
+        invalidate styledRunLayout if (styledRunLayout !== void);
+
+        invalidate styledRunTrigger if (styledRunTrigger !== void);
 
 
 
@@ -4003,6 +4017,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var ll = lineLayer;
 
+		styledRun = void;
+
 		resetLineSize();
 
 		lineLayerLinks.count = 0;
@@ -4363,6 +4379,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		stopChFade();
 
+		flushStyledRun();
+
+		styledRun = void;
+
 		// Determine lineLayer at the current display position
 
 		var ll = lineLayer;
@@ -4460,6 +4480,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 	{
 
 		// Called when line size changes to resize the line drawing layer.
+
+		flushStyledRun();
+
+		styledRun = void; // (the content moves)
 
 
 
@@ -5095,6 +5119,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var rta = getRichTextApp(ll);
 
+		// With useStyledLayout the line's characters are drawn together (drawStyledRun)
+
+		var run = rta !== void && ll === lineLayer && styledRunUsable();
+
 		var cw = rta !== void ? rta.advance(this, ch) : llfont.getTextWidth(ch);
 
 
@@ -5115,7 +5143,17 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-		drawTextToLayer(ll, dx, dy, ch, chColor);
+		if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
+
+		else {
+
+			// (drawing the run again later would cover this character)
+
+			if (styledRun !== void) flushStyledRun(), styledRun = void;
+
+			drawTextToLayer(ll, dx, dy, ch, chColor);
+
+		}
 
 
 
@@ -5547,6 +5585,212 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
+	// A line's characters drawn together (useStyledLayout). KAG draws a message a character at
+
+	// a time, each where the one before it ended. Where krkr_richtext draws the text
+
+	// (useRichText), the characters of a line go into a run instead, which is laid out with
+
+	// RichText.StyledLayout and drawn whole from where it began, over what the line layer had
+
+	// there before the run (styledRunBack). So they are shaped together, as krkr_richtext lays
+
+	// out a paragraph: kerning, ligatures, and marks and emoji sequences that come as several
+
+	// characters, at subpixel positions. KAG still says where each character goes and when (the
+
+	// text speed, waits, links, the word wrap): a character's advance is what it was
+
+	// (RichTextFontApp.advance). The run is drawn again once the conductor stops for the moment
+
+	// (styledRunTrigger), so text that comes all at once is laid out once a line, and before
+
+	// anything else draws on the line layer or puts it on the page (flushStyledRun). A run is
+
+	// one font and one colour on one line; a character with ruby is a run of its own (its ruby
+
+	// is KAG's, from rubySize and rubyOffset: StyledLayout's is half the text's size, touching
+
+	// it), and anything else drawn on the line layer (a new line, a change of line size, a
+
+	// graphic) ends the run. Not for vertical text, a pitch, or the character fade.
+
+	var styledRunTrigger; // AsyncTrigger: flushStyledRun once the conductor stops
+
+	function styledRunUsable() {
+
+		return useStyledLayout && pitch == 0 && !hasChFadeLayer &&
+
+			typeof global.RichText.StyledLayout != "undefined" && typeof lineLayer.drawStyledLayout != "undefined";
+
+	}
+
+	// text for StyledLayout's markup: its tags start with "<" and its entities with "&"
+
+	function styledRunEscape(text) {
+
+		var out = "";
+
+		for (var i = 0; i < text.length; i++) {
+
+			var c = text[i];
+
+			out += c == "&" ? "&amp;" : c == "<" ? "&lt;" : c == ">" ? "&gt;" : c;
+
+		}
+
+		return out;
+
+	}
+
+	// A new run on the line layer ll from x (y: the top of the text cell), in rta's style and
+
+	// appearance (ready for the line layer's font and the colour)
+
+	function startStyledRun(ll, rta, x, y) {
+
+		flushStyledRun(); // (styledRunBack is the new run's from here)
+
+		// the run's glyphs, and their edge or shadow, may reach left of x
+
+		var pad = rta.appPad + rta.style.fontSize \ 4 + 2;
+
+		var bx = Math.max(0, x - pad), bw = ll.imageWidth - bx, h = ll.imageHeight;
+
+		var back = styledRunBack;
+
+		if (back === void) {
+
+			back = styledRunBack = new global.Layer(window, this);
+
+			back.name = name + ":Run";
+
+			back.visible = false;
+
+			back.hitType = htMask, back.hitThreshold = 256;
+
+		}
+
+		if (back.imageWidth < bw || back.imageHeight < h)
+
+			back.setImageSize(Math.max(back.imageWidth, bw), Math.max(back.imageHeight, h));
+
+		back.type = ll.type;
+
+		back.face = dfAuto;
+
+		ll.face = dfAuto;
+
+		back.copyRect(0, 0, ll, bx, 0, bw, h);
+
+		styledRunCount++;
+
+		return styledRun = %[ layer:ll, x:x, y:y, next:x, style:rta.style, baseLine:rta.baseLine,
+
+			key:rta.appKey, app:rta.app.clone(), text:"", markup:"", extent:0, closed:false, dirty:false,
+
+			pad:pad, backX:bx, backWidth:bw, height:h, layerWidth:ll.imageWidth ];
+
+	}
+
+	// Adds ch, which advances cw, at x, y on the line layer ll (y: the top of the text cell) to
+
+	// the run there (rta: the RichTextFontApp, ready for the line layer's font). alone: ch is a
+
+	// run of its own, drawn at once (KAG draws its ruby over it)
+
+	function drawStyledRun(ll, rta, x, y, ch, color, cw, alone) {
+
+		rta.updateApp(this, color);
+
+		var r = styledRun;
+
+		if (r === void || r.closed || alone || r.next != x || r.y != y || r.style !== rta.style ||
+
+			r.key != rta.appKey || r.layer !== ll || r.height != ll.imageHeight || r.layerWidth != ll.imageWidth)
+
+			r = startStyledRun(ll, rta, x, y);
+
+		r.closed = alone;
+
+		r.text += ch;
+
+		r.markup += styledRunEscape(ch);
+
+		r.next = x + cw;
+
+		r.dirty = true;
+
+		if (alone) {
+
+			flushStyledRun();
+
+			return;
+
+		}
+
+		if (styledRunTrigger === void) {
+
+			styledRunTrigger = new AsyncTrigger(flushStyledRun, "");
+
+			styledRunTrigger.cached = true;
+
+		}
+
+		styledRunTrigger.trigger();
+
+	}
+
+	// Draws the run again, when it has characters it hasn't drawn: what was under it, then the
+
+	// run, its baseline where Layer.drawText puts it
+
+	function flushStyledRun() {
+
+		var r = styledRun;
+
+		if (r === void || !r.dirty) return;
+
+		r.dirty = false;
+
+		var ll = r.layer;
+
+		if (!isvalid ll || ll.imageHeight != r.height || ll.imageWidth != r.layerWidth || richTextApp === void) return;
+
+		var rt = global.RichText, lt = richTextApp.layout;
+
+		lt.layout(r.text, r.style);
+
+		var width = lt.width, ascent = lt.ascent;
+
+		var sl = styledRunLayout;
+
+		if (sl === void) sl = styledRunLayout = new rt.StyledLayout();
+
+		sl.layout(r.markup, 100000, 100000, rt.HALIGN_LEFT, rt.VALIGN_TOP, %[ "default" => r.style ], %[ "default" => r.app ]);
+
+		r.extent = Math.max(r.extent, int(r.x - r.backX + width) + r.pad * 2 + r.style.fontSize);
+
+		ll.face = dfAuto;
+
+		ll.copyRect(r.backX, 0, styledRunBack, 0, 0, Math.min(r.backWidth, r.extent), r.height);
+
+		// krkr_richtext finds a layer's pixels when a script uses one of its members, but not for
+
+		// drawStyledLayout, which drew where they were at the last such use (a copyRect can move
+
+		// them: the run came out a character behind), or, as the first drawing on a layer, threw
+
+		// "wrong context" (実行コンテキストが違います). Reading a property finds them
+
+		var attach = ll.useCache;
+
+		ll.drawStyledLayout(sl, r.x, r.y + r.baseLine + ascent);
+
+	}
+
+
+
 	// Draws text with the krkr_richtext plugin: kerned positions and vector outlines and
 
 	// shadows, using the same faces and baseline as Layer.drawText.
@@ -5862,6 +6106,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 	{
 
 		// Draw image storage.
+
+		flushStyledRun();
+
+		styledRun = void; // (drawn on the line layer: the characters after it start another run)
 
 
 
@@ -9488,6 +9736,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		antialiased = src.antialiased;
 
 		useRichText = src.useRichText;
+
+		useStyledLayout = src.useStyledLayout;
 
 		vertical = src.vertical;
 

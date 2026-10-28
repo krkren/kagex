@@ -3217,8 +3217,9 @@ class KAGEnvPlayer
 		}
 		addTag(%[tagname:"textunit", texts:texts]);
 		emitChars(t.text, firstCh, redraw);
-		// a language without spaces between its words breaks lines anywhere (KAG's own wrap)
-		if (!KAGLanguage.wordWrap(t.lang)) currentWrap.line = "";
+		// a language without spaces between its words breaks lines between characters, with
+		// its own rules (KAGWindow.needsToBeWrapped)
+		currentWrap.wordWrap = KAGLanguage.wordWrap(t.lang);
 		addTagSimple("endtextunit");
 	}
 

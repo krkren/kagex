@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.12.1
+
+### Added
+
+- **A line's characters drawn together**: where krkr_richtext draws the message window, each line's characters are laid out and drawn together by its `StyledLayout`, as its line breaker lays them out, instead of one at a time: the line so far is drawn again each time the text stops (after every character at the usual speed, once a line when the text comes all at once, which is as fast as before). So kerning and ligatures run across the line, accents and emoji made of several characters are shaped as one (a combining accent was drawn beside its letter, and a character outside the BMP, an emoji, as two boxes), and the characters sit at fractions of a pixel. KAG still places and times every character, so the text speed, waits, links and the word wrap are as they were; a character with ruby keeps KAG's ruby (`rubySize`, `rubyOffset`), since StyledLayout's can't be sized or moved (`UPSTREAM.md`). Config.tjs's `useStyledLayout` turns it off (`doc/kagex.txt`, "Line breaking").
+- **Japanese and Chinese line breaking by krkr_richtext**: Japanese and Chinese lines break where its line breaker plans, filling each line, with the Unicode rules and the languages' own: closing brackets, full stops, commas and small kana don't start a line, and a word in Latin letters (a name, README) isn't split, as KAG's character wrap split it. Nothing hangs into the margin KAG kept at the end of a line for that (`marginRCh`), so a line can end a character earlier. Vertical text, and the builds without krkr_richtext (the browser, iOS), keep KAG's own wrap (`UPSTREAM.md`).
+
+### Fixed
+
+- In a Japanese or Chinese game whose scripts KAG plays (not compiled), a line with a space in it got the English word wrap, which could break it at the space.
+
 ## 0.12.0
 
 ### Added

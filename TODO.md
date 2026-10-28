@@ -1,10 +1,6 @@
 # To do
 
-Planned features, in two groups. The first needs only work in this repository (scripts, data and kagex-release): the plugins and engine features it uses are already in krkrz_dev's default build and ship in the Linux package, and krkrz_dev itself isn't changed (`CLAUDE.md`). The second needs changes to the builds as well. The last section lists the plugins looked at and left out, and why.
-
-## Interface, accessibility and languages
-
-- [ ] Drawing a page's text through krkr_richtext's `StyledLayout` itself (its ruby, vertical text and per-character timing) in place of KAG's character-by-character drawing. Line breaks come from its line breaker already (`needsToBeWrapped()`, `lineBreakStrategy`; `doc/kagex.txt`, "Line breaking"), but KAG still places and times each character, and vertical text, Japanese and Chinese keep KAG's own line breaking (kinsoku).
+Planned features. Each needs changes to the builds as well as work in this repository; krkrz_dev itself isn't changed (`CLAUDE.md`), and what its plugins can't do yet is in `UPSTREAM.md`. The last section lists the plugins and features looked at and left out, and why.
 
 ## Needing more than scripts
 
@@ -20,4 +16,5 @@ These change the builds too: native code for every platform, including the web, 
 - `layerExLongExposure`: averages frames into one image, an authoring tool for rule images, which `tools/assets/make_rules.py` makes.
 - `lineParser`: `[].load()` already reads a file line by line, and the framework parses with KAGParserEx and csvParser.
 - `expat`: XML parsing; nothing in kagex reads XML, and only the desktop builds have it.
+- krkr_richtext's per-character timing (`StyledLayout`'s `<delay>`, `<wait>` and `calcShowCount`): it times a text laid out whole, while KAG's conductor gives the message window a character at a time with its own waits, skipping and auto mode, so KAG keeps timing the characters (krkr_richtext lays out and draws each line of them: `useStyledLayout`).
 - `krkrgles` (Windows only): an OpenGL ES context through ANGLE, for engines without one. The SDL engine draws with OpenGL ES, and krkreffekseer, krkrthreepp and krkrlive2d use its context.
