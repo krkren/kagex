@@ -33,6 +33,13 @@ if (NOT EXISTS "${LIVE2D_DRIVER_SOURCE}/src/ilive2d.h")
   message(FATAL_ERROR "LIVE2D_DRIVER_SOURCE (${LIVE2D_DRIVER_SOURCE}) isn't a checkout of wtnbgo/live2d")
 endif()
 
+# KTX's ASTC codec and Basis Universal's encoder with SSE2 only, the x86-64 every CPU has: KTX
+# picks AVX2 for them by itself (a CPU without it would stop at the first instruction), which
+# GCC 10, the Steam Runtime's (--steamrt), can't compile (no _mm256_cvtsi256_si32). On arm64
+# KTX takes NEON whatever these say
+set(ASTCENC_ISA_SSE2 ON CACHE BOOL "" FORCE)
+set(BASISU_SSE OFF CACHE BOOL "" FORCE)
+
 if (WIN32)
   add_subdirectory(${LIVE2D_DRIVER_SOURCE} ${CMAKE_CURRENT_BINARY_DIR}/upstream)
   return()
