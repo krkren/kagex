@@ -35,8 +35,11 @@ For a release, build it into `plugins/<platform>/` instead (`--out plugins/linux
 (`tools/release/README.md`, "Your own plugins"). Build the Linux one with `--steamrt`: a Linux
 plugin needs the glibc of the system it's built on, and `--steamrt` builds it in Valve's Steam
 Linux Runtime (sniper) SDK container (docker or podman; glibc 2.31, which krkrz_linux's Steam
-engine is built in too), so it loads on every Linux the engines run on and inside the Steam
-Runtime.
+engine is built in too), with Debian's own GCC 10, so it loads on every Linux the engines run on
+and inside the Steam Runtime, and errors it reports reach your scripts (the SDK's newer GCC links
+an unwinder into the plugin, and an error crossing it stops the game: `UPSTREAM.md` 2). In
+Steam's own engine (krkrz_linux's), whose engine and plugins each have an unwinder of their own,
+such an error can still stop the game, as with every plugin there.
 
 ## Android and iOS
 
