@@ -1,0 +1,291 @@
+Preset CMake variables:
+
+  CMAKE_TOOLCHAIN_FILE:FILEPATH="/home/runner/work/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_TARGET_TRIPLET="x64-linux"
+
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.4).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-linux-x86_64.tar.gz -> cmake-4.4.4-linux-x86_64.tar.gz
+Successfully downloaded cmake-4.4.4-linux-x86_64.tar.gz
+Extracting cmake...
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+The following packages will be built and installed:
+    drlibs:x64-linux@2026-03-03
+    libebur128:x64-linux@1.2.6#3
+    libjpeg-turbo:x64-linux@3.2.0#1
+    libogg:x64-linux@1.3.6#1
+    libopusenc:x64-linux@0.3
+    libpng:x64-linux@1.6.59
+  * libspng:x64-linux@0.7.4#1
+    libtomcrypt:x64-linux@1.18.2#4
+    libtommath:x64-linux@1.3.0#3
+    libvorbis:x64-linux@1.3.7#4
+    opus:x64-linux@1.6.1
+    opusfile:x64-linux@0.12+20221121#1
+  * vcpkg-cmake:x64-linux@2025-08-07
+  * vcpkg-cmake-config:x64-linux@2026-07-21
+    zlib:x64-linux@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 15 package(s) from /home/runner/work/kagex/kagex/vcpkg-archives in 525 ms. Use --debug to see more details.
+Installing 1/15 drlibs:x64-linux@2026-03-03...
+drlibs:x64-linux@2026-03-03 package ABI: 5bf0461ee9678e72805e56a289297544e9ddd49bc4b9c940b731df2d81b08910
+Elapsed time to handle drlibs:x64-linux: 1.1 ms
+Installing 2/15 vcpkg-cmake:x64-linux@2025-08-07...
+vcpkg-cmake:x64-linux@2025-08-07 package ABI: 432d1aff3700edc9248643cdc81d9a45981221af8863f28f271d6aa5cb779ff0
+Elapsed time to handle vcpkg-cmake:x64-linux: 900 us
+Installing 3/15 libebur128:x64-linux@1.2.6#3...
+libebur128:x64-linux@1.2.6#3 package ABI: 1027ec2f781101808baceb4b244da4609b76a6d9478a2e387dacfe6ca00330a9
+Elapsed time to handle libebur128:x64-linux: 1.1 ms
+Installing 4/15 vcpkg-cmake-config:x64-linux@2026-07-21...
+vcpkg-cmake-config:x64-linux@2026-07-21 package ABI: 418368076e94bd634e4f7b85285ee31d8a93d487700f1e7e950798c6838b2864
+Elapsed time to handle vcpkg-cmake-config:x64-linux: 943 us
+Installing 5/15 zlib:x64-linux@1.3.2#2...
+zlib:x64-linux@1.3.2#2 package ABI: 28494c92a93d739ef72a3e63bb9f7c6f7e5b9a795804ca81215183ef870986ca
+Elapsed time to handle zlib:x64-linux: 1.48 ms
+Installing 6/15 libspng:x64-linux@0.7.4#1...
+libspng:x64-linux@0.7.4#1 package ABI: ce63dc2aa1268f754d71a9d988ccb139064333276959ecc010a6ae48133eeacb
+Elapsed time to handle libspng:x64-linux: 1.19 ms
+Installing 7/15 libjpeg-turbo:x64-linux@3.2.0#1...
+libjpeg-turbo:x64-linux@3.2.0#1 package ABI: a5d924f7a2c6ace9ffb692d81094a5123854a123099083254261e6de0212014c
+Elapsed time to handle libjpeg-turbo:x64-linux: 1.33 ms
+Installing 8/15 libogg:x64-linux@1.3.6#1...
+libogg:x64-linux@1.3.6#1 package ABI: 93cebc61380be68ffb99456956999bea1ceb823eeab065ba6e7698c265d4ef69
+Elapsed time to handle libogg:x64-linux: 1.38 ms
+Installing 9/15 opus:x64-linux@1.6.1...
+opus:x64-linux@1.6.1 package ABI: 64f350f964d760bd967bb45ab8e91b63ef86675c29b5371189170d7d0c6339ab
+Elapsed time to handle opus:x64-linux: 1.28 ms
+Installing 10/15 libopusenc:x64-linux@0.3...
+libopusenc:x64-linux@0.3 package ABI: b52c13b481954604fab1b016818b987269416b42c71ae8ce0003c00e9cf1660c
+Elapsed time to handle libopusenc:x64-linux: 1.07 ms
+Installing 11/15 libpng:x64-linux@1.6.59...
+libpng:x64-linux@1.6.59 package ABI: bfd58782c21fbf8e74064f5e095b8e3a059a357ac955b306a5062428c3955a0a
+Elapsed time to handle libpng:x64-linux: 1.54 ms
+Installing 12/15 libtommath:x64-linux@1.3.0#3...
+libtommath:x64-linux@1.3.0#3 package ABI: 25e92396409fa346018994ac6e3eb7d910e37ce56e5c51dffe1ac767bdb88c74
+Elapsed time to handle libtommath:x64-linux: 1.34 ms
+Installing 13/15 libtomcrypt:x64-linux@1.18.2#4...
+libtomcrypt:x64-linux@1.18.2#4 package ABI: 3d1979e9575f21447141288f8d61697af677de05b73350ddca3040e5ac1ef816
+Elapsed time to handle libtomcrypt:x64-linux: 1.4 ms
+Installing 14/15 libvorbis:x64-linux@1.3.7#4...
+libvorbis:x64-linux@1.3.7#4 package ABI: 3096be2130b7ff8f93b3c42bd2b4d64486f6bd430c37060ec6238919550391eb
+Elapsed time to handle libvorbis:x64-linux: 1.53 ms
+Installing 15/15 opusfile:x64-linux@0.12+20221121#1...
+opusfile:x64-linux@0.12+20221121#1 package ABI: 076c37a16439b601466ca72a806bf9002fe0093b8f3241a36f493e12b447ebd8
+Elapsed time to handle opusfile:x64-linux: 1.57 ms
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+All requested installations completed successfully in: 20.8 ms
+-- Running vcpkg install - done
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+CMake Warning (dev) at /usr/local/share/cmake-3.31/Modules/FetchContent.cmake:1373 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  /home/runner/work/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found ZLIB: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libz.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libz.a (found version "1.3.2")
+-- Found PNG: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libpng16.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libpng16d.a (found version "1.6.59")
+-- Found JPEG: optimized;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/lib/libjpeg.a;debug;/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/vcpkg_installed/x64-linux/debug/lib/libjpeg.a (found version "62")
+-- xp3crypt: /home/runner/work/kagex/kagex/xp3crypt (archive encryption on)
+-- kagex-release: encrypting scenarios with scnfile from /home/runner/work/kagex/kagex/scnfile
+-- Looking for unistd.h
+-- Looking for unistd.h - found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for sys/stat.h
+-- Looking for sys/stat.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for snprintf
+-- Looking for snprintf - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of long
+-- Check size of long - done
+-- Check size of long long
+-- Check size of long long - done
+-- Looking for include file ctype.h
+-- Looking for include file ctype.h - found
+-- Looking for include file dirent.h
+-- Looking for include file dirent.h - found
+-- Looking for include file fcntl.h
+-- Looking for include file fcntl.h - found
+-- Looking for include file inttypes.h
+-- Looking for include file inttypes.h - found
+-- Looking for include file io.h
+-- Looking for include file io.h - not found
+-- Looking for include file memory.h
+-- Looking for include file memory.h - found
+-- Looking for include file setjmp.h
+-- Looking for include file setjmp.h - found
+-- Looking for include file stdlib.h
+-- Looking for include file stdlib.h - found
+-- Looking for include file strings.h
+-- Looking for include file strings.h - found
+-- Looking for include file string.h
+-- Looking for include file string.h - found
+-- Looking for include file sys/mman.h
+-- Looking for include file sys/mman.h - found
+-- Looking for include file sys/times.h
+-- Looking for include file sys/times.h - found
+-- Looking for include file windows.h
+-- Looking for include file windows.h - not found
+-- Looking for getenv
+-- Looking for getenv - found
+-- Looking for getpagesize
+-- Looking for getpagesize - found
+-- Looking for mmap
+-- Looking for mmap - found
+-- Looking for opendir
+-- Looking for opendir - found
+-- Looking for setjmp
+-- Looking for setjmp - found
+-- Looking for sqrt
+-- Looking for sqrt - not found
+-- Looking for strstr
+-- Looking for strstr - found
+-- Looking for iconv_open in iconv
+-- Looking for iconv_open in iconv - not found
+-- Looking for sqrt in m
+-- Looking for sqrt in m - found
+-- Check size of char
+-- Check size of char - done
+-- Check size of int
+-- Check size of int - done
+-- Check size of short
+-- Check size of short - done
+-- Check size of size_t
+-- Check size of size_t - done
+-- Configuring done (21.8s)
+-- Generating done (0.2s)
+-- Build files have been written to: /home/runner/work/kagex/kagex/kagex/tools/release/build/linux
