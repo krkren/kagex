@@ -182,6 +182,19 @@ def own_plugin_tests(exe, proj):
          "contents.plugins" not in errs, w)
     (proj / "plugins" / "linux" / "notes.txt").unlink()
     shutil.rmtree(proj / "plugins" / "android")
+    # a game with a Live2D model and no Live2D plugin for an enabled desktop platform
+    model = proj / "data" / "fgimage" / "zz_test.l2d"
+    model.write_bytes(b"PK")
+    t["platforms"] = json.loads(json.dumps(s["platforms"]))
+    for pl in ("windows", "linux"):
+        t["platforms"][pl]["enabled"] = True
+    (proj / "plugins" / "linux" / "libkrkrlive2d.so").write_bytes(b"not a real plugin")
+    code, errs, warns = check_issues(exe, proj, t)
+    w = " ".join(warns.get("contents.plugins", []))
+    step("own plugins: a Live2D model without the plugin is warned about, per platform",
+         "plugins/windows/ has no krkrlive2d.dll" in w and "libkrkrlive2d.so" not in w, w)
+    (proj / "plugins" / "linux" / "libkrkrlive2d.so").unlink()
+    model.unlink()
 
 
 def server_tests(exe, proj, args):

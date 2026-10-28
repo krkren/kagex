@@ -336,6 +336,25 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			if (!p.root.empty() && fs::is_directory(p.root / "plugins" / id, ec) && flag(s, std::string("platforms.") + id + ".enabled"))
 				warn("contents.plugins", std::string("plugins/") + id + "/ stays out of the packages: that engine has its plugins linked in, so a game's own "
 				     "plugins need an engine package built with them (engines/ next to data/)");
+
+		// Live2D models (.l2d) need the krkrlive2d plugin, which no engine package has: a desktop
+		// platform without it in plugins/<platform>/ shows a note in each character's place
+		bool live2d = false;
+		if (!p.data.empty() && fs::is_directory(p.data, ec))
+			for (auto it = fs::recursive_directory_iterator(p.data, fs::directory_options::skip_permission_denied, ec);
+			     it != fs::recursive_directory_iterator() && !live2d; it.increment(ec)) {
+				if (ec) break;
+				const std::string n = krt::fromPath(it->path().filename());
+				live2d = n.size() > 4 && (n.compare(n.size() - 4, 4, ".l2d") == 0 || n.compare(n.size() - 4, 4, ".L2D") == 0);
+			}
+		if (live2d) {
+			const std::pair<const char*, const char*> withPlugin[] = { { "windows", "krkrlive2d.dll" }, { "linux", "libkrkrlive2d.so" },
+			                                                           { "steam", "libkrkrlive2d.so" }, { "macos", "libkrkrlive2d.dylib" } };
+			for (const auto& [id, file] : withPlugin)
+				if (flag(s, std::string("platforms.") + id + ".enabled") && !fs::exists(gamePluginFolder(p, id) / file, ec))
+					warn("contents.plugins", std::string("The game has Live2D models, but plugins/") + krt::fromPath(gamePluginFolder(p, id).filename()) + "/ has no " +
+					     file + ": its " + id + " package will show a note in each Live2D character's place. tools/live2d/setup.py builds it");
+		}
 	}
 	if (!p.frameworkInData && p.framework.empty())
 		error("contents.framework", "The game has no data/system and there is no template/system next to data/ to copy in");
