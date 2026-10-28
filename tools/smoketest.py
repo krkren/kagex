@@ -941,6 +941,11 @@ def live2d_steps(eng):
             raise SmokeError("the stand-in plugin can't draw Hiyori: %s" % r)
     else:
         print("     Live2D: the krkrlive2d plugin and Hiyori's model", flush=True)
+        # how long its first use took, as the Animated Character demo played (the device, its
+        # shaders, Hiyori's model and the first picture)
+        print("     first use (ms): %s" % eng.tjs('var t = KAGLive2DOf(kag).timings, a = [], k = []; k.assign(t);'
+                                                 ' for (var i = 0; i < k.count; i += 2) a.add(k[i] + " " + k[i + 1]);'
+                                                 ' return a.join(", ");'), flush=True)
     hiyori = 'var c = world_object.env.characters["hiyori"]; '
     eng.tjs('global.__smokeL2DBlink = eyeFlipFreq; eyeFlipFreq = 1.0; kag.process("anim.ks", "*start"); return 1;')
     eng.wait("Pip", 'world_object.env.characters["pip"] !== void && kag.inStable', timeout=20)

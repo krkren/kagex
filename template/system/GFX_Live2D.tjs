@@ -29,6 +29,7 @@ class KAGLive2D extends KAGPlugin
 	var shadersReady = false;
 	var models = %[];    // placed path => %[ model:Live2DModel, count ]
 	var players = [];    // the players made, released with the device: %[ player, path ]
+	var timings = %[];   // how long the first uses took (ms): device, shaders, and each model read
 
 	function KAGLive2D(win) {
 		super.KAGPlugin();
@@ -39,12 +40,14 @@ class KAGLive2D extends KAGPlugin
 			KAGLinkPlugin("plugin/krkrlive2d.dll") if (typeof global.Live2DPlayer == "undefined");
 			if (typeof global.Live2DPlayer == "undefined")
 				throw new Exception("the krkrlive2d plugin isn't there (a game builds it with Live2D's Cubism SDK)");
+			var t0 = System.getTickCount();
 			compositor = new GLCompositor(win);
 			if (!compositor.GLGetProcAddress)
 				throw new Exception("the draw device has no OpenGL ES context");
 			compositor.unpremultiply = true;
 			compositor.makeCurrent();
 			device = new Live2DDevice(compositor);
+			timings.device = System.getTickCount() - t0;
 			available = true;
 		} catch (e) {
 			reason = e.message;
@@ -99,7 +102,9 @@ class KAGLive2D extends KAGPlugin
 			try {
 				// by its name, without a folder: the plugin reads <name>.model3.json from the zip,
 				// <name> being what it's given less the extension
+				var t0 = System.getTickCount();
 				model.load(Storages.extractStorageName(path));
+				timings["model " + Storages.extractStorageName(path)] = System.getTickCount() - t0;
 			} catch (e) {
 				invalidate model;
 				dm(@"Live2D model ${storage} can't be read: ${e.message}");
@@ -116,7 +121,10 @@ class KAGLive2D extends KAGPlugin
 		compositor.makeCurrent();
 		if (!shadersReady) {
 			// compiled all at once on the first draw otherwise, a wait of seconds under ANGLE
+			var t0 = System.getTickCount();
 			try { device.prepareShaders(); } catch (e) { dm("Live2D: prepareShaders: " + e.message); }
+			timings.shaders = System.getTickCount() - t0;
+			dm(@"Live2D: the device took ${timings.device} ms, its shaders ${timings.shaders} ms");
 			shadersReady = true;
 		}
 		var player = new Live2DPlayer(device);
@@ -176,7 +184,9 @@ class KAGLive2D extends KAGPlugin
 	function render(layer, player) {
 		player.setScale(1.0);
 		if (live2dFlipY) player.setMatrix(1, 0, 0, 0, -1, 0);
+		var t0 = timings.draw === void ? System.getTickCount() : void;
 		compositor.capture(layer, drawPlayer, player, 0);
+		if (t0 !== void) timings.draw = System.getTickCount() - t0;
 	}
 }
 
