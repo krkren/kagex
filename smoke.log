@@ -1,0 +1,211 @@
+ok   --help: kagex-release 0.11.0
+ok   --version: kagex-release 0.11.0
+ok   plan before init (defaults): Game files: 621 (33.1 MB), 1 excluded; framework: template/system, copied in as data/system
+ok   init writes release.json: Wrote /tmp/tmp4t8_jib1/My Game/release.json
+ok   defaults from first.ks: KAGEX Sample / 0.11.0 / kagex-sample
+ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+ok   icon found: platform/icon-1024.png
+ok   init refuses to replace: error: /tmp/tmp4t8_jib1/My Game/release.json is already there (--force replaces it)
+ok   check: the defaults have no errors
+ok   check: the host platform is listed: linux
+ok   check: reports a bad version and reserved names: identity.version, identity.appName
+ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+ok   plan: the chosen platforms: windows, linux, web, android, ios
+ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 621 files, 1 excluded, 1 .psd
+ok   plan: images and sounds to convert: 479 images, 0 sounds
+ok   plan: framework copied in: template/system, copied in as data/system
+ok   an unknown platform is refused: unknown platform: nowhere
+ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to /tmp/tmp4t8_jib1/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: each kind of protection has a key of its own
+ok   keys: only the owner can read the file: 0o100600
+ok   keys: keygen won't replace keys: error: /tmp/tmp4t8_jib1/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to /tmp/tmp4t8_jib1/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to /tmp/tmp4t8_jib1/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u2026 (kagex-release --cli keygen <file>)"]}
+ok   keys: a keys file outside the game's folder passes: {}
+ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file /tmp/tmp4t8_jib1/My Game/../keys/no-signing.txt has no signing key: Create keys\u2026 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in /tmp/tmp4t8_jib1/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u2026 makes a new one)"]}
+ok   keys: a misspelt key name is an error: {"keys.file": ["/tmp/tmp4t8_jib1/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"]}
+ok   signing: no keys file is an error: keys.file
+ok   signing: a signed desktop build can't use a data folder: platforms.linux.data
+ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.web.url, signing.enabled
+ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+ok   the page is served
+ok   the client library is embedded
+ok   state: /tmp/tmp4t8_jib1/My Game/release.json
+ok   state: the tool encrypts archives and scenarios: archive True, scenarios True
+ok   check from the screen: scenes.encrypt; platforms.android.applicationId; platforms.android.keystore
+ok   host status for every platform: windows=True, linux=True, steam=True, macos=False, web=True, android=True, ios=False
+ok   save
+ok   screen (light): no script errors
+ok   screen: every section: 10
+ok   screen: the title field
+ok   screen: a platform turned on and saved
+ok   screen: a bad version is shown at its field
+ok   screen: build from the window: Built: ✓Linux 64.2 MB/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-linux.tar.gzShow✓Test run The game started without script errorsLog✓Media 470 images and 0 sounds converted (12 from earlier builds): 8.7 MB → 8.2 MB✓Scripts 71 compiled to bytecodeLogiimage/layers.psd couldn't be split into its laye
+ok   screen (dark): no script errors
+ok   build: every platform: windows=True; linux=True; steam=True 
+ok   windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3
+ok   windows: an archive per media folder beside data.xp3, and no data folder: bgimage.xp3 bgm.xp3 data.xp3 effect.xp3 fgimage.xp3 image.xp3 rule.xp3 scenario.xp3 thum.xp3 video.xp3 voice.xp3
+ok   windows: the .cf: ; KAGEX Sample 0.11.0: engine options (each line is a command-line option without its "-") | orgname=krkren | appname=kagex-sample | debugwin=no | 
+ok   linux: tar.gz with an executable engine: 0o755
+ok   linux: the .cf
+ok   linux: an archive per media folder beside data.xp3
+ok   linux: menu entry and icon
+ok   steam: tar.gz with an executable engine: 0o755
+ok   steam: the .cf
+ok   steam: an archive per media folder beside data.xp3
+ok   SHA256SUMS: 3 lines
+ok   test run of this computer's build: The game started without script errors 
+ok   build variants: ; ; 
+ok   windows: data bound into the exe: engine 15529984 bytes, xp3 at 15529984 of 21785810
+ok   windows: the media archives beside the bound exe
+ok   windows: only the linked plugins: 22 plugins
+ok   steam: zip with a data folder and the executable flag
+ok   steam: the data folder has the media folders the other platforms' archives took
+ok   test run with the data bound into the executable: The game started without script errors 
+ok   web (files): build
+ok   web (files): engine options:  false; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = "gamedata/"; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (files): title, manifest and icons
+ok   web (files): the build's id in the page and its scripts: da03c3c60d89cab2 ['coi-serviceworker.js', 'kagex-web.js?v=da03c3c60d89cab2', 'webconfig.js?v=da03c3c60d89cab2', 'krkrz.js?v=da03c3c60d89cab2']
+ok   web (files): link previews
+ok   web (files): krkrz.data is what krkrz.js expects: 0 bytes
+ok   web (files): the files, in lower case: 614 files
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 57090)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.10/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.10/http/server.py", line 668, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.10/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib/python3.10/http/server.py", line 433, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.10/http/server.py", line 421, in handle_one_request
+    method()
+  File "/usr/lib/python3.10/http/server.py", line 675, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.10/http/server.py", line 875, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.10/shutil.py", line 198, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.10/socketserver.py", line 826, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+ok   web (files): the game starts in the browser: "logo.ks" 
+ok   web (xp3): build
+ok   web (xp3): engine options: DATA_XP3 = true; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = ""; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (xp3): title, manifest and icons
+ok   web (xp3): the build's id in the page and its scripts: 498798c53eb6a369 ['coi-serviceworker.js', 'kagex-web.js?v=498798c53eb6a369', 'webconfig.js?v=498798c53eb6a369', 'krkrz.js?v=498798c53eb6a369']
+ok   web (xp3): link previews
+ok   web (xp3): krkrz.data is what krkrz.js expects: 32486444 bytes
+ok   web (xp3): data.xp3 preloaded
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 36342)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.10/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.10/http/server.py", line 668, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.10/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib/python3.10/http/server.py", line 433, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.10/http/server.py", line 421, in handle_one_request
+    method()
+  File "/usr/lib/python3.10/http/server.py", line 675, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.10/http/server.py", line 875, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.10/shutil.py", line 198, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.10/socketserver.py", line 826, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 36294)
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/socketserver.py", line 683, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.10/socketserver.py", line 360, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/lib/python3.10/http/server.py", line 668, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.10/socketserver.py", line 747, in __init__
+    self.handle()
+  File "/usr/lib/python3.10/http/server.py", line 433, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.10/http/server.py", line 421, in handle_one_request
+    method()
+  File "/usr/lib/python3.10/http/server.py", line 675, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.10/http/server.py", line 875, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.10/shutil.py", line 198, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.10/socketserver.py", line 826, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+ok   web (xp3): the game starts in the browser: "logo.ks" 
+ok   web (files): starts while the prefetch's cache writes are slow: "logo.ks" 
+ok   web: another build, another id (players' pages and caches update): da03c3c60d89cab2 / 498798c53eb6a369
+ok   android (apk): build
+ok   android (apk): data.xp3, stored uncompressed, and the engine: 0; ['lib/arm64-v8a/libkrkrz.so', 'lib/x86_64/libkrkrz.so']
+ok   android: package name, version and label: package: name='com.example.kagexsample' versionCode='1100' versionName='0.11.0' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+ok   android (aab): build
+ok   android (aab): the data folder and the engine: base/lib/x86_64/libkrkrz.so; base/lib/arm64-v8a/libkrkrz.so
+ok   media: build:  {"images": 470, "sounds": 2, "fromCache": 470, "bytesBefore": 10017024, "bytesAfter": 8683027, "keptByReference": 6, "keptForEffects": 6, "rewrittenScripts": 0}
+ok   media: WAV to Opus, its loop points at 48 kHz: #2.00
+# Sound Loop Information (utf-8)
+# Generated by krkrz_tools
+Link { From=96000;            To=48000;            Smooth=False; Condition=no; RefValue=0;          CondVar=0;  }
+ok   media: FLAC to Opus
+ok   media: a file the scripts name is kept
+ok   media: files a name pattern covers are kept
+ok   media: images to TLG
+ok   media: the framework's images too
+ok   media: textures an Effekseer effect names are kept: kept for effects: 6
+ok   media: sizes: 10017024 -> 8683027 bytes
+ok   media: the test run with converted media: The game started without script errors 
+ok   converted game: a button finds its hover image, the CG screen its thumbnail: start_over.tlg|thum_event1.tlg
+ok   converted game: hovering a button highlights it: changed
+ok   converted game: an effect's textures stay PNG: png
+ok   converted game: an effect draws: drawn
+ok   media: build with the names rewritten
+ok   media: the script names the new files: *start | [playse storage="kr_ref.opus"] | [eval exp="tf.v = 'tv%03d.opus'"] | [s] | 
+ok   media: the source script is untouched
+ok   media: those files converted
+ok   media: the cache: 472 from the cache, of 473 images and 5 sounds
+ok   media: build with JPEG for opaque images
+ok   media: rule images stay lossless: rule_shatter.tlg, wipe_brush.tlg
+ok   signing build: built
+ok   signing build: the signed test run verifies: Signatures verified and the game started without script errors 
+ok   signing build: data.xp3.sig, the engine list and its sig, engine .sig files: bgimage.xp3.sig, bgm.xp3.sig, data.xp3.sig, effect.xp3.sig, fgimage.xp3.sig, image.xp3.sig
+ok   signing build: every media folder's archive, signed: bgimage.xp3 bgm.xp3 data.xp3 effect.xp3 fgimage.xp3 image.xp3 rule.xp3 scenario.xp3 sound.xp3 thum.xp3 video.xp3 voice.xp3
+ok   signing build: no keys shipped
+ok   signing run: the untouched build starts: mounted 11 archives
+ok   signing run: a changed data.xp3 stops the game: verified=False
+ok   signing run: a deleted .sig stops the game: verified=False
+ok   signing run: a changed engine file stops the game: verified=False
+ok   signing run: a changed bgimage.xp3 stops the game: verified=False
+ok   signing run: an unsigned extra archive stops the game: verified=False
+ok   signing run: -replfile is refused: verified=False
+ok   signed hidden-names build: built, encrypted with the names hidden and signed:  {'archive': 'encrypted, names hidden', 'scenes': 'plain .scn', 'signed': True}
+ok   signed hidden-names build: the signed test run verifies: Signatures verified and the game started without script errors 
+ok   signed hidden-names build: data.xp3 and the folders' archives, signed, and no data folder or data.xpc: bgimage.xp3 bgimage.xp3.sig bgm.xp3 bgm.xp3.sig data.xp3 data.xp3.sig effect.xp3 effect.xp3.sig fgimage.xp3 fgimage.xp3.sig image.xp3 image.xp3.sig rule.xp3 rule.xp3.sig scenario.xp3 scenario.xp3.sig sound.xp3 sound.xp3.sig thum.xp3 thum.xp3.sig video.xp3 video.xp3.sig voice.xp3 voice.xp3.sig
+ok   signed hidden-names build: only data.xp3's startup.tjs keeps its name: {'data.xp3': ['startup.tjs']}
+ok   signed hidden-names run: the untouched build starts: mounted 11 archives

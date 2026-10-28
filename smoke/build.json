@@ -1,0 +1,74 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/tmp/tmp4t8_jib1/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/tmp/tmp4t8_jib1/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-windows",
+   "package": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-windows.zip",
+   "bytes": 52882701
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-linux",
+   "package": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-linux.tar.gz",
+   "bytes": 67346830
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-steam",
+   "package": "/tmp/tmp4t8_jib1/My Game/release/kagex-sample-0.11.0-steam.tar.gz",
+   "bytes": 74874530
+  }
+ ],
+ "notes": [
+  "image/layers.psd couldn't be split into its layers (not a Photoshop file it can read (it has no picture size)), so it went in as it is",
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 470,
+  "sounds": 0,
+  "fromCache": 12,
+  "bytesBefore": 9134716,
+  "bytesAfter": 8611428,
+  "keptByReference": 3,
+  "keptForEffects": 6,
+  "rewrittenScripts": 0
+ },
+ "layered": {
+  "files": 1,
+  "pictures": 2,
+  "bytesBefore": 344793,
+  "bytesAfter": 60865
+ },
+ "scripts": {
+  "compiled": 71,
+  "expressions": 2,
+  "fixed": 20,
+  "truncates": true,
+  "kept": [],
+  "log": "/tmp/tmp4t8_jib1/My Game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": false
+ }
+}
