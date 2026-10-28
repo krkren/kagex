@@ -146,6 +146,8 @@ jobs:
         env:
           SDL_VIDEO_DRIVER: ${{ matrix.video }}
           SDL_AUDIO_DRIVER: dummy
+          # the log in UTF-8 on Windows too (its console's code page has no Japanese)
+          PYTHONUTF8: 1
         run: .github/platforms/run-logged.sh smoke $PY -B tools/smoketest.py --engine "$ENGINE" --only sample --keep --live2d required
       - name: Publish results branch
         if: always()

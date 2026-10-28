@@ -93,9 +93,12 @@ set_target_properties(Live2DCubismCore PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES ${CORE_PATH}/include)
 
 # GLAD's OpenGL ES 2 loader (the driver's copy; its CMakelists.txt is named so that only a
-# file system that ignores case finds it)
+# file system that ignores case finds it), with the EGL loader its own loader refers to.
+# EGL_NO_X11: the driver loads GLES through the engine's GLGetProcAddress and never touches X11,
+# whose headers eglplatform.h would want on Linux (CI's runners have none)
 if (NOT TARGET glad)
   add_library(glad STATIC ${L2D}/external/glad/src/egl.c ${L2D}/external/glad/src/gles2.c)
+  target_compile_definitions(glad PUBLIC EGL_NO_X11)
   target_include_directories(glad PUBLIC ${L2D}/external/glad/include)
 endif()
 

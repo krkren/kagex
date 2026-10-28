@@ -2589,6 +2589,13 @@ def scncompile_check(opts, data):
 
 
 def main():
+    # A Windows console's code page (cp1252) has no Japanese: the line-breaking steps' text
+    # stopped the whole run there with a UnicodeEncodeError. Write what it can't show escaped
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     default_exe = "krkrz.exe" if os.name == "nt" else "./krkrz"
     ap.add_argument("--engine", default=default_exe)
