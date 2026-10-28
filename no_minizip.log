@@ -1,0 +1,59 @@
+-- The C compiler identification is AppleClang 17.0.0.17000013
+-- The CXX compiler identification is AppleClang 17.0.0.17000013
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- live2d driver: using local source at /Users/runner/work/kagex/kagex/tools/live2d/driver
+-- live2d driver (kagex's build for iOS): Cubism Core 06.00.0001
+-- live2d driver: the engine's minizip-ng
+-- Found Bash: /bin/bash
+fatal: No names found, cannot describe anything.
+CMake Warning at /Users/runner/work/_temp/live2d/src/live2d/external/KTX-Software/cmake/version.cmake:166 (message):
+  Error retrieving version from GIT tag.  Falling back to 0.0.0-noversion
+Call Stack (most recent call first):
+  /Users/runner/work/_temp/live2d/src/live2d/external/KTX-Software/CMakeLists.txt:13 (include)
+
+
+Initial BASISU_BUILD_X64=ON
+Initial CMAKE_BUILD_TYPE=
+Initial BASISU_SSE=FALSE
+Initial BASISU_ZSTD=ON
+Initial BASISU_OPENCL=OFF
+Initial BASISU_SAN=OFF
+initial BASISU_TOOL=FALSE
+initial BASISU_EXAMPLES=FALSE
+basisu build type: Release
+Building 64-bit
+SSE disabled
+Zstandard enabled
+-- Arm backend options
+--   SVE 256b backend     - OFF
+--   SVE 128b backend     - OFF
+--   NEON backend         - ON
+-- x86-64 backend options
+--   AVX2 backend         - OFF
+--   SSE4.1 backend       - OFF
+--   SSE2 backend         - OFF
+--   Use native gathers   - ON
+-- Agnostic backend options
+--   NONE backend         - OFF
+--   NATIVE backend       - OFF
+-- Build options
+--   Invariance           - ON
+--   Shared libs          - OFF
+--   Decompressor         - OFF
+-- Developer options
+--   Diagnostics          - OFF
+--   ASAN                 - OFF
+--   UBSAN                - OFF
+--   Unit tests           - OFF
+-- Configuring done (7.8s)
+-- Generating done (0.2s)
+-- Build files have been written to: /Users/runner/work/_temp/b-no_minizip
