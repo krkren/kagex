@@ -1644,6 +1644,11 @@ def sample_steps(eng):
         if not language_framework(eng):
             print("     (skipped: this build has one language)", flush=True)
             return
+        # the choices' other languages are in the compiled scenario (KAG's own player shows them as written)
+        if eng.tjs('KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.scnFindCompiled == "undefined";'
+                   ' return scnFindCompiled("s0001.ks") !== void && world_object.scenePlayEnabled ? 1 : 0;') != 1:
+            print("     (skipped: s0001.ks isn't played compiled here)", flush=True)
+            return
         eng.tjs('kag.process("s0001.ks", "*start"); return 1;')
         eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks" && kag.inStable && kag.selectShowing'
                  ' && kag.transCount == 0', timeout=30)

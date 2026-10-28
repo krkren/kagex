@@ -1196,6 +1196,9 @@ def layered_tests(exe, tmp, args):
     s["platforms"][host]["data"] = "xp3"
     s["output"].update({"archive": "none", "patchFrom": ""})
     s["media"]["images"].update({"opaque": "tlg6", "alpha": "tlg6"})
+    # the scenarios compiled, as a release has them: the package is read-only, and smoketest.py's
+    # language steps redraw the compiled texts and choices
+    s["scenes"] = {"compile": True, "encrypt": False}
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
     code, out = run(exe, "--cli", "build", str(rel), "--engines=" + str(args.engines), "--json")
     try:
