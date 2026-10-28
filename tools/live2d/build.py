@@ -22,11 +22,15 @@ environment variable, when there's no --sdk). It needs git, CMake 3.22 or newer 
 minimum) and a C++17 compiler: on Windows, Visual Studio, run from its developer command prompt
 for the engine's architecture when Ninja is used (else --arch picks it).
 
-Linux and macOS build the driver through tools/live2d/driver (its own CMake builds for Windows,
-Android and iOS only); Windows builds it with its own. Android and iOS packages aren't built here
-yet (TODO.md).
+Linux, macOS, Android and iOS build the driver through tools/live2d/driver (its own CMake builds
+for Windows, Android and iOS only, and its iOS build wants the Core's libraries where Cubism 5
+R5 no longer has them); Windows builds it with its own. Android and iOS link every plugin into
+the engine, so there the plugin is built with the engine by the platform's kit (krkrz_android,
+krkrz_ios): --kit <the kit config> fetches and patches the sources, adds the plugin to the
+config and writes the environment the kit's build needs to <work>/kit.env.
 
 usage: python3 tools/live2d/build.py [--sdk PATH] [--out DIR] [--work DIR] [--arch ARCH] [--jobs N]
+       python3 tools/live2d/build.py --sdk PATH --kit app-config.json|ios-config.json [--work DIR]
 """
 import argparse, glob, os, platform, shutil, subprocess, sys, zipfile
 
@@ -134,6 +138,35 @@ def fetch(work, name):
     return path
 
 
+def kit(config, work, core, src):
+    """Readies an Android or iOS kit (krkrz_android, krkrz_ios), which links every plugin into the
+    engine, to build krkrlive2d with it: the folder that holds the plugin's checkout goes first in
+    the config's pluginFolders (krkrz_dev has an older krkrlive2d, and the first folder with the
+    plugin wins), krkrlive2d at the end of its plugins (and staticPlugins, where it has them),
+    and <work>/kit.env gets the environment the plugin's and the driver's CMake read
+    (LIVE2DLIB_FOLDER, LIVE2D_DRIVER_SOURCE, CUBISM_SDK_CORE), one NAME=value a line, for the
+    kit's build. The engine built so holds the Cubism Core: it goes into the game's packages
+    only, never into an engine package for other developers"""
+    import json
+    with open(config, encoding="utf-8") as f:
+        cfg = json.load(f)
+    cm = cfg.setdefault("cmake", {})
+    folder = os.path.dirname(src["krkrlive2d"]).replace("\\", "/")
+    cm["pluginFolders"] = [folder] + [x for x in cm.get("pluginFolders", []) if x != folder]
+    for key in ("plugins", "staticPlugins"):
+        if key in cm or key == "plugins":
+            cm[key] = [x for x in cm.get(key, []) if x != "krkrlive2d"] + ["krkrlive2d"]
+    with open(config, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=4, ensure_ascii=False)
+        f.write("\n")
+    envfile = os.path.join(work, "kit.env")
+    with open(envfile, "w", encoding="utf-8") as f:
+        f.write("LIVE2DLIB_FOLDER=%s\n" % os.path.join(HERE, "driver").replace("\\", "/"))
+        f.write("LIVE2D_DRIVER_SOURCE=%s\n" % src["live2d"].replace("\\", "/"))
+        f.write("CUBISM_SDK_CORE=%s\n" % core.replace("\\", "/"))
+    print("%s: krkrlive2d from %s; the kit's build needs the environment in %s" % (config, folder, envfile))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--sdk", default=os.environ.get("CUBISM_SDK_CORE"),
@@ -142,6 +175,10 @@ def main():
     ap.add_argument("--work", default=os.path.join(HERE, "build"), help="sources and build (tools/live2d/build)")
     ap.add_argument("--arch", help="macOS: arm64 or x86_64; Windows: Win32 or x64 (the engine's)")
     ap.add_argument("--jobs", type=int, default=os.cpu_count() or 4)
+    ap.add_argument("--kit", metavar="CONFIG",
+                    help="Android and iOS: don't build; ready the sources for a kit's engine build "
+                         "instead, adding the plugin to the kit config (app-config.json or "
+                         "ios-config.json) and writing the environment it needs to <work>/kit.env")
     opts = ap.parse_args()
 
     for tool in ("git", "cmake"):
@@ -158,6 +195,8 @@ def main():
     print("Cubism Core %s at %s" % (".".join(str(v) for v in version), core), flush=True)
 
     src = {name: fetch(work, name) for name in SOURCES}
+    if opts.kit:
+        return kit(opts.kit, work, core, src)
 
     build = os.path.join(work, "build-" + (opts.arch or platform.machine() or "host"))
     env = dict(os.environ)

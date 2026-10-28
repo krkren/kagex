@@ -1,13 +1,16 @@
 # Builds the krkrlive2d plugin (Live2D characters, doc/world.txt "Live2D Characters") with
 # Live2D's Cubism SDK for Native on Windows, Linux and macOS (tools/live2d/build.py), and runs the
 # sample's smoke test with Live2D required on each platform's engine package from the newest
-# release, with Hiyori fetched from Live2D's GitHub (tools/assets/make_hiyori.py).
+# release, with Hiyori fetched from Live2D's GitHub (tools/assets/make_hiyori.py). Android and
+# iOS link every plugin into the engine, so there the kit builds the engine with the plugin
+# (build.py --kit), as platforms.yml builds the sample's apps, and the smoke test runs on an
+# emulator and in the Simulator.
 #
 # The SDK is Live2D's, and its licence keeps it private: it comes from the private repository
 # krkren/cubism-sdk through the CUBISM_SDK_TOKEN secret (a fine-grained token that can only read
-# that repository's contents). Neither the SDK, nor the plugin built with it, nor Hiyori leaves
-# the runner: no artifacts, and the results branch (ci/platform-results-live2d-<os>) holds logs
-# only, no pictures.
+# that repository's contents). Neither the SDK, nor the plugin or the engines built with it, nor
+# Hiyori leaves the runner: no artifacts (but the compiled scenarios, which hold neither), and the
+# results branches (ci/platform-results-live2d-<os>) hold logs only, no pictures.
 name: Live2D
 
 on:
@@ -23,6 +26,8 @@ on:
       - 'tools/live2d-standin.tjs'
       - 'tools/smoketest.py'
       - 'tools/assets/make_hiyori.py'
+      - 'app-config.json'
+      - 'ios-config.json'
       - '.github/workflows/live2d.yml'
   workflow_dispatch:
 
@@ -32,6 +37,13 @@ permissions:
 env:
   # the SDK in krkren/cubism-sdk (with its .sha256 beside it)
   CUBISM_SDK_ZIP: CubismSdkForNative-5-r.5.zip
+  # Android and iOS: the engine, the kits and kagex's plugins, as platforms.yml pins them
+  ENGINE_SHA: 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  KRKRZ_ANDROID_SHA: eff2b17b5df37af29681cc4872da6b5b0bd94d63
+  KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
+  XP3CRYPT_SHA: 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
+  SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
   live2d:
@@ -156,3 +168,190 @@ jobs:
           # Hiyori is on the screen: no screenshots on a public branch
           RESULTS_NO_PICTURES: 1
         run: .github/platforms/publish-results.sh "live2d-${{ matrix.name }}" "live2d ${{ matrix.name }}, run ${{ github.run_id }} (${{ job.status }})"
+
+  # The sample's scenarios compiled, as platforms.yml's: the app's data is read-only
+  scenarios:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the libraries the engine loads
+        run: |
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
+            libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig > /dev/null
+      - name: Compile the scenarios
+        run: .github/platforms/compile-scenarios.sh . "$RUNNER_TEMP/scenarios.tgz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live2d-scenarios
+          path: ${{ runner.temp }}/scenarios.tgz
+          if-no-files-found: error
+
+  android:
+    needs: scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: live2d-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: |
+          mkdir -p results
+          echo "${{ github.sha }} on android, run ${{ github.run_id }}" > results/run.txt
+          tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: Clone the engine and krkrz_android
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
+      - name: The Cubism SDK
+        env:
+          SDK_TOKEN: ${{ secrets.CUBISM_SDK_TOKEN }}
+        run: |
+          [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
+          git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk.git" "$RUNNER_TEMP/cubism-sdk"
+          (cd "$RUNNER_TEMP/cubism-sdk" && [ "$(sha256sum "$CUBISM_SDK_ZIP" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$CUBISM_SDK_ZIP.sha256")" ] && echo "$CUBISM_SDK_ZIP: SHA-256 as recorded") | tee results/sdk.txt
+      - name: Live2D in the engine
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh kit python3 -B kirikiri/kagex/tools/live2d/build.py \
+            --sdk "$RUNNER_TEMP/cubism-sdk/$CUBISM_SDK_ZIP" --work "$RUNNER_TEMP/live2d" --kit "$PROJECT_DIR/app-config.json"
+          cat "$RUNNER_TEMP/live2d/kit.env" >> "$GITHUB_ENV"
+          python3 -c "import json; c = json.load(open('$PROJECT_DIR/app-config.json'))['cmake']; print(c['pluginFolders'][0]); print(c['plugins'][-1])" | tee -a results/kit.txt
+      - name: Hiyori
+        run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up the Android SDK, vcpkg and SDL3
+        run: |
+          ndk=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/app-config.json'))['ndkVersion'])")
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          cmake=$("$sdk/cmdline-tools/latest/bin/sdkmanager" --list 2>/dev/null | grep -oE 'cmake;3\.[0-9]+\.[0-9]+' | sort -u -t. -k2,2n -k3,3n | tail -1)
+          echo "using $cmake" | tee results/cmake.txt
+          kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;$ndk" "$cmake" "platforms;android-36" "build-tools;36.0.0"
+          sed -i -E "s/version = \"3\.22\.1\"/version = \"${cmake#cmake;}\"/" kirikiri/krkrz_android/app/build.gradle
+          echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
+          python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
+          echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
+          echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
+          chmod +x kirikiri/krkrz_android/gradlew
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 nasm > results/apt.log 2>&1
+          mkdir -p kirikiri/krkrz_android/app/libs
+          (cd kirikiri/krkrz_android && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
+      - name: Build the debug APK
+        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
+      - name: The engine has the plugin
+        run: |
+          apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          unzip -l "$apk" | grep -E 'lib/|fgimage/hiyori' | tee results/apk.txt
+          unzip -o -q "$apk" 'lib/x86_64/*' -d "$RUNNER_TEMP/apklib"
+          for f in "$RUNNER_TEMP"/apklib/lib/x86_64/*.so; do
+            if strings "$f" | grep -c -E 'Live2DPlayer|csmReviveMocInPlace' > /dev/null; then echo "$(basename "$f") has krkrlive2d and the Cubism Core"; fi
+          done | tee -a results/apk.txt
+          grep -q "has krkrlive2d" results/apk.txt || { echo "::error title=No Live2D::the engine has no krkrlive2d"; exit 1; }
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Smoke test on an emulator
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          disable-animations: true
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --live2d required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULTS_NO_PICTURES: 1
+        run: kirikiri/kagex/.github/platforms/publish-results.sh live2d-android "live2d android, run ${{ github.run_id }} (${{ job.status }})"
+
+  ios:
+    needs: scenarios
+    runs-on: macos-15
+    timeout-minutes: 150
+    env:
+      KRKRZ_BASE: ${{ github.workspace }}/kirikiri
+      PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kirikiri/kagex
+      - uses: actions/download-artifact@v4
+        with:
+          name: live2d-scenarios
+          path: ${{ runner.temp }}/scenarios
+      - name: Put the compiled scenarios into the project
+        run: |
+          mkdir -p results
+          echo "${{ github.sha }} on ios, run ${{ github.run_id }}" > results/run.txt
+          tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: Clone the engine and krkrz_ios
+        run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
+      - name: The Cubism SDK
+        env:
+          SDK_TOKEN: ${{ secrets.CUBISM_SDK_TOKEN }}
+        run: |
+          [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
+          git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk.git" "$RUNNER_TEMP/cubism-sdk"
+          (cd "$RUNNER_TEMP/cubism-sdk" && [ "$(shasum -a 256 "$CUBISM_SDK_ZIP" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$CUBISM_SDK_ZIP.sha256")" ] && echo "$CUBISM_SDK_ZIP: SHA-256 as recorded") | tee results/sdk.txt
+      - name: Live2D in the engine
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh kit python3 -B kirikiri/kagex/tools/live2d/build.py \
+            --sdk "$RUNNER_TEMP/cubism-sdk/$CUBISM_SDK_ZIP" --work "$RUNNER_TEMP/live2d" --kit "$PROJECT_DIR/ios-config.json"
+          cat "$RUNNER_TEMP/live2d/kit.env" >> "$GITHUB_ENV"
+      - name: Hiyori
+        run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+      - name: Set up vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          xcodebuild -version | tee results/xcode.txt
+      - name: Build for the Simulator
+        run: |
+          echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_ios/CMakeLists.txt
+          kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+          app=$(find "$PROJECT_DIR/build/ios" -name '*.app' -path '*iphonesimulator*' | head -1)
+          [ -n "$app" ] || { echo "::error::no .app"; exit 1; }
+          echo "APP=$app" >> "$GITHUB_ENV"
+          ls "$app" | tee results/app.txt
+      - name: Smoke test in the Simulator
+        timeout-minutes: 30
+        run: |
+          dev=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)['devices']
+          print(next(x['udid'] for k, v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']))")
+          echo "device $dev" | tee results/simulator.txt
+          xcrun simctl boot "$dev" || true
+          xcrun simctl bootstatus "$dev" -b > /dev/null
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --live2d required || s=$?
+          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log results/ 2>/dev/null || true
+          exit $s
+      - name: Publish results branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULTS_NO_PICTURES: 1
+        run: kirikiri/kagex/.github/platforms/publish-results.sh live2d-ios "live2d ios, run ${{ github.run_id }} (${{ job.status }})"
