@@ -4,14 +4,18 @@
 
 // Game (primary layer) coordinates -> window client coordinates, assuming the engine
 // letterboxes the game into the window (full screen) or shows it 1:1 scaled (window).
+// In a window with the menu bar (0.12.0's MenuBar.tjs) the game is at the top, under its strip
 function __ci_map(gx, gy)
 {
-	var cw, ch;
+	var cw, ch, strip = 0;
 	if (kag.fullScreen) { cw = System.screenWidth; ch = System.screenHeight; }
 	else { cw = kag.innerWidth; ch = kag.innerHeight; }
+	if (!kag.fullScreen && typeof kag.menuStripHeight != "undefined") strip = kag.menuStripHeight;
+	ch -= strip;
 	var sw = kag.scWidth, sh = kag.scHeight;
 	var s = cw / sw;
 	if (ch / sh < s) s = ch / sh;
+	if (strip > 0) return [ (int)((cw - sw * s) / 2 + gx * s), (int)(strip + gy * s) ];
 	return [ (int)((cw - sw * s) / 2 + gx * s), (int)((ch - sh * s) / 2 + gy * s) ];
 }
 
