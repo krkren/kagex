@@ -1099,6 +1099,8 @@ KAGLoadScript("GFX_AMovie.tjs")   if (KAGConfigEnabled("gfxAlphaMovieEnabled", t
 
 KAGLoadScript("GFX_Effekseer.tjs") if (KAGConfigEnabled("gfxEffekseerEnabled", true));
 
+KAGLoadScript("GFX_Live2D.tjs")   if (KAGConfigEnabled("gfxLive2DEnabled",   true));
+
 
 
 KAGLoadScript("MessageLayer.tjs");

@@ -701,6 +701,70 @@
 
 			],
 
+
+
+		// A Live2D character (KAGEnvCharacterLive2D.tjs): Hiyori, Live2D Inc.'s sample model, which
+
+		// tools/assets/make_hiyori.py fetches from Live2D's GitHub into fgimage/hiyori.l2d (it isn't
+
+		// in this repository: Live2D's licence for its sample models doesn't let others put copies of
+
+		// them online, only works that use them). The krkrlive2d
+
+		// plugin draws her; a build without it, or without her file, says so in anim.ks.
+
+		"hiyori" => %[
+
+			"nameAlias" => %[ "en" => "Hiyori", "ja" => "ひより" ],
+
+			"yoffset" => 300, // the centre of her canvas, below the centre of the screen
+
+			"voiceFile" => "hiyori%s%06d",
+
+			"voiceName" => "voice0",
+
+			"live2d" => %[
+
+				"model" => "hiyori",
+
+				"canvas" => [2976, 4175], // her canvas in Cubism Editor, for its shape
+
+				"height" => 1650,         // its height on the screen at 100%
+
+				// a pose is motions that go on: one of the model3.json group after another
+
+				"poses" => %[ "standard" => "Idle" ],
+
+				"defaultPose" => "standard",
+
+				// motions played once, then the pose's again
+
+				"motions" => %[ "tap" => "TapBody" ],
+
+				// faces: values added to her parameters (an eye's is how open it is)
+
+				"faces" => %[
+
+					"normal"    => %[],
+
+					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1 ],
+
+					"laugh"     => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamCheek" => 1 ],
+
+					"sad"       => %[ "ParamBrowLY" => -0.5, "ParamBrowRY" => -0.5, "ParamBrowLForm" => -1, "ParamBrowRForm" => -1, "ParamMouthForm" => -1 ],
+
+					"surprised" => %[ "ParamBrowLY" => 1, "ParamBrowRY" => 1, "ParamMouthForm" => -0.5 ],
+
+					"blush"     => %[ "ParamCheek" => 1 ],
+
+					],
+
+				"defaultFace" => "normal",
+
+				],
+
+			],
+
 		],
 
 

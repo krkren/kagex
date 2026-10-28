@@ -43,5 +43,31 @@ And lipflip=4 moves the mouth four times, without a voice.
 【pip】Bye for now!
 That wave is an animation: waving, in data/main/charanim.csv, steps through the arm poses on a timer until something else changes.
 [pip hide]
+*live2d|Live2D
+; A Live2D character: Hiyori, Live2D Inc.'s sample model, drawn by the krkrlive2d plugin
+; (KAGEnvCharacterLive2D.tjs). Her model, data/fgimage/hiyori.l2d, comes from
+; tools/assets/make_hiyori.py, and her voice too, with its key for Azure's speech service. A
+; build without the plugin or the model says so instead. See "Live2D Characters" in
+; doc/world.txt.
+[if exp="!KAGLive2DCanDraw('hiyori')"]
+This build doesn't play Live2D models. That takes the krkrlive2d plugin, built with Live2D's Cubism SDK, and a model: "Live2D Characters" in doc/world.txt says how to add them.
+[demodone name=anim]
+[jump storage=s0001.ks]
+[endif]
+[hiyori standard posright]
+This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Live2D's Cubism Editor, which the krkrlive2d plugin moves and draws thirty times a second. This content uses sample data owned and copyrighted by Live2D Inc.
+[hiyori smile]
+[if exp="sampleVoiceExists('hiyori000001')"]
+[hiyori voice=1]
+[endif]
+【hiyori】Hello! I'm Hiyori. I blink by myself, and my mouth moves with my voice, just like Pip!
+Her pose, standard, plays the motions of the model's Idle group one after another, and her faces are values for its parameters, set in envinit.tjs, which fade into each other.
+[hiyori tap motionwait]
+tap plays the model's TapBody motion once, and motionwait waits for it to end. Then her Idle motions go on.
+[hiyori xsad]
+An x in front of a face makes her blink as it changes.
+[hiyori surprised eyeflip=2]
+The eye and mouth commands work for her as they do for Pip: eyeflip=2 blinks twice.
+[hiyori normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]

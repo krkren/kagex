@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Live2D characters**: a World character can be a Live2D Cubism model: an envinit.tjs entry with `live2d` and a `.l2d` file (the folder Cubism Editor exports, zipped), which the krkrlive2d plugin draws into the character's layer through the engine's GLCompositor every frame, at the size of its World level. Its poses are motions that go on (one of a model3.json group after another), its motions play once and go back to the pose (`motionwait` waits for one), its faces are the model's expressions or values for its parameters, fading into each other, and it blinks and lip-syncs to its voice as Pip does, a lip track's vowels shaping its mouth; the eye and mouth commands work on it too. Its pose and face are saved, and a model is let go when its character leaves the screen (`KAGEnvCharacterLive2D.tjs`, `GFX_Live2D.tjs`; `doc/world.txt`, "Live2D Characters"). The plugin needs Live2D's Cubism SDK, whose licence keeps its Core out of kagex's own engines, so a game builds the plugin; without it, a Live2D character draws nothing and the log says why. The smoke test checks the framework with a stand-in for the plugin (`tools/live2d-standin.tjs`).
+- **Hiyori** in the Animated Character demo: Live2D Inc.'s sample model (Neuro-sama's first), who joins in after Pip with her idle motions, faces, a motion played once, blinking and a voiced line. She isn't in the repository, since Live2D's licence for its sample models doesn't let others put them online: `tools/assets/make_hiyori.py model --accept-license` fetches her from Live2D's GitHub, and `speech` makes her line with Azure's text to speech in the voice Neuro-sama speaks with (en-US-AshleyNeural, pitched up 25%), given an Azure Speech key. A build without the plugin or her model says so in her place.
+
+### Changed
+
+- Blinking and lip-sync are a class of their own, `KAGEnvCharacterEyeLip.tjs`, which characters drawn from layers and Live2D characters share; world.tjs loads it before either, so Override.tjs changes its settings (`eyeFlipTime`, `lipFlipTime` ...) as before.
+
 ## 0.12.1
 
 ### Added

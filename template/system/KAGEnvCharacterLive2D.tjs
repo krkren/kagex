@@ -1,0 +1,723 @@
+// KAGEnvCharacterLive2D.tjs - World characters played by Live2D Cubism models
+//
+// A character whose envinit.tjs entry has "live2d" is a model made with Live2D's Cubism Editor:
+// a .l2d file (the exported folder's contents in a zip, renamed), which the krkrlive2d plugin
+// draws each frame into the character's layer (GFX_Live2D.tjs), at the size of its World level.
+// Its poses are motions that go on (one of a motion group after another, or one looping), its
+// motions play once and go back to the pose, and its faces are the model's expressions or
+// values for its parameters. It blinks and lip-syncs to its voice as a character drawn from
+// layers does (KAGEnvCharacterEyeLip.tjs): the eyes' level closes its eye parameters, the
+// mouth's opens its LipSync parameters, and a lip track's vowels shape its mouth form.
+// doc/world.txt, "Live2D Characters".
+//
+//   "hiyori" => %[
+//       "voiceFile" => "hiyori%s%06d",
+//       "live2d" => %[
+//           "model"  => "hiyori",            // hiyori.l2d
+//           "canvas" => [2976, 4175],        // the model's canvas, for its shape
+//           "height" => 1650,                // the canvas's height on the screen at 100%
+//           "poses"  => %[ standard:"Idle" ],
+//           "motions" => %[ tap:"TapBody" ],
+//           "faces"  => %[ normal:%[], smile:%[ ParamEyeLSmile:1, ParamEyeRSmile:1 ] ],
+//           "defaultPose" => "standard",
+//           "defaultFace" => "normal",
+//           ],
+//       ],
+
+// Settings, which Override.tjs can change
+// The time between the frames a model is drawn (ms): 33 is 30 a second
+var live2dFrameTime = 33;
+// The tallest picture drawn: a character taller on the screen is drawn at this and enlarged
+var live2dMaxHeight = 2048;
+// How long a motion fades in and out, and a face of parameter values into the next (ms)
+var live2dMotionFade = 500;
+var live2dFaceFade = 300;
+// How long the eyes and the mouth take to reach the level they're going to (ms), which turns
+// the steps of a blink and of lip-sync into movement
+var live2dEyeSmooth = 30;
+var live2dMouthSmooth = 50;
+// The mouth for each vowel of a lip track: how open (of the voice's level) and the mouth form
+// (added to the model's mouth-form parameter: + wider, - rounder). A model's "vowels" can give
+// its own
+var live2dVowels = %[
+	a : [1.0,  0.0],
+	i : [0.45, 1.0],
+	u : [0.35, -0.8],
+	e : [0.6,  0.6],
+	o : [0.8,  -0.6],
+];
+
+/**
+ * Whether a model can be drawn here: the krkrlive2d plugin, OpenGL ES and the model's file
+ * @param model the model's file name, with or without .l2d
+ */
+function KAGLive2DCanDraw(model) {
+	if (typeof global.KAGLive2DOf == "undefined" || typeof global.kag == "undefined") {
+		return false;
+	}
+	var sys = KAGLive2DOf(kag);
+	return sys.available && sys.findModel(model) != "";
+}
+
+class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
+
+	var config;          // the entry's "live2d"
+	var modelName;       // its model's file name
+	var aspect = 1.0;    // its canvas's width for its height
+	var system;          // the window's KAGLive2D
+	var player;          // the model playing (Live2DPlayer), made when first drawn
+	var failed;          // why it can't be drawn, when it can't
+	var renderLayer;     // the picture drawn
+	var emptyLayer;      // the picture when it can't be drawn
+
+	var lastStep;        // when the model last moved (System.getTickCount)
+	var lastDraw;        // when it was last drawn
+	var poseStart;       // the pose's motion is to start again
+	var poseMotion;      // the motion of the pose playing (a name in its group)
+	var oneShot;         // a motion to play once (its spec, as in "motions"), until it starts
+	var oneShotPlaying;  // a motion playing once
+	var motionWait;      // the command waits for that motion to end (motionwait)
+
+	var faceFrom = %[];  // the face's parameter values fading out
+	var faceTo = %[];    // and fading in
+	var faceStart;       // when the fade began
+	var expression = ""; // the model's expression shown
+
+	var eyeValue = 1.0;  // the eyes, 1 open to 0 shut, on their way to eyeLevel
+	var mouthOpen = 0.0; // the mouth, 0 shut to 1, on its way to lipLevel
+	var mouthForm = 0.0; // its shape (a vowel's)
+
+	var eyeParams;       // the eye parameters blinking closes
+	var mouthFormParam;  // the parameter vowels shape
+
+	/**
+	 * Constructor
+	 */
+	function KAGEnvCharacterLive2D(env, name, initName, init) {
+		super.KAGEnvCharacterEyeLip(...);
+		var c = init.live2d;
+		config = typeof c == "Object" && c !== null ? c : %[ model:(string)c ];
+		modelName = config.model !== void ? (string)config.model : initName;
+		if (config.canvas !== void && config.canvas.count >= 2 && +config.canvas[1] > 0) {
+			aspect = (real)config.canvas[0] / +config.canvas[1];
+		}
+		eyeParams = config.eyes !== void ? config.eyes : ["ParamEyeLOpen", "ParamEyeROpen"];
+		mouthFormParam = config.mouthForm !== void ? (string)config.mouthForm : "ParamMouthForm";
+		pose = config.defaultPose !== void ? config.defaultPose : firstName(config.poses);
+		face = config.defaultFace;
+		setFaceValues(true);
+		// it blinks, and its mouth follows its voice, unless told otherwise (eyeflipoff ...)
+		eyeflipTime = void;
+		lipflipTime = void;
+		setEyeState(6);
+		setLipState(6);
+	}
+
+	function finalize() {
+		releasePlayer();
+		invalidate renderLayer if renderLayer !== void;
+		invalidate emptyLayer if emptyLayer !== void;
+		super.finalize(...);
+	}
+
+	function firstName(dict) {
+		if (dict === void) return void;
+		var list = [];
+		list.assign(dict);
+		return list.count > 0 ? list[0] : void;
+	}
+
+	function namesOf(dict) {
+		var ret = [];
+		if (dict !== void) {
+			var list = [];
+			list.assign(dict);
+			for (var i = 0; i < list.count; i += 2) ret.add(list[i]);
+			ret.sort();
+		}
+		return ret;
+	}
+
+	// The model's poses, motions and faces by name
+	function poseSpec(name)   { return config.poses   !== void && name !== void ? config.poses[name]   : void; }
+	function motionSpec(name) { return config.motions !== void && name !== void ? config.motions[name] : void; }
+	function faceSpec(name)   { return config.faces   !== void && name !== void ? config.faces[name]   : void; }
+
+	// Show a released model again on the next draw (its picture, its GL objects)
+	function releasePlayer() {
+		if (player !== void) {
+			if (system !== void && isvalid system) {
+				system.releasePlayer(player);
+			} else {
+				try { invalidate player; } catch {}
+			}
+			player = void;
+		}
+		oneShotPlaying = false;
+		poseMotion = void;
+		lastStep = void;
+		lastDraw = void;
+	}
+
+	// The stand-in picture cache ([env clearstandcache]): a model not shown is let go
+	function flashStandLayerInfo() {
+		releasePlayer() if !isShow();
+	}
+
+	// Initialize level at initial display: a character that goes lets go of its model
+	property disp {
+		getter() {
+			return *(&global.KAGEnvCharacter.disp incontextof this);
+		}
+		setter(v) {
+			if (disp != CLEAR && v == CLEAR) {
+				releasePlayer();
+			}
+			*(&global.KAGEnvCharacter.disp incontextof this) = v;
+		}
+	}
+
+	// ----------------------------------------------------------------
+	// Poses, motions and faces
+	// ----------------------------------------------------------------
+
+	/**
+	 * A motion spec's motions, by name: "<group>", every motion of the model3.json group (one of
+	 * them at random each time); "<group>:<n>" its n-th (from 0); "<group>:<name>" or ":<name>" the
+	 * motion of that file name (motions/<name>.motion3.json, as the plugin keeps them)
+	 */
+	function motionNames(spec) {
+		var s = spec !== void ? (string)spec : "";
+		var i = s.indexOf(":");
+		var group = i >= 0 ? s.substr(0, i) : s;
+		var which = i >= 0 ? s.substr(i + 1) : "";
+		var names = [];
+		if (group != "") {
+			var count = player.getMotionCount(group);
+			for (var n = 0; n < count; n++) names.add(player.getMotionName(group, n));
+		}
+		if (which == "") return names;
+		if (/^[0-9]+$/.test(which)) {
+			return +which < names.count ? [ names[+which] ] : [];
+		}
+		return [ which ];
+	}
+
+	/**
+	 * Starts one of the motions (by name) as the model's main motion; true when there was one
+	 */
+	function playMotion(names, loop) {
+		if (names.count == 0) return false;
+		var name = names[0];
+		if (names.count > 1) {
+			// at random, but not the one playing again (unless the group is only that one)
+			for (var tries = 0; tries < 8; tries++) {
+				name = names[(int)(Math.random() * names.count)];
+				if (name != poseMotion) break;
+			}
+		}
+		var fade = live2dMotionFade / 1000.0;
+		player.startMotion("main", name, loop ? 1 : 0, fade, fade);
+		poseMotion = name;
+		return true;
+	}
+
+	/**
+	 * Sets the pose: the motions that go on while nothing else plays
+	 */
+	function setPose(poseName, elm) {
+		if (poseSpec(poseName) === void) {
+			env.errorCmd(name + ": no Live2D pose " + poseName);
+			return;
+		}
+		if (poseName != pose || isClear()) {
+			if (elm.emotion === void) {
+				hideEmotion();
+			}
+			pose = poseName;
+			poseStart = true;
+			if (isClear()) {
+				initFile(elm);
+				disp = SHOW;
+				redraw = true;
+				setAutoTrans([init.poseTrans, init.charTrans, env.envinfo.poseTrans, env.envinfo.charTrans], elm);
+				ypos = 0 if (elm.ypos === void);
+			}
+		}
+	}
+
+	/**
+	 * Plays a motion once, then the pose's again
+	 */
+	function playOnce(motionName, elm) {
+		var spec = motionSpec(motionName);
+		if (spec === void) {
+			env.errorCmd(name + ": no Live2D motion " + motionName);
+			return;
+		}
+		oneShot = spec;
+		motionWait = elm.motionwait !== void && +elm.motionwait;
+		if (isClear()) {
+			initFile(elm);
+			disp = SHOW;
+			redraw = true;
+			setAutoTrans([init.poseTrans, init.charTrans, env.envinfo.poseTrans, env.envinfo.charTrans], elm);
+		}
+	}
+
+	/**
+	 * The parameter values of a face: %[ parameter:value ], its "expression" left out
+	 */
+	function faceValuesOf(faceName) {
+		var spec = faceSpec(faceName);
+		var ret = %[];
+		if (typeof spec == "Object" && spec !== null) {
+			(Dictionary.assign incontextof ret)(spec, false);
+			delete ret.expression;
+		}
+		return ret;
+	}
+
+	function faceExpressionOf(faceName) {
+		var spec = faceSpec(faceName);
+		if (typeof spec == "String") return spec;
+		if (typeof spec == "Object" && spec !== null && spec.expression !== void) return (string)spec.expression;
+		return "";
+	}
+
+	/**
+	 * Starts the face's parameter values fading in (at once with now)
+	 */
+	function setFaceValues(now) {
+		var to = faceValuesOf(face);
+		if (now || faceStart === void) {
+			faceFrom = to;
+		} else {
+			// from where the fade had got to
+			faceFrom = currentFaceValues(System.getTickCount());
+		}
+		faceTo = to;
+		faceStart = now ? void : System.getTickCount();
+	}
+
+	/**
+	 * Sets the face: an expression of the model, values for its parameters, or both
+	 */
+	function setFace(faceName, elm) {
+		if (faceSpec(faceName) === void) {
+			env.errorCmd(name + ": no Live2D face " + faceName);
+			return;
+		}
+		if (faceName != face) {
+			if (env.envinfo.hideEmotionOnFace && elm.emotion === void) {
+				hideEmotion();
+			}
+			face = faceName;
+			setFaceValues(isClear());
+		}
+		if (isClear()) {
+			disp = SHOW;
+			redraw = true;
+			setAutoTrans([init.faceTrans, init.charTrans, env.envinfo.faceTrans, env.envinfo.charTrans], elm);
+		}
+	}
+
+	// whether a parameter is one the eyes' blinking closes: a face's value for it is how open
+	// the eyes are (1 open, 0 shut), not a value added
+	function isEyeParam(param) {
+		for (var i = 0; i < eyeParams.count; i++) {
+			if (eyeParams[i] == param) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * The face's parameter values at tick, on their way from faceFrom to faceTo: an eye
+	 * parameter's from 1, another's from 0
+	 */
+	function currentFaceValues(tick) {
+		var t = 1.0;
+		if (faceStart !== void && live2dFaceFade > 0) {
+			t = (tick - faceStart) / live2dFaceFade;
+			t = 1.0 if t > 1.0;
+			t = 0.0 if t < 0.0;
+		}
+		var ret = %[];
+		var keys = [];
+		keys.assign(faceFrom);
+		for (var i = 0; i < keys.count; i += 2) ret[keys[i]] = true;
+		keys.assign(faceTo);
+		for (var i = 0; i < keys.count; i += 2) ret[keys[i]] = true;
+		keys.assign(ret);
+		for (var i = 0; i < keys.count; i += 2) {
+			var p = keys[i];
+			var none = isEyeParam(p) ? 1.0 : 0.0;
+			var a = faceFrom[p] !== void ? +faceFrom[p] : none;
+			var b = faceTo[p] !== void ? +faceTo[p] : none;
+			ret[p] = a + (b - a) * t;
+		}
+		return ret;
+	}
+
+	// ----------------------------------------------------------------
+	// Commands
+	// ----------------------------------------------------------------
+
+	/**
+	 * Prioritize pose specification processing
+	 */
+	function doPoseCommand(cmd, param, elm) {
+		if (cmd == "pose") {
+			setPose(param, elm);
+			return true;
+		}
+		if (poseSpec(cmd) !== void) {
+			setPose(cmd, elm);
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Execute command
+	 */
+	function doCommand(cmd, param, elm) {
+		if (doEyeLipCommand(cmd, param, elm)) {
+			return true;
+		}
+		if (cmd == "motion") {
+			playOnce(param, elm);
+			return true;
+		}
+		if (cmd == "motionwait") {
+			return true; // with the motion
+		}
+		if (motionSpec(cmd) !== void) {
+			playOnce(cmd, elm);
+			return true;
+		}
+		if (faceSpec(cmd) !== void) {
+			setFace(cmd, elm);
+			return true;
+		}
+		// x<face>: a blink as the face changes (the model fades from one to the other)
+		if (cmd == "xface" || (cmd.charAt(0) == "x" && faceSpec(cmd.substr(1)) !== void)) {
+			setFace(cmd == "xface" ? param : cmd.substr(1), elm);
+			eyeflip = 1 if !(eyeflip > 0);
+			return true;
+		}
+		return super.doCommand(cmd, param, elm);
+	}
+
+	function checkSync(elm) {
+		super.checkSync(elm);
+		syncCommand = true if motionWait;
+	}
+
+	function sync(elm, skipMode) {
+		super.sync(...);
+		if (motionWait) {
+			motionWait = false;
+			env.addFastTag("wchanim", %[target:this]);
+		}
+	}
+
+	// a motion played once can be waited for (motionwait) and is stopped by a click
+	function canWaitAnim() {
+		return oneShot !== void || oneShotPlaying;
+	}
+
+	function stopAnim() {
+		var was = canWaitAnim();
+		oneShot = void;
+		if (oneShotPlaying) {
+			oneShotPlaying = false;
+			poseStart = true;
+		}
+		env.trigger(name + "_anim") if was;
+	}
+
+	function waitAnim(elm, main) {
+		if (!canWaitAnim()) {
+			return 0;
+		}
+		var trigger = name + "_anim";
+		var canskip = elm.canskip !== void ? elm.canskip : true;
+		if (canskip && main.clickSkipEnabled) {
+			if (main.skipMode) {
+				stopAnim();
+				return 0;
+			}
+			main.conductor.wait(%[
+				click : function(arg) { arg(); } incontextof this,
+				click_arg : stopAnim,
+				trigger => function(arg) { return arg; } incontextof this,
+				trigger + "_arg" => +elm.wait
+				]);
+		} else {
+			main.conductor.wait(%[
+				trigger => function(arg) { return arg; } incontextof this,
+				trigger + "_arg" => +elm.wait
+				]);
+		}
+		return -2;
+	}
+
+	// ----------------------------------------------------------------
+	// Save and load
+	// ----------------------------------------------------------------
+
+	function onRestore(f) {
+		super.onRestore(f);
+		// the pose's motion from its start, the face as it was, no motion played once
+		oneShot = void;
+		oneShotPlaying = false;
+		poseStart = true;
+		expression = "";
+		setFaceValues(true);
+		restoreEyeLip(f);
+	}
+
+	// ----------------------------------------------------------------
+	// Drawing
+	// ----------------------------------------------------------------
+
+	/**
+	 * Makes the model's player, the first time it's drawn; false (and why, logged once) when it
+	 * can't be drawn
+	 */
+	function prepare() {
+		if (player !== void) return true;
+		if (failed !== void) return false;
+		if (typeof global.KAGLive2DOf == "undefined") {
+			failed = "GFX_Live2D.tjs isn't loaded (gfxLive2DEnabled)";
+		} else {
+			system = KAGLive2DOf(env.window);
+			if (!system.available) {
+				failed = system.reason;
+			} else {
+				var file = system.findModel(modelName);
+				if (file == "") {
+					failed = @"its model ${modelName}.l2d isn't there";
+				} else {
+					player = system.newPlayer(file);
+					if (player === void) failed = @"its model ${file} can't be read";
+				}
+			}
+		}
+		if (player === void) {
+			dm(@"Live2D character ${name} isn't drawn: ${failed}");
+			return false;
+		}
+		// the World blinks its eyes (eyeLevel), not the model by itself, and opens its mouth
+		player.setBlinkingMode(0);
+		player.setVoiceMode(0);
+		player.setVoiceWeight(1.0);
+		for (var i = 0; i < eyeParams.count; i++) {
+			player.setParameterType(eyeParams[i], 1); // their extra value is a factor
+		}
+		poseStart = true;
+		poseMotion = void;
+		expression = "";
+		lastStep = void;
+		return true;
+	}
+
+	function approach(v, target, dt, time) {
+		if (time <= 0 || dt >= time) return target;
+		return v + (target - v) * dt / time;
+	}
+
+	/**
+	 * Moves the model on to tick: its motions, its face, its eyes and mouth
+	 */
+	function step(tick) {
+		var dt = lastStep !== void ? tick - lastStep : 0;
+		dt = 0 if dt < 0;
+		dt = 100 if dt > 100; // after a pause, from where it was
+		lastStep = tick;
+
+		// motions: one played once, else the pose's, another of its group when one ends
+		if (oneShot !== void) {
+			var names = motionNames(oneShot);
+			oneShot = void;
+			if (playMotion(names, false)) {
+				oneShotPlaying = true;
+				poseStart = false;
+			}
+		} else if (poseStart || !player.isPlaying("main")) {
+			if (oneShotPlaying) {
+				oneShotPlaying = false;
+				env.trigger(name + "_anim");
+			}
+			var names = motionNames(poseSpec(pose));
+			// one motion loops, a group's play one after another
+			playMotion(names, names.count == 1);
+			poseStart = false;
+		}
+
+		// the face: the model's expression, and values added to its parameters
+		var exp = faceExpressionOf(face);
+		if (exp != expression) {
+			player.setExpression(exp);
+			expression = exp;
+		}
+		var values = currentFaceValues(tick);
+		faceStart = void if faceStart !== void && tick - faceStart >= live2dFaceFade;
+
+		// the eyes: closed by the blink, and by the face
+		var eyeTarget = eyeLevel !== void ? eyeLevel / 2.0 : 1.0;
+		eyeValue = approach(eyeValue, eyeTarget, dt, live2dEyeSmooth);
+		for (var i = 0; i < eyeParams.count; i++) {
+			var p = eyeParams[i];
+			var f = values[p] !== void ? values[p] : 1.0;
+			player.setDiffParameterValue(p, eyeValue * f);
+			delete values[p];
+		}
+
+		// the mouth: as open as the voice (lipLevel), shaped like its vowel
+		var shapes = config.vowels !== void ? config.vowels : global.live2dVowels;
+		var shape = lipVowel !== void ? shapes[lipVowel] : void;
+		var level = lipLevel !== void ? lipLevel : 0;
+		var openTarget = level / 2.0 * (shape !== void ? +shape[0] : 1.0);
+		var formTarget = level > 0 && shape !== void ? +shape[1] : 0.0;
+		mouthOpen = approach(mouthOpen, openTarget, dt, live2dMouthSmooth);
+		mouthForm = approach(mouthForm, formTarget, dt, live2dMouthSmooth);
+		player.setVoiceValue(mouthOpen);
+		values[mouthFormParam] = (values[mouthFormParam] !== void ? values[mouthFormParam] : 0) + mouthForm;
+
+		var keys = [];
+		keys.assign(values);
+		for (var i = 0; i < keys.count; i += 2) {
+			player.setDiffParameterValue(keys[i], +keys[i+1]);
+		}
+
+		player.progress(dt);
+	}
+
+	/**
+	 * Draws the model: into a picture the size of its canvas at the character's level, which
+	 * the World places by the canvas's centre (moved by "anchor")
+	 * @param layer Target layer
+	 * @param levelName Level name
+	 * @param pose Pose specification
+	 * @return true if successful
+	 */
+	function drawPose(layer, levelName, pose) {
+		var levelInfo = env.levels[(int)+level];
+		var zoom = 100;
+		if (levelInfo !== void) {
+			zoom = levelInfo.imgzoom !== void ? +levelInfo.imgzoom : levelInfo.zoom !== void ? +levelInfo.zoom : 100;
+		}
+		var height = config.height !== void ? +config.height : kag.scHeight;
+		var h = height * zoom / 100.0;
+		var r = h > live2dMaxHeight ? live2dMaxHeight / h : 1.0;
+		var rh = (int)(h * r + 0.5);
+		rh = 1 if rh < 1;
+		var rw = (int)(rh * aspect + 0.5);
+		rw = 1 if rw < 1;
+
+		if (!env.skipNoDisp && prepare()) {
+			if (renderLayer === void) {
+				var parent = env.temporaryLayer;
+				renderLayer = new global.Layer(parent.window, parent);
+				renderLayer.name = "Live2D picture:" + name;
+			}
+			if (renderLayer.imageWidth != rw || renderLayer.imageHeight != rh) {
+				renderLayer.setImageSize(rw, rh);
+			}
+			var tick = System.getTickCount();
+			try {
+				step(tick);
+				system.render(renderLayer, player);
+			} catch (e) {
+				dm(@"Live2D character ${name} stopped: ${e.message}");
+				failed = e.message;
+				releasePlayer();
+				renderLayer.fillRect(0, 0, rw, rh, 0);
+			}
+			lastDraw = tick;
+			layer.assignImages(renderLayer);
+		} else {
+			// nothing to draw: an empty picture, placed as the model would be
+			if (emptyLayer === void) {
+				var parent = env.temporaryLayer;
+				emptyLayer = new global.Layer(parent.window, parent);
+				emptyLayer.name = "Live2D picture (none):" + name;
+				emptyLayer.setImageSize(1, 1);
+				emptyLayer.fillRect(0, 0, 1, 1, 0);
+			}
+			layer.assignImages(emptyLayer);
+			r = 1.0;
+			rw = rh = 1;
+		}
+		layer.type = ltAlpha;
+		layer.resolution = drawResolution = 100 * r;
+		var anchor = config.anchor;
+		var ax = anchor !== void ? +anchor[0] * zoom / 100 : 0;
+		var ay = anchor !== void ? +anchor[1] * zoom / 100 : 0;
+		afx = defaultAfx = (int)(rw / r / 2 + ax);
+		afy = defaultAfy = (int)(rh / r / 2 + ay);
+		return true;
+	}
+
+	// drawLayer sets a level's imgzoom as the picture's resolution, for pictures drawn at 100%:
+	// this one is drawn at the level's size already
+	var drawResolution;
+	function drawLayer(layer) {
+		super.drawLayer(layer);
+		if (drawResolution !== void && isShowBU()) {
+			layer.resolution = drawResolution;
+		}
+	}
+
+	/**
+	 * No face window (facewin) for a model
+	 */
+	function drawFace(layer) {
+		return false;
+	}
+
+	// the model moves on its own: draw it again every live2dFrameTime while it shows
+	function updateExtra(tick) {
+		if (player === void || !isShow()) return 0;
+		if (lastDraw !== void && tick - lastDraw < live2dFrameTime) return 0;
+		return 1;
+	}
+
+	function isAnimating() {
+		return isShow() && failed === void && !env.skipNoDisp;
+	}
+
+	// a model that can't be drawn has no eyes or mouth to move either
+	function isNeedUpdate() {
+		return failed === void && super.isNeedUpdate();
+	}
+
+	/**
+	 * Mouths by vowel: a model's mouth form takes a lip track's vowels
+	 */
+	function faceHasVowels() {
+		return mouthFormParam != "";
+	}
+
+	// ----------------------------------------------------------------
+	// Names, for the debug tools
+	// ----------------------------------------------------------------
+
+	function getPoseNames() {
+		return namesOf(config.poses);
+	}
+
+	function getDressNames() {
+		return [];
+	}
+
+	function getFaceNames() {
+		return namesOf(config.faces);
+	}
+
+	function getMotionNames() {
+		return namesOf(config.motions);
+	}
+};

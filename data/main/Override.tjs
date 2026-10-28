@@ -1462,3 +1462,16 @@ function playNext()
     }
 }
 
+
+/**
+ * Whether a voice's file is there, by its name without the extension (anim.ks: Hiyori's line
+ * is voiced once tools/assets/make_hiyori.py speech has made it)
+ */
+function sampleVoiceExists(name)
+{
+    var exts = [".wav", ".ogg", ".opus"];
+    for (var i = 0; i < exts.count; i++) {
+        if (Storages.isExistentStorage(name + exts[i])) return true;
+    }
+    return false;
+}

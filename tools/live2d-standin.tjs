@@ -1,0 +1,197 @@
+// live2d-standin.tjs - a stand-in for the krkrlive2d plugin, for tests without Live2D's Cubism SDK
+//
+// Defines Live2DDevice, Live2DModel and Live2DPlayer in script, with the methods
+// GFX_Live2D.tjs and KAGEnvCharacterLive2D.tjs call, so a game runs as with the plugin when it
+// isn't there: before anything has used Live2D, KAGLive2D finds these classes and links no
+// plugin. It plays no model. It keeps what the model is told (Live2DStandIn: the motions
+// started, the eyes' and the mouth's values, the face's parameters, the expression) and draws
+// a picture of it through GLCompositor, inside capture() as the plugin draws: a violet body
+// filling the middle of the canvas, an eye band for each eye as tall as the eye is open, and a
+// mouth as tall as it's open. Its "model" is the motion groups below, whatever the .l2d file is.
+// tools/smoketest.py runs it with Scripts.exec before the Animated Character demo.
+
+global.Live2DStandIn = %[
+	groups  : %[
+		Idle    : [ "Hiyori_m01", "Hiyori_m02", "Hiyori_m03", "Hiyori_m05", "Hiyori_m06",
+					"Hiyori_m07", "Hiyori_m08", "Hiyori_m09", "Hiyori_m10" ],
+		TapBody : [ "Hiyori_m04" ],
+		],
+	motionTime : 1500,  // how long a motion plays (ms), unless it loops
+	started  : [],      // the motions started: "<group>/<name>[ loop]"
+	expressions : [],   // the expressions set
+	eyes     : [],      // the left eye's value at each picture drawn (1 open, 0 shut)
+	mouths   : [],      // the mouth's (the voice value) at each picture drawn
+	forms    : [],      // the mouth form's
+	drawn    : 0,       // pictures drawn
+	players  : 0,       // players made, less those released
+	shaders  : false,   // prepareShaders called
+	];
+
+class Live2DDevice
+{
+	var compositor;
+	var surfaceWidth = 0;
+	var surfaceHeight = 0;
+
+	function Live2DDevice(oglbase) {
+		if (oglbase === void || !oglbase.GLGetProcAddress) {
+			throw new Exception("Can't Retrive GLGetProcAddress interface");
+		}
+		compositor = oglbase;
+	}
+	function onBeginScene(w, h) {
+		surfaceWidth = w;
+		surfaceHeight = h;
+	}
+	function onEndScene() {
+	}
+	function prepareShaders() {
+		Live2DStandIn.shaders = true;
+	}
+}
+
+class Live2DModel
+{
+	var file = "";
+	function Live2DModel() {
+	}
+	function load(filename) {
+		file = Storages.isExistentStorage(filename) ? filename : "";
+	}
+	function clear() {
+		file = "";
+	}
+	function getParameterCount() {
+		return file != "" ? 70 : 0;
+	}
+}
+
+class Live2DPlayer
+{
+	var device;
+	var file = "";
+	var playing = "";      // the motion playing ("" none)
+	var looping = false;
+	var left = 0;          // ms left of it
+	var types = %[];
+	var diffs = %[];
+	var voice = 0.0;
+	var expression = "";
+	var blinkingMode = 1;
+	var scale = 1.0;
+	var pieces = %[];      // a 1x1 layer of each colour drawn with
+
+	function Live2DPlayer(dev) {
+		device = dev;
+		Live2DStandIn.players++;
+	}
+	function finalize() {
+		var list = [];
+		list.assign(pieces);
+		for (var i = 1; i < list.count; i += 2) invalidate list[i];
+		Live2DStandIn.players--;
+	}
+	function loadModel(model) {
+		file = model.file;
+	}
+	function load(filename) {
+		file = filename;
+	}
+	function getParameterCount() {
+		return file != "" ? 70 : 0;
+	}
+	function getMotionCount(group) {
+		var g = Live2DStandIn.groups[group];
+		return g !== void ? g.count : 0;
+	}
+	function getMotionName(group, no) {
+		var g = Live2DStandIn.groups[group];
+		return g !== void && no < g.count ? g[no] : "";
+	}
+	function startMotion(group, name, loop = -1, fadeIn = -1, fadeOut = -1) {
+		playing = (string)name;
+		looping = +loop > 0;
+		left = Live2DStandIn.motionTime;
+		Live2DStandIn.started.add(group + "/" + playing + (looping ? " loop" : ""));
+		// a main motion puts the extra values back, as the plugin's ClearDiffParameters does
+		var list = [];
+		list.assign(diffs);
+		for (var i = 0; i < list.count; i += 2) diffs[list[i]] = types[list[i]] ? 1.0 : 0.0;
+	}
+	function stopMotion(group) {
+		playing = "";
+	}
+	function isPlaying(group) {
+		return playing != "";
+	}
+	function progress(tick) {
+		if (playing != "" && !looping) {
+			left -= tick;
+			playing = "" if left <= 0;
+		}
+	}
+	function setExpression(id) {
+		expression = (string)id;
+		Live2DStandIn.expressions.add(expression);
+	}
+	function setParameterType(param, type) {
+		types[param] = +type;
+		diffs[param] = +type ? 1.0 : 0.0;
+	}
+	function setDiffParameterValue(param, value) {
+		diffs[param] = +value;
+	}
+	function setParameterValue(param, value) {
+	}
+	function setVoiceValue(v) {
+		voice = +v;
+	}
+	function setVoiceWeight(w) {
+	}
+	function setVoiceMode(m) {
+	}
+	function setBlinkingMode(m) {
+		blinkingMode = +m;
+	}
+	function setScale(s) {
+		scale = +s;
+	}
+	function setMatrix(m11, m12, m13, m21, m22, m23) {
+	}
+
+	function piece(color) {
+		var p = pieces[(string)color];
+		if (p === void) {
+			p = pieces[(string)color] = new Layer(kag, kag.primaryLayer);
+			p.setImageSize(1, 1);
+			p.fillRect(0, 0, 1, 1, color);
+		}
+		return p;
+	}
+
+	// draws, inside GLCompositor.capture, a picture of what the model was told
+	function render() {
+		var c = device.compositor;
+		var w = device.surfaceWidth, h = device.surfaceHeight;
+		var eye = diffs.ParamEyeLOpen !== void ? diffs.ParamEyeLOpen : 1.0;
+		var form = diffs.ParamMouthForm !== void ? diffs.ParamMouthForm : 0.0;
+		Live2DStandIn.drawn++;
+		Live2DStandIn.eyes.add(eye);
+		Live2DStandIn.mouths.add(voice);
+		Live2DStandIn.forms.add(form);
+		// the body: the middle third of the canvas, its whole height
+		c.drawLayer(piece(0xff8a6cff), w / 3, 0, 0, h, w / 3, 0, 255);
+		// the eyes: white bands as tall as they're open
+		var eh = (int)(h * 0.04 * eye);
+		if (eh > 0) {
+			c.drawLayer(piece(0xffffffff), w / 20, 0, 0, eh, w * 0.40, h * 0.20, 255);
+			c.drawLayer(piece(0xffffffff), w / 20, 0, 0, eh, w * 0.55, h * 0.20, 255);
+		}
+		// the mouth: a pink band as tall as it's open, half again as wide for a wide vowel
+		var mh = (int)(h * 0.05 * voice);
+		if (mh > 0) {
+			var mw = w * 0.08 * (1.0 + form / 2);
+			c.drawLayer(piece(0xffff8cc4), mw, 0, 0, mh, w / 2 - mw / 2, h * 0.30, 255);
+		}
+	}
+}

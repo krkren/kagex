@@ -12,3 +12,7 @@ __pycache__
 # compiled scenarios (SceneParser.tjs) are made from the scripts
 *.scn.json
 *.scn
+
+# Hiyori, Live2D Inc.'s sample model, which tools/assets/make_hiyori.py fetches: Live2D's
+# licence for its sample models doesn't let others put copies online
+data/fgimage/hiyori.l2d
