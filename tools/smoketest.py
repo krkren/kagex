@@ -816,7 +816,11 @@ def interface_steps(eng, step):
             print("     (skipped: checked on the desktop engines, with a framework that has it)", flush=True)
             return
         eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
-        eng.tjs('global.__smokeShot = ""; global.__smokeShotHook = function(name) {'
+        # the notice shows for 2 s, which a slow runner's next commands can take (macOS), so the
+        # hook notes whether it's up: the hook runs right after the notice is shown
+        eng.tjs('global.__smokeShot = ""; global.__smokeShotNotice = 0; global.__smokeShotHook = function(name) {'
+                ' var n = kag.screenshotNoticeLayer;'
+                ' global.__smokeShotNotice = n !== void && (isvalid n) && n.visible ? 1 : 0;'
                 ' global.__smokeShot = name === void ? "(failed)" : name; };'
                 ' kag.screenshotHook.add(__smokeShotHook); return 1;')
         try:
@@ -834,7 +838,7 @@ def interface_steps(eng, step):
                                     "written in the background" if background else "written at once"), flush=True)
         if size != want:
             raise SmokeError("the screenshot is %s, the screen %s" % (size, want))
-        if eng.tjs("var n = kag.screenshotNoticeLayer; return n !== void && (isvalid n) && n.visible ? 1 : 0;") != 1:
+        if eng.tjs("return __smokeShotNotice;") != 1:
             raise SmokeError("no notice said the screenshot was saved")
 
 
