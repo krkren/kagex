@@ -4,7 +4,6 @@
 ; tools/assets/make_pip.py), and its envinit.tjs entry has no poses. See "Characters drawn from
 ; layers" in doc/world.txt.
 [initscene]
-[bgm01]
 [road normal]
 [pip standard center]
 Pip is drawn from layers, put together as it's shown: a body, two outfits, three arm poses and six faces.

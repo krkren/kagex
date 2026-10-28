@@ -18,6 +18,7 @@
 ### Changed
 
 - The sample's F1-F8 are key bindings (`kag.bindKey` in `AfterInit.tjs`) instead of a `keyDownHook` function, and its menu captions (`Override.tjs`) have their shortcuts, for the menu bar. The framework's menu has Save Screenshot and Help > Controls.
+- The Character demo's music fades out before its positional sound part, so the chimes and footsteps are heard on their own, and the Animated Character demo has no music.
 
 ## 0.11.0
 

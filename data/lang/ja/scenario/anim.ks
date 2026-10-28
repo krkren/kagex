@@ -4,7 +4,6 @@
 ; tools/assets/make_pip.py), and its envinit.tjs entry has no poses. See "Characters drawn from
 ; layers" in doc/world.txt.
 [initscene]
-[bgm01]
 [road normal]
 [pip standard center]
 ピップは表示するときにレイヤを組み合わせて描かれます。体がひとつ、衣装がふたつ、腕のポーズが三つ、表情が六つです。

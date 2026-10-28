@@ -112,6 +112,8 @@ Movement with initial position specified (Center→Right)
 [ai posright:center opacity=255:0 time=500]
 Movement with initial position specified (Center→Right with opacity control)
 
+; The music fades out here, so the positional sounds below can be heard on their own
+[bgm stop=1500]
 [ai opacity=255:0 zoom=100:140 time=500]
 Combined with zoom
 

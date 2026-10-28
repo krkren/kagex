@@ -112,6 +112,8 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai posright:center opacity=255:0 time=500]
 初期位置指定で場所移動（中→右 透明度制御あり）
 
+; The music fades out here, so the positional sounds below can be heard on their own
+[bgm stop=1500]
 [ai opacity=255:0 zoom=100:140 time=500]
 ズームと複合
 
