@@ -1,11 +1,12 @@
 diff --git a/src/LAppModel.cpp b/src/LAppModel.cpp
-index 3e1335e..d4d9258 100644
+index 3e1335e..7305eb4 100644
 --- a/src/LAppModel.cpp
 +++ b/src/LAppModel.cpp
-@@ -7,6 +7,8 @@
+@@ -7,6 +7,9 @@
  
  #include "LAppModel.hpp"
  #include <vector>
++#include <algorithm>
 +#include <cstdarg>
 +#include <cstdio>
  #include <string>

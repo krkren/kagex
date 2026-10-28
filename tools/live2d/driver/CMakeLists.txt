@@ -14,6 +14,13 @@
 # one binary would clash.
 cmake_minimum_required(VERSION 3.16)
 
+# A project of its own. krkrlive2d adds this folder, then calls tp_stub's krkrz_plugin(), which
+# names its own folder's project after the plugin; this folder had taken its project's name from
+# the engine's above it (krkrz), so its names going up read krkrz, krkrlive2d, krkrz, and CMake's
+# Xcode generator put its targets, and KTX's, into the krkrz project twice: "duplicate object ids
+# not allowed" in the iOS kit (UPSTREAM.md)
+project(live2ddriver LANGUAGES C CXX)
+
 # the driver's checkout and the SDK's Core folder, from the environment the first time and kept
 # in the cache, so a reconfigure (from cmake --build) finds them
 set(LIVE2D_DRIVER_SOURCE "$ENV{LIVE2D_DRIVER_SOURCE}" CACHE PATH "the wtnbgo/live2d checkout")

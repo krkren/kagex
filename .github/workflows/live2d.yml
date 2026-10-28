@@ -117,6 +117,9 @@ jobs:
           case "$RUNNER_OS" in
             Linux)
               nm -D --defined-only "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -v ' _' >> results/plugin.txt
+              # the libraries it loads, and whether it carries an unwinder of its own (UPSTREAM.md 2)
+              readelf -d "$WORK/live2d-plugin/libkrkrlive2d.so" | grep NEEDED >> results/plugin.txt
+              echo "its own _Unwind_ functions: $(nm "$WORK/live2d-plugin/libkrkrlive2d.so" 2>/dev/null | grep -c ' [Tt] _Unwind_')" >> results/plugin.txt
               # built in the Steam Runtime: it needs no newer glibc than 2.31
               glibc=$(objdump -T "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -oE 'GLIBC_[0-9.]+' | sort -uV | tail -1)
               echo "needs $glibc" | tee -a results/plugin.txt
