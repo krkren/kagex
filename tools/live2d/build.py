@@ -291,6 +291,12 @@ def main():
     else:
         if shutil.which("ninja"):
             args += ["-G", "Ninja"]
+        if opts.in_steamrt:
+            # The runtime's GCC 14 links libstdc++ and libgcc into the plugin, with an unwinder of
+            # its own: an exception the engine throws through the plugin's frames (an error a
+            # script makes it report) then aborts the game (UPSTREAM.md 2). libgcc_s, the shared
+            # unwinder every system has, is the engine's own
+            args += ["-DCMAKE_SHARED_LINKER_FLAGS=-shared-libgcc"]
         if sys.platform == "darwin" and opts.arch:
             args += ["-DCMAKE_OSX_ARCHITECTURES=" + opts.arch]
     run(args, env=env)

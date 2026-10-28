@@ -941,6 +941,13 @@ def live2d_steps(eng):
             raise SmokeError("the stand-in plugin can't draw Hiyori: %s" % r)
     else:
         print("     Live2D: the krkrlive2d plugin and Hiyori's model", flush=True)
+        # an error the plugin reports reaches the script: the engine's exception unwinds through
+        # the plugin's frames, which aborts the game where the two have unwinders of their own
+        # (UPSTREAM.md 2)
+        r = str(eng.tjs('try { new Live2DDevice(1); return "no error"; } catch (e) { return "caught: " + e.message; }'))
+        print("     an error through the plugin: %s" % r[:60], flush=True)
+        if not r.startswith("caught"):
+            raise SmokeError("Live2DDevice given a number didn't report an error: %s" % r)
         # how long its first use took, as the Animated Character demo played (the device, its
         # shaders, Hiyori's model and the first picture)
         print("     first use (ms): %s" % eng.tjs('var t = KAGLive2DOf(kag).timings, a = [], k = []; k.assign(t);'
