@@ -338,7 +338,7 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 				     "plugins need an engine package built with them (engines/ next to data/)");
 
 		// Live2D models (.l2d) need the krkrlive2d plugin, which no engine package has: a desktop
-		// platform without it in plugins/<platform>/ shows a note in each character's place
+		// platform without it in plugins/<platform>/ draws none of them
 		bool live2d = false;
 		if (!p.data.empty() && fs::is_directory(p.data, ec))
 			for (auto it = fs::recursive_directory_iterator(p.data, fs::directory_options::skip_permission_denied, ec);
@@ -353,7 +353,7 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			for (const auto& [id, file] : withPlugin)
 				if (flag(s, std::string("platforms.") + id + ".enabled") && !fs::exists(gamePluginFolder(p, id) / file, ec))
 					warn("contents.plugins", std::string("The game has Live2D models, but plugins/") + krt::fromPath(gamePluginFolder(p, id).filename()) + "/ has no " +
-					     file + ": its " + id + " package will show a note in each Live2D character's place. tools/live2d/setup.py builds it");
+					     file + ": its " + id + " package won't draw its Live2D characters. tools/live2d/setup.py builds it");
 		}
 	}
 	if (!p.frameworkInData && p.framework.empty())
