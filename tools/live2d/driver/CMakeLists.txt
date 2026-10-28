@@ -8,8 +8,13 @@
 # static library from the SDK's Core folder (CUBISM_SDK_CORE). Elsewhere it's the driver's own.
 cmake_minimum_required(VERSION 3.16)
 
-if (NOT LIVE2D_DRIVER_SOURCE)
-  set(LIVE2D_DRIVER_SOURCE "$ENV{LIVE2D_DRIVER_SOURCE}")
+# the driver's checkout and the SDK's Core folder, from the environment the first time and kept
+# in the cache, so a reconfigure (from cmake --build) finds them
+set(LIVE2D_DRIVER_SOURCE "$ENV{LIVE2D_DRIVER_SOURCE}" CACHE PATH "the wtnbgo/live2d checkout")
+set(CUBISM_SDK_CORE "$ENV{CUBISM_SDK_CORE}" CACHE PATH "the Cubism SDK for Native's Core folder")
+if ("$ENV{CUBISM_SDK_CORE}" STREQUAL "" AND NOT CUBISM_SDK_CORE STREQUAL "")
+  # the driver's own CMake (Windows, Android, iOS) reads it from the environment
+  set(ENV{CUBISM_SDK_CORE} "${CUBISM_SDK_CORE}")
 endif()
 if (NOT EXISTS "${LIVE2D_DRIVER_SOURCE}/src/ilive2d.h")
   message(FATAL_ERROR "LIVE2D_DRIVER_SOURCE (${LIVE2D_DRIVER_SOURCE}) isn't a checkout of wtnbgo/live2d")
@@ -24,10 +29,10 @@ set(L2D ${LIVE2D_DRIVER_SOURCE})
 
 # The Cubism Core: the SDK's Core folder, whose CHANGELOG.md names its version (the driver's
 # own check: 06.00.0001 is the one it was made for)
-if ("$ENV{CUBISM_SDK_CORE}" STREQUAL "")
+if (CUBISM_SDK_CORE STREQUAL "")
   message(FATAL_ERROR "CUBISM_SDK_CORE (the Cubism SDK for Native's Core folder) isn't set")
 endif()
-file(TO_CMAKE_PATH "$ENV{CUBISM_SDK_CORE}" CORE_PATH)
+file(TO_CMAKE_PATH "${CUBISM_SDK_CORE}" CORE_PATH)
 if (NOT EXISTS ${CORE_PATH}/include/Live2DCubismCore.h)
   message(FATAL_ERROR "CUBISM_SDK_CORE=${CORE_PATH} has no include/Live2DCubismCore.h (it's the SDK's Core folder)")
 endif()

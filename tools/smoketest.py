@@ -994,10 +994,17 @@ def live2d_steps(eng):
         raise SmokeError("Hiyori's copy doesn't play her motions in step with her: %s" % r)
     # blinking (eyeFlipFreq 1: a blink every frame or so), the eyes open the rest of the time, and
     # a face that fades in
-    eng.tjs('global.__smokeL2D = %[ eyes : 9.0, eyesOpen : 0.0, open : 0.0, forms : %[], vowels : %[], voice : %[] ];'
+    eng.tjs('global.__smokeL2D = %[ eyes : 9.0, eyesOpen : 0.0, open : 0.0, forms : %[], vowels : %[], voice : %[],'
+            '  apart : 0.0, drawnOff : 0.0, samples : 0,'
+            '  from : typeof global.Live2DStandIn != "undefined" ? Live2DStandIn.eyes.count : 0 ];'
             ' global.__smokeL2DTimer = new Timer(function() {'
-            '  var c = world_object.env.characters["hiyori"]; if (c === void) return; var s = global.__smokeL2D;'
+            '  var c = world_object.env.characters["hiyori"]; if (c === void || c.player === void) return; var s = global.__smokeL2D;'
             '  var e = c.faceTargets.ParamEyeLOpen; if (e !== void) { s.eyes = e if e < s.eyes; s.eyesOpen = e if e > s.eyesOpen; }'
+            '  s.samples++;'
+            '  for (var i = 0; i < c.faceParams.count; i++) { var p = c.faceParams[i];'
+            '   var d = Math.abs(c.shadow.getParameterValue(p) - c.player.getParameterValue(p)); s.apart = d if d > s.apart;'
+            '   if (typeof global.Live2DStandIn != "undefined" && c.faceTargets[p] !== void) {'
+            '    d = Math.abs(Live2DStandIn.last[p] - c.faceTargets[p]); s.drawnOff = d if d > s.drawnOff; } }'
             '  var b = c.soundBuffer; if (b !== void && b.status == "play") {'
             '   s.open = c.mouthOpen if c.mouthOpen > s.open; s.forms["%.1f".sprintf(c.faceTargets.ParamMouthForm)] = 1;'
             '   s.voice[b.position] = 1; if (c.lipVowel !== void) s.vowels[c.lipVowel] = 1; }'
@@ -1012,7 +1019,7 @@ def live2d_steps(eng):
     if float(r[0]) > 0.2:
         raise SmokeError("Hiyori's eyes didn't close to blink (down to %s)" % r[0])
     if float(r[1]) < 0.95:
-        raise SmokeError("Hiyori's eyes weren't open between blinks (at most %s): her motions' eyes won" % r[1])
+        raise SmokeError("the World didn't open Hiyori's eyes between blinks (at most %s)" % r[1])
     if not 0.3 < float(r[2]) < 0.7 or abs(float(r[3]) - 1.0) > 0.01 or r[4] != "smile":
         raise SmokeError("Hiyori's smile face didn't fade in: %s" % r)
     # lip-sync to a voice with a lip track (Pip's synthesized line, which has pip000009.lip): her
@@ -1039,10 +1046,17 @@ def live2d_steps(eng):
         raise SmokeError("Hiyori's mouth didn't follow pip000009.lip (open %.2f, vowels %s, forms %s)" % (opened, vowels, forms))
     if abs(after - face_mouth) > 0.01:
         raise SmokeError("Hiyori's mouth is at %.2f after the voice, not the face's %.2f" % (after, face_mouth))
+    r = str(eng.tjs('var s = global.__smokeL2D; return [s.samples, s.apart, s.drawnOff].join(",");')).split(",")
+    print("     over %s samples: her copy off by at most %s%s" % (r[0], r[1], ", the drawn values off the World's by at most %s" % r[2] if standin else ""), flush=True)
+    if int(r[0]) < 50 or float(r[1]) > 0.0001:
+        raise SmokeError("Hiyori's copy didn't play her motions in step with her: %s" % r)
+    if standin and float(r[2]) > 0.001:
+        raise SmokeError("the stand-in didn't draw the values the World set (off by %s): the motions' showed through" % r[2])
     if standin:
-        # what the stand-in drew: the World's values, not its motions' (half shut eyes, an open mouth)
+        # what the stand-in drew while the World blinked and spoke: the World's eyes and mouth,
+        # not its motions' (eyes half shut, the mouth open)
         r = str(eng.tjs('var s = Live2DStandIn, n = s.eyes.count, e = 9, eo = 0;'
-                        ' for (var i = 0; i < n; i++) { e = s.eyes[i] if s.eyes[i] < e; eo = s.eyes[i] if s.eyes[i] > eo; }'
+                        ' for (var i = global.__smokeL2D.from; i < n; i++) { e = s.eyes[i] if s.eyes[i] < e; eo = s.eyes[i] if s.eyes[i] > eo; }'
                         ' return [e, eo, s.mouths[n - 1]].join(",");')).split(",")
         print("     the stand-in drew the eyes from %s down to %s, and the mouth last at %s" % (r[1], r[0], r[2]), flush=True)
         if float(r[0]) > 0.2 or float(r[1]) < 0.95 or abs(float(r[2]) - face_mouth) > 0.01:
@@ -1067,8 +1081,9 @@ def live2d_steps(eng):
     eng.wait("data3 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(3))", timeout=10)
     eng.tjs('kag.goToStart(); return 1;')
     eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
-    if standin and eng.tjs("return Live2DStandIn.players;") != 0:
-        raise SmokeError("Hiyori's model wasn't let go when the game went back to the title")
+    if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
+        raise SmokeError("Hiyori's model wasn't let go when the game went back to the title: %s"
+                         % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
     eng.tjs("loadFunction(3); return 1;")
     eng.wait("Hiyori after the load", 'world_object.env.characters["hiyori"] !== void'
              ' && world_object.env.characters["hiyori"].player !== void && kag.inStable', timeout=30)
@@ -1081,8 +1096,9 @@ def live2d_steps(eng):
     eng.clicker(True, until="s0001.ks")
     eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
     eng.clicker(False)
-    if standin and eng.tjs("return Live2DStandIn.players;") != 0:
-        raise SmokeError("Hiyori's model wasn't let go when she left")
+    if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
+        raise SmokeError("Hiyori's model wasn't let go when she left: %s"
+                         % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
 
 
 def compiled_framework(eng):

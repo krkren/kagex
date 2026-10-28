@@ -11,13 +11,16 @@ macOS, krkrlive2d.dll on Windows), where KAGLive2D (GFX_Live2D.tjs) links it.
 
 The Cubism Core is Live2D's, under its Proprietary Software License: a game may ship it inside
 the game, so the plugin goes into your game's packages, but not into anything handed to other
-developers (an engine package, a template). Download the SDK from Live2D yourself, which agrees
-to its licences; kagex never holds a copy. A business with yearly sales of 10 million yen or more
-also needs Live2D's release licence for the game.
+developers (an engine package, a template), and the game's terms for its players protect it as
+the licence says. Download the SDK from Live2D yourself, which agrees to its licences; kagex
+never holds a copy. A business with yearly sales of 10 million yen or more needs Live2D's release
+licence for the game, and an "Expandable Application" (one that can show any number of models,
+as an avatar or streaming app does) needs Live2D's approval whoever makes it.
 
 --sdk is the SDK's zip, the folder it unzips to, or its Core folder (the CUBISM_SDK_CORE
-environment variable, when there's no --sdk). It needs git, CMake 3.16 or newer and a C++17
-compiler (Visual Studio on Windows), and Ninja is used where it's there.
+environment variable, when there's no --sdk). It needs git, CMake 3.22 or newer (KTX-Software's
+minimum) and a C++17 compiler: on Windows, Visual Studio, run from its developer command prompt
+for the engine's architecture when Ninja is used (else --arch picks it).
 
 Linux and macOS build the driver through tools/live2d/driver (its own CMake builds for Windows,
 Android and iOS only); Windows builds it with its own. Android and iOS packages aren't built here
@@ -95,6 +98,9 @@ def fetch(work, name):
         os.makedirs(path)
         git(path, "init", "-q")
         git(path, "remote", "add", "origin", url)
+    git(path, "remote", "set-url", "origin", url)
+    # the sources byte for byte, so kagex's patches (CRLF where the sources have it) apply
+    git(path, "config", "core.autocrlf", "false")
     try:
         have = git(path, "rev-parse", "HEAD")
     except subprocess.CalledProcessError:
@@ -146,12 +152,19 @@ def main():
     env["CUBISM_SDK_CORE"] = core
     env["LIVE2DLIB_FOLDER"] = os.path.join(HERE, "driver")
     env["LIVE2D_DRIVER_SOURCE"] = src["live2d"]
+    # as krkrlive2d's own presets: C++17, and on Windows the static runtime the driver's Core
+    # library (Live2DCubismCore_MT.lib) is built for
     args = ["cmake", "-S", src["krkrlive2d"], "-B", build,
             "-DCMAKE_BUILD_TYPE=Release", "-DKRKRZ_VARIANT=SDL",
+            "-DCMAKE_CXX_STANDARD=17", "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
             "-DTPSTUB_DIR=" + src["tp_stub"], "-DNCBIND_DIR=" + src["ncbind"],
-            "-DLIVE2DLIB_FOLDER=" + env["LIVE2DLIB_FOLDER"]]
+            "-DLIVE2DLIB_FOLDER=" + env["LIVE2DLIB_FOLDER"],
+            "-DLIVE2D_DRIVER_SOURCE=" + src["live2d"], "-DCUBISM_SDK_CORE=" + core]
     if sys.platform == "win32":
-        if opts.arch:
+        args += ["-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>"]
+        if shutil.which("ninja") and shutil.which("cl"):
+            args += ["-G", "Ninja", "-DCMAKE_C_COMPILER=cl", "-DCMAKE_CXX_COMPILER=cl"]
+        elif opts.arch:
             args += ["-A", opts.arch]
     else:
         if shutil.which("ninja"):

@@ -1443,8 +1443,8 @@ none), whatever the motion playing does with them: a model whose idle motions bl
 talk (Hiyori's do) keeps the face the script gives it and its mouth shut while it isn't speaking,
 and its head, body and hair go on moving. Every other parameter is the motions'. The plugin adds
 a value to a parameter after the main motion, so a copy of the model without OpenGL plays the
-same motions a frame ahead, and what's added is the face's value less the motion's. An
-expression of the model goes on top, as the model says.
+same motions, moving on first each frame, and what's added is the face's value less what the
+motion sets in that frame. An expression of the model goes on top, as the model says.
 
 
 
@@ -1462,7 +1462,8 @@ next frames, or with the window), and read again when it comes back; a model sho
 characters is read once. While a skip shows nothing, the character keeps its last picture, and
 a motion played once doesn't play. There's no face window (facewin) for a model. The settings
 are global variables in KAGEnvCharacterLive2D.tjs, which Override.tjs can change:
-live2dFrameTime, live2dMaxHeight, live2dMotionFade (how long a motion fades in and out, 500 ms),
+live2dFrameTime, live2dMaxHeight, live2dMotionFade (how long a motion fades in and out, 500 ms;
+0 for a very short fade),
 live2dFaceFade, live2dEyeSmooth, live2dMouthSmooth and live2dVowels; and in GFX_Live2D.tjs
 live2dFlipY, which turns the picture read back upside down, should an engine read it back the
 other way up.
@@ -1526,8 +1527,11 @@ src/plugins/krkrlive2d, but doesn't build it at engine 2.6.5). kagex builds it f
 
 Releasing a game with it: Live2D's Publication License (its "Cubism SDK Release License") is for
 a business with yearly sales of 10 million yen or more; individuals and smaller businesses
-release without one, but check Live2D's terms as they stand. The Core goes out inside the game
-only: the plugin goes into the game's packages, never into anything handed to other developers.
+release without one, but check Live2D's terms as they stand; an "Expandable Application" (one
+that can show any number of models, as an avatar or streaming app does) needs Live2D's approval
+whoever makes it. The Core goes out inside the game only: the plugin goes into the game's
+packages, never into anything handed to other developers, and the game's terms for its players
+protect the Core as the licence says (its section 5.2.2).
 A model is yours or one whose licence lets you ship it: Live2D's sample models, Hiyori among
 them, are under its Free Material License, which lets individuals and small businesses use them
 in their works, a game shipping them inside it, with "This content uses sample data owned and

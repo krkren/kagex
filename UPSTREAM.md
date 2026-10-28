@@ -177,7 +177,7 @@ Script features that need these log the missing plugin and carry on without the 
 ## 29. A parameter can't be set over a motion
 
 - **Where:** krkrlive2d's extra values (`setDiffParameterValue`) are added to what the main motion sets, or multiply it (`setParameterType(p, 1)`), in `MyCubismModel::SaveParameters`; `setParameterValue` sets a value the motion then overwrites. There's no way to make a parameter a given value whatever the motion does (as a Cubism expression's `Overwrite` blend does).
-- **What it costs:** a model whose idle motions blink, smile and talk (Hiyori's) can't hold a face the script gives it, nor keep its mouth shut while it isn't speaking. `KAGEnvCharacterLive2D.tjs` keeps a copy of the model (`Live2DModel.clone`) playing the same motions a frame ahead and adds the face's value less the motion's, which updates every Live2D character's model twice a frame.
+- **What it costs:** a model whose idle motions blink, smile and talk (Hiyori's) can't hold a face the script gives it, nor keep its mouth shut while it isn't speaking. `KAGEnvCharacterLive2D.tjs` keeps a copy of the model (`Live2DModel.clone`) playing the same motions, moved on first each frame, and adds the face's value less what the motion sets in that frame, which updates every Live2D character's model twice a frame.
 - **Fix:** a parameter type that overwrites (`setParameterType(p, 2)`: `SaveParameters` sets the extra value as the parameter's).
 
 ## 30. A .bmp the Linux engine saves says its pixels start 2 bytes late

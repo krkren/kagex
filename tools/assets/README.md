@@ -53,15 +53,15 @@ The sample's images are generated here rather than edited by hand.
   kagex-lipsync (`kagex-lipsync --cli make pip000009.ogg`), as any voice's would.
 - `make_hiyori.py` gets the demo's Live2D character, Hiyori (Live2D Inc.'s sample model), whose
   files aren't in the repository: Live2D's Free Material License lets no one but Live2D hand out
-  its sample models' files (a work using them may ship them inside it). `model --accept-license`
-  fetches her from Live2D's CubismNativeSamples on GitHub, at a pinned commit, into
-  `data/fgimage/hiyori.l2d` (gitignored): her folder's contents in a zip with fixed times, so it's
-  the same file every time. `--accept-license` says you agree to that licence and her terms.
-  `speech` makes her voice line (`data/voice/hiyori000001.ogg`, the `【hiyori】` line after
-  `voice=1` in anim.ks) with Microsoft Azure's text to speech in `en-US-AshleyNeural` pitched up
-  25%, the voice Neuro-sama speaks with, given an Azure Speech resource (`AZURE_SPEECH_KEY`,
-  `AZURE_SPEECH_REGION`) and ffmpeg; kagex-lipsync then makes its lip track (`kagex-lipsync --cli
-  make hiyori000001.ogg`).
+  its sample models' files (a work an individual or a small business makes with them may ship them
+  inside it). `model --accept-license` fetches her from Live2D's CubismNativeSamples on GitHub, at
+  a pinned commit, into `data/fgimage/hiyori.l2d` (gitignored): her folder's contents in a zip
+  with fixed times, so it's the same file every time. `--accept-license` says you agree to that
+  licence and her terms. `speech` makes her voice line (`data/voice/hiyori000001.ogg`, the
+  `【hiyori】` line after `voice=1` in anim.ks) with Microsoft Azure's text to speech in
+  `en-US-AshleyNeural` pitched up 25%, the voice Neuro-sama speaks with, given an Azure Speech
+  resource (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`) and ffmpeg; kagex-lipsync then makes its
+  lip track (`kagex-lipsync --cli make hiyori000001.ogg`).
 - `make_sounds.py` makes the Character demo's positional sound effects in `data/sound`: a
   two-note chime (`se_chime.ogg`, played at the far left and far right of the stage) and
   footsteps that loop (`se_steps.ogg`, following Ai as she walks), drawn in NumPy with fixed

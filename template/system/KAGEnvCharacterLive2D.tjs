@@ -13,8 +13,8 @@
 // mouth's take the face's values (the parameter's default where it names none), whatever the
 // motion playing does with them, and the motions move the rest (the head, the body, the hair).
 // The plugin applies a value added to a parameter right after the main motion, so a copy of the
-// model without OpenGL (Live2DModel) plays the same motions a step ahead, and what's added is
-// the face's value less what the motion sets in that step.
+// model without OpenGL (Live2DModel) plays the same motions, moving on first each frame, and
+// what's added is the face's value less what the motion sets in that frame.
 // doc/world.txt, "Live2D Characters".
 //
 //   "hiyori" => %[
@@ -72,8 +72,9 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 	var aspect = 1.0;    // its canvas's width for its height
 	var system;          // the window's KAGLive2D
 	var player;          // the model playing (Live2DPlayer), made when first drawn
-	var shadow;          // its copy without OpenGL (Live2DModel), a step ahead with the same motions
+	var shadow;          // its copy without OpenGL (Live2DModel), moved on first with the same motions
 	var paramInfo;       // its parameters: id => %[ min, max, default ... ]
+	var paramIds;        // their ids by id and by display name (cdi3.json's)
 	var faceParams;      // the parameters the World sets: the faces', the eyes' and the mouth's
 	var faceTargets = %[]; // the values it last set them to
 	var failed;          // why it can't be drawn, when it can't
@@ -87,6 +88,7 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 	var oneShot;         // a motion to play once (its spec, as in "motions"), until it starts
 	var oneShotPlaying;  // a motion playing once
 	var motionWait;      // the command waits for that motion to end (motionwait)
+	var missingMotions = %[]; // the motions the model doesn't have, logged once
 
 	var faceFrom = %[];  // the face's parameter values fading out
 	var faceTo = %[];    // and fading in
@@ -233,18 +235,32 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 	 */
 	function playMotion(names, loop) {
 		if (names.count == 0) return false;
-		var name = names[0];
+		var motion = names[0];
 		if (names.count > 1) {
 			// at random, but not the one playing again (unless the group is only that one)
 			for (var tries = 0; tries < 8; tries++) {
-				name = names[(int)(Math.random() * names.count)];
-				if (name != poseMotion) break;
+				motion = names[(int)(Math.random() * names.count)];
+				if (motion != poseMotion) break;
 			}
 		}
-		var fade = live2dMotionFade / 1000.0;
-		player.startMotion("main", name, loop ? 1 : 0, fade, fade);
-		shadow.startMotion("main", name, loop ? 1 : 0, fade, fade);
-		poseMotion = name;
+		// the plugin fades over its default for 0, so no fade is a very short one
+		var fade = live2dMotionFade > 0 ? live2dMotionFade / 1000.0 : 0.001;
+		player.startMotion("main", motion, loop ? 1 : 0, fade, fade);
+		// a motion the model doesn't have leaves the one before playing
+		var current = player.getCurrentMotions();
+		var started = false;
+		for (var i = 0; current !== void && i < current.count; i++) {
+			started = true if current[i] !== void && current[i].name == "main." + motion;
+		}
+		if (!started) {
+			if (missingMotions[motion] === void) {
+				missingMotions[motion] = true;
+				dm(@"Live2D character ${name}: its model has no motion ${motion}");
+			}
+			return false;
+		}
+		shadow.startMotion("main", motion, loop ? 1 : 0, fade, fade);
+		poseMotion = motion;
 		return true;
 	}
 
@@ -306,6 +322,21 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 			(Dictionary.assign incontextof ret)(spec, false);
 			delete ret.expression;
 		}
+		return idValues(ret);
+	}
+
+	// a parameter's id, for its id or its display name (as it is until the model is read)
+	function paramIdOf(param) {
+		var id = paramIds !== void ? paramIds[param] : void;
+		return id !== void ? id : param;
+	}
+
+	function idValues(values) {
+		if (paramIds === void) return values;
+		var ret = %[];
+		var keys = [];
+		keys.assign(values);
+		for (var i = 0; i < keys.count; i += 2) ret[paramIdOf(keys[i])] = keys[i + 1];
 		return ret;
 	}
 
@@ -340,7 +371,8 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 				hideEmotion();
 			}
 			face = faceName;
-			setFaceValues(isClear());
+			// before the model is read, from its parameters' defaults (not known yet): at once
+			setFaceValues(isClear() || paramInfo === void);
 		}
 		if (isClear()) {
 			disp = SHOW;
@@ -562,10 +594,26 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 		}
 		// its parameters, and those the World sets: the faces', the eyes' and the mouth's
 		paramInfo = %[];
-		for (var i = shadow.getParameterCount() - 1; i >= 0; i--) {
+		paramIds = %[];
+		var infos = [];
+		for (var i = 0; i < shadow.getParameterCount(); i++) {
 			var info = shadow.getParameterInfo(i);
-			paramInfo[info.id] = info if info !== void && info.id !== void;
+			if (info !== void && info.id !== void) {
+				paramInfo[info.id] = info;
+				paramIds[info.id] = info.id;
+				infos.add(info);
+			}
 		}
+		for (var i = 0; i < infos.count; i++) {
+			var n = infos[i].name;
+			paramIds[n] = infos[i].id if n !== void && n != "" && paramIds[n] === void;
+		}
+		// the settings and the faces by id
+		for (var i = 0; i < eyeParams.count; i++) eyeParams[i] = paramIdOf(eyeParams[i]);
+		for (var i = 0; i < mouthParams.count; i++) mouthParams[i] = paramIdOf(mouthParams[i]);
+		mouthFormParam = paramIdOf(mouthFormParam);
+		faceFrom = idValues(faceFrom);
+		faceTo = idValues(faceTo);
 		var names = %[];
 		var add = function(list, names) {
 			for (var i = 0; i < list.count; i++) names[list[i]] = true if paramInfo[list[i]] !== void;
@@ -614,6 +662,9 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 			if (playMotion(names, false)) {
 				oneShotPlaying = true;
 				poseStart = false;
+			} else {
+				// it didn't start: nothing to wait for (motionwait)
+				env.trigger(name + "_anim");
 			}
 		} else if (poseStart || !player.isPlaying("main")) {
 			if (oneShotPlaying) {
@@ -708,6 +759,7 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 				system.render(renderLayer, player);
 			} catch (e) {
 				dm(@"Live2D character ${name} stopped: ${e.message}");
+				stopAnim();
 				failed = e.message;
 				releasePlayer();
 				renderLayer.fillRect(0, 0, rw, rh, 0);
@@ -762,7 +814,7 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 
 	// the model moves on its own: draw it again every live2dFrameTime while it shows
 	function updateExtra(tick) {
-		if (player === void || !isShow()) return 0;
+		if (player === void || !isShow() || env.skipNoDisp) return 0;
 		if (lastDraw !== void && tick - lastDraw < live2dFrameTime) return 0;
 		return 1;
 	}
