@@ -1,0 +1,299 @@
+Preset CMake variables:
+
+  CMAKE_CXX_COMPILER="cl"
+  CMAKE_C_COMPILER="cl"
+  CMAKE_TOOLCHAIN_FILE:FILEPATH="D:\a\_temp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_TARGET_TRIPLET="x64-windows-static"
+
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.4).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-windows-x86_64.zip -> cmake-4.4.4-windows-x86_64.zip
+Successfully downloaded cmake-4.4.4-windows-x86_64.zip
+Extracting cmake...
+Detecting compiler hash for triplet x64-windows-static...
+Compiler found: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+Detecting compiler hash for triplet x64-windows...
+Compiler found: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+The following packages will be built and installed:
+    drlibs:x64-windows-static@2026-03-03
+    libebur128:x64-windows-static@1.2.6#3
+    libjpeg-turbo:x64-windows-static@3.2.0#1
+    libogg:x64-windows-static@1.3.6#1
+    libopusenc:x64-windows-static@0.3
+    libpng:x64-windows-static@1.6.59
+  * libspng:x64-windows-static@0.7.4#1
+    libtomcrypt:x64-windows-static@1.18.2#4
+    libtommath:x64-windows-static@1.3.0#3
+    libvorbis:x64-windows-static@1.3.7#4
+    opus:x64-windows-static@1.6.1
+    opusfile:x64-windows-static@0.12+20221121#1
+  * vcpkg-cmake:x64-windows@2025-08-07
+  * vcpkg-cmake-config:x64-windows@2026-07-21
+    zlib:x64-windows-static@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 15 package(s) from D:/a/kagex/kagex/vcpkg-archives in 361 ms. Use --debug to see more details.
+Installing 1/15 drlibs:x64-windows-static@2026-03-03...
+drlibs:x64-windows-static@2026-03-03 package ABI: 38355f1034b066be1e1fc6ec145a58756a56b3d0cbb145b0ff4485beaa8bc7f5
+Elapsed time to handle drlibs:x64-windows-static: 1.88 ms
+Installing 2/15 vcpkg-cmake:x64-windows@2025-08-07...
+vcpkg-cmake:x64-windows@2025-08-07 package ABI: 97ded23a142b8d509e7fed379afdb0323df57acfce7bf183936f105649888f12
+Elapsed time to handle vcpkg-cmake:x64-windows: 2.36 ms
+Installing 3/15 libebur128:x64-windows-static@1.2.6#3...
+libebur128:x64-windows-static@1.2.6#3 package ABI: 41c2325aa56584d9e5db4d0da4d7b6fff9d85ac875041bba9a34a792a8282bba
+Elapsed time to handle libebur128:x64-windows-static: 2.37 ms
+Installing 4/15 vcpkg-cmake-config:x64-windows@2026-07-21...
+vcpkg-cmake-config:x64-windows@2026-07-21 package ABI: c00f8d0f068e00e49817af65e91e3f73cc8b1c9b43938ce3fe7803903e571846
+Elapsed time to handle vcpkg-cmake-config:x64-windows: 1.76 ms
+Installing 5/15 zlib:x64-windows-static@1.3.2#2...
+zlib:x64-windows-static@1.3.2#2 package ABI: 136c054920586aec25063781f27079deca2dd0dcdbe250e3cbaaac0caf57e3e6
+Elapsed time to handle zlib:x64-windows-static: 4.39 ms
+Installing 6/15 libspng:x64-windows-static@0.7.4#1...
+libspng:x64-windows-static@0.7.4#1 package ABI: d767f253e7c5bcf17286ec4d817f4b6f8a8d04cbe0189fa834705c4122afeaa2
+Elapsed time to handle libspng:x64-windows-static: 2.83 ms
+Installing 7/15 libjpeg-turbo:x64-windows-static@3.2.0#1...
+libjpeg-turbo:x64-windows-static@3.2.0#1 package ABI: 345049ffb4ed5c932793a1773199e6cb4b0320a39ede44369649368045942c4b
+Elapsed time to handle libjpeg-turbo:x64-windows-static: 4.27 ms
+Installing 8/15 libogg:x64-windows-static@1.3.6#1...
+libogg:x64-windows-static@1.3.6#1 package ABI: a2bbe4188f75a7a28b0bb83cd273d3d32e03f144fd20ff21b2ce5cc9c27b22d7
+Elapsed time to handle libogg:x64-windows-static: 3.17 ms
+Installing 9/15 opus:x64-windows-static@1.6.1...
+opus:x64-windows-static@1.6.1 package ABI: d5bc04cef90fada449a09935107c6b0c92f26370a0019d99194b0c4b5c4e7dc5
+Elapsed time to handle opus:x64-windows-static: 3.71 ms
+Installing 10/15 libopusenc:x64-windows-static@0.3...
+libopusenc:x64-windows-static@0.3 package ABI: d39878fd6f5d0a7c980291fc92c005785dbe6f884e83a2a3f95746c887250348
+Elapsed time to handle libopusenc:x64-windows-static: 2.06 ms
+Installing 11/15 libpng:x64-windows-static@1.6.59...
+libpng:x64-windows-static@1.6.59 package ABI: c4affd04b83889dabd8cd4892ca590f9f779d33fcb3d98ccb65cb112f0b4d1aa
+Elapsed time to handle libpng:x64-windows-static: 5.06 ms
+Installing 12/15 libtommath:x64-windows-static@1.3.0#3...
+libtommath:x64-windows-static@1.3.0#3 package ABI: 02ff45f113ec5c22ad5fd9cec91248ff8e9068fd08983ff0e0711125648e7763
+Elapsed time to handle libtommath:x64-windows-static: 3.43 ms
+Installing 13/15 libtomcrypt:x64-windows-static@1.18.2#4...
+libtomcrypt:x64-windows-static@1.18.2#4 package ABI: d5a308b0b2f81e870e832ce960c7b5b87101c3665fc73300553fba9d79deca7f
+Elapsed time to handle libtomcrypt:x64-windows-static: 4.15 ms
+Installing 14/15 libvorbis:x64-windows-static@1.3.7#4...
+libvorbis:x64-windows-static@1.3.7#4 package ABI: 1ca2bc6fa59434d5daee554ce893a8802f717078f57e86c726f2c24b9d633335
+Elapsed time to handle libvorbis:x64-windows-static: 3.87 ms
+Installing 15/15 opusfile:x64-windows-static@0.12+20221121#1...
+opusfile:x64-windows-static@0.12+20221121#1 package ABI: 4191a6dbe027f4e60280a8a95a03a63abc69549cc075dd097fba19bafdd46c34
+Elapsed time to handle opusfile:x64-windows-static: 3.68 ms
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+All requested installations completed successfully in: 51.6 ms
+-- Running vcpkg install - done
+-- The C compiler identification is MSVC 19.44.35229.0
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - not found
+-- Found Threads: TRUE
+CMake Warning (dev) at C:/Program Files/CMake/share/cmake-3.31/Modules/FetchContent.cmake:1373 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  D:/a/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found ZLIB: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/zs.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/zsd.lib (found version "1.3.2")
+-- Found PNG: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/libpng16.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/libpng16d.lib (found version "1.6.59")
+-- Found JPEG: optimized;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/lib/jpeg.lib;debug;D:/a/kagex/kagex/kagex/tools/release/build/windows/vcpkg_installed/x64-windows-static/debug/lib/jpeg.lib (found version "62")
+-- xp3crypt: D:/a/kagex/kagex/xp3crypt (archive encryption on)
+-- kagex-release: encrypting scenarios with scnfile from D:/a/kagex/kagex/scnfile
+-- Looking for unistd.h
+-- Looking for unistd.h - not found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for sys/stat.h
+-- Looking for sys/stat.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for snprintf
+-- Looking for snprintf - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of long
+-- Check size of long - done
+-- Check size of long long
+-- Check size of long long - done
+-- Looking for include file ctype.h
+-- Looking for include file ctype.h - found
+-- Looking for include file dirent.h
+-- Looking for include file dirent.h - not found
+-- Looking for include file fcntl.h
+-- Looking for include file fcntl.h - found
+-- Looking for include file inttypes.h
+-- Looking for include file inttypes.h - found
+-- Looking for include file io.h
+-- Looking for include file io.h - found
+-- Looking for include file memory.h
+-- Looking for include file memory.h - found
+-- Looking for include file setjmp.h
+-- Looking for include file setjmp.h - found
+-- Looking for include file stdlib.h
+-- Looking for include file stdlib.h - found
+-- Looking for include file strings.h
+-- Looking for include file strings.h - not found
+-- Looking for include file string.h
+-- Looking for include file string.h - found
+-- Looking for include file sys/mman.h
+-- Looking for include file sys/mman.h - not found
+-- Looking for include file sys/times.h
+-- Looking for include file sys/times.h - not found
+-- Looking for include file windows.h
+-- Looking for include file windows.h - found
+-- Looking for getenv
+-- Looking for getenv - found
+-- Looking for getpagesize
+-- Looking for getpagesize - not found
+-- Looking for mmap
+-- Looking for mmap - not found
+-- Looking for opendir
+-- Looking for opendir - not found
+-- Looking for setjmp
+-- Looking for setjmp - found
+-- Looking for sqrt
+-- Looking for sqrt - found
+-- Looking for strstr
+-- Looking for strstr - found
+-- Looking for iconv_open in iconv
+-- Looking for iconv_open in iconv - not found
+-- Looking for sqrt in m
+-- Looking for sqrt in m - not found
+-- Check size of char
+-- Check size of char - done
+-- Check size of int
+-- Check size of int - done
+-- Check size of short
+-- Check size of short - done
+-- Check size of size_t
+-- Check size of size_t - done
+-- Configuring done (48.5s)
+-- Generating done (0.3s)
+-- Build files have been written to: D:/a/kagex/kagex/kagex/tools/release/build/windows

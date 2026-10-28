@@ -1,0 +1,42 @@
+5-ok   defaults from first.ks: KAGEX Sample / 0.12.1 / kagex-sample
+6-ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+7-ok   icon found: platform/icon-1024.png
+8:ok   init refuses to replace: error: C:/Users/runneradmin/AppData/Local/Temp/tmpn0v_uwew/My Game/release.json is already there (--force replaces it)
+9-ok   check: the defaults have no errors
+10-ok   check: the host platform is listed: windows
+11-ok   check: reports a bad version and reserved names: identity.version, identity.appName
+12-ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+13-ok   plan: the chosen platforms: windows, linux, web, android, ios
+14-ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 637 files, 1 excluded, 1 .psd
+15-ok   plan: images and sounds to convert: 484 images, 0 sounds
+16-ok   plan: framework copied in: template/system, copied in as data/system
+17-ok   an unknown platform is refused: unknown platform: nowhere
+18-ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmpn0v_uwew\keys\game-keys.txt.
+19-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+20-ok   keys: each kind of protection has a key of its own
+21:ok   keys: keygen won't replace keys: error: C:/Users/RUNNER~1/AppData/Local/Temp/tmpn0v_uwew/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+22-ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to C:\Users\RUNNER~1\AppData\Local\Temp\tmpn0v_uwew\keys\game-keys.txt.
+23-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+24-ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmpn0v_uwew\keys\game-keys.txt.
+25-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+26:ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u00e2\u20ac\u00a6 (kagex-release --cli keygen <file>)"]}
+27-ok   keys: a keys file outside the game's folder passes: {}
+28-ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+29:ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+30:ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file C:/Users/runneradmin/AppData/Local/Temp/tmpn0v_uwew/My Game/../keys/no-signing.txt has no signing key: Create keys\u00e2\u20ac\u00a6 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+31-ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in C:/Users/runneradmin/AppData/Local/Temp/tmpn0v_uwew/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u00e2\u20ac\u00a6 makes a new one)"]}
+32:ok   keys: a misspelt key name is an error: {"keys.file": ["C:/Users/runneradmin/AppData/Local/Temp/tmpn0v_uwew/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+33-ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"]}
+34:ok   signing: no keys file is an error: keys.file
+35-ok   signing: a signed desktop build can't use a data folder: platforms.windows.data
+36-ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.web.url, signing.enabled
+37-ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+38-ok   own plugins: the plan lists them: kagex-sample | kagex-sample.cf | libSDL3.so.0 | plugin/ (with the game's own: libkrkrgame.so) | data.xp3 | bgimage.xp3, bgm.xp3, effect.xp3, fgimage.xp3, image.xp3, rule.xp3, scenario.xp3, sound.xp3, thum.xp3, video.xp3, voice.xp3 | kagex-sample.desktop, kagex-sample.png
+39-ok   own plugins: check warns about a stray file and plugins/android: plugins/linux/notes.txt isn't a Linux (lib*.so) plugin: it stays out of the packages plugins/android/ stays out of the packages: that engine has its plugins linked in, so a game's own plugins need an engine package built with them (engines/ next to data/)
+40-ok   own plugins: a Live2D model without the plugin is warned about, per platform: The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package will show a note in each Live2D character's place. tools/live2d/setup.py builds it
+41-ok   the page is served
+42-ok   the client library is embedded
+43-ok   state: C:/Users/runneradmin/AppData/Local/Temp/tmpn0v_uwew/My Game/release.json
+44-ok   state: the tool encrypts archives and scenarios: archive True, scenarios True
+45-ok   check from the screen: scenes.encrypt; platforms.android.applicationId; platforms.android.keystore
+46-ok   host status for every platform: windows=True, linux=True, steam=True, macos=False, web=True, android=False, ios=False
