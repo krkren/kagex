@@ -172,10 +172,15 @@ def kit(config, work, core, src):
     print("%s: krkrlive2d from %s; the kit's build needs the environment in %s" % (config, folder, envfile))
 
 
-# --steamrt: Valve's Steam Linux Runtime 3.0 (sniper) SDK, Debian 11 with glibc 2.31 and a
-# backported GCC 14, which krkrz_linux builds the Steam engine in: a plugin built there loads on
-# every Linux the engines run on and inside the Steam Runtime; one built on a newer system needs
-# that system's glibc. Its CMake is too old for KTX-Software, so a newer one is fetched
+# --steamrt: Valve's Steam Linux Runtime 3.0 (sniper) SDK, Debian 11 with glibc 2.31, which
+# krkrz_linux builds the Steam engine in: a plugin built there loads on every Linux the engines
+# run on and inside the Steam Runtime; one built on a newer system needs that system's glibc. It
+# builds with Debian's own GCC 10, not the SDK's backported GCC 14: that one links libstdc++ and
+# libgcc into the plugin, with an unwinder of its own (-shared-libgcc doesn't change it), and an
+# exception the engine throws through the plugin's frames (an error a script makes the plugin
+# report) then aborted the game (UPSTREAM.md 2). GCC 10's libstdc++ and libgcc_s are shared, as
+# every system has them (and newer). Its CMake is too old for KTX-Software, so a newer one is
+# fetched
 STEAMRT_IMAGE = "registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest"
 STEAMRT_CMAKE = "3.31.7"
 STEAMRT_NINJA = "1.12.1"
@@ -197,7 +202,7 @@ def steamrt(opts):
         if not any(m == x or m.startswith(x + os.sep) for x in mounts):
             mounts.append(m)
     args = [tool, "run", "--rm", "--user", "%d:%d" % (os.getuid(), os.getgid()),
-            "-e", "HOME=/tmp", "-e", "CC=gcc-14", "-e", "CXX=g++-14"]
+            "-e", "HOME=/tmp", "-e", "CC=gcc", "-e", "CXX=g++"]
     for m in mounts:
         args += ["-v", "%s:%s" % (m, m)]
     args += ["-w", ROOT, STEAMRT_IMAGE, "python3", "-B", os.path.join(HERE, "build.py"), "--in-steamrt",
@@ -291,12 +296,6 @@ def main():
     else:
         if shutil.which("ninja"):
             args += ["-G", "Ninja"]
-        if opts.in_steamrt:
-            # The runtime's GCC 14 links libstdc++ and libgcc into the plugin, with an unwinder of
-            # its own: an exception the engine throws through the plugin's frames (an error a
-            # script makes it report) then aborts the game (UPSTREAM.md 2). libgcc_s, the shared
-            # unwinder every system has, is the engine's own
-            args += ["-DCMAKE_SHARED_LINKER_FLAGS=-shared-libgcc"]
         if sys.platform == "darwin" and opts.arch:
             args += ["-DCMAKE_OSX_ARCHITECTURES=" + opts.arch]
     run(args, env=env)

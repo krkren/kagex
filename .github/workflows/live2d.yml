@@ -208,7 +208,12 @@ jobs:
               # built in the Steam Runtime: it needs no newer glibc than 2.31
               glibc=$(objdump -T "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -oE 'GLIBC_[0-9.]+' | sort -uV | tail -1)
               echo "needs $glibc" | tee -a results/plugin.txt
-              printf '%s\n' "$glibc" "GLIBC_2.31" | sort -CV || { echo "::error title=glibc::the plugin needs $glibc, newer than the Steam Runtime's 2.31"; exit 1; } ;;
+              printf '%s\n' "$glibc" "GLIBC_2.31" | sort -CV || { echo "::error title=glibc::the plugin needs $glibc, newer than the Steam Runtime's 2.31"; exit 1; }
+              # libstdc++ no newer than Debian 11's (GCC 10), and the shared unwinder, not one of its own
+              glibcxx=$(objdump -T "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -oE 'GLIBCXX_[0-9.]+' | sort -uV | tail -1)
+              echo "needs $glibcxx" | tee -a results/plugin.txt
+              printf '%s\n' "$glibcxx" "GLIBCXX_3.4.28" | sort -CV || { echo "::error title=libstdc++::the plugin needs $glibcxx, newer than GCC 10's"; exit 1; }
+              readelf -d "$WORK/live2d-plugin/libkrkrlive2d.so" | grep -q 'libgcc_s' || { echo "::error title=unwinder::the plugin has libgcc linked in, with an unwinder of its own"; exit 1; } ;;
             macOS) otool -L "$WORK/live2d-plugin/libkrkrlive2d.dylib" >> results/plugin.txt; lipo -info "$WORK/live2d-plugin/libkrkrlive2d.dylib" >> results/plugin.txt ;;
           esac
       - name: The engine
