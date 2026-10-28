@@ -1,0 +1,87 @@
+ok   --help: kagex-release 0.11.0
+ok   --version: kagex-release 0.11.0
+ok   plan before init (defaults): Game files: 621 (33.1 MB), 1 excluded; framework: template/system, copied in as data/system
+ok   init writes release.json: Wrote /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/release.json
+ok   defaults from first.ks: KAGEX Sample / 0.11.0 / kagex-sample
+ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+ok   icon found: platform/icon-1024.png
+ok   init refuses to replace: error: /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/release.json is already there (--force replaces it)
+ok   check: the defaults have no errors
+ok   check: the host platform is listed: macos
+ok   check: reports a bad version and reserved names: identity.version, identity.appName
+ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+ok   plan: the chosen platforms: windows, linux, web, android, ios
+ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 621 files, 1 excluded, 1 .psd
+ok   plan: images and sounds to convert: 479 images, 0 sounds
+ok   plan: framework copied in: template/system, copied in as data/system
+ok   an unknown platform is refused: unknown platform: nowhere
+ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: each kind of protection has a key of its own
+ok   keys: only the owner can read the file: 0o100600
+ok   keys: keygen won't replace keys: error: /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to /var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/keys/game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u2026 (kagex-release --cli keygen <file>)"]}
+ok   keys: a keys file outside the game's folder passes: {}
+ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/../keys/no-signing.txt has no signing key: Create keys\u2026 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u2026 makes a new one)"]}
+ok   keys: a misspelt key name is an error: {"keys.file": ["/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"], "platforms.macos.signing": ["Ad hoc signed apps open only after the player allows them (right-click > Open, or System Settings > Privacy & Security)"]}
+ok   signing: no keys file is an error: keys.file
+ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.macos.signing, platforms.web.url, signing.enabled
+ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+ok   the page is served
+ok   the client library is embedded
+ok   state: /private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmphuj4zs1b/My Game/release.json
+ok   state: the tool encrypts archives and scenarios: archive True, scenarios True
+ok   check from the screen: scenes.encrypt; platforms.macos.signing; platforms.android.applicationId; platforms.android.keystore
+ok   host status for every platform: windows=True, linux=True, steam=True, macos=True, web=True, android=True, ios=False
+ok   save
+ok   build: every platform: windows=True; linux=True; steam=True; macos=True 
+ok   windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3
+ok   windows: an archive per media folder beside data.xp3, and no data folder: bgimage.xp3 bgm.xp3 data.xp3 effect.xp3 fgimage.xp3 image.xp3 rule.xp3 scenario.xp3 thum.xp3 video.xp3 voice.xp3
+ok   windows: the .cf: ; KAGEX Sample 0.11.0: engine options (each line is a command-line option without its "-") | orgname=krkren | appname=kagex-sample | debugwin=no | 
+ok   linux: tar.gz with an executable engine: 0o755
+ok   linux: the .cf
+ok   linux: an archive per media folder beside data.xp3
+ok   linux: menu entry and icon
+ok   steam: tar.gz with an executable engine: 0o755
+ok   steam: the .cf
+ok   steam: an archive per media folder beside data.xp3
+ok   macos: the app with data.xp3, its icon and .cf
+ok   macos: an archive per media folder beside data.xp3 in Resources
+ok   macos: Info.plist
+ok   macos: the signature verifies
+ok   SHA256SUMS: 4 lines
+ok   test run of this computer's build: The game started without script errors 
+ok   build variants: ; ; 
+ok   windows: data bound into the exe: engine 15529984 bytes, xp3 at 15529984 of 21785810
+ok   windows: the media archives beside the bound exe
+ok   windows: only the linked plugins: 22 plugins
+ok   steam: zip with a data folder and the executable flag
+ok   steam: the data folder has the media folders the other platforms' archives took
+ok   web (files): build
+ok   web (files): engine options:  false; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = "gamedata/"; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (files): title, manifest and icons
+ok   web (files): the build's id in the page and its scripts: da03c3c60d89cab2 ['coi-serviceworker.js', 'kagex-web.js?v=da03c3c60d89cab2', 'webconfig.js?v=da03c3c60d89cab2', 'krkrz.js?v=da03c3c60d89cab2']
+ok   web (files): link previews
+ok   web (files): krkrz.data is what krkrz.js expects: 0 bytes
+ok   web (files): the files, in lower case: 614 files
+ok   web (xp3): build
+ok   web (xp3): engine options: DATA_XP3 = true; | var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = ""; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -soundpoolsize=96 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (xp3): title, manifest and icons
+ok   web (xp3): the build's id in the page and its scripts: 498798c53eb6a369 ['coi-serviceworker.js', 'kagex-web.js?v=498798c53eb6a369', 'webconfig.js?v=498798c53eb6a369', 'krkrz.js?v=498798c53eb6a369']
+ok   web (xp3): link previews
+ok   web (xp3): krkrz.data is what krkrz.js expects: 32486444 bytes
+ok   web (xp3): data.xp3 preloaded
+ok   web: another build, another id (players' pages and caches update): da03c3c60d89cab2 / 498798c53eb6a369
+ok   ios (simulator): build
+ok   ios (simulator): Info.plist: {'CFBundleIdentifier': 'com.example.kagexsample', 'CFBundleDisplayName': 'KAGEX Sample', 'CFBundleVersion': '1100'}
+ok   ios (simulator): data.xp3 and the icon
+ok   ios (simulator): the signature verifies
+ok   ios (simulator): installs and keeps running: com.example.kagexsample: 28096
