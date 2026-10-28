@@ -1,0 +1,16 @@
+3-Japanese: ja_sample.ogg
+4-  ja_sample: 34 marks, vowels ioeaaaaiooeaiaiauo (100% like the committed track's)
+5-A voice that doesn't say its line (Pip's babble)
+6:  refused: error: The voice doesn't fit its line: type what it says, in the language it says it
+7-A track's state
+8-  after the voice changed: 1 tracks: 1 out of date, 0 without a voice
+9-  kagex-release warns about it
+10-The sample's lines, from its scripts
+11-Traceback (most recent call last):
+12-  File "D:\a\kagex\kagex\kagex\tools\lipsync\test\smoke.py", line 141, in <module>
+13-    sys.exit(main())
+14-             ^^^^^^
+15-  File "D:\a\kagex\kagex\kagex\tools\lipsync\test\smoke.py", line 105, in main
+16-    open(os.path.join(out, "list.json"), "w").write(r.stdout)
+17-  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\encodings\cp1252.py", line 19, in encode
+18-    return codecs.charmap_encode(input,self.errors,encoding_table)[0]

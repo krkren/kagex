@@ -1,0 +1,20 @@
+English: pip000009.ogg
+  pip000009: 111 marks, vowels aiaeiaouiueaiiuiaioiaiaueiaeiaeiauaaieiaiueouiaaouaeeaaai (100% like the committed track's)
+Japanese: ja_sample.ogg
+  ja_sample: 34 marks, vowels ioeaaaaiooeaiaiauo (100% like the committed track's)
+A voice that doesn't say its line (Pip's babble)
+  refused: error: The voice doesn't fit its line: type what it says, in the language it says it
+A track's state
+  after the voice changed: 1 tracks: 1 out of date, 0 without a voice
+  kagex-release warns about it
+The sample's lines, from its scripts
+Traceback (most recent call last):
+  File "D:\a\kagex\kagex\kagex\tools\lipsync\test\smoke.py", line 141, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "D:\a\kagex\kagex\kagex\tools\lipsync\test\smoke.py", line 105, in main
+    open(os.path.join(out, "list.json"), "w").write(r.stdout)
+  File "C:\hostedtoolcache\windows\Python\3.12.10\x64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 468-475: character maps to <undefined>
