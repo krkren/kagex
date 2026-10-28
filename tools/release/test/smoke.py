@@ -1570,7 +1570,7 @@ def engine_has_xp3crypt(engines):
 # The sample's media folders, each packed into an archive of its own beside data.xp3 on the
 # desktops (Plan.cpp's splitFolderNames, those of them the sample has)
 SPLIT_PARTS = ["bgimage.xp3", "bgm.xp3", "effect.xp3", "fgimage.xp3", "image.xp3", "rule.xp3",
-               "scenario.xp3", "thum.xp3", "video.xp3", "voice.xp3"]
+               "scenario.xp3", "sound.xp3", "thum.xp3", "video.xp3", "voice.xp3"]
 
 
 def xp3_names(path):
