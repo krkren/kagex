@@ -62,6 +62,15 @@ endif()
 
 #--- OpenJTalk's front end (its own CMakeLists.txt, which works as a sub-project) ---------------
 add_subdirectory("${_ojt}" openjtalk EXCLUDE_FROM_ALL)
+if(MSVC)
+    # OpenJTalk asks cl for /source-charset:UTF-8 and /execution-charset:UTF-8 itself, which cl
+    # refuses next to the /utf-8 (the same two) every target here starts with (tools/release)
+    get_target_property(_ojt_opts openjtalk COMPILE_OPTIONS)
+    if(_ojt_opts)
+        list(REMOVE_ITEM _ojt_opts /utf-8)
+        set_target_properties(openjtalk PROPERTIES COMPILE_OPTIONS "${_ojt_opts}")
+    endif()
+endif()
 set(_ojt_inc jpcommon mecab/src mecab2njd njd njd2jpcommon njd_set_accent_phrase njd_set_accent_type njd_set_digit
     njd_set_long_vowel njd_set_pronunciation njd_set_unvoiced_vowel text2mecab)
 list(TRANSFORM _ojt_inc PREPEND "${_ojt}/")
