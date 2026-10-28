@@ -26,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.12.0"
-  KAGEX_SHA: 65ca51981ba45e8dd7583ba879fc5155baa3ba5c
+  RELEASE_TAG: "0.12.1"
+  KAGEX_SHA: 0949cc77dc9d89bfc34efd5fc6cd140ea03c0d5c
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
