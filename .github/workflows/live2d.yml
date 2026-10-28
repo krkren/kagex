@@ -6,11 +6,21 @@
 # (build.py --kit), as platforms.yml builds the sample's apps, and the smoke test runs on an
 # emulator and in the Simulator.
 #
+# The sample game with Live2D: each desktop job also builds the sample as a game with kagex-release
+# (built by the tool job from this commit), the plugin in plugins/<platform>/ and Hiyori in its
+# data, and runs the smoke test on that package. Started by hand with a release's tag (Actions >
+# Live2D > Run workflow, release: the tag), the jobs add those packages, the Android APK and the
+# iOS Simulator app to that release as kagex_sample_live2d_<platform>: the playable sample, apart
+# from the engine and template packages, which can't carry Live2D's Cubism Core (a game may ship
+# it; anything handed to other developers may not). Each holds LIVE2D-NOTICE.txt, the terms that
+# protect the Core.
+#
 # The SDK is Live2D's, and its licence keeps it private: it comes from the private repository
 # krkren/cubism-sdk through the CUBISM_SDK_TOKEN secret (a fine-grained token that can only read
 # that repository's contents). Neither the SDK, nor the plugin or the engines built with it, nor
-# Hiyori leaves the runner: no artifacts (but the compiled scenarios, which hold neither), and the
-# results branches (ci/platform-results-live2d-<os>) hold logs only, no pictures.
+# Hiyori leaves the runner but in those sample game packages: no artifacts (but the compiled
+# scenarios and kagex-release, which hold neither), and the results branches
+# (ci/platform-results-live2d-<os>) hold logs only, no pictures.
 name: Live2D
 
 on:
@@ -26,10 +36,16 @@ on:
       - 'tools/live2d-standin.tjs'
       - 'tools/smoketest.py'
       - 'tools/assets/make_hiyori.py'
+      - 'tools/release/src/**'
       - 'app-config.json'
       - 'ios-config.json'
       - '.github/workflows/live2d.yml'
   workflow_dispatch:
+    inputs:
+      release:
+        description: "A release's tag: add the Live2D sample game packages to it (empty: only test)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -46,7 +62,76 @@ env:
   CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
+  # kagex-release from this commit, for the sample game packages (its own tests are
+  # release-tool.yml's): built as release-tool.yml builds it, without kagex-lipsync
+  tool:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-2022, preset: windows, name: windows }
+          - { os: ubuntu-22.04, preset: linux, name: linux }
+          - { os: macos-15, preset: macos, name: macos }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: kagex
+      - name: Clone krkrz_tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(gh api "repos/wamsoft/krkrz_dev/contents/src/tools/krkrz_tools?ref=$ENGINE_SHA" --jq .sha)
+          git clone -q https://github.com/wamsoft/krkrz_tools.git krkrz_tools
+          git -C krkrz_tools checkout -q "$sha"
+          git -C krkrz_tools submodule update -q --init --recursive
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+            git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
+            git -C "${p%%:*}" checkout -q "${p#*:}"
+          done
+          echo "KRKRZ_TOOLS_DIR=$(pwd -W 2>/dev/null || pwd)/krkrz_tools" >> "$GITHUB_ENV"
+          [ "$RUNNER_OS" = macOS ] && echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> "$GITHUB_ENV"
+          true
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Set up vcpkg
+        id: vcpkg
+        run: |
+          git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
+          if [ "$RUNNER_OS" = Windows ]; then "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics; else "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics; fi
+          ws=$(pwd -W 2>/dev/null || pwd)
+          mkdir -p vcpkg-archives
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$ws/vcpkg-archives,readwrite" >> "$GITHUB_ENV"
+          echo "sha=$(git -C "$RUNNER_TEMP/vcpkg" rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      # release-tool.yml's vcpkg libraries (restore only: that workflow keeps them)
+      - uses: actions/cache/restore@v4
+        with:
+          path: vcpkg-archives
+          key: vcpkg-release-tool-${{ matrix.name }}-${{ hashFiles('kagex/tools/release/vcpkg.json') }}-${{ steps.vcpkg.outputs.sha }}
+          restore-keys: vcpkg-release-tool-${{ matrix.name }}-
+      - name: Build kagex-release
+        working-directory: kagex/tools/release
+        run: |
+          cmake --preset ${{ matrix.preset }} "-DKRKRZ_TOOLS_DIR=$KRKRZ_TOOLS_DIR" -DKAGEX_LIPSYNC=OFF > "$RUNNER_TEMP/configure.log" 2>&1 || { tail -60 "$RUNNER_TEMP/configure.log"; exit 1; }
+          cmake --build --preset ${{ matrix.preset }}-rel --target kagex-release
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp build/${{ matrix.preset }}/Release/kagex-release* "$GITHUB_WORKSPACE/out/"
+          ls -l "$GITHUB_WORKSPACE/out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live2d-kagex-release-${{ matrix.name }}
+          path: out
+          retention-days: 1
+          if-no-files-found: error
+
   live2d:
+    needs: tool
     strategy:
       fail-fast: false
       matrix:
@@ -170,6 +255,55 @@ jobs:
           # the log in UTF-8 on Windows too (its console's code page has no Japanese)
           PYTHONUTF8: 1
         run: .github/platforms/run-logged.sh smoke $PY -B tools/smoketest.py --engine "$ENGINE" --only sample --keep --live2d required
+      - uses: actions/download-artifact@v4
+        with:
+          name: live2d-kagex-release-${{ matrix.name }}
+          path: ${{ runner.temp }}/tool
+      - name: The sample game with Live2D
+        env:
+          SDL_VIDEO_DRIVER: ${{ matrix.video }}
+          SDL_AUDIO_DRIVER: dummy
+          PYTHONUTF8: 1
+        run: |
+          tool="$WORK/tool/kagex-release"; [ "$RUNNER_OS" = Windows ] && tool="$tool.exe"
+          chmod +x "$tool" 2>/dev/null || true
+          "$tool" --version | tee results/sample.txt
+          # this checkout as the game: the plugin in plugins/<platform>/, Hiyori in its data (the
+          # Hiyori step), Live2D's notice beside the executable
+          mkdir -p "plugins/${{ matrix.name }}"
+          cp "$WORK/live2d-plugin/"*krkrlive2d* "plugins/${{ matrix.name }}/"
+          cp tools/live2d/LIVE2D-NOTICE.txt .
+          "$tool" --cli init . >> results/sample.txt
+          $PY - "${{ matrix.name }}" <<'PY'
+          import json, sys
+          s = json.load(open("release.json", encoding="utf-8"))
+          for p in s["platforms"]:
+              s["platforms"][p]["enabled"] = p == sys.argv[1]
+          s["contents"]["extraFiles"] = s["contents"].get("extraFiles", []) + ["LIVE2D-NOTICE.txt"]
+          s["output"]["archive"] = "zip"
+          json.dump(s, open("release.json", "w", encoding="utf-8"), indent=2)
+          PY
+          "$tool" --cli check release.json >> results/sample.txt 2>&1 || true
+          .github/platforms/run-logged.sh sample-build "$tool" --cli build release.json "--engines=$WORK"
+          pkg=$(ls "$PWD"/release/*-${{ matrix.name }}.zip | head -1)
+          [ -n "$pkg" ] || { echo "::error::kagex-release made no package"; exit 1; }
+          mkdir -p "$WORK/sample"
+          (cd "$WORK/sample" && unzip -q "$pkg" 2>/dev/null || $PY -m zipfile -e "$pkg" .)
+          case "$RUNNER_OS" in
+            Windows) exe=$(ls "$WORK"/sample/*/kagex-sample.exe) ;;
+            Linux) exe=$(ls "$WORK"/sample/*/kagex-sample); chmod +x "$exe" ;;
+            macOS) exe=$(ls -d "$WORK"/sample/*.app)/Contents/MacOS/krkrz ;;
+          esac
+          ls "$(dirname "$exe")" >> results/sample.txt
+          test -f "$(dirname "$exe")/LIVE2D-NOTICE.txt" || [ "$RUNNER_OS" = macOS ] || { echo "::error::no LIVE2D-NOTICE.txt beside the executable"; exit 1; }
+          .github/platforms/run-logged.sh sample-smoke $PY -B tools/smoketest.py --packaged --engine "$exe" --live2d required
+          cp "$pkg" "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
+          ls -l "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip" | tee -a results/sample.txt
+      - name: Add the sample game to the release
+        if: inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ inputs.release }}" "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
@@ -234,7 +368,10 @@ jobs:
           cat "$RUNNER_TEMP/live2d/kit.env" >> "$GITHUB_ENV"
           python3 -c "import json; c = json.load(open('$PROJECT_DIR/app-config.json'))['cmake']; print(c['pluginFolders'][0]); print(c['plugins'][-1])" | tee -a results/kit.txt
       - name: Hiyori
-        run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+          # Live2D's notice, in the app's data
+          cp kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt kirikiri/kagex/data/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -287,6 +424,17 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
           script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --live2d required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
+      # the sample game with Live2D, on a release: the optimized build, signed with the debug key
+      # (as kagex_sdl3_android.apk)
+      - name: Add the sample game to the release
+        if: inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug
+          apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
+          cp "$apk" "$RUNNER_TEMP/kagex_sample_live2d_android.apk"
+          gh release upload "${{ inputs.release }}" "$RUNNER_TEMP/kagex_sample_live2d_android.apk" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
@@ -329,7 +477,9 @@ jobs:
             --sdk "$RUNNER_TEMP/cubism-sdk/$CUBISM_SDK_ZIP" --work "$RUNNER_TEMP/live2d" --kit "$PROJECT_DIR/ios-config.json"
           cat "$RUNNER_TEMP/live2d/kit.env" >> "$GITHUB_ENV"
       - name: Hiyori
-        run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
+          cp kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt kirikiri/kagex/data/
       - name: Set up vcpkg
         run: |
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
@@ -358,6 +508,13 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --live2d required || s=$?
           cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log results/ 2>/dev/null || true
           exit $s
+      - name: Add the sample game to the release
+        if: inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
+          gh release upload "${{ inputs.release }}" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
