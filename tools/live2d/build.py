@@ -41,6 +41,13 @@ SOURCES = {
     "ncbind":     ("https://github.com/wamsoft/ncbind",     "256502b817e6627c1491b916938448470df395fd", False),
 }
 
+# patches to a source's submodules: name: {its folder: the patch}. The Cubism Native
+# Framework's compiles each blend-mode shader set the first time it's drawn with, rather than all
+# 474 up front (UPSTREAM.md)
+SUBMODULE_PATCHES = {
+    "live2d": {"external/CubismNativeFramework": "live2d-CubismNativeFramework.patch"},
+}
+
 # the oldest Cubism Core the driver was made for (its CMakeLists.txt checks it too)
 CORE_VERSION = (6, 0, 1)
 
@@ -113,12 +120,17 @@ def fetch(work, name):
     git(path, "reset", "-q", "--hard", commit)
     git(path, "clean", "-q", "-fdx")
     if submodules:
-        # its own (the build needs none of theirs: KTX-Software's tests, the samples' Framework)
+        # its own (the build needs none of theirs: KTX-Software's tests, the samples' Framework),
+        # byte for byte too, and --force to undo an earlier build's patch in them
         print("fetching %s's submodules" % name, flush=True)
-        run(["git", "-C", path, "submodule", "update", "--init", "--depth", "1"])
+        run(["git", "-c", "core.autocrlf=false", "-C", path, "submodule", "update", "--init", "--force", "--depth", "1"])
     patch = os.path.join(HERE, "patches", name + ".patch")
     if os.path.exists(patch):
         run(["git", "-C", path, "apply", "--whitespace=nowarn", patch])
+    # its submodules' (SUBMODULE_PATCHES)
+    for sub, sub_patch in SUBMODULE_PATCHES.get(name, {}).items():
+        run(["git", "-C", os.path.join(path, sub), "apply", "--whitespace=nowarn",
+             os.path.join(HERE, "patches", sub_patch)])
     return path
 
 

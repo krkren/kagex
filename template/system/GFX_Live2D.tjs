@@ -120,7 +120,8 @@ class KAGLive2D extends KAGPlugin
 		}
 		compositor.makeCurrent();
 		if (!shadersReady) {
-			// compiled all at once on the first draw otherwise, a wait of seconds under ANGLE
+			// the basic shaders, before the first draw (kagex's build of the plugin compiles the
+			// blend-mode ones as a model first draws with each, not all 474 here: UPSTREAM.md)
 			var t0 = System.getTickCount();
 			try { device.prepareShaders(); } catch (e) { dm("Live2D: prepareShaders: " + e.message); }
 			timings.shaders = System.getTickCount() - t0;

@@ -21,8 +21,12 @@ the static runtime the Core's library is made for).
   (gitignored), applies `patches/`, and builds with `KRKRZ_VARIANT=SDL`.
 - `patches/krkrlive2d.patch` and `patches/live2d.patch` fix what stops the plugin compiling
   with GCC and Clang, and the plugin's file reader throwing for a file the driver only looks
-  for, which kept every model without a `.vmotion3.json` from loading (`UPSTREAM.md`). They're
-  kept byte for byte (CRLF where the sources have it).
+  for, which kept every model without a `.vmotion3.json` from loading (`UPSTREAM.md`).
+  `patches/live2d-CubismNativeFramework.patch` (applied in the driver's CubismNativeFramework
+  submodule) compiles each of Cubism 5.3's blend-mode shaders the first time a model draws with
+  it, rather than all 474 before the first frame, which stood the game still for seconds when
+  its first Live2D character appeared (`UPSTREAM.md`). They're kept byte for byte (CRLF where
+  the sources have it).
 - `driver/CMakeLists.txt` is the driver's build on Linux and macOS, which its own CMake doesn't
   have: the Cubism Native Framework's OpenGL ES 2 renderer through GLAD, the Core's static
   library from the SDK, minizip-ng and KTX (read only). On Windows, Android and iOS it hands
