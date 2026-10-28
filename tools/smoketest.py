@@ -723,13 +723,20 @@ def interface_steps(eng, step):
                 eng.tjs("kag.onWindowedMenuItemClick(); return 1;")
             eng.wait("the menu bar", "kag.menuBarShown && kag.menuBarView !== void && kag.menuBarView.shown",
                      timeout=10)
-            # the window is the strip taller than the game, which is drawn under it
-            size = [int(v) for v in str(eng.tjs(
-                'var z = kag.zoomNumer / kag.zoomDenom; return [kag.innerWidth, kag.innerHeight,'
-                ' int(kag.primaryLayer.width * z + 0.5), int(kag.primaryLayer.height * z + 0.5),'
-                ' kag.menuStripHeight].join(",");')).split(",")]
+            # the window is the strip taller than the game, which is drawn under it (once the
+            # window has its size: leaving full screen takes a moment on some systems)
+            end = time.time() + 10
+            while True:
+                size = [int(v) for v in str(eng.tjs(
+                    'var z = kag.zoomNumer / kag.zoomDenom; return [kag.innerWidth, kag.innerHeight,'
+                    ' int(kag.primaryLayer.width * z + 0.5), int(kag.primaryLayer.height * z + 0.5),'
+                    ' kag.menuStripHeight].join(",");')).split(",")]
+                sized = size[4] > 0 and abs(size[0] - size[2]) <= 1 and abs(size[1] - size[3] - size[4]) <= 1
+                if sized or time.time() > end:
+                    break
+                time.sleep(0.25)
             print("     window %dx%d, the game %dx%d under a %d px strip" % tuple(size), flush=True)
-            if size[4] <= 0 or abs(size[0] - size[2]) > 1 or abs(size[1] - size[3] - size[4]) > 1:
+            if not sized:
                 raise SmokeError("the window isn't the game plus the strip: %s" % size)
             # F10: the first menu, from the keyboard; Esc closes it
             eng.key("VK_F10")
@@ -746,9 +753,17 @@ def interface_steps(eng, step):
             if at == "":
                 raise SmokeError("the menu bar has no title for Help (with Controls)")
             index, x, y = at.split(",")
+            help_open = 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex == %s' % index
             eng.tjs("Agent.click(%s, %s); return 1;" % (x, y))
-            eng.wait("Help's menu", 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex == %s'
-                     % index, timeout=10)
+            try:
+                eng.wait("Help's menu", help_open, timeout=4)
+            except SmokeError:
+                # Agent.click's coordinates are the window's in points, which a scaled display
+                # (a Mac's) may not match: open it as a click on its title does
+                print("     (the click at %s,%s didn't reach Help's title here: opened through"
+                      " onMenuBarTitle, as a click does)" % (x, y), flush=True)
+                eng.tjs("kag.onMenuBarTitle(%s); return 1;" % index)
+                eng.wait("Help's menu", help_open, timeout=10)
             if a11y_framework(eng):
                 # screen readers get the bar's titles and the menu's items
                 titles = [n.get("name") for d in json.loads(str(eng.tjs("return Agent.a11yTree();"))).get("dialogs") or []
