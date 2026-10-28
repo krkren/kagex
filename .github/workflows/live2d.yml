@@ -53,6 +53,8 @@ jobs:
       - name: Tools
         run: |
           mkdir -p results
+          # never empty, so the results branch is pushed whichever step fails
+          echo "${{ github.sha }} on ${{ matrix.os }}, run ${{ github.run_id }}" > results/run.txt
           PY=python3; [ "$RUNNER_OS" = Windows ] && PY=python
           echo "PY=$PY" >> "$GITHUB_ENV"
           echo "WORK=$(cd "$RUNNER_TEMP" && (pwd -W 2>/dev/null || pwd))" >> "$GITHUB_ENV"
