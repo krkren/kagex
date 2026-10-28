@@ -1570,15 +1570,17 @@ def sample_steps(eng):
                  ' t.loadImages("start_normal"); var diff = 0;'
                  ' for (var y = 4; y < t.imageHeight; y += 4) for (var x = 4; x < t.imageWidth; x += 4)'
                  ' if ((b.getMainPixel(x, y) & 0xffffff) != (t.getMainPixel(x, y) & 0xffffff)) diff++;'
-                 ' invalidate t; return Storages.getPlacedPath("start_normal.png") + "|" + diff;')
+                 ' invalidate t; return Storages.getPlacedPath(getExistImageName("start_normal")) + "|" + diff;')
         switch_language(eng, "ja", "title.ks")
         placed, diff = str(eng.tjs(check)).split("|")
         print("     Japanese: start_normal from %s, %s samples unlike it" % (placed, diff), flush=True)
-        if "/lang/ja/" not in placed.replace("\\", "/") or diff != "0":
+        # (any format: a release converts the pictures; in an archive the path follows its ">")
+        in_lang = lambda p, code: re.search(r"(^|[/>])lang/%s/" % code, p.replace("\\", "/")) is not None
+        if not in_lang(placed, "ja") or diff != "0":
             raise SmokeError("the title's Start button isn't data/lang/ja's image (%s, %s samples differ)" % (placed, diff))
         switch_language(eng, "en", "title.ks")
         placed, diff = str(eng.tjs(check)).split("|")
-        if "/lang/" in placed or diff != "0":
+        if in_lang(placed, "[^/]+") or diff != "0":
             raise SmokeError("back in English, the Start button isn't data/image's (%s, %s samples differ)" % (placed, diff))
 
     @step("languages: the line on screen is drawn again in the other language, and the backlog keeps what was shown")
@@ -1671,10 +1673,10 @@ def sample_steps(eng):
                 else 'setLanguageButton("ja"); return 1;')
         eng.wait("Japanese", 'KAGLanguage.current == "ja" && kag.conductor.curStorage == "config.ks" && kag.inStable'
                  ' && kag.transCount == 0', timeout=20)
-        r = str(eng.tjs('return [KAGLanguage.chosen ? 1 : 0, kag.scflags.language, Storages.getPlacedPath("config_base.png")].join("|");'))
+        r = str(eng.tjs('return [KAGLanguage.chosen ? 1 : 0, kag.scflags.language, Storages.getPlacedPath(getExistImageName("config_base"))].join("|");'))
         print("     chosen, saved, config_base: %s" % r, flush=True)
         chosen, saved, placed = r.split("|")
-        if chosen != "1" or saved != "ja" or "/lang/ja/" not in placed.replace("\\", "/"):
+        if chosen != "1" or saved != "ja" or not re.search(r"(^|[/>])lang/ja/", placed.replace("\\", "/")):
             raise SmokeError("Config's 日本語 button didn't choose Japanese and keep it: %s" % r)
         eng.tjs('setLanguageButton("en"); return 1;')
         eng.wait("English", 'KAGLanguage.current == "en" && kag.conductor.curStorage == "config.ks" && kag.inStable'

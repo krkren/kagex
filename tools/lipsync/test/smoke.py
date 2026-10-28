@@ -64,12 +64,12 @@ def main():
     try:
         print("English: pip000009.ogg", flush=True)
         r = run([tool, "--cli", "align", os.path.join(ROOT, "data", "voice", "pip000009.ogg"), SPEECH])
-        open(os.path.join(out, "pip000009.lip"), "w").write(r.stdout)
+        open(os.path.join(out, "pip000009.lip"), "w", encoding="utf-8").write(r.stdout)
         same_track(marks(r.stdout), marks(open(os.path.join(ROOT, "data", "voice", "pip000009.lip"), encoding="utf-8").read()), "pip000009")
 
         print("Japanese: ja_sample.ogg", flush=True)
         r = run([tool, "--cli", "align", os.path.join(HERE, "ja_sample.ogg"), JA_TEXT])
-        open(os.path.join(out, "ja_sample.lip"), "w").write(r.stdout)
+        open(os.path.join(out, "ja_sample.lip"), "w", encoding="utf-8").write(r.stdout)
         same_track(marks(r.stdout), marks(open(os.path.join(HERE, "ja_sample.lip"), encoding="utf-8").read()), "ja_sample")
 
         print("A voice that doesn't say its line (Pip's babble)", flush=True)
@@ -102,7 +102,7 @@ def main():
         if o.engines:
             print("The sample's lines, from its scripts", flush=True)
             r = run([tool, "--cli", "list", ROOT, "--json", "--engines=" + os.path.abspath(o.engines)], ok=(0, 1))
-            open(os.path.join(out, "list.json"), "w").write(r.stdout)
+            open(os.path.join(out, "list.json"), "w", encoding="utf-8").write(r.stdout)
             voices = {v["name"]: v for v in json.loads(r.stdout)["voices"]}
             pip = voices.get("pip000009.ogg")
             if pip is None or not pip["lines"] or not pip["lines"][0]["text"].startswith("Hi again!"):
