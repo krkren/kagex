@@ -1,0 +1,82 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-windows",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-windows.zip",
+   "bytes": 53021088
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-linux",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-linux.tar.gz",
+   "bytes": 67468084
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-steam",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-steam.tar.gz",
+   "bytes": 74995549
+  },
+  {
+   "platform": "macos",
+   "title": "macOS",
+   "ok": true,
+   "folder": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-macos",
+   "package": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/kagex-sample-0.12.1-macos.zip",
+   "bytes": 55482859
+  }
+ ],
+ "notes": [
+  "image/layers.psd couldn't be split into its layers (not a Photoshop file it can read (it has no picture size)), so it went in as it is",
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)"
+ ],
+ "media": {
+  "images": 475,
+  "sounds": 0,
+  "fromCache": 12,
+  "bytesBefore": 9148113,
+  "bytesAfter": 8625651,
+  "keptByReference": 3,
+  "keptForEffects": 6,
+  "rewrittenScripts": 0
+ },
+ "layered": {
+  "files": 1,
+  "pictures": 2,
+  "bytesBefore": 344793,
+  "bytesAfter": 60865
+ },
+ "scripts": {
+  "compiled": 78,
+  "expressions": 2,
+  "fixed": 23,
+  "truncates": true,
+  "kept": [],
+  "log": "/private/var/folders/nj/vtw8zd2j31d1gdrtntc5y4600000gn/T/tmpcxotg5v0/My Game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": false
+ }
+}
