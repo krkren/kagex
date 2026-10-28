@@ -15,6 +15,14 @@
 # it; anything handed to other developers may not). Each holds LIVE2D-NOTICE.txt, the terms that
 # protect the Core.
 #
+# A game's own engine package (tools/live2d/README.md, "Android and iOS"): the Android and iOS
+# jobs also make one from the engine they built, as a developer would (android-engine.py,
+# ios-engine.py with --with-cubism-core, and checks that they refuse it without), put it in
+# engines/ next to data/ and build the sample from it with kagex-release: the iOS Simulator app
+# gets the smoke test with Live2D required, the device .ipa its signature checked, and the
+# Android APK (a release build, without the REPL) is started on the emulator and checked by its
+# log (.github/platforms/android-start.sh).
+#
 # The SDK is Live2D's, and its licence keeps it private: it comes from the private repository
 # krkren/cubism-sdk through the CUBISM_SDK_TOKEN secret (a fine-grained token that can only read
 # that repository's contents). Neither the SDK, nor the plugin or the engines built with it, nor
@@ -37,6 +45,9 @@ on:
       - 'tools/smoketest.py'
       - 'tools/assets/make_hiyori.py'
       - 'tools/release/src/**'
+      - 'tools/release/scripts/android-engine.py'
+      - 'tools/release/scripts/ios-engine.py'
+      - '.github/platforms/android-start.sh'
       - 'app-config.json'
       - 'ios-config.json'
       - '.github/workflows/live2d.yml'
@@ -338,7 +349,7 @@ jobs:
           if-no-files-found: error
 
   android:
-    needs: scenarios
+    needs: [scenarios, tool]
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     env:
@@ -414,6 +425,71 @@ jobs:
             if strings "$f" | grep -c -E 'Live2DPlayer|csmReviveMocInPlace' > /dev/null; then echo "$(basename "$f") has krkrlive2d and the Cubism Core"; fi
           done | tee -a results/apk.txt
           grep -q "has krkrlive2d" results/apk.txt || { echo "::error title=No Live2D::the engine has no krkrlive2d"; exit 1; }
+      # the optimized build, signed with the debug key (the kit's release-debug), as platforms.yml
+      # makes the sample's APK: the sample game with Live2D on a release, and what a game's own
+      # engine package is made from below
+      - name: Build the release APK
+        run: |
+          # Gradle downloads lint's own dependencies here (three tries, as platforms.yml)
+          for try in 1 2 3; do
+            kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug && break
+            [ "$try" = 3 ] && exit 1
+            sleep 30
+          done
+          apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
+          [ -n "$apk" ] || { echo "::error::no release APK"; exit 1; }
+          echo "RELEASE_APK=$apk" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: live2d-kagex-release-linux
+          path: ${{ runner.temp }}/tool
+      # A game's own engine package, as tools/live2d/README.md has a developer make it: this
+      # engine through android-engine.py (which refuses the Cubism Core without
+      # --with-cubism-core) into engines/ next to data/, where kagex-release finds it, then the
+      # sample built with kagex-release from it (its host engine, for compiling the scripts and
+      # scenarios, from the release, headless)
+      - name: A game's own engine package
+        run: |
+          sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
+            libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig >> results/apt.log 2>&1
+          version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
+          if python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$RELEASE_APK" "$RUNNER_TEMP/refused.zip" \
+              --version "$version" --app-config "$PROJECT_DIR/app-config.json" > results/engine-refused.txt 2>&1; then
+            echo "::error title=Cubism Core::android-engine.py made an engine package holding the Cubism Core without --with-cubism-core"
+            exit 1
+          fi
+          grep -q "Cubism Core" results/engine-refused.txt || { cat results/engine-refused.txt; exit 1; }
+          mkdir -p "$PROJECT_DIR/engines"
+          python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$RELEASE_APK" \
+            "$PROJECT_DIR/engines/kagex_engine_android.zip" --version "$version" --app-config "$PROJECT_DIR/app-config.json" \
+            --with-cubism-core | tee results/engine-package.txt
+          tool="$RUNNER_TEMP/tool/kagex-release"
+          chmod +x "$tool"
+          "$tool" --version | tee results/game.txt
+          cd "$PROJECT_DIR"
+          "$tool" --cli init . >> "$GITHUB_WORKSPACE/results/game.txt"
+          python3 - <<'PY'
+          import json
+          s = json.load(open("release.json", encoding="utf-8"))
+          for p in s["platforms"]:
+              s["platforms"][p]["enabled"] = p == "android"
+          s["output"]["check"] = False
+          s["platforms"]["android"].update({"format": "apk", "data": "xp3", "applicationId": "io.github.krkren.kagex.live2d",
+                                            "versionCode": 0, "keystore": "", "keyAlias": ""})
+          json.dump(s, open("release.json", "w", encoding="utf-8"), indent=2)
+          PY
+          "$tool" --cli check release.json >> "$GITHUB_WORKSPACE/results/game.txt" 2>&1 || true
+          s=0
+          .github/platforms/run-logged.sh game-build "$tool" --cli build release.json || s=$?
+          cp release/*.log "$GITHUB_WORKSPACE/results/" 2>/dev/null || true
+          [ "$s" = 0 ] || exit "$s"
+          apk=$(ls "$PWD"/release/*.apk | head -1)
+          [ -n "$apk" ] || { echo "::error::kagex-release made no APK"; exit 1; }
+          unzip -l "$apk" | grep -E 'assets/data|lib/' | tee -a "$GITHUB_WORKSPACE/results/game.txt"
+          unzip -o -q "$apk" 'lib/*' -d "$RUNNER_TEMP/gamelib"
+          LC_ALL=C grep -l "Live2D Cubism SDK Core Version" "$RUNNER_TEMP"/gamelib/lib/*/*.so | tee -a "$GITHUB_WORKSPACE/results/game.txt" | grep -q x86_64 \
+            || { echo "::error title=No Live2D::the game's APK has no Cubism Core in its engine"; exit 1; }
+          echo "GAME_APK=$apk" >> "$GITHUB_ENV"
       - name: Enable KVM for the emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -428,7 +504,11 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --live2d required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
+          # the debug build through its REPL, then the APK kagex-release made from the game's own
+          # engine package, which (a release build) has no REPL: started and checked by its log
+          script: |
+            kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --live2d required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
+            kirikiri/kagex/.github/platforms/run-logged.sh game-start kirikiri/kagex/.github/platforms/android-start.sh "$GAME_APK" io.github.krkren.kagex.live2d results/game-logcat.txt krkrlive2d scnfile xp3crypt
       # the sample game with Live2D, on a release: the optimized build, signed with the debug key
       # (as kagex_sdl3_android.apk)
       - name: Add the sample game to the release
@@ -436,9 +516,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug
-          apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
-          cp "$apk" "$RUNNER_TEMP/kagex_sample_live2d_android.apk"
+          cp "$RELEASE_APK" "$RUNNER_TEMP/kagex_sample_live2d_android.apk"
           gh release upload "${{ inputs.release }}" "$RUNNER_TEMP/kagex_sample_live2d_android.apk" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
@@ -448,7 +526,7 @@ jobs:
         run: kirikiri/kagex/.github/platforms/publish-results.sh live2d-android "live2d android, run ${{ github.run_id }} (${{ job.status }})"
 
   ios:
-    needs: scenarios
+    needs: [scenarios, tool]
     runs-on: macos-15
     timeout-minutes: 150
     env:
@@ -507,11 +585,93 @@ jobs:
           d = json.load(sys.stdin)['devices']
           print(next(x['udid'] for k, v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']))")
           echo "device $dev" | tee results/simulator.txt
+          echo "SIM_DEVICE=$dev" >> "$GITHUB_ENV"
           xcrun simctl boot "$dev" || true
           xcrun simctl bootstatus "$dev" -b > /dev/null
           s=0
           kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --live2d required || s=$?
-          cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log results/ 2>/dev/null || true
+          cp "$(ls -td "${TMPDIR:-/tmp}"/kagex-smoke-* | head -1)/simulator.log" results/ 2>/dev/null || true
+          exit $s
+      # the engine for devices (Release, unsigned: a developer's certificate signs it), as
+      # platforms.yml builds it for kagex-release's engine package: here with the Cubism Core
+      # for devices
+      - name: Build for devices, unsigned
+        run: |
+          kirikiri/kagex/.github/platforms/run-logged.sh device-configure make -C kirikiri/krkrz_ios dist-configure
+          kirikiri/kagex/.github/platforms/run-logged.sh device-build xcodebuild -project "$PROJECT_DIR/build/ios/dist/krkrz_ios.xcodeproj" \
+            -target krkrz -configuration Release -sdk iphoneos -arch arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          dapp=$(find "$PROJECT_DIR/build/ios/dist" -name '*.app' -path '*iphoneos*' | head -1)
+          [ -n "$dapp" ] || { echo "::error::no device .app"; exit 1; }
+          LC_ALL=C grep -rl "Live2D Cubism SDK Core Version" "$dapp" | tee results/device.txt | grep -q . \
+            || { echo "::error title=No Live2D::the engine for devices has no Cubism Core"; exit 1; }
+          ditto -c -k --keepParent "$dapp" "$RUNNER_TEMP/ios-device.zip"
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/ios-simulator.zip"
+      - uses: actions/download-artifact@v4
+        with:
+          name: live2d-kagex-release-macos
+          path: ${{ runner.temp }}/tool
+      # A game's own engine package, as tools/live2d/README.md has a developer make it: these two
+      # apps through ios-engine.py (which refuses the Cubism Core without --with-cubism-core)
+      # into engines/ next to data/, where kagex-release finds it, then the sample built from it
+      # for the Simulator (smoke-tested below: its REPL is a launch option) and for devices
+      # (signed ad hoc with a stand-in profile, as tools/release/test/smoke.py does)
+      - name: A game's own engine package
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
+          if python3 -I kirikiri/kagex/tools/release/scripts/ios-engine.py --device "$RUNNER_TEMP/ios-device.zip" --simulator "$RUNNER_TEMP/ios-simulator.zip" \
+              "$RUNNER_TEMP/refused.zip" --version "$version" > results/engine-refused.txt 2>&1; then
+            echo "::error title=Cubism Core::ios-engine.py made an engine package holding the Cubism Core without --with-cubism-core"
+            exit 1
+          fi
+          grep -q "Cubism Core" results/engine-refused.txt || { cat results/engine-refused.txt; exit 1; }
+          mkdir -p "$PROJECT_DIR/engines"
+          python3 -I kirikiri/kagex/tools/release/scripts/ios-engine.py --device "$RUNNER_TEMP/ios-device.zip" --simulator "$RUNNER_TEMP/ios-simulator.zip" \
+            "$PROJECT_DIR/engines/kagex_engine_ios.zip" --version "$version" --with-cubism-core | tee results/engine-package.txt
+          tool="$RUNNER_TEMP/tool/kagex-release"
+          chmod +x "$tool"
+          "$tool" --version | tee results/game.txt
+          cd "$PROJECT_DIR"
+          "$tool" --cli init . >> "$GITHUB_WORKSPACE/results/game.txt"
+          for target in simulator device; do
+            python3 - "$target" <<'PY'
+          import json, plistlib, sys
+          s = json.load(open("release.json", encoding="utf-8"))
+          for p in s["platforms"]:
+              s["platforms"][p]["enabled"] = p == "ios"
+          s["output"]["check"] = False
+          open("test.mobileprovision", "wb").write(plistlib.dumps({"Name": "kagex live2d test", "Entitlements": {
+              "application-identifier": "ABCDE12345.io.github.krkren.kagex.live2d", "get-task-allow": True}}))
+          s["platforms"]["ios"].update({"bundleId": "io.github.krkren.kagex.live2d", "buildNumber": 0, "identity": "-",
+                                        "profile": "test.mobileprovision", "data": "xp3", "target": sys.argv[1]})
+          json.dump(s, open("release.json", "w", encoding="utf-8"), indent=2)
+          PY
+            "$tool" --cli check release.json >> "$GITHUB_WORKSPACE/results/game.txt" 2>&1 || true
+            .github/platforms/run-logged.sh "game-build-$target" "$tool" --cli build release.json
+          done
+          sim=$(ls "$PWD"/release/*-ios-simulator.zip | head -1)
+          ipa=$(ls "$PWD"/release/*.ipa | head -1)
+          [ -n "$sim" ] && [ -n "$ipa" ] || { echo "::error::kagex-release made no Simulator app or .ipa"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/game" "$RUNNER_TEMP/ipa"
+          ditto -x -k "$sim" "$RUNNER_TEMP/game"
+          ditto -x -k "$ipa" "$RUNNER_TEMP/ipa"
+          gapp=$(ls -d "$RUNNER_TEMP"/game/*.app | head -1)
+          dapp=$(ls -d "$RUNNER_TEMP"/ipa/Payload/*.app | head -1)
+          for a in "$gapp" "$dapp"; do
+            ls "$a" | tee -a "$GITHUB_WORKSPACE/results/game.txt"
+            test -f "$a/data.xp3" || { echo "::error::no data.xp3 in $a"; exit 1; }
+            LC_ALL=C grep -rl "Live2D Cubism SDK Core Version" "$a" | tee -a "$GITHUB_WORKSPACE/results/game.txt" | grep -q . \
+              || { echo "::error title=No Live2D::$(basename "$a") has no Cubism Core"; exit 1; }
+            codesign --verify --deep --strict "$a" 2>&1 | tee -a "$GITHUB_WORKSPACE/results/game.txt"
+            [ "${PIPESTATUS[0]}" = 0 ] || { echo "::error::the signature of $a doesn't verify"; exit 1; }
+          done
+          echo "GAME_APP=$gapp" >> "$GITHUB_ENV"
+      - name: Smoke test of the game in the Simulator
+        timeout-minutes: 30
+        run: |
+          s=0
+          kirikiri/kagex/.github/platforms/run-logged.sh game-smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$GAME_APP" \
+            --bundle-id io.github.krkren.kagex.live2d --device "$SIM_DEVICE" --keep --live2d required || s=$?
+          cp "$(ls -td "${TMPDIR:-/tmp}"/kagex-smoke-* | head -1)/simulator.log" results/game-simulator.log 2>/dev/null || true
           exit $s
       - name: Add the sample game to the release
         if: inputs.release != ''
