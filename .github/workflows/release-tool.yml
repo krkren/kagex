@@ -1,14 +1,15 @@
-# Builds kagex-release (tools/release) for Windows, Linux and macOS (Apple Silicon) and runs
-# its smoke test (tools/release/test/smoke.py; on Linux also the screen in headless Chromium),
-# with the engine packages of the newest release that has them.
-# Each job uploads the tool (kagex-release-<os>) and force-pushes its results to
-# ci/platform-results-release-tool-<os>.
+# Builds kagex-release (tools/release) and kagex-lipsync (tools/lipsync, built with it) for
+# Windows, Linux and macOS (Apple Silicon) and runs their smoke tests (tools/release/test/smoke.py,
+# on Linux also the screen in headless Chromium; tools/lipsync/test/smoke.py), with the engine
+# packages of the newest release that has them.
+# Each job uploads the tools (kagex-release-<os>: both, and kagex-lipsync's lipsync/ folder) and
+# force-pushes its results to ci/platform-results-release-tool-<os>.
 name: Release tool
 
 on:
   push:
     branches: ['release-tool/**', main]
-    paths: ['tools/release/**', '.github/workflows/release-tool.yml']
+    paths: ['tools/release/**', 'tools/lipsync/**', '.github/workflows/release-tool.yml']
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -34,9 +35,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-2022, preset: windows, name: windows, exe: kagex-release.exe }
-          - { os: ubuntu-22.04, preset: linux, name: linux, exe: kagex-release }
-          - { os: macos-15, preset: macos, name: macos, exe: kagex-release }
+          - { os: windows-2022, preset: windows, name: windows, exe: kagex-release.exe, lipsync: kagex-lipsync.exe }
+          - { os: ubuntu-22.04, preset: linux, name: linux, exe: kagex-release, lipsync: kagex-lipsync }
+          - { os: macos-15, preset: macos, name: macos, exe: kagex-release, lipsync: kagex-lipsync }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -163,11 +164,18 @@ jobs:
             browser=--browser
           fi
           KAGEX_RELEASE_REQUIRE_ENCRYPTION=1 kagex/.github/platforms/run-logged.sh smoke $PY -B kagex/tools/release/test/smoke.py "$exe" $browser --out results/smoke --engines engines
+      - name: kagex-lipsync's test
+        run: |
+          dir=kagex/tools/release/build/${{ matrix.preset }}/Release
+          kagex/.github/platforms/run-logged.sh lipsync $PY -B kagex/tools/lipsync/test/smoke.py "$dir/${{ matrix.lipsync }}" --release "$dir/${{ matrix.exe }}" --out results/lipsync --engines engines
       - name: Pack the tool
         if: always()
         run: |
           mkdir -p out
           cp kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.exe }} out/ 2>/dev/null || true
+          # kagex-lipsync and its models and dictionary, which it reads from lipsync/ beside it
+          cp kagex/tools/release/build/${{ matrix.preset }}/Release/${{ matrix.lipsync }} out/ 2>/dev/null || true
+          cp -R kagex/tools/release/build/${{ matrix.preset }}/Release/lipsync out/ 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:

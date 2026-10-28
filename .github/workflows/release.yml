@@ -6,7 +6,8 @@
 # (pages.yml on main). kagex-release (tools/release) comes from release-tool.yml, also called
 # with the release commit; tool-check makes its engine packages (kagex_engine_*.zip) from this
 # release's packages and builds the sample with them, and publish adds the tool to the Windows
-# and Linux zips (tools/) and as downloads of its own. Zip package layout, like 0.0.4:
+# and Linux zips (tools/) and as downloads of its own, with kagex-lipsync (tools/lipsync, built
+# with it) and its models and dictionary (lipsync/ beside it) the same way. Zip package layout, like 0.0.4:
 #   krkrz(.exe), SDL3.dll / libSDL3.so.0, plugin/, license.txt, licenses/ (cmake --install of
 #   the engine) + data/, template/, doc/, "KAGEX Initial Setup.txt" and krkrz.cf (the
 #   engine's options: the Linux/macOS save folder) from the kagex commit.
@@ -25,8 +26,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.10.0"
-  KAGEX_SHA: d8d1f52fe42c84f024b964d356603772989ec396
+  RELEASE_TAG: "0.11.0"
+  KAGEX_SHA: b8cab0bad7e0d1e1d078052bf082c326fc626d3e
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -801,25 +802,36 @@ jobs:
           name: kagex-engine-packages
           path: dist
 
-      - name: The release tool, in the packages and on its own
+      - name: The release tools, in the packages and on their own
         if: env.PUBLISH == 'true'
         run: |
-          win=platforms/kagex-release-windows/kagex-release.exe
-          lin=platforms/kagex-release-linux/kagex-release
-          mac=platforms/kagex-release-macos/kagex-release
-          ls -l "$win" "$lin" "$mac"
-          chmod 755 "$lin" "$mac"
-          # tools/kagex-release(.exe) in the Windows and Linux zips
+          win=platforms/kagex-release-windows
+          lin=platforms/kagex-release-linux
+          mac=platforms/kagex-release-macos
+          # kagex-release, and kagex-lipsync with its models and dictionary (lipsync/ beside it)
+          for d in "$win" "$lin" "$mac"; do
+            x=; [ "$d" = "$win" ] && x=.exe
+            ls -l "$d/kagex-release$x" "$d/kagex-lipsync$x" || exit 1
+            test -f "$d/lipsync/open_jtalk/sys.dic" && test -f "$d/lipsync/pocketsphinx/cmudict-en-us.dict" || { echo "::error::$d has no lipsync/ data"; find "$d/lipsync" -maxdepth 2 | head; exit 1; }
+            du -sh "$d/lipsync"
+          done
+          chmod 755 "$lin/kagex-release" "$lin/kagex-lipsync" "$mac/kagex-release" "$mac/kagex-lipsync"
+          # tools/ in the Windows and Linux zips: kagex-release(.exe), kagex-lipsync(.exe), lipsync/
           mkdir -p t/tools
-          cp "$win" t/tools/
-          for z in kagex_sdl3_windows_release.zip kagex_sdl3_windows_debug.zip; do (cd t && zip -q "../dist/$z" tools/kagex-release.exe); done
-          rm t/tools/*
-          cp -p "$lin" t/tools/
-          for z in kagex_sdl3_linux_release.zip kagex_sdl3_linux_debug.zip; do (cd t && zip -q "../dist/$z" tools/kagex-release); done
-          # each on its own
-          (cd "$(dirname "$win")" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-windows.zip" kagex-release.exe)
-          tar czf dist/kagex-release-linux.tar.gz -C "$(dirname "$lin")" kagex-release
-          (cd "$(dirname "$mac")" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-macos.zip" kagex-release)
+          cp "$win/kagex-release.exe" "$win/kagex-lipsync.exe" t/tools/
+          cp -R "$win/lipsync" t/tools/
+          for z in kagex_sdl3_windows_release.zip kagex_sdl3_windows_debug.zip; do (cd t && zip -q -r "../dist/$z" tools); done
+          rm -rf t/tools/*
+          cp -p "$lin/kagex-release" "$lin/kagex-lipsync" t/tools/
+          cp -R "$lin/lipsync" t/tools/
+          for z in kagex_sdl3_linux_release.zip kagex_sdl3_linux_debug.zip; do (cd t && zip -q -r "../dist/$z" tools); done
+          # each on its own: kagex-release alone, kagex-lipsync with its lipsync/
+          (cd "$win" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-windows.zip" kagex-release.exe)
+          tar czf dist/kagex-release-linux.tar.gz -C "$lin" kagex-release
+          (cd "$mac" && zip -q -9 "$GITHUB_WORKSPACE/dist/kagex-release-macos.zip" kagex-release)
+          (cd "$win" && zip -q -9 -r "$GITHUB_WORKSPACE/dist/kagex-lipsync-windows.zip" kagex-lipsync.exe lipsync)
+          tar czf dist/kagex-lipsync-linux.tar.gz -C "$lin" kagex-lipsync lipsync
+          (cd "$mac" && zip -q -9 -r "$GITHUB_WORKSPACE/dist/kagex-lipsync-macos.zip" kagex-lipsync lipsync)
           ls -l dist
 
       - name: Wait for the release commit to reach main
@@ -852,8 +864,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           ls -l dist
-          # 9 packages, 9 engine packages and the tool for 3 systems
-          [ "$(ls dist/* | wc -l)" = 21 ] || { echo "expected 21 files"; exit 1; }
+          # 9 packages, 9 engine packages, and the two tools for 3 systems
+          [ "$(ls dist/* | wc -l)" = 24 ] || { echo "expected 24 files"; exit 1; }
           sha256sum dist/*
           if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
             echo "tag $RELEASE_TAG already exists"; exit 1
