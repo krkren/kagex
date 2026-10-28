@@ -3234,7 +3234,7 @@ class KAGEnvPlayer
 			currentText = "";
 			// filled in below, before KAG draws the characters
 			currentWrap = %[key:"scene:" + (++wrapSerial), line:""];
-			var wrapLine = "", wrapNewline = false;
+			var wrapLine = "";
 
 			var indentCharacter = void;
 			var indentLevel = 0;
@@ -3265,7 +3265,7 @@ class KAGEnvPlayer
 				if (!literal && ch == "\n") {
 					// Newline processing
 					addTagSimple("r");
-					wrapNewline = true;
+					wrapLine += "\n";
 				} else if (!literal && ch == "%") {
 					// Font command
 					if (i < l) {
@@ -3329,8 +3329,9 @@ class KAGEnvPlayer
 					firstCh = false;
 				}
 			}
-			// with a new line in it the character wrap does it, as for a scenario line with [r]
-			currentWrap.line = wrapNewline ? "" : wrapLine;
+			// its new lines too: the word wrap goes on after them on the new line, as for a
+			// scenario line with [r]
+			currentWrap.line = wrapLine;
 	}
 
 	// -----------------------------------------------------------

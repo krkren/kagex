@@ -605,6 +605,19 @@ Naming Convention Methodology
 
 File format: ogg
 
+A sound placed on the stage ([se pos=, xpos=, level=, char=], world.txt "SE Object Functions")
+is panned to where it is with the engine's 3D sound. Mono files place best. "se3d" in
+envinit.tjs (optional) sets the distances:
+
+    "se3d" => %[ "spread" => 2.0, "depth" => 1.0, "mindistance" => 3.0, "maxdistance" => 30.0 ],
+
+  spread       How far to the side the screen's edges are, in the 3D sound's units (the
+               listener is in the middle, facing the stage).
+  depth        How far in front a sound at a level of 100% zoom is; one at 50% is twice as far.
+  mindistance  Nearer than this a sound is as loud as it gets, so across the screen it only
+               pans (WaveSoundBuffer.minDistance).
+  maxdistance  Where it stops getting quieter (WaveSoundBuffer.maxDistance).
+
 ● Creation of Voice Data
 
 Naming Convention Methodology

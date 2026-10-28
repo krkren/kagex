@@ -666,6 +666,11 @@ KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "
 // scriptsEx.dll - always try to load (Scripts class exists but this extends it)
 KAGLinkPlugin("plugin/scriptsEx.dll");
 KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
+// layerExSave: Window.startSaveLayerImage writes a picture on another thread, so the screenshot
+// key (F12, KAGWindow.saveScreenshot) doesn't stop the game while a PNG is written. It gives
+// the method only to windows made after it's linked, so it's linked before the game window.
+// Where it's missing (the browser, Android and iOS builds) screenshots are written in one go
+KAGLinkPlugin("plugin/layerExSave.dll") if typeof global.Window.startSaveLayerImage == "undefined";
 // JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
 // <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
 KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
@@ -1031,6 +1036,8 @@ KAGLoadScript("BitmapFont.tjs")   if (KAGConfigEnabled("fontExBitmapEnabled", fa
 
 KAGLoadScript("Utils.tjs");
 
+KAGLoadScript("Accessibility.tjs");
+
 KAGLoadScript("KAGLayer.tjs");
 
 KAGLoadScript("AnimKAGLayer.tjs");
@@ -1088,6 +1095,12 @@ KAGLoadScript("GFX_Effekseer.tjs") if (KAGConfigEnabled("gfxEffekseerEnabled", t
 KAGLoadScript("MessageLayer.tjs");
 
 KAGLoadScript("Menus.tjs");
+
+KAGLoadScript("ElementsScreen.tjs"); // screens drawn with Elements: the menu's drop-downs, the controls list
+
+KAGLoadScript("MenuBar.tjs");
+
+KAGLoadScript("Controls.tjs");
 
 KAGLoadScript("DefaultMover.tjs");
 
@@ -1170,6 +1183,8 @@ parseStartTick = System.getTickCount();
 
 
 global.kag = new KAGWindow() if typeof global.kag == "undefined";
+
+KAGA11y.setLabel(System.title); // what a screen reader calls the game's window
 
 	
 
@@ -1303,7 +1318,9 @@ if (typeof global.kag !== "undefined") {
     // via setInnerSize(pxWidth, pxHeight), and resizing here would fight it.
     // In a window, KAGWindow.setZoom sizes it to scWidth x scHeight (members of kag, not
     // globals) at the zoom the constructor picked, which is below 1 when that doesn't fit
-    // the display. setInnerSize(scWidth, scHeight) made it taller than a 1080p screen.
+    // the display, plus the menu bar's strip (MenuBar.tjs; a menuBarEnabled or menuBarHeight
+    // AfterInit.tjs set is in effect by now). setInnerSize(scWidth, scHeight) made it taller
+    // than a 1080p screen.
     // fullScreened, not fullScreen: the start-up switch may not have taken effect yet
     if (!global.kag.fullScreened)
         global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);

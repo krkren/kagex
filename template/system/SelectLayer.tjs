@@ -38,6 +38,8 @@ class SelectButtonLayer extends ButtonLayer
 
 	var ui;
 
+	var a11yHidden = true; // screen readers: SelectLayer shows the choices as a list (pushA11y)
+
 
 
     /**
@@ -314,9 +316,25 @@ class SelectButtonLayer extends ButtonLayer
 
         }
 
-		return super.onFocus(...);
+		var r = super.onFocus(...);
+
+		owner.pushA11y() if (owner isvalid && typeof owner.pushA11y != "undefined");
+
+		return r;
 
     }
+
+
+
+	function onBlur(focused)
+
+	{
+
+		super.onBlur(...);
+
+		owner.pushA11y() if (owner isvalid && typeof owner.pushA11y != "undefined");
+
+	}
 
 	function getButtonHotSpot() {
 
@@ -1128,7 +1146,83 @@ class SelectLayer {
 
         selects.clear();
 
+		KAGA11y.removeNodes(this);
+
     }
+
+
+
+	/**
+
+	 * Screen readers (Accessibility.tjs): the choices as a list, each with its label and its
+
+	 * place on the screen, the one the keyboard is on selected
+
+	 */
+
+	var a11yChosen = false;
+
+	function pushA11y() {
+
+		if (!KAGA11y.available || a11yChosen) return;
+
+		if (selects.count == 0) return KAGA11y.removeNodes(this);
+
+		var nodes = [ %[ id:"choices", role:"list", name:tr("Choices") ] ], focus;
+
+		for (var i = 0; i < selects.count; i++) {
+
+			var sel = selects[i];
+
+			if (sel === void || !isvalid sel) continue;
+
+			var states = [ "focusable" ];
+
+			if (sel.focused) states.add("selected"), focus = "choice" + i;
+
+			states.add("disabled") if (!sel.enabled);
+
+			nodes.add(%[ id:"choice" + i, role:"list_item", name:sel.message, parent:"choices",
+
+				states:states, rect:KAGA11y.rectOf(sel) ]);
+
+		}
+
+		KAGA11y.updateNodes(this, nodes, focus);
+
+	}
+
+
+
+	/**
+
+	 * The screen reader moved to a choice (focus) or chose it (click)
+
+	 */
+
+	function onA11yAction(id, action, arg) {
+
+		if (id.substring(0, 6) != "choice") return;
+
+		var sel = selects[+id.substring(6)];
+
+		if (sel === void || !isvalid sel) return;
+
+		if (action == "focus") {
+
+			sel._ignoreFocusJump = true;
+
+			sel.focus();
+
+			sel._ignoreFocusJump = void;
+
+		} else if (action == "click" && sel.enabled) {
+
+			sel.onButtonClick();
+
+		}
+
+	}
 
 
 
@@ -1231,6 +1325,8 @@ class SelectLayer {
 			sel.redraw();
 
 		}
+
+		pushA11y();
 
 	}
 
@@ -1344,6 +1440,38 @@ class SelectLayer {
 
 		playSE(opense, opensebuf);
 
+		// Screen readers: the text before the choices, then the choices. With a screen reader
+
+		// on, the keyboard starts on the first choice, so the arrows go on from there
+
+		window.a11yAnnounceText();
+
+		a11yChosen = false;
+
+		if (KAGA11y.available && typeof global.ElementsDialog.a11yActive != "undefined" && ElementsDialog.a11yActive) {
+
+			for (var i = 0; i < cnt; i++) {
+
+				var sel = selects[i];
+
+				if (!sel.enabled) continue;
+
+				sel._ignoreFocusJump = true;
+
+				sel.focus();
+
+				sel._ignoreFocusJump = void;
+
+				break;
+
+			}
+
+		}
+
+		KAGA11y.removeNodes(this);
+
+		pushA11y();
+
     }
 
 
@@ -1355,6 +1483,8 @@ class SelectLayer {
 	 */
 
 	function end(select) {
+
+		a11yChosen = true, KAGA11y.removeNodes(this); // chosen: the list is gone for a screen reader
 
 		var elm;
 

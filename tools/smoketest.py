@@ -5,7 +5,8 @@ Starts the engine with SDL's offscreen video driver and drives the sample throug
 engine's REPL file channel (-replfile, see krkrz_dev src/core/doc/REPL.md): the title screen,
 each demo scene (compiled from the scripts in !scnlist.txt where the data folder is writable,
 doc/scn.txt), save and load, the config and extras screens, a Yes/No prompt and the About
-screen. On the desktop it also compiles the scripts with -scncompile=all. It fails when a step doesn't reach the state it expects, when the engine raises a
+screen, and on the desktop the menu bar (in a window), the controls list, the screenshot key
+and what a screen reader is given. On the desktop it also compiles the scripts with -scncompile=all. It fails when a step doesn't reach the state it expects, when the engine raises a
 script exception, or when the engine opens a native modal dialog (an error message box or a
 Yes/No that should have been drawn in the game window).
 
@@ -611,6 +612,217 @@ def prompt_steps(eng, step):
         eng.wait("About to close", "kag.currentDialog === void", timeout=10)
 
 
+def a11y_framework(eng):
+    """Whether screen readers are given the game's text and UI (Accessibility.tjs, after
+    0.11.0) and the engine lets the test see what they get (Agent.a11yTree: the desktop REPLs)"""
+    return eng.tjs('return typeof global.KAGA11y == "Object" && KAGA11y !== void && KAGA11y.available'
+                   ' && typeof global.Agent != "undefined" && typeof Agent.a11yTree != "undefined" ? 1 : 0;') == 1
+
+
+def a11y_nodes(eng):
+    """The nodes a screen reader sees in the game window (Agent.a11yTree)"""
+    t = json.loads(str(eng.tjs("return Agent.a11yTree();")))
+    return ((t.get("game") or {}).get("tree") or {}).get("nodes") or []
+
+
+def a11y_find(eng, role, prefix, timeout=5.0):
+    """The first node of the role whose name starts with prefix, once there is one"""
+    end = time.time() + timeout
+    while True:
+        nodes = a11y_nodes(eng)
+        for n in nodes:
+            # the tree spells the roles setGameA11y takes (list_item) its own way (list item)
+            if (n.get("role") or "").replace(" ", "_") == role and (n.get("name") or "").startswith(prefix):
+                return n
+        if time.time() > end:
+            raise SmokeError("screen readers get no %s \"%s...\": %s"
+                             % (role, prefix, [(n.get("role"), n.get("name")) for n in nodes if n.get("name")]))
+        time.sleep(0.2)
+
+
+def a11y_click(eng, node):
+    """Presses a node the way a screen reader does (Agent.a11yAction)"""
+    if eng.tjs('return Agent.a11yAction("%s", "click") ? 1 : 0;' % node["id"]) != 1:
+        raise SmokeError("the screen reader's click on %s did nothing" % node)
+
+
+def a11y_said(eng, since):
+    """What a screen reader was given to say since a point of the speech log (Agent.a11yLog),
+    and the next point"""
+    r = json.loads(str(eng.tjs('var l = Agent.a11yLog(%d); return Scripts.toJSONString(%%[lines:l.lines, next:l.next]);'
+                               % since)))
+    return r.get("lines") or [], r.get("next") or since
+
+
+def elements_screens(eng):
+    """Whether the steps for the menu bar and the controls list run here: on the desktop engines
+    (where they've been checked), with a framework that has them (after 0.11.0) and an engine
+    with ElementsPanel. Says why not"""
+    if not isinstance(eng, DesktopEngine):
+        print("     (skipped: checked on the desktop engines)", flush=True)
+        return False
+    if eng.tjs('return typeof global.KAGElementsScreenAvailable != "undefined" ? 1 : 0;') != 1:
+        print("     (skipped: this build's framework predates the Elements screens)", flush=True)
+        return False
+    if eng.tjs("return KAGElementsScreenAvailable() ? 1 : 0;") != 1:
+        print("     (skipped: this engine has no ElementsPanel)", flush=True)
+        return False
+    return True
+
+
+def controls_list(eng):
+    """KAGControlsList(kag): [(section title, [(keys, action)...])...]"""
+    sections = json.loads(str(eng.tjs("return Scripts.toJSONString(KAGControlsList(kag));")))
+    return [(sec.get("title"), [(r.get("keys") or "", r.get("action") or "") for r in sec.get("rows") or []])
+            for sec in sections]
+
+
+def controls_action(sections, title, key):
+    """The action of the row in a section whose keys include key ("F2" in "F2 / S")"""
+    for t, rows in sections:
+        if t != title:
+            continue
+        for keys, action in rows:
+            if key in [k.strip() for k in keys.split("/")]:
+                return action
+
+
+def interface_steps(eng, step):
+    """The menu bar (in a window), the controls list, the screenshot key and the screen
+    reader's view of a Yes/No prompt, which every game gets from template/system"""
+
+    @step("screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers")
+    def _():
+        if not a11y_framework(eng):
+            print("     (skipped: no screen reader interface here, or a framework without it)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs('global.__smokeAnswer = ""; askYesNo("Smoke test?", "Confirm",'
+                ' function() { global.__smokeAnswer = "yes"; },'
+                ' function() { global.__smokeAnswer = "no"; }); return 1;')
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        a11y_find(eng, "button", "No")
+        a11y_click(eng, a11y_find(eng, "button", "Yes"))
+        eng.wait("the answer", '__smokeAnswer == "yes"', timeout=10)
+        eng.wait("the prompt to close", "kag.currentDialog === void", timeout=10)
+
+    @step("in a window the menu bar sits above the game: F10 and a click on a title drop its"
+          " menus down, Help > Controls works, and full screen has no bar")
+    def _():
+        if not elements_screens(eng):
+            return
+        if eng.tjs('return typeof global.KAGMenuBar != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the menu bar)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        if eng.tjs("return KAGMenuBarAvailable(kag) ? 1 : 0;") != 1:
+            raise SmokeError("the menu bar can't be shown (KAGMenuBarAvailable: Window.setViewport, the stand-in menu)")
+        full = eng.tjs("return kag.fullScreened ? 1 : 0;") == 1
+        try:
+            if full:
+                eng.tjs("kag.onWindowedMenuItemClick(); return 1;")
+            eng.wait("the menu bar", "kag.menuBarShown && kag.menuBarView !== void && kag.menuBarView.shown",
+                     timeout=10)
+            # the window is the strip taller than the game, which is drawn under it
+            size = [int(v) for v in str(eng.tjs(
+                'var z = kag.zoomNumer / kag.zoomDenom; return [kag.innerWidth, kag.innerHeight,'
+                ' int(kag.primaryLayer.width * z + 0.5), int(kag.primaryLayer.height * z + 0.5),'
+                ' kag.menuStripHeight].join(",");')).split(",")]
+            print("     window %dx%d, the game %dx%d under a %d px strip" % tuple(size), flush=True)
+            if size[4] <= 0 or abs(size[0] - size[2]) > 1 or abs(size[1] - size[3] - size[4]) > 1:
+                raise SmokeError("the window isn't the game plus the strip: %s" % size)
+            # F10: the first menu, from the keyboard; Esc closes it
+            eng.key("VK_F10")
+            eng.wait("the first menu", 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex >= 0'
+                     ' && kag.menuDropDown !== void', timeout=10)
+            eng.key("VK_ESCAPE")
+            eng.wait("the menu to close", "kag.currentDialog === void && kag.menuDropDown === void"
+                     " && kag.menuBarView.openIndex < 0", timeout=10)
+            # a click on Help's title, in the strip (the title of the menu Help > Controls is in)
+            at = str(eng.tjs(
+                'var b = kag.menuBarView; for (var i = 0; i < b.titles.count; i++) with (b.titles[i])'
+                ' if (.menu && .item.children.find(kag.controlsMenuItem) >= 0)'
+                ' return i + "," + (.x + .w \\ 2) + "," + (kag.menuStripHeight \\ 2); return "";'))
+            if at == "":
+                raise SmokeError("the menu bar has no title for Help (with Controls)")
+            index, x, y = at.split(",")
+            eng.tjs("Agent.click(%s, %s); return 1;" % (x, y))
+            eng.wait("Help's menu", 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex == %s'
+                     % index, timeout=10)
+            if a11y_framework(eng):
+                # screen readers get the bar's titles and the menu's items
+                titles = [n.get("name") for d in json.loads(str(eng.tjs("return Agent.a11yTree();"))).get("dialogs") or []
+                          for n in ((d.get("tree") or {}).get("nodes") or [])
+                          if (n.get("role") or "").replace(" ", "_") == "menu_item"]
+                if len(titles) < 2:
+                    raise SmokeError("screen readers get the menu bar's titles as %s" % titles)
+                a11y_click(eng, a11y_find(eng, "menu_item", eng.tjs(
+                    "return KAGMenuItemText(kag.controlsMenuItem).label;")))
+            else:
+                print("     (Controls chosen with the keys: no screen reader interface here)", flush=True)
+                eng.tjs("var d = kag.menuDropDown, b = d.boxes[0]; for (var i = 0; i < b.entries.count; i++)"
+                        " if (b.entries[i].item === kag.controlsMenuItem) d.activate(0, i, true); return 1;")
+            eng.wait("the controls list", 'kag.currentDialog instanceof "KAGControlsPanel"', timeout=10)
+            eng.key("VK_ESCAPE")
+            eng.wait("the controls list to close", "kag.currentDialog === void", timeout=10)
+            # full screen: no bar, and the game fills the window again
+            eng.tjs("kag.onFullScreenMenuItemClick(); return 1;")
+            eng.wait("the bar to go", "!kag.menuBarShown && !kag.menuBarView.shown && kag.menuStripHeight == 0",
+                     timeout=10)
+        finally:
+            eng.tjs("kag.closeMenuDropDown(); kag.changeFullScreenOrWindow(%s); return 1;"
+                    % ("true" if full else "false"))
+
+    @step("the controls list reads the window's key and controller bindings, and opens and closes")
+    def _():
+        if not elements_screens(eng):
+            return
+        sections = controls_list(eng)
+        titles = [t for t, rows in sections]
+        print("     sections: %s" % ", ".join("%s (%d)" % (t, len(rows)) for t, rows in sections), flush=True)
+        if "Keyboard" not in titles or "Mouse" not in titles:
+            raise SmokeError("the controls list has no keyboard or mouse section: %s" % sections)
+        # F10 opens the menu bar's first menu, so it's listed only while there's a bar (windowed)
+        bar = eng.tjs('return typeof kag.menuBarShown != "undefined" && kag.menuBarShown ? 1 : 0;') == 1
+        for key, action in (("F10", "Menu" if bar else None), ("F12", "Save a screenshot")):
+            if controls_action(sections, "Keyboard", key) != action:
+                raise SmokeError("the controls list doesn't say %s is %s: %s" % (key, action, sections[0]))
+        if eng.tjs('return typeof global.VK_PAD1 == "Integer" ? 1 : 0;') == 1 and "Controller" not in titles:
+            raise SmokeError("the controls list has no controller section: %s" % titles)
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs("kag.showControls(); return 1;")
+        eng.wait("the controls list", 'kag.currentDialog instanceof "KAGControlsPanel"', timeout=10)
+        eng.key("VK_ESCAPE")
+        eng.wait("the controls list to close", "kag.currentDialog === void", timeout=10)
+
+    @step("F12 saves the screen as a PNG and says so")
+    def _():
+        if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof kag.saveScreenshot != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: checked on the desktop engines, with a framework that has it)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs('global.__smokeShot = ""; global.__smokeShotHook = function(name) {'
+                ' global.__smokeShot = name === void ? "(failed)" : name; };'
+                ' kag.screenshotHook.add(__smokeShotHook); return 1;')
+        try:
+            eng.key("VK_F12")
+            name = eng.wait("the screenshot", "__smokeShot", timeout=10)
+        finally:
+            eng.tjs("kag.screenshotHook.remove(__smokeShotHook); return 1;")
+        if name == "(failed)":
+            raise SmokeError("the screenshot wasn't saved (see the log)")
+        size = eng.tjs('var l = new Layer(kag, kag.primaryLayer); l.loadImages(__smokeShot);'
+                       ' var r = l.imageWidth + "x" + l.imageHeight; invalidate l; return r;')
+        want = eng.tjs('return kag.primaryLayer.width + "x" + kag.primaryLayer.height;')
+        background = eng.tjs('return typeof kag.startSaveLayerImage == "Object" ? 1 : 0;') == 1
+        print("     %s, %s (%s)" % (name.split("/")[-1], size,
+                                    "written in the background" if background else "written at once"), flush=True)
+        if size != want:
+            raise SmokeError("the screenshot is %s, the screen %s" % (size, want))
+        if eng.tjs("var n = kag.screenshotNoticeLayer; return n !== void && (isvalid n) && n.visible ? 1 : 0;") != 1:
+            raise SmokeError("no notice said the screenshot was saved")
+
+
 def template_steps(eng):
     """template/ run as a game of its own: it has to start without the sample's hooks."""
     steps, step = collector()
@@ -632,6 +844,7 @@ def template_steps(eng):
             raise SmokeError("languages, the one shown, chosen: %s" % r)
 
     prompt_steps(eng, step)
+    interface_steps(eng, step)
     return steps
 
 
@@ -683,6 +896,80 @@ PAGE_TJS = r"""
     }
     if (unit !== void) units.add(%[texts:unit.texts, drawn:drawn]);
     return Scripts.toJSONString(%[name:name, units:units]);"""
+
+
+# The word wrap on a message layer of its own (MainWindow.tjs needsToBeWrapped): each character
+# of a text goes through it and the layer as the ch tag sends it, with the page cleared where it
+# fills; the lines drawn come back as JSON (lines: %[text, end (x where it ends), kag (KAG's own
+# character wrap ended it)], limit: where the wrap breaks, planning: krkr_richtext planned it,
+# rich: krkr_richtext draws there, pages)
+WRAP_TJS = r"""
+// global.__smokeWrap(texts, strategy, startX, lines): draws each text through the word wrap on a
+// message layer of its own, lines high, and returns what it drew as JSON
+global.__smokeWrap = function(text, strategy, startX, lineCount) {
+	var lay = new MessageLayer(kag, kag.back.base, "smoke line breaking", 99, true);
+	var r = %[ lines:[], pages:0 ];
+	var cur = kag.current, saved = kag.saveWordWrap(), strat = kag.lineBreakStrategy;
+	var hist = kag.historyWriteEnabled, tw = kag.textWriteEnabled;
+	try {
+		lay.useRichText = kag.fore.messages[0].useRichText;
+		lay.clear(); // the font size from the settings
+		lay.setPosition(%[ left:0, top:0, width:1800, height:40 + lineCount * (lay.fontSize + lay.lineSpacing) + (lay.fontSize >> 1),
+			marginl:48, margint:20, marginr:60, marginb:20 ]);
+		lay.clear();
+		kag.current = lay, kag.lineBreakStrategy = strategy;
+		kag.historyWriteEnabled = false, kag.textWriteEnabled = true;
+		if (startX >= 0) lay.x = startX;
+		r.limit = lay.relinexpos;
+		var w = %[ wrap:%[ key:"smoke:" + System.getTickCount() + ":" + Math.random(), line:text ] ];
+		var line = "", y = lay.y, x = lay.x;
+		for (var i = 0; i < text.length; i++) {
+			var ch = text[i];
+			if (ch == "\n") {
+				r.lines.add(%[ text:line, end:x ]), line = "";
+				if (lay.processReturn()) r.pages++, lay.clear();
+				y = lay.y, x = lay.x;
+				continue;
+			}
+			if (kag.needsToBeWrapped(ch, w)) {
+				// the page is full: the conductor would clear it and run this ch again
+				r.lines.add(%[ text:line, end:x ]), line = "", r.pages++;
+				lay.clear();
+				y = lay.y;
+				kag.needsToBeWrapped(ch, w);
+			}
+			if (lay.y != y) r.lines.add(%[ text:line, end:x ]), line = "", y = lay.y;
+			if (kag.wrapDropSpace && ch == " ") continue;
+			if (lay.processCh(ch, 0)) {
+				// KAG's own wrap filled the page
+				r.lines.add(%[ text:line, end:x ]), line = "", r.pages++;
+				lay.clear();
+				y = lay.y;
+				kag.wrapResume = true, kag.wrapResumeDropHist = false;
+				i--;
+				continue;
+			}
+			if (lay.y != y) r.lines.add(%[ text:line, end:x, kag:1 ]), line = "", y = lay.y;
+			line += ch, x = lay.x;
+		}
+		r.lines.add(%[ text:line, end:x ]);
+		r.planning = kag.wrapPlanning ? 1 : 0;
+		r.rich = lay.getRichTextApp(lay.lineLayer) !== void ? 1 : 0;
+	} catch (e) {
+		r.error = e.message;
+	}
+	kag.current = cur, kag.lineBreakStrategy = strat;
+	kag.historyWriteEnabled = hist, kag.textWriteEnabled = tw;
+	kag.restoreWordWrap(saved);
+	invalidate lay;
+	return Scripts.toJSONString(r);
+};
+"""
+
+
+def tjs_string(text):
+    """text as a TJS string literal"""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
 
 
 def page_text(eng):
@@ -837,11 +1124,52 @@ def sample_steps(eng):
         eng.tjs('kag.process("char.ks", "*start"); return 1;')
         eng.wait("char.ks's first text", 'world_object.player !== void && world_object.player.working'
                  ' && world_object.player.curTextId >= 1 && kag.inStable', timeout=20)
-        r = str(eng.tjs('var t = world_object.player.curText.text, w = kag.wrapSplitLine;'
-                        ' return [kag.wrapKey, w !== void ? w.count : -1, t.split(" ").count, t].join("|");'))
+        # (wrapText, the line as drawn, after 0.11.0; wrapSplitLine, its words, before)
+        r = str(eng.tjs('var t = world_object.player.curText.text, w = typeof kag.wrapText != "undefined"'
+                        ' ? (kag.wrapText != "" ? kag.wrapText.split(" ").count : -1)'
+                        ' : kag.wrapSplitLine !== void ? kag.wrapSplitLine.count : -1;'
+                        ' return [kag.wrapKey, w, t.split(" ").count, t].join("|");'))
         key, words, expected, text = r.split("|", 3)
         if not key.startswith("scene:") or words != expected:
             raise SmokeError("the word wrap didn't take the compiled text (%s): %s" % (r, text))
+
+    @step("English lines break between words, where krkr_richtext draws as its line breaker plans them")
+    def _():
+        if eng.tjs('return typeof kag.saveWordWrap != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's word wrap predates the line breaking plan)", flush=True)
+            return
+        clean = eng.tjs('return kag.wrapCleanLine("\\t[ai face=smile]【ai】Hello there,[r]friend [[1].");')
+        if clean != "Hello there,\nfriend [1].":
+            raise SmokeError("a scenario line with tags isn't read as it's drawn: %r" % clean)
+        eng.tjs(WRAP_TJS + "return 1;")
+        para = ("Kirikiri Z draws this message with krkr_richtext, which lays out text with minikin: its line"
+                " breaker looks at the whole paragraph, so lines come out more even than when each one is"
+                " filled as far as it goes.")
+        steps = " ".join("Step %d of a long passage goes on for a few words more." % i for i in range(1, 21))
+        cases = [(para, how, -1, 20) for how in ("greedy", "quality", "balanced")]
+        cases += [(para, "quality", 900, 20), (para + "\n" + para, "balanced", -1, 20), (steps, "quality", 600, 3)]
+        for text, how, start, lines in cases:
+            r = json.loads(str(eng.tjs("return __smokeWrap(%s, \"%s\", %d, %d);" % (tjs_string(text), how, start, lines))))
+            if r.get("error"):
+                raise SmokeError("the word wrap failed: %s" % r["error"])
+            drawn = [l.get("text") or "" for l in r.get("lines") or []]
+            what = "%s from %s, %d lines a page" % (how, "the line's start" if start < 0 else "x %d" % start, lines)
+            print("     %s: %d lines, %d page(s), %s" % (what, len(drawn), r.get("pages", 0),
+                  "planned by krkr_richtext" if r.get("planning") else "a word at a time"), flush=True)
+            if " ".join(" ".join(drawn).split()) != " ".join(text.split()):
+                raise SmokeError("%s: words were split or lost: %s" % (what, drawn))
+            for l in r["lines"]:
+                if (l.get("text") or "").startswith(" ") or l.get("kag"):
+                    raise SmokeError("%s: a line starts with a space, or KAG's character wrap broke it: %s" % (what, drawn))
+                if (l.get("text") or "").strip() != "" and l.get("end", 0) >= r.get("limit", 0):
+                    raise SmokeError("%s: a line runs past %s: %s" % (what, r.get("limit"), l))
+            if r.get("rich") and not r.get("planning"):
+                raise SmokeError("%s: krkr_richtext draws the text, but didn't plan its lines" % what)
+            if "\n" in text and not any(drawn[i].rstrip().endswith("goes.") and drawn[i + 1].startswith("Kirikiri")
+                                        for i in range(len(drawn) - 1)):
+                raise SmokeError("%s: the new line isn't where the text has it: %s" % (what, drawn))
+            if lines == 3 and r.get("pages", 0) < 1:
+                raise SmokeError("%s: the text didn't fill a page: %s" % (what, drawn))
 
     @step("a compiled scene saves in the middle and loads where it was")
     def _():
@@ -1376,6 +1704,27 @@ def sample_steps(eng):
         if w <= 0:
             raise SmokeError("the choices' font measures %s: the text is drawn with the icon font" % w)
 
+    @step("screen readers: the demo menu's choices are a list, one picked through it plays, and its text is read")
+    def _():
+        if not a11y_framework(eng):
+            print("     (skipped: no screen reader interface here, or a framework without it)", flush=True)
+            return
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks" && kag.inStable', timeout=20)
+        a11y_find(eng, "list", "Choices")
+        choice = a11y_find(eng, "list_item", "World Extension: Character")
+        _, since = a11y_said(eng, 0)
+        a11y_click(eng, choice)
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.clickWaiting', timeout=30)
+        first = "This is a scripting sample using KAGEX World Extension."
+        end = time.time() + 5
+        while True:
+            said, _ = a11y_said(eng, since)
+            if any(first in l for l in said):
+                break
+            if time.time() > end:
+                raise SmokeError("the first text wasn't read out: %s" % said[-6:])
+            time.sleep(0.2)
+
     @step("save and load a bookmark")
     def _():
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
@@ -1426,6 +1775,46 @@ def sample_steps(eng):
             eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
 
     prompt_steps(eng, step)
+    interface_steps(eng, step)
+
+    @step("the controls list has the sample's own keys and buttons (AfterInit.tjs)")
+    def _():
+        if not elements_screens(eng):
+            return
+        sections = controls_list(eng)
+        for key, action in (("F1", "About"), ("F2", "Save"), ("F3", "Load"), ("F4", "Config"),
+                            ("F6", "Skip to the next choice or unread text"), ("F7", "Message history"), ("F8", "Auto mode on or off")):
+            got = controls_action(sections, "Keyboard", key)
+            if got != action:
+                raise SmokeError("the controls list says %s is %s, not %s" % (key, got, action))
+        names = json.loads(str(eng.tjs("return Scripts.toJSONString(KAGPadButtonNames().shown);")))
+        for button, action in ((10, "Config"), (9, "Save"), (5, "Load")):
+            got = controls_action(sections, "Controller", names[button - 1])
+            if got != action:
+                raise SmokeError("the controls list says %s is %s, not %s" % (names[button - 1], got, action))
+
+    @step("positional sound: an SE placed at the stage's far left or right is panned there (World pos=, xpos=)")
+    def _():
+        if eng.tjs('return typeof world_object.env.se3DPosition != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates positional sound)", flush=True)
+            return
+        if eng.tjs('return typeof kag.se[0].use3D != "undefined" && typeof global.SoundListener != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this engine has no 3D sound)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        got = []
+        for attrs in ('pos:"farleft"', 'pos:"farright"', 'xpos:"0"', ''):
+            got.append(str(eng.tjs('var env = world_object.env, i = env.getSeId(void);'
+                                   ' world_object.onUnknown("se", %%[tagname:"se", buf:"" + i, storage:"se_chime"%s]);'
+                                   ' var b = env.getSEOBJ(i);'
+                                   ' return b.use3D ? "%%.2f".sprintf(b.posX) : "off";' % ((", " + attrs) if attrs else ""))))
+        print("     x: far left %s, far right %s, xpos=0 %s, unplaced %s" % tuple(got), flush=True)
+        try:
+            left, right, mid = float(got[0]), float(got[1]), float(got[2])
+        except ValueError:
+            raise SmokeError("a placed sound isn't positional: %s" % got)
+        if not (left < -0.5 and right > 0.5 and abs(mid) < 0.01) or got[3] != "off":
+            raise SmokeError("the sounds aren't where they were put: %s" % got)
 
     @step("back to the title through the Yes/No prompt")
     def _():

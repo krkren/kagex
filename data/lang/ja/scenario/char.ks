@@ -115,6 +115,18 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai opacity=255:0 zoom=100:140 time=500]
 ズームと複合
 
+; Positional sound: a sound placed on the stage is panned to where it is (doc/world.txt)
+[se storage=se_chime pos=farleft]
+ステージの左はしで鳴るチャイム（位置のある効果音）
+
+[se storage=se_chime pos=farright]
+右はしで鳴るチャイム
+
+[se storage=se_steps loop=1 char=ai]
+[ai posleft time=1500]
+歩くあいについていく足音
+[se name=se_steps stop=300]
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

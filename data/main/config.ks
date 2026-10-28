@@ -81,13 +81,22 @@
 [locate x=1414 y=732]
 [button name="config_voice5" normal="config_voice5_on" exp="setVoiceOnButton('voice5')"]
 
-; Default, Title and Return, right-aligned in the header
+; Default, Title and Return, right-aligned in the header, and before them Controls, the list
+; of what each key and button does (Controls.tjs), where the engine can show it
 [if exp="tf.fromTitle"]
+[if exp="KAGElementsScreenAvailable()"]
+[locate x=1070 y=78]
+[button name="config_controls" exp="kag.showControls()"]
+[endif]
 [locate x=1260 y=78]
 [button name="config_initial" exp="initial()"]
 [locate x=1450 y=78]
 [button name="config_title" target=*backtotitle]
 [else]
+[if exp="KAGElementsScreenAvailable()"]
+[locate x=880 y=78]
+[button name="config_controls" exp="kag.showControls()"]
+[endif]
 [locate x=1070 y=78]
 [button name="config_initial" exp="initial()"]
 [locate x=1260 y=78]

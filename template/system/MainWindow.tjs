@@ -60,23 +60,43 @@ class KAGWindow extends Window
 
 	// is generated to be automatically copied to the bookmark by the terminal perl script.
 
-	// English word wrap. needsToBeWrapped() runs from the ch handler before each character
-	// is drawn. It splits the current scenario line (tags stripped) into words, and when the
-	// next word won't fit on the message line or the history line, it breaks the line before
-	// the word. The space the line broke at is dropped: the ch handler checks wrapDropSpace
-	// and wrapDropSpaceHist (assigning to text inside this function has no effect there).
+	// Word wrap. needsToBeWrapped() runs from the ch handler before each character is drawn.
+	// It follows the characters through the current scenario line (tags stripped, [r] as a
+	// new line) and breaks the message line between words. Where krkr_richtext draws the
+	// message layer, the breaks come from its line breaker (RichText.ParagraphLayout, which
+	// its StyledLayout uses too), laid out over the whole line at once with lineBreakStrategy:
+	// the plan below, made again when the text goes somewhere it didn't expect (a new page,
+	// [r], another font). Elsewhere, and as a check on the plan, a word that won't fit on
+	// the message line goes to the next one. The history log wraps by its own width, a word
+	// at a time. KAG still draws each character (its speed, ruby, links, waits), and vertical
+	// text and Japanese and Chinese (KAGLanguage.wordWrap) keep KAG's own character wrap.
+	// The space the line broke at is dropped: the ch handler checks wrapDropSpace and
+	// wrapDropSpaceHist (assigning to text inside this function has no effect there).
 	// Text from the scene player (compiled scenarios) isn't on the conductor's line: its ch
-	// tags carry wrap = %[key, line], the message as it's drawn (KAGEnvPlayer.extractText).
+	// tags carry wrap = %[key, line], the message as it's drawn (KAGEnvPlayer.emitChars).
+	var lineBreakStrategy = "quality"; // the plan's line breaking (Config.tjs): "quality", "balanced" or "greedy"
 	var wrapKey = void;             // "storage:line" of the scenario line the state below is for
-	var wrapSplitLine = void;       // its words; a word gets the space before it appended when that space is reached
-	var wrapNum = 0;                // index of the current word
-	var wrapBreakWrap = 0;          // 1: no spaces outside tags on this line, so no word wrap
-	var wrapPos = 0;                // message line position where the current word starts
+	var wrapText = "";              // that line as drawn: no tags, "\n" for [r]
+	var wrapAt = 0;                 // index in wrapText of the next character
+	var wrapLastAt = 0;             // where the last character was: the conductor may run that ch again
+	var wrapBreakWrap = 0;          // 1: no spaces on this line, so no word wrap
+	var wrapWordStart = 0;          // index of the current word (with the space before it)
+	var wrapSegStart = 0;           // index of the current piece of it on the message line (a planned break can split a word)
+	var wrapPos = 0;                // message line position where that piece starts
+	var wrapPosLine = 0;            // and the line it is on (wrapLineOf)
 	var wrapPosHist = 0;            // history line width where the current word starts
-	var wrapWordWidth = void;       // msgTextWidth() of the current word, cached
-	var wrapWordWidthHist = void;   // histTextWidth() of the current word, cached
+	var wrapWordWidth = void;       // msgTextWidth() of the piece, cached
+	var wrapWordWidthHist = void;   // histTextWidth() of the word, cached
 	var wrapResume = false;         // a page break returned from this ch: the conductor runs it again on the new page
 	var wrapResumeDropHist = false; // whether the history line was broken at that ch
+	var wrapBroke = false;          // the message line was just broken at a space: more spaces there aren't drawn
+	var wrapDrawnWord = "";         // what was drawn since the last space drawn (to find the line again)
+	var wrapPlanning = false;       // krkr_richtext can plan this line's breaks (every character so far was the line's)
+	var wrapPlan = void;            // the planned breaks: index in wrapText of a line's first character -> true
+	var wrapPlanStyle = void;       // the RichText.Style the plan measured with
+	var wrapPlanX = 0;              // the message line position, and the line, the plan last saw
+	var wrapPlanY = 0;
+	var wrapParagraph = void;       // the RichText.ParagraphLayout that plans
 	var spaceChar = " ";
 	var newlineTag = "[r]";
 	var wrapDropSpace = false;     // the space the word wrap broke the line at is not drawn...
@@ -92,20 +112,42 @@ class KAGWindow extends Window
 	}
 	// Forget the line the word wrap was in (internalRestoreFlags calls this on a load)
 	function resetWordWrap() {
-		wrapKey = wrapSplitLine = wrapWordWidth = wrapWordWidthHist = void;
-		wrapNum = wrapBreakWrap = 0;
-		wrapResume = wrapResumeDropHist = false;
+		wrapKey = wrapWordWidth = wrapWordWidthHist = wrapPlan = wrapPlanStyle = void;
+		wrapText = wrapDrawnWord = "";
+		wrapAt = wrapLastAt = wrapBreakWrap = 0;
+		wrapResume = wrapResumeDropHist = wrapBroke = wrapPlanning = false;
 	}
-	// The scenario line as the player reads it: no [tags], no \ escapes, no leading 【name】
+	// The word wrap's state, kept while another text is drawn (drawTextUnitNow)
+	function saveWordWrap() {
+		return [ wrapKey, wrapText, wrapAt, wrapLastAt, wrapBreakWrap, wrapWordStart, wrapSegStart, wrapPos,
+			wrapPosHist, wrapWordWidth, wrapWordWidthHist, wrapResume, wrapResumeDropHist, wrapBroke,
+			wrapPlanning, wrapPlan, wrapPlanStyle, wrapPlanX, wrapPlanY, wrapDropSpace, wrapDropSpaceHist, wrapPosLine,
+			wrapDrawnWord ];
+	}
+	function restoreWordWrap(s) {
+		wrapKey = s[0], wrapText = s[1], wrapAt = s[2], wrapLastAt = s[3], wrapBreakWrap = s[4];
+		wrapWordStart = s[5], wrapSegStart = s[6], wrapPos = s[7], wrapPosHist = s[8];
+		wrapWordWidth = s[9], wrapWordWidthHist = s[10], wrapResume = s[11], wrapResumeDropHist = s[12];
+		wrapBroke = s[13], wrapPlanning = s[14], wrapPlan = s[15], wrapPlanStyle = s[16];
+		wrapPlanX = s[17], wrapPlanY = s[18], wrapDropSpace = s[19], wrapDropSpaceHist = s[20], wrapPosLine = s[21];
+		wrapDrawnWord = s[22];
+	}
+	// The scenario line as the player reads it: no [tags] ([r] a new line), no \ escapes, no
+	// leading 【name】, nor the tabs KAG skips at the start of a line; [[ is a [
 	function wrapCleanLine(line) {
-		var clean = "";
-		for (var i = 0; i < line.length; i++) {
+		var clean = "", n = line.length, i = 0;
+		while (i < n && line[i] == "\t") i++;
+		for (; i < n; i++) {
 			var c = line[i];
 			if (c == "[") {
-				for (var depth = 0; i < line.length; i++) {
+				if (i + 1 < n && line[i + 1] == "[") { clean += c; i++; continue; }
+				var from = i + 1;
+				for (var depth = 0; i < n; i++) {
 					if (line[i] == "[") depth++;
 					else if (line[i] == "]" && --depth <= 0) break;
 				}
+				var tag = line.substring(from, i - from).trim();
+				if (tag == "r" || /^r[ \t]/.test(tag)) clean += "\n";
 			} else if (c != "\\") {
 				clean += c;
 			}
@@ -118,6 +160,131 @@ class KAGWindow extends Window
 	}
 	function wrapLinePos() {
 		return current.vertical ? current.y+current.lineLayer.font.getTextWidth(spaceChar) : current.x;
+	}
+	function wrapLineOf() {
+		return current.vertical ? current.x : current.y;
+	}
+	// Whether the message line has nothing on it yet (breaking it again would leave it empty)
+	function wrapAtLineStart() {
+		with (current) return .vertical ? .y <= .marginT + .indentxpos : .x <= .marginL + .indentxpos;
+	}
+	function wrapSkipSpaces(text, i) {
+		while (text.charAt(i) == spaceChar) i++;
+		return i;
+	}
+	// The end of the word at i in wrapText (the spaces before it included)
+	function wrapWordEndAt(i) {
+		var n = wrapText.length;
+		i = wrapSkipSpaces(wrapText, i);
+		while (i < n) {
+			var c = wrapText.charAt(i);
+			if (c == spaceChar || c == "\n") break;
+			i++;
+		}
+		return i;
+	}
+	// The end of the current piece: its word's, or a planned break inside the word
+	function wrapSegEnd() {
+		var end = wrapWordEndAt(wrapSegStart);
+		if (wrapPlan !== void)
+			for (var j = wrapSkipSpaces(wrapText, wrapSegStart) + 1; j < end; j++)
+				if (wrapPlan[j]) return j;
+		return end;
+	}
+	// Where a word drawn after text the line doesn't have is in the line, from index from on:
+	// the index of the space after it, or -1
+	function wrapFindWord(word, from) {
+		var n = wrapText.length, len = word.length;
+		for (var p = wrapText.indexOf(word, from); p >= 0; p = wrapText.indexOf(word, p + 1)) {
+			var before = p > 0 ? wrapText.charAt(p - 1) : spaceChar;
+			if ((before == spaceChar || before == "\n") && p + len < n && wrapText.charAt(p + len) == spaceChar) return p + len;
+		}
+		return -1;
+	}
+	function wrapNewWord(i) {
+		wrapWordStart = wrapSegStart = i;
+		wrapWordWidth = wrapWordWidthHist = void;
+		wrapPos = wrapLinePos(), wrapPosLine = wrapLineOf();
+		wrapPosHist = histTextWidth(historyLayer.currentLine);
+	}
+	function wrapStartLine(key, clean) {
+		wrapKey = key, wrapText = clean, wrapDrawnWord = "";
+		wrapAt = wrapLastAt = 0;
+		wrapResume = wrapBroke = false;
+		wrapBreakWrap = clean.indexOf(spaceChar) == -1 ? 1 : 0;
+		wrapPlan = wrapPlanStyle = void;
+		wrapPlanning = !wrapBreakWrap && !current.vertical && typeof current.getRichTextApp != "undefined";
+		wrapNewWord(0);
+	}
+	// Where a RichText.ParagraphLayout breaks text laid out width wide (how: a
+	// lineBreakStrategy name): the index of each line's first character after the first
+	// line, but for lines that a new line ("\n") starts. "balanced" breaks as for justified
+	// text, whose spaces may shrink, so a line can come out wider than width: then it tries
+	// narrower, and in the end greedy
+	function wrapLayoutBreaks(text, width, style, how) {
+		var rt = global.RichText, pl = wrapParagraph;
+		if (pl === void) pl = wrapParagraph = new rt.ParagraphLayout();
+		var strategy = rt.BREAK_HIGH_QUALITY;
+		if (how == "greedy") strategy = rt.BREAK_GREEDY;
+		else if (how == "balanced") strategy = rt.BREAK_BALANCED;
+		var w = width;
+		for (var tries = 0; ; tries++) {
+			pl.breakStrategy = strategy;
+			pl.layout(text, w, style);
+			if (strategy != rt.BREAK_BALANCED) break;
+			var over = 0;
+			for (var i = 0; i < pl.lineCount; i++) over = Math.max(over, pl.getLineInfo(i).width - width);
+			if (over <= 0) break;
+			if (tries < 3) w -= Math.ceil(over);
+			else strategy = rt.BREAK_GREEDY, w = width;
+		}
+		var breaks = [], n = text.length;
+		for (var i = 1; i < pl.lineCount; i++) {
+			var s = pl.getLineInfo(i).startIndex;
+			if (s <= 0 || s >= n || text.charAt(s - 1) == "\n" || text.charAt(s) == "\n") continue;
+			s = wrapSkipSpaces(text, s);
+			if (s < n) breaks.add(s);
+		}
+		return breaks;
+	}
+	// Plans the breaks of wrapText from index from on, from where the message line is now:
+	// what fits of it on the rest of this line, then whole lines. Lines end 2 pixels short
+	// of where the check below breaks, for the rounding of each character's advance
+	function wrapMakePlan(from, rta) {
+		var cur = current;
+		wrapPlan = void;
+		if (rta === void) rta = cur.getRichTextApp(cur.lineLayer);
+		if (rta === void || typeof global.RichText.ParagraphLayout == "undefined") { wrapPlanning = false; return; }
+		var plan = wrapPlan = %[];
+		wrapPlanStyle = rta.style, wrapPlanX = cur.x, wrapPlanY = cur.y;
+		var text = wrapText.substring(from), n = text.length;
+		var start = cur.marginL + cur.indentxpos, end = cur.relinexpos - 2, off = 0;
+		if (n == 0 || end <= start) return;
+		var style = rta.style;
+		if (cur.pitch != 0) {
+			// KAG adds the pitch after each character
+			style = style.clone();
+			style.letterSpacing = cur.pitch / style.fontSize;
+		}
+		if (cur.x > start) {
+			var first = end - cur.x, e;
+			if (first <= 0 || msgTextWidth(text.substring(0, wrapWordEndAt(from) - from)) >= first) {
+				e = 0; // not even the first word fits
+			} else {
+				// the rest of a line is filled as far as it goes
+				var b = wrapLayoutBreaks(text, first, style, "greedy");
+				e = b.count > 0 ? b[0] : n;
+				// all of it up to a new line fits here: plan again after that, on its own line
+				var nl = text.indexOf("\n");
+				if (nl >= 0 && nl < e) return;
+			}
+			off = wrapSkipSpaces(text, e);
+			if (off >= n) return;
+			plan[from + off] = true;
+		}
+		var rest = off > 0 ? text.substring(off) : text;
+		var b = wrapLayoutBreaks(rest, end - start, style, lineBreakStrategy);
+		for (var i = 0; i < b.count; i++) plan[from + off + b[i]] = true;
 	}
 	function needsToBeWrapped(text, elm) {
 		wrapDropSpace = wrapDropSpaceHist = false;
@@ -132,55 +299,81 @@ class KAGWindow extends Window
 			line = conductor.curLineStr;
 			if (line === void || line == "") return false;
 			var c0 = line[0];
-			if (c0 == "*" || c0 == "[" || c0 == ";" || c0 == "\t") return false;
-			if (line.indexOf(newlineTag) != -1 || line.indexOf(spaceChar) == -1) return false;
+			if (c0 == "*" || c0 == ";" || line.indexOf(spaceChar) == -1) return false;
 			key = conductor.curStorage + ":" + conductor.curLine;
 		}
 
-		// A new scenario line: split it into words. Lines are told apart by position, not
-		// by content, so two identical lines in a row each get their own pass
-		if (key != wrapKey) {
-			wrapKey = key;
-			wrapResume = false;
-			var clean = wrap !== void ? line : wrapCleanLine(line);
-			wrapBreakWrap = clean.indexOf(spaceChar) == -1 ? 1 : 0;
-			wrapSplitLine = wrapBreakWrap ? void : clean.split(spaceChar);
-			wrapNum = 0;
-			wrapWordWidth = wrapWordWidthHist = void;
-			wrapPos = wrapLinePos();
-			wrapPosHist = histTextWidth(historyLayer.currentLine);
-		}
+		// A new scenario line. Lines are told apart by position, not by content, so two
+		// identical lines in a row each get their own pass
+		if (key != wrapKey) wrapStartLine(key, wrap !== void ? line : wrapCleanLine(line));
 		if (wrapBreakWrap) return false;
 
-		if (wrapResume) {
-			// The conductor runs this ch again after a page break (-3/-5 re-queue the tag).
-			// Measure from the new page, and if it is the space the line broke at, neither
-			// count it as a new word again nor draw it at the top of the new page
+		var cur = current, resumed = wrapResume, i;
+		if (resumed) {
+			// The conductor runs this ch again after a page break (-3/-5 re-queue the tag):
+			// it is where the first run found it, now on a new page
 			wrapResume = false;
-			wrapPos = wrapLinePos();
-			wrapPosHist = histTextWidth(historyLayer.currentLine);
-			if (text == spaceChar) {
-				wrapDropSpace = true;
+			i = wrapAt = wrapLastAt;
+		} else {
+			// Past [r]: a new message line, and a new word
+			i = wrapAt;
+			var j = i;
+			while (wrapText.charAt(j) == "\n") j++;
+			if (j > i) i = wrapAt = j, wrapDrawnWord = "", wrapNewWord(i);
+		}
+		var isSpace = text == spaceChar;
+		var matched = wrapText.substr(i, text.length) == text;
+		if (!matched) {
+			// Text the line doesn't have here (from [emb], [ch], a macro or a hook): no plan
+			// for the rest of the line. The line goes on where its text comes back: at the
+			// next character that is the line's, or after the word just drawn, found further
+			// on in the line (text [if] left out)
+			wrapPlanning = false, wrapPlan = void;
+			if (isSpace && wrapDrawnWord != "") {
+				var k = wrapFindWord(wrapDrawnWord, wrapWordStart);
+				if (k >= 0) i = k, matched = true;
+			}
+			if (!matched && i >= wrapText.length) return false;
+		}
+		wrapLastAt = i;
+		if (matched) wrapAt = i + text.length;
+		if (!resumed) {
+			if (isSpace) wrapDrawnWord = "";
+			else wrapDrawnWord += text;
+		}
+
+		if (resumed) {
+			// Measured from the new page; the space the line broke at is neither drawn at the
+			// top of the new page nor counted as another word
+			if (isSpace) {
+				wrapNewWord(i);
+				wrapDropSpace = wrapBroke = true;
 				wrapDropSpaceHist = wrapResumeDropHist;
 				return false;
 			}
+		} else if (matched && isSpace) {
+			// The next word starts at this space
+			wrapNewWord(i);
+		}
+		// The line moved on its own (a new page, KAG's character wrap, [locate], [cm]): the
+		// piece of the word goes on from here
+		var lp = wrapLinePos();
+		if (wrapLineOf() != wrapPosLine || lp < wrapPos) {
+			wrapSegStart = i, wrapPos = lp, wrapPosLine = wrapLineOf(), wrapWordWidth = void;
 		}
 
-		if (text == spaceChar) {
-			// The next word starts after this space
-			wrapNum++;
-			if (wrapNum < wrapSplitLine.count) wrapSplitLine[wrapNum] += spaceChar;
-			wrapWordWidth = wrapWordWidthHist = void;
-			wrapPos = wrapLinePos();
-			wrapPosHist = histTextWidth(historyLayer.currentLine);
+		if (wrapPlanning && textWriteEnabled) {
+			var rta = cur.getRichTextApp(cur.lineLayer);
+			if (rta === void) wrapPlanning = false, wrapPlan = void;
+			else if (wrapPlan === void || rta.style !== wrapPlanStyle || cur.y != wrapPlanY || cur.x < wrapPlanX) wrapMakePlan(i, rta);
+			wrapPlanX = cur.x;
 		}
-		// More spaces than the line has (text from [emb] or a macro): leave it to the character wrap
-		if (wrapNum >= wrapSplitLine.count) return false;
-		var word = wrapSplitLine[wrapNum];
 
 		if (historyWriteEnabled) {
-			if (wrapWordWidthHist === void) wrapWordWidthHist = histTextWidth(word);
-			if (wrapPosHist + wrapWordWidthHist >= historyLayer.relinePos && wrapWordWidthHist <= historyLayer.relinePos) {
+			if (wrapWordWidthHist === void)
+				wrapWordWidthHist = histTextWidth(wrapText.substring(wrapWordStart, wrapWordEndAt(wrapWordStart) - wrapWordStart));
+			if (wrapPosHist + wrapWordWidthHist >= historyLayer.relinePos && wrapWordWidthHist <= historyLayer.relinePos &&
+				historyLayer.currentLine != "") {
 				wrapDropSpaceHist = true;
 				historyLayer.reline();
 				wrapPosHist = histTextWidth(historyLayer.currentLine);
@@ -189,18 +382,39 @@ class KAGWindow extends Window
 
 		// Nothing is drawn under [notextmode], so the message line doesn't move
 		if (!textWriteEnabled) return false;
-		if (wrapWordWidth === void) wrapWordWidth = msgTextWidth(word);
-		if (wrapPos + wrapWordWidth >= current.relinexpos) {
-			if (wrapWordWidth <= current.relinexpos) {
-				wrapDropSpace = true;
-				if (current.processReturn()) {
-					// The page is full: break it here, and handle the re-run on the new page
-					wrapResume = true, wrapResumeDropHist = wrapDropSpaceHist;
-					return true;
-				}
-			}
-			wrapPos = wrapLinePos();
+		if (isSpace && wrapBroke) {
+			wrapDropSpace = true;
+			return false;
 		}
+		var brk = false, planned = false;
+		if (wrapPlan !== void && matched) {
+			var b = isSpace ? wrapSkipSpaces(wrapText, i) : i;
+			if (wrapPlan[b]) {
+				delete wrapPlan[b];
+				brk = planned = true;
+			}
+		}
+		if (!brk) {
+			if (wrapWordWidth === void) wrapWordWidth = msgTextWidth(wrapText.substring(wrapSegStart, wrapSegEnd() - wrapSegStart));
+			brk = wrapPos + wrapWordWidth >= cur.relinexpos && !wrapAtLineStart();
+		}
+		if (brk) {
+			wrapDropSpace = true;
+			if (cur.processReturn()) {
+				// The page is full: break it here, and handle the re-run on the new page
+				wrapResume = true, wrapResumeDropHist = wrapDropSpaceHist;
+				return true;
+			}
+			wrapBroke = isSpace;
+			wrapSegStart = isSpace ? wrapSkipSpaces(wrapText, i) : i;
+			wrapPos = wrapLinePos(), wrapPosLine = wrapLineOf(), wrapWordWidth = void;
+			// A break the plan didn't have: plan again from this new line
+			if (wrapPlanning) {
+				if (planned) wrapPlanX = cur.x, wrapPlanY = cur.y;
+				else wrapMakePlan(wrapSegStart);
+			}
+		}
+		if (!isSpace) wrapBroke = false;
 		return false;
 	}
 
@@ -2390,6 +2604,10 @@ class KAGWindow extends Window
 
 		createPadKeyMap();
 
+		// The keys' bindings (processKeys)
+
+		createKeyBindings();
+
 
 
 		// Show window
@@ -2912,7 +3130,9 @@ class KAGWindow extends Window
 
 		// choice or unread text, and holding R2 skips like Ctrl. L2 shows the game in its next
 
-		// language, as F9 does (KAGLanguageList). createPadKeyMap adds the stick.
+		// language, as F9 does (KAGLanguageList). START and R3 (pressing the right stick) open the
+
+		// menu bar's first menu in a window, as F10 does (MenuBar.tjs). createPadKeyMap adds the stick.
 
 		// If a function is specified, that function is called when the button is pressed.
 
@@ -2939,6 +3159,10 @@ class KAGWindow extends Window
 		VK_PAD7 =>			switchLanguageByKey, // L2: the next language (Language.tjs)
 
 		VK_PAD8 =>			VK_CONTROL, // R2: held, skips like Ctrl (getKeyState reads it through padKeyMapReverse)
+
+		VK_PAD10 =>			VK_F10, // START: the menu
+
+		VK_PAD12 =>			VK_F10, // R3: the menu
 
 		];
 
@@ -3278,6 +3502,12 @@ class KAGWindow extends Window
 
 			}
 
+			// full screen has no menu bar: the game goes back to the middle of the window first
+
+			menuBarFullScreen = !!v;
+
+			applyMenuBarLayout() if (v);
+
 
 
 			// Hook
@@ -3466,11 +3696,11 @@ class KAGWindow extends Window
 
 				var x = Math.round((innerWidth  - w) / (z*2));
 
-				var y = Math.round((innerHeight - h) / (z*2));
+				var y = Math.round((innerHeight - menuStripHeight - h) / (z*2));
 
 				w = Math.ceil(innerWidth  / z);
 
-				h = Math.ceil(innerHeight / z);
+				h = Math.ceil((innerHeight - menuStripHeight) / z);
 
 				sysbase.setPos(x, y, pxWidth, pxHeight);
 
@@ -3542,7 +3772,9 @@ class KAGWindow extends Window
 
 		if (resize) {
 
-			setInnerSize(w, h);
+			// in a window, the menu bar's strip above the game (MenuBar.tjs)
+
+			setInnerSize(w, h + menuStripHeight);
 
 			resetPrimaryPos();
 
@@ -3561,6 +3793,8 @@ class KAGWindow extends Window
 			}
 
 		}
+
+		applyMenuBarLayout();
 
 //		top++, top--; // Spell to ensure VCR movies follow XXX
 
@@ -4214,7 +4448,7 @@ class KAGWindow extends Window
 
 			if (max) {
 
-				var vert = (innerWidth/innerHeight > pxWidth/pxHeight);
+				var vert = (innerWidth/(innerHeight - menuStripHeight) > pxWidth/pxHeight);
 
 				var zoom = System.getArgument("-fszoom");
 
@@ -4266,7 +4500,7 @@ class KAGWindow extends Window
 
 				}
 
-				if (vert) numer = innerHeight, denom = pxHeight;
+				if (vert) numer = innerHeight - menuStripHeight, denom = pxHeight;
 
 			}
 
@@ -4809,6 +5043,10 @@ class KAGWindow extends Window
 		// recorded, and saved, as windowed. Record the mode asked for unless the switch failed
 
 		var  menu = ((fullScreened = switched ? !!isfull : fullScreen) != 0) ? "fullScreenMenuItem" : "windowedMenuItem";
+
+		menuBarFullScreen = fullScreened;
+
+		applyMenuBarLayout() if (!switched);
 
 		this[menu].checked = true if (typeof this[menu] == "Object");
 
@@ -10940,6 +11178,7 @@ class KAGWindow extends Window
 
 	// Simple name clear
 	function clearName() {
+		a11yName = "";
 		currentVoice.clear() if (currentVoice !== void);
 		if (textWriteEnabled) {
 			current.processName();
@@ -10971,7 +11210,36 @@ class KAGWindow extends Window
 				}
 			}
 		}
+		a11yName = name if name != "";
 		callHook("onDrawName", name);
+	}
+
+	// ----------------------------------------------------------------------------
+	// Screen readers (Accessibility.tjs): the text of each message is read out when it waits
+	// for a click (or, in auto mode, when the wait starts), with the speaker's name. Text
+	// skipped through (F6, Ctrl) isn't read. a11yReadText = false turns it off
+	// ----------------------------------------------------------------------------
+
+	var a11yReadText = true;
+	var a11yText = "";  // the text drawn since the last reading
+	var a11yName = "";  // its speaker
+
+	function a11yNoteText(text)
+	{
+		if (a11yReadText && skipMode <= SKIP_PAGE && text !== void && KAGA11y.available) a11yText += text;
+	}
+
+	/**
+	 * Reads out what was drawn since the last time
+	 */
+	function a11yAnnounceText()
+	{
+		var text = a11yText, name = a11yName;
+		a11yText = "", a11yName = "";
+		if (!a11yReadText || text === void) return;
+		text = text.trim();
+		if (text == "") return;
+		KAGA11y.announce(name != "" ? tr("%s: %s").sprintf(name, text) : text);
 	}
 
 	/**
@@ -12897,25 +13165,385 @@ class KAGWindow extends Window
 
 	//------------------------------------------------------- Keyboard Operations --
 
-	function processKeys(key, shift)
+	//------------------------------------------------------------- Key bindings --
+
+	// The keys the window acts on, as data: processKeys and preProcessKeys run them, and the
+	// controls list (Controls.tjs) reads them, so a game that changes them gets a correct list.
+	// A game adds its own in AfterInit.tjs with bindKey (the sample binds F1-F8 there) and
+	// removes one with unbindKey; keyDownHook still works, but the controls list can't see
+	// what a hook does. Each binding is a dictionary:
+	//   key     the key (VK_*)
+	//   shift   the modifier keys held, compared exactly (0, ssShift, ssCtrl, ssAlt or a sum;
+	//           a held key's repeats carry ssRepeat, so they don't match), or void for any
+	//   action  a function (called with key, shift) or an expression (Scripts.eval)
+	//   label   what it does, in English (tr shows it in the language shown); void: not listed
+	//   early   true: it runs before the layer with the keyboard focus gets the key (as
+	//           keyDownHook does), so it works over choices and dialogs too. A game's bindKey is
+	//           early unless it says otherwise; the framework's own act only when nothing else
+	//           took the key (processKeys)
+	//   debug   true: only in KAG's debug mode (debugWindowEnabled; -debugwin=no turns it off)
+	//   when    void, or a function: the binding is there while it returns true
+	var keyBindings = [];
+
+	function bindKey(key, shift, action, label, early = true, debug = false, when = void)
+	{
+		unbindKey(key, shift);
+		keyBindings.add(%[ key:key, shift:shift, action:keyBindingFunction(action), label:label,
+			early:early, debug:debug, when:keyBindingFunction(when) ]);
+	}
+
+	// A function written outside any object (function { ... } in AfterInit.tjs) has no object of
+	// its own, so called as a binding's member it would run with the binding's dictionary as
+	// this, where every name it uses is void: it gets the global object instead
+	function keyBindingFunction(f)
+	{
+		if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
+			Scripts.getObjectContext(f) === null) return f incontextof global;
+		return f;
+	}
+
+	function unbindKey(key, shift)
+	{
+		for (var i = keyBindings.count - 1; i >= 0; i--)
+			with (keyBindings[i]) keyBindings.erase(i) if (.key == key && .shift === shift);
+	}
+
+	// Whether binding b is in effect now
+	function keyBindingActive(b)
+	{
+		if (b.debug && !debugWindowEnabled) return false;
+		if (b.when !== void && !b.when()) return false;
+		return true;
+	}
+
+	// The binding for key and shift, if one is in effect (early: those that run first)
+	function findKeyBinding(key, shift, early)
+	{
+		for (var i = keyBindings.count - 1; i >= 0; i--) {
+			var b = keyBindings[i];
+			if (b.key != key || !!b.early != !!early) continue;
+			if (b.shift !== void && b.shift != shift) continue;
+			if (keyBindingActive(b)) return b;
+		}
+	}
+
+	function runKeyBinding(key, shift, early)
+	{
+		var b = findKeyBinding(key, shift, early);
+		if (b === void) return false;
+		if (typeof b.action == "String") Scripts.eval(b.action);
+		else if (b.action !== void) b.action(key, shift);
+		return true;
+	}
+
+	// The framework's bindings (in the constructor, before Config.tjs's settings take effect,
+	// so freeSaveDataMode and the like are read when a key is pressed)
+	function createKeyBindings()
 	{
 		// Debug keys, while KAG's debug mode is on (it is unless -debugwin=no: set that for a
 		// release). The SDL engine has no menu bar for the Debug menu.
 		// Shift+F12 shows the debug window (the running line at the bottom of the screen), and
 		// Shift+F11 switches the debug level (none, simple, verbose).
-		if (debugWindowEnabled && shift == ssShift && (key == VK_F12 || key == VK_F11)) {
-			if (key == VK_F12) onDebugWinMenuItemClick(void);
-			else if (debugLevel == tkdlNone) onDebugLevelSimpleMenuItemClick(void);
+		bindKey(VK_F12, ssShift, function { onDebugWinMenuItemClick(void); } incontextof this,
+			"Show or hide the debug window", false, true);
+		bindKey(VK_F11, ssShift, function {
+			if (debugLevel == tkdlNone) onDebugLevelSimpleMenuItemClick(void);
 			else if (debugLevel == tkdlSimple) onDebugLevelVerboseMenuItemClick(void);
 			else onDebugLevelNoneMenuItemClick(void);
+		} incontextof this, "Change the debug level", false, true);
+		bindKey(VK_BACK, ssShift, function { backToAutoLabelStoreMenuItem.click(); } incontextof this,
+			"Go back to the last pass record", false, true,
+			function { return autoLabelStore !== void && typeof this.backToAutoLabelStoreMenuItem == "Object"; } incontextof this);
+		// Proceed to next choice/unread
+		bindKey(#'F', void, skipToNextStopByKey, "Skip to the next choice or unread text", false);
+		// Back to previous
+		bindKey(#'B', void, goBackByKey, "Go back", false);
+		// Auto-read
+		bindKey(#'A', void, switchAutoModeByKey, "Auto mode on or off", false);
+		// Save and load bookmarks, in free save mode
+		bindKey(#'S', void, function { menuItemClickByKey("storeMenu"); } incontextof this, "Save", false, false,
+			function { return freeSaveDataMode; } incontextof this);
+		bindKey(#'L', void, function { menuItemClickByKey("restoreMenu"); } incontextof this, "Load", false, false,
+			function { return freeSaveDataMode; } incontextof this);
+		// The next language (Language.tjs)
+		bindKey(VK_F9, 0, switchLanguageByKey, "Show the game in its next language", false, false,
+			function { return languageAvailable; } incontextof this);
+		// Show message history
+		bindKey(#'R', void, showHistoryByKey, "Message history", false);
+		bindKey(VK_UP, ssShift, showHistoryByKey, "Message history", false);
+		// Hide message
+		bindKey(VK_ESCAPE, void, function { menuItemClickByKey("rightClickMenuItem"); } incontextof this,
+			"Hide the message window", false);
+		// The menu bar (MenuBar.tjs; in a window) and screenshots
+		bindKey(VK_F10, 0, showMenuBar, "Menu", false, false, function { return menuBarShown; } incontextof this);
+		bindKey(VK_F12, 0, saveScreenshot, "Save a screenshot", false, false, function { return screenshotEnabled; } incontextof this);
+		bindKey(VK_SNAPSHOT, void, saveScreenshot, void, false, false, function { return screenshotEnabled; } incontextof this)
+			if (typeof global.VK_SNAPSHOT == "Integer");
+	}
+
+	//------------------------------------------------- The menu and the controls --
+
+	// The menu bar (MenuBar.tjs) shows the menu items KAGWindow_createMenus makes as Kirikiri's
+	// Win32 menu bar did, in windowed mode only: the window is menuBarHeight taller than the game,
+	// which is placed under that strip (applyMenuBarLayout), and a menu drops down over the game
+	// from its title. F10 opens the first menu, and so do the controller's START (unless the game
+	// maps it to something else) and R3. Full screen has no menu bar. The controls list
+	// (Controls.tjs) shows what each key, mouse button and controller button does; Help >
+	// Controls opens it, and a game can call showControls() from its own screens (the sample's
+	// Config does). Both are drawn with the engine's Elements UI: without it, or without
+	// Window.setViewport, there's no bar.
+	var menuBarEnabled = true;     // false: no menu bar (F10 and START do nothing)
+	var menuBarHeight = 30;        // the strip's height, in screen pixels
+	var menuBarView;               // the bar (KAGMenuBar), once it has been shown
+	var menuDropDown;              // the menu dropped down from it (KAGMenuDropDown), while one is open
+	var menuBarFullScreen;         // the screen mode asked for last (fullScreened is set after the switch)
+	var menuChosen;                // the item the menu closed for, done once it has closed
+	var menuChoiceTrigger;
+
+	// Whether the bar is there: in windowed mode, with the menu visible, once the window is
+	// made (Initialize.tjs sets its size again at the end, and the bar draws with kag's fonts)
+	property menuBarShown
+	{
+		getter {
+			var full = menuBarFullScreen !== void ? menuBarFullScreen : fullScreened;
+			return menuBarEnabled && !full && typeof global.kag == "Object" && global.kag === this &&
+				typeof this.menu == "Object" && menu !== void && menu.visible && KAGMenuBarAvailable(this);
+		}
+	}
+
+	// How much taller than the game the window is
+	property menuStripHeight { getter { return menuBarShown ? menuBarHeight : 0; } }
+
+	/**
+	 * Places the game under the strip (or, without one, as before: in the middle of the window)
+	 * and shows the bar or hides it. setZoom and the switches between full screen and a window
+	 * call this; the window's size already has the strip in it
+	 */
+	function applyMenuBarLayout()
+	{
+		if (typeof this.setViewport == "undefined") return;
+		var strip = menuStripHeight;
+		try {
+			if (strip > 0) setViewport("custom", zoomNumer / zoomDenom, 0.5, 0, 0, strip);
+			else setViewport("contain", 1.0, 0.5, 0.5, 0, 0);
+		} catch (e) {
+			dm("The menu bar's strip: " + e.message);
 			return;
 		}
-		if (key == VK_BACK && (shift == ssShift) && autoLabelStore !== void
-			&& typeof this.backToAutoLabelStoreMenuItem == "Object")
-		{
-			backToAutoLabelStoreMenuItem.click();
+		if (strip > 0) {
+			if (menuBarView === void) menuBarView = new KAGMenuBar(this);
+			menuBarView.update();
+		} else if (menuBarView !== void) {
+			closeMenuDropDown();
+			menuBarView.hide();
 		}
+	}
 
+	// The menu was shown or hidden (Menu.visible, Menus.tjs): the window gets the strip, or loses it
+	function onMenuBarVisibleChanged()
+	{
+		if (menuBarView === void || fullScreened || menuBarFullScreen === true) return;
+		setZoom(origZoomNumer, origZoomDenom);
+	}
+
+	// The top menus changed (a game showed, hid or renamed one): the bar is drawn again
+	function updateMenuBar()
+	{
+		menuBarView.update(true) if menuBarView !== void && menuBarView.shown;
+	}
+
+	/**
+	 * F10: opens the first menu, from the keyboard (or closes the one open)
+	 */
+	function showMenuBar()
+	{
+		if (!menuBarShown || menuBarView === void || !menuBarView.shown) return false;
+		if (menuDropDown !== void) { closeMenuDropDown(); return true; }
+		var first = menuBarView.firstMenu();
+		return first >= 0 ? openMenuDropDown(first, true) : false;
+	}
+
+	// A title of the bar clicked: its menu opens or closes, or a top item without a submenu does
+	// what it does
+	function onMenuBarTitle(index)
+	{
+		if (menuBarView === void || index >= menuBarView.titles.count) return;
+		var t = menuBarView.titles[index];
+		if (!t.enabled) return;
+		if (!t.menu) {
+			closeMenuDropDown();
+			if (currentDialog !== void) return;
+			menuChosen = t.item;
+			runMenuChoiceLater();
+			return;
+		}
+		if (menuDropDown !== void && menuBarView.openIndex == index) return closeMenuDropDown();
+		openMenuDropDown(index, false);
+	}
+
+	/**
+	 * Drops the menu of the bar's title index down (from the keyboard: with its first item
+	 * chosen); one that's open already switches to it
+	 */
+	function openMenuDropDown(index, byKey)
+	{
+		if (!menuBarShown || menuBarView === void) return false;
+		if (menuDropDown !== void && isvalid menuDropDown) {
+			menuDropDown.switchTo(index, byKey);
+			return true;
+		}
+		if (currentDialog !== void) return false;
+		try { (new KAGMenuDropDown(this, index, byKey)).open(); }
+		catch (e) { dm("Could not open the menu: " + e.message); return false; }
+		return true;
+	}
+
+	function closeMenuDropDown()
+	{
+		menuDropDown.close() if menuDropDown !== void && isvalid menuDropDown;
+	}
+
+	function showControls()
+	{
+		if (!KAGElementsScreenAvailable() || currentDialog !== void) return false;
+		try { (new KAGControlsPanel(this)).open(); }
+		catch (e) { dm("Could not show the controls: " + e.message); return false; }
+		return true;
+	}
+
+	// Whether the menu shows item (besides its visible and menuBarHidden): Help > Contents
+	// only with the help file there
+	function menuShows(item)
+	{
+		if (typeof this.helpIndexMenuItem != "undefined" && item === helpIndexMenuItem)
+			return typeof global.helpFile == "undefined" || Storages.isExistentStorage(System.exePath + helpFile);
+		return true;
+	}
+
+	// The menu closed for an item: it's done now, after the window took the menu away (an item
+	// that opens a dialog of its own, a Yes/No prompt, would otherwise replace it)
+	function runMenuChoiceLater()
+	{
+		if (menuChosen === void) return;
+		if (menuChoiceTrigger === void) {
+			menuChoiceTrigger = new AsyncTrigger(runMenuChoice, "");
+			menuChoiceTrigger.cached = true;
+			add(menuChoiceTrigger);
+		}
+		menuChoiceTrigger.trigger();
+	}
+
+	function runMenuChoice()
+	{
+		var item = menuChosen;
+		menuChosen = void;
+		if (item === void || typeof item != "Object" || !isvalid item) return;
+		try {
+			if (typeof item.click != "undefined") item.click();
+			else if (typeof item.onClick != "undefined") item.onClick();
+		} catch (e) {
+			dm("Menu item " + item.caption + ": " + e.message);
+		}
+	}
+
+	//-------------------------------------------------------------- Screenshots --
+
+	// F12 (and Print Screen, where the system passes it on) saves the screen as a PNG,
+	// screenshot-<date>-<time>.png, in the save folder (screenshotFolder to put them elsewhere),
+	// and says so in a corner for a moment (screenshotNotice). Writing a 1920x1080 PNG takes
+	// about 90 ms, which shows as a hitch, so where the layerExSave plugin gave the window
+	// startSaveLayerImage (it has to be linked before the window is made: Initialize.tjs) and
+	// the folder is a local one, the PNG is written on another thread; elsewhere it's written
+	// with saveLayerImage, in one go. screenshotHook is called with the file's name once it's
+	// written (void if it couldn't be).
+	var screenshotEnabled = true;
+	var screenshotFolder;          // void: the save folder (System.dataPath)
+	var screenshotNotice = true;
+	var screenshotHook = [];
+	var screenshotNoticeLayer;     // the notice on show
+	var screenshotsSaving = 0;     // written on other threads now
+
+	function screenshotStorage()
+	{
+		var folder = screenshotFolder !== void ? screenshotFolder : System.dataPath;
+		folder += "/" if (folder != "" && folder.charAt(folder.length - 1) != "/");
+		var d = new Date();
+		var base = "screenshot-%04d%02d%02d-%02d%02d%02d".sprintf(d.getYear(), d.getMonth() + 1, d.getDate(),
+			d.getHours(), d.getMinutes(), d.getSeconds());
+		var name = folder + base + ".png";
+		for (var i = 2; Storages.isExistentStorage(name); i++) name = folder + base + "-" + i + ".png";
+		return name;
+	}
+
+	/**
+	 * Saves what the screen shows as a PNG (F12). Returns the file's name, or void
+	 */
+	function saveScreenshot()
+	{
+		if (!screenshotEnabled) return;
+		hideScreenshotNotice(); // not in the picture
+		var name = screenshotStorage();
+		var w = primaryLayer.width, h = primaryLayer.height;
+		var lay = new global.Layer(this, primaryLayer);
+		try {
+			lay.setImageSize(w, h);
+			lay.piledCopy(0, 0, primaryLayer, 0, 0, w, h);
+			// what the layers leave in the alpha channel means nothing on the screen, and PNG keeps it
+			lay.face = dfMask;
+			lay.fillRect(0, 0, w, h, 0xffffffff);
+			lay.face = dfAlpha;
+			if (typeof this.startSaveLayerImage == "Object" && name.substring(0, 7) == "file://") {
+				// layerExSave copies the picture, so the layer can go at once
+				startSaveLayerImage(lay, name, %[]);
+				screenshotsSaving++;
+			} else {
+				lay.saveLayerImage(name, "png");
+				onScreenshotSaved(name);
+			}
+		} catch (e) {
+			dm("Could not save a screenshot as " + name + ": " + e.message);
+			invalidate lay;
+			onScreenshotSaved(void);
+			return;
+		}
+		invalidate lay;
+		return name;
+	}
+
+	// layerExSave: a picture started with startSaveLayerImage was written (or not: canceled)
+	function onSaveLayerImageDone(handler, canceled, layer, filename)
+	{
+		screenshotsSaving-- if (screenshotsSaving > 0);
+		onScreenshotSaved(canceled ? void : filename);
+	}
+
+	function onSaveLayerImageProgress(handler, progress, layer, filename) {}
+
+	function onScreenshotSaved(name)
+	{
+		if (name !== void) {
+			dm("Screenshot saved: " + name);
+			KAGA11y.announce(tr("Screenshot saved"));
+			showScreenshotNotice(tr("Screenshot saved")) if (screenshotNotice);
+		}
+		callHook(screenshotHook, name);
+	}
+
+	function showScreenshotNotice(text)
+	{
+		hideScreenshotNotice();
+		if (typeof global.showYesNoNotice == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		try { screenshotNoticeLayer = showYesNoNotice(this, text); } catch (e) { dm("notice: " + e.message); }
+	}
+
+	function hideScreenshotNotice()
+	{
+		if (screenshotNoticeLayer !== void && isvalid screenshotNoticeLayer) invalidate screenshotNoticeLayer;
+		screenshotNoticeLayer = void;
+	}
+
+	function processKeys(key, shift)
+	{
         // Skip processing via CONTROL
         if(key == VK_CONTROL) {
 			var sg = getKeyState;
@@ -12931,66 +13559,14 @@ class KAGWindow extends Window
 
         if(checkProceedingKey(key, shift)) return;
 
-		if(key == #'F')
-		{
-			// Proceed to next choice/unread
-			skipToNextStopByKey();
-			return;
-		}
-
-		if(key == #'B')
-		{
-			// Back to previous
-			goBackByKey();
-			return;
-		}
-
-		if(key == #'A')
-		{
-			// Auto-read
-			switchAutoModeByKey();
-			return;
-		}
- 
-		if(freeSaveDataMode)
-		{
-			if(key == #'S')
-			{
-				// Save bookmark
-				return menuItemClickByKey("storeMenu");
-			}
-
-			if(key == #'L')
-			{
-				// Load bookmark
-				return menuItemClickByKey("restoreMenu");
-			}
-		}
-
-		if(key == VK_F9 && shift == 0)
-		{
-			// The next language (Language.tjs)
-			switchLanguageByKey();
-			return;
-		}
-
-		if(key == #'R' || (shift == ssShift && key == VK_UP))
-		{
-			// Show message history
-			showHistoryByKey();
-			return;
-		}
-
-		if(key == VK_ESCAPE)
-		{
-			// Hide message
-			return menuItemClickByKey("rightClickMenuItem");
-		}
+		// F, B, A, S and L (free save mode), F9, R, Esc, F10, F12... (createKeyBindings)
+		runKeyBinding(key, shift, false);
 	}
 
 	function preProcessKeys(key, shift)
 	{
-		return callHook(keyDownHook, key, shift);
+		if (callHook(keyDownHook, key, shift)) return true;
+		return runKeyBinding(key, shift, true);
 	}
 
 	function internalOnKeyDown(key, shift)
@@ -13152,6 +13728,7 @@ class KAGWindow extends Window
 		}
 		if (selectShowing && _selectLayer !== void) selectLayer.relabel();
 		setMenuAccessibleAll();
+		updateMenuBar(); // the menu bar's titles in the new language
 		callHook(languageChangeHook, code, previous);
 	}
 
@@ -13196,15 +13773,15 @@ class KAGWindow extends Window
 		return items;
 	}
 
-	// what the word wrap measures a text by: its characters, or nothing (the character wrap)
-	// when it has a new line, as KAGEnvPlayer.emitChars does, or is in a language without
+	// what the word wrap measures a text by: its characters and new lines, as
+	// KAGEnvPlayer.emitChars does, or nothing (the character wrap) in a language without
 	// spaces between its words (KAGLanguage.wordWrap)
 	function languageWrapLine(items, lang)
 	{
 		if (!KAGLanguage.wordWrap(lang)) return "";
 		var line = "";
 		for (var i = 0; i < items.count; i++) {
-			if (items[i][0] == "r") return "";
+			if (items[i][0] == "r") line += "\n";
 			if (items[i][0] == "ch") line += items[i][1];
 		}
 		return line;
@@ -13225,8 +13802,7 @@ class KAGWindow extends Window
 		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items, lang)]];
 		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
 		var hist = historyWriteEnabled, tw = textWriteEnabled, cur = current;
-		var wrapState = [wrapKey, wrapSplitLine, wrapNum, wrapBreakWrap, wrapPos, wrapPosHist, wrapWordWidth,
-			wrapWordWidthHist, wrapResume, wrapResumeDropHist, wrapDropSpace, wrapDropSpaceHist];
+		var wrapState = saveWordWrap();
 		historyWriteEnabled = false;
 		textWriteEnabled = true;
 		current = layer;
@@ -13251,10 +13827,7 @@ class KAGWindow extends Window
 		historyWriteEnabled = hist;
 		textWriteEnabled = tw;
 		current = cur;
-		wrapKey = wrapState[0], wrapSplitLine = wrapState[1], wrapNum = wrapState[2], wrapBreakWrap = wrapState[3];
-		wrapPos = wrapState[4], wrapPosHist = wrapState[5], wrapWordWidth = wrapState[6];
-		wrapWordWidthHist = wrapState[7], wrapResume = wrapState[8], wrapResumeDropHist = wrapState[9];
-		wrapDropSpace = wrapState[10], wrapDropSpaceHist = wrapState[11];
+		restoreWordWrap(wrapState);
 		layer.endTextUnit();
 	}
 
@@ -13462,6 +14035,8 @@ class KAGWindow extends Window
 		if(skipMode) return skipCancelKeyPressing()?-4:0;
 			// During skipping (allow event processing opportunity to cancel skip if key pressed)
 
+		a11yAnnounceText(); // screen readers: the text so far
+
 		if(nowaitMode)
 			return ((nowaitModeClickSkip || clickSkipEnabled)
 					? waitAuto(nowaitModeWait, "l", hasCurrentVoice && elm.voicewait)
@@ -13502,6 +14077,8 @@ class KAGWindow extends Window
 		if(skipMode == SKIP_CLICK || skipMode == SKIP_PAGE) cancelSkip();
 		if(skipMode == SKIP_FAST && !skipKeyPressing()) cancelSkip();
 		if(skipMode) return -4; // Process events once
+
+		a11yAnnounceText(); // screen readers: the page's text
 
 		if(nowaitMode)
 			return ((nowaitModeClickSkip || clickSkipEnabled)
@@ -13555,6 +14132,8 @@ class KAGWindow extends Window
 			dm("Warning: Reached auto-page break click wait in hidden " +
 				(currentPage ? "back" : "fore") + " message layer " + currentNum);
 		}
+
+		a11yAnnounceText(); // screen readers: the full page's text
 
 		if(nowaitMode) {
 			current.clear2(); // Call clear2
@@ -15313,7 +15892,7 @@ class KAGWindow extends Window
 			repage = current.processCh(text, chUserMode ? acs : 0);
 			if(repage)
 			{
-				wrapResume = true, wrapResumeDropHist = false; // this ch runs again on the next page
+				wrapResume = true, wrapResumeDropHist = wrapDropSpaceHist; // this ch runs again on the next page
 				return showPageBreakAndClear();
 			}
 		}
@@ -15322,6 +15901,7 @@ class KAGWindow extends Window
 			historyLayer.autoReline() if (repage === false && typeof historyLayer.autoReline == "Object");
 			historyLayer.store(text);
 		}
+		a11yNoteText(text) if (textWriteEnabled); // the space a wrap dropped too
 		if(autoWCEnabled && skipMode <= SKIP_STOP)
 		{
 			// Auto-wait
@@ -15408,6 +15988,7 @@ class KAGWindow extends Window
 			historyLayer.autoReline() if (repage === false && typeof historyLayer.autoReline == "Object");
 			historyLayer.store(text, true) if (text !== void);
 		}
+		a11yNoteText(text) if (textWriteEnabled);
 		return acs * actskipspeed;
 	} incontextof this,
 
@@ -15460,6 +16041,7 @@ class KAGWindow extends Window
 
 		// Line break
         if(historyWriteEnabled) historyLayer.reline();
+		a11yNoteText("\n") if (textWriteEnabled);
 		if (textWriteEnabled) {
 			if(currentWithBack) current.comp.processReturn();
 			if(current.processReturn())
@@ -15878,6 +16460,7 @@ class KAGWindow extends Window
         // Stop execution
 		stablePosibility = true;
 		cancelSkip();
+		a11yAnnounceText();
 		if(!usingExtraConductor) incRecordLabel(true);
 		inSleep = true;
 		if(recordHistoryOfStore == 2) // 2: Every choice (@s tag)
