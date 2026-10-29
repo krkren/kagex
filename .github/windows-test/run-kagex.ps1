@@ -514,7 +514,9 @@ if (-not $script:proc.HasExited) {
 
 # Script exceptions in the engine log. Plugins.link of optional plugins that this build
 # does not provide throws inside kagex's try/catch; those are listed separately.
-$optional = 'layerExDraw|gfxEffect|flashPlayer|AlphaMovie|windowEx|scnfile|xp3crypt'
+# krkrlive2d: Live2D's licence keeps its Cubism Core out of kagex's engines, so a game builds
+# the plugin itself; the sample's Live2D demo links it where it isn't there and says so
+$optional = 'layerExDraw|gfxEffect|flashPlayer|AlphaMovie|windowEx|scnfile|xp3crypt|krkrlive2d'
 $lines = (Read-Log) -split "`r?`n"
 $excs = @(); $expected = @()
 for ($n = 0; $n -lt $lines.Count; $n++) {
