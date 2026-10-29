@@ -10,7 +10,9 @@
 # with it) and its models and dictionary (lipsync/ beside it) the same way. Zip package layout, like 0.0.4:
 #   krkrz(.exe), SDL3.dll / libSDL3.so.0, plugin/, license.txt, licenses/ (cmake --install of
 #   the engine) + data/, template/, doc/, "KAGEX Initial Setup.txt" and krkrz.cf (the
-#   engine's options: the Linux/macOS save folder) from the kagex commit.
+#   engine's options: the Linux/macOS save folder) from the kagex commit. An earlier release's
+#   build of the engine is reused when its note (kagex-engine-build.json, added to a release) says
+#   krkrz_dev and the plugins built into it are the same commits this run would build.
 name: Release packages
 
 on:
@@ -27,7 +29,7 @@ concurrency:
 
 env:
   RELEASE_TAG: "0.13.0"
-  KAGEX_SHA: e5bad8219194d12082c53b560354b5967734fd2c
+  KAGEX_SHA: 38982996251577dc066bb008d75b4cd9603ecd11
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -87,7 +89,25 @@ jobs:
         with:
           path: ci
 
+      - name: Build the engine, or take an earlier release's build of it
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ matrix.config == 'Debug' && 'kagex_engine_windows_debug.zip' || 'kagex_engine_windows.zip' }}
+        shell: bash
+        run: |
+          # The engine, with xp3crypt built in and scnfile beside it, is rebuilt every release.
+          # An engine package of an earlier release holds this very engine when krkrz_dev and
+          # those two plugins are the same commits, so it is unpacked instead of compiling them
+          # (an hour of the run, with the vcpkg ports and MSVC that go with it)
+          tag=$(bash ci/.github/release-build/engine-build.sh find "$ASSET")
+          echo "reuse=$tag" >> "$GITHUB_OUTPUT"
+          if [ -n "$tag" ]; then
+            bash ci/.github/release-build/engine-build.sh unpack "$tag" "$ASSET" stage
+          fi
+
       - name: Clone engine (recursive)
+        if: steps.engine.outputs.reuse == ''
         shell: bash
         run: |
           mkdir -p results
@@ -110,6 +130,7 @@ jobs:
           } | tee results/versions.txt
 
       - name: Set up vcpkg
+        if: steps.engine.outputs.reuse == ''
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg "$env:RUNNER_TEMP\vcpkg"
@@ -119,6 +140,7 @@ jobs:
           "VCPKG_BINARY_SOURCES=clear;files,$env:GITHUB_WORKSPACE\vcpkg-archives,readwrite" >> $env:GITHUB_ENV
 
       - name: Restore vcpkg binary cache
+        if: steps.engine.outputs.reuse == ''
         uses: actions/cache/restore@v4
         with:
           path: vcpkg-archives
@@ -126,11 +148,13 @@ jobs:
           restore-keys: vcpkg-x64-windows-static-
 
       - name: MSVC environment
+        if: steps.engine.outputs.reuse == ''
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
       - name: Configure engine (preset x64-windows = SDL3)
+        if: steps.engine.outputs.reuse == ''
         shell: pwsh
         working-directory: krkrz_dev
         run: |
@@ -149,6 +173,7 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
       - name: Build engine and all plugins
+        if: steps.engine.outputs.reuse == ''
         shell: pwsh
         working-directory: krkrz_dev
         run: |
@@ -158,18 +183,27 @@ jobs:
           if ($LASTEXITCODE) { Get-Content "$env:GITHUB_WORKSPACE\results\build.log" -Tail 80; exit $LASTEXITCODE }
 
       - name: Install and package
+        env:
+          ENGINE_REUSE: ${{ steps.engine.outputs.reuse }}
         shell: pwsh
         run: |
           $name = "kagex_sdl3_windows_$($env:CONFIG.ToLower()).zip"
           "PKG_NAME=$name" >> $env:GITHUB_ENV
-          cmake --install krkrz_dev/build/x64-windows --config $env:CONFIG --prefix stage
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           New-Item -ItemType Directory pkg | Out-Null
-          Copy-Item -Recurse stage\* pkg\
-          foreach ($exe in 'krkrz64.exe', 'krkrz64d.exe') {
-            if (Test-Path "pkg\$exe") { Move-Item "pkg\$exe" pkg\krkrz.exe -Force }
+          if ($env:ENGINE_REUSE) {
+            # stage/ is an earlier release's engine package of this engine, unpacked above: its
+            # krkrz.exe and plugin/ are already named as this package wants them
+            Copy-Item -Recurse stage\* pkg\
+            Remove-Item -Force pkg\engine.json
+          } else {
+            cmake --install krkrz_dev/build/x64-windows --config $env:CONFIG --prefix stage
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+            Copy-Item -Recurse stage\* pkg\
+            foreach ($exe in 'krkrz64.exe', 'krkrz64d.exe') {
+              if (Test-Path "pkg\$exe") { Move-Item "pkg\$exe" pkg\krkrz.exe -Force }
+            }
+            if (Test-Path pkg\plugin64) { Move-Item pkg\plugin64 pkg\plugin }
           }
-          if (Test-Path pkg\plugin64) { Move-Item pkg\plugin64 pkg\plugin }
           foreach ($p in 'data', 'template', 'doc', 'KAGEX Initial Setup.txt', 'krkrz.cf') { Copy-Item -Recurse "kagex\$p" pkg\ }
           foreach ($need in 'krkrz.exe', 'SDL3.dll', 'license.txt', 'licenses', 'data\startup.tjs', 'krkrz.cf',
                             'template\system\notosansjp-regular.otf', 'template\system\YesNoDialogLayer.tjs',
@@ -287,7 +321,28 @@ jobs:
           mkdir -p results
           { gcc-12 --version | head -1; cmake --version | head -1; ldd --version | head -1; } | tee results/toolchain.txt
 
+      - name: Build the engine, or take an earlier release's build of it
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ matrix.config == 'Debug' && 'kagex_engine_linux_debug.zip' || 'kagex_engine_linux.zip' }}
+        run: |
+          # the same engine an earlier release made, with the same xp3crypt and scnfile built into
+          # it, is worth an hour of this job: unpack that package instead of cloning and building
+          tag=$(bash ci/.github/release-build/engine-build.sh find "$ASSET")
+          echo "reuse=$tag" >> "$GITHUB_OUTPUT"
+          if [ -n "$tag" ]; then
+            bash ci/.github/release-build/engine-build.sh unpack "$tag" "$ASSET" stage
+            {
+              echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
+              echo "engine $ASSET of release $tag, not rebuilt: $ENGINE_REPO @ $ENGINE_SHA"
+              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA"
+              echo "linux $CONFIG, runner $ImageOS $ImageVersion"
+            } | tee results/versions.txt
+          fi
+
       - name: Clone engine (recursive)
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone --depth 1 --recursive --shallow-submodules -j 8 -b master "$ENGINE_REPO" krkrz_dev
           if [ "$(git -C krkrz_dev rev-parse HEAD)" != "$ENGINE_SHA" ]; then
@@ -308,6 +363,7 @@ jobs:
           } | tee results/versions.txt
 
       - name: Set up vcpkg
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
@@ -316,6 +372,7 @@ jobs:
           echo "VCPKG_BINARY_SOURCES=clear;files,$GITHUB_WORKSPACE/vcpkg-archives,readwrite" >> "$GITHUB_ENV"
 
       - name: Restore vcpkg binary cache
+        if: steps.engine.outputs.reuse == ''
         uses: actions/cache/restore@v4
         with:
           path: vcpkg-archives
@@ -323,6 +380,7 @@ jobs:
           restore-keys: vcpkg-x64-linux-
 
       - name: Configure engine (preset x64-linux)
+        if: steps.engine.outputs.reuse == ''
         working-directory: krkrz_dev
         env:
           # tp_stub.h uses ptrdiff_t without <cstddef>; GCC 12's headers don't pull it in for
@@ -343,13 +401,14 @@ jobs:
           grep -q "kagex: Effekseer's static members are defined in efk_core" "$GITHUB_WORKSPACE/results/configure.log"
 
       - name: Save vcpkg binary cache
-        if: always()
+        if: always() && steps.engine.outputs.reuse == ''
         uses: actions/cache/save@v4
         with:
           path: vcpkg-archives
           key: vcpkg-x64-linux-${{ hashFiles('krkrz_dev/src/core/vcpkg.json', 'krkrz_dev/src/plugins/*/vcpkg.json', 'krkrz_dev/src/core/external/*/vcpkg.json') }}-${{ github.run_id }}-${{ matrix.config }}
 
       - name: Build engine and all plugins
+        if: steps.engine.outputs.reuse == ''
         working-directory: krkrz_dev
         env:
           CXXFLAGS: -include cstddef
@@ -371,6 +430,7 @@ jobs:
           fi
 
       - name: krkr_richtext must load on its own (relink if needed)
+        if: steps.engine.outputs.reuse == ''
         working-directory: krkrz_dev/build/x64-linux
         run: |
           exec > >(tee -a "$GITHUB_WORKSPACE/results/richtext-link.log") 2>&1
@@ -395,19 +455,21 @@ jobs:
           echo "loads after relink"
 
       - name: Install and package
+        env:
+          ENGINE_REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
           exec > >(tee -a "$GITHUB_WORKSPACE/results/package.log") 2>&1
           set -x
           name="kagex_sdl3_linux_${CONFIG,,}.zip"
           echo "PKG_NAME=$name" >> "$GITHUB_ENV"
-          cmake --install krkrz_dev/build/x64-linux --config "$CONFIG" --prefix stage
+          if [ -z "$ENGINE_REUSE" ]; then cmake --install krkrz_dev/build/x64-linux --config "$CONFIG" --prefix stage; fi
           mkdir pkg
           # krkrz finds libSDL3.so.0 next to it ($ORIGIN); ship that one file, dereferenced, like 0.0.2
           sdl=$(ls stage/libSDL3.so.0 stage/libSDL3.so.0.* stage/libSDL3.so 2>/dev/null | head -1)
           [ -n "$sdl" ] || { ls -la stage; echo "no libSDL3 in the install"; exit 1; }
           cp -L "$sdl" pkg/libSDL3.so.0
           for f in stage/*; do
-            case "$(basename "$f")" in libSDL3.so*) ;; *) cp -a "$f" pkg/ ;; esac
+            case "$(basename "$f")" in libSDL3.so*|engine.json) ;; *) cp -a "$f" pkg/ ;; esac
           done
           cp -a kagex/data kagex/template kagex/doc "kagex/KAGEX Initial Setup.txt" kagex/krkrz.cf pkg/
           # libkrkr_richtext.so has linked without libpng & co. on some toolchains (CLAUDE.md);
@@ -864,8 +926,12 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           ls -l dist
-          # 9 packages, 9 engine packages, and the two tools for 3 systems
-          [ "$(ls dist/* | wc -l)" = 24 ] || { echo "expected 24 files"; exit 1; }
+          # the engine these release's packages hold, by commit: a later release of kagex reuses
+          # their build instead of compiling it when these three still match (.github/release-build)
+          printf '{\n  "format": 1,\n  "engine": "%s",\n  "xp3crypt": "%s",\n  "scnfile": "%s"\n}\n' \
+            "$ENGINE_SHA" "$XP3CRYPT_SHA" "$SCNFILE_SHA" > dist/kagex-engine-build.json
+          # 9 packages, 9 engine packages, the two tools for 3 systems and that note
+          [ "$(ls dist/* | wc -l)" = 25 ] || { echo "expected 25 files"; exit 1; }
           sha256sum dist/*
           if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
             echo "tag $RELEASE_TAG already exists"; exit 1
