@@ -361,6 +361,21 @@ current folder), for working offline;
 folder next to the game's `data/` is used when there is one (engine packages of your own, such
 as ones with the scnfile or xp3crypt plugin), or else one next to the tool.
 
+### Your own plugins
+
+A plugin built for your game, which the engine packages can't carry (krkrlive2d, built with your
+own Cubism SDK: `tools/live2d`), goes in `plugins/<platform>/` next to `data/`: `.dll` files in
+`plugins/windows/`, `lib*.so` in `plugins/linux/` (Steam uses them too), `.dylib` in
+`plugins/macos/`. Each build copies them into its `plugin/` folder (into `Contents/MacOS` in the
+app) after the engine's, so one with the name of an engine plugin replaces it; they're all copied,
+whatever `contents.plugins` says, and a signed build signs them with the engine. The plan lists
+them. The web, Android and iOS engines have their plugins linked in, so there a plugin of your
+own means an engine package built with it (`engines/`); `check` warns about a
+`plugins/web`, `plugins/android` or `plugins/ios` folder for an enabled platform, and about files in the desktops'
+folders that aren't plugins for them. A game with Live2D models (`.l2d`) gets a warning for each
+enabled desktop platform whose folder lacks the Live2D plugin (`tools/live2d/setup.py` builds it):
+its package wouldn't draw its Live2D characters.
+
 ### release.json
 
 | Section | What it holds |

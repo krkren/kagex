@@ -51,6 +51,18 @@ The sample's images are generated here rather than edited by hand.
   speech synthesizer (Kokoro-82M, Apache-2.0, run with ONNX Runtime; the model is downloaded
   into `.cache/kokoro` once), which shows the mouths by vowel: its `pip000009.lip` comes from
   kagex-lipsync (`kagex-lipsync --cli make pip000009.ogg`), as any voice's would.
+- `make_hiyori.py` gets the demo's Live2D character, Hiyori (Live2D Inc.'s sample model), whose
+  files aren't in the repository: Live2D's Free Material License lets no one but Live2D hand out
+  its sample models' files (a work an individual or a small business makes with them may ship them
+  inside it). `model --accept-license` fetches her from Live2D's CubismNativeSamples on GitHub, at
+  a pinned commit, into `data/fgimage/hiyori.l2d` (gitignored): her folder's contents in a zip
+  with fixed times, so it's the same file every time. `--accept-license` says you agree to that
+  licence and her terms. `speech` makes her voice line (`data/voice/hiyori000001.ogg`, the
+  `【hiyori】` line after `voice=1` in anim.ks) with eSpeak NG, a formant synthesizer (rules and a
+  model of the vocal tract, no voice learned from recordings), in US English's `anika` variant at
+  160 words a minute, and ffmpeg (`ESPEAK_NG` names espeak-ng when it isn't on the PATH; 1.52.0
+  made the committed line, the same bytes each time); kagex-lipsync then makes its lip track
+  (`kagex-lipsync --cli make hiyori000001.ogg`).
 - `make_sounds.py` makes the Character demo's positional sound effects in `data/sound`: a
   two-note chime (`se_chime.ogg`, played at the far left and far right of the stage) and
   footsteps that loop (`se_steps.ogg`, following Ai as she walks), drawn in NumPy with fixed
@@ -74,6 +86,8 @@ python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG
 python3 tools/assets/make_clip.py        # the emblem as a CLIP STUDIO PAINT file (needs the engine)
 python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art voice speech
+python3 tools/assets/make_hiyori.py model --accept-license   # Hiyori's model (Live2D's licence)
+python3 tools/assets/make_hiyori.py speech  # her voice line (needs espeak-ng and ffmpeg)
 python3 tools/assets/make_sounds.py      # the Character demo's sound effects (needs ffmpeg)
 python3 tools/assets/psdwrite.py <structure.txt> [out.psd]   # a layer structure as a PSD
 ```

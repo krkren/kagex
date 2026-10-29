@@ -1,0 +1,193 @@
+diff --git a/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp b/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp
+index 9ffcb13..4288327 100644
+--- a/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp
++++ b/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp
+@@ -242,8 +242,9 @@ void CubismShader_OpenGLES2::ReleaseShaderProgram()
+         {
+             glDeleteProgram(_shaderSets[i]->ShaderProgram);
+             _shaderSets[i]->ShaderProgram = 0;
+-            CSM_DELETE(_shaderSets[i]);
+         }
++        // kagex: a set never compiled has no program, and goes too
++        CSM_DELETE(_shaderSets[i]);
+     }
+ }
+ 
+@@ -302,6 +303,34 @@ void CubismShader_OpenGLES2::SetShaderSet(CubismShaderSet& shaderSets, const Mas
+     }
+ }
+ 
++void CubismShader_OpenGLES2::SetPendingShader(const csmInt32 index, const csmChar* vertShaderPath, const csmChar* fragShaderPath, const csmInt32 colorBlendMode, const csmInt32 alphaBlendMode, const MaskType maskType)
++{
++    // kagex: GenerateShaders compiled all 79 blend-mode combinations' six sets up front, 474
++    // programs: seconds under ANGLE, over 30 on a Mac, though a model draws with a few
++    CubismShaderSet* shaderSet = _shaderSets[index];
++    shaderSet->PendingVertShaderPath = vertShaderPath;
++    shaderSet->PendingFragShaderPath = fragShaderPath;
++    shaderSet->PendingColorBlendMode = colorBlendMode;
++    shaderSet->PendingAlphaBlendMode = alphaBlendMode;
++    shaderSet->PendingMaskType = maskType;
++}
++
++CubismShader_OpenGLES2::CubismShaderSet* CubismShader_OpenGLES2::GetShaderSet(const csmInt32 index)
++{
++    CubismShaderSet* shaderSet = _shaderSets[index];
++    if (shaderSet->PendingFragShaderPath != NULL)
++    {
++        // compiled once, even when it fails (it draws nothing then, as before)
++        const csmChar* vert = shaderSet->PendingVertShaderPath;
++        const csmChar* frag = shaderSet->PendingFragShaderPath;
++        shaderSet->PendingVertShaderPath = NULL;
++        shaderSet->PendingFragShaderPath = NULL;
++        shaderSet->ShaderProgram = LoadShaderProgramFromFile(vert, frag, shaderSet->PendingColorBlendMode, shaderSet->PendingAlphaBlendMode);
++        SetShaderSet(*shaderSet, static_cast<MaskType>(shaderSet->PendingMaskType), true);
++    }
++    return shaderSet;
++}
++
+ csmInt32 CubismShader_OpenGLES2::GetShaderNamesBegin(const csmBlendMode blendMode)
+ {
+ #define CSM_GET_SHADER_NAME(COLOR, ALPHA) ShaderNames_ ## COLOR ## ALPHA
+@@ -473,12 +502,12 @@ void CubismShader_OpenGLES2::GenerateShaders()
+                 const csmInt32 start = (i == 0 ? 1 : 0);
+                 for (csmInt32 j = start; j < AlphaBlendMode_Count; ++j)
+                 {
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcBlend.vert", "FragShaderSrcBlendTegra.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskBlendTegra.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedBlendTegra.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcBlend.vert", "FragShaderSrcPremultipliedAlphaBlendTegra.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskPremultipliedAlphaBlendTegra.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedPremultipliedAlphaBlendTegra.frag", i, j);
++                    SetPendingShader(offset++, "VertShaderSrcBlend.vert", "FragShaderSrcBlendTegra.frag", i, j, MaskType_None);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskBlendTegra.frag", i, j, MaskType_Masked);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedBlendTegra.frag", i, j, MaskType_MaskedInverted);
++                    SetPendingShader(offset++, "VertShaderSrcBlend.vert", "FragShaderSrcPremultipliedAlphaBlendTegra.frag", i, j, MaskType_PremultipliedAlpha);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskPremultipliedAlphaBlendTegra.frag", i, j, MaskType_MaskedPremultipliedAlpha);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedPremultipliedAlphaBlendTegra.frag", i, j, MaskType_MaskedInvertedPremultipliedAlpha);
+                 }
+             }
+         }
+@@ -504,12 +533,12 @@ void CubismShader_OpenGLES2::GenerateShaders()
+                 const csmInt32 start = (i == 0 ? 1 : 0);
+                 for (csmInt32 j = start; j < AlphaBlendMode_Count; ++j)
+                 {
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcBlend.vert", "FragShaderSrcBlend.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskBlend.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedBlend.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcBlend.vert", "FragShaderSrcPremultipliedAlphaBlend.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskPremultipliedAlphaBlend.frag", i, j);
+-                    _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedPremultipliedAlphaBlend.frag", i, j);
++                    SetPendingShader(offset++, "VertShaderSrcBlend.vert", "FragShaderSrcBlend.frag", i, j, MaskType_None);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskBlend.frag", i, j, MaskType_Masked);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedBlend.frag", i, j, MaskType_MaskedInverted);
++                    SetPendingShader(offset++, "VertShaderSrcBlend.vert", "FragShaderSrcPremultipliedAlphaBlend.frag", i, j, MaskType_PremultipliedAlpha);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskPremultipliedAlphaBlend.frag", i, j, MaskType_MaskedPremultipliedAlpha);
++                    SetPendingShader(offset++, "VertShaderSrcMaskedBlend.vert", "FragShaderSrcMaskInvertedPremultipliedAlphaBlend.frag", i, j, MaskType_MaskedInvertedPremultipliedAlpha);
+                 }
+             }
+         }
+@@ -569,12 +598,12 @@ void CubismShader_OpenGLES2::GenerateShaders()
+             const csmInt32 start = (i == 0 ? 1 : 0);
+             for (csmInt32 j = start; j < AlphaBlendMode_Count; ++j)
+             {
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcBlend.vert", "FrameworkShaders/FragShaderSrcBlend.frag", i, j);
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskBlend.frag", i, j);
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskInvertedBlend.frag", i, j);
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcBlend.vert", "FrameworkShaders/FragShaderSrcPremultipliedAlphaBlend.frag", i, j);
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskPremultipliedAlphaBlend.frag", i, j);
+-                _shaderSets[offset++]->ShaderProgram = LoadShaderProgramFromFile("FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskInvertedPremultipliedAlphaBlend.frag", i, j);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcBlend.vert", "FrameworkShaders/FragShaderSrcBlend.frag", i, j, MaskType_None);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskBlend.frag", i, j, MaskType_Masked);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskInvertedBlend.frag", i, j, MaskType_MaskedInverted);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcBlend.vert", "FrameworkShaders/FragShaderSrcPremultipliedAlphaBlend.frag", i, j, MaskType_PremultipliedAlpha);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskPremultipliedAlphaBlend.frag", i, j, MaskType_MaskedPremultipliedAlpha);
++                SetPendingShader(offset++, "FrameworkShaders/VertShaderSrcMaskedBlend.vert", "FrameworkShaders/FragShaderSrcMaskInvertedPremultipliedAlphaBlend.frag", i, j, MaskType_MaskedInvertedPremultipliedAlpha);
+             }
+         }
+     }
+@@ -633,30 +662,8 @@ void CubismShader_OpenGLES2::GenerateShaders()
+     // 乗算（クリッピング・反転、PremultipliedAlpha）
+     SetShaderSet(*_shaderSets[ShaderNames_MultMaskedInvertedPremultipliedAlpha], MaskType_MaskedInvertedPremultipliedAlpha);
+ 
+-    // ブレンドモードの組み合わせ分作成
+-    {
+-        csmUint32 offset = ShaderNames_NormalAtop;
+-        for (csmInt32 i = 0; i < ColorBlendMode_Count; ++i)
+-        {
+-            // Normal Overはシェーダを作る必要がないため 1 から始める
+-            const csmInt32 start = (i == 0 ? 1 : 0);
+-            for (csmInt32 j = start; j < AlphaBlendMode_Count; ++j)
+-            {
+-                //
+-                SetShaderSet(*_shaderSets[offset++], MaskType_None, true);
+-                // クリッピング
+-                SetShaderSet(*_shaderSets[offset++], MaskType_Masked, true);
+-                // クリッピング・反転
+-                SetShaderSet(*_shaderSets[offset++], MaskType_MaskedInverted, true);
+-                // PremultipliedAlpha
+-                SetShaderSet(*_shaderSets[offset++], MaskType_PremultipliedAlpha, true);
+-                // クリッピング、PremultipliedAlpha
+-                SetShaderSet(*_shaderSets[offset++], MaskType_MaskedPremultipliedAlpha, true);
+-                // クリッピング・反転、PremultipliedAlpha
+-                SetShaderSet(*_shaderSets[offset++], MaskType_MaskedInvertedPremultipliedAlpha, true);
+-            }
+-        }
+-    }
++    // ブレンドモードの組み合わせ分: kagex: each set's locations are read when it's compiled, on
++    // its first use (GetShaderSet)
+ 
+     // モザイク用 (カスタム拡張): ソース埋め込みシェーダから生成
+     _shaderSets[ShaderNames_Mosaic]->ShaderProgram = LoadShaderProgram(VertShaderSrcMosaic, FragShaderSrcMosaic);
+@@ -699,7 +706,7 @@ void CubismShader_OpenGLES2::SetupShaderProgramForDrawable(CubismRenderer_OpenGL
+ 
+     // シェーダーセット
+     const csmInt32 shaderNameBegin = GetShaderNamesBegin(model.GetDrawableBlendModeType(index));
+-    CubismShaderSet* shaderSet = _shaderSets[shaderNameBegin + offset];
++    CubismShaderSet* shaderSet = GetShaderSet(shaderNameBegin + offset);
+     csmBool isBlendMode = false;
+     GLuint blendTexture = 0;
+ 
+@@ -939,7 +946,7 @@ void CubismShader_OpenGLES2::SetupShaderProgramForOffscreen(CubismRenderer_OpenG
+ 
+     // シェーダーセット
+     const csmInt32 shaderNameBegin = GetShaderNamesBegin(model.GetOffscreenBlendModeType(offscreenIndex));
+-    CubismShaderSet* shaderSet = _shaderSets[shaderNameBegin + offset];
++    CubismShaderSet* shaderSet = GetShaderSet(shaderNameBegin + offset);
+     csmBool isBlendMode = false;
+     GLuint blendTexture = 0;
+ 
+diff --git a/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp b/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
+index 0ff17df..797f82f 100644
+--- a/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
++++ b/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
+@@ -197,6 +197,13 @@ private:
+         GLint UniformScreenColorLocation;   ///< シェーダプログラムに渡す変数のアドレス(ScreenColor)
+         GLint UnifromChannelFlagLocation;   ///< シェーダプログラムに渡す変数のアドレス(ChannelFlag)
+         GLint UniformMosaicParamLocation;   ///< シェーダプログラムに渡す変数のアドレス(MosaicParam)
++        // kagex: a blend-mode set is compiled the first time it's drawn with (GetShaderSet): until
++        // then its shaders' files and modes wait here (PendingFragShaderPath not NULL)
++        const csmChar* PendingVertShaderPath;
++        const csmChar* PendingFragShaderPath;
++        csmInt32 PendingColorBlendMode;
++        csmInt32 PendingAlphaBlendMode;
++        csmInt32 PendingMaskType;
+     };
+     /**
+      * @brief   CubismShaderSetを設定する
+@@ -216,6 +223,16 @@ private:
+      */
+     static csmInt32 GetShaderNamesBegin(const csmBlendMode blendMode);
+ 
++    /**
++     * @brief   kagex: notes a blend-mode set's shaders, compiled on its first use
++     */
++    void SetPendingShader(csmInt32 index, const csmChar* vertShaderPath, const csmChar* fragShaderPath, csmInt32 colorBlendMode, csmInt32 alphaBlendMode, MaskType maskType);
++
++    /**
++     * @brief   kagex: a shader set, compiling it first when it hasn't been
++     */
++    CubismShaderSet* GetShaderSet(csmInt32 index);
++
+     /**
+      * @brief   privateなコンストラクタ
+      */

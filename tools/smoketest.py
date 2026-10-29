@@ -10,12 +10,18 @@ and what a screen reader is given. On the desktop it also compiles the scripts w
 script exception, or when the engine opens a native modal dialog (an error message box or a
 Yes/No that should have been drawn in the game window).
 
+The Animated Character demo's Live2D character needs the krkrlive2d plugin, built with Live2D's
+Cubism SDK, which kagex's own builds don't have: without it the test puts a stand-in for the
+plugin in its place (tools/live2d-standin.tjs), which draws through OpenGL ES as the plugin
+does, so the framework's part is tested all the same; --live2d required wants the real one.
+
 It then runs template/ as a game of its own, the way a new game starts out, and checks that
 it starts and that its prompts are drawn in the game window too.
 
 usage: python3 tools/smoketest.py [--engine ./krkrz] [--only sample|template] [--keep] [--verbose]
                                  [--effekseer required|optional] [--vector required|optional]
                                  [--zip required|optional] [--clip required|optional]
+                                 [--live2d required|optional]
 
 Run it from the repository root with the engine next to data/, the same layout the game runs
 in (CLAUDE.md, "Running"). Saves go to temporary folders, so it doesn't touch savedata/.
@@ -887,6 +893,246 @@ def animated_framework(eng):
                    ' && scnFindCompiled("anim.ks") !== void) ? 1 : 0;') == 1
 
 
+LIVE2D_STANDIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "live2d-standin.tjs")
+
+
+def live2d_steps(eng):
+    """The Animated Character demo's Live2D character, Hiyori (KAGEnvCharacterLive2D.tjs). With the
+    krkrlive2d plugin and her model (tools/assets/make_hiyori.py) it checks her picture as the
+    plugin draws it; without them (every build kagex ships: the plugin needs Live2D's Cubism SDK)
+    the demo has said so as the demos played, and the stand-in plugin (live2d-standin.tjs) takes
+    the plugin's place, doing what the plugin's driver does with a model's parameters, so the
+    framework's part is checked all the same: her picture where the World puts her, upright, the
+    model's copy in step with her player, the pose's motions, a motion played once, a face fading
+    in and holding over her motions', blinking, lip-sync to a voice with a lip track, a save and
+    a load, and letting the model go when she leaves"""
+    if eng.tjs('return typeof global.KAGEnvCharacterLive2D != "undefined" && typeof global.KAGLive2DOf != "undefined"'
+               ' && world_object.env.characterInits["hiyori"] !== void ? 1 : 0;') != 1:
+        if eng.opts.live2d == "required":
+            raise SmokeError("--live2d required, but this build's framework or sample predates Live2D characters")
+        print("     (skipped: this build's framework or sample predates Live2D characters)", flush=True)
+        return
+    why = str(eng.tjs('var s = KAGLive2DOf(kag); return !s.available ? s.reason : s.findModel("hiyori") == ""'
+                      ' ? "no fgimage/hiyori.l2d (tools/assets/make_hiyori.py model)" : "";'))
+    standin = why != ""
+    if standin:
+        print("     Live2D: unavailable (%s): the stand-in plugin plays her" % why, flush=True)
+        if eng.opts.live2d == "required":
+            raise SmokeError("Live2D characters can't be drawn here: " + why)
+        with open(LIVE2D_STANDIN, encoding="utf-8") as f:
+            src = f.read()
+        # the window's Live2D device, made without the plugin, goes; the stand-in's classes
+        # take the plugin's place; and a file stands in for her model where it isn't there
+        r = eng.tjs('var s = kag.live2dSystem; kag.removePlugin(s); invalidate s; kag.live2dSystem = void;'
+                    ' Scripts.exec(%s);'
+                    ' if (KAGLive2DOf(kag).findModel("hiyori") == "") {'
+                    '  if (typeof global.Zip == "undefined" || typeof global.KAGMountPatchZip == "undefined") return "no minizip";'
+                    '  ["stand-in"].save(System.dataPath + "zz_hiyori.txt");'
+                    '  var z = new Zip(); z.open(System.dataPath + "zz_live2d.zip", 1);'
+                    '  z.add(System.dataPath + "zz_hiyori.txt", "fgimage/hiyori.l2d"); z.close(); invalidate z;'
+                    '  if (!KAGMountPatchZip(System.dataPath + "zz_live2d.zip")) return "the zip didn\'t mount"; }'
+                    ' var s2 = KAGLive2DOf(kag); return s2.available ? (KAGLive2DCanDraw("hiyori") ? "" : "no model") : s2.reason;'
+                    % tjs_string(src))
+        if r == "no minizip":
+            print("     (skipped: no minizip plugin to stand in a model file with)", flush=True)
+            return
+        if r:
+            if "OpenGL" in str(r) or "GLCompositor" in str(r):
+                print("     (skipped: the stand-in draws through OpenGL ES, which isn't here: %s)" % r, flush=True)
+                return
+            raise SmokeError("the stand-in plugin can't draw Hiyori: %s" % r)
+    else:
+        print("     Live2D: the krkrlive2d plugin and Hiyori's model", flush=True)
+        # an error the plugin reports reaches the script: the engine's exception unwinds through
+        # the plugin's frames, which aborts the game where the two have unwinders of their own
+        # (UPSTREAM.md 2)
+        r = str(eng.tjs('try { new Live2DDevice(1); return "no error"; } catch (e) { return "caught: " + e.message; }'))
+        print("     an error through the plugin: %s" % r[:60], flush=True)
+        if not r.startswith("caught"):
+            raise SmokeError("Live2DDevice given a number didn't report an error: %s" % r)
+        # how long its first use took, as the Animated Character demo played (the device, its
+        # shaders, Hiyori's model and the first picture)
+        print("     first use (ms): %s" % eng.tjs('var t = KAGLive2DOf(kag).timings, a = [], k = []; k.assign(t);'
+                                                 ' for (var i = 0; i < k.count; i += 2) a.add(k[i] + " " + k[i + 1]);'
+                                                 ' return a.join(", ");'), flush=True)
+    hiyori = 'var c = world_object.env.characters["hiyori"]; '
+    eng.tjs('global.__smokeL2DBlink = eyeFlipFreq; eyeFlipFreq = 1.0; kag.process("anim.ks", "*start"); return 1;')
+    eng.wait("Pip", 'world_object.env.characters["pip"] !== void && kag.inStable', timeout=20)
+    eng.tjs('kag.process("anim.ks", "*live2d"); return 1;')
+    eng.wait("Hiyori", 'world_object.env.characters["hiyori"] !== void && world_object.env.characters["hiyori"].player !== void'
+             ' && kag.inStable', timeout=30)
+    time.sleep(1.5)
+    # drawn, and on the screen: the World puts her canvas's centre at posright (480 right of the
+    # screen's centre), 300 below it
+    drawn = str(eng.tjs(hiyori + 'var t = c.targetLayer, l = c.renderLayer, n = 0;'
+                        ' for (var y = 0; y < l.imageHeight; y += 16) for (var x = 0; x < l.imageWidth; x += 16)'
+                        ' if (l.getMaskPixel(x, y) > 0) n++;'
+                        ' var left = (int)(t._affineleft - t.afx), top = (int)(t._affinetop - t.afy);'
+                        ' return [n, t.visible ? 1 : 0, left, top, l.imageWidth, l.imageHeight, c.lastDraw !== void ? 1 : 0].join(",");'))
+    n, visible, left, top, width, height, ticking = [int(v) for v in drawn.split(",")]
+    print("     Hiyori: %d of her picture's samples drawn, %dx%d at (%d, %d)" % (n, width, height, left, top), flush=True)
+    if n < 100 or not visible:
+        raise SmokeError("Hiyori isn't drawn: %s" % drawn)
+    if abs(left + width / 2 - 1440) > 2 or abs(top + height / 2 - 840) > 2:
+        raise SmokeError("Hiyori's picture is centred at (%d, %d), not at posright's (1440, 840)"
+                         % (left + width / 2, top + height / 2))
+    # it goes on drawing: the model moves by itself
+    eng.tjs(hiyori + 'global.__smokeL2DDraw = c.lastDraw; return 1;')
+    time.sleep(1.0)
+    if eng.tjs(hiyori + 'return c.lastDraw != global.__smokeL2DDraw ? 1 : 0;') != 1:
+        raise SmokeError("Hiyori was drawn once, and not again as her model moved")
+    # upright: a player of her model, with no motion, drawn with its eyes open and shut, differs
+    # where her eyes are, in the top part of the picture (her head's)
+    r = str(eng.tjs('var s = KAGLive2DOf(kag), file = s.findModel("hiyori"), p = s.newPlayer(file);'
+                    ' var w = 300, h = 420, a = new Layer(kag, kag.fore.base), b = new Layer(kag, kag.fore.base);'
+                    ' a.setImageSize(w, h); b.setImageSize(w, h);'
+                    ' p.progress(33); s.render(a, p);'
+                    ' p.setParameterValue("ParamEyeLOpen", 0); p.setParameterValue("ParamEyeROpen", 0);'
+                    ' p.progress(33); s.render(b, p); s.releasePlayer(p);'
+                    ' var n = 0, sy = 0;'
+                    ' for (var y = 0; y < h; y += 2) for (var x = 0; x < w; x += 2) {'
+                    '  var pa = a.getMainPixel(x, y), pb = b.getMainPixel(x, y), d = 0;'
+                    '  for (var k = 0; k < 32; k += 8) d += Math.abs(((pa >> k) & 255) - ((pb >> k) & 255));'
+                    '  if (d > 60) { n++; sy += y; } }'
+                    ' invalidate a; invalidate b; return [n, n > 0 ? sy / n / h : -1].join(",");')).split(",")
+    changed, eyes_at = int(r[0]), float(r[1])
+    print("     upright: shutting her eyes changes %d samples, %.0f%% of the way down" % (changed, eyes_at * 100), flush=True)
+    if changed < 10 or not 0.0 < eyes_at < 0.4:
+        raise SmokeError("Hiyori's eyes aren't near the top of her picture (upside down?): %s" % r)
+    # her copy without OpenGL (the shadow) plays the motions in step with her player
+    r = str(eng.tjs(hiyori + 'var d = 0; for (var i = 0; i < c.faceParams.count; i++) {'
+                    ' var p = c.faceParams[i], x = Math.abs(c.shadow.getParameterValue(p) - c.player.getParameterValue(p));'
+                    ' d = x if x > d; } return [c.faceParams.count, d].join(",");')).split(",")
+    print("     the World's parameters: %s; her copy is off by at most %s" % (r[0], r[1]), flush=True)
+    if int(r[0]) < 4 or float(r[1]) > 0.0001:
+        raise SmokeError("Hiyori's copy doesn't play her motions in step with her: %s" % r)
+    # blinking (eyeFlipFreq 1: a blink every frame or so), the eyes open the rest of the time, and
+    # a face that fades in
+    eng.tjs('global.__smokeL2D = %[ eyes : 9.0, eyesOpen : 0.0, open : 0.0, forms : %[], vowels : %[], voice : %[],'
+            '  apart : 0.0, drawnOff : 0.0, samples : 0,'
+            '  from : typeof global.Live2DStandIn != "undefined" ? Live2DStandIn.eyes.count : 0 ];'
+            ' global.__smokeL2DTimer = new Timer(function() {'
+            '  var c = world_object.env.characters["hiyori"]; if (c === void || c.player === void) return; var s = global.__smokeL2D;'
+            '  var e = c.faceTargets.ParamEyeLOpen; if (e !== void) { s.eyes = e if e < s.eyes; s.eyesOpen = e if e > s.eyesOpen; }'
+            '  s.samples++;'
+            '  for (var i = 0; i < c.faceParams.count; i++) { var p = c.faceParams[i];'
+            '   var d = Math.abs(c.shadow.getParameterValue(p) - c.player.getParameterValue(p)); s.apart = d if d > s.apart;'
+            '   if (typeof global.Live2DStandIn != "undefined" && c.faceTargets[p] !== void) {'
+            '    d = Math.abs(Live2DStandIn.last[p] - c.faceTargets[p]); s.drawnOff = d if d > s.drawnOff; } }'
+            '  var b = c.soundBuffer; if (b !== void && b.status == "play") {'
+            '   s.open = c.mouthOpen if c.mouthOpen > s.open; s.forms["%.1f".sprintf(c.faceTargets.ParamMouthForm)] = 1;'
+            '   s.voice[b.position] = 1; if (c.lipVowel !== void) s.vowels[c.lipVowel] = 1; }'
+            ' }, ""); __smokeL2DTimer.interval = 20; __smokeL2DTimer.enabled = true;'
+            ' var c = world_object.env.characters["hiyori"]; c.setFace("smile", %[]);'
+            ' global.__smokeL2DMid = c.currentFaceValues(c.faceStart + live2dFaceFade / 2).ParamEyeLSmile; return 1;')
+    time.sleep(1.5)
+    r = str(eng.tjs(hiyori + 'var s = global.__smokeL2D;'
+                    ' return [s.eyes, s.eyesOpen, global.__smokeL2DMid, c.faceTargets.ParamEyeLSmile, c.face].join(",");')).split(",")
+    print("     blinking: the eyes from %s down to %s; the smile face: ParamEyeLSmile %s halfway through its fade, then %s"
+          % (r[1], r[0], r[2], r[3]), flush=True)
+    if float(r[0]) > 0.2:
+        raise SmokeError("Hiyori's eyes didn't close to blink (down to %s)" % r[0])
+    if float(r[1]) < 0.95:
+        raise SmokeError("the World didn't open Hiyori's eyes between blinks (at most %s)" % r[1])
+    if not 0.3 < float(r[2]) < 0.7 or abs(float(r[3]) - 1.0) > 0.01 or r[4] != "smile":
+        raise SmokeError("Hiyori's smile face didn't fade in: %s" % r)
+    # lip-sync to a voice with a lip track (Pip's synthesized line, which has pip000009.lip): her
+    # mouth opens, shaped by its vowels, and closes to the face's when it ends
+    eng.tjs(hiyori + 'c.playVoice("pip000009"); return 1;')
+    end = time.time() + 14
+    while time.time() < end:
+        time.sleep(0.5)
+        if eng.tjs(hiyori + 'var b = c.soundBuffer; return b !== void && b.status != "play" ? 1 : 0;') == 1:
+            break
+    time.sleep(0.5)
+    r = str(eng.tjs(hiyori + 'var s = global.__smokeL2D, f = [], v = [], p = []; f.assign(s.forms); v.assign(s.vowels); p.assign(s.voice);'
+                    ' var fs = [], vs = []; for (var i = 0; i < f.count; i += 2) fs.add(f[i]);'
+                    ' for (var i = 0; i < v.count; i += 2) vs.add(v[i]);'
+                    ' return [s.open, fs.join(" "), vs.join(" "), p.count \\ 2, c.faceTargets.ParamMouthOpenY,'
+                    ' c.faceValuesOf(c.face).ParamMouthOpenY].join(",");')).split(",")
+    opened, forms, vowels, positions = float(r[0]), r[1].split(), r[2].split(), int(r[3])
+    after, face_mouth = float(r[4]), float(r[5]) if r[5] not in ("", "void") else 0.0
+    print("     lip-sync: the mouth open up to %.2f, vowels %s, mouth forms %s; after it %.2f (the face's %.2f)"
+          % (opened, " ".join(vowels) or "none", " ".join(forms), after, face_mouth), flush=True)
+    if positions <= 1:
+        print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
+    elif opened < 0.3 or len(vowels) < 2 or len(set(forms)) < 2:
+        raise SmokeError("Hiyori's mouth didn't follow pip000009.lip (open %.2f, vowels %s, forms %s)" % (opened, vowels, forms))
+    if abs(after - face_mouth) > 0.01:
+        raise SmokeError("Hiyori's mouth is at %.2f after the voice, not the face's %.2f" % (after, face_mouth))
+    r = str(eng.tjs('var s = global.__smokeL2D; return [s.samples, s.apart, s.drawnOff].join(",");')).split(",")
+    print("     over %s samples: her copy off by at most %s%s" % (r[0], r[1], ", the drawn values off the World's by at most %s" % r[2] if standin else ""), flush=True)
+    if int(r[0]) < 50 or float(r[1]) > 0.0001:
+        raise SmokeError("Hiyori's copy didn't play her motions in step with her: %s" % r)
+    if standin and float(r[2]) > 0.001:
+        raise SmokeError("the stand-in didn't draw the values the World set (off by %s): the motions' showed through" % r[2])
+    if standin:
+        # what the stand-in drew while the World blinked and spoke: the World's eyes and mouth,
+        # not its motions' (eyes half shut, the mouth open)
+        r = str(eng.tjs('var s = Live2DStandIn, n = s.eyes.count, e = 9, eo = 0;'
+                        ' for (var i = global.__smokeL2D.from; i < n; i++) { e = s.eyes[i] if s.eyes[i] < e; eo = s.eyes[i] if s.eyes[i] > eo; }'
+                        ' return [e, eo, s.mouths[n - 1]].join(",");')).split(",")
+        print("     the stand-in drew the eyes from %s down to %s, and the mouth last at %s" % (r[1], r[0], r[2]), flush=True)
+        if float(r[0]) > 0.2 or float(r[1]) < 0.95 or abs(float(r[2]) - face_mouth) > 0.01:
+            raise SmokeError("the stand-in didn't draw the World's eyes and mouth over its motions': %s" % r)
+    # a motion played once (tap: TapBody), then the pose's again
+    eng.tjs(hiyori + 'c.playOnce("tap", %[]); return 1;')
+    eng.wait("the tap motion", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)
+    eng.wait("the pose's motions again", '!world_object.env.characters["hiyori"].oneShotPlaying', timeout=20)
+    eng.tjs('__smokeL2DTimer.enabled = false; invalidate __smokeL2DTimer; eyeFlipFreq = global.__smokeL2DBlink; return 1;')
+    if standin:
+        r = str(eng.tjs('var s = Live2DStandIn; return [s.started.join(";"), s.players, s.drawn].join(",");')).split(",")
+        started = r[0].split(";")
+        print("     the stand-in: %s pictures drawn; motions started: %s" % (r[2], " ".join(started[:8])), flush=True)
+        if not [m for m in started if m.startswith("main/Hiyori_m") and m != "main/Hiyori_m04"]:
+            raise SmokeError("the pose's motions (the Idle group) didn't play: %s" % started)
+        if "main/Hiyori_m04" not in started:
+            raise SmokeError("tap didn't play the TapBody motion: %s" % started)
+    # with effects off (the sample's Config) the update handler stops and nothing moves her on:
+    # a face and the eyes' commands still show, drawn as their tag runs, the face at once
+    eng.tjs('global.__smokeNoeffect = [kag.noeffect, kag.noeffectEnabled]; kag.noeffect = true; kag.noeffectEnabled = true; return 1;')
+    time.sleep(0.3)
+    eng.tjs(hiyori + 'global.__smokeL2DEyes = c.eyestate; global.__smokeL2DDraw = c.lastDraw;'
+            ' world_object.env.unknown("hiyori", %["surprised" => "true", "eyeclose" => "true"]); return 1;')
+    eng.wait("Hiyori drawn with effects off", 'world_object.env.characters["hiyori"].lastDraw != global.__smokeL2DDraw', timeout=5)
+    # (the brows: only the face sets them, within their range; the eyes and mouth have more to them)
+    r = str(eng.tjs(hiyori + 'var f = c.faceValuesOf("surprised");'
+                    ' var off = Math.max(Math.abs(c.faceTargets.ParamBrowLY - f.ParamBrowLY), Math.abs(c.faceTargets.ParamBrowRY - f.ParamBrowRY));'
+                    ' return [c.face, off, c.faceTargets.ParamEyeLOpen].join(",");')).split(",")
+    eng.tjs(hiyori + 'kag.noeffect = global.__smokeNoeffect[0]; kag.noeffectEnabled = global.__smokeNoeffect[1];'
+            ' c.setEyeState(global.__smokeL2DEyes, %[]); world_object.env.unknown("hiyori", %["smile" => "true"]);'
+            ' c.startUpdateHandler(); return 1;')
+    print("     with effects off: face %s, off the face's values by at most %s, the eyes' target %s"
+          % (r[0], r[1], r[2]), flush=True)
+    if r[0] != "surprised" or float(r[1]) > 0.01 or float(r[2]) > 0.05:
+        raise SmokeError("with effects off, Hiyori's face and eyes didn't change as their tag ran: %s" % r)
+    # a save and a load with her on the screen: she's drawn again, her model made again (smiling,
+    # as she was, or with the face the script gives her there: a compiled scene keeps the World as
+    # it was at its save points)
+    eng.tjs("kag.saveBookMark(3); return 1;")
+    eng.wait("data3 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(3))", timeout=10)
+    eng.tjs('kag.goToStart(); return 1;')
+    eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+    if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
+        raise SmokeError("Hiyori's model wasn't let go when the game went back to the title: %s"
+                         % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
+    eng.tjs("loadFunction(3); return 1;")
+    eng.wait("Hiyori after the load", 'world_object.env.characters["hiyori"] !== void'
+             ' && world_object.env.characters["hiyori"].player !== void && kag.inStable', timeout=30)
+    r = str(eng.tjs(hiyori + 'return [c.pose, c.face, c.isShow() ? 1 : 0, c.targetLayer.visible ? 1 : 0].join(",");'))
+    print("     after a load: pose, face, shown: %s" % r, flush=True)
+    pose_, face_, shown_, visible_ = r.split(",")
+    if pose_ != "standard" or face_ not in ("normal", "smile") or shown_ != "1" or visible_ != "1":
+        raise SmokeError("after a load Hiyori is %s, not standard and shown" % r)
+    # she leaves at the demo's end and lets her model go
+    eng.clicker(True, until="s0001.ks")
+    eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
+    eng.clicker(False)
+    if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
+        raise SmokeError("Hiyori's model wasn't let go when she left: %s"
+                         % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
+
+
 def compiled_framework(eng):
     """Whether the framework compiles scenarios (SceneParser.tjs; pages.yml may test an older
     release's site)"""
@@ -1569,7 +1815,7 @@ def sample_steps(eng):
             if len(seen) < 2 or not set(seen) <= said:
                 raise SmokeError("Pip's mouth didn't follow pip000009.lip's vowels (%s; seen: %s)" % (" ".join(sorted(said)), " ".join(sorted(seen)) or "none"))
         # a voice with no lip track (Ai's, said by Pip): its level read where the clock says it
-        # is playing (KAGEnvCharacterEx.readVoice), the mouth opening and closing with it
+        # is playing (KAGEnvCharacterEyeLip.readVoice), the mouth opening and closing with it
         if positions > 1 and eng.tjs('return typeof world_object.env.characters["pip"].readVoice != "undefined" ? 1 : 0;') == 1:
             eng.tjs('global.__smokeLips2 = []; var c = world_object.env.characters["pip"];'
                     ' global.__smokeLipTimer2 = new Timer(function() {'
@@ -1592,6 +1838,10 @@ def sample_steps(eng):
         eng.clicker(True, until="s0001.ks")
         eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
         eng.clicker(False)
+
+    @step("a Live2D character draws, moves, blinks and lip-syncs (--live2d required), or does with the stand-in plugin")
+    def _():
+        live2d_steps(eng)
 
     @step("a character's layers read from a PSD match its layer structure, vowel mouths included")
     def _():
@@ -2048,7 +2298,7 @@ def sample_steps(eng):
             print("     (skipped: no compiled scenes, Pip or Search here)", flush=True)
             return
         # a character put back from a saved state (a seek's end, a load, going back) has to start
-        # its blinking and lip-sync again (KAGEnvCharacterEx.onRestore)
+        # its blinking and lip-sync again (KAGEnvCharacterEx.onRestore, restoreEyeLip)
         eng.tjs('tf.searchText = "blink"; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
         eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
                  timeout=20)
@@ -2371,6 +2621,13 @@ def scncompile_check(opts, data):
 
 
 def main():
+    # A Windows console's code page (cp1252) has no Japanese: the line-breaking steps' text
+    # stopped the whole run there with a UnicodeEncodeError. Write what it can't show escaped
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     default_exe = "krkrz.exe" if os.name == "nt" else "./krkrz"
     ap.add_argument("--engine", default=default_exe)
@@ -2393,6 +2650,10 @@ def main():
     ap.add_argument("--effekseer", choices=["required", "optional"], default="optional",
                     help="whether the build must draw Effekseer effects (the krkreffekseer plugin "
                     "and OpenGL ES): required fails when it can't; optional reports it")
+    ap.add_argument("--live2d", choices=["required", "optional"], default="optional",
+                    help="whether the build must draw Live2D characters (the krkrlive2d plugin, OpenGL ES "
+                    "and Hiyori's model, tools/assets/make_hiyori.py): required fails when it can't; "
+                    "optional tests the framework with a stand-in for the plugin (tools/live2d-standin.tjs)")
     ap.add_argument("--vector", choices=["required", "optional"], default="optional",
                     help="whether the build must draw SVG images (the layerExVector plugin): "
                     "required fails when it can't; optional reports it")

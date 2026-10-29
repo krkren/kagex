@@ -2,7 +2,7 @@
 
 kagex never changes krkrz_dev, its submodules or its plugins (`CLAUDE.md`). This file lists the problems in them, and in Wamsoft's platform kits, that kagex can't work around: each one costs a feature or a platform until it's fixed upstream. They're sorted by importance, most important first. Bugs the scripts or the CI work around aren't listed here; `CLAUDE.md` describes them next to their workarounds.
 
-These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-core `7d91ba5`), the plugins it pins (krkr_richtext `52bbb5c`, krkreffekseer `f8197fa` with Effekseer `b6035eb`, extNagano `4b403e2`), and the kits `platforms.yml` pins (krkrz_android `eff2b17`, krkrz_ios `003abad`). When one is fixed upstream, use the fix and delete the entry.
+These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-core `7d91ba5`), the plugins it pins (krkr_richtext `52bbb5c`, krkreffekseer `f8197fa` with Effekseer `b6035eb`, extNagano `4b403e2`, krkrlive2d `dbdb29f` and its newest commit `8edeb8e`, with the Live2D driver at `58c4c66` and tp_stub `35ef31a` and ncbind `256502b` for building it on its own), and the kits `platforms.yml` pins (krkrz_android `eff2b17`, krkrz_ios `003abad`). When one is fixed upstream, use the fix and delete the entry.
 
 ## 1. The REPL handles TJS values on its own thread
 
@@ -70,13 +70,25 @@ These were found against engine 2.6.5 (krkrz_dev `21d20e9` of 2026-10-20, krkrz-
 - **What it costs:** krkreffekseer can't draw with the GPU draw device; every effect ends at once there and the console says why.
 - **Fix:** expose the GPU device's GL function lookup to `GLCompositor`, or document that it needs the GL draw device.
 
-## 12. rgbfade can't change a whole scene
+## 12. Live2D: the driver builds only for Windows, Android and iOS, and krkrz_dev doesn't build krkrlive2d
+
+- **Where:** krkrlive2d's CMake fetches its driver, wtnbgo/live2d, at `main` (`58c4c66` of 2026-10-26), whose `CMakeLists.txt` defines the `live2ddriver` target only under `WIN32`, `ANDROID` and `IOS` (its own notes say the Android and iOS builds are untested since its move to Cubism 5 R5). krkrz_dev lists krkrlive2d among its plugins with the line commented out (`CMakeLists.txt`: a driver at another commit wanted `find_package(minizip)`, which its vcpkg manifest lacks), so none of its builds has it. And Live2D's Cubism SDK for Native has no WebAssembly Core (its Core folder has Windows, Linux, macOS, Android and iOS libraries), so a web build would need Live2D's Cubism Core for Web bridged into the engine.
+- **What it costs:** Live2D characters (`KAGEnvCharacterLive2D.tjs`) need the plugin, which a game builds with its own Cubism SDK (Live2D's licence keeps the Core out of kagex's engines in any case). kagex builds it with `tools/live2d/build.py`, which on Linux and macOS builds the driver through its own CMake (`tools/live2d/driver`: GLAD's GLES 2 loader and the Core's static library, as on Android); the web has no plugin. The smoke test checks the framework with a stand-in for the plugin (`tools/live2d-standin.tjs`) where there's no SDK.
+- **Fix:** build the driver for Linux and macOS as for Android (GLAD's GLES 2 loader, the Core's `lib/linux/x86_64` and `lib/macos/arm64` static libraries), pin the driver's commit in krkrlive2d's CMake, and build krkrlive2d in krkrz_dev when `CUBISM_SDK_CORE` is set.
+
+## 13. krkrlive2d plays a motion given by number from the start of its group, and a model's Idle group as differences
+
+- **Where:** `startMotion` (`src/Live2D_common.cpp`) passes `params[0]->AsInteger()`, the group's name, as the motion's number when its second argument is a number, instead of `params[1]`. And the driver makes an `Idle` group of difference motions (`AddMotionGroup("Idle", 1)` in `LAppModel.cpp`) before the model's own groups, so a model3.json `Idle` group (Live2D's sample models have one) loads as differences added to the main motion rather than as the motion itself.
+- **What it costs:** `startMotion("Idle", 3)` plays Idle's first motion, added on. `KAGEnvCharacterLive2D.tjs` plays every motion by its name (`getMotionName`) as the main motion, which the driver loads from the model's `motions/` folder: a model has to keep its motions there, as Cubism Editor's export does.
+- **Fix:** `params[1]->AsInteger()`; make the driver's own groups only for a model that has no group of that name.
+
+## 14. rgbfade can't change a whole scene
 
 - **Where:** extNagano's `rgbfade.cpp` (`Process`): where either picture's alpha is 0, it takes a branch meant for transparent pixels that multiplies the colours (`(s1b * opaB) & 0xff`), and it ignores the layer type `StartTransition` is given. The picture the engine composites for a transition with children (a layer with what's on it) has no meaningful alpha: in the World's scenes rgbfade took the transparent branch all over the screen.
 - **What it costs:** on a whole scene (any World transition, or KAG's base layer with characters on it) rgbfade shows solid black, green and blue. It only works between two whole pictures on one layer with `children=false`, which is how the sample's `transition.ks` shows it.
 - **Fix:** blend the channels as usual for an opaque layer type (`ltOpaque`), and blend rather than multiply the colours in the transparent-pixel branches.
 
-## 13. Plugins KAGEX uses that krkrz_dev doesn't build
+## 15. Plugins KAGEX uses that krkrz_dev doesn't build
 
 Script features that need these log the missing plugin and carry on without the feature.
 
@@ -84,62 +96,104 @@ Script features that need these log the missing plugin and carry on without the 
 - `windowEx`: the extended window events, hiding the menu bar, and the window-control menu icons (`MenuItem.bi*`). `MainWindow.tjs` and `Menus.tjs` skip those paths.
 - `flashPlayer`: Flash movies (`GFX_Flash.tjs`). Flash itself is long gone, so this matters only to old games being ported.
 
-## 14. StyledLayout's ruby can't be sized or placed
+## 16. StyledLayout's ruby can't be sized or placed
 
 - **Where:** krkr_richtext's `TextRenderer::drawStyledLayout` (`richtext/src/TextRenderer.cpp`) draws a `<ruby>`'s text at `parserOptions.rubyScale` (0.5) times the size of the text under it, with its descent on the text's ascent, centred over it. `TagParser::ParseOptions` (`rubyScale` and the rest) can't be set from TJS: the `StyledLayout` binding (`src/main.cpp`) has no options, and there is no gap or offset at all.
 - **What it costs:** KAG sizes and places ruby with `rubySize` and `rubyOffset` (the sample's 15 px, 3 px down, over 39 px text, between lines 5 px apart). StyledLayout's would be 19.5 px and reach into the line above, so where the message window draws a line's characters together (`useStyledLayout`, `MessageLayer.drawStyledRun`) a character with ruby is a run of its own and KAG draws its ruby as before; krkr_richtext doesn't lay out the ruby with the text.
 - **Fix:** bind the parse options (at least `rubyScale`) to `StyledLayout`, and give ruby an offset from the text (or a style of its own: `<ruby text='...' style='name'>`).
 
-## 15. krkr_richtext's Japanese line breaking is only for vertical text, which TJS can't reach
+## 17. krkr_richtext's Japanese line breaking is only for vertical text, which TJS can't reach
 
 - **Where:** krkr_richtext's JLReq typesetting (`richtext/src/vertical/`: `CharClass`, `LineBreaker`, `LineItemBuilder`, `VerticalParagraphLayout`, `BlockLayout`: kinsoku as penalties, hanging punctuation, punctuation spacing, ruby that widens its text, tate-chu-yoko) lays out vertical text only, and `src/main.cpp` binds none of it. Horizontal text goes through minikin (`ParagraphLayout`), whose line breaker follows UAX #14 with ICU's tailoring for the language: a closing bracket, a full stop or a small kana doesn't start a line, but nothing hangs into the margin and nothing is spaced or squeezed.
 - **What it costs:** vertical messages keep KAG's own drawing and its character wrap with kinsoku. Horizontal Japanese and Chinese lines break where `ParagraphLayout` says (`needsToBeWrapped`), so they end before `relinexpos`: the margin KAG keeps for hanging punctuation (`marginRCh`) stays empty, and a character that can't start a line takes the one before it to the next line, where KAG let it hang.
 - **Fix:** bind the vertical layout (a `VerticalStyledLayout` with `drawStyledLayout` and per-line results), and offer the JLReq line breaker (with hanging) for horizontal text too.
 
-## 16. A Yes/No prompt during an overlay movie can open under the movie
+## 18. A Yes/No prompt during an overlay movie can open under the movie
 
 - **Where:** the SDL engine's `Window.setMaskRegion` throws "not implemented", so `YesNoFrameDialogWindow`, the shaped window KAG shows over a playing movie, can't be used.
 - **What it costs:** on the SDL engine every prompt is a layer of the game window (`YesNoDialogLayer`), which an overlay movie can cover.
 - **Fix:** implement `setMaskRegion` (SDL3 has shaped windows: `SDL_SetWindowShape`).
 
-## 17. Full screen in the browser waits for the next tap
+## 19. Full screen in the browser waits for the next tap
 
 - **Where:** the browser build requests full screen from its own main loop rather than from a user event, and browsers only allow it during one.
 - **What it costs:** on Android and iPad, choosing full screen in the Config screen takes effect only on the next tap.
 - **Fix:** make the request from the input event that triggers it, or queue it to the next pointer event in JavaScript.
 
-## 18. Tests can't hold a key down
+## 20. Tests can't hold a key down
 
 - **Where:** keys injected through `Agent` or the REPL don't change `System.getKeyState`.
 - **What it costs:** the smoke tests press and release keys over two frames, but can't test anything that needs a key held: skipping while Ctrl or the controller's R2 is held.
 - **Fix:** have the injected key events update the key state that `getKeyState` reads.
 
-## 19. The sigcheck plugin keeps file sizes and offsets in 32-bit ints
+## 21. The sigcheck plugin keeps file sizes and offsets in 32-bit ints
 
 - **Where:** `src/plugins/sigcheck/main.cpp` (`SigChecker::CheckSignatureOfFile` and `CheckKrkrExecutable`) holds the file size, the running byte count and the mark offsets in `int`/`tjs_uint32`. krkrz_tools' `krt::sig` (the signing side) uses 64-bit offsets, so it signs any size correctly; only the engine-side verifier is 32-bit.
 - **What it costs:** signatures (`sigcheck`, used by `template/system/SignatureCheck.tjs`) can only be checked on files below 2 GB. From 2 GB the progress byte count overflows (odd or missing progress events, but the hash still verifies); past 4 GB the size is truncated to 32 bits (thousands of spurious progress events); and at an exact multiple of 4 GiB the size reads as 0 and the per-cent calculation divides by it. kagex-release works around it by keeping every signed archive under 2 GB — splitting a large game's media into separate archives (`Build.cpp`, `splitIfNeeded`) — and refusing a single folder of 2 GB or more. Confirmed on the 0.8.0 Linux engine: a 1 GB file verifies in ~12 s; 2.3 GB and 4.1 GB verify but with the byte-count problems above.
 - **Fix:** use `tjs_int64` for the size, the running offset and the mark offsets in the plugin, matching `krt::sig`.
 
-## 20. The sigcheck plugin reads each file several times per check
+## 22. The sigcheck plugin reads each file several times per check
 
 - **Where:** `SigChecker::CheckSignature` calls `CheckKrkrExecutable` three times (searching for the `XOPT_EMBED_AREA_`, `XRELEASE_SIG____` and XP3 marks), each a full scan from the start of the file, before `CheckSignatureOfFile` reads the whole file once more to hash it.
 - **What it costs:** start-up of a signed build (`SignatureCheck.tjs`) reads the game archive and every engine file about four times over. For a large archive that is seconds of disk I/O before the game appears; splitting (above) spreads it across several files but doesn't reduce the total. The mark search also has no business running on a plain data file (only an executable carries the marks), but the plugin runs it on everything.
 - **Fix:** scan for all three marks in one pass, skip the executable-mark search for a file that isn't an executable, and reuse that read for the hash.
 
-## 21. Bytecode indexes are 16 bits
+## 23. Bytecode indexes are 16 bits
 
 - **Where:** `ExportByteCode` writes each function's code words and each constant's table index as 16-bit numbers (`Add2ByteToVector`, `(tjs_int16)constarray.PutVariant(...)`), and `tTJSByteCodeLoader` reads them back signed.
 - **What it costs:** a script with a function of more than 32767 code words, or with more than 32767 different strings or numbers, would load wrong, so kagex-release leaves one as source. KAGEX's largest, `MainWindow.tjs`, has 2259 strings and at most 3469 code words in a function.
 - **Fix:** 32-bit code words and indexes, in a new version of the bytecode format.
 
-## 22. A playing voice's position and level come from the wrong part of it now and then
+## 24. A playing voice's position and level come from the wrong part of it now and then
 
 - **Where:** `tTJSNI_QueueSoundBuffer::GetSamplePosition`, `GetCurrentPlayingPosition` and `GetVisBuffer` (`common/sound/QueueSoundBufferImpl.cpp`), behind `position`, `samplePosition`, `getVisBuffer`, `getSoundLevel` and `getVowel`, take the samples the stream has played modulo the sample count of the first buffer still in `Samples`, and read that buffer at that offset. That's right only while the first buffer in `Samples` is the one playing and every buffer before it had the same count. A played buffer leaves `Samples` when the stream's callback releases it (`ReleasePlayedSample`), so for a while after the stream moves on, the offset into the new buffer is read in the old one (the likely cause; the jumps seen go both ways). Measured with a voice playing: `samplePosition` is within about 30 ms of the time since `play()` three quarters of the time and half a second (one buffer) ahead the rest, and reading 8192 samples from it with `getVisBuffer` shows the samples past the end of the half-second buffer it falls in are often from half a second earlier, not the next part.
 - **What it costs:** lip-sync by level read the wrong part of the voice. In the Animated Character demo under auto mode, a 3-second voice line reported positions of 469, 1097, 1460 and 1066 ms within 600 ms of play, and Pip's mouth stayed shut through most of it. Measured in the engine on synthesized lines in eight voices, the mouth was open or shut as the voice called for 68-69% of the time, against 77-81% with the right readings. kagex works around it (`readVoice` in `KAGEnvCharacterEx.tjs`): what the engine reads is at `samplePosition` plus the offset given, so it asks for the part the clock since the voice started says is playing, only within the half-second buffer `samplePosition` is in, and keeps readings of the next frames for when the engine is a buffer ahead and that part is gone: 72-73% on the same lines. Lip tracks (`<voice>.lip`) are timed by the clock alone.
 - **Fix:** count the samples of the buffers released so far (or note the stream's played count where each buffer starts) and take the offset from that rather than modulo the first buffer's count, and release a buffer under the same lock the played count is read with; and have `GetVisBuffer` go on into the buffer that really follows in the voice (past the first one it can return an older part).
 
-## 23. getVowel hears a voice's pitch more than its vowels
+## 25. getVowel hears a voice's pitch more than its vowels
 
 - **Where:** `tTJSNI_QueueSoundBuffer::GetVowel` (`common/sound/QueueSoundBufferImpl.cpp`) scores each vowel by the energy of a 1024-point FFT within ±15% + 50 Hz of fixed first and second formants (a 800/1200, i 300/2300, u 350/1200, e 500/1900, o 500/900 Hz, a man's Japanese vowels) and divides by the total. A voice's energy is at its harmonics, its pitch apart, most of it in the lowest few, so the fundamental and the second harmonic land in one vowel's bands whatever the vowel is (i's and u's, 205 to 452 Hz, for a pitch of 200 to 250 Hz; o's and u's above about 300 Hz), and the formants, between harmonics, barely count; e almost never wins.
 - **What it costs:** mouths by vowel can't come from a voice as it plays: on synthesized lines in four Japanese and four English voices (women's and men's), getVowel named the vowel being said 22% and 39% of the time; a woman's voice (pitch around 200 to 250 Hz, in i's and u's first-formant bands) mostly reads as i, a higher one as o (Pip's babble, at about 440 Hz, 190 of 199 times). So kagex leaves it off (`lipEngineVowels`), and a voice's vowels come from a lip track made before (`<voice>.lip`, kagex-lipsync: 86% and 87% on the same lines), for the voices a game picks; the rest move the mouth by loudness only.
 - **Fix:** estimate the formants from the spectral envelope rather than the raw spectrum (cepstral smoothing or LPC), and place them relative to the voice's own range (or scale the table with its pitch), with wider bands.
+
+## 26. krkrlive2d and its driver don't compile outside Windows
+
+- **Where:** krkrlive2d's `src/utils.cpp` and `src/Live2D.cpp` use `strlen` and `memset` without `<cstring>`, and `Live2D.cpp`'s `setStrProp` takes a `ttstr &` that `Live2D_common.cpp` passes temporaries to, which only MSVC accepts. The driver's `src/LAppModel.cpp` uses `va_start` without `<cstdarg>`. And a plugin built on its own (not in krkrz_dev's tree) gets the Windows declarations of `tp_stub.h` (`IStream`, `WPARAM`) unless it's configured with `KRKRZ_VARIANT=SDL`, which `krkrz.cmake` needs to define `__GENERIC__`.
+- **What it costs:** GCC and Clang stop on them. kagex's build (`tools/live2d/build.py`) applies `tools/live2d/patches/` and passes `KRKRZ_VARIANT=SDL`.
+- **Fix:** include `<cstring>` and `<cstdarg>`, take `const ttstr &`, and have `krkrz.cmake` define `__GENERIC__` whenever the target isn't Windows.
+
+## 27. krkrlive2d can't read a model without a .vmotion3.json
+
+- **Where:** the driver asks the plugin for files that may not be there and expects no stream back: `LoadVariableMotion` opens `<model>.vmotion3.json` for every model, and for a model in a folder `exists()` opens files to test them. krkrlive2d's `PReadStream::OpenFile` (`src/Live2D.cpp`) calls `TVPCreateStream`, which throws when there's no such storage (engine 2.6.5), and nothing catches it.
+- **What it costs:** `Live2DModel.load` fails for every model without that file (Live2D's sample models among them): "ストレージ hiyori.vmotion3.json を開くことができません". kagex's patch catches the exception and returns no stream.
+- **Fix:** catch it (or test `TVPIsExistentStorage` first) in `OpenFile`.
+
+## 28. krkrlive2d reads a zipped model only by a bare name, named as its model3.json
+
+- **Where:** `LInfoModel::LoadAssets` (the driver's `LAppModel.cpp`) opens the zip it's given, then looks in it for `basenamex(filename) + ".model3.json"`, where `basenamex` drops only the extension. Given a placed path (`file://./game/data/fgimage/hiyori.l2d`), it looks for `file://./game/data/fgimage/hiyori.model3.json` in the zip.
+- **What it costs:** a model loads only by its storage name without a folder (`hiyori.l2d`, which the engine's auto path finds), and only when its model3.json has the file's name (the case doesn't matter). `GFX_Live2D.tjs` passes `Storages.extractStorageName`, and `doc/world.txt` says how to name a `.l2d`.
+- **Fix:** look for the model3.json by the file's name without its folder, or take the zip's only `*.model3.json`.
+
+## 29. A parameter can't be set over a motion
+
+- **Where:** krkrlive2d's extra values (`setDiffParameterValue`) are added to what the main motion sets, or multiply it (`setParameterType(p, 1)`), in `MyCubismModel::SaveParameters`; `setParameterValue` sets a value the motion then overwrites. There's no way to make a parameter a given value whatever the motion does (as a Cubism expression's `Overwrite` blend does).
+- **What it costs:** a model whose idle motions blink, smile and talk (Hiyori's) can't hold a face the script gives it, nor keep its mouth shut while it isn't speaking. `KAGEnvCharacterLive2D.tjs` keeps a copy of the model (`Live2DModel.clone`) playing the same motions, moved on first each frame, and adds the face's value less what the motion sets in that frame, which updates every Live2D character's model twice a frame.
+- **Fix:** a parameter type that overwrites (`setParameterType(p, 2)`: `SaveParameters` sets the extra value as the parameter's).
+
+## 30. A .bmp the Linux engine saves says its pixels start 2 bytes late
+
+- **Where:** `TVPSaveAsBMP` (`common/visual/GraphicsLoaderIntf.cpp`) writes `bfSize` and `bfOffBits` from `sizeof(TVP_WIN_BITMAPFILEHEADER)`, which is 16 where the struct isn't packed (`GraphicsLoaderIntf.h` packs it only under `_WIN32`), not the file header's 14 bytes, and then writes the pixels right after the 54 bytes of headers.
+- **What it costs:** `Layer.saveLayerImage(file, "bmp")` writes files whose header points 2 bytes into the pixels: other programs read them with the colour channels shifted (ffmpeg and Pillow see a truncated file), and so would the engine's own loader, which seeks to `bfOffBits`. kagex saves screenshots as PNG; recording frames as .bmp means reading the pixels from the end of the file.
+- **Fix:** use 14 (or pack the struct) for the file header's size.
+
+## 31. The Cubism framework compiles 474 shader programs before a model's first frame
+
+- **Where:** `CubismShader_OpenGLES2::GenerateShaders` (the driver's CubismNativeFramework, `a1bd031`, Cubism 5 R5) compiles a program for every blend-mode set when the renderer starts (krkrlive2d's `prepareShaders`, or the first draw): the 79 combinations of Cubism 5.3's 16 colour and 5 alpha blend modes, each with six mask and premultiplied variants, though a model draws with a few of them (Hiyori with none, Live2D's Ren with 8).
+- **What it costs:** the game stands still when its first Live2D character appears: 0.5 s here, 1.2 s on GitHub's Linux runner, 6.5 s under ANGLE on its Windows runner, 39 s on its Mac runner (past the smoke test's 30 s wait). kagex's patch (`tools/live2d/patches/live2d-CubismNativeFramework.patch`, which `build.py` applies in the submodule) compiles each blend-mode set the first time a drawable uses it (`GetShaderSet`) and leaves the 11 others as they were: `prepareShaders` takes 22 ms on the Linux runner, 49 ms on Windows and 0.9 s on the Mac, Ren's first frame here 0.4 s rather than 0.9, and both models draw the same pixels.
+- **Fix:** the same in the framework (or in Live2D's: its OpenGL renderers all do this), or a program binary cache.
+
+## 32. A plugin's own subfolders go into the iOS Xcode project twice
+
+- **Where:** tp_stub's `krkrz_plugin()` (`krkrz.cmake`) calls `project(<plugin>)`, at the end of a plugin's CMakeLists.txt, after the plugin has added its libraries' folders. Those folders took their project's name from the engine's (`krkrz`) when they were added, so going up from them the names read `krkrz`, `<plugin>`, `krkrz`, `krkrz_ios`, and CMake's `cmGlobalGenerator::FillProjectMap` lists a folder once for each change of name: twice for `krkrz`. The Xcode generator then makes their targets twice in that project and stops: "Xcode generator: duplicate object ids not allowed".
+- **What it costs:** a plugin that adds a folder of its own before `krkrz_plugin()` stops the iOS kit's configure: krkrlive2d (its driver) did. krkr_richtext (`add_subdirectory(richtext)`) and krkreffekseer (`add_subdirectory(glad)`) do the same, which is very likely why they stopped it too and are left out of kagex's iOS build (`ios-config.json`). kagex's driver CMake (`tools/live2d/driver`) calls `project(live2ddriver)` itself, so its names read `live2ddriver`, `krkrlive2d`, `krkrz`.
+- **Fix:** call `project()` in `krkrz_plugin()` only when the plugin is the top project, or have each plugin call it before adding its folders.

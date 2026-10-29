@@ -317,6 +317,45 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	// contents and media
 	const std::string plugins = str(s, "contents.plugins");
 	if (!oneOf(plugins, { "all", "linked" })) error("contents.plugins", "plugins is \"all\" or \"linked\"");
+	// the game's own plugins: a desktop's libraries in plugins/<platform>/ (Project.h). The web,
+	// Android and iOS engines link their plugins in, so a game's own go into its own engine
+	// package there (engines/)
+	{
+		std::error_code ec;
+		const std::pair<const char*, const char*> desktops[] = { { "windows", "Windows (.dll)" }, { "linux", "Linux (lib*.so)" }, { "macos", "macOS (.dylib)" } };
+		for (const auto& [id, kind] : desktops) {
+			const fs::path dir = gamePluginFolder(p, id);
+			if (p.root.empty() || !fs::is_directory(dir, ec)) continue;
+			for (const auto& e : fs::directory_iterator(dir, ec)) {
+				const std::string n = krt::fromPath(e.path().filename());
+				if (e.is_regular_file(ec) && !n.empty() && n[0] != '.' && !isPluginFor(id, n))
+					warn("contents.plugins", "plugins/" + std::string(id) + "/" + n + " isn't a " + kind + " plugin: it stays out of the packages");
+			}
+		}
+		for (const char* id : { "web", "android", "ios" })
+			if (!p.root.empty() && fs::is_directory(p.root / "plugins" / id, ec) && flag(s, std::string("platforms.") + id + ".enabled"))
+				warn("contents.plugins", std::string("plugins/") + id + "/ stays out of the packages: that engine has its plugins linked in, so a game's own "
+				     "plugins need an engine package built with them (engines/ next to data/)");
+
+		// Live2D models (.l2d) need the krkrlive2d plugin, which no engine package has: a desktop
+		// platform without it in plugins/<platform>/ draws none of them
+		bool live2d = false;
+		if (!p.data.empty() && fs::is_directory(p.data, ec))
+			for (auto it = fs::recursive_directory_iterator(p.data, fs::directory_options::skip_permission_denied, ec);
+			     it != fs::recursive_directory_iterator() && !live2d; it.increment(ec)) {
+				if (ec) break;
+				const std::string n = krt::fromPath(it->path().filename());
+				live2d = n.size() > 4 && (n.compare(n.size() - 4, 4, ".l2d") == 0 || n.compare(n.size() - 4, 4, ".L2D") == 0);
+			}
+		if (live2d) {
+			const std::pair<const char*, const char*> withPlugin[] = { { "windows", "krkrlive2d.dll" }, { "linux", "libkrkrlive2d.so" },
+			                                                           { "steam", "libkrkrlive2d.so" }, { "macos", "libkrkrlive2d.dylib" } };
+			for (const auto& [id, file] : withPlugin)
+				if (flag(s, std::string("platforms.") + id + ".enabled") && !fs::exists(gamePluginFolder(p, id) / file, ec))
+					warn("contents.plugins", std::string("The game has Live2D models, but plugins/") + krt::fromPath(gamePluginFolder(p, id).filename()) + "/ has no " +
+					     file + ": its " + id + " package won't draw its Live2D characters. tools/live2d/setup.py builds it");
+		}
+	}
 	if (!p.frameworkInData && p.framework.empty())
 		error("contents.framework", "The game has no data/system and there is no template/system next to data/ to copy in");
 	if (flag(s, "contents.compileScripts") && flag(s, "engine.debug"))

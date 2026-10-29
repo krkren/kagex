@@ -43,5 +43,24 @@ lipflip=4 なら、声なしで口を四回動かします。
 【pip】またね！
 あの手を振る動きはアニメーションです。data/main/charanim.csv の waving が、ほかの変化があるまでタイマーで腕のポーズを切り替えています。
 [pip hide]
+*live2d|Live2D
+[if exp="!KAGLive2DCanDraw('hiyori')"]
+このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
+[demodone name=anim]
+[jump storage=s0001.ks]
+[endif]
+[hiyori standard posright]
+こちらはひより、Live2D モデルです。株式会社 Live2D のサンプルキャラクターで、Cubism Editor で作られ、krkrlive2d プラグインが一秒に三十回動かして描いています。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
+[hiyori smile]
+[hiyori voice=1]
+【hiyori】こんにちは！ひよりです。ピップと同じように、ひとりでにまばたきして、声に合わせて口が動きます！
+ポーズ standard はモデルの Idle グループのモーションを次々に再生して、頭や体を動かします。顔はスクリプトが指定した表情のままで、envinit.tjs に書いたパラメータの値です。表情どうしはフェードして切り替わります。
+[hiyori tap motionwait]
+tap はモデルの TapBody モーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとは Idle のモーションに戻ります。
+[hiyori xsad]
+表情の前に x を付けると、切り替わるときにまばたきします。
+[hiyori surprised eyeflip=2]
+目と口のコマンドはピップと同じように使えます。eyeflip=2 で二回まばたきします。
+[hiyori normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]

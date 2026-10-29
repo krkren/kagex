@@ -984,8 +984,15 @@ class KAGWorldPlugin extends KAGPlugin
 @endif
 };
 
+// Eyes that blink and a mouth that moves with the voice, for the characters below, which draw
+// their own pictures (loaded first, so Override.tjs can change its settings)
+KAGLoadScriptOnce("KAGEnvCharacterEyeLip.tjs");
+
 // Characters drawn from layered images, with eye blinks and lip-sync (exstand: charinit.csv,
 // doc/world.txt). A character without "poses" in envinit.tjs is one of those then.
 if (Storages.isExistentStorage("charinit.csv")) {
 	KAGLoadScript("KAGEnvCharacterEx.tjs");
 }
+
+// Live2D characters (doc/world.txt, "Live2D Characters"): an envinit.tjs entry with "live2d"
+KAGLoadScript("KAGEnvCharacterLive2D.tjs");

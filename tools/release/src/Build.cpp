@@ -1264,6 +1264,19 @@ private:
 		if (left) pr_.log("Plugins: " + std::to_string(kept) + " linked by the scripts, " + std::to_string(left) + " left out");
 	}
 
+	// The game's own plugins (plugins/<platform>/ next to data/: built for the game, such as
+	// krkrlive2d), after the engine's, so one of a name the engine has replaces it. All of them,
+	// whatever contents.plugins says: they're there because the game uses them
+	void gamePluginsInto(const std::string& id, const fs::path& to)
+	{
+		std::string names;
+		for (const auto& f : gamePlugins(p_, id)) {
+			copyFile(f, to / f.filename());
+			names += (names.empty() ? "" : ", ") + krt::fromPath(f.filename());
+		}
+		if (!names.empty()) pr_.log(id + ": the game's own plugins: " + names);
+	}
+
 	// Appends data.xp3 to the executable, at a 16-byte boundary (where the engine looks); the
 	// folders' archives go beside it (copyParts)
 	void bind(const fs::path& exe)
@@ -1317,6 +1330,7 @@ private:
 			if (e.is_regular_file(ec) && n.size() > 4 && n.compare(n.size() - 4, 4, ".dll") == 0) copyFile(e.path(), dir / e.path().filename());
 		}
 		pluginsInto(engine / "plugin", dir / "plugin");
+		gamePluginsInto("windows", dir / "plugin");
 		if (encryptedXp3For("windows")) archiveKeyInto("windows", dir);   // before bind, so the exe is keyed first
 		scenesInto("windows", dir);
 		writeText(dir / krt::toPath(str(s_, "identity.exeName") + ".cf"), engineConfig(s_, p_));
@@ -1344,6 +1358,7 @@ private:
 			}
 		}
 		pluginsInto(engine / "plugin", dir / "plugin");
+		gamePluginsInto(id, dir / "plugin");
 		if (encryptedXp3For(id)) archiveKeyInto(id, dir);   // before bind, so the executable is keyed first
 		scenesInto(id, dir);
 		writeText(dir / krt::toPath(exeName + ".cf"), engineConfig(s_, p_));
@@ -1411,6 +1426,7 @@ private:
 					fs::remove(e.path(), ec);
 			}
 		}
+		gamePluginsInto("macos", contents / "MacOS");   // codesign signs them with the app
 		scenesInto("macos", app);
 		writeText(contents / "MacOS" / "krkrz.cf", engineConfig(s_, p_));
 		dataInto("macos", res);

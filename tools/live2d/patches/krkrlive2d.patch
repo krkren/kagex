@@ -1,0 +1,68 @@
+diff --git a/src/Live2D.cpp b/src/Live2D.cpp
+index d599b1e..f957b34 100644
+--- a/src/Live2D.cpp
++++ b/src/Live2D.cpp
+@@ -1,5 +1,6 @@
+ #include <ncbind.hpp>
+ #include <memory>
++#include <cstring>
+ 
+ #include "Live2D.h"
+ 
+@@ -49,7 +50,18 @@ public:
+     // Win32 の IStream ではなく iTJSBinaryStream を使うことで、
+     // 新旧いずれの tp_stub でもコンパイルできる。
+     ttstr name = convertUtf8StringToTtstr(filename, strlen(filename));
+-    mStream = TVPCreateStream(name, TJS_BS_READ);
++    // The driver asks for files that may not be there (<model>.vmotion3.json): that's a null
++    // stream to it. TVPCreateStream throws for one, so it isn't asked: an exception the engine
++    // throws through the plugin's frames aborts the game where the two don't share libgcc's
++    // unwinder (a plugin built in the Steam Runtime)
++    if (!TVPIsExistentStorage(name)) {
++      return false;
++    }
++    try {
++      mStream = TVPCreateStream(name, TJS_BS_READ);
++    } catch (...) {
++      mStream = nullptr;
++    }
+     if (mStream) {
+       mSize = (size_t)mStream->GetSize();
+       mPosition = 0;
+@@ -162,11 +174,15 @@ Live2DDevice::Live2DDevice(tTJSVariant glbase)
+   tTJSVariant iface_v;
+   if (TJS_FAILED(clo.PropGet(0, TJS_W("GLGetProcAddress"), NULL, &iface_v, NULL)))
+       TVPThrowExceptionMessage(TJS_W("Can't Retrive GLGetProcAddress interface"));
+-  GetGLProcAddressFunc glGetProcInterface = reinterpret_cast<GetGLProcAddressFunc>((tjs_int64)iface_v);
+ 
+   ILive2DDevice::InitParam param;
+   memset(&param, 0, sizeof(param));
++#ifdef USE_GLAD
++  // the driver loads GLES through GLAD (Windows, Linux, macOS); on Android and iOS it calls the
++  // system's GLES and takes no loader
++  GetGLProcAddressFunc glGetProcInterface = reinterpret_cast<GetGLProcAddressFunc>((tjs_int64)iface_v);
+   param.getProcAddress = glGetProcInterface;
++#endif
+   mLive2DDevice = GetRuntime()->CreateDevice(param);
+ }
+ 
+@@ -401,7 +417,7 @@ static void setFloatProp(iTJSDispatch2 *obj, const tjs_char *name,
+ }
+ 
+ // オブジェクトに文字列を格納
+-static void setStrProp(iTJSDispatch2 *obj, const tjs_char *name, ttstr &value) {
++static void setStrProp(iTJSDispatch2 *obj, const tjs_char *name, const ttstr &value) {
+   tTJSVariant var = value;
+   obj->PropSet(TJS_MEMBERENSURE, name, NULL, &var, obj);
+ }
+diff --git a/src/utils.cpp b/src/utils.cpp
+index 1777e53..53a490c 100644
+--- a/src/utils.cpp
++++ b/src/utils.cpp
+@@ -1,5 +1,6 @@
+ #include <ncbind.hpp>
+ #include <string>
++#include <cstring>
+ 
+ // ttstrをUTF8文字列へ変換
+ std::string

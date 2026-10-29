@@ -1,0 +1,361 @@
+// live2d-standin.tjs - a stand-in for the krkrlive2d plugin, for tests without Live2D's Cubism SDK
+//
+// Defines Live2DDevice, Live2DModel and Live2DPlayer in script, with the methods
+// GFX_Live2D.tjs and KAGEnvCharacterLive2D.tjs call, so a game runs as with the plugin when it
+// isn't there: before anything has used Live2D, KAGLive2D finds these classes and links no
+// plugin. tools/smoketest.py runs it with Scripts.exec before the Animated Character demo.
+//
+// It plays no model, but it does what the plugin's driver (with kagex's patches) does with a
+// model's parameters:
+//  - load() reads <name>.model3.json from the zip, <name> being the name it's given less its
+//    extension, so a name with a folder in it reads nothing: a model with no parameters
+//  - a main motion sets parameters as time goes on, fading in from where they were (every
+//    motion here acts with the face, as Hiyori's do: eyes half shut, the mouth open and
+//    changing shape), getParameterValue gives what it set, and the extra values
+//    (setDiffParameterValue) are added to that, or multiply it (setParameterType 1)
+//  - a motion the model doesn't have doesn't start, and the one before goes on
+//  - starting a main motion puts the extra values back (ClearDiffParameters)
+//  - the voice value is added to the mouth after that, and every value is kept to its range
+// It keeps what was drawn (Live2DStandIn: the motions started, the expressions, each picture's
+// eye, mouth and mouth form, and every parameter of the last) and draws it through
+// GLCompositor, inside capture() as
+// the plugin draws: a violet body filling the middle of the canvas, an eye band for each eye as
+// tall as the eye is open, and a mouth as tall as it's open.
+
+global.Live2DStandIn = %[
+	groups  : %[
+		Idle    : [ "Hiyori_m01", "Hiyori_m02", "Hiyori_m03", "Hiyori_m05", "Hiyori_m06",
+					"Hiyori_m07", "Hiyori_m08", "Hiyori_m09", "Hiyori_m10" ],
+		TapBody : [ "Hiyori_m04" ],
+		],
+	// the model's parameters: id, min, max, default, display name (Hiyori's face)
+	params  : [
+		[ "ParamAngleX",       -30, 30 , 0, "Angle X"       ],
+		[ "ParamEyeLOpen",       0, 1.2, 1, "Eye L Open"    ],
+		[ "ParamEyeROpen",       0, 1.2, 1, "Eye R Open"    ],
+		[ "ParamEyeLSmile",      0, 1  , 0, "Eye L Smile"   ],
+		[ "ParamEyeRSmile",      0, 1  , 0, "Eye R Smile"   ],
+		[ "ParamBrowLY",        -1, 1  , 0, "Brow L Y"      ],
+		[ "ParamBrowRY",        -1, 1  , 0, "Brow R Y"      ],
+		[ "ParamBrowLForm",     -1, 1  , 0, "Brow L Form"   ],
+		[ "ParamBrowRForm",     -1, 1  , 0, "Brow R Form"   ],
+		[ "ParamBrowLAngle",    -1, 1  , 0, "Brow L Angle"  ],
+		[ "ParamBrowRAngle",    -1, 1  , 0, "Brow R Angle"  ],
+		[ "ParamCheek",         -1, 1  , 0, "Cheek"         ],
+		[ "ParamMouthForm",     -2, 1  , 1, "Mouth Form"    ],
+		[ "ParamMouthOpenY",     0, 1  , 0, "Mouth Open"    ]
+		],
+	// what every motion sets, [ around, by, ms ]: around + by * sin(time / ms), quick enough
+	// that a value a frame late is well off
+	acting  : %[ ParamAngleX:[10, 10, 400], ParamEyeLOpen:[0.5, 0.3, 90], ParamEyeROpen:[0.5, 0.3, 90],
+				 ParamMouthOpenY:[0.4, 0.3, 150], ParamMouthForm:[-1, 0.8, 120],
+				 ParamBrowLY:[0.5, 0.2, 200], ParamBrowRY:[0.5, 0.2, 200] ],
+	lipSync : "ParamMouthOpenY",
+	motionTime : 1500,  // how long a motion plays (ms), unless it loops
+	started  : [],      // the motions started by players: "<group>/<name>[ loop]"
+	expressions : [],   // the expressions set
+	eyes     : [],      // the left eye's value at each picture drawn (0 shut to 1.2)
+	mouths   : [],      // the mouth's (0 shut to 1)
+	forms    : [],      // the mouth form's
+	last     : %[],     // every parameter as the last picture was drawn
+	drawn    : 0,       // pictures drawn
+	players  : 0,       // players made, less those released
+	models   : 0,       // models and players made, less those released
+	shaders  : false,   // prepareShaders called
+	];
+
+class Live2DDevice
+{
+	var compositor;
+	var surfaceWidth = 0;
+	var surfaceHeight = 0;
+
+	function Live2DDevice(oglbase) {
+		if (oglbase === void || !oglbase.GLGetProcAddress) {
+			throw new Exception("Can't Retrive GLGetProcAddress interface");
+		}
+		compositor = oglbase;
+	}
+	function onBeginScene(w, h) {
+		surfaceWidth = w;
+		surfaceHeight = h;
+	}
+	function onEndScene() {
+	}
+	function prepareShaders() {
+		Live2DStandIn.shaders = true;
+	}
+}
+
+class Live2DModel
+{
+	var file = "";
+	var values = %[];      // the parameters as the main motion left them
+	var types = %[];       // 1: the extra value multiplies
+	var diffs = %[];       // the extra values
+	var acted = false;     // a motion has set its parameters
+	var playing = "";      // the motion playing ("" none)
+	var looping = false;
+	var left = 0;          // ms left of it
+	var clock = 0;         // ms of motion time gone by
+	var motionStart = 0;   // the clock when the motion started
+	var fadeTime = 0;      // ms it fades in over
+	var fadeFrom = %[];    // the parameters it fades in from
+	var voice = 0.0;
+	var expression = "";
+
+	function Live2DModel() {
+		Live2DStandIn.models++;
+	}
+	function finalize() {
+		Live2DStandIn.models--;
+	}
+	function load(filename) {
+		clear();
+		var name = (string)filename;
+		// as the driver looks in the zip for <name less its extension>.model3.json, a folder
+		// in the name finds nothing: a model with no parameters
+		if (name.indexOf("/") >= 0 || name.indexOf(":") >= 0) return;
+		if (!Storages.isExistentStorage(name)) {
+			throw new Exception(@"can't open the storage ${name}");
+		}
+		file = name;
+		reset();
+	}
+	function clear() {
+		file = "";
+		(Dictionary.clear incontextof values)();
+		(Dictionary.clear incontextof diffs)();
+		(Dictionary.clear incontextof types)();
+		acted = false;
+		playing = "";
+	}
+	function reset() {
+		var ps = Live2DStandIn.params;
+		for (var i = 0; i < ps.count; i++) values[ps[i][0]] = ps[i][3];
+	}
+	function copyFrom(m) {
+		file = m.file;
+		(Dictionary.assign incontextof values)(m.values);
+		(Dictionary.assign incontextof fadeFrom)(m.fadeFrom);
+		acted = m.acted;
+		playing = m.playing;
+		looping = m.looping;
+		left = m.left;
+		clock = m.clock;
+		motionStart = m.motionStart;
+		fadeTime = m.fadeTime;
+	}
+	function clone() {
+		var m = new global.Live2DModel();
+		m.copyFrom(this);
+		return m;
+	}
+	function info(id) {
+		var ps = Live2DStandIn.params;
+		for (var i = 0; i < ps.count; i++) {
+			if (ps[i][0] == id) return ps[i];
+		}
+		return void;
+	}
+	function inRange(id, v) {
+		var p = info(id);
+		if (p !== void) {
+			v = p[1] if v < p[1];
+			v = p[2] if v > p[2];
+		}
+		return v;
+	}
+	function getParameterCount() {
+		return file != "" ? Live2DStandIn.params.count : 0;
+	}
+	function getParameterInfo(no) {
+		var p = Live2DStandIn.params[no];
+		return %[ id:p[0], name:p[4], min:p[1], max:p[2], "default" => p[3] ];
+	}
+	// by id or display name, as the driver finds them
+	function idOf(id) {
+		var ps = Live2DStandIn.params;
+		for (var i = 0; i < ps.count; i++) {
+			if (ps[i][0] == id || ps[i][4] == id) return ps[i][0];
+		}
+		return void;
+	}
+	function getParameterValue(id) {
+		var v = values[idOf(id)];
+		return v !== void ? v : 0;
+	}
+	function setParameterValue(id, value) {
+		id = idOf(id);
+		values[id] = inRange(id, +value) if id !== void;
+	}
+	function setParameterType(id, type) {
+		id = idOf(id);
+		if (id === void) return;
+		types[id] = +type;
+		diffs[id] = +type ? 1.0 : 0.0;
+	}
+	function setDiffParameterValue(id, value) {
+		id = idOf(id);
+		diffs[id] = +value if id !== void;
+	}
+	function getMotionCount(group) {
+		var g = Live2DStandIn.groups[group];
+		return g !== void ? g.count : 0;
+	}
+	function getMotionName(group, no) {
+		var g = Live2DStandIn.groups[group];
+		return g !== void && no < g.count ? g[no] : "";
+	}
+	function hasMotion(name) {
+		var list = [];
+		list.assign(Live2DStandIn.groups);
+		for (var i = 1; i < list.count; i += 2) {
+			if (list[i].find(name) >= 0) return true;
+		}
+		return false;
+	}
+	function startMotion(group, name, loop = -1, fadeIn = -1, fadeOut = -1) {
+		name = (string)name;
+		if (!hasMotion(name)) return;
+		playing = name;
+		looping = +loop > 0;
+		left = Live2DStandIn.motionTime;
+		acted = true;
+		// it fades in from where the parameters are (the driver's default fade is a second)
+		(Dictionary.assign incontextof fadeFrom)(values);
+		motionStart = clock;
+		fadeTime = +fadeIn > 0 ? +fadeIn * 1000 : 1000;
+		// a main motion puts the extra values back, as the driver's ClearDiffParameters does
+		var list = [];
+		list.assign(diffs);
+		for (var i = 0; i < list.count; i += 2) diffs[list[i]] = types[list[i]] ? 1.0 : 0.0;
+	}
+	function getCurrentMotions() {
+		return playing != "" ? [ %[ name:"main." + playing, loop:looping ? 1 : 0 ] ] : [];
+	}
+	function stopMotion(group) {
+		playing = "";
+	}
+	function isPlaying(group) {
+		return playing != "";
+	}
+	// the motion sets its parameters as time goes on (and they stay as it left them when it ends)
+	function progress(tick) {
+		clock += +tick;
+		if (playing == "") return;
+		if (!looping) {
+			left -= tick;
+			if (left <= 0) {
+				playing = "";
+				return;
+			}
+		}
+		var t = clock - motionStart;
+		var w = fadeTime > 0 ? t / fadeTime : 1.0;
+		w = 1.0 if w > 1.0;
+		var list = [];
+		list.assign(Live2DStandIn.acting);
+		for (var i = 0; i < list.count; i += 2) {
+			var id = list[i], a = list[i + 1];
+			var to = a[0] + a[1] * Math.sin(t / a[2]);
+			var from = fadeFrom[id] !== void ? fadeFrom[id] : values[id];
+			values[id] = inRange(id, from + (to - from) * w);
+		}
+	}
+	function setExpression(id) {
+		expression = (string)id;
+		Live2DStandIn.expressions.add(expression);
+	}
+	// a parameter as drawn: the motion's value, the extra value, the voice, kept to its range
+	function finalValue(id) {
+		var v = getParameterValue(id);
+		var d = diffs[id];
+		if (d !== void) v = types[id] ? v * d : v + d;
+		if (id == Live2DStandIn.lipSync) v += voice;
+		return inRange(id, v);
+	}
+}
+
+class Live2DPlayer extends Live2DModel
+{
+	var device;
+	var blinkingMode = 1;
+	var scale = 1.0;
+	var pieces = %[];      // a 1x1 layer of each colour drawn with
+
+	function Live2DPlayer(dev) {
+		super.Live2DModel();
+		device = dev;
+		Live2DStandIn.players++;
+	}
+	function finalize() {
+		var list = [];
+		list.assign(pieces);
+		for (var i = 1; i < list.count; i += 2) invalidate list[i];
+		Live2DStandIn.players--;
+		super.finalize(...);
+	}
+	function loadModel(model) {
+		clear();
+		copyFrom(model);
+	}
+	function startMotion(group, name, loop = -1, fadeIn = -1, fadeOut = -1) {
+		super.startMotion(...);
+		if (hasMotion((string)name)) Live2DStandIn.started.add(group + "/" + playing + (looping ? " loop" : ""));
+	}
+	function setVoiceValue(v) {
+		voice = +v;
+	}
+	function setVoiceWeight(w) {
+	}
+	function setVoiceMode(m) {
+	}
+	function setBlinkingMode(m) {
+		blinkingMode = +m;
+	}
+	function setScale(s) {
+		scale = +s;
+	}
+	function setMatrix(m11, m12, m13, m21, m22, m23) {
+	}
+
+	function piece(color) {
+		var p = pieces[(string)color];
+		if (p === void) {
+			p = pieces[(string)color] = new Layer(kag, kag.primaryLayer);
+			p.setImageSize(1, 1);
+			p.fillRect(0, 0, 1, 1, color);
+		}
+		return p;
+	}
+
+	// draws, inside GLCompositor.capture, a picture of the model's face as it is
+	function render() {
+		var c = device.compositor;
+		var w = device.surfaceWidth, h = device.surfaceHeight;
+		var eye = finalValue("ParamEyeLOpen");
+		var mouth = finalValue("ParamMouthOpenY");
+		var form = finalValue("ParamMouthForm");
+		Live2DStandIn.drawn++;
+		var ps = Live2DStandIn.params;
+		for (var i = 0; i < ps.count; i++) Live2DStandIn.last[ps[i][0]] = finalValue(ps[i][0]);
+		Live2DStandIn.eyes.add(eye);
+		Live2DStandIn.mouths.add(mouth);
+		Live2DStandIn.forms.add(form);
+		// the body: the middle third of the canvas, its whole height
+		c.drawLayer(piece(0xff8a6cff), w / 3, 0, 0, h, w / 3, 0, 255);
+		// the eyes: white bands as tall as they're open, a fifth of the way down
+		var eh = (int)(h * 0.04 * eye);
+		if (eh > 0) {
+			c.drawLayer(piece(0xffffffff), w / 20, 0, 0, eh, w * 0.40, h * 0.20, 255);
+			c.drawLayer(piece(0xffffffff), w / 20, 0, 0, eh, w * 0.55, h * 0.20, 255);
+		}
+		// the mouth: a pink band as tall as it's open, wider for a wider form
+		var mh = (int)(h * 0.05 * mouth);
+		if (mh > 0) {
+			var mw = w * 0.08 * (1.5 + form / 2);
+			c.drawLayer(piece(0xffff8cc4), mw, 0, 0, mh, w / 2 - mw / 2, h * 0.30, 255);
+		}
+	}
+}

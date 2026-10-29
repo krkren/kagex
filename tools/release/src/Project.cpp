@@ -1,5 +1,6 @@
 #include "Project.h"
 
+#include <algorithm>
 #include <cctype>
 #include <regex>
 
@@ -102,6 +103,34 @@ std::string slug(const std::string& s)
 		else if (!out.empty() && out.back() != '-') out += '-';
 	}
 	while (!out.empty() && out.back() == '-') out.pop_back();
+	return out;
+}
+
+fs::path gamePluginFolder(const Project& p, const std::string& platform)
+{
+	return p.root / "plugins" / krt::toPath(platform == "steam" ? std::string("linux") : platform);
+}
+
+bool isPluginFor(const std::string& platform, const std::string& name)
+{
+	const std::string n = lower(name);
+	auto endsWith = [&](const std::string& e) { return n.size() > e.size() && n.compare(n.size() - e.size(), e.size(), e) == 0; };
+	if (platform == "windows") return endsWith(".dll");
+	if (platform == "macos") return endsWith(".dylib");
+	if (platform == "linux" || platform == "steam")
+		return n.rfind("lib", 0) == 0 && (endsWith(".so") || n.find(".so.") != std::string::npos);
+	return false;
+}
+
+std::vector<fs::path> gamePlugins(const Project& p, const std::string& platform)
+{
+	std::vector<fs::path> out;
+	std::error_code ec;
+	const fs::path dir = gamePluginFolder(p, platform);
+	if (p.root.empty() || !fs::is_directory(dir, ec)) return out;
+	for (const auto& e : fs::directory_iterator(dir, ec))
+		if (e.is_regular_file(ec) && isPluginFor(platform, krt::fromPath(e.path().filename()))) out.push_back(e.path());
+	std::sort(out.begin(), out.end());
 	return out;
 }
 

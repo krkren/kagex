@@ -701,6 +701,71 @@
 
 			],
 
+
+
+		// A Live2D character (KAGEnvCharacterLive2D.tjs): Hiyori, Live2D Inc.'s sample model, which
+
+		// tools/assets/make_hiyori.py fetches from Live2D's GitHub into fgimage/hiyori.l2d (it isn't
+
+		// in this repository: Live2D's licence for its sample models doesn't let others put copies of
+
+		// them online, only works that use them). The krkrlive2d
+
+		// plugin draws her; a build without it, or without her file, says so in anim.ks.
+
+		"hiyori" => %[
+
+			"nameAlias" => %[ "en" => "Hiyori", "ja" => "ひより" ],
+
+			"yoffset" => 300, // the centre of her canvas, below the centre of the screen
+
+			"voiceFile" => "hiyori%s%06d",
+
+			"voiceName" => "voice0",
+
+			"live2d" => %[
+
+				"model" => "hiyori",
+
+				"canvas" => [2976, 4175], // her canvas in Cubism Editor, for its shape
+
+				"height" => 1650,         // its height on the screen at 100%
+
+				// a pose is motions that go on: one of the model3.json group after another
+
+				"poses" => %[ "standard" => "Idle" ],
+
+				"defaultPose" => "standard",
+
+				// motions played once, then the pose's again
+
+				"motions" => %[ "tap" => "TapBody" ],
+
+				// faces: values for her parameters (an eye's is how open it is: 1 open, 0 shut), which
+				// hold whatever her motions do; a parameter a face doesn't name is at its default
+
+				"faces" => %[
+
+					"normal"    => %[],
+
+					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.45, "ParamCheek" => 0.5 ],
+
+					"laugh"     => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.5, "ParamCheek" => 1 ],
+
+					"sad"       => %[ "ParamEyeLOpen" => 0.75, "ParamEyeROpen" => 0.75, "ParamBrowLY" => -0.3, "ParamBrowRY" => -0.3, "ParamBrowLForm" => -1, "ParamBrowRForm" => -1, "ParamBrowLAngle" => -0.5, "ParamBrowRAngle" => -0.5, "ParamMouthForm" => -2 ],
+
+					"surprised" => %[ "ParamEyeLOpen" => 1.2, "ParamEyeROpen" => 1.2, "ParamBrowLY" => 0.8, "ParamBrowRY" => 0.8, "ParamMouthForm" => -2, "ParamMouthOpenY" => 0.6 ],
+
+					"blush"     => %[ "ParamEyeLOpen" => 0.85, "ParamEyeROpen" => 0.85, "ParamEyeLSmile" => 0.6, "ParamEyeRSmile" => 0.6, "ParamBrowLY" => -0.3, "ParamBrowRY" => -0.3, "ParamCheek" => 1 ],
+
+					],
+
+				"defaultFace" => "normal",
+
+				],
+
+			],
+
 		],
 
 

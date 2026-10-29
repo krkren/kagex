@@ -49,6 +49,26 @@ def keep(rel):
         and not rel.split("/")[-1].startswith("._")
 
 
+# Live2D's Cubism Core (the Live2D plugin, or an engine with it linked in) may go out inside a
+# game only, never in an engine package handed to other developers (tools/live2d/README.md):
+# this string is the Core's own
+CUBISM_CORE_MARK = b"Live2D Cubism SDK Core Version"
+
+
+def refuse_cubism_core(files, allowed):
+    """Stops when a file holds the Cubism Core, unless the package is the game's own
+    (--with-cubism-core): files is {name: (data, mode)}"""
+    held = sorted(n for n, (data, _mode) in files.items() if CUBISM_CORE_MARK in data)
+    if not held:
+        return
+    if not allowed:
+        sys.exit("%s hold%s Live2D's Cubism Core, which may go out inside a game only, never in an engine "
+                 "package for other developers. For your own game's engine package (engines/ next to data/), "
+                 "add --with-cubism-core" % (", ".join(held), "s" if len(held) == 1 else ""))
+    print("note: %s hold%s Live2D's Cubism Core: this package is for your game's own builds only"
+          % (", ".join(held), "s" if len(held) == 1 else ""))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--device", required=True)
@@ -56,6 +76,8 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--version", required=True)
     ap.add_argument("--licenses-from")
+    ap.add_argument("--with-cubism-core", action="store_true",
+                    help="a package for your own game's builds may hold Live2D's Cubism Core (the Live2D plugin)")
     a = ap.parse_args()
     out = {}
     for kind, path in (("device", a.device), ("simulator", a.simulator)):
@@ -71,6 +93,7 @@ def main():
                 if (n == "license.txt" or n.startswith("licenses/")) and not n.endswith("/"):
                     out[n] = (z.read(n), 0o644)
     manifest = {"format": 1, "platform": "ios", "version": a.version, "debug": False}
+    refuse_cubism_core(out, a.with_cubism_core)
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for name, data, mode in [("engine.json", (json.dumps(manifest, indent=2) + "\n").encode(), 0o644)] + \
                 [(n, d, m) for n, (d, m) in sorted(out.items())]:
