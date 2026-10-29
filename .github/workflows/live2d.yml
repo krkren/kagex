@@ -341,7 +341,7 @@ jobs:
       # package holds a .app, beside the program when it is loose files)
       - name: README.md in the sample package
         env:
-          PKG: "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
+          PKG: "${{ env.WORK }}/kagex_sample_live2d_${{ matrix.name }}.zip"
         run: |
           test -f tools/live2d/LIVE2D-NOTICE.txt || { echo "::error::tools/live2d/LIVE2D-NOTICE.txt is missing"; exit 1; }
           $PY - "$PKG" <<'PY'
@@ -364,7 +364,7 @@ jobs:
       # packages only: an APK and an .app bundle can hold no loose files beside the program.
       - name: the Live2D build tools in the sample package
         env:
-          PKG: "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
+          PKG: "${{ env.WORK }}/kagex_sample_live2d_${{ matrix.name }}.zip"
         run: |
           $PY - "$PKG" <<'PY'
           import os, sys, zipfile
@@ -773,7 +773,7 @@ jobs:
       - name: README.md in the sample package
         if: inputs.release != ''
         env:
-          PKG: "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
+          PKG: "${{ runner.temp }}/kagex_sample_live2d_ios_simulator.zip"
         run: |
           test -f kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt || { echo "::error::tools/live2d/LIVE2D-NOTICE.txt is missing"; exit 1; }
           python3 - "$PKG" <<'PY'
