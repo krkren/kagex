@@ -26,7 +26,7 @@
 
 // Version
 
-sf.software_version = "0.12.1";
+sf.software_version = "0.13.0";
 
 
 
