@@ -6,8 +6,10 @@ Characters"), with your copy of Live2D's Cubism SDK for Native, for the engine o
 
 It fetches the plugin's sources at the commits kagex is tested with (SOURCES below), applies
 kagex's fixes to them (patches/; UPSTREAM.md says what they fix), builds them with the SDK's
-Cubism Core, and puts the plugin in plugin/ (libkrkrlive2d.so on Linux, libkrkrlive2d.dylib on
-macOS, krkrlive2d.dll on Windows), where KAGLive2D (GFX_Live2D.tjs) links it.
+Cubism Core, and puts the plugin in plugin/ (libkrkrlive2d.so on Linux, krkrlive2d.dll on
+Windows), where the engine next to data/ finds it and KAGLive2D (GFX_Live2D.tjs) links it. On
+macOS the engine is an app, which finds plugins beside its executable: copy libkrkrlive2d.dylib
+into the app's Contents/MacOS and sign the app again (setup.py does both).
 
 The Cubism Core is Live2D's, under its Proprietary Software License: a game may ship it inside
 the game, so the plugin goes into your game's packages, but not into anything handed to other
@@ -201,8 +203,17 @@ def steamrt(opts):
     for m in sorted(set(paths), key=len):
         if not any(m == x or m.startswith(x + os.sep) for x in mounts):
             mounts.append(m)
-    args = [tool, "run", "--rm", "--user", "%d:%d" % (os.getuid(), os.getgid()),
-            "-e", "HOME=/tmp", "-e", "CC=gcc", "-e", "CXX=g++"]
+    # files the build writes into the mounted folders must be this user's. Rootless podman maps
+    # a --user to a uid of its own unless the user namespace keeps the ids (keep-id); rootless
+    # docker maps the container's root to this user, so there the build runs as root
+    version = subprocess.run([tool, "--version"], capture_output=True, text=True).stdout.lower()
+    user = ["--user", "%d:%d" % (os.getuid(), os.getgid())]
+    if os.getuid() != 0 and "podman" in (os.path.basename(tool) + " " + version):
+        user = ["--userns=keep-id"] + user
+    elif os.getuid() != 0 and "rootless" in subprocess.run([tool, "info", "--format", "{{.SecurityOptions}}"],
+                                                         capture_output=True, text=True).stdout:
+        user = []
+    args = [tool, "run", "--rm"] + user + ["-e", "HOME=/tmp", "-e", "CC=gcc", "-e", "CXX=g++"]
     for m in mounts:
         args += ["-v", "%s:%s" % (m, m)]
     args += ["-w", ROOT, STEAMRT_IMAGE, "python3", "-B", os.path.join(HERE, "build.py"), "--in-steamrt",
@@ -311,6 +322,11 @@ def main():
     shown = os.path.relpath(out, ROOT) if os.path.abspath(out).startswith(ROOT + os.sep) else out
     print("%s: %d bytes. It holds the Cubism Core: it goes into your game's packages, and into "
           "nothing handed to other developers." % (shown, os.path.getsize(out)))
+    if sys.platform == "darwin" and os.path.abspath(opts.out) == os.path.join(ROOT, "plugin"):
+        # the app's engine looks beside its executable, not in plugin/ next to data/
+        print("On macOS the engine finds plugins beside its executable: copy it into <the app>/Contents/MacOS "
+              "and sign the app again (codesign --force --deep --sign - <the app>); tools/live2d/setup.py does both. "
+              "For kagex-release, build it with --out plugins/macos.")
 
 
 if __name__ == "__main__":

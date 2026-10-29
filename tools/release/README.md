@@ -371,7 +371,7 @@ app) after the engine's, so one with the name of an engine plugin replaces it; t
 whatever `contents.plugins` says, and a signed build signs them with the engine. The plan lists
 them. The web, Android and iOS engines have their plugins linked in, so there a plugin of your
 own means an engine package built with it (`engines/`); `check` warns about a
-`plugins/web`, `plugins/android` or `plugins/ios` folder, and about files in the desktops'
+`plugins/web`, `plugins/android` or `plugins/ios` folder for an enabled platform, and about files in the desktops'
 folders that aren't plugins for them. A game with Live2D models (`.l2d`) gets a warning for each
 enabled desktop platform whose folder lacks the Live2D plugin (`tools/live2d/setup.py` builds it):
 its package wouldn't draw its Live2D characters.

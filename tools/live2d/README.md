@@ -8,7 +8,9 @@ licences, and keep it, and the plugin built with it, out of the repository.
 `setup.py` walks you through it: Live2D's licences, what this computer needs (and how to get
 what's missing), the SDK, the plugin built for the engine next to `data/` and into
 `plugins/<platform>/` for your game's packages, Hiyori if you want her, the notice for your
-players (`LIVE2D-NOTICE.txt`, added to release.json's extra files) and a quick check that the
+players (`LIVE2D-NOTICE.txt`, added to release.json's extra files, which go into the desktop and
+web packages; Android and iOS apps take none, so there the terms go where players agree to the
+game's terms: the store listing's licence agreement, or a screen in the game) and a quick check that the
 engine draws Live2D characters. It asks before each step; `--check` only reports.
 
 ```sh
@@ -23,8 +25,10 @@ What it does, by hand:
 python3 tools/live2d/build.py --sdk ~/Downloads/CubismSdkForNative-5-r.5.zip
 ```
 
-puts `libkrkrlive2d.so` (Linux), `libkrkrlive2d.dylib` (macOS) or `krkrlive2d.dll` (Windows) in
-`plugin/`, where the engine next to `data/` finds it. It needs git, CMake 3.22+ and a C++17
+puts `libkrkrlive2d.so` (Linux) or `krkrlive2d.dll` (Windows) in `plugin/`, where the engine
+next to `data/` finds it. On macOS it puts `libkrkrlive2d.dylib` there too, but the engine is an
+app that finds plugins beside its executable: copy the plugin into the app's `Contents/MacOS` and
+sign the app again (`codesign --force --deep --sign - KAGEX.app`), as `setup.py` does. It needs git, CMake 3.22+ and a C++17
 compiler (Visual Studio on Windows, from its developer command prompt when Ninja is there);
 `--arch` picks the engine's architecture on macOS (arm64, x86_64) and Windows (Win32, x64). It
 builds as krkrlive2d's own presets do (C++17, and on Windows the static runtime the Core's

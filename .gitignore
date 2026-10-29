@@ -21,3 +21,10 @@ tools/live2d/build/
 # a game's own plugins for kagex-release (tools/release/README.md); the Live2D plugin holds the
 # Cubism Core, which must never be published from here
 /plugins/
+# kagex-release's output (packages, with a game's plugins and data) and a game's own engine
+# packages (engines/; with Live2D they hold the Core), and the macOS engine beside data/, where
+# tools/live2d/setup.py puts the plugin
+/release/
+/engines/
+/*.app/
+*.dylib

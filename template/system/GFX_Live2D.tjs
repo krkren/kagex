@@ -129,7 +129,13 @@ class KAGLive2D extends KAGPlugin
 			shadersReady = true;
 		}
 		var player = new Live2DPlayer(device);
-		player.loadModel(ent.model);
+		try {
+			player.loadModel(ent.model);
+		} catch (e) {
+			// not counted nor listed: let it go here, or nothing would
+			invalidate player;
+			throw e;
+		}
 		ent.count++;
 		players.add(%[ player:player, path:path ]);
 		return player;

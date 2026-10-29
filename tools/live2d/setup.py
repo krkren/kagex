@@ -219,9 +219,11 @@ def add_notice(ui):
             with open(rel, "w", encoding="utf-8") as f:
                 json.dump(s, f, indent=2, ensure_ascii=False)
                 f.write("\n")
-            ui.say("Added %s to release.json's extra files: it goes beside the executable in every package" % NOTICE)
+            ui.say("Added %s to release.json's extra files: it goes into the Windows, Linux, macOS and web packages" % NOTICE)
     else:
         ui.say("When you make release.json (kagex-release), add %s to contents.extraFiles" % NOTICE)
+    ui.say("Android and iOS apps take no extra files: put these terms where players agree to your game's terms")
+    ui.say("there (the store listing's licence agreement, or a screen in the game).")
 
 
 def main():
@@ -323,9 +325,13 @@ def main():
     hiyori = os.path.join(DATA, "fgimage", "hiyori.l2d")
     envinit = os.path.join(DATA, "main", "envinit.tjs")
     # the sample's envinit.tjs names her model ("model" => "hiyori"), and make_hiyori.py fetches it
-    wants_hiyori = os.path.exists(os.path.join(ROOT, "tools", "assets", "make_hiyori.py")) and os.path.exists(envinit) and \
+    fetcher = os.path.join(ROOT, "tools", "assets", "make_hiyori.py")
+    wants_hiyori = os.path.exists(envinit) and \
         re.search(r'"model"\s*=>\s*"hiyori"', open(envinit, encoding="utf-8", errors="replace").read()) is not None
-    if not os.path.exists(hiyori) and wants_hiyori and \
+    if not os.path.exists(hiyori) and wants_hiyori and not os.path.exists(fetcher):
+        ui.say("The sample's Hiyori isn't here, and neither is tools/assets/make_hiyori.py, which fetches her: copy it")
+        ui.say("from the repository (at this release's tag) and run this again to fetch her.")
+    elif not os.path.exists(hiyori) and wants_hiyori and \
             ui.ask("Fetch Hiyori, the sample's Live2D character (Live2D's Free Material License)?", True, opts.hiyori):
         r = subprocess.run([sys.executable, "-B", os.path.join(ROOT, "tools", "assets", "make_hiyori.py"), "model", "--accept-license"])
         ui.say("Hiyori: " + ("data/fgimage/hiyori.l2d" if r.returncode == 0 else "couldn't be fetched (see above)"))

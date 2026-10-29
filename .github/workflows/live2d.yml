@@ -9,11 +9,12 @@
 # The sample game with Live2D: each desktop job also builds the sample as a game with kagex-release
 # (built by the tool job from this commit), the plugin in plugins/<platform>/ and Hiyori in its
 # data, and runs the smoke test on that package. Started by hand with a release's tag (Actions >
-# Live2D > Run workflow, release: the tag), the jobs add those packages, the Android APK and the
-# iOS Simulator app to that release as kagex_sample_live2d_<platform>: the playable sample, apart
-# from the engine and template packages, which can't carry Live2D's Cubism Core (a game may ship
-# it; anything handed to other developers may not). Each holds LIVE2D-NOTICE.txt, the terms that
-# protect the Core.
+# Live2D > Run workflow, release: the tag), the jobs add those packages, and the Android APK and
+# iOS Simulator app kagex-release builds below, to that release as kagex_sample_live2d_<platform>:
+# the playable sample, apart from the engine and template packages, which can't carry Live2D's
+# Cubism Core (a game may ship it; anything handed to other developers may not). The desktop
+# packages hold LIVE2D-NOTICE.txt, the terms that protect the Core; apps take no extra files, so
+# for the APK and the Simulator app those terms go in the release's notes.
 #
 # A game's own engine package (tools/live2d/README.md, "Android and iOS"): the Android and iOS
 # jobs also make one from the engine they built, as a developer would (android-engine.py,
@@ -38,16 +39,22 @@ on:
       - 'template/system/GFX_Live2D.tjs'
       - 'template/system/KAGEnvCharacter*.tjs'
       - 'template/system/world.tjs'
+      - 'template/system/KAGEnvironment.tjs'
+      - 'template/system/Initialize.tjs'
       - 'data/main/envinit.tjs'
+      - 'data/main/Override.tjs'
       - 'data/scenario/anim.ks'
+      - 'data/lang/ja/scenario/anim.ks'
       - 'tools/live2d/**'
       - 'tools/live2d-standin.tjs'
       - 'tools/smoketest.py'
       - 'tools/assets/make_hiyori.py'
       - 'tools/release/src/**'
+      - 'tools/release/scripts/engine-package.py'
       - 'tools/release/scripts/android-engine.py'
       - 'tools/release/scripts/ios-engine.py'
       - '.github/platforms/android-start.sh'
+      - '.github/platforms/publish-results.sh'
       - 'app-config.json'
       - 'ios-config.json'
       - '.github/workflows/live2d.yml'
@@ -58,10 +65,15 @@ on:
         required: false
         default: ""
 
+# reading only, but for the jobs that push their results branch and add to a release
 permissions:
-  contents: write
+  contents: read
 
 env:
+  # started with a release's tag: the jobs build that tag's code (and the desktop jobs use its
+  # engine packages), so what they add to the release is that release's; passed to the shell
+  # through the environment, never written into a command
+  RELEASE_TAG: ${{ inputs.release }}
   # the SDK in krkren/cubism-sdk (with its .sha256 beside it)
   CUBISM_SDK_ZIP: CubismSdkForNative-5-r.5.zip
   # Android and iOS: the engine, the kits and kagex's plugins, as platforms.yml pins them
@@ -92,6 +104,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: kagex
+          ref: ${{ inputs.release || github.sha }}
       - name: Clone krkrz_tools
         env:
           GH_TOKEN: ${{ github.token }}
@@ -154,11 +167,15 @@ jobs:
           - { os: macos-15, name: macos, arch: arm64, video: cocoa }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release || github.sha }}
       - name: Tools
         run: |
           mkdir -p results
@@ -176,6 +193,8 @@ jobs:
             exit 1
           fi
           git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk.git" "$WORK/cubism-sdk"
+          # the clone keeps its URL, token and all, in .git/config: gone before any other step runs
+          chmod -R u+w "$WORK/cubism-sdk/.git"; rm -rf "$WORK/cubism-sdk/.git"
           $PY - "$WORK/cubism-sdk/$CUBISM_SDK_ZIP" <<'PY' | tee results/sdk.txt
           import hashlib, sys
           data = open(sys.argv[1], "rb").read()
@@ -231,7 +250,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name == "kagex_engine_linux.zip"))][0].tag_name')
+          tag=$RELEASE_TAG
+          [ -n "$tag" ] || tag=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name == "kagex_engine_linux.zip"))][0].tag_name')
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
             echo "::error title=No engine::No release has the engine packages"
             exit 1
@@ -319,7 +339,7 @@ jobs:
         if: inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ inputs.release }}" "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip" --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$RELEASE_TAG" "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
@@ -336,6 +356,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release || github.sha }}
       - name: Install the libraries the engine loads
         run: |
           sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
@@ -351,6 +373,8 @@ jobs:
   android:
     needs: [scenarios, tool]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     timeout-minutes: 150
     env:
       KRKRZ_BASE: ${{ github.workspace }}/kirikiri
@@ -359,6 +383,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: kirikiri/kagex
+          ref: ${{ inputs.release || github.sha }}
       - uses: actions/download-artifact@v4
         with:
           name: live2d-scenarios
@@ -376,7 +401,12 @@ jobs:
         run: |
           [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
           git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk.git" "$RUNNER_TEMP/cubism-sdk"
-          (cd "$RUNNER_TEMP/cubism-sdk" && [ "$(sha256sum "$CUBISM_SDK_ZIP" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$CUBISM_SDK_ZIP.sha256")" ] && echo "$CUBISM_SDK_ZIP: SHA-256 as recorded") | tee results/sdk.txt
+          # the clone keeps its URL, token and all, in .git/config: gone before any other step runs
+          chmod -R u+w "$RUNNER_TEMP/cubism-sdk/.git"; rm -rf "$RUNNER_TEMP/cubism-sdk/.git"
+          got=$(cd "$RUNNER_TEMP/cubism-sdk" && sha256sum "$CUBISM_SDK_ZIP" | cut -d' ' -f1)
+          want=$(cut -d' ' -f1 "$RUNNER_TEMP/cubism-sdk/$CUBISM_SDK_ZIP.sha256")
+          [ -n "$got" ] && [ "$got" = "$want" ] || { echo "::error title=Cubism SDK::$CUBISM_SDK_ZIP's SHA-256 isn't the one recorded"; exit 1; }
+          echo "$CUBISM_SDK_ZIP: SHA-256 as recorded" | tee results/sdk.txt
       - name: Live2D in the engine
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh kit python3 -B kirikiri/kagex/tools/live2d/build.py \
@@ -386,8 +416,6 @@ jobs:
       - name: Hiyori
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
-          # Live2D's notice, in the app's data
-          cp kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt kirikiri/kagex/data/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -462,7 +490,9 @@ jobs:
           mkdir -p "$PROJECT_DIR/engines"
           python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$RELEASE_APK" \
             "$PROJECT_DIR/engines/kagex_engine_android.zip" --version "$version" --app-config "$PROJECT_DIR/app-config.json" \
-            --with-cubism-core | tee results/engine-package.txt
+            --with-cubism-core \
+            > results/engine-package.txt 2>&1 || { cat results/engine-package.txt; exit 1; }
+          cat results/engine-package.txt
           tool="$RUNNER_TEMP/tool/kagex-release"
           chmod +x "$tool"
           "$tool" --version | tee results/game.txt
@@ -509,15 +539,16 @@ jobs:
           script: |
             kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --live2d required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt results/ 2>/dev/null; exit $s
             kirikiri/kagex/.github/platforms/run-logged.sh game-start kirikiri/kagex/.github/platforms/android-start.sh "$GAME_APK" io.github.krkren.kagex.live2d results/game-logcat.txt krkrlive2d scnfile xp3crypt
-      # the sample game with Live2D, on a release: the optimized build, signed with the debug key
-      # (as kagex_sdl3_android.apk)
+      # the sample game with Live2D, on a release: the APK kagex-release made from the game's own
+      # engine package (an optimized build signed with the debug key, its data in data.xp3),
+      # started on the emulator above
       - name: Add the sample game to the release
         if: inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp "$RELEASE_APK" "$RUNNER_TEMP/kagex_sample_live2d_android.apk"
-          gh release upload "${{ inputs.release }}" "$RUNNER_TEMP/kagex_sample_live2d_android.apk" --clobber --repo "$GITHUB_REPOSITORY"
+          cp "$GAME_APK" "$RUNNER_TEMP/kagex_sample_live2d_android.apk"
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/kagex_sample_live2d_android.apk" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
@@ -528,6 +559,8 @@ jobs:
   ios:
     needs: [scenarios, tool]
     runs-on: macos-15
+    permissions:
+      contents: write
     timeout-minutes: 150
     env:
       KRKRZ_BASE: ${{ github.workspace }}/kirikiri
@@ -536,6 +569,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: kirikiri/kagex
+          ref: ${{ inputs.release || github.sha }}
       - uses: actions/download-artifact@v4
         with:
           name: live2d-scenarios
@@ -553,7 +587,12 @@ jobs:
         run: |
           [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
           git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk.git" "$RUNNER_TEMP/cubism-sdk"
-          (cd "$RUNNER_TEMP/cubism-sdk" && [ "$(shasum -a 256 "$CUBISM_SDK_ZIP" | cut -d' ' -f1)" = "$(cut -d' ' -f1 "$CUBISM_SDK_ZIP.sha256")" ] && echo "$CUBISM_SDK_ZIP: SHA-256 as recorded") | tee results/sdk.txt
+          # the clone keeps its URL, token and all, in .git/config: gone before any other step runs
+          chmod -R u+w "$RUNNER_TEMP/cubism-sdk/.git"; rm -rf "$RUNNER_TEMP/cubism-sdk/.git"
+          got=$(cd "$RUNNER_TEMP/cubism-sdk" && shasum -a 256 "$CUBISM_SDK_ZIP" | cut -d' ' -f1)
+          want=$(cut -d' ' -f1 "$RUNNER_TEMP/cubism-sdk/$CUBISM_SDK_ZIP.sha256")
+          [ -n "$got" ] && [ "$got" = "$want" ] || { echo "::error title=Cubism SDK::$CUBISM_SDK_ZIP's SHA-256 isn't the one recorded"; exit 1; }
+          echo "$CUBISM_SDK_ZIP: SHA-256 as recorded" | tee results/sdk.txt
       - name: Live2D in the engine
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh kit python3 -B kirikiri/kagex/tools/live2d/build.py \
@@ -562,7 +601,6 @@ jobs:
       - name: Hiyori
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
-          cp kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt kirikiri/kagex/data/
       - name: Set up vcpkg
         run: |
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
@@ -626,7 +664,9 @@ jobs:
           grep -q "Cubism Core" results/engine-refused.txt || { cat results/engine-refused.txt; exit 1; }
           mkdir -p "$PROJECT_DIR/engines"
           python3 -I kirikiri/kagex/tools/release/scripts/ios-engine.py --device "$RUNNER_TEMP/ios-device.zip" --simulator "$RUNNER_TEMP/ios-simulator.zip" \
-            "$PROJECT_DIR/engines/kagex_engine_ios.zip" --version "$version" --with-cubism-core | tee results/engine-package.txt
+            "$PROJECT_DIR/engines/kagex_engine_ios.zip" --version "$version" --with-cubism-core \
+            > results/engine-package.txt 2>&1 || { cat results/engine-package.txt; exit 1; }
+          cat results/engine-package.txt
           tool="$RUNNER_TEMP/tool/kagex-release"
           chmod +x "$tool"
           "$tool" --version | tee results/game.txt
@@ -665,6 +705,7 @@ jobs:
             [ "${PIPESTATUS[0]}" = 0 ] || { echo "::error::the signature of $a doesn't verify"; exit 1; }
           done
           echo "GAME_APP=$gapp" >> "$GITHUB_ENV"
+          echo "GAME_SIM_ZIP=$sim" >> "$GITHUB_ENV"
       - name: Smoke test of the game in the Simulator
         timeout-minutes: 30
         run: |
@@ -673,13 +714,15 @@ jobs:
             --bundle-id io.github.krkren.kagex.live2d --device "$SIM_DEVICE" --keep --live2d required || s=$?
           cp "$(ls -td "${TMPDIR:-/tmp}"/kagex-smoke-* | head -1)/simulator.log" results/game-simulator.log 2>/dev/null || true
           exit $s
+      # the sample game with Live2D, on a release: the Simulator app kagex-release made from the
+      # game's own engine package (its data in data.xp3), smoke-tested above
       - name: Add the sample game to the release
         if: inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
-          gh release upload "${{ inputs.release }}" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip" --clobber --repo "$GITHUB_REPOSITORY"
+          cp "$GAME_SIM_ZIP" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:

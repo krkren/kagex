@@ -33,6 +33,8 @@ Original: Go Watanabe, 2012/4/29 (updated for the SDL3 port)
   only), so the plugin that draws Live2D characters is built with your own copy of Live2D's
   Cubism SDK for Native. tools/live2d/setup.py, in the repository, walks you through it: put
   the repository's tools/live2d folder (from https://github.com/krkren/kagex, at this release's
-  tag) next to data/ as tools/live2d and run python3 tools/live2d/setup.py. To play the sample
+  tag) next to data/ as tools/live2d, with tools/assets/make_hiyori.py (it fetches the
+  sample's Hiyori) and tools/smoketest.py (its quick check) beside it as in the repository,
+  and run python3 tools/live2d/setup.py. To play the sample
   with Live2D first, download kagex_sample_live2d_<platform> from the release, where there is
   one. doc/world.txt, "Live2D Characters", describes them.

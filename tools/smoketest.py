@@ -908,6 +908,8 @@ def live2d_steps(eng):
     a load, and letting the model go when she leaves"""
     if eng.tjs('return typeof global.KAGEnvCharacterLive2D != "undefined" && typeof global.KAGLive2DOf != "undefined"'
                ' && world_object.env.characterInits["hiyori"] !== void ? 1 : 0;') != 1:
+        if eng.opts.live2d == "required":
+            raise SmokeError("--live2d required, but this build's framework or sample predates Live2D characters")
         print("     (skipped: this build's framework or sample predates Live2D characters)", flush=True)
         return
     why = str(eng.tjs('var s = KAGLive2DOf(kag); return !s.available ? s.reason : s.findModel("hiyori") == ""'
@@ -1086,6 +1088,24 @@ def live2d_steps(eng):
             raise SmokeError("the pose's motions (the Idle group) didn't play: %s" % started)
         if "main/Hiyori_m04" not in started:
             raise SmokeError("tap didn't play the TapBody motion: %s" % started)
+    # with effects off (the sample's Config) the update handler stops and nothing moves her on:
+    # a face and the eyes' commands still show, drawn as their tag runs, the face at once
+    eng.tjs('global.__smokeNoeffect = [kag.noeffect, kag.noeffectEnabled]; kag.noeffect = true; kag.noeffectEnabled = true; return 1;')
+    time.sleep(0.3)
+    eng.tjs(hiyori + 'global.__smokeL2DEyes = c.eyestate; global.__smokeL2DDraw = c.lastDraw;'
+            ' world_object.env.unknown("hiyori", %["surprised" => "true", "eyeclose" => "true"]); return 1;')
+    eng.wait("Hiyori drawn with effects off", 'world_object.env.characters["hiyori"].lastDraw != global.__smokeL2DDraw', timeout=5)
+    # (the brows: only the face sets them, within their range; the eyes and mouth have more to them)
+    r = str(eng.tjs(hiyori + 'var f = c.faceValuesOf("surprised");'
+                    ' var off = Math.max(Math.abs(c.faceTargets.ParamBrowLY - f.ParamBrowLY), Math.abs(c.faceTargets.ParamBrowRY - f.ParamBrowRY));'
+                    ' return [c.face, off, c.faceTargets.ParamEyeLOpen].join(",");')).split(",")
+    eng.tjs(hiyori + 'kag.noeffect = global.__smokeNoeffect[0]; kag.noeffectEnabled = global.__smokeNoeffect[1];'
+            ' c.setEyeState(global.__smokeL2DEyes, %[]); world_object.env.unknown("hiyori", %["smile" => "true"]);'
+            ' c.startUpdateHandler(); return 1;')
+    print("     with effects off: face %s, off the face's values by at most %s, the eyes' target %s"
+          % (r[0], r[1], r[2]), flush=True)
+    if r[0] != "surprised" or float(r[1]) > 0.01 or float(r[2]) > 0.05:
+        raise SmokeError("with effects off, Hiyori's face and eyes didn't change as their tag ran: %s" % r)
     # a save and a load with her on the screen: she's drawn again, her model made again (smiling,
     # as she was, or with the face the script gives her there: a compiled scene keeps the World as
     # it was at its save points)

@@ -371,8 +371,11 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 				hideEmotion();
 			}
 			face = faceName;
-			// before the model is read, from its parameters' defaults (not known yet): at once
-			setFaceValues(isClear() || paramInfo === void);
+			// before the model is read, from its parameters' defaults (not known yet): at once.
+			// With effects off nothing moves the model on (no update handler), so the face
+			// changes at once and the character is drawn again now
+			setFaceValues(isClear() || paramInfo === void || env.isNoeffect());
+			redraw = true if env.isNoeffect();
 		}
 		if (isClear()) {
 			disp = SHOW;
@@ -480,6 +483,14 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 	function initCommand() {
 		super.initCommand();
 		motionWait = false;
+	}
+
+	// With effects off the update handler doesn't run, so the eyes and mouth go to what their
+	// commands (eyeclose, lipopen ...) set when the character is drawn again, as
+	// KAGEnvCharacterEx's characters do on every redraw
+	function command(elm) {
+		super.command(elm);
+		initEyeLip() if redraw && env.isNoeffect();
 	}
 
 	function checkSync(elm) {
@@ -744,7 +755,20 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 		var rw = (int)(rh * aspect + 0.5);
 		rw = 1 if rw < 1;
 
-		if (!env.skipNoDisp && prepare()) {
+		// the model's player made the first time, which calls into the plugin: an error there is
+		// logged and the character drawn empty, as an error in drawing it is
+		var ready = false;
+		if (!env.skipNoDisp) {
+			try {
+				ready = prepare();
+			} catch (e) {
+				dm(@"Live2D character ${name} isn't drawn: ${e.message}");
+				stopAnim();
+				failed = e.message;
+				releasePlayer();
+			}
+		}
+		if (ready) {
 			if (renderLayer === void) {
 				var parent = env.temporaryLayer;
 				renderLayer = new global.Layer(parent.window, parent);
