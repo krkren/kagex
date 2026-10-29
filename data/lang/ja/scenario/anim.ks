@@ -52,9 +52,7 @@ lipflip=4 なら、声なしで口を四回動かします。
 [hiyori standard posright]
 こちらはひより、Live2D モデルです。株式会社 Live2D のサンプルキャラクターで、Cubism Editor で作られ、krkrlive2d プラグインが一秒に三十回動かして描いています。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
 [hiyori smile]
-[if exp="sampleVoiceExists('hiyori000001')"]
 [hiyori voice=1]
-[endif]
 【hiyori】こんにちは！ひよりです。ピップと同じように、ひとりでにまばたきして、声に合わせて口が動きます！
 ポーズ standard はモデルの Idle グループのモーションを次々に再生して、頭や体を動かします。顔はスクリプトが指定した表情のままで、envinit.tjs に書いたパラメータの値です。表情どうしはフェードして切り替わります。
 [hiyori tap motionwait]

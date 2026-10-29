@@ -57,9 +57,7 @@ This build doesn't play Live2D models. That takes the krkrlive2d plugin, built w
 [hiyori standard posright]
 This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Live2D's Cubism Editor, which the krkrlive2d plugin moves and draws thirty times a second. This content uses sample data owned and copyrighted by Live2D Inc.
 [hiyori smile]
-[if exp="sampleVoiceExists('hiyori000001')"]
 [hiyori voice=1]
-[endif]
 【hiyori】Hello! I'm Hiyori. I blink by myself, and my mouth moves with my voice, just like Pip!
 Her pose, standard, plays the motions of the model's Idle group one after another, which move her head and body. Her face is the one the script gives her: values for the model's parameters, set in envinit.tjs, which fade into each other.
 [hiyori tap motionwait]
