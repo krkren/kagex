@@ -335,6 +335,53 @@ jobs:
           .github/platforms/run-logged.sh sample-smoke $PY -B tools/smoketest.py --packaged --engine "$exe" --live2d required
           cp "$pkg" "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
           ls -l "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip" | tee -a results/sample.txt
+      # Live2D's licence asks a game to show its players these terms. kagex-release puts its
+      # extraFiles beside the program on the desktops only, and an APK or a .app bundle holds no
+      # file like that, so they come along inside the package as README.md (at its root when the
+      # package holds a .app, beside the program when it is loose files)
+      - name: README.md in the sample package
+        env:
+          PKG: "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
+        run: |
+          test -f tools/live2d/LIVE2D-NOTICE.txt || { echo "::error::tools/live2d/LIVE2D-NOTICE.txt is missing"; exit 1; }
+          $PY - "$PKG" <<'PY'
+          import os, sys, zipfile
+          pkg = sys.argv[1]
+          with zipfile.ZipFile(pkg) as z:
+              names = z.namelist()
+              notice = [n for n in names if n.split("/")[-1] == "LIVE2D-NOTICE.txt"]
+              folder = os.path.dirname(notice[0]) if notice else ""
+              if any(n.split("/")[-1] == "README.md" for n in names):
+                  sys.exit("README.md is already in " + pkg)
+          with zipfile.ZipFile(pkg, "a") as z:
+              z.write("tools/live2d/LIVE2D-NOTICE.txt", (folder + "/" if folder else "") + "README.md")
+          print("the terms for the players, as README.md in %s (%s)" % (pkg, folder or "the package root"))
+          PY
+      # what a developer needs to build the Live2D plugin for their own game with the SDK they have
+      # licensed: build.py and setup.py, their patches, the driver's CMake, and the script that
+      # fetches Hiyori. The SDK, the Cubism Core and Hiyori's files stay outside the repository, so
+      # these fetch them on the developer's computer (setup.py asks before each step). The desktop
+      # packages only: an APK and an .app bundle can hold no loose files beside the program.
+      - name: the Live2D build tools in the sample package
+        env:
+          PKG: "$WORK/kagex_sample_live2d_${{ matrix.name }}.zip"
+        run: |
+          $PY - "$PKG" <<'PY'
+          import os, sys, zipfile
+          pkg = sys.argv[1]
+          files = ["tools/assets/make_hiyori.py"]
+          for root, dirs, names in os.walk("tools/live2d"):
+            for name in sorted(names):
+              files.append(os.path.join(root, name))
+          with zipfile.ZipFile(pkg, "a") as z:
+              have = set(z.namelist())
+              for f in files:
+                  name = f.replace(os.sep, "/")
+                  if name in have:
+                      sys.exit(name + " is already in " + pkg)
+                  z.write(f, name)
+              print("%d files of the Live2D tools into %s" % (len(files), pkg))
+          PY
       - name: Add the sample game to the release
         if: inputs.release != ''
         env:
@@ -716,13 +763,37 @@ jobs:
           exit $s
       # the sample game with Live2D, on a release: the Simulator app kagex-release made from the
       # game's own engine package (its data in data.xp3), smoke-tested above
+      - name: The Simulator package as the release's
+        if: inputs.release != ''
+        run: cp "$GAME_SIM_ZIP" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
+      # Live2D's licence asks a game to show its players these terms. kagex-release puts its
+      # extraFiles beside the program on the desktops only, and an APK or a .app bundle holds no
+      # file like that, so they come along inside the package as README.md (at its root when the
+      # package holds a .app, beside the program when it is loose files)
+      - name: README.md in the sample package
+        if: inputs.release != ''
+        env:
+          PKG: "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
+        run: |
+          test -f kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt || { echo "::error::tools/live2d/LIVE2D-NOTICE.txt is missing"; exit 1; }
+          python3 - "$PKG" <<'PY'
+          import os, sys, zipfile
+          pkg = sys.argv[1]
+          with zipfile.ZipFile(pkg) as z:
+              names = z.namelist()
+              notice = [n for n in names if n.split("/")[-1] == "LIVE2D-NOTICE.txt"]
+              folder = os.path.dirname(notice[0]) if notice else ""
+              if any(n.split("/")[-1] == "README.md" for n in names):
+                  sys.exit("README.md is already in " + pkg)
+          with zipfile.ZipFile(pkg, "a") as z:
+              z.write("kirikiri/kagex/tools/live2d/LIVE2D-NOTICE.txt", (folder + "/" if folder else "") + "README.md")
+          print("the terms for the players, as README.md in %s (%s)" % (pkg, folder or "the package root"))
+          PY
       - name: Add the sample game to the release
         if: inputs.release != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          cp "$GAME_SIM_ZIP" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip"
-          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip" --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/kagex_sample_live2d_ios_simulator.zip" --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish results branch
         if: always()
         env:
