@@ -962,8 +962,8 @@ def live2d_steps(eng):
     eng.wait("Hiyori", 'world_object.env.characters["hiyori"] !== void && world_object.env.characters["hiyori"].player !== void'
              ' && kag.inStable', timeout=30)
     time.sleep(1.5)
-    # drawn, and on the screen: the World puts her canvas's centre at posright (480 right of the
-    # screen's centre), 300 below it
+    # drawn, and on the screen: the World puts her canvas's centre at center (the screen's own
+    # centre), 300 below it
     drawn = str(eng.tjs(hiyori + 'var t = c.targetLayer, l = c.renderLayer, n = 0;'
                         ' for (var y = 0; y < l.imageHeight; y += 16) for (var x = 0; x < l.imageWidth; x += 16)'
                         ' if (l.getMaskPixel(x, y) > 0) n++;'
@@ -973,8 +973,8 @@ def live2d_steps(eng):
     print("     Hiyori: %d of her picture's samples drawn, %dx%d at (%d, %d)" % (n, width, height, left, top), flush=True)
     if n < 100 or not visible:
         raise SmokeError("Hiyori isn't drawn: %s" % drawn)
-    if abs(left + width / 2 - 1440) > 2 or abs(top + height / 2 - 840) > 2:
-        raise SmokeError("Hiyori's picture is centred at (%d, %d), not at posright's (1440, 840)"
+    if abs(left + width / 2 - 960) > 2 or abs(top + height / 2 - 840) > 2:
+        raise SmokeError("Hiyori's picture is centred at (%d, %d), not at center's (960, 840)"
                          % (left + width / 2, top + height / 2))
     # it goes on drawing: the model moves by itself
     eng.tjs(hiyori + 'global.__smokeL2DDraw = c.lastDraw; return 1;')
@@ -1079,6 +1079,22 @@ def live2d_steps(eng):
     eng.tjs(hiyori + 'c.playOnce("tap", %[]); return 1;')
     eng.wait("the tap motion", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)
     eng.wait("the pose's motions again", '!world_object.env.characters["hiyori"].oneShotPlaying', timeout=20)
+    # a motion of a group's number (idle5: "Idle:4"), and one named by its file (m03, which the
+    # driver keeps as Hiyori_m03), which is in the Idle group here
+    for name, want in (("idle5", "Hiyori_m"), ("m03", "Hiyori_m03")):
+        eng.tjs(hiyori + 'c.playOnce("' + name + '", %[]); return 1;')
+        eng.wait(name + " to play", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)
+        got = str(eng.tjs(hiyori + 'return c.poseMotion;'))
+        if not got.startswith(want):
+            raise SmokeError("%s (%s) didn't play a motion of %s: %s" % (name, want, want, got))
+        print("     %s: %s" % (name, got), flush=True)
+        eng.wait("the pose's motions again", '!world_object.env.characters["hiyori"].oneShotPlaying', timeout=20)
+    # a pose of one motion of its own (still: ":Hiyori_m03") plays that one, looping
+    eng.tjs(hiyori + 'c.setPose("still", %[]); return 1;')
+    eng.wait("the still pose", 'world_object.env.characters["hiyori"].pose == "still"'
+             ' && world_object.env.characters["hiyori"].poseMotion == "Hiyori_m03"', timeout=10)
+    eng.tjs(hiyori + 'c.setPose("standard", %[]); return 1;')
+    eng.wait("the Idle pose again", 'world_object.env.characters["hiyori"].pose == "standard"', timeout=10)
     eng.tjs('__smokeL2DTimer.enabled = false; invalidate __smokeL2DTimer; eyeFlipFreq = global.__smokeL2DBlink; return 1;')
     if standin:
         r = str(eng.tjs('var s = Live2DStandIn; return [s.started.join(";"), s.players, s.drawn].join(",");')).split(",")
@@ -1088,6 +1104,10 @@ def live2d_steps(eng):
             raise SmokeError("the pose's motions (the Idle group) didn't play: %s" % started)
         if "main/Hiyori_m04" not in started:
             raise SmokeError("tap didn't play the TapBody motion: %s" % started)
+        if "main/Hiyori_m03" not in started:
+            raise SmokeError("m03 (':Hiyori_m03') didn't play that motion once: %s" % started)
+        if "main/Hiyori_m03 loop" not in started:
+            raise SmokeError('the still pose (":Hiyori_m03") did not play it as one motion looping: %s' % started)
     # with effects off (the sample's Config) the update handler stops and nothing moves her on:
     # a face and the eyes' commands still show, drawn as their tag runs, the face at once
     eng.tjs('global.__smokeNoeffect = [kag.noeffect, kag.noeffectEnabled]; kag.noeffect = true; kag.noeffectEnabled = true; return 1;')

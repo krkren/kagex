@@ -731,15 +731,18 @@
 
 				"height" => 1650,         // its height on the screen at 100%
 
-				// a pose is motions that go on: one of the model3.json group after another
+				// a pose is motions that go on: one of the model3.json group after another, or one
+				// motion of its own (":<name>"), which loops on its own
 
-				"poses" => %[ "standard" => "Idle" ],
+				"poses" => %[ "standard" => "Idle", "still" => ":Hiyori_m03" ],
 
 				"defaultPose" => "standard",
 
-				// motions played once, then the pose's again
+				// motions played once, then the pose's again; a spec is a model3.json group ("Idle",
+				// one of its motions at random), "<group>:<n>" its n-th and ":<name>" the file
+				// motions/<name>.motion3.json, whatever group it is in
 
-				"motions" => %[ "tap" => "TapBody" ],
+				"motions" => %[ "tap" => "TapBody", "idle5" => "Idle:4", "m03" => ":Hiyori_m03" ],
 
 				// faces: values for her parameters (an eye's is how open it is: 1 open, 0 shut), which
 				// hold whatever her motions do; a parameter a face doesn't name is at its default
@@ -748,7 +751,7 @@
 
 					"normal"    => %[],
 
-					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.45, "ParamCheek" => 0.5 ],
+					"smile"     => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1 ],
 
 					"laugh"     => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamMouthOpenY" => 0.5, "ParamCheek" => 1 ],
 
@@ -757,6 +760,14 @@
 					"surprised" => %[ "ParamEyeLOpen" => 1.2, "ParamEyeROpen" => 1.2, "ParamBrowLY" => 0.8, "ParamBrowRY" => 0.8, "ParamMouthForm" => -2, "ParamMouthOpenY" => 0.6 ],
 
 					"blush"     => %[ "ParamEyeLOpen" => 0.85, "ParamEyeROpen" => 0.85, "ParamEyeLSmile" => 0.6, "ParamEyeRSmile" => 0.6, "ParamBrowLY" => -0.3, "ParamBrowRY" => -0.3, "ParamCheek" => 1 ],
+
+					// thinking: her eyes look away and half shut, as if she is reading the script
+
+					"thinking"  => %[ "ParamEyeLOpen" => 0.7, "ParamEyeROpen" => 0.7, "ParamEyeBallX" => -0.7, "ParamEyeBallY" => -0.5, "ParamBrowLY" => 0.4, "ParamBrowRY" => 0.4, "ParamBrowLAngle" => 0.5, "ParamBrowRAngle" => 0.5, "ParamMouthForm" => -0.5 ],
+
+					// wink: one eye shut, the other open and smiling, which goes on blinking
+
+					"wink"      => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 1, "ParamEyeRSmile" => 1, "ParamMouthForm" => 1, "ParamCheek" => 0.4 ],
 
 					],
 

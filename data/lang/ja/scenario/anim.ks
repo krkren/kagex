@@ -49,18 +49,34 @@ lipflip=4 なら、声なしで口を四回動かします。
 [demodone name=anim]
 [jump storage=s0001.ks]
 [endif]
-[hiyori standard posright]
-こちらはひより、Live2D モデルです。株式会社 Live2D のサンプルキャラクターで、Cubism Editor で作られ、krkrlive2d プラグインが一秒に三十回動かして描いています。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
+[hiyori standard center]
+こちらはひより、Live2D のモデルです。株式会社 Live2D のサンプルキャラクターで、Cubism Editor で作られ、krkrlive2d プラグインが描いています。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
 [hiyori smile]
 [hiyori voice=1]
 【hiyori】こんにちは！ひよりです。ピップと同じように、ひとりでにまばたきして、声に合わせて口が動きます！
-ポーズ standard はモデルの Idle グループのモーションを次々に再生して、頭や体を動かします。顔はスクリプトが指定した表情のままで、envinit.tjs に書いたパラメータの値です。表情どうしはフェードして切り替わります。
-[hiyori tap motionwait]
-tap はモデルの TapBody モーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとは Idle のモーションに戻ります。
+口は、声とその台本から kagex-lipsync が作ったリップトラックに従って動きます。母音ひとつひとつに、形のちがう口があたります。
+[hiyori normal]
+表情がもともと持っている口の値が声を抜けたあとに休む形なので、話し終われば口は閉じます。
+[hiyori thinking]
+顔は envinit.tjs がそのモデルのパラメータについて決めた集まりで、表情から表情へはフェードします。
 [hiyori xsad]
-表情の前に x を付けると、切り替わるときにまばたきします。
-[hiyori surprised eyeflip=2]
-目と口のコマンドはピップと同じように使えます。eyeflip=2 で二回まばたきします。
+表情の前の x、ここでいう xsad は、表情が変わるときにまばたきします。
+[hiyori wink]
+表情は片方の目だけ閉じて、もう一方は開けたままにできます。wink がそれです。
+[hiyori surprised]
+surprised はその表情のとおりに口を開けたままにします。
+[hiyori normal eyeflip=2 lipflip=3]
+目と口のコマンドはピップと同じように使えます。eyeflip=2 は二回まばたきし、lipflip=3 は口を三度動かします。
+[hiyori tap motionwait]
+tap はモデルの TapBody モーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとはポーズのモーションに戻ります。
+[hiyori idle5 motionwait]
+モーションの名前は envinit.tjs で、グループと番号で決めます。idle5 は Idle グループの九個なかの五番めです。
+[hiyori m03 motionwait]
+m03 は来るファイルの名前で決めています。motions/Hiyori_m03.motion3.json のもので、どのグループに入っていても構いません。
+[hiyori still]
+ポーズは続いて再生されるモーションです。standard は Idle グループのモーションを次々に、still は一つのモーションだけ再生します。
+[hiyori standard]
+モーションは頭や体や腕を動かし、髪やスカートはモデル自身の物理演算で動きます。
 [hiyori normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]

@@ -1370,12 +1370,13 @@ The character's envinit.tjs entry has "live2d"; the rest is as for any character
         "model" => "hiyori",             // hiyori.l2d
         "canvas" => [2976, 4175],        // the model's canvas
         "height" => 1650,                // the canvas's height on the screen at 100%
-        "poses" => %[ "standard" => "Idle" ],
+        "poses" => %[ "standard" => "Idle", "still" => ":Hiyori_m03" ],
         "defaultPose" => "standard",
-        "motions" => %[ "tap" => "TapBody" ],
+        "motions" => %[ "tap" => "TapBody", "idle5" => "Idle:4", "m03" => ":Hiyori_m03" ],
         "faces" => %[
             "normal" => %[],
-            "smile"  => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1, "ParamMouthOpenY" => 0.45 ],
+            "smile"  => %[ "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1 ],
+            "wink"   => %[ "ParamEyeLOpen" => 0, "ParamEyeRSmile" => 1 ],
             "laugh"  => %[ "ParamEyeLOpen" => 0, "ParamEyeROpen" => 0, "ParamEyeLSmile" => 1, "ParamEyeRSmile" => 1 ],
             "angry"  => "exp_03",        // an expression of the model
             ],

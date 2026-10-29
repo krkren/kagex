@@ -54,18 +54,34 @@ This build doesn't play Live2D models. That takes the krkrlive2d plugin, built w
 [demodone name=anim]
 [jump storage=s0001.ks]
 [endif]
-[hiyori standard posright]
-This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Live2D's Cubism Editor, which the krkrlive2d plugin moves and draws thirty times a second. This content uses sample data owned and copyrighted by Live2D Inc.
+[hiyori standard center]
+This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Cubism Editor and drawn by the krkrlive2d plugin. This content uses sample data owned and copyrighted by Live2D Inc.
 [hiyori smile]
 [hiyori voice=1]
 【hiyori】Hello! I'm Hiyori. I blink by myself, and my mouth moves with my voice, just like Pip!
-Her pose, standard, plays the motions of the model's Idle group one after another, which move her head and body. Her face is the one the script gives her: values for the model's parameters, set in envinit.tjs, which fade into each other.
-[hiyori tap motionwait]
-tap plays the model's TapBody motion once, and motionwait waits for it to end. Then her Idle motions go on.
+Her mouth follows the lip track kagex-lipsync made from her voice and its words: every vowel gets its own shape.
+[hiyori normal]
+A face's own mouth value is where the mouth rests, so she shuts it when she is done speaking.
+[hiyori thinking]
+Her face is the set of the model's parameters envinit.tjs gives her, and one face fades into the next.
 [hiyori xsad]
-An x in front of a face makes her blink as it changes.
-[hiyori surprised eyeflip=2]
-The eye and mouth commands work for her as they do for Pip: eyeflip=2 blinks twice.
+An x in front of a face, as in xsad here, blinks while the face changes.
+[hiyori wink]
+A face can shut one of her eyes and leave the other open: that is what wink does.
+[hiyori surprised]
+surprised leaves her mouth open, since that is what the face asks for.
+[hiyori normal eyeflip=2 lipflip=3]
+The eye and mouth commands work for her as they do for Pip: eyeflip=2 blinks twice, and lipflip=3 moves her mouth three times.
+[hiyori tap motionwait]
+tap plays her model's TapBody motion once, and motionwait waits for it to end; then her pose's motions go on again.
+[hiyori idle5 motionwait]
+A motion's name comes from envinit.tjs, which says its group and number: idle5 is the fifth of her Idle group's nine.
+[hiyori m03 motionwait]
+And m03 names the file it comes from, motions/Hiyori_m03.motion3.json, whatever group holds it.
+[hiyori still]
+A pose is the motions that go on: standard takes her Idle group's, one after another, and still plays one motion only.
+[hiyori standard]
+Her motions move her head, body and arms, and her hair and skirt move by the model's own physics.
 [hiyori normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]
