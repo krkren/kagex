@@ -83,8 +83,12 @@ Web bridged into the engine (`TODO.md`).
 
 CI (`.github/workflows/live2d.yml`) builds it on Windows, Linux (in the Steam Runtime) and macOS,
 and into the Android and iOS engines, with the SDK from the private repository krkren/cubism-sdk
-(the `CUBISM_SDK_TOKEN` secret), and runs the smoke test with Live2D required on each; only logs
-leave the runners.
+(the `CUBISM_SDK_TOKEN` secret), and runs the smoke test with Live2D required on each. It also
+does what this page describes for a game: the desktop jobs build the sample with the plugin in
+`plugins/<platform>/`, and the Android and iOS jobs make a game's own engine package
+(`--with-cubism-core`) into `engines/` and build the sample from it, all with kagex-release, and
+test what comes out. Only logs leave the runners, but for the sample game packages a run started
+with a release's tag adds to that release.
 
 ## The licence
 
