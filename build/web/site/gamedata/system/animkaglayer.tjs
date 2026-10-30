@@ -1,0 +1,116 @@
+/**
+ * KAGLayer with simple animation processing
+ */
+class AnimKAGLayer extends KAGLayer {
+
+	// Constructor
+	function AnimKAGLayer() {
+		super.KAGLayer(...);
+	}
+
+	// Finalizer
+    function finalize() {
+		animStop();
+		super.finalize(...);
+    }
+
+	// Screen update processing
+	function onPaint() {
+		super.onPaint(...);
+		if (animCount !== void && animCount > 0 && animTime > 0) {
+			var now = System.getTickCount() - animStartTime;
+			var t = ((now \ animTime) % animCount) * (imageHeight \ animCount);
+			if (t <= imageHeight - height) {
+				imageTop = -t;
+            }
+		}
+    }
+
+	/**
+	 * Image loading process
+	 * @param storage File to load
+	 * @param key key
+	 * @param count Number of animation divisions
+	 * @param time Animation interval specification
+	 */
+    function loadImages(storage, key, count, time) {
+		animStop();
+        var ret = super.loadImages(storage, key);
+        animStart(count, time);
+        return ret;
+    }
+
+	/**
+	 * Size adjustment
+	 * Correction for animation processing
+	 */
+    function setSizeToImageSize() {
+        if (animCount === void) {
+            super.setSizeToImageSize();
+        } else {
+            super.width  = imageWidth;
+            super.height = imageHeight / animCount;
+        }
+    }
+
+	/**
+	 * Image assignment
+	 */
+	function assignImages(src, copyvisiblestate = false) {
+		animStop();
+		super.assignImages(src, copyvisiblestate);
+		if (src instanceof "AnimKAGLayer") with (src) {
+			if (.animCount > 0) {
+				animStart(.animCount, .animTime);
+			}
+		}
+    }
+	
+	// -----------------------------------------------
+	// Simple animation processing
+	// -----------------------------------------------
+	
+    var animCount; // Count for animation processing
+    var animTime;  // Flip time for animation processing
+    var animStartTime; // Animation start time
+    var animTimer; // Timer for animation processing
+
+	// Stop animation
+	function animStop() {
+        animCount = void;
+		animTime  = void;
+		animStartTime  =void;
+		if (animTimer !== void) {
+			invalidate animTimer;
+			animTimer = void;
+		}
+    }
+
+	// Animation update handler
+	function animHandler() {
+		if (visible) {
+			update(0,0,1,1);
+		}
+    }
+
+	// Start animation
+    function animStart(count, time) {
+        if (count === void || count <= 1) {
+            animStop();
+            super.height = imageHeight;
+        } else {
+            super.height = imageHeight / count;
+            animCount = count;
+            if (time > 0) {
+                animTime  = time === void ? (1000 / count) : time;
+                animStartTime = System.getTickCount();
+                animTimer = new Timer(animHandler, '');
+                animTimer.capacity = 1;
+                animTimer.interval = animTime;
+                animTimer.enabled  = true;
+				update(0,0,1,1);
+            }
+        }
+    }
+
+}

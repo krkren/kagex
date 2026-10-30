@@ -1,0 +1,1772 @@
+/**
+ * Track for voice playback
+ */
+class VoiceTrack extends WaveSoundBuffer
+{
+	var owner;
+	var labelCount;
+	var mode; // If true, performs label processing for the execution environment
+	var vocoder; // For changing voice speed
+	var storage; // File currently playing
+
+	function VoiceTrack(owner) {
+		this.owner = owner;
+		labelCount = 0;
+		super.WaveSoundBuffer(owner);
+		prevstatus = status; //"unload";
+		vocoder = new global.WaveSoundBuffer.PhaseVocoder();
+		vocoder.window = 256;
+	}
+
+	function finalize() {
+		stop();
+		filters.clear();
+		invalidate vocoder;
+		super.finalize();
+	}
+
+	// For volume control
+	function onStartVoice() { owner.onStartVoice(); }
+	function onStopVoice()  { owner.onStopVoice(); }
+
+	function open(storage) {
+		this.storage = storage;
+		super.open(...);
+	}
+
+	function play(mode) {
+		super.play(...);
+		onStartVoice();
+		if (mode) {
+			owner.onStartVoiceLabel(labels);
+		}
+		this.mode = mode;
+		labelCount = 0;
+	}
+
+	// Specify playback speed
+	var speedChanging = false;
+	var _speed = 1.0;
+	property speed {
+		getter() {
+			return _speed;
+		}
+		setter(v) {
+			if (v != _speed) {
+				speedChanging = true;
+				var pos;
+				if (status == "play") {
+					pos = position;
+					super.stop();
+					dm(@"Voice paused:${pos}:${totalTime}");
+				}
+				filters.remove(vocoder);
+				if (v != 1.0) {
+					filters.add(vocoder);
+					vocoder.time = 1.0 / v;
+				}
+				if (pos !== void) {
+					super.open(storage);
+					position = pos;
+					super.play();
+					dm(@"Voice resumed:${pos}:${position}");
+				}
+				_speed = v;
+				speedChanging = false;
+				_onStatusChanged(); // Trigger events that didn't occur during processing
+			}
+		}
+	}
+
+	var prevstatus; // Previous status
+	function _onStatusChanged() {
+		var ps = prevstatus;
+		var cs = prevstatus = status;
+		if (ps == "play" && cs == "stop") {
+			if (mode) {
+				owner.onStopVoiceLabel();
+			}
+			onStopVoice();
+		}
+	}
+	
+	function onStatusChanged() {
+		super.onStatusChanged(...);
+		// Skip while speed is changing
+		if (!speedChanging) {
+			_onStatusChanged();
+		}
+	}
+
+	function onLabel(name) {
+		if (mode) {
+			owner.onLabelVoice(name, ++labelCount);
+		}
+	}
+
+	function canWait() {
+		return status == "play";
+	}
+};
+
+/**
+ * Track for loop voice playback
+ */
+class BackVoiceTrack extends VoiceTrack
+{
+	function BackVoiceTrack() {
+		super.VoiceTrack(...);
+	}
+
+	function onStartVoice() {}
+	function onStopVoice()  {}
+
+	function play() {
+		if (looping) {
+			// If loop voice has labels, change starting position randomly
+			var names = [];
+			names.assign(labels);
+			if (names.count > 0) {
+				var n = intrandom(names.count\2);
+				//dm("Random criteria:" + n);
+				if (n > 0) {
+					stop();
+					var label = names[(n-1)*2+1];
+					//dm("bvoice", label.position, label.samplePosition);
+					samplePosition = label.samplePosition if (typeof label == "Object" && label);
+				}
+			}
+		}
+		return super.play(...);
+	}
+
+	function onFadeCompleted() {
+		stop() if (volume == 0);
+	}
+};
+
+/**
+ * Layer supporting coordinate correction for characters
+ */
+class EmotionLayer extends EnvGraphicLayer {
+
+	/**
+	 * Constructor
+	 */
+	function EmotionLayer(win, par, owner) {
+		// Parent constructor
+		super.EnvGraphicLayer(win, par, owner);
+	}
+
+	/**
+	 * Initialization of offset information
+	 */
+	function updateOffsetInfo() {
+		// Base size
+		var basezoom = owner.env.envinfo.emoZoom;
+		if (basezoom === void) {
+			basezoom = 100;
+		}
+		if (owner !== void) {
+			var init = owner.init;
+			var basexoff = init.xoffset !== void ? +init.xoffset : +ownerenv.xoffset;
+			var baseyoff = init.yoffset !== void ? +init.yoffset : +ownerenv.yoffset;
+			if (owner.levels !== void) {
+				// Forced all-level offset specification mode
+				var levelInfo = owner.levels[owner.level];
+				xoffset = (int)(levelInfo !== void ? levelInfo.xoffset : 0) + basexoff;
+				yoffset = (int)(levelInfo !== void ? levelInfo.yoffset : 0) + baseyoff;
+				if (levelInfo !== void) {
+					zoom = levelInfo.emozoom !== void ? levelInfo.emozoom :
+					levelInfo.zoom !== void ? levelInfo.zoom : 100;
+				} else {
+					zoom = 100;
+				}
+			} else {
+				// Level correction by env definition
+				xoffset = (int)(owner.xoffset !== void ? +owner.xoffset : 0) + basexoff;
+				yoffset = (int)(owner.yoffset !== void ? +owner.yoffset : 0) + baseyoff;
+				var levelInfo = ownerenv.levels[owner.level];
+				if (levelInfo !== void) {
+					levelz       = levelInfo.zoom !== void ? (int)levelInfo.zoom : 100;
+					levelxoffset = levelInfo.xoffset !== void ? (int)levelInfo.xoffset : 0;
+					levelyoffset = levelInfo.yoffset !== void ? (int)levelInfo.yoffset : 0;
+				}
+				if (levelInfo !== void) {
+					zoom = levelInfo.emozoom !== void ? levelInfo.emozoom :
+					levelInfo.zoom !== void ? levelInfo.zoom : 100;
+				} else {
+					zoom = 100;
+				}
+			}
+			//dm("Reset process level:" + owner.level);
+			//dm("owner offset:" + owner.xoffset + "," + owner.yoffset);
+			//dm("offset:" + xoffset + "," + yoffset);
+			//dm("levelz:" + levelz);
+			zoom = zoom / basezoom * 100;
+		}
+	}
+};
+
+
+/**
+ * Layer supporting coordinate correction for characters
+ */
+class EnvCharacterGraphicLayer extends EnvGraphicLayer {
+
+	/**
+	 * Constructor
+	 */
+	function EnvCharacterGraphicLayer(win, par, owner) {
+		// Parent constructor
+		super.EnvGraphicLayer(win, par, owner);
+	}
+
+	/**
+	 * Initialization of offset information
+	 */
+	function updateOffsetInfo() {
+		if (owner !== void) {
+			var init = owner.init;
+			var basexoff = init.xoffset !== void ? +init.xoffset : +ownerenv.xoffset;
+			var baseyoff = init.yoffset !== void ? +init.yoffset : +ownerenv.yoffset;
+			if (owner.levels !== void) {
+				// Forced all-level offset specification mode
+				var levelInfo = owner.levels[owner.level];
+				xoffset = (int)(levelInfo !== void ? levelInfo.xoffset : 0) + basexoff;
+				yoffset = (int)(levelInfo !== void ? levelInfo.yoffset : 0) + baseyoff;
+			} else {
+				// Level correction by env definition
+				xoffset = (int)(owner.xoffset !== void ? +owner.xoffset : 0) + basexoff;
+				yoffset = (int)(owner.yoffset !== void ? +owner.yoffset : 0) + baseyoff;
+				var levelInfo = ownerenv.levels[owner.level];
+				if (levelInfo !== void) {
+					levelz       = levelInfo.zoom !== void ? (int)levelInfo.zoom : 100;
+					levelxoffset = levelInfo.xoffset !== void ? (int)levelInfo.xoffset : 0;
+					levelyoffset = levelInfo.yoffset !== void ? (int)levelInfo.yoffset : 0;
+				}
+			}
+			//dm("Reset process level:" + owner.level);
+			//dm("owner offset:" + owner.xoffset + "," + owner.yoffset);
+			//dm("offset:" + xoffset + "," + yoffset);
+			//dm("levelz:" + levelz);
+		}
+	}
+};
+
+
+/**
+ * Character layer
+ * Pose specification etc.
+ */
+class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
+
+
+	// Initialize level on initial display
+	property disp {
+		getter() {
+			return *(&global.KAGEnvLevelLayer.disp incontextof this);
+		}
+		setter(v) {
+			if (disp != CLEAR && v == CLEAR) {
+				hideEmotion();
+			}
+			*(&global.KAGEnvLevelLayer.disp incontextof this) = v;
+		}
+	}
+
+
+	var deleteFlag;
+	
+	// Default for fade specification
+	property fadeValue {
+        getter() {
+			if (init !== void && init.fadeValue !== void) {
+				return init.fadeValue;
+			} else {
+				if (env.envinfo !== void && env.envinfo.charFadeValue !== void) {
+					return env.envinfo.charFadeValue;
+				} else {
+					return KAGEnvTrans.fadeValue;
+				}
+			}
+        }
+    }
+
+	// Specification of display level for facial expressions
+	property faceLevelName {
+		getter() {
+			return init.faceLevelName !== void ? init.faceLevelName : env.faceLevelName;
+		}
+	}
+
+	/**
+	 * Specification of automatic transition for display processing
+	 */
+	function setDispAutoTrans(elm) {
+		setAutoTrans([init.dispTrans, env.envinfo.charDispTrans], elm);
+	}
+	
+	/// Initialization name
+    var initName;
+	/// Standing CG name
+	var standName;
+
+    /// Initialization information
+    var poses;
+
+	// Individual pose offset correction
+	var yoffset;
+	var xoffset;
+	var levels;
+    
+    /// Pose
+	var pose;
+    /// Outfit
+    var dress;
+    /// Facial expression
+	var face;
+	/// Pose for facial expressions
+	var _facepose;
+
+	property facepose {
+		getter() {
+			return _facepose === void ? pose : _facepose;
+		}
+		setter(v) {
+			_facepose = v;
+		}
+	}
+	
+    var facePoseMap;
+    
+    // Base image name
+    var baseImageName;
+    // Base image
+    var baseImage;
+    // Face image
+    var faceImage;
+
+    // Emotion
+	var emotion;
+	var hideemo;
+    var emotionLayer;
+
+    /**
+     * Constructor
+     * @param env Environment object
+     * @param name Character name
+     * @param initName Initialization name
+     * @param init Character initialization data
+     */
+	function KAGEnvCharacter(env, name, initName, init) {
+
+		defaultAfy = "bottom";
+		global.KAGEnvImage.KAGEnvImage(env, name);
+		global.KAGEnvLevelLayer.KAGEnvLevelLayer();
+
+		layerClass = global.EnvCharacterGraphicLayer;
+        
+		//dm("Character registered:" + name); 
+		this.initName = initName;
+		this.init     = init;
+		this.standName = init.standName !== void ? init.standName : initName;
+        if (init) {
+			poses = init.poses; //showKeys("poses", poses);
+			if (poses !== void && init.defaultPose !== void) {
+				_setPose(init.defaultPose);
+			}
+            // Facial pose sync function
+            if (init.facePose) {
+                // Create a map from expressions to poses
+                facePoseMap = %[];
+				foreach(poses, function(name, value, dict, facePoseMap) {
+                    var faces = [];
+                    faces.assign(value.faces);
+                    for (var i=0; i<faces.count; i+= 2) {
+                        facePoseMap[faces[i]] = name;
+                    }
+                }, facePoseMap);
+            }
+
+		}
+    }
+	
+	function finalize() {
+		if (baseImage !== void) {
+            invalidate baseImage;
+        }
+        if (faceImage !== void) {
+            invalidate faceImage;
+        }
+        if (soundBuffer !== void) {
+            invalidate soundBuffer;
+		}
+		if (backVoiceBuffer !== void) {
+			invalidate backVoiceBuffer;
+		}
+		if (emotionLayer !== void) {
+			invalidate emotionLayer;
+		}
+		// Note: Order cannot be changed
+		global.KAGEnvLevelLayer.finalize();
+		global.KAGEnvImage.finalize();
+    }
+
+	/**
+	 * Save processing
+	 */
+	function onStore(f) {
+		global.KAGEnvImage.onStore(f);
+		global.KAGEnvLevelLayer.onStore(f);
+		f.name = name;
+		f.initName = initName if initName != name;
+		f.yoffset = yoffset if xoffset != 0;
+		f.xoffset = xoffset if yoffset != 0;
+		f.levels = levels if levels !== void;
+		f.pose = pose if pose !== void ;
+		f.facepose = _facepose if _facepose !== void;
+		f.dress = dress if dress !== void;
+		f.face = face if face !== void;
+		f.posName = posName if posName !== void;
+		f.backVoiceName = backVoiceName if backVoiceName !== void;
+		f.backVoiceLoop = backVoiceLoop if backVoiceName !== void && backVoiceLoop;
+		f.backVoiceType = backVoiceType if backVoiceType != 0;
+    }
+
+	/**
+	 * Load processing
+	 */
+    function onRestore(f) {
+		yoffset = f.yoffset !== void ? f.yoffset : 0;
+		xoffset = f.xoffset !== void ? f.xoffset : 0;
+		levels = f.levels;
+		pose  = f.pose;
+		_facepose = f.facepose;
+		dress = f.dress;
+		face  = f.face;
+		posName  = posName;
+		backVoiceName = f.backVoiceName;
+		backVoiceLoop = f.backVoiceLoop !== void ? f.backVoiceLoop : false;
+		backVoiceType = f.backVoiceType !== void ? f.backVoiceType : 0;
+		global.KAGEnvImage.onRestore(f);
+		global.KAGEnvLevelLayer.onRestore(f);
+    }
+
+    // Perform facial expression rendering processing
+    var redrawFace;
+
+	function setRedrawFace(elm) {
+		if (isShowFace() && (elm.faceon || env.isRedrawFace(this)) && !elm.faceoff) {
+			redrawFace = true;
+		}
+	}
+	
+	function _setPose(poseName) {
+		var info = poses[poseName];
+		if (info !== void) {
+			pose = poseName;
+			yoffset = info.yoffset;
+			xoffset = info.xoffset;
+			levels  = info.levels !== void ? info.levels : init.levels;
+		}
+	}
+	
+	/**
+	 * Pose setting
+	 */
+    function setPose(poseName, elm) {
+		if (poses !== void) {
+			var info = poses[poseName];
+			if (info !== void) {
+				if (poseName != pose || isClear()) {
+					// Clear emotion when pose changes
+					if (elm.emotion === void) {
+						hideEmotion();
+					}
+					initFile(elm);
+					_setPose(poseName);
+					//dm(poseName + ":Level setting:" + levels);
+					disp = SHOW;
+					redraw = true;
+					setAutoTrans([info.trans, init.poseTrans, init.charTrans, env.envinfo.poseTrans, env.envinfo.charTrans], elm);
+					
+					// Get facial expression display
+					setRedrawFace(elm);
+				}
+				// Outfit initialization processing
+				if (dress !== void && (info.dresses == void || info.dresses[dress] == void)) {
+					dress = void;
+				}
+				// Facial expression initialization processing
+				if (face !== void && (info.faces == void || info.faces[face] == void)) {
+					face = void;
+				}
+			}
+		}
+		// Reset ypos to 0 when pose is set
+		ypos = 0 if (elm.ypos === void);
+	}
+
+	/**
+	 * Specification of pose for facial expressions
+	 */
+	function setFacePose(poseName, elm) {
+		if (poseName === void || poseName == "") {
+			facepose = void;
+			return;
+		}
+		if (poses !== void) {
+			var info = poses[poseName];
+			if (info !== void) {
+				facepose = poseName;
+			}
+		}
+	}
+
+	/**
+	 * Outfit setting
+	 */
+    function setDress(dressName, elm) {
+		if (dressName != dress || isClear()) {
+			// Clear emotion when outfit changes
+			if (elm.emotion === void) {
+				hideEmotion();
+			}
+			initFile(elm);
+			dress = dressName;
+			disp = SHOW;
+			redraw = true;
+			setAutoTrans([init.dressTrans, init.charTrans, env.envinfo.dressTrans, env.envinfo.charTrans], elm);
+			// Get facial expression display
+			setRedrawFace(elm);
+		}
+		// Reset ypos to 0 when outfit is changed
+		ypos = 0 if (elm.ypos === void);
+    }
+	/**
+	 * Facial expression setting
+	  */
+    function setFace(faceName, elm) {
+		if (faceName != face || isClear()) {
+			if (env.envinfo.hideEmotionOnFace && elm.emotion === void) {
+				hideEmotion();
+			}
+			face = faceName;
+			disp = SHOW;
+			redraw = true;
+			setAutoTrans([init.faceTrans, init.charTrans, env.envinfo.faceTrans, env.envinfo.charTrans], elm);
+			// Get facial expression display
+			setRedrawFace(elm);
+		}
+    }
+
+	// Display position specification
+	var posName;
+
+	var  posCollisionCheckEnabled = global.debugWindowEnabled;
+	var _posCollisionCheck;
+	function resetPosCollision() {
+		if (_posCollisionCheck === void) {
+			_posCollisionCheck = %[ xpos:[], ypos:[], level:[]/*, disp:[]*/ ];
+		} else with (_posCollisionCheck) {
+			.xpos .clear();
+			.ypos .clear();
+			.level.clear();
+//			.disp .clear();
+		}
+	}
+	function setPosCollision(elm, cmd, tag) {
+		_posCollisionCheck[tag].add(cmd !== void ? cmd : tag) if (elm[tag] !== void);
+	}
+	function errorPosCollision(tag) {
+		if (tag === void) {
+			errorPosCollision("xpos");
+			errorPosCollision("ypos");
+			errorPosCollision("level");
+//			errorPosCollision("disp");
+		} else if (_posCollisionCheck[tag].count > 1) {
+			env.errorCmd(@"${name}: ${tag} is multiply specified: " + _posCollisionCheck[tag].join("/"));
+		}
+	}
+	function checkPosCollision(elm, cmd) {
+		if (posCollisionCheckEnabled) {
+			setPosCollision(elm, cmd, "xpos");
+			setPosCollision(elm, cmd, "ypos");
+			setPosCollision(elm, cmd, "level");
+//			setPosCollision(elm, cmd, "disp");
+		}
+	}
+	function onBeforeDoCommand(elm) {
+		if (posCollisionCheckEnabled) {
+			resetPosCollision();
+			checkPosCollision(elm);
+		}
+	}
+	function  onAfterDoCommand(elm) {
+		if (posCollisionCheckEnabled) errorPosCollision();
+	}
+
+	/**
+	 * Display position setting
+	 */
+    function setPosition(cmd, elm) {
+
+		var istrans = false;
+		
+		posName = getTo(cmd);
+		var info;
+        if (env.positions === void || (info = env.positions[posName]) === void) {
+            return;
+        }
+
+		checkPosCollision(info, cmd);
+		hideEmotion(0);
+		
+		if (info.xpos !== void || info.ypos !== void) {
+			if (disp == CLEAR) {
+				disp = SHOW;
+			}
+			var posFrom = getFrom(cmd);
+			var fromInfo;
+			if (posFrom !== void && (fromInfo = env.positions[posFrom]) !== void) {
+				moveTime = info.time !== void ? info.time : elm.time;
+				moveAccel = (elm.accel === void) ? 0 : elm.accel;
+				if (fromInfo.xpos !== void) {
+					xposFrom   = calcRelative(xpos, fromInfo.xpos, env.xmax);
+				}
+				if (info.xpos !== void) {
+					xpos       = calcRelative(xpos, info.xpos, env.xmax);
+				}					
+				if (fromInfo.ypos !== void) {
+					yposFrom   = calcRelative(ypos, fromInfo.ypos, env.ymax);
+				}
+				if (info.ypos !== void) {
+					ypos       = calcRelative(ypos, info.ypos, env.ymax);
+				}
+				reposition = true;
+			} else {
+				var newxpos = info.xpos !== void ? calcRelative(xpos, info.xpos, env.xmax) : xpos;
+				var newypos = info.ypos !== void ? calcRelative(xpos, info.ypos, env.ymax) : ypos;
+				if (xpos == void || xpos != newxpos || ypos == void || ypos != newypos) {
+					if (_prevShow) {
+						moveTime = info.time !== void ? info.time : elm.time;
+						if (moveTime !== void && xpos === void) {
+							moveTime = 0;
+						}
+						moveAccel = (elm.accel === void) ? 0 : elm.accel;
+					}
+					xpos = newxpos;
+					ypos = newypos;
+					reposition = true;
+					if (moveTime === void) {
+						redraw = true;
+						istrans = true;
+					}
+				}
+			}
+		}
+
+		if (info.disp !== void) {
+			if (disp == CLEAR && info.disp < BU) {
+				// Initialize state when displaying
+				initFile(elm);
+				ypos = 0 if info.ypos === void && elm.ypos === void;
+			}
+			disp = info.disp;
+			redraw = true;
+			istrans = true;
+		}
+
+		if (info.level !== void) {
+			level = info.level;
+			if (elm.back !== void) toBack(); // [XXX] Because evaluation order is indefinite: front is unnecessary since it's always at the front when changing levels
+			if (disp == CLEAR && elm.hide === void) {
+				// Automatic display and state initialization
+				initFile(elm);
+				ypos = 0 if info.ypos === void && elm.ypos === void;
+				disp = SHOW;
+			}
+			istrans = true;
+		}
+
+		if (info.trans !== void) {
+			setTrans(info.trans, elm);
+		} else if (istrans) {
+			setAutoTrans([env.envinfo.positionTrans], elm);
+		}
+	}
+
+	/**
+	 * Emotion setting
+	 */
+	function setEmotion(name, elm) {
+		var info;
+		// Replacement processing by pose for emotion names
+		if (env.emotionmap !== void) {
+			var emoPose = pose.replace(/（.*）|\(.*\)/, "");
+			var emoMapName = standName + "_" + emoPose + "_" + name;
+			var emoName = env.emotionmap[emoMapName];
+			if (emoName !== void) {
+				name = emoName;
+			}
+			//dm("Emotion name:" + emoMapName + ":" + name);
+		}
+		if (!elm.hideemotion && env.emotions !== void && (info = env.emotions[name]) !== void) {
+			hideemo = void;
+			emotion = %[];
+			(Dictionary.assign incontextof emotion)(info, false);
+			if (emotion.name === void) {
+				emotion.name = name;
+			}
+			emotion.time   = elm.time if elm.time !== void;
+			emotion.nowait = elm.nowait if elm.nowait !== void;
+			emotion.hide   = elm.hide if elm.hide !== void;
+			updateFlag = true;
+			return true;
+		}
+		return false;
+    }
+
+	/**
+	 * Clearing emotion
+	 */
+	function hideEmotion(param, elm) {
+		if (emotionLayer !== void && emotionLayer.visible) {
+			if (param === void) {
+				hideemo = env.envinfo.emoHideTime !== void ? +env.envinfo.emoHideTime : 500;
+			} else if (param == "true") {
+				hideemo = elm.time !== void ? +elm.time : env.envinfo.emoHideTime !== void ? +env.envinfo.emoHideTime : 500;
+			} else {
+				hideemo = +param;
+			}
+			updateFlag = true;
+		}
+		return 0;
+	}
+
+	
+    var charCommands = %[
+	initname : null,
+    dress   : this.setDress incontextof this,
+    face    : function(cmd,elm) {
+        if (facePoseMap !== void) {
+            var p;
+            if ((p = facePoseMap[cmd]) !== void) {
+                setPose(p,elm);
+                setFace(cmd,elm);
+            }
+        } else {
+            setFace(cmd,elm);
+        }
+    }incontextof this,
+	facepose : this.setFacePose incontextof this,
+    pos     : this.setPosition incontextof this,
+	emotion : function(param, elm) { this.setEmotion(param,elm); return 0;} incontextof this,
+	hideemotion : this.hideEmotion incontextof this,
+    xpos    : this.setXPos incontextof this,
+    ypos    : this.setYPos incontextof this,
+    front   : this.setFront incontextof this,
+    back    : this.setBack incontextof this,
+    level   : this.setLevel incontextof this,
+	"delete" => function (param, elm) { deleteFlag=true; disp = CLEAR; } incontextof this,
+	stopvoice : null,
+	playvoice : null,
+	waitvoice : null,
+	noplayvoice : null,
+	facewin : function(param, elm) { disp = FACE; redraw = true; } incontextof this,
+	faceon : null,
+	faceoff : null,
+	loop : null,
+	bvoice : function (param, elm) { setBVoice(param, elm, 0); } incontextof this,
+	hvoice : function (param, elm) { setBVoice(param, elm, 1); } incontextof this,
+        ];
+
+	
+	function setBVoice(param, elm, type) {
+		if (param != "") {
+			backVoiceName = param;
+			backVoiceLoop = elm.loop !== void ? +elm.loop : true;
+			backVoiceType = elm.type !== void ? +elm.type : type;
+		} else {
+			backVoiceName = void;
+			backVoiceLoop = false;
+			backVoiceType = 0;
+		}
+		updateFlag = true;
+	}
+
+	/**
+	 * Prioritize pose specification processing
+	 */
+    function doPoseCommand(cmd, param, elm) {
+
+        // Pose command
+        if (cmd == "pose") {
+            setPose(param, elm);
+            return true;
+        }
+
+        // If facial pose map exists
+        if (facePoseMap !== void) {
+            var p;
+            if ((p = facePoseMap[cmd]) !== void) {
+                setPose(p,elm);
+                setFace(cmd,elm);
+                return true;
+            }
+        }
+        
+        // Pose specification
+        if (poses !== void) {
+            if (poses[cmd] !== void) {
+                setPose(cmd,elm);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+	/**
+	 * Execution of command
+	 * @param cmd Command
+	 * @param param Parameter
+	 * @param elm All parameters including other commands
+	 * @return true if executed
+	 */
+    function doCommand(cmd, param, elm) {
+
+        var func;
+        if ((func = charCommands[cmd]) !== void) {
+            if (func != null) {
+                func(param, elm);
+            }
+            return true;
+        }
+
+		if (global.KAGEnvImage.doCommand(cmd, param, elm)) {
+			return true;
+        }
+		
+        var info;
+        var find = false;
+
+		if (!find && poses !== void && pose !== void) {
+			var poseInfo;
+			if ((poseInfo = poses[pose]) !== void) {
+				var dresses       = poseInfo.dresses;
+				var faces         = poseInfo.faces;
+				if (dresses !== void && dresses[cmd] !== void) {
+					//dm("Setting outfit");
+					find = true;
+                    setDress(cmd,elm);
+                } else if (faces !== void && faces[cmd] !== void) {
+                    //dm("Setting facial expression");
+                    find = true;
+                    setFace(cmd,elm);
+                }
+            } else {
+                dm("No pose information for:" + pose + ":" + cmd);
+            }
+        }
+
+		var posName = getTo(cmd);
+        if (!find && env.positions !== void && env.positions[posName] !== void) {
+            setPosition(cmd, elm);
+            find = true;
+        }            
+
+        // Action
+        if (!find) {
+            find = setAction(cmd, elm);
+        }
+
+        // Emotion
+        if (!find) {
+			find = setEmotion(cmd, elm);
+        }
+        
+        // Update
+        if (!find) {
+            find = setTrans(cmd, elm);
+        }
+
+        return find;
+    };
+
+	var imageFile;
+	var timeInfo;
+
+	function applyColor(layer) {
+		if (timeInfo !== void) {
+			with (layer) {
+				// Ambient light synthesis
+				if (timeInfo.charLightColor !== void) {
+					.holdAlpha = true;
+					.fillOperateRect(0,0,
+									 .imageWidth, .imageHeight,
+									 timeInfo.charLightColor,
+									 timeInfo.charLightType);
+				}
+				// Brightness correction
+				if (timeInfo.charBrightness !== void) {
+					.light(timeInfo.charBrightness, timeInfo.charContrast);
+				}
+			}
+		}
+	}
+
+	function getRedrawContext() {
+		var context = global.KAGEnvImage.getRedrawContext();
+		if (!init.noColorFilter) {
+			context.timeInfo = timeInfo;
+			context.applyColor = applyColor;
+		}
+		return context;
+	}
+	
+	function layerRedrawFunction(layer) {
+		if (applyColor !== void) {
+			applyColor(layer);
+		}
+		global.KAGEnvImage.layerRedrawFunction(layer);
+	}
+
+	function getStandAfx(base, level) {
+		var ret;
+		if (typeof base == "Object") {
+			if (base instanceof "Dictionary") {
+				ret = base[(string)level];
+			} else if (base instanceof "Array") {
+				ret = base[level];
+			}
+		} else {
+			ret = base;
+		}
+		if (ret === void) {
+			ret = "center";
+		}
+		//dm("afx:" + ret);
+		return ret;
+	}
+
+	function getStandAfy(base, level) {
+		var ret;
+		if (typeof base == "Object") {
+			if (base instanceof "Dictionary") {
+				ret = base[(string)level];
+			} else if (base instanceof "Array") {
+				ret = base[level];
+			}
+		} else {
+			ret = base;
+		}
+		if (ret === void) {
+			ret = "bottom";
+		}
+		//dm("afy:" + ret);
+		return ret;
+	}
+	
+	/**
+	 * Subroutine for rendering standing CG
+	 * @param layer Target layer
+	 * @param levelName Level name
+	 * @param _pose Pose specification
+	 * @param drawFace Whether to render facial expression
+	 * @return true if successful
+	 */
+	function _drawLayerPose(layer, levelName, _pose, drawFace=false) {
+		
+		var poseInfo;
+		if (poses !== void && (poseInfo = poses[_pose]) !== void) {
+			
+			// Prioritize msgImage / msgFaceImage for facial rendering
+			var imageName     = (drawFace && poseInfo.msgImage !== void)     ? poseInfo.msgImage : poseInfo.image;
+			var faceImageName = (drawFace && poseInfo.msgFaceImage !== void) ? poseInfo.msgFaceImage : poseInfo.faceImage;
+            var dresses       = poseInfo.dresses;
+            var faces         = poseInfo.faces;
+
+            imageName = imageName.replace(/LEVEL/, levelName);
+
+            // Refer to default if no outfit is specified
+			var dressName;
+			if (dress !== void) {
+				dressName = dresses[dress];
+            } 
+			dressName = poseInfo.defaultDress if dressName === void;
+
+            // Refer to default if no facial expression is specified
+            var faceName;
+            if (face !== void) {
+                faceName = faces[face];
+            }
+            faceName = poseInfo.defaultFace if faceName === void;
+
+            //dm("dress:", dressName, "face:", faceName);
+            
+            if (faceImageName !== void) {
+
+				var parent = env.temporaryLayer;
+				
+                // Separated-face style standing CG
+
+                // Base part
+                imageFile = imageName.replace(/DRESS/, dressName);
+
+                // Loading base image
+				if (baseImageName != imageFile) {
+                    baseImageName = imageFile;
+					// For image base caching
+					if (baseImage === void) {
+						baseImage = new global.Layer(parent.window, parent);
+						baseImage.name = "Standing CG image cache:" + name;
+                    }
+                    try {
+                        baseImage.loadImages(imageFile);
+                    } catch (e) {
+                        if (dressName != poseInfo.defaultDress) {
+                            // Fall back to default outfit
+                            dressName = poseInfo.defaultDress;
+                            imageFile = imageName.replace(/DRESS/, dressName);
+                            baseImageName = imageFile;
+                            try {
+                                baseImage.loadImages(imageFile);
+                            } catch (e) {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    } 
+                }
+                
+				// Assign image to layer
+				layer.assignImages(baseImage);
+				// Initialization process XXX might need reconsideration
+                layer.type    = layer._initType    = baseImage.type;
+                layer.opacity = layer._initOpacity = baseImage.opacity;
+
+                // Adjustment processing for levels
+                faceImageName = faceImageName.replace(/LEVEL/, levelName);
+                
+                // Facial expression specification
+                if (faceName !== void) {
+                    imageFile = faceImageName.replace(/DRESS/, dressName);
+                    imageFile = imageFile.replace(/FACE/, faceName);
+                    var imageInfo;
+                    if (faceImage === void) {
+						faceImage = new global.Layer(parent.window, parent);
+                        faceImage.name = "For standing CG face image processing:" + name;
+                    }
+                    try {
+                        imageInfo = faceImage.loadImages(imageFile);
+                    } catch (e) {
+                        var succeeded = false;
+                        // Falling back to default outfit is not treated as an error
+                        if (dressName != poseInfo.defaultDress) {
+                            dressName = poseInfo.defaultDress;
+                            imageFile = faceImageName.replace(/DRESS/, dressName);
+                            imageFile = imageFile.replace(/FACE/, faceName);
+                            try {
+                                imageInfo = faceImage.loadImages(imageFile);
+                                succeeded = true;
+                            } catch (e) {
+                            }
+                        }
+                        if (!succeeded) {
+                            if (faceName != poseInfo.defaultFace) {
+                                // Fall back to default facial expression
+                                faceName = poseInfo.defaultFace;
+                                imageFile = faceImageName.replace(/DRESS/, dressName);
+                                imageFile = imageFile.replace(/FACE/, faceName);
+                                try {
+                                    imageInfo = faceImage.loadImages(imageFile);
+                                } catch (e) {
+                                    return false;
+                                }
+                            } else {
+                                return false;
+                            }
+                        }
+                    }
+					var operateMode = omPsNormal;
+					if (imageInfo && imageInfo.offs_x !== void) {
+						layer.operateRect(imageInfo.offs_x, imageInfo.offs_y,
+										  faceImage, 0, 0, faceImage.imageWidth, faceImage.imageHeight, operateMode);
+                    } else {
+                        layer.operateRect(0,0,faceImage,0,0,faceImage.imageWidth, faceImage.imageHeight, operateMode);
+                    }
+				}
+                
+            } else {
+                // Composed-face style standing CG
+                // Overwrite with outfit information
+                if (dressName !== void) {
+                    imageFile = imageName.replace(/DRESS/, dressName);
+                } else {
+                    imageFile = imageName;
+                }
+                // Overwrite with facial expression
+                if (faceName !== void) {
+                    imageFile = imageFile.replace(/FACE/, faceName);
+                }
+                try {
+					if (layer instanceof "AnimationLayer") {
+						var elm = %[ storage:imageFile ];
+						layer.loadImages(elm);
+                    } else {
+						layer.loadImages(imageFile);
+                    }
+                } catch (e) {
+                    return false;
+                }
+            }
+
+			defaultAfx = poseInfo.afx !== void ? getStandAfx(poseInfo.afx, level) : init.afx !== void ? getStandAfx(init.afx, level) : "center";
+			afx = void;
+			defaultAfy = poseInfo.afy !== void ? getStandAfy(poseInfo.afy, level) : init.afy !== void ? getStandAfy(init.afy, level) : "bottom";
+			afy = void;
+			
+			return true;
+		}
+        return false;
+    }
+
+	/**
+	 * Rendering standing CG
+	 * @param layer Target layer
+	 * @param levelName Level name
+     * @param pose Pose specification
+	 * @return true if successful
+	 */
+	function drawPose(layer, levelName, pose) {
+		return _drawLayerPose(layer, levelName, pose);
+	}
+
+    /**
+	 * Render facial expression
+	 * @parma layer Target layer
+	 * @return true if rendered
+	 */
+	function drawFace(layer) {
+		//dm("Rendering facial expression:" + name + " face:" + face + " layer:" + layer.name + " level:" + faceLevelName);
+		if (poses !== void) {
+			imageFile = "";
+			if (_drawLayerPose(layer, faceLevelName, facepose, true) ||
+				(facepose != init.defaultPose && _drawLayerPose(layer, faceLevelName, init.defaultPose, true))) {
+				if (env.envinfo.faceApplyColor && !init.noColorFilter) {
+					applyColor(layer);
+				}
+				return true;
+			} else {
+				env.errorImage(imageFile + ":Facial expression image cannot be loaded name:" + name + " pose:" + facepose + " dress:" + dress + " face:" + face);
+			}
+		}
+		return false;
+    }
+	
+	/**
+	 * Render image
+	 * @param layer Target layer
+	 */
+	function drawLayer(layer) {
+		if (emotionLayer !== void && emotionLayer.visible == false) {
+			invalidate emotionLayer;
+			emotionLayer = void;
+		}
+		if (isShowBU()) {
+			var levelName;
+			var levelInfo = env.levels[level];
+			if (levelInfo !== void) {
+				levelName = levelInfo.name;
+			}
+			if (levelName === void) {
+				levelName = level;
+			}
+			// Load image
+			imageFile = "";
+			if (!drawPose(layer, levelName, pose) &&
+				!(pose != init.defaultPose && drawPose(layer, levelName, init.defaultPose))) {
+				env.errorImage(imageFile + ":Standing CG image cannot be loaded name:" + name + " pose:" + pose + " dress:" + dress + " face:" + face);
+			}
+			// Special scaling correction
+			//dm(@"${name}:Layer rendering:${level}:${levelInfo}:${levelName}");
+			if (levelInfo !== void && levelInfo.imgzoom !== void) {
+				//dm("Resolution specified");
+				layer.resolution = 10000 / levelInfo.imgzoom;
+			}
+			// Default when uninitialized
+			if (xpos === void) {
+				xpos = env.defaultXpos;
+			}
+			if (ypos === void) {
+				ypos = env.defaultYpos;
+			}
+		}
+	}
+
+	function emoConv(emo) {
+		if (emo instanceof "Array") {
+			//dm("Emotion level:" + level);
+			return emo[level];
+		}
+		return emo;
+	}
+
+	/**
+	 * Get current emotion information
+	 * @param name Name specification includes emoX, emoY, emoRev
+	 */
+	function getEmotionInfo(emotion) {
+		
+		// Default
+		var emoX   = emoConv(env.envinfo.emoX);
+		var emoY   = emoConv(env.envinfo.emoY);
+		var emoRev = 0;
+		
+		// Per-character correction
+		emoX = emoConv(init.emoX) if init.emoX !== void;
+		emoY = emoConv(init.emoY) if init.emoY !== void;
+		emoRev = init.emoRev if init.emoRev !== void;
+
+		// Per-pose correction
+		if (poses !== void) {
+			var p = poses[pose];
+			if (p !== void) {
+				emoX   = p.emoX if p.emoX !== void;
+				emoY   = p.emoY if p.emoY !== void;
+				emoRev = p.emoRev if p.emoRev !== void;
+			}
+		}
+
+		// Correction by layout specification
+		if (emotion) {
+			return %[
+			emoX: emoX + (emoRev ? -emotion.xoff:emotion.xoff),
+			emoY: emoY + emotion.yoff,
+			emoRev: emoRev
+				];
+		} else {
+			return %[
+			emoX: emoX,
+			emoY: emoY,
+			emoRev: emoRev
+				];
+		}
+	}
+
+
+	// XXXX Needs reconsideration
+	var emotionDone;
+	function nodisp(elm) {
+		global.KAGEnvImage.nodisp(elm);
+		if (redraw && emotionDone) {
+			emotion = void;
+		}
+		emotionDone = emotion !== void;
+	}
+	
+	/**
+	 * Layer state update process
+	 * Added emotion processing
+	 */
+	function updateLayer(layer) {
+		global.KAGEnvImage.updateLayer(...);
+		
+		// Emotion clearing process
+		if (hideemo !== void) {
+			if (emotionLayer !== void && emotionLayer.visible) {
+				if (hideemo > 0) {
+					emotionLayer.stopAction();
+					emotionLayer.beginAction(%[visvalue:%[handler:"MoveAction", value:0, time:hideemo, hide:true]]);
+				} else {
+					emotionLayer.stopAction();
+					emotionLayer.visible = false;
+				}
+			}
+			hideemo = void;
+		}
+		
+		// New emotion process
+		if (emotion !== void) {
+			if (isShowBU()) {
+				var levelName;
+				var levelInfo = env.levels[level];
+				if (levelInfo !== void) {
+					levelName = levelInfo.name;}
+				if (levelName === void) {
+					levelName = level;
+				}
+
+				// Per-pose correction
+				var info = getEmotionInfo(emotion);
+				//dm("Emotion origin:" + info.emoX + "," + info.emoY + " rev:" + info.emoRev + " level:" + levelName);
+				
+				// New emotion layer
+				if (emotionLayer === void) {
+					emotionLayer = new EmotionLayer(layer.window, layer.parent, this);
+					emotionLayer.name = name + " Emotion";
+				}
+				emotionLayer.stopAction();
+				var emoOrigin = emotion.origin !== void ? emotion.origin : 9;
+				var emoAction = emotion.action;
+				if (info.emoRev && emotion.imageRev !== void) {
+					var name = emotion.imageRev;
+					name = name.replace(/LEVEL/, levelName);
+					emotionLayer.loadImages(%[storage:name]);
+					emoOrigin = emotion.originRev if emotion.originRev !== void;
+					emoAction = emotion.actionRev if emotion.actionRev !== void;
+				} else {
+					var name = emotion.image;
+					name = name.replace(/LEVEL/, levelName);
+					emotionLayer.loadImages(%[storage:name]);
+				}
+				with (emotionLayer) {
+					//dm("Emotion Action:" + emoAction + ":" + emotion.time);
+					.updateOffsetInfo();
+
+					switch (emoOrigin) {
+					case 1: .afx = "left";   .afy = "top"; break;
+					case 2: .afx = "center"; .afy = "top"; break;
+					case 3: .afx = "right"; .afy = "top"; break;
+					case 4: .afx = "right"; .afy = "center"; break;
+					case 5: .afx = "right"; .afy = "bottom"; break;
+					case 6: .afx = "center"; .afy = "bottom"; break;
+					case 7: .afx = "left"; .afy = "bottom"; break;
+					case 8: .afx = "left"; .afy = "center"; break;
+					case 9: .afx = "center"; .afy = "center"; break;
+					default: .afx = .defaultAfx; .afy = .defaultAfy; break;
+					}
+					.originx = layer.originx;
+					.originy = layer.originy;
+					.setPos(layer.left + info.emoX, layer.top + info.emoY);
+					if (emoAction !== void) {
+						var action = createAction(emoAction, %[time:emotion.time]);
+						if (action !== void) {
+							//dm("Emotion Action time:" + action.time);
+							var target = (action instanceof "Array") ? action[action.count-1] : action;
+							if (emotion.nowait !== void) {
+								target.nowait = +emotion.nowait;
+							} else if (target.nowait == void) {
+								target.nowait = true;
+							}
+							target.hide = +emotion.hide if emotion.hide !== void;
+							.beginAction(action);
+						}
+					}
+					.parent   = layer.parent;
+					.absolute = layer.absolute+1;
+					.visvalue = 100;
+				}
+				//dm("emoLayer", layer.parent.name, layer.absolute);
+			}
+			invalidate emotion;
+			emotion = void;
+		}
+    }
+
+	/**
+	 * Update process
+	 */
+	function update(base) {
+		timeInfo = env.currentTimeInfo;
+		// Standing CG system update
+		global.KAGEnvImage.update(...);
+		// Facial expression update
+		if (redrawFace) {
+			env.redrawFace(this);
+			redrawFace = false;
+		}
+	}
+
+	function updateSound(skipMode) {
+		// For loop voice support
+		if (doBackVoice) {
+			if (backVoiceName === void || backVoiceName == "" || !openBackVoice(backVoiceName, backVoiceLoop)) {
+				stopBackVoice();
+				backVoiceName = void;
+				backVoiceLoop = false;
+			} else {
+				stopVoice();
+				startBackVoice();
+				if (!backVoiceLoop) {
+					backVoiceName = void;
+				}
+			}
+			doBackVoice = false;
+		}
+	}
+
+	function initCommand() {
+		global.KAGEnvImage.initCommand();
+		redrawFace = false;
+	}
+
+	
+	/**
+	 * KAG tag processing
+	 * @param elm Command parameters
+	 */
+	function command(elm) {
+		// Prioritize pose specification command
+		var e = %[];
+		(Dictionary.assign incontextof e)(elm); 
+		var names = [];
+		names.assign(e);
+		for (var i=0; i<names.count; i+= 2) {
+			if (doPoseCommand(names[i], names[i+1], e)) {
+				delete e[names[i]];
+			}
+		}
+		global.KAGEnvImage.command(e);
+	}
+
+	function checkSync(elm) {
+		global.KAGEnvImage.checkSync(elm);
+		syncCommand = true if elm.waitvoice;
+	}
+
+	function sync(elm, skipMode) {
+		global.KAGEnvImage.sync(...);
+		if (elm.stopvoice) {
+			stopVoice();
+		} else if (elm.playvoice !== void) {
+			if (!skipMode) {
+				var param = elm.playvoice;
+				if (typeof param == "String") {
+					if (reNumber.test(param)) {
+						param = (int)(cutZero.replace(param, ""));
+					}
+					playVoice(getVoice(param));
+				}
+			}
+		}
+		if (elm.waitvoice) {
+			env.addFastTag("wchvoice", %[target:this]);
+		}
+	}
+
+	// ----------------------------------------------------------
+	// Voice processing
+	// ----------------------------------------------------------
+
+	var reNumber = new RegExp("^[0-9][0-9]*$");
+	var cutZero  = new RegExp("^0*", "g"); // For cutting leading zeros (otherwise treated as octal)
+
+	/**
+	 * Get voice filename
+	 * @param voice Parameter. Formatted if numeric, returned as-is if string
+	 */
+    function getVoice(voice) {
+        if (typeof voice == "Integer") {
+            if (init.voiceFile === void) {
+                return void;
+            }
+			var voiceBase = env.getVoiceBase();
+			// If named and not the default name, refer with a filename containing 'N'
+			if (env.isDefaultName()) {
+				var name = init.voiceFile.sprintf(voiceBase, voice, "N");
+				if (Storages.isExistentStorage(name)) {
+                    return name;
+                }
+            }
+            // In case of a normal name
+            return init.voiceFile.sprintf(voiceBase, voice, "");
+        } else if (typeof voice == "String") {
+            return voice;
+        }
+        return void;
+    }
+
+	var soundBuffer; // Sound buffer for voice
+
+	var backVoiceBuffer; //< Sound buffer for loop voice
+	var _backVoiceName; //< Loop voice filename
+	var doBackVoice = false; //< Flag for starting loop voice
+	var backVoiceLoop = false;
+	var backVoiceType = 0;
+
+	property backVoiceName {
+		getter() {
+			return _backVoiceName;
+		}
+		setter(v) {
+			_backVoiceName = v;
+			doBackVoice = true;
+		}
+	}
+	
+	function updateVoiceSpeed() {
+		if (soundBuffer !== void) {
+			soundBuffer.speed = env.getVoiceSpeed();
+		}
+    }
+    
+	/**
+	 * Process on voice start
+	 * BGM volume control and BGV control
+	 */
+	function onStartVoice() {
+		//dm("Voice start volume control started");
+		env.onStartVoice(name);
+		if (backVoiceName !== void) {
+			stopBackVoice();
+		}
+	}
+
+	/**
+	 * Process on voice stop
+	 * BGM volume control and BGV control
+	 */
+	function onStopVoice() {
+		//dm("Voice start volume control completed");
+		env.onStopVoice(name);
+		if (backVoiceName !== void) {
+			if (!doBackVoice) {
+				startBackVoice();
+			}
+		}
+    }
+	
+	function onStartVoiceLabel(labels) {
+		var names = [];
+		names.assign(labels);
+		// ↑WaveSoundBuffer.labels has a special EnumMembers implementation,
+		//   always assigned sorted by samplePosition (unlike Dictionary, order is not undefined)
+		var entryDelay = env.entryDelay;
+		var n = 0;
+		for (var i=0;i<names.count;i+=2) {
+			entryDelay(names[i]);
+			entryDelay("vl" + ++n);
+		}
+		entryDelay("vlstop");
+	}
+
+	function onStopVoiceLabel() {
+		env.extractDelay("vlstop");
+	}
+
+	/**
+	 * Process on voice label
+	 */
+	function onLabelVoice(name, count) {
+		var extractDelay = env.extractDelay;
+		extractDelay(name);
+		extractDelay("vl" + count);
+	}
+	
+	function getVoicename(voicename) {
+		// Extension completion processing
+		env.errorLine(void, name + ":Voice playback:" + voicename);
+		if (!Storages.isExistentStorage(voicename)) {
+			var test;
+			if (test = voicename + ".wav", Storages.isExistentStorage(test)) {
+				return test;
+			} else if(test = voicename + ".ogg", Storages.isExistentStorage(test)) {
+				return test;
+			} else if(test = voicename + ".opus", Storages.isExistentStorage(test)) {
+				return test;
+			} else {
+				env.errorVoice(name + ":Voice cannot be loaded:" + voicename);
+				return void;
+			}
+		}
+		return voicename;
+	}
+
+	function isVoiceOn() {
+		return env.isVoiceOn(init.voiceName);
+	}
+	
+	/**
+	 * Voice playback
+	 */
+	function playVoice(voicename=void, mode=true) {
+		if (voicename !== void && voicename != ""){
+			//dm("Playback processing:" + voicename);
+			voicename = getVoicename(voicename);
+			if (voicename !== void && env.isVoiceOn(init.voiceName) && !env.skipMode) {
+				if (soundBuffer === void) {
+					soundBuffer = new VoiceTrack(this);
+				}
+				soundBuffer.speed = env.getVoiceSpeed();
+				soundBuffer.open(voicename);
+				soundBuffer.play(mode);
+				resetVoiceVolume();
+			}
+		}
+    }
+
+	/**
+	 * Stop voice
+	 */
+    function stopVoice() {
+		if (soundBuffer !== void) {
+			soundBuffer.stop();
+        }
+    }
+
+	/**
+	 * Clear voice mode.
+	 * *Stops delayrun related reactions
+	 */
+	function clearVoiceMode() {
+		if (soundBuffer !== void) {
+			soundBuffer.mode = false;
+		}
+		if (backVoiceBuffer !== void) {
+			backVoiceBuffer.mode = false;
+		}
+	}
+	
+	/**
+	 * Wait for voice
+	 */
+	function waitVoice(elm, main) {
+		if (soundBuffer !== void && soundBuffer.canWait()) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var trigger = name + "_voice";
+			if (canskip && main.clickSkipEnabled) {
+				if (main.skipMode){
+					stopVoice();
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						arg();
+					} incontextof this,
+					click_arg : stopVoice,
+					trigger => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					trigger + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					trigger => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					trigger + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		}
+		return 0;
+    }
+    
+	/**
+	 * Readjust voice volume
+	 */
+    function resetVoiceVolume() {
+		if (soundBuffer !== void) {
+			var per = init.voiceVolume;
+			var vol = env.getVoiceVolume(init.voiceName);
+			soundBuffer.volume2 = ((per !== void) ? (vol * +per / 100) : vol) * 1000;
+        }
+	}
+
+	/**
+	 * Open loop voice file
+	 */
+	function openBackVoice(voicename, loop) {
+		if (voicename !== void && voicename != ""){
+			voicename = getVoicename(voicename);
+			if (voicename !== void && env.isVoiceOn(init.voiceName, loop)) {
+				if (backVoiceBuffer === void) {
+					backVoiceBuffer = new BackVoiceTrack(this);
+				}
+				resetBackVoiceVolume();
+				backVoiceBuffer.open(voicename);
+				backVoiceBuffer.looping = loop;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Readjust loop voice volume
+	 */
+	function resetBackVoiceVolume() {
+		if (backVoiceBuffer !== void) {
+			var per = init.voiceVolume;
+			var vol = env.getBGVVolume(backVoiceType, init.voiceName);
+			backVoiceBuffer.volume2 = ((per !== void) ? (vol * +per / 100) : vol) * 1000;
+		}
+	}
+
+	/**
+	 * Start loop voice
+	 */
+	function startBackVoice() {
+		//dm("Resuming back voice");
+		if (backVoiceBuffer !== void) {
+			backVoiceBuffer.stopFade();
+			if (backVoiceBuffer.status != "play") {
+				backVoiceBuffer.volume = 0;
+				backVoiceBuffer.play(true);
+			}
+			backVoiceBuffer.fade(100000,300);
+		}
+	}
+
+	/**
+	 * End loop voice
+	 */
+	function stopBackVoice() {
+		if (backVoiceBuffer !== void) {
+			backVoiceBuffer.fade(0,300);
+		}
+	}
+
+	// -----------------------------------------------------------------
+	// For referring to standing CG information
+	// -----------------------------------------------------------------
+
+	// Get list of pose names
+	function getPoseNames() {
+		var ret = [];
+		var names = [];
+		names.assign(poses);
+		for (var i=0;i<names.count;i+=2) {
+			ret.add(names[i]);
+		}
+		ret.sort();
+		return ret;
+	}
+	
+	// Get list of outfit names
+	function getDressNames() {
+		var ret = [];
+		var info = poses[pose];
+		if (info !== void && info.dresses !== void) {
+			var names = [];
+			names.assign(info.dresses);
+			for (var i=0;i<names.count;i+=2) {
+				ret.add(names[i]);
+			}
+		}
+		ret.sort();
+		return ret;
+	}
+
+	// Get list of facial expression names
+	function getFaceNames() {
+		var ret = [];
+		var info = poses[pose];
+		if (info !== void && info.faces !== void) {
+			var names = [];
+			names.assign(info.faces);
+			for (var i=0;i<names.count;i+=2) {
+				ret.add(names[i]);
+			}
+		}
+		ret.sort();
+		return ret;
+	}
+};

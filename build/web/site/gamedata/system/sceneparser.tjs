@@ -1,0 +1,2260 @@
+﻿// SceneParser.tjs - compiles KAG scenarios into scenes for the scene player (KAGEnvPlayer.tjs)
+//
+// A script listed in !scnlist.txt is compiled into <script>.scn (a PSB file, written by the
+// scnfile plugin's SCNFile), or <script>.scn.json without the plugin or with format=json in
+// parseroption.txt, next to the script. The player reads that instead of the script: text, names and voices as a table, the tags as
+// steps, and the World's state at every save point, so it can start at any line, roll back
+// and skip to unread text. See doc/scn.txt for what is compiled and how, and the format.
+//
+// The compiler reads the script with a tokenizer of its own rather than KAGParser, which
+// evaluates [if], cond= and & entities while it parses: here those stay runtime decisions.
+// Macros are expanded as KAG does, from parsermacro.ks (or the game's macros without it).
+// World tags are run through the player's headless World (KAGEnvForParse) to record its
+// state; every other tag is kept as a step for the game to run.
+//
+// A script starts from the World another listed script leaves when it goes there (a [jump]
+// or a choice to its start): its entry state. Each compiled file records where it goes and
+// the World then (exits); a script reached that way from scripts that all leave the same
+// World starts from it, otherwise from an empty World. compileAll compiles a script again
+// when its entry state has changed, until they all hold (entryFor, doc/scn.txt).
+//
+// A game in more than one language (KAGLanguageList, Language.tjs) has its other languages
+// built into each compiled file, as Wamsoft's multi-language games do: each script's
+// translation into a language, lang/<code>/scenario/<script> (a copy of the script with the
+// text in that language), is compiled too, and its texts, display names, choices and titles go
+// into the script's, scene by scene (addLanguages, doc/scn.txt "Languages").
+
+// Text flags (KAGEnvPlayer.TEXTFLAG_*)
+var SCN_TEXTFLAG_LINE   = 0x01;
+var SCN_TEXTFLAG_NOER   = 0x02;
+var SCN_TEXTFLAG_NOWAIT = 0x04;
+var SCN_TEXTFLAG_EVENT  = 0x08;
+var SCN_TEXTFLAG_STAGE  = 0x10;
+var SCN_TEXTFLAG_NOTEXT = 0x20;
+var SCN_TEXTFLAG_CONT   = 0x40;
+
+// Compiled format version, part of every compiled file's source key (2: exits and entry; 3: a
+// game's other languages in its texts, choices and titles)
+var SCN_FORMAT_VERSION = 3;
+
+// FNV-1a over a string, as 8 hex digits
+function scnHashString(s)
+{
+	var h = 0x811c9dc5;
+	var l = s.length;
+	for (var i = 0; i < l; i++) {
+		h = ((h ^ #s.charAt(i)) * 16777619) & 0xffffffff;
+	}
+	return "%08x".sprintf(h);
+}
+
+/**
+ * A compiled text as plain text: without its escapes (\\, \%, \[ and \k), font commands
+ * (%<size>, %r) and ruby, new lines as spaces. With ruby, what is read out: each ruby in place
+ * of the characters it goes with ([ruby] before one character, [ruby,n] before n + 1, as the
+ * scene player draws them)
+ */
+function scnPlainText(t, ruby = false)
+{
+	var l = t.length, ret = "", i = 0, covered = 0;
+	while (i < l) {
+		var ch = t.charAt(i++);
+		if (ch == "\\") {
+			ch = i < l ? t.charAt(i++) : "";
+			if (ch != "\\" && ch != "%" && ch != "[") continue;
+		} else if (ch == "%") {
+			if (i < l && /[0-9]/.test(t.charAt(i))) {
+				while (i < l && /[0-9]/.test(t.charAt(i))) i++;
+			} else {
+				i++;
+			}
+			continue;
+		} else if (ch == "[") {
+			var r = "";
+			while (i < l && (ch = t.charAt(i++)) != "]") r += ch;
+			if (ruby) {
+				var p = r.indexOf(",");
+				covered = (p >= 0 ? +r.substr(p + 1) : 0) + 1;
+				ret += p >= 0 ? r.substr(0, p) : r;
+			}
+			continue;
+		} else if (ch == "\n") {
+			ch = " ";
+		}
+		if (covered > 0) {
+			covered--;
+			continue;
+		}
+		ret += ch;
+	}
+	return ret;
+}
+
+// A text's entry for one language, as Wamsoft's multi-language scenes have it: [display name,
+// text, length, speech text (ruby read out), search text (as it's shown)]
+function scnLanguageEntry(disp, text)
+{
+	var search = scnPlainText(text);
+	return [ disp, text, search.length, scnPlainText(text, true), search ];
+}
+
+// A choice's text in one language: %[text, speechtext, searchtext, textlength]
+function scnChoiceEntry(text)
+{
+	var shown = text.charAt(0) == "@" ? text.substr(1) : text; // @: a choice without a frame
+	var search = scnPlainText(shown);
+	return %[ text:text, speechtext:scnPlainText(shown, true), searchtext:search, textlength:search.length ];
+}
+
+/**
+ * Reads a KAG scenario into tags the way KAGParser does, except that [if]/[elsif]/[else]/
+ * [endif]/[ignore]/[endignore], [jump]/[call]/[return] and [emb] come back as tags, cond= is
+ * returned instead of evaluated, and & entities keep their expression. Macros are expanded
+ * like KAGParser's ([macropop] ends each one). Labels and [iscript] blocks go to the owner
+ * (onScnLabel, onScnScript) as they're passed.
+ *
+ * A returned tag is a dictionary: tagname, the attributes, and
+ *   __attrs  the attribute names and values in order ([name, value, ...]; values as given,
+ *            entities as "&expression")
+ *   __ent    names of attributes that are & entities (a dictionary)
+ *   __cond   the cond= expression, if any
+ *   __mp     the macro's arguments, if the tag came from a macro
+ *   __line   its line (0-based)
+ */
+class SceneTokenizer
+{
+	var owner;
+	var storage;
+	var lines = [];
+	var labelAliases = [];
+	var lineCount = 0;
+	var curLine = 0;
+	var lineStr = "";
+	var pos = 0;
+	var bufferUsing = false;
+	var ignoreCR = true;
+	var macros;
+	var macroArgs = [];
+	var recording = false;
+	var recordName;
+	var recordStr;
+	var tagLine = 0;
+	var pending = []; // tags to return before reading on (a macro's cond)
+
+	function SceneTokenizer(owner, macros) {
+		this.owner = owner;
+		this.macros = macros;
+	}
+
+	function finalize() {
+	}
+
+	function error(msg) {
+		throw new Exception("%s(%d): %s".sprintf(storage, tagLine + 1, msg));
+	}
+
+	function load(storage) {
+		this.storage = storage;
+		lines.load(storage);
+		lineCount = lines.count;
+		for (var i = 0; i < lineCount; i++) {
+			var l = lines[i];
+			if (i == 0 && l.charAt(0) == $0xFEFF) l = l.substr(1); // a BOM
+			var t = 0;
+			while (l.charAt(t) == "\t") t++;
+			lines[i] = t > 0 ? l.substr(t) : l;
+		}
+		// label names as KAGParser makes them: a duplicate becomes name:2, name:3...
+		labelAliases.clear();
+		var counts = %[], prev = "";
+		for (var i = 0; i < lineCount; i++) {
+			var l = lines[i];
+			if (l.length >= 2 && l.charAt(0) == "*") {
+				var vl = l.indexOf("|");
+				var label = vl >= 0 ? l.substr(0, vl) : l;
+				if (label.length == 1) {
+					if (prev == "") { tagLine = i; error("the first label can't omit its name"); }
+					label = prev;
+				}
+				prev = label;
+				if (counts[label] !== void) {
+					counts[label]++;
+					label = label + ":" + counts[label];
+				} else {
+					counts[label] = 1;
+				}
+				labelAliases[i] = label;
+			}
+		}
+		curLine = 0;
+		pos = 0;
+		bufferUsing = false;
+		lineStr = "";
+		macroArgs.clear();
+		pending.clear();
+		recording = false;
+	}
+
+	property macroDepth { getter() { return macroArgs.count; } }
+
+	// Skips comments, passes labels and [iscript] blocks; false at the end
+	function skipCommentOrLabel() {
+		pos = 0;
+		for (; curLine < lineCount; curLine++) {
+			var p = lines[curLine];
+			var c = p.charAt(0);
+			if (c == ";") continue;
+			if (c == "*") {
+				tagLine = curLine;
+				if (recording) error("a label can't be inside a macro");
+				var vl = p.indexOf("|");
+				var label = labelAliases[curLine];
+				if (label === void) label = p;
+				owner.onScnLabel(label, vl >= 0 ? p.substr(vl + 1) : void, curLine);
+				continue;
+			}
+			if (p == "[iscript]" || p == "[iscript]\\" || p == "@iscript") {
+				tagLine = curLine;
+				if (recording) error("[iscript] can't be inside a macro");
+				var start = curLine + 1;
+				var script = "";
+				for (curLine++; curLine < lineCount; curLine++) {
+					p = lines[curLine];
+					if (p == "[endscript]" || p == "[endscript]\\" || p == "@endscript") break;
+					script += p + "\n";
+				}
+				if (curLine >= lineCount) error("[iscript] without [endscript]");
+				owner.onScnScript(script, start);
+				continue;
+			}
+			break;
+		}
+		if (curLine >= lineCount) return false;
+		lineStr = lines[curLine];
+		bufferUsing = false;
+		return true;
+	}
+
+	function nextLine() {
+		curLine++;
+		pos = 0;
+		bufferUsing = false;
+		lineStr = "";
+	}
+
+	function isWS(c) {
+		return c == " " || c == "\t";
+	}
+
+	function getNextTag() {
+		if (pending.count > 0) return pending.shift();
+		while (true) {
+			if (curLine >= lineCount) {
+				if (recording) error("[macro] without [endmacro]");
+				return void;
+			}
+			if (!bufferUsing && pos == 0) {
+				if (!skipCommentOrLabel()) {
+					if (recording) error("[macro] without [endmacro]");
+					return void;
+				}
+			}
+			var len = lineStr.length;
+			if (!ignoreCR) {
+				if ((lineStr.charAt(pos) == "\\" && pos + 1 == len) ||
+					(pos >= len && pos >= 3 && lineStr.substr(pos - 3, 3) == "[p]")) {
+					// a line ending with \ or [p] doesn't end with a new line
+					nextLine();
+					continue;
+				}
+				if (pos >= len) {
+					tagLine = curLine;
+					nextLine();
+					if (recording) {
+						recordStr += "[r eol=true]";
+						continue;
+					}
+					return %[tagname:"r", eol:"true", __line:tagLine];
+				}
+			}
+			var ldelim;
+			if (!bufferUsing && pos == 0 && lineStr.charAt(0) == "@") {
+				ldelim = ""; // a line command
+			} else {
+				var c = lineStr.charAt(pos);
+				if (c != "[" || lineStr.charAt(pos + 1) == "[") {
+					tagLine = curLine;
+					if (pos >= len) {
+						nextLine();
+						continue;
+					}
+					if (c == "\t") {
+						pos++;
+						continue;
+					}
+					var ret;
+					if (c != "\n") {
+						ret = %[tagname:"ch", text:c, __line:tagLine];
+						if (recording) recordStr += (c == "[" ? "[[" : c);
+					} else {
+						ret = %[tagname:"r", __line:tagLine];
+						if (recording) recordStr += "[r]";
+					}
+					pos += (c == "[") ? 2 : 1;
+					if (!recording) return ret;
+					continue;
+				}
+				ldelim = "]";
+			}
+			var tag = readTag(ldelim);
+			if (tag !== void) return tag;
+		}
+	}
+
+	// Moves past the end of a tag
+	function stepNext(ldelim) {
+		if (ldelim == "") nextLine();
+		else pos++;
+	}
+
+	// Reads a tag at pos: the tag to return, or void to read on
+	function readTag(ldelim) {
+		tagLine = curLine;
+		var tagstartpos = pos;
+		var len = lineStr.length;
+		pos++;
+		while (pos < len && isWS(lineStr.charAt(pos))) pos++;
+		if (pos >= len) error("syntax error in a tag");
+		var namestart = pos;
+		while (pos < len && !isWS(lineStr.charAt(pos)) && lineStr.charAt(pos) != ldelim) pos++;
+		if (pos == namestart) error("a tag without a name");
+		var tagname = lineStr.substr(namestart, pos - namestart).toLowerCase();
+
+		var elm = %[tagname:tagname];
+		var attrs = [];
+		var ent = %[];
+		var cond;
+		var top = macroArgs.count > 0 ? macroArgs[macroArgs.count - 1] : void;
+
+		while (true) {
+			while (pos < len && isWS(lineStr.charAt(pos))) pos++;
+			if ((ldelim == "" && pos >= len) || (ldelim != "" && lineStr.charAt(pos) == ldelim)) break;
+			if (pos >= len) error("a tag without its ]");
+			if (lineStr.charAt(pos) == "*") {
+				// in a macro: all of the macro's arguments
+				if (!recording && top !== void) {
+					var a = [];
+					a.assign(top.args);
+					for (var i = 0; i < a.count; i += 2) {
+						var n = a[i];
+						if (n == "tagname" || n == "taglist") continue;
+						var v = a[i + 1];
+						if (typeof v == "String" && v.charAt(0) == "&") {
+							ent[n] = true;
+							v = v.substr(1);
+						} else {
+							delete ent[n];
+						}
+						if (elm[n] === void) attrs.push(n, v);
+						else {
+							for (var j = 0; j < attrs.count; j += 2) if (attrs[j] == n) { attrs[j + 1] = v; break; }
+						}
+						elm[n] = v;
+					}
+				}
+				pos++;
+				continue;
+			}
+			var astart = pos;
+			while (pos < len) {
+				var c = lineStr.charAt(pos);
+				if (isWS(c) || c == "=" || c == ldelim) break;
+				pos++;
+			}
+			var attrname = lineStr.substr(astart, pos - astart).toLowerCase();
+			while (pos < len && isWS(lineStr.charAt(pos))) pos++;
+			var entity = false, macroarg = false, value;
+			if (lineStr.charAt(pos) != "=") {
+				value = "true";
+			} else {
+				pos++;
+				while (pos < len && isWS(lineStr.charAt(pos))) pos++;
+				if (pos >= len) error("syntax error in a tag's attribute");
+				var c = lineStr.charAt(pos);
+				if (c == "&") entity = true, pos++;
+				else if (c == "%") macroarg = true, pos++;
+				var vdelim = "";
+				c = lineStr.charAt(pos);
+				if (c == "\"" || c == "'") {
+					vdelim = c;
+					pos++;
+				}
+				var raw = "";
+				while (pos < len) {
+					c = lineStr.charAt(pos);
+					if (vdelim != "" ? (c == vdelim) : (c == ldelim || isWS(c))) break;
+					if (c == "`") {
+						pos++;
+						if (pos >= len) error("syntax error in a tag's attribute");
+						c = lineStr.charAt(pos);
+					} else if (raw == "" && !entity && !macroarg) {
+						// & or % at the start of a quoted value
+						if (c == "&") { entity = true; pos++; continue; }
+						if (c == "%") { macroarg = true; pos++; continue; }
+					}
+					raw += c;
+					pos++;
+				}
+				if (ldelim != "" && pos >= len) error("a tag without its ]");
+				if (vdelim != "") pos++;
+				value = raw;
+			}
+			if (recording) continue;
+			if (macroarg) {
+				// a macro argument, name|default
+				var vp = value.indexOf("|");
+				var n = vp >= 0 ? value.substr(0, vp) : value;
+				if (top !== void) {
+					var v = top.args[n];
+					if (v === void && vp >= 0) v = value.substr(vp + 1);
+					value = v;
+				} else {
+					value = n;
+				}
+				if (typeof value == "String" && value.charAt(0) == "&") {
+					entity = true;
+					value = value.substr(1);
+				}
+				if (value === void) continue;
+			}
+			if (attrname == "cond") {
+				cond = entity ? ("(" + value + ")") : value;
+				continue;
+			}
+			if (entity) ent[attrname] = true;
+			else delete ent[attrname];
+			if (elm[attrname] === void) attrs.push(attrname, value);
+			else {
+				for (var j = 0; j < attrs.count; j += 2) if (attrs[j] == attrname) { attrs[j + 1] = value; break; }
+			}
+			elm[attrname] = value;
+		}
+
+		// the tag has ended
+		if (recording) {
+			if (tagname == "endmacro") {
+				recording = false;
+				macros[recordName] = recordStr + "[macropop]";
+				stepNext(ldelim);
+				return;
+			}
+			if (ldelim != "") recordStr += lineStr.substr(tagstartpos, pos - tagstartpos + 1);
+			else if (pos - tagstartpos > 1) recordStr += "[" + lineStr.substr(tagstartpos + 1, pos - tagstartpos - 1) + "]";
+			stepNext(ldelim);
+			return;
+		}
+		switch (tagname) {
+		case "macro":
+			if (elm.name == "") error("[macro] without a name");
+			recordName = ((string)elm.name).toLowerCase();
+			recording = true;
+			recordStr = "";
+			stepNext(ldelim);
+			return;
+		case "endmacro":
+			error("[endmacro] without [macro]");
+		case "erasemacro":
+			if (macros[elm.name] === void) error("unknown macro: " + elm.name);
+			delete macros[elm.name];
+			stepNext(ldelim);
+			return;
+		case "macropop":
+			if (macroArgs.count > 0) {
+				var frame = macroArgs.pop();
+				if (frame.cond) {
+					stepNext(ldelim);
+					return %[tagname:"endif", __line:tagLine, __macrocond:true];
+				}
+			}
+			stepNext(ldelim);
+			return;
+		case "pmacro":
+		case "erasepmacro":
+			error("[" + tagname + "] (parameter macros) isn't supported in compiled scenarios");
+		}
+		var body = macros[tagname];
+		if (body !== void) {
+			// expand the macro where its tag was
+			if (ldelim != "") pos++;
+			var rest = lineStr.substr(pos);
+			lineStr = lineStr.substr(0, tagstartpos) + body + rest + ((ldelim == "" && !ignoreCR) ? "\\" : "");
+			pos = tagstartpos;
+			bufferUsing = true;
+			var args = %[];
+			(Dictionary.assign incontextof args)(elm);
+			// entities stay expressions: "&expression"
+			var a = [];
+			a.assign(ent);
+			for (var i = 0; i < a.count; i += 2) args[a[i]] = "&" + args[a[i]];
+			macroArgs.add(%[args:args, cond:cond !== void]);
+			if (cond !== void) {
+				// a macro with cond= runs its contents only when cond holds
+				return %[tagname:"if", exp:cond, __line:tagLine, __macrocond:true,
+						 __mp:top !== void ? top.args : void];
+			}
+			return;
+		}
+		stepNext(ldelim);
+		elm.__attrs = attrs;
+		elm.__ent = ent;
+		elm.__cond = cond;
+		elm.__mp = top !== void ? top.args : void;
+		elm.__line = tagLine;
+		return elm;
+	}
+}
+
+/**
+ * The scene compiler
+ */
+class SceneParser
+{
+	var env;          // KAGEnvForParse: the headless World
+	var scenePath;    // unused: compiled files go next to their script
+	var targets = []; // the scripts to compile (!scnlist.txt)
+	var targetMap = %[];
+	var options = %[];
+	var baseMacros = %[];
+	var macroKey = "";
+	var keyCache = %[]; // storage -> %[hash, entry] of its compiled file
+	var exitCache = %[]; // storage -> the exits its compiled file records (exitsOf)
+	var warnings = [];
+	var prepared = false; // prepare() has run
+
+	function SceneParser(env, scenePath) {
+		this.env = env;
+		this.scenePath = scenePath;
+		env.parser = this if typeof env.parser != "undefined";
+	}
+
+	function finalize() {
+		if (env isvalid && typeof env.parser != "undefined" && env.parser === this) env.parser = void;
+	}
+
+	function dm(msg) {
+		global.dm("scn: " + msg);
+	}
+
+	// A problem worth reporting that doesn't stop the compile
+	function warn(msg) {
+		var w = (cstorage != "" ? "%s(%d): ".sprintf(cstorage, cline + 1) : "") + msg;
+		warnings.add(w);
+		dm("warning: " + w);
+	}
+
+	function error(msg) {
+		throw new Exception("%s(%d): %s".sprintf(cstorage, cline + 1, msg));
+	}
+
+	// A problem with a file as a whole (a translation)
+	function warnFile(file, msg) {
+		var w = file + ": " + msg;
+		warnings.add(w);
+		dm("warning: " + w);
+	}
+
+	// ------------------------------------------------------------------
+	// Settings: macros and options
+	// ------------------------------------------------------------------
+
+	/**
+	 * Loads the macros the scripts are compiled with and the options
+	 * @param macroFile parsermacro.ks: its macros, and those of the files it calls or jumps
+	 * to. Without it, the game's macros as they are now
+	 * @param optionFile parseroption.txt: name=value lines (linemode, craftername, format)
+	 */
+	function prepare(macroFile = "parsermacro.ks", optionFile = "parseroption.txt") {
+		(Dictionary.clear incontextof baseMacros)();
+		if (macroFile != "" && Storages.isExistentStorage(macroFile)) {
+			loadMacros(macroFile, 0);
+		} else if (typeof kag.mainConductor == "Object" && kag.mainConductor.macros !== void) {
+			(Dictionary.assign incontextof baseMacros)(kag.mainConductor.macros);
+		}
+		(Dictionary.clear incontextof options)();
+		if (optionFile != "" && Storages.isExistentStorage(optionFile)) {
+			var list = [].load(optionFile);
+			for (var i = 0; i < list.count; i++) {
+				var l = ((string)list[i]).trim();
+				if (l == "" || l.charAt(0) == ";" || l.charAt(0) == "#") continue;
+				var p = l.indexOf("=");
+				if (p < 0) options[l.toLowerCase()] = "true";
+				else options[l.substr(0, p).trim().toLowerCase()] = l.substr(p + 1).trim();
+			}
+		}
+		// the key of the settings, for knowing when to compile again
+		var names = [];
+		names.assign(baseMacros);
+		var keys = [];
+		for (var i = 0; i < names.count; i += 2) keys.add(names[i]);
+		keys.sort();
+		var text = "";
+		for (var i = 0; i < keys.count; i++) text += keys[i] + "=" + baseMacros[keys[i]] + "\n";
+		names.assign(options);
+		keys.clear();
+		for (var i = 0; i < names.count; i += 2) keys.add(names[i]);
+		keys.sort();
+		for (var i = 0; i < keys.count; i++) text += "option:" + keys[i] + "=" + options[keys[i]] + "\n";
+		macroKey = scnHashString(text);
+		prepared = true;
+	}
+
+	// Collects the macros a file defines, following [call] and [jump]
+	function loadMacros(storage, depth) {
+		if (depth > 16) throw new Exception("parsermacro.ks: calls nested too deep at " + storage);
+		var tok = new SceneTokenizer(%[ onScnLabel:function {}, onScnScript:function {} ], baseMacros);
+		try {
+			tok.load(storage);
+			var elm;
+			while ((elm = tok.getNextTag()) !== void) {
+				switch (elm.tagname) {
+				case "call":
+					if (elm.storage != "") loadMacros(elm.storage, depth + 1);
+					break;
+				case "jump":
+					if (elm.storage != "") {
+						tok.load(elm.storage);
+					}
+					break;
+				case "return":
+					invalidate tok;
+					return;
+				}
+			}
+		} catch (e) {
+			invalidate tok;
+			throw e;
+		}
+		invalidate tok;
+	}
+
+	// ------------------------------------------------------------------
+	// What to compile, and when
+	// ------------------------------------------------------------------
+
+	function initDepend(list) {
+		targets.clear();
+		(Dictionary.clear incontextof targetMap)();
+		for (var i = 0; i < list.count; i++) {
+			var name = list[i];
+			if (targetMap[name.toLowerCase()] === void) {
+				targets.add(name);
+				targetMap[name.toLowerCase()] = name;
+			}
+		}
+	}
+
+	// Each compiled file holds the key of what it was compiled from, and its exits, so no
+	// dependency file
+	function loadDepend(file) {}
+	function saveDepend(file) {}
+
+	function getTargetList() {
+		var ret = [];
+		ret.assign(targets);
+		return ret;
+	}
+
+	function isTarget(storage) {
+		return targetMap[((string)storage).toLowerCase()] !== void;
+	}
+
+	/**
+	 * The scripts to compile before storage, then storage: the listed scripts that go to its
+	 * start (its entry state comes from them), with theirs when recursive
+	 */
+	function getAllDependStorageList(storage, recursive, list, map) {
+		list = [] if list === void;
+		map = %[] if map === void;
+		var key = ((string)storage).toLowerCase();
+		if (map[key] !== void) return list;
+		map[key] = true;
+		var from = predecessors(storage);
+		for (var i = 0; i < from.count; i++) {
+			if (recursive) getAllDependStorageList(from[i], true, list, map);
+			else if (map[from[i].toLowerCase()] === void) {
+				map[from[i].toLowerCase()] = true;
+				list.add(from[i]);
+			}
+		}
+		list.add(storage);
+		return list;
+	}
+
+	// ------------------------------------------------------------------
+	// Entry states: the World a script starts from
+	// ------------------------------------------------------------------
+
+	// The exits a listed script's compiled file records (%[storage, target, state]), cached
+	// by the file's key; [] when it isn't compiled
+	function exitsOf(storage) {
+		var lkey = ((string)storage).toLowerCase();
+		var path = typeof global.scnFindCompiled != "undefined" ? scnFindCompiled(storage) : void;
+		if (path === void) {
+			delete exitCache[lkey];
+			return [];
+		}
+		var c = exitCache[lkey];
+		if (c !== void && c.path == path) return c.exits;
+		var exits = [];
+		try {
+			var root = readCompiled(path);
+			if (root !== void && root.exits !== void) exits.assignStruct(root.exits);
+		} catch (e) {
+			dm(storage + ": its compiled file can't be read for its exits: " + e.message);
+		}
+		exitCache[lkey] = %[ path:path, exits:exits ];
+		return exits;
+	}
+
+	// A script's start label: the first label, when nothing but comments and macro definitions
+	// comes before it (a [jump] to it enters the script at its start); "" otherwise
+	function startLabel(storage) {
+		if (!Storages.isExistentStorage(storage)) return "";
+		var lines = [].load(storage);
+		var inMacro = false;
+		for (var i = 0; i < lines.count; i++) {
+			var t = ((string)lines[i]).trim();
+			if (t == "" || t.charAt(0) == ";") continue;
+			if (!inMacro && (t.indexOf("[macro ") == 0 || t.indexOf("@macro ") == 0)) inMacro = true;
+			if (inMacro) {
+				if (t.indexOf("[endmacro]") >= 0 || t.indexOf("@endmacro") == 0) inMacro = false;
+				continue;
+			}
+			if (t.charAt(0) != "*") return "";
+			var bar = t.indexOf("|");
+			return bar >= 0 ? t.substr(0, bar) : t;
+		}
+		return "";
+	}
+
+	// The exits of the other listed scripts into storage's start
+	function exitsInto(storage) {
+		var ret = [];
+		var lkey = ((string)storage).toLowerCase();
+		var start = startLabel(storage);
+		for (var i = 0; i < targets.count; i++) {
+			var from = targets[i];
+			if (from.toLowerCase() == lkey) continue;
+			var exits = exitsOf(from);
+			for (var j = 0; j < exits.count; j++) {
+				var e = exits[j];
+				if (((string)e.storage).toLowerCase() != lkey) continue;
+				var t = e.target !== void ? (string)e.target : "";
+				if (t != "" && t != start) continue;
+				ret.add(%[ from:from, state:e.state ]);
+			}
+		}
+		return ret;
+	}
+
+	// The listed scripts that go to storage's start
+	function predecessors(storage) {
+		var ret = [], seen = %[];
+		var into = exitsInto(storage);
+		for (var i = 0; i < into.count; i++) {
+			var k = into[i].from.toLowerCase();
+			if (seen[k] === void) {
+				seen[k] = true;
+				ret.add(into[i].from);
+			}
+		}
+		return ret;
+	}
+
+	/**
+	 * The World storage starts from: the state the scripts that go to its start leave, when
+	 * they all leave the same one; void (an empty World) when none does, or they differ (a
+	 * menu that every chapter comes back to sets its own screen up)
+	 */
+	function entryFor(storage) {
+		var into = exitsInto(storage);
+		if (into.count == 0) return;
+		var key = Scripts.toJSONString(into[0].state);
+		for (var i = 1; i < into.count; i++) {
+			if (Scripts.toJSONString(into[i].state) != key) {
+				dm(storage + ": the scripts that go to it leave different screens, so it starts from an empty World");
+				return;
+			}
+		}
+		// an empty World is no entry state
+		if (key == Scripts.toJSONString(%[])) return;
+		return into[0].state;
+	}
+
+	// The key of an entry state ("" for an empty World)
+	function entryKey(entry) {
+		return entry === void ? "" : scnHashString(Scripts.toJSONString(entry));
+	}
+
+	// Whether compiled files are .scn (PSB, through the scnfile plugin) or .scn.json
+	property writesPsb {
+		getter() {
+			return typeof global.SCNFile != "undefined" && options.format != "json";
+		}
+	}
+
+	// Where a script's compiled file goes: next to it, when that's a local folder
+	function outputPath(storage) {
+		var placed = Storages.getPlacedPath(storage);
+		if (placed == "" || placed.indexOf(">") >= 0) return void;
+		if (placed.substr(0, 7) != "file://") return void;
+		return placed + (writesPsb ? ".scn" : ".scn.json");
+	}
+
+	// A compiled file's data, whichever kind it is
+	function readCompiled(path) {
+		if (path.substr(path.length - 5) == ".json") return Scripts.evalJSONStorage(path, true);
+		var file = new SCNFile(path);
+		var root = file.root;
+		invalidate file;
+		return root;
+	}
+
+	// The key of everything a script's compile depends on: with more than one language, its
+	// translations too
+	function sourceKey(storage) {
+		var key = "%d:%s:%s".sprintf(SCN_FORMAT_VERSION, macroKey, fileHash(storage));
+		key += ":" + fileHash("envinit.tjs");
+		key += ":" + fileHash("charinit.csv") if Storages.isExistentStorage("charinit.csv");
+		var langs = otherLanguages;
+		if (langs.count > 0) {
+			key += ":" + KAGLanguage.source;
+			for (var i = 0; i < langs.count; i++) {
+				var t = translationOf(storage, langs[i]);
+				key += "," + langs[i] + "=" + (t !== void ? fileHash(t) : "-");
+			}
+		}
+		return key;
+	}
+
+	// ------------------------------------------------------------------
+	// Languages (doc/scn.txt, "Languages")
+	// ------------------------------------------------------------------
+
+	// The game's languages after the one its scripts are written in (KAGLanguageList)
+	property otherLanguages {
+		getter() {
+			var ret = [];
+			if (global.KAGLanguage !== void)
+				for (var i = 1; i < KAGLanguage.list.count; i++) ret.add(KAGLanguage.list[i]);
+			return ret;
+		}
+	}
+
+	// Where a script's translation into a language goes: lang/<code>/scenario/<script>
+	function translationName(storage, lang) {
+		return "lang/" + lang + "/scenario/" + Storages.extractStorageName(storage);
+	}
+
+	// A script's translation into a language: in the game's data, or a zip patch with a lang/
+	// folder (the last first); void when there's none. Not isExistentStorage, which finds a
+	// missing lang/ja/scenario/char.ks as the script itself (KAGStorageAt)
+	function translationOf(storage, lang) {
+		var roots = typeof global.KAGLanguageRoots != "undefined" ? KAGLanguageRoots : [ "" ];
+		var name = translationName(storage, lang);
+		for (var i = roots.count - 1; i >= 0; i--) {
+			if (KAGStorageAt(roots[i] + name, name)) return roots[i] + name;
+		}
+	}
+
+	// A scene's choices ([seladd], [mseladd]), in order
+	function choicesOf(scene) {
+		var ret = [];
+		var nexts = scene.nexts;
+		for (var i = 0; nexts !== void && i < nexts.count; i++) {
+			if (nexts[i].type == 1 || nexts[i].type == 2) ret.add(nexts[i]);
+		}
+		return ret;
+	}
+
+	// Why a scene's translation doesn't fit it, text for text (void when it does): a translation
+	// has the texts of its script, in the same order, each said by the same character
+	function translationMismatch(s, ts) {
+		var label = s.label != "" ? s.label : "the start";
+		if (ts === void) return "it has no " + label;
+		if (ts.texts.count != s.texts.count)
+			return "%s has %d texts in it, %d in the script".sprintf(label, ts.texts.count, s.texts.count);
+		for (var j = 0; j < s.texts.count; j++) {
+			var a = s.texts[j][0], b = ts.texts[j][0];
+			if (a != b) return "text %d of %s is %s's in it, %s's in the script (line %d)".sprintf(j + 1, label,
+				b != "" ? b : "nobody", a != "" ? a : "nobody", s.lines.count > 0 ? textLineOf(s, j + 1) + 1 : 0);
+		}
+		var c = choicesOf(s).count, tc = choicesOf(ts).count;
+		if (c != tc) return "%s has %d choices in it, %d in the script".sprintf(label, tc, c);
+	}
+
+	// The line a text of a scene comes from (its save point's)
+	function textLineOf(scene, id) {
+		var lines = scene.lines;
+		for (var i = 0; i < lines.count; i++) {
+			var l = lines[i];
+			if (typeof l == "Object" && l instanceof "Array" && typeof l[0] == "Integer" && l[2] === id) return l[4];
+		}
+		return scene.firstLine;
+	}
+
+	/**
+	 * Puts a script's translations into its compiled data, as Wamsoft's multi-language scenes
+	 * have them: languages lists the other languages' codes, and a text's display name and text
+	 * become a list of entries, the source language's first, each [display name, text, length,
+	 * speech text, search text]; a choice gets language, a list of %[text, speechtext,
+	 * searchtext, textlength] (void first: the source language's is its text); a title becomes a
+	 * list. A translation is matched scene by scene (by label), then text by text and choice by
+	 * choice; a scene it doesn't fit (translationMismatch), and every scene of a language without
+	 * a translation, keeps the source language's text in that language.
+	 * @param langs the other languages
+	 * @param translated each one's translation compiled (compileScript), or void
+	 * @param names where each one's translation is
+	 */
+	function addLanguages(root, langs, translated, names) {
+		root.languages = [];
+		root.languages.assign(langs);
+		var maps = [];
+		for (var k = 0; k < langs.count; k++) {
+			var m = void, t = translated[k];
+			if (t !== void) {
+				m = %[];
+				for (var i = 0; i < t.scenes.count; i++) m[t.scenes[i].label] = t.scenes[i];
+			}
+			maps.add(m);
+		}
+		for (var si = 0; si < root.scenes.count; si++) {
+			var s = root.scenes[si];
+			var texts = s.texts;
+			var entries = [];
+			for (var j = 0; j < texts.count; j++) entries.add([ scnLanguageEntry(texts[j][1], texts[j][2]) ]);
+			var titles = [ s.title ];
+			var choices = choicesOf(s);
+			var choiceEntries = [];
+			for (var c = 0; c < choices.count; c++) choiceEntries.add([ void ]);
+			for (var k = 0; k < langs.count; k++) {
+				var ts = void;
+				if (maps[k] !== void) {
+					ts = maps[k][s.label];
+					var why = translationMismatch(s, ts);
+					if (why !== void) {
+						warnFile(names[k], why + ", so that scene is shown as written in " + langs[k]);
+						ts = void;
+					}
+				}
+				titles.add(ts !== void ? ts.title : s.title);
+				for (var j = 0; j < texts.count; j++) {
+					var t = ts !== void ? ts.texts[j] : texts[j];
+					entries[j].add(scnLanguageEntry(t[1], t[2]));
+				}
+				var tc = ts !== void ? choicesOf(ts) : choices;
+				for (var c = 0; c < choices.count; c++) choiceEntries[c].add(scnChoiceEntry((string)tc[c].text));
+			}
+			for (var j = 0; j < texts.count; j++) {
+				var t = texts[j];
+				texts[j] = [ t[0], entries[j], t[3], t[4], t[5] ];
+			}
+			for (var c = 0; c < choices.count; c++) choices[c].language = choiceEntries[c];
+			s.title = titles;
+		}
+	}
+
+	function fileHash(storage) {
+		var placed = Storages.getPlacedPath(storage);
+		if (placed == "") return "-";
+		return Storages.getMD5HashString(placed);
+	}
+
+	/**
+	 * Whether a script needs compiling: its compiled file is missing, or was compiled from
+	 * something else (the script, the macros, the options, envinit.tjs or the compiler)
+	 */
+	function isNeedParse(storage) {
+		prepare() if !prepared;
+		var out = outputPath(storage);
+		if (out === void) return false; // nowhere to write it
+		var key = sourceKey(storage);
+		var lkey = ((string)storage).toLowerCase();
+		if (keyCache[lkey] === void) {
+			if (!Storages.isExistentStorage(out)) return true;
+			try {
+				var root = readCompiled(out);
+				keyCache[lkey] = %[ hash:(root !== void ? root.hash : ""), entry:(root !== void && root.entry !== void ? root.entry : "") ];
+			} catch (e) {
+				return true;
+			}
+		}
+		// compiled from something else, or the World it starts from has changed
+		return keyCache[lkey].hash != key || keyCache[lkey].entry != entryKey(entryFor(storage));
+	}
+
+	/**
+	 * Whether compiled data was compiled from the script and settings as they are now
+	 */
+	function isCurrent(storage, root) {
+		prepare() if !prepared;
+		return root !== void && root.hash == sourceKey(storage);
+	}
+
+	/**
+	 * Compiles a script and writes its compiled file
+	 * @return the compiled data
+	 */
+	function parse(storage, progress, offset) {
+		var out = outputPath(storage);
+		if (out === void) throw new Exception(storage + ": its folder isn't writable, so it can't be compiled");
+		var t = System.getTickCount();
+		var root = compile(storage, entryFor(storage));
+		if (writesPsb) SCNFile.save(root, out);
+		else Scripts.saveJSON(out, root, true, 1);
+		// one compiled file per script: the player would read a .scn before a .scn.json
+		var other = out.substr(out.length - 5) == ".json" ? out.substr(0, out.length - 5) : out + ".json";
+		Storages.deleteFile(other) if Storages.isExistentStorage(other);
+		keyCache[((string)storage).toLowerCase()] = %[ hash:root.hash, entry:(root.entry !== void ? root.entry : "") ];
+		// a new file isn't found through the auto path until its cache is rebuilt
+		Storages.addAutoPath(System.exePath + "dummy/");
+		Storages.removeAutoPath(System.exePath + "dummy/");
+		var found = typeof global.scnFindCompiled != "undefined" ? scnFindCompiled(storage) : void;
+		exitCache[((string)storage).toLowerCase()] = %[ path:found, exits:(root.exits !== void ? root.exits : []) ] if found !== void;
+		var ntexts = 0;
+		for (var i = 0; i < root.scenes.count; i++) ntexts += root.scenes[i].texts.count;
+		dm("%s: %d scenes, %d texts, %d warnings (%d ms) -> %s".sprintf(storage, root.scenes.count, ntexts,
+			cwarnings, System.getTickCount() - t, out));
+		return root;
+	}
+
+	function getCurrentInfo() {
+		return %[ file:cstorage, line:cline, label:scene !== void ? scene.label : "", lineStr:"" ];
+	}
+
+	// ------------------------------------------------------------------
+	// The compile
+	// ------------------------------------------------------------------
+
+	var tok;          // the tokenizer
+	var cstorage = "";
+	var cline = 0;
+	var cwarnings = 0;
+	var scenes;       // scenes done
+	var scene;        // the scene being compiled
+	var dead;         // tags are unreachable (after a jump or a choice)
+	var deadLevel;    // the [if] level they're unreachable at
+	var deadNest;     // [if]s opened while unreachable
+	var ifStack = [];
+
+	// the text state, as KAG keeps it (MainWindow.tjs, "Special Line Break Control Mode")
+	var lineMode;
+	var crAfterName;
+	var noCrOnce;
+	var noErOnce;
+	var afterPage;
+	var doLine;
+	var emptyLine;
+	var commandLine;
+	var prevEmptyLine;
+	var nameMode;
+	var afterName;
+	var nameStr;
+	var nameDisp;
+
+	// voices (MainWindow.tjs, "For Voice Processing")
+	var voiceBase = "";
+	var voiceDefault;
+	var voiceMap = %[];
+	var nextVoiceList = [];
+
+	// where the script goes to other scripts, and the World then (%[storage, target, state])
+	var exits = [];
+
+	// the message being put together
+	var msg;
+	var pendingName;
+	var lastName;
+	var lastDisp;
+
+	/**
+	 * Compiles a script, with its translations into the game's other languages
+	 * @param entry the World it starts from (entryFor), or void for an empty one
+	 */
+	function compile(storage, entry) {
+		var wcount = warnings.count;
+		var root = compileScript(storage, entry);
+		var langs = otherLanguages;
+		if (langs.count > 0) {
+			// each translation, from the same World (its exits and its key are the script's)
+			var translated = [], names = [];
+			for (var i = 0; i < langs.count; i++) {
+				var path = translationOf(storage, langs[i]), t = void;
+				names.add(path !== void ? path : translationName(storage, langs[i]));
+				if (path === void) {
+					warnFile(storage, "no translation into " + langs[i] + " (" + names[i] + "), so it's shown as written in " + langs[i]);
+				} else {
+					try {
+						t = compileScript(path, entry);
+					} catch (e) {
+						var w = e.message + " (so the translation isn't used, and the script is shown as written in " + langs[i] + ")";
+						warnings.add(w);
+						dm("warning: " + w);
+					}
+				}
+				translated.add(t);
+			}
+			cstorage = storage;
+			cline = 0;
+			addLanguages(root, langs, translated, names);
+		}
+		cwarnings = warnings.count - wcount;
+		return root;
+	}
+
+	/**
+	 * Compiles one script (a script, or its translation)
+	 * @param entry the World it starts from, or void for an empty one
+	 */
+	function compileScript(storage, entry) {
+		cstorage = storage;
+		cline = 0;
+		scenes = [];
+		scene = void;
+		dead = false;
+		deadNest = 0;
+		ifStack.clear();
+		setLineMode(options.linemode);
+		setCrAfterName(options.craftername);
+		noCrOnce = noErOnce = false;
+		voiceBase = "";
+		voiceDefault = void;
+		(Dictionary.clear incontextof voiceMap)();
+		nextVoiceList = [];
+		msg = void;
+		pendingName = void;
+		lastName = lastDisp = void;
+
+		env.initEnv(,,false);
+		env.onRestore(entry,,,false) if entry !== void;
+		env.clearSFlags();
+		exits = [];
+
+		var macros = %[];
+		(Dictionary.assign incontextof macros)(baseMacros);
+		tok = new SceneTokenizer(this, macros);
+		try {
+			tok.ignoreCR = lineMode == LINEMODE_NONE ? global.ignoreCR : false;
+			tok.load(storage);
+			beginScene("", "", 0);
+			var elm;
+			while ((elm = tok.getNextTag()) !== void) {
+				cline = elm.__line if elm.__line !== void;
+				processTag(elm);
+			}
+			if (ifStack.count > 0) error("[if] without [endif]");
+			scene.lastLine = tok.lineCount - 1;
+			finishScene(void);
+		} catch (e) {
+			invalidate tok;
+			tok = void;
+			env.initEnv(,,false);
+			throw e;
+		}
+		invalidate tok;
+		tok = void;
+		env.initEnv(,,false);
+		env.clearSFlags();
+
+		// the part before the first label goes when it does nothing
+		if (scenes.count > 1) {
+			var s = scenes[0];
+			if (s.label == "" && s.texts.count == 0 && s.lines.count <= 1 && s.nexts.count <= 1) scenes.erase(0);
+		}
+		var root = %[ version:SCN_FORMAT_VERSION, storage:storage, hash:sourceKey(storage), scenes:[] ];
+		root.entry = entryKey(entry) if entry !== void;
+		root.exits = exits if exits.count > 0;
+		for (var i = 0; i < scenes.count; i++) {
+			var s = scenes[i];
+			var d = %[ label:s.label, title:s.title, firstLine:s.firstLine, startLine:s.firstLine,
+					   lastLine:s.lastLine, spCount:s.pointCount - 1, texts:s.texts, lines:s.lines ];
+			d.nexts = s.nexts if s.nexts.count > 0;
+			root.scenes.add(d);
+		}
+		return root;
+	}
+
+	// ------------------------------------------------------------------
+	// Scenes
+	// ------------------------------------------------------------------
+
+	function beginScene(label, title, line) {
+		scene = %[ label:label, title:title, firstLine:line, lastLine:line, lines:[], texts:[], nexts:[],
+				   choices:[], pointCount:0, stateMap:%[], sflagSeen:%[], prevStageKey:"", prevEventKey:"",
+				   closed:false, pendingPoint:void, linePoint:void ];
+		emitSavePoint(line);
+	}
+
+	function finishScene(fallLabel) {
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		if (scene.choices.count > 0) {
+			warn("[seladd] without [select]: the choices are dropped");
+			scene.choices.clear();
+		}
+		if (!scene.closed && fallLabel !== void) scene.nexts.add(%[ type:0, target:fallLabel ]);
+		scenes.add(scene);
+	}
+
+	// A label: the scene so far ends and goes on to it
+	function onScnLabel(label, page, line) {
+		cline = line;
+		if (ifStack.count > 0) error("a label can't be inside [if]...[endif] in a compiled scenario");
+		var title = (page !== void && page != "") ? page : scene.title;
+		scene.lastLine = line - 1;
+		finishScene(label);
+		beginScene(label, title, line);
+		dead = false;
+		deadNest = 0;
+	}
+
+	// An [iscript] block runs as a step
+	function onScnScript(script, line) {
+		cline = line;
+		if (dead) return;
+		emitStep([ "*script", 0, "script", script, "storage", cstorage, "line", line ]);
+	}
+
+	// ------------------------------------------------------------------
+	// Lines: steps, texts and save points
+	// ------------------------------------------------------------------
+
+	function emitStep(step) {
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		if (scene.linePoint !== void) {
+			scene.linePoint[4] = cline;
+			scene.linePoint = void;
+		}
+		scene.lines.add(step);
+	}
+
+	// The World's state now: a dictionary, or the number of an earlier text in this scene
+	// with the same state (as a save point or a text's state)
+	function stateRef(textId, st) {
+		if (st === void) {
+			st = %[];
+			env.onStore(st);
+		}
+		var key = Scripts.toJSONString(st);
+		var same = scene.stateMap[key];
+		if (same !== void) return same;
+		if (textId !== void) scene.stateMap[key] = textId;
+		return st;
+	}
+
+	// A save point: the game can save, load and jump here (KAGEnvPlayer.SAVE_*)
+	function emitSavePoint(line = cline) {
+		var sp = [ scene.pointCount++, stateRef(), void, void, line, 0, void ];
+		scene.lines.add(sp);
+		scene.pendingPoint = sp;
+		scene.linePoint = sp;
+		for (var i = 0; i < ifStack.count; i++) ifStack[i].hasPoint = true;
+	}
+
+	// After a branch ends: a save point in it only covers that branch, so what comes next
+	// gets one of its own
+	function branchPoint(f) {
+		if (f.hasPoint) {
+			scene.pendingPoint = void;
+			emitSavePoint();
+		}
+	}
+
+	// After a wait for a click (a text's or an [l]/[p] of its own), the next save point
+	function waitBoundary() {
+		emitSavePoint();
+	}
+
+	// Read flags the World set (bgm_, cg_...), the first time in the scene
+	function emitSFlags() {
+		var flags = env.sflags;
+		for (var i = 0; i < flags.count; i++) {
+			var f = flags[i];
+			if (scene.sflagSeen[f] === void) {
+				scene.sflagSeen[f] = true;
+				scene.lines.add(f);
+			}
+		}
+		env.clearSFlags();
+	}
+
+	// Text with \, % and [ escaped for the player
+	function escapeText(c) {
+		switch (c) {
+		case "\\": return "\\\\";
+		case "%": return "\\%";
+		case "[": return "\\[";
+		}
+		return c;
+	}
+
+	// A name for the next message ([dispname])
+	function textName(name, disp, voice) {
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		pendingName = %[ name:(name != "" ? name : void), disp:(disp != "" ? disp : void), voice:voice ];
+	}
+
+	function openMessage() {
+		if (msg !== void) return;
+		if (pendingName !== void) {
+			msg = %[ name:pendingName.name, disp:pendingName.disp, voice:pendingName.voice, cont:false ];
+			pendingName = void;
+		} else {
+			// it carries on the message window as it is
+			msg = %[ name:lastName, disp:lastDisp, cont:true ];
+		}
+		msg.text = "";
+		msg.visible = false;
+		msg.line = cline;
+	}
+
+	function textCh(c) {
+		openMessage();
+		msg.text += escapeText(c);
+		msg.visible = true;
+	}
+
+	function textR() {
+		openMessage();
+		msg.text += "\n";
+	}
+
+	function textRuby(text) {
+		openMessage();
+		msg.text += "[" + text + "]";
+	}
+
+	// An [l] inside a message
+	function textInlineWait() {
+		if (msg !== void && msg.visible) {
+			msg.text += "\\k";
+		} else {
+			emitStep([ "l" ]);
+			waitBoundary();
+		}
+	}
+
+	// The wait that ends a message: TEXTFLAG_LINE for [l], 0 for [p]. elm is the tag as
+	// written, for a wait without a message to end (the line modes make their own)
+	function textWait(flag, elm) {
+		if (msg !== void && msg.visible) {
+			closeMessage(flag);
+		} else {
+			closeMessage(SCN_TEXTFLAG_NOWAIT);
+			if (!(flag & SCN_TEXTFLAG_LINE) && noErOnce) {
+				noErOnce = false;
+				emitStep([ "*noer" ]);
+			}
+			if (elm !== void) {
+				emitStep(makeStep(elm));
+			} else if (flag & SCN_TEXTFLAG_LINE) {
+				emitStep([ "l", 0, "voicewait", "true" ]);
+				emitStep([ "afterline" ]);
+			} else {
+				emitStep([ "p", 0, "nosave", "true" ]);
+			}
+			waitBoundary();
+		}
+	}
+
+	function closeMessage(flag) {
+		if (msg === void) return;
+		var m = msg;
+		msg = void;
+		if (!m.visible) {
+			// no characters: its new lines are [r]s of their own
+			var t = m.text;
+			for (var i = 0; i < t.length; i++) {
+				if (t.charAt(i) == "\n") emitStep([ "r" ]);
+			}
+			return;
+		}
+		if (scene.linePoint !== void) {
+			scene.linePoint[4] = m.line;
+			scene.linePoint = void;
+		}
+		if (m.cont) flag |= SCN_TEXTFLAG_CONT;
+		if (!(flag & (SCN_TEXTFLAG_LINE | SCN_TEXTFLAG_NOWAIT)) && noErOnce) {
+			flag |= SCN_TEXTFLAG_NOER;
+			noErOnce = false;
+		}
+		var id = scene.texts.count + 1;
+		var st = %[];
+		env.onStore(st);
+		var stageKey = st.stage !== void ? Scripts.toJSONString(st.stage) : "";
+		var eventKey = st.event !== void && st.event.disp !== void ? Scripts.toJSONString(st.event) : "";
+		flag |= SCN_TEXTFLAG_STAGE if stageKey != scene.prevStageKey;
+		flag |= SCN_TEXTFLAG_EVENT if eventKey != "" && eventKey != scene.prevEventKey;
+		scene.prevStageKey = stageKey;
+		scene.prevEventKey = eventKey;
+		var state = stateRef(id, st);
+		scene.texts.add([ m.name, m.disp, m.text, m.voice, flag, state ]);
+		if (scene.pendingPoint !== void) {
+			scene.pendingPoint[2] = id;
+			scene.pendingPoint[5] = flag;
+			scene.pendingPoint = void;
+		}
+		scene.lines.add(id);
+		lastName = m.name;
+		lastDisp = m.disp;
+		if (!(flag & SCN_TEXTFLAG_NOWAIT)) waitBoundary();
+	}
+
+	// ------------------------------------------------------------------
+	// Tags
+	// ------------------------------------------------------------------
+
+	function processTag(elm) {
+		var name = elm.tagname;
+		// KAGParser handles these itself, so the line modes never see them
+		switch (name) {
+		case "if": case "ignore": case "elsif": case "else": case "endif": case "endignore":
+			control(elm);
+			return;
+		}
+		if (dead) return; // unreachable, after a jump or a choice
+		switch (name) {
+		case "jump":
+			jump(elm);
+			return;
+		case "call": case "return":
+			error("[" + name + "] isn't supported in compiled scenarios");
+		case "emb":
+			// text worked out as it's shown
+			var step = [ "*emb", 0, "exp", elm.exp ];
+			if (elm.escape !== void) step.push("escape", elm.escape);
+			if (elm.__cond !== void) step.push("*cond", elm.__cond);
+			emitStep(step);
+			return;
+		}
+		if (elm.__cond !== void) {
+			switch (name) {
+			case "ch": case "r": case "l": case "p": case "ruby":
+				// a text tag that may not run: a step of its own
+				emitStep(makeStep(elm));
+				if (name == "l" || name == "p") waitBoundary();
+				return;
+			}
+		}
+		if (lineMode != LINEMODE_NONE) {
+			switch (name) {
+			case "ch": parseCh(elm); return;
+			case "r": parseR(elm); return;
+			case "p": parseP(elm); return;
+			case "l": parseL2(elm); return;
+			case "nor": noCrOnce = true; return;
+			case "noer": noErOnce = true; return;
+			case "ruby": parseRuby(elm); return;
+			case "nul": checkName(); return;
+			}
+			if (doLine) {
+				parseL();
+				doLine = false;
+			}
+			commandLine = true;
+		} else {
+			switch (name) {
+			case "ch": textCh(elm.text); return;
+			case "r": textR(); return;
+			case "l": textWait(SCN_TEXTFLAG_LINE, elm); return;
+			case "p": textWait(0, elm); return;
+			case "ruby": textRuby(elm.text); return;
+			case "noer": noErOnce = true; return;
+			}
+		}
+		switch (name) {
+		case "voice": parseVoice(elm); return;
+		case "nextvoice": parseNextVoice(elm); return;
+		case "parse": parseParse(elm); return;
+		}
+		// ruby written as a tag: [漢字,かんじ]
+		if (name.indexOf(",") > 0 || name.indexOf("'") > 0) {
+			var rb = kag.checkRubyTag(name);
+			if (rb !== void) {
+				checkName();
+				for (var i = 0; i < rb.length; i++) {
+					if (rb.ruby[i] != "") textRuby(rb.ruby[i]);
+					textCh(rb.text[i]);
+				}
+				return;
+			}
+		}
+		command(elm);
+	}
+
+	// The step that runs a tag: [tagname, flag attributes..., 0, name, value...]. Values that
+	// are & entities are "&expression" (one that starts with & or ` as text gets a ` before
+	// it); *cond is a condition and *mp the macro's arguments, both for the game to use
+	function makeStep(elm, skip) {
+		var step = [ elm.tagname ];
+		var attrs = elm.__attrs;
+		var ent = elm.__ent;
+		var i = 0;
+		var n = attrs !== void ? attrs.count : 0;
+		// the leading attributes without a value are flags
+		for (; i < n; i += 2) {
+			var name = attrs[i];
+			if (skip !== void && skip[name]) continue;
+			if (attrs[i + 1] !== "true" || ent[name]) break;
+			step.push(name);
+		}
+		step.push(0);
+		var usesMp = false;
+		for (; i < n; i += 2) {
+			var name = attrs[i];
+			if (skip !== void && skip[name]) continue;
+			var v = attrs[i + 1];
+			if (ent[name]) {
+				v = "&" + v;
+				usesMp = true if /\bmp\b/.test(v);
+			} else if (typeof v == "String") {
+				usesMp = true if /\bmp\b/.test(v);
+				var c = v.charAt(0);
+				if (c == "&" || c == "`") v = "`" + v;
+			}
+			step.push(name, v);
+		}
+		if (elm.__cond !== void) {
+			step.push("*cond", elm.__cond);
+			usesMp = true if /\bmp\b/.test(elm.__cond);
+		}
+		if (usesMp && elm.__mp !== void) {
+			var mp = %[];
+			(Dictionary.assign incontextof mp)(elm.__mp);
+			delete mp.taglist;
+			step.push("*mp", mp);
+		}
+		return step;
+	}
+
+	// The tag's attributes as the World gets them: tagname first, then in order. Entities are
+	// worked out now, from the values they have while compiling
+	function envElm(elm) {
+		var e = %[ tagname:elm.tagname ];
+		var attrs = elm.__attrs;
+		for (var i = 0; i < attrs.count; i += 2) {
+			var name = attrs[i], v = attrs[i + 1];
+			if (elm.__ent[name]) {
+				try {
+					v = Scripts.eval(v);
+					v = (string)v if v !== void;
+				} catch (ex) {
+					warn("[%s %s=&%s]: can't be worked out while compiling (%s), so the saved state leaves it out".sprintf(
+						elm.tagname, name, attrs[i + 1], ex.message));
+					continue;
+				}
+			}
+			e[name] = v;
+		}
+		return e;
+	}
+
+	function command(elm) {
+		var name = elm.tagname;
+		switch (name) {
+		case "seladd":
+			addChoice(elm, 1);
+			return;
+		case "mseladd":
+			addChoice(elm, 2);
+			return;
+		case "select": case "mselect":
+			select(elm);
+			return;
+		case "scenestart": case "scenestarttext": case "sceneplay": case "scenecheck":
+			error("[" + name + "] can't be used in a compiled scenario");
+		case "linemode":
+			setLineMode(elm.mode);
+			break;
+		case "craftername":
+			setCrAfterName(elm.mode);
+			break;
+		}
+		emitStep(makeStep(elm));
+		if (elm.__cond !== void) {
+			if (isWorldTag(name)) warn("[" + name + "] has cond=, so the saved state doesn't include what it does");
+		} else if (name == "clearlayers") {
+			// clearing the front page clears the World's layers too (KAGEnvironment.onClear)
+			if (elm.page != "back") env.onClear();
+		} else if (isWorldTag(name)) {
+			runWorld(elm);
+		}
+		emitSFlags();
+	}
+
+	function isWorldTag(name) {
+		return typeof kag.tagHandlers[name] == "undefined";
+	}
+
+	// Collects the tags [allchar] and the like expand into
+	var expanded = [];
+	function addTag(name, elm) {
+		var e = %[];
+		(Dictionary.assign incontextof e)(elm, false) if elm !== void;
+		e.tagname = name;
+		expanded.add(e);
+	}
+
+	// Runs a World tag in the headless World
+	function runWorld(elm) {
+		var name = elm.tagname;
+		var e = envElm(elm);
+		try {
+			switch (name) {
+			case "dellay": case "dellayer":
+				env.delLayer(e);
+				break;
+			case "delchar":
+				env.delCharacter(e);
+				break;
+			case "allchar": case "alllayer": case "allfore": case "allbase": case "allimage": case "allse":
+				expanded.clear();
+				env[name](e, this);
+				var list = [];
+				list.assign(expanded);
+				expanded.clear();
+				for (var i = 0; i < list.count; i++) {
+					var t = list[i].tagname;
+					if (t != "begintrans" && t != "endtrans") worldUnknown(t, list[i]);
+				}
+				break;
+			case "begintrans": case "endtrans": case "beginenvtrans": case "msgon": case "msgoff":
+			case "twait": case "showtwait": case "*": case "laytrans": case "alltrans": case "breaktrans":
+			case "wchvoice":
+				break; // the screen only
+			default:
+				worldUnknown(name, e);
+				break;
+			}
+		} catch (ex) {
+			warn("[" + name + "]: " + ex.message);
+		}
+	}
+
+	function worldUnknown(name, e) {
+		var init = env.characterInits[name];
+		if (init !== void) {
+			// voices are the compiler's (KAGEnvironment.unknown sets KAG's)
+			if (e.voice !== void) {
+				setVoice(name, e.voice, e) if init.noVoice === void;
+				delete e.voice;
+			}
+			if (e.nextvoice !== void) {
+				if (init.noVoice === void) {
+					var nv = e.nextvoice;
+					if (typeof nv == "String" && nv != "") {
+						switch (nv) {
+						case "true": case "false": case "1": case "0": break;
+						default: setVoice(name, nv, e); break;
+						}
+					}
+					setNextVoice(name);
+				}
+				delete e.nextvoice;
+			}
+			if (Scripts.getObjectCount(e) <= 1) return;
+		}
+		env.unknown(name, e);
+	}
+
+	// ------------------------------------------------------------------
+	// [if] ... [endif]: steps the player branches on
+	// ------------------------------------------------------------------
+
+	// What the compiler keeps per branch: the World and the text state
+	function saveState() {
+		var st = %[];
+		env.onStore(st);
+		var vm = %[];
+		var names = [];
+		names.assign(voiceMap);
+		for (var i = 0; i < names.count; i += 2) {
+			var info = %[];
+			(Dictionary.assign incontextof info)(names[i + 1]);
+			vm[names[i]] = info;
+		}
+		var nv = [];
+		nv.assign(nextVoiceList);
+		return %[ env:st, lineMode:lineMode, crAfterName:crAfterName, noCrOnce:noCrOnce, noErOnce:noErOnce,
+				  afterPage:afterPage, doLine:doLine, emptyLine:emptyLine, commandLine:commandLine,
+				  prevEmptyLine:prevEmptyLine, nameMode:nameMode, afterName:afterName, nameStr:nameStr,
+				  nameDisp:nameDisp, voiceBase:voiceBase, voiceDefault:voiceDefault, voiceMap:vm,
+				  nextVoiceList:nv, pendingName:pendingName, lastName:lastName, lastDisp:lastDisp,
+				  ignoreCR:tok.ignoreCR ];
+	}
+
+	function restoreState(s) {
+		env.onRestore(s.env, , , false);
+		lineMode = s.lineMode;
+		crAfterName = s.crAfterName;
+		noCrOnce = s.noCrOnce;
+		noErOnce = s.noErOnce;
+		afterPage = s.afterPage;
+		doLine = s.doLine;
+		emptyLine = s.emptyLine;
+		commandLine = s.commandLine;
+		prevEmptyLine = s.prevEmptyLine;
+		nameMode = s.nameMode;
+		afterName = s.afterName;
+		nameStr = s.nameStr;
+		nameDisp = s.nameDisp;
+		voiceBase = s.voiceBase;
+		voiceDefault = s.voiceDefault;
+		(Dictionary.clear incontextof voiceMap)();
+		var names = [];
+		names.assign(s.voiceMap);
+		for (var i = 0; i < names.count; i += 2) {
+			var info = %[];
+			(Dictionary.assign incontextof info)(names[i + 1]);
+			voiceMap[names[i]] = info;
+		}
+		nextVoiceList = [];
+		nextVoiceList.assign(s.nextVoiceList);
+		pendingName = s.pendingName;
+		lastName = s.lastName;
+		lastDisp = s.lastDisp;
+		tok.ignoreCR = s.ignoreCR;
+	}
+
+	// The condition under which the current branches all run, for choices made in them
+	function branchCondition() {
+		var parts = [];
+		for (var i = 0; i < ifStack.count; i++) {
+			var f = ifStack[i];
+			var n = f.conds.count - (f.cur !== void ? 1 : 0);
+			for (var j = 0; j < n; j++) parts.add("!(" + f.conds[j] + ")");
+			parts.add("(" + f.cur + ")") if f.cur !== void;
+		}
+		return parts.join(" && ");
+	}
+
+	function controlStep(name, elm, exp) {
+		var step = [ name, 0 ];
+		if (exp !== void) step.push("exp", exp);
+		if (elm.__mp !== void && exp !== void && /\bmp\b/.test(exp)) {
+			var mp = %[];
+			(Dictionary.assign incontextof mp)(elm.__mp);
+			step.push("*mp", mp);
+		}
+		return step;
+	}
+
+	function control(elm) {
+		var name = elm.tagname;
+		if (dead) {
+			// unreachable: follow the [if] structure to where it can be reached again
+			switch (name) {
+			case "if": case "ignore":
+				deadNest++;
+				return;
+			case "elsif": case "else":
+				if (deadNest > 0 || deadLevel == 0 || ifStack.count != deadLevel) return;
+				break;
+			case "endif": case "endignore":
+				if (deadNest > 0) {
+					deadNest--;
+					return;
+				}
+				if (deadLevel == 0 || ifStack.count != deadLevel) return;
+				break;
+			}
+		}
+		switch (name) {
+		case "if": case "ignore":
+			beginIf(elm, name == "ignore");
+			break;
+		case "elsif":
+			elseIf(elm);
+			break;
+		case "else":
+			elseBranch(elm);
+			break;
+		case "endif": case "endignore":
+			endIf(elm);
+			break;
+		}
+	}
+
+	function beginIf(elm, negate) {
+		var exp = elm.exp;
+		if (exp == "") error("[if] without exp");
+		if (elm.__ent !== void && elm.__ent.exp) exp = "(" + exp + ")";
+		if (negate) exp = "!(" + exp + ")";
+		emitStep(controlStep("*if", elm, exp));
+		ifStack.add(%[ conds:[exp], cur:exp, pre:saveState(), falls:[], hasElse:false, hasPoint:false ]);
+	}
+
+	// The current branch ends: its state goes on after [endif] unless it jumped away
+	function endBranch(f) {
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		if (!dead) f.falls.add(saveState());
+		dead = false;
+		deadNest = 0;
+	}
+
+	function elseIf(elm) {
+		if (ifStack.count == 0) error("[elsif] without [if]");
+		var f = ifStack[ifStack.count - 1];
+		if (f.hasElse) error("[elsif] after [else]");
+		var exp = elm.exp;
+		if (exp == "") error("[elsif] without exp");
+		if (elm.__ent !== void && elm.__ent.exp) exp = "(" + exp + ")";
+		endBranch(f);
+		restoreState(f.pre);
+		emitStep(controlStep("*elsif", elm, exp));
+		branchPoint(f);
+		f.conds.add(exp);
+		f.cur = exp;
+	}
+
+	function elseBranch(elm) {
+		if (ifStack.count == 0) error("[else] without [if]");
+		var f = ifStack[ifStack.count - 1];
+		if (f.hasElse) error("[else] twice");
+		endBranch(f);
+		restoreState(f.pre);
+		emitStep([ "*else" ]);
+		branchPoint(f);
+		f.hasElse = true;
+		f.cur = void;
+	}
+
+	function endIf(elm) {
+		if (ifStack.count == 0) error("[endif] without [if]");
+		var f = ifStack[ifStack.count - 1];
+		endBranch(f);
+		if (!f.hasElse) f.falls.add(f.pre);
+		ifStack.pop();
+		emitStep([ "*endif" ]);
+		if (f.falls.count == 0) {
+			// every branch jumped away, so what follows can't be reached
+			restoreState(f.pre);
+			dead = true;
+			deadLevel = ifStack.count;
+			deadNest = 0;
+			scene.pendingPoint = void;
+			return;
+		}
+		var first = f.falls[0];
+		var key = Scripts.toJSONString(first.env);
+		for (var i = 1; i < f.falls.count; i++) {
+			if (Scripts.toJSONString(f.falls[i].env) != key) {
+				warn("the branches of [if] leave the World in different states; the saved states after [endif] follow the first one");
+				break;
+			}
+		}
+		restoreState(first);
+		branchPoint(f);
+	}
+
+	// ------------------------------------------------------------------
+	// Jumps and choices: where a scene goes next
+	// ------------------------------------------------------------------
+
+	function jump(elm) {
+		var next = %[ type:0 ];
+		next.storage = elm.storage if elm.storage != "";
+		next.target = elm.target if elm.target != "";
+		if (elm.__ent.storage || elm.__ent.target) {
+			// a destination worked out as it runs: a step
+			emitStep(makeStep(%[ tagname:"next", __attrs:elm.__attrs, __ent:elm.__ent, __cond:elm.__cond, __mp:elm.__mp ],
+				%[ countpage:true ]));
+			if (elm.__cond === void) markDead();
+			return;
+		}
+		addExit(next.storage, next.target);
+		if (elm.__cond !== void || ifStack.count > 0) {
+			// a jump that may not happen, or one inside [if]: a step of its own
+			var step = [ "next", 0 ];
+			step.push("storage", next.storage) if next.storage !== void;
+			step.push("target", next.target) if next.target !== void;
+			if (elm.__cond !== void) {
+				step.push("*cond", elm.__cond);
+				if (elm.__mp !== void && /\bmp\b/.test(elm.__cond)) {
+					var mp = %[];
+					(Dictionary.assign incontextof mp)(elm.__mp);
+					step.push("*mp", mp);
+				}
+			}
+			emitStep(step);
+			if (elm.__cond === void) markDead();
+			return;
+		}
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		scene.nexts.add(next);
+		scene.closed = true;
+		markDead();
+	}
+
+	// A jump or a choice to another script: the World it finds there (entryFor)
+	function addExit(storage, target) {
+		if (storage === void || storage == "") return;
+		storage = Storages.extractStorageName(storage);
+		if (storage.toLowerCase() == ((string)cstorage).toLowerCase()) return;
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		var st = %[];
+		env.onStore(st);
+		exits.add(%[ storage:storage, target:(target !== void ? target : ""), state:st ]);
+	}
+
+	function markDead() {
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		dead = true;
+		deadLevel = ifStack.count;
+		deadNest = 0;
+	}
+
+	function addChoice(elm, type) {
+		var c = %[ type:type ];
+		var attrs = elm.__attrs;
+		for (var i = 0; i < attrs.count; i += 2) {
+			var name = attrs[i], v = attrs[i + 1];
+			if (elm.__ent[name]) {
+				warn("[%s %s=&...]: choices take their values as written; use eval= for a condition".sprintf(elm.tagname, name));
+			}
+			c[name] = v;
+		}
+		var conds = [];
+		conds.add("(" + elm.eval + ")") if elm.eval != "";
+		conds.add("(" + elm.__cond + ")") if elm.__cond !== void;
+		var bc = branchCondition();
+		conds.add(bc) if bc != "";
+		if (conds.count > 0) c.eval = conds.join(" && ");
+		scene.choices.add(c);
+	}
+
+	function select(elm) {
+		if (ifStack.count > 0) error("[" + elm.tagname + "] can't be inside [if]...[endif] in a compiled scenario");
+		closeMessage(SCN_TEXTFLAG_NOWAIT);
+		var type = elm.tagname == "mselect" ? 2 : 1;
+		for (var i = 0; i < scene.choices.count; i++) {
+			var c = scene.choices[i];
+			if (c.type != type) warn("[" + elm.tagname + "] with choices of the other kind");
+			c.type = type;
+			scene.nexts.add(c);
+			addExit(c.storage, c.target);
+		}
+		scene.choices.clear();
+		scene.closed = true;
+		markDead();
+	}
+
+	// ------------------------------------------------------------------
+	// Text, as KAG puts it together in each line mode (MainWindow.tjs)
+	// ------------------------------------------------------------------
+
+	function setLineMode(mode) {
+		switch (mode) {
+		case "page": lineMode = LINEMODE_PAGE; break;
+		case "line": lineMode = LINEMODE_LINE; break;
+		case "vn":   lineMode = LINEMODE_VN;   break;
+		case "tex":  lineMode = LINEMODE_TEX;  break;
+		case "free": lineMode = LINEMODE_FREE; break;
+		default:     lineMode = LINEMODE_NONE; break;
+		}
+		if (tok !== void) tok.ignoreCR = lineMode == LINEMODE_NONE ? global.ignoreCR : false;
+		afterPage = true;
+		doLine = false;
+		emptyLine = true;
+		commandLine = false;
+		prevEmptyLine = true;
+		nameMode = 0;
+		afterName = false;
+	}
+
+	function setCrAfterName(mode) {
+		crAfterName = mode !== void && mode != "false" && mode != "0" && mode != "";
+		afterName = false;
+	}
+
+	function lineCheck() {
+		if (doLine) {
+			parseL();
+			doLine = false;
+		}
+	}
+
+	function emptyCheck() {
+		switch (lineMode) {
+		case LINEMODE_PAGE:
+			break;
+		case LINEMODE_LINE:
+		case LINEMODE_VN:
+		case LINEMODE_FREE:
+			if (afterPage) afterPage = false;
+			else if (!afterName) textR();
+			break;
+		case LINEMODE_TEX:
+			if (afterPage) afterPage = false;
+			break;
+		}
+		if (!afterName && (lineMode <= LINEMODE_LINE || prevEmptyLine)) {
+			textName();
+			afterName = true;
+		}
+	}
+
+	function parseCh(elm) {
+		var t = elm.text;
+		if (nameMode > 0) {
+			// 【name/display name】
+			if (t == "】") {
+				nameMode = 0;
+				setNextVoice(nameStr);
+				var voices;
+				if (nextVoiceList.count > 0) {
+					voices = nextVoiceList;
+					nextVoiceList = [];
+				}
+				textName(nameStr, nameDisp, voices);
+				afterName = true;
+			} else if (nameMode == 1) {
+				if (t == "/") nameMode = 2;
+				else nameStr += t;
+			} else {
+				nameDisp += t;
+			}
+			return;
+		} else if (emptyLine) {
+			lineCheck();
+			if (t == "【") {
+				nameMode = 1;
+				nameStr = "";
+				nameDisp = "";
+				return;
+			}
+			emptyCheck();
+		}
+		textCh(t);
+		emptyLine = false;
+		afterPage = false;
+		afterName = false;
+	}
+
+	function parseR(elm) {
+		if (elm.eol === void) {
+			if (doLine) {
+				parseL();
+				doLine = false;
+			}
+			checkName();
+			textR();
+			return;
+		}
+		if (noCrOnce) {
+			noCrOnce = false;
+			prevEmptyLine = emptyLine;
+			emptyLine = true;
+			commandLine = false;
+			return;
+		}
+		nameMode = 0;
+		if (crAfterName && afterName) {
+			commandLine = false;
+			return;
+		}
+		switch (lineMode) {
+		case LINEMODE_PAGE:
+			if (emptyLine) {
+				if (!commandLine) prevEmptyLine = emptyLine;
+			} else {
+				prevEmptyLine = emptyLine;
+				emptyLine = true;
+				textWait(0);
+			}
+			break;
+		case LINEMODE_LINE:
+			if (emptyLine) {
+				if (!commandLine) prevEmptyLine = emptyLine;
+			} else {
+				prevEmptyLine = emptyLine;
+				emptyLine = true;
+				parseL();
+			}
+			break;
+		case LINEMODE_VN:
+			if (emptyLine) {
+				if (!prevEmptyLine) {
+					if (!commandLine) {
+						doLine = false;
+						prevEmptyLine = emptyLine;
+						parseP();
+					}
+				} else {
+					prevEmptyLine = emptyLine;
+				}
+			} else {
+				prevEmptyLine = emptyLine;
+				emptyLine = true;
+				doLine = true;
+			}
+			break;
+		case LINEMODE_TEX:
+		case LINEMODE_FREE:
+			if (emptyLine) {
+				if (!commandLine) {
+					if (!prevEmptyLine) {
+						prevEmptyLine = emptyLine;
+						parseP();
+					} else {
+						prevEmptyLine = emptyLine;
+					}
+				}
+			} else {
+				prevEmptyLine = emptyLine;
+				emptyLine = true;
+			}
+			break;
+		}
+		commandLine = false;
+	}
+
+	// The [l] a line mode adds at the end of a line
+	function parseL() {
+		textWait(SCN_TEXTFLAG_LINE);
+	}
+
+	// An [l] in the script
+	function parseL2(elm) {
+		textInlineWait();
+	}
+
+	function parseP(elm) {
+		textWait(0);
+		afterPage = true;
+		emptyLine = true;
+		commandLine = false;
+		nameStr = "";
+		nameDisp = "";
+	}
+
+	function checkName() {
+		if (emptyLine) {
+			lineCheck();
+			emptyCheck();
+		}
+		emptyLine = false;
+		afterPage = false;
+		afterName = false;
+	}
+
+	function parseRuby(elm) {
+		checkName();
+		textRuby(elm.text);
+	}
+
+	// ------------------------------------------------------------------
+	// Voices (MainWindow.tjs setVoice/getVoice)
+	// ------------------------------------------------------------------
+
+	function parseParse(elm) {
+		(Dictionary.clear incontextof voiceMap)();
+		nextVoiceList = [];
+		if (elm.base !== void) setVoiceBase(elm.base);
+		if (elm.voice !== void) voiceDefault = +elm.voice;
+	}
+
+	function setVoiceBase(base) {
+		voiceBase = base;
+		// KAG keeps the base where the World reads it when playing a voice
+		emitStep([ "eval", 0, "exp", "kag.voiceBase = \"" + ((string)base).escape() + "\"" ]);
+	}
+
+	function parseVoice(elm) {
+		var a = [];
+		a.assign(elm);
+		for (var i = 0; i < a.count; i += 2) {
+			var name = a[i], value = a[i + 1];
+			switch (name) {
+			case "tagname": case "replace": case "once": case "entry": case "taglist":
+				continue;
+			case "base":
+				setVoiceBase(value);
+				continue;
+			case "default":
+				voiceDefault = value;
+				continue;
+			}
+			if (name.charAt(0) == "_") continue;
+			setVoice(name, value, elm);
+		}
+	}
+
+	function parseNextVoice(elm) {
+		setNextVoice(elm.name);
+	}
+
+	function setVoice(name, voice, elm) {
+		var info = voiceMap[name];
+		if (info === void) {
+			info = %[];
+			voiceMap[name] = info;
+		}
+		voice = (string)voice;
+		if (voice.charAt(0) == "@") {
+			if (info.voice !== void) info.voice += +voice.substr(1);
+			else info.voice = +voice.substr(1);
+		} else if (voice == "clear") {
+			delete info.strVoice;
+			delete info.voice;
+			delete info.incVoice;
+		} else if (voice == "dec") {
+			info.voice-- if info.voice !== void;
+		} else if (voice == "count" || voice == "inc") {
+			info.voice++ if info.voice !== void;
+		} else if (voice == "ignore") {
+			info.strVoice = "ignore";
+		} else if (/^[1-9][0-9]*$/.test(voice) || voice == "0") {
+			if (elm.once || elm.replace) info.strVoice = +voice;
+			else info.voice = +voice;
+		} else if (voice.length > 0) {
+			info.strVoice = voice;
+		}
+		info.incVoice = elm.incvoice || elm.replace;
+		info.noplayvoice = elm.noplayvoice;
+	}
+
+	function getVoice(name) {
+		if (name == "") return;
+		var info = voiceMap[name];
+		if (info === void && voiceDefault !== void) {
+			info = %[];
+			voiceMap[name] = info;
+			info.voice = voiceDefault;
+		}
+		var voice;
+		if (info !== void) {
+			if (info.strVoice !== void) {
+				if (info.strVoice != "ignore") voice = info.strVoice;
+				info.strVoice = void;
+			} else if (info.voice !== void) {
+				voice = info.voice;
+				info.incVoice = true;
+			}
+			if (info.incVoice) {
+				info.voice++ if info.voice >= 0;
+				info.incVoice = void;
+			}
+		}
+		return voice;
+	}
+
+	function setNextVoice(name) {
+		var voice = getVoice(name);
+		if (voice !== void) {
+			var info = voiceMap[name];
+			var v = %[ name:name, voice:voice ];
+			v.noplayvoice = info.noplayvoice if info !== void && info.noplayvoice !== void;
+			nextVoiceList.add(v);
+		}
+	}
+}

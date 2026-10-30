@@ -1,0 +1,957 @@
+/**
+ * Class for rendering text.
+ * Provides functionality to fill a rectangle with text and return that data.
+ *
+ * Notes:
+ * - The font face is assumed to be unchanged during a single drawing. If changed, results are not guaranteed.
+ * - Ruby text is placed at a position protruding above the specified area. The top edge of the main text at its maximum size is position 0.
+ * - Line-end prohibited characters (kinsoku) may protrude from the specified area by up to kinsokuMax characters.
+ *
+ * lines: All text. An array of lines.
+ * line: The line currently being processed. An array of text.
+ * Individual text data: A dictionary containing the following information:
+ * x, y: Display position (coordinates relative to the rendering origin).
+ * text: Text to be displayed.
+ * size: Font size.
+ * graph: Graphic image name (to be displayed reduced to the vertical width, instead of text). *Not implemented.
+ * ruby: Ruby text.
+ *   text: Text to be displayed.
+ *   x, y: Display position (coordinates relative to the character's display position).
+ *   size: Ruby font size.
+ * color: Text color.
+ * bold: True if drawing in bold.
+ * italic: True if drawing in italics.
+ * shadow: If drawing a shadow, its color.
+ * edge: If drawing an edge, its color.
+ *
+ */
+class TextRender
+{
+	// Prohibited line-start characters
+	var wwFollowing = "%),:;]}｡｣ﾞﾟ。，、．：；゛゜ヽヾゝゞ々’”）〕］｝〉》」』】°′″℃¢％‰　" + 
+		              "!.?､･ｧｨｩｪｫｬｭｮｯｰ・？！ーぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ";
+	// Prohibited line-end characters
+    var wwLeading="\\$([{｢‘“（〔［｛〈《「『【￥＄£";
+
+	// Max number of prohibited characters
+	var kinsokuMax = 1;
+	
+	var x; // Current display position
+	var y; // Current display position
+	var indentpos; // Indent position
+
+	var ignoreFontChange = true; // Ignore font changes
+	
+	var defaultFontSize = 24; // Default font height
+	var defaultLineSize = 0; // Default line height
+	var lineSize; // Line height
+
+	var defaultLineSpacing = 6; // Default line spacing
+	var lineSpacing; // Line spacing
+	var defaultPitch = 0; // Default character pitch
+	var pitch; // Character pitch
+	var align=-1; // -1=Left/Top align  0=Center align   1=Right/Bottom align
+	
+	var defaultRubySize = 10; // Default ruby height
+	var rubySize; // Ruby height
+	var defaultRubyOffset = -2; // Default ruby offset
+	var rubyOffset; // Ruby offset
+	var currentRuby = ""; // Ruby for the next character
+	var currentRubyCount = 0;
+	var currentText = "";
+
+	var defaultChColor = 0xffffff; // Default character color
+	var chColor; // Character color
+	
+	var defaultShadow = true; // Whether to apply shadow by default
+	var shadow; // Whether to apply shadow
+	var defaultShadowColor = 0x000000; // Default shadow color
+	var shadowColor; // Shadow color
+
+	var defaultEdge = false; // Whether to apply edge by default
+	var edge; // Whether to apply edge
+	var defaultEdgeColor = 0x0080ff; // Default edge color
+	var edgeColor; // Edge color
+
+	var defaultBold = false; // Whether to draw in bold by default
+	var defaultItalic = false; // Whether to draw in italics by default
+	
+	var font;	// Font for processing
+	var width;  //< Display area width
+	var height; //< Display area height
+
+	var lines;        //< Information for all lines
+	var line;         //< Information for current line
+	var kinsokuCount; //< Kinsoku counter
+
+	property bold {
+		setter(v) {
+			font.bold = v;
+		}
+		getter() {
+			return font.bold;
+		}
+	}
+
+	property italic {
+		setter(v) {
+			font.italic = v;
+		}
+		getter() {
+			return font.italic;
+		}
+	}
+
+	var _fontSize;
+	property fontSize {
+		setter(v) {
+			_fontSize = v;
+			font.height = v;
+		}
+		getter() {
+			return _fontSize;
+		}
+	}
+
+	/**
+	 * Constructor
+	 * @param width Rendering area width
+	 * @param height Rendering area height
+	 */
+	function TextRender() {
+	}
+
+	/**
+	 * Finalizer
+	 */
+    function finalize() {
+    }
+
+	function initFont(font) {
+		this.font = font;
+		font.angle = 0;
+	}
+	
+	/**
+	 * Clear the screen
+	 */
+	function clear() {
+		x = 0;
+		y = 0;
+		kinsokuCount = 0;
+		currentRuby = "";
+		currentRubyCount = 0;
+		currentText = "";
+		indentpos = 0;
+		resetFont();
+		resetStyle();
+		lines = [];
+		line  = [];
+    }
+
+	// Reset font
+	function resetFont() {
+		bold   = defaultBold;
+		italic = defaultItalic;
+		fontSize = defaultFontSize;
+		chColor = defaultChColor;
+		rubySize = defaultRubySize;
+		rubyOffset = defaultRubyOffset;
+		shadow = defaultShadow;
+		edge = defaultEdge;
+		shadowColor = defaultShadowColor;
+		edgeColor = defaultEdgeColor;
+	}
+
+	// Set font
+	function setFont(elm) {
+
+		if (elm.bold == 'default')
+			bold = defaultBold;
+		else if(elm.bold !== void)
+			bold = +elm.bold;
+
+		if (elm.italic == 'default')
+			italic = false;
+		else if(elm.italic !== void)
+			italic = +elm.italic;
+		
+		if (elm.size == 'default')
+			fontSize = defaultFontSize;
+		else if(elm.size !== void)
+			fontSize = +elm.size;
+		if (!fontSize) throw new Exception("Invalid font size (check for spelling errors in 'default', etc.): "+elm.size);
+		
+		if (elm.color == 'default')
+			chColor = defaultChColor;
+		else if(elm.color !== void)
+			chColor = +elm.color;
+
+		if (elm.rubysize == 'default')
+			rubySize = defaultRubySize;
+		else if(elm.rubysize !== void)
+			rubySize = +elm.rubysize;
+
+		if (elm.rubyoffset == 'default')
+			rubyOffset = defaultRubyOffset;
+		else if(elm.rubyoffset !== void)
+			rubyOffset = +elm.rubyoffset;
+
+		if (elm.shadow == 'default')
+			shadow = defaultShadow;
+		else if(elm.shadow !== void)
+			shadow = +elm.shadow;
+
+		if (elm.shadowcolor == 'default')
+			shadowColor = defaultShadowColor;
+		else if(elm.shadowcolor !== void)
+			shadowColor = +elm.shadowcolor;
+
+		if (elm.edge == 'default')
+			edge = defaultEdge;
+		else if(elm.edge !== void)
+			edge = +elm.edge;
+
+		if (elm.edgecolor == 'default')
+			edgeColor = defaultEdgeColor;
+		else if(elm.edgecolor !== void)
+			edgeColor = +elm.edgecolor;
+    }
+
+	// Set default font
+	function setDefaultFont(elm) {
+		defaultBold = +elm.bold if elm.bold !== void;
+		defaultFontSize = +elm.size if elm.size !== void;
+		defaultChColor = +elm.color if elm.color !== void;
+		defaultRubySize = +elm.rubysize if elm.rubysize !== void;
+		defaultRubyOffset = +elm.rubyoffset if elm.rubyoffset !== void;
+		defaultShadow = +elm.shadow if elm.shadow !== void;
+		defaultShadowColor = +elm.shadowcolor if elm.shadowcolor !== void;
+		defaultEdge = +elm.edge if elm.edge !== void;
+		defaultEdgeColor = +elm.edgecolor if elm.edgecolor !== void;
+	}
+
+	// Reset style
+	function resetStyle() {
+		lineSize = defaultLineSize;
+		lineSpacing = defaultLineSpacing;
+		pitch = defaultPitch;
+		align = -1;
+	}
+
+	// Set style
+	function setStyle(elm) {
+		if (elm.linespacing == 'default')
+			lineSpacing = defaultLineSpacing;
+		else if(elm.linespacing !== void)
+			lineSpacing = +elm.linespacing;
+
+		if (elm.pitch == 'default')
+			pitch = defaultPitch;
+		else if(elm.pitch !== void)
+			pitch = +elm.pitch;
+
+		if(elm.linesize == 'default')
+		{
+			lineSize = defaultLineSize;
+		}
+		else if(elm.linesize !== void)
+		{
+			lineSize = +elm.linesize;
+		}
+
+		if(elm.align == 'default')
+		{
+			align = -1;
+		}
+		else if(elm.align !== void)
+		{
+			if(elm.align == 'left' || elm.align == 'top')
+				align = -1;
+			else if(elm.align == 'center')
+				align = 0;
+			else if(elm.align == 'right' || elm.align == 'bottom')
+				align = 1;
+		}
+	}
+
+	// Set default style
+	function setDefaultStyle(elm) {
+		defaultLineSpacing = +elm.linespacing if elm.linespacing !== void;
+		defaultPitch = +elm.pitch if elm.pitch !== void;
+		defaultLineSize = +elm.linesize if elm.linesize !== void;
+	}
+
+	/**
+	 * Line addition process
+	 */
+	function addLine()	{
+
+		// Get maximum font size
+		var maxSize = 0;
+		var c = line.count;
+		for (var i=0;i<line.count;i++) {
+			maxSize = (int)Math.max(maxSize, line[i].size);
+		}
+		// Shift by the larger of line width or font size
+		var addy = maxSize > lineSize ? maxSize : lineSize;
+
+		if (height !== void && y +  addy >= height) {
+			// Truncated because it exceeds the page
+			line.clear();
+			return false;
+		}
+
+		// Alignment process
+		var addx;
+		switch (align) {
+		case 0:
+			addx = (width - x)/2;
+			break;
+		case 1:
+			addx = width - x;
+			break;
+		default:
+			addx = 0;
+		}
+
+		// Correct line coordinates according to line breaks and alignment
+		var count = line.count;
+		for (var i=0;i<count;i++) {
+			var ch = line[i];
+			ch.x += addx;
+			ch.y += addy;
+		}
+
+		lines.add(line);
+		line = [];
+
+		// Line break process
+		x = indentpos;
+		y += addy;
+		y += lineSpacing;
+		kinsokuCount = 0;
+		currentRuby = "";
+		currentRubyCount = 0;
+		currentText = "";
+		return true;
+	}
+
+	/**
+	 * Renders character text
+	 * @param text character info
+	 * @return false if truncated
+	 */
+	function entryCh(text) {
+		with (text) {
+			if (x + .cw >= width) {
+				// If character overflows
+				var nextline; // Next line
+				// Prohibited line-start characters
+				if (wwFollowing.indexOf(.text)!=-1) {
+					// Display as is if within kinsoku limit
+					if (kinsokuCount < kinsokuMax) {
+						kinsokuCount++;
+					} else {
+						// If the kinsoku limit is exceeded, move everything to the next line
+						nextline = [];
+						while (line.count > 1 && kinsokuCount > 0) {
+							nextline.unshift(line.pop());
+							kinsokuCount--;
+						}
+						// If the last character is not a line-start prohibited char, move it to the next line as well
+						if (line.count > 1 && wwFollowing.indexOf(line[line.count-1].text)==-1) {
+							nextline.unshift(line.pop());
+						}
+					}
+				} else {
+					//dm("Normal char:" + .text);
+					//dm("Char count:" + line.count);
+					//dm("Last char:" + wwLeading.indexOf(line[line.count-1].text));
+					//dm("Second to last char:" + wwLeading.indexOf(line[line.count-2].text));
+					// Prepare next line
+					nextline = [];
+					// If the end is a prohibited line-end char, move to next line if moving one character is okay
+					if (line.count > 2 && wwLeading.indexOf(line[line.count-2].text)==-1 && wwLeading.indexOf(line[line.count-1].text)!=-1) {
+						nextline.unshift(line.pop());
+					} if (line.count > 1 && wwLeading.indexOf(line[line.count-1].text)!=-1) {
+						nextline.unshift(line.pop());
+					}
+				}
+				if (nextline !== void) {
+					// If there is a next line, break line
+					if (!addLine(line)) {
+						return false; // Truncated
+					}
+					// Insert all characters moved by kinsoku directly into the next line
+					var t;
+					while ((t = nextline.shift()) !== void) {
+						//dm("Re-entering moved character:" + t.text);
+						if (!entryCh(t)) {
+							return false; // Truncated
+						}
+					}
+				}
+			}
+			//dm("Insert:%s (%d,%d)".sprintf(.text, x, y));
+			.x = x;
+			.y = y-.size;
+			line.add(text);
+			x += .cw;
+			x += pitch;
+		}
+		return true; // Character added
+	}
+
+	/**
+	 * Renders character ch
+	 * @param ch character
+	 * @return false if truncated
+	 */
+	function processCh(ch) {
+		currentText += ch;
+		if (currentRubyCount > 0) {
+			// If ruby target character count is specified, accumulate for now
+			currentRubyCount--;
+			return true;
+		}
+		if (currentText.length == 1) {
+			// If only 1 character, process as usual
+			// Create basic information for the text to be stored
+			var cw = font.getTextWidth(currentText);
+			var text = %[text:currentText, cw:cw, size:fontSize, bold:bold, italic:italic, color:chColor];
+			text.edge   = edgeColor if edge;
+			text.shadow = shadowColor if shadow;
+			// Register ruby
+			if (currentRuby != "") {
+				var oh = font.height;
+				font.height = rubySize;
+				var rw = font.getTextWidth(currentRuby);
+				font.height = oh;
+				var rx = int((cw>>1) - (rw>>1));
+				var ry = int(-rubySize-rubyOffset);
+				text.ruby = %[text:currentRuby, x:rx, y:ry, size:rubySize];
+				currentRuby = "";
+			}
+			currentText = "";
+			return entryCh(text);
+		} else {
+			// First, expand the text
+			var texts = [];
+			var l = currentText.length;
+			var w = 0;
+			for (var i=0;i<l;i++) {
+				var ch = currentText.charAt(i);
+				var cw = font.getTextWidth(ch);
+				var text = %[text:ch, cw:cw, size:fontSize, bold:bold, italic:italic, color:chColor];
+				text.edge   = edgeColor if edge;
+				text.shadow = shadowColor if shadow;
+				texts.add(text);
+				w += cw;
+			}
+			// Calculate the drawing width of the text
+			w += pitch * (l-1);
+			var cw0 = texts[0].cw/2;
+			w -= cw0;
+			w -= texts[l-1].cw/2;
+
+			// Get ruby size information
+			var oh = font.height;
+			font.height = rubySize;
+			var rubies = [];
+			var rl = currentRuby.length;
+			var rw = 0;
+			for (var i=0;i<rl;i++) {
+				var ch = currentRuby.charAt(i);
+				var cw = font.getTextWidth(ch);
+				rubies.add(%[ch:ch, cw:cw]);
+				rw += cw;
+			}
+			rw -= rubies[0].cw/2;
+			rw -= rubies[rl-1].cw/2;
+			font.height = oh;
+
+			// Determine ruby placement criteria
+			var rx;
+			var rpitch;
+			if (w > rw) {
+				rx = cw0;
+				rpitch = w / (rl-1);
+			} else {
+				rx = cw0 - (rw - w)/2;
+				rpitch = rw / (rl-1);
+			}
+			var ry = int(-rubySize-rubyOffset);
+
+			// Insert ruby into the text
+			var target = 0;
+			for (var i=0;i<rl;i++) {
+				var ch = rubies[i].ch;
+				var cw = rubies[i].cw;
+				var ruby = %[text:ch, x:rx-cw/2, y:ry, size:rubySize];
+				var text = texts[target];
+				if (text.ruby === void) {
+					text.ruby = [];
+				}
+				text.ruby.add(ruby);
+				rx += rpitch;
+				var cw = text.cw + pitch;
+				if (target < l-1 && rx > cw) {
+					target++;
+					rx -= cw;
+				}
+			}
+
+			currentRuby = "";
+			currentText = "";
+			
+			// Submit for drawing
+			for (var i=0;i<l;i++) {
+				if (!entryCh(texts[i])) {
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
+	/**
+	 * Add a line break
+	 * @return Success:true False if truncated
+	 */
+	function processReturn() {
+		return addLine();
+	}
+
+	// Set ruby for the next character
+	function processRuby(text) {
+		if (text.length > 0) {
+			var p;
+			if ((p = text.indexOf(",")) >= 0) {
+				// Target character count exists on the ruby side
+				currentRuby      = text.substr(0,p);
+				currentRubyCount = +text.substr(p+1);
+			} else {
+				currentRuby = text;
+				currentRubyCount = 0;
+			}
+		}
+	}
+
+	// Pre-indent process
+	function preIndent(ch) {
+		if (ch !== void) {
+			x -= font.getTextWidth(ch);
+		}
+	}
+
+	// Set indent to current position
+	function setIndent() {
+		indentpos = x;
+	}
+
+	// Reset indent
+	function resetIndent() {
+		indentpos = 0;
+	}
+
+	// Empty line check
+	property emptyLine {
+		getter() {
+			return line === void || line.count == 0;
+		}
+	}
+
+	/**
+	 * Executes text rendering in batch and returns the result
+	 * @param width Rendering area width
+	 * @param height Rendering area height (if void, end is not checked)
+	 * @param font Font for rendering
+	 * @param text Text to process
+	 * @param base Target for variable reference with $. If omitted, global is referenced
+	 * @param autoIndent Enable automatic indentation. If negative, reverse indent if at start of line
+	 * @return true if rendering succeeded without overflowing
+	 *
+	 * After calling this,
+	 * the rendering results will be stored in 'lines'.
+	 * Also, the maximum value in the 'y' direction will be stored in height.
+	 *
+	 * Input special text format:
+	 * \n      Newline
+	 * \t      Tab character
+	 * \i      Start indent (from next line)
+	 * \r      Reset indent (from next line)
+	 * \Char   Escape specification. All special functions disabled
+	 * [xxxx]  Ruby specification. Applies to the next character
+	 * %b      Bold specification
+	 * %i      Italic specification
+	 * %n      Reset bold/italics
+	 * %s      Shadow specification
+	 * %e      Edge specification
+	 * %Value  Size specification
+	 * %r      Font reset
+	 * $xxx;   Embedded specification (xxxx is variable name)
+	 * &xxx;   Graphic character specification (xxxx is image name) *Not implemented
+	 */
+	function render(width, height, font, text, autoIndent=0, base=void) {
+
+		this.width = width;
+		this.height = height;
+		initFont(font);
+
+		clear();
+		base = global if base === void;
+
+		// List of brackets for auto-indent (must be ordered to match Begin/End)
+		var autoIndentBeginCharacters = "「『（‘“〔［｛〈《";
+		var autoIndentEndCharacters   = "」』）’”〕］｝〉》";
+		var afterCr = true;
+		var indentLevel = 0; // Count "「"
+		var indentCharacter = void; // Character used for indentation
+		var stop = false; // True if truncated
+		
+		var c = text.length; // Character count
+		var i = 0; // Index
+		while (!stop && i < c) {
+			var ch = text.charAt(i++);
+			switch (ch) {
+			case "\n":
+				// Line break code
+				if (!processReturn()) {
+					stop = true;
+				}
+				afterCr = true;
+				break;
+			case "\\":
+				// Escape sequence
+				if (i < c) {
+					ch = text.charAt(i++);
+					switch (ch) {
+					case "n":
+						if (!processReturn()) {
+							stop = true;
+						}
+						break;
+					case "t":
+						if (!processCh("\t")) {
+							stop = true;
+						}
+						afterCr = false;
+						break;
+					case "i":
+						setIndent();
+						break;
+					case "r":
+						resetIndent();
+						break;
+					case "\\":
+						if (!processCh(ch)) {
+							stop = true;
+						}
+						afterCr = false;
+						break;
+					// Ignore others
+					default:
+						break;
+					}
+				}
+				break;
+			case "[":
+				// Ruby
+				{
+					var value  ="";	while (i < c) {	ch = text.charAt(i++); if (ch == "]") break; value += ch; }
+					processRuby(value);
+				}
+				break;
+			case "%":
+				// Command
+				if (i < c) {
+					ch = text.charAt(i++);
+					if (/[0-9]/.test(ch)) {
+						var value = ch;
+						while (i < c) {	ch = text.charAt(i); if (!/[0-9]/.test(ch)) break; value += ch; i++; }
+						value = +value;
+						if (!ignoreFontChange) {
+							fontSize = value ? value : defaultFontSize;
+						}
+					} else {
+						switch (ch) {
+						case "b": bold = true; break;
+						case "i": italic = true; break;
+						case "n": bold = false, italic = false; break;
+						case "s": shadow = true; break;
+						case "e": edge = true; break;
+						case "r": resetFont(); break;
+						case "C": align=0; break;
+						case "R": align=1; break;
+						case "L": align=-1; break;
+						default: break;
+						}
+					}
+				}
+				break;
+			case "$":
+				// Variable reference
+				{
+					var value  ="";	while (i < c) {	ch = text.charAt(i++); if (ch == ";") break; value += ch; }
+					if (value != "") {
+						if (typeof base[value] == "String") {
+							value = base[value];
+							for (var i=0;i<value.length;i++) {
+								if (!processCh(value.charAt(i))) {
+									stop = true;
+									break;
+								}
+								afterCr = false;
+							}
+						}
+					}
+				}
+				break;
+			case "&":
+				// Graphic character
+				{
+					var value  ="";	while (i < c) {	ch = text.charAt(i++); if (ch == ";") break; value += ch; }
+					if (value != "") {
+						var entry = getGraphEntry(value);
+						entryCh(entry) if (entry !== void);
+					}
+					afterCr = false;
+				}
+				break;
+			default:
+				// Normal character
+				if (autoIndent) {
+					// Auto-indent
+					var indentBeginIdx = -1, indentEndIdx = -1;
+					indentBeginIdx = autoIndentBeginCharacters.indexOf(ch);
+					indentEndIdx   = autoIndentEndCharacters  .indexOf(ch);
+					if (autoIndent < 0 && indentBeginIdx >= 0 && emptyLine) {
+						preIndent(ch);
+					}
+					if (!processCh(ch)) {
+						stop = true;
+					} else {
+						// Auto-indent process
+						if (indentBeginIdx >= 0) {
+							if (afterCr) {
+								indentCharacter = autoIndentBeginCharacters.charAt(indentBeginIdx);
+								setIndent();
+							}
+							indentLevel++;
+						} else if (indentEndIdx >= 0) {
+							if (indentLevel == 1) {
+								var pair = autoIndentBeginCharacters.indexOf(indentCharacter);
+								resetIndent() if (pair == indentEndIdx);
+							}
+							indentLevel--;
+						}
+					}
+				} else {
+					if (!processCh(ch)) {
+						stop = true;
+					}
+				}
+				afterCr = false;
+				break;
+			}
+		}
+		if (stop) {
+			return false;
+		} else {
+			return processReturn();
+		}
+	}
+
+	// Common parameters
+	// No interface to change for now
+	var antialiased; // Whether to apply anti-aliasing
+	var edgeExtent = 1; // Thickness of outlined text
+	var edgeEmphasis = 512; // Emphasis level of outlined text
+	var shadowOffsetX = 2; // Shadow offset
+	var shadowOffsetY = 2; // Shadow offset
+	var shadowWidth   = 0; // Shadow blur level
+
+	/**
+	 * Draws specified character to the layer
+	 * @param layer
+	 * @param ox Origin X position
+	 * @param oy Origin Y position
+	 * @param ch Character drawing info
+	 */
+	function drawCh(layer, ox, oy, ch) {
+		with (ch) {
+			//dm(@"Draw character:(${ch.x},${ch.y}) ${ch.size}, ${ch.text}, %08x}".sprintf(ch.color));
+			layer.font.height = .size;
+			if (.graph != "") {
+				drawGraph(layer, ox, oy, .graph, ch);
+			} else {
+				var dt = layer.drawText;
+				if      (.edge   !== void) dt(ox + .x, oy + .y, .text, .color, 255, antialiased, edgeEmphasis, .edge, edgeExtent, 0, 0);
+				else if (.shadow !== void) dt(ox + .x, oy + .y, .text, .color, 255, antialiased, 255, .shadow, shadowWidth, shadowOffsetX, shadowOffsetY);
+				else                       dt(ox + .x, oy + .y, .text, .color, 255, antialiased);
+			}
+			if (.ruby !== void) {
+				if (.ruby instanceof "Array") {
+					var count = .ruby.count;
+					for (var i=0;i<count;i++) {
+						drawRuby(layer, ox, oy, ch, .ruby[i]);
+					}
+				} else {
+					drawRuby(layer, ox, oy, ch, .ruby);
+				}
+			}
+		}
+	}
+
+	function getGraphLayer(file) {
+		var win = global.Window.mainWindow;
+		var lay = new global.Layer(win, win.primaryLayer);
+		try {
+			lay.loadImages(file);
+		} catch {
+			invalidate lay;
+			return void;
+		}
+		return lay;
+	}
+
+	function getGraphEntry(file) {
+		var lay = getGraphLayer(file);
+		if (lay !== void) {
+			var text = %[ graph:file, cw:lay.imageWidth, size:lay.imageHeight, color:chColor ];
+			text.edge   = edgeColor if edge;
+			text.shadow = shadowColor if shadow;
+			invalidate lay;
+			return text;
+		}
+	}
+	function drawGraph(target, ox, oy, file, ch) {
+		var lay = getGraphLayer(file);
+		if (lay !== void) with (lay) {
+			var w = ch.cw, h = ch.size;
+			ox += ch.x;
+			oy += ch.y;
+
+			.face = dfOpaque;
+			.holdAlpha = true;
+			if (ch.edge !== void) {
+				.fillRect(0, 0, w, h, ch.edge);
+				target.operateRect(ox+1, oy,   lay, 0, 0, w, h);
+				target.operateRect(ox,   oy+1, lay, 0, 0, w, h);
+				target.operateRect(ox-1, oy,   lay, 0, 0, w, h);
+				target.operateRect(ox,   oy-1, lay, 0, 0, w, h);
+			} else if (ch.shadow !== void) {
+				.fillRect(0, 0, w, h, ch.shadow);
+				target.operateRect(ox+shadowOffsetX, oy+shadowOffsetY, lay, 0, 0, w, h);
+			}
+			.fillRect(0, 0, w, h, ch.color);
+			target.operateRect(ox, oy, lay, 0, 0, w, h);
+			invalidate lay;
+		}
+	}
+
+	function drawRuby(layer, ox, oy, ch, ruby) {
+		if (ruby) {
+			with (ruby) {
+				var rtext = %[];
+				(Dictionary.assign incontextof rtext)(ch);
+				delete rtext.ruby;
+				rtext.x += .x;
+				rtext.y += .y;
+				rtext.text = .text;
+				rtext.size = .size;
+				//dm("Draw ruby:%s (%d,%d) %d".sprintf(rtext.text, rtext.x, rtext.y, rtext.size));
+				drawCh(layer, ox, oy, rtext);
+			}
+		}
+	}
+	
+	/**
+	 * Renders and draws text to the layer
+	 * @param layer Destination layer
+	 * @param ox Origin X position
+	 * @param oy Origin Y position
+	 * @param width Rendering area width
+	 * @param height Rendering area height (if void, end is not checked)
+	 * @param text Text to process
+	 * @param autoIndent Enable automatic indentation. If negative, reverse indent if at start of line
+	 * @param base Base for variable reference. If omitted, it becomes global
+	 * @return true if rendering succeeded without overflowing
+	 */
+	function draw(layer, ox, oy, width, height, text, autoIndent=1, base=void) {
+		// Rendering
+		var ret= render(width, height, layer.font, text, autoIndent, base);
+		drawAll(layer, ox, oy);
+		return ret;
+	}
+	function drawAll(layer, ox, oy) {
+		// Draw results to the layer
+		for (var l=0, lc=lines.count; l<lc; l++) {
+			for (var i=0, line=lines[l], c=line.count; i<c; i++) {
+				drawCh(layer, ox, oy, line[i]);
+			}
+		}
+	}
+	function getRect() {
+		// Get range
+		var minmax = function(rect, item, ox=0, oy=0) {
+			with (rect) {
+				var n, x=item.x+ox, y=item.y+oy;
+				if ((n=x)           < .x1 || .x1 === void) .x1 = n;
+				if ((n=y)           < .y1 || .y1 === void) .y1 = n;
+				if ((n=x+item.cw)   > .x2 || .x2 === void) .x2 = n;
+				if ((n=y+item.size) > .y2 || .y2 === void) .y2 = n;
+				if (item.ruby !== void) {
+					if (item.ruby instanceof "Array") {
+						for (var i=0, c=item.ruby.count; i < c; i++)
+							.self(rect, item.ruby[i], x, y);
+					} else  .self(rect, item.ruby,    x, y);
+				}
+			}
+		};
+		var rect = %[ self:minmax ];
+		for (var l=0, lc=lines.count; l<lc; l++) {
+			for (var i=0, line=lines[l], c=line.count; i<c; i++) {
+				minmax(rect, line[i]);
+			}
+		}
+		with (rect) return %[ x:.x1, y:.y1, width:.x2-.x1, height:.y2-.y1 ];
+	}
+
+
+	/**
+	 * Copy settings from the message layer
+	 * @param msg Message layer
+	 */
+	function setDefaultFromMessageLayer(msg, force) {
+		if (msg instanceof "MessageLayer" || force) {
+			var params = ["defaultBold",
+						  "defaultFontSize",
+						  "defaultChColor",
+						  "defaultRubySize",
+						  "defaultRubyOffset",
+						  "defaultShadow",
+						  "defaultShadowColor",
+						  "defaultEdge",
+						  "defaultEdgeColor",
+						  "defaultLineSpacing",
+						  "defaultPitch",
+						  "defaultLineSize",
+						  "antialiased",
+						  "edgeExtent",
+						  "edgeEmphasis",
+						  "shadowOffsetX",
+						  "shadowOffsetY",
+						  "shadowWidth"
+						  ];
+			var c = params.count;
+			for (var i=0;i<c;i++) {
+				var name = params[i];
+				if (typeof msg[name] != "undefined") {
+					this[name] = msg[name];
+				}
+			}
+		}
+	}
+}

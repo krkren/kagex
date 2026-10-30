@@ -1,0 +1,537 @@
+// CheckBoxLayer.tjs - Checkbox Layer
+
+// Copyright (C)2001-2008, W.Dee and contributors  Free to modify and redistribute.
+
+
+
+
+
+class CheckBoxLayer extends KAGLayer
+
+{
+
+	var CheckBox_checked = false;
+
+	var CheckBox_glyph;
+
+	var CheckBox_mouseOn = false;
+
+	var CheckBox_color = clWindow;
+
+	var CheckBox_glyphColor = clWindowText; // Color of the symbol
+
+	var CheckBox_opacity = 192; // Opacity
+
+
+
+	function CheckBoxLayer(win, par)
+
+	{
+
+		super.Layer(...);
+
+
+
+		hitType = htMask;
+
+		hitThreshold = 0;
+
+
+
+		if(typeof win.cursorPointed !== "undefined")
+
+			cursor = win.cursorPointed;
+
+
+
+		CheckBox_glyph = new global.Layer(win, this);
+
+		CheckBox_glyph.loadImages("check.png");
+
+
+
+		setImageSize(CheckBox_glyph.width, CheckBox_glyph.height);
+
+		setSizeToImageSize();
+
+
+
+		focusable = true; // Can gain focus
+
+	}
+
+
+
+	function finalize()
+
+	{
+
+		invalidate CheckBox_glyph;
+
+		super.finalize(...);
+
+	}
+
+
+
+	function assign(src)
+
+	{
+
+		// Copy information from src to this button layer
+
+		assignImages(src, true);
+
+		CheckBox_checked = src.CheckBox_checked;
+
+		CheckBox_color = src.CheckBox_color;
+
+		CheckBox_glyphColor = src.CheckBox_glyphColor;
+
+		CheckBox_opacity = src.CheckBox_opacity;
+
+	}
+
+
+
+
+
+	function draw()
+
+	{
+
+		// Draw current state
+
+
+
+		// Clear background
+
+		face = dfAlpha;
+
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+
+
+
+		var w, h;
+
+		var l = (imageWidth - (w = CheckBox_glyph.imageWidth)) >> 1;
+
+		var t = (imageHeight - (h = CheckBox_glyph.imageHeight)) >> 1;
+
+
+
+		if(CheckBox_color != clNone)
+
+			colorRect(l, t, w, h, CheckBox_color, CheckBox_opacity);
+
+
+
+		// Color the base when mouse is over
+
+		if(CheckBox_mouseOn)
+
+			colorRect(l+1, t+1, w-2, h-2, clHighlight, 64); // Highlight
+
+
+
+		// Draw symbol
+
+		if(CheckBox_checked)
+
+		{
+
+			CheckBox_glyph.face = dfOpaque;
+
+			CheckBox_glyph.holdAlpha = true;
+
+			CheckBox_glyph.fillRect(0, 0, w, h, CheckBox_glyphColor); // Paint with symbol color
+
+			operateRect(l, t, CheckBox_glyph, 0, 0, w, h, omAlpha);
+
+		}
+
+
+
+		// Draw border
+
+		colorRect(l, t, w, 1, 0x000000, 128);
+
+		colorRect(l, t+1, 1, h-2, 0x000000, 128);
+
+		colorRect(l+w-1, t+1, 1, h-1, 0xffffff, 128);
+
+		colorRect(l+1, t+h-1, w-2, 1, 0xffffff, 128);
+
+
+
+		if(focused)
+
+		{
+
+			// Highlight because it has focus
+
+			colorRect(l+2, t+2, w-4, 1, clHighlight, 128);
+
+			colorRect(l+2, t+3, 1, h-5, clHighlight, 128);
+
+			colorRect(l+3, t+h-3, w-5, 1, clHighlight, 128);
+
+			colorRect(l+w-3, t+3, 1, h-6, clHighlight, 128);
+
+		}
+
+
+
+	}
+
+
+
+	function onPaint()
+
+	{
+
+		// Called immediately before drawing
+
+		super.onPaint(...);
+
+		draw();
+
+	}
+
+
+
+	function onMouseEnter()
+
+	{
+
+		// Mouse entered the layer area
+
+		CheckBox_mouseOn = true;
+
+		update();
+
+		super.onMouseEnter(...);
+
+	}
+
+
+
+	function onMouseLeave()
+
+	{
+
+		// Mouse left the layer area
+
+		CheckBox_mouseOn = false;
+
+		update();
+
+		super.onMouseLeave(...);
+
+	}
+
+
+
+	function onNodeDisabled()
+
+	{
+
+		// Layer node became disabled
+
+		super.onNodeDisabled(...);
+
+		update();
+
+	}
+
+
+
+	function onNodeEnabled()
+
+	{
+
+		// Layer node became enabled
+
+		super.onNodeEnabled(...);
+
+		update();
+
+	}
+
+
+
+	function onFocus()
+
+	{
+
+		// Gained focus
+
+		super.onFocus(...);
+
+		update();
+
+	}
+
+
+
+	function onBlur()
+
+	{
+
+		// Lost focus
+
+		super.onBlur(...);
+
+		update();
+
+	}
+
+
+
+	function onMouseDown()
+
+	{
+
+		// onMouseDown event handler
+
+		focus();
+
+        checked = !checked;
+
+		super.onMouseDown(...);
+
+	}
+
+
+
+	function onMouseUp()
+
+	{
+
+		// onMouseUp event handler
+
+		update();
+
+		super.onMouseUp(...);
+
+	}
+
+
+
+	function onKeyDown(key, shift, process)
+
+	{
+
+		// Key was pressed
+
+		if(process)
+
+		{
+
+			if(key == VK_RETURN || key == VK_SPACE)
+
+			{
+
+				// Space key or Enter key
+
+                checked = !checked;
+
+				super.onKeyDown(key, shift, false); // Handled, so pass false to process
+
+			}
+
+			else
+
+			{
+
+				super.onKeyDown(...);
+
+			}
+
+		}
+
+		else
+
+		{
+
+			// Do nothing if process is false
+
+			super.onKeyDown(...);
+
+		}
+
+	}
+
+
+
+	property width
+
+	{
+
+		setter(x)
+
+		{
+
+			super.width = x;
+
+			imageWidth = x;
+
+			update();
+
+		}
+
+		getter
+
+		{
+
+			return super.width;
+
+		}
+
+	}
+
+
+
+	property height
+
+	{
+
+		setter(x)
+
+		{
+
+			super.height = x;
+
+			imageHeight = x;
+
+			update();
+
+		}
+
+		getter
+
+		{
+
+			return super.height;
+
+		}
+
+	}
+
+
+
+	property color
+
+	{
+
+		setter(x)
+
+		{
+
+			CheckBox_color = int x;
+
+			update();
+
+		}
+
+		getter
+
+		{
+
+			return CheckBox_color;
+
+		}
+
+	}
+
+
+
+	property glyphColor
+
+	{
+
+		setter(x)
+
+		{
+
+			CheckBox_glyphColor = int x;
+
+			update();
+
+		}
+
+		getter
+
+		{
+
+			return CheckBox_glyphColor;
+
+		}
+
+	}
+
+
+
+	property bgOpacity
+
+	{
+
+		setter(x)
+
+		{
+
+			CheckBox_opacity = int x;
+
+			update();
+
+		}
+
+		getter
+
+		{
+
+			return CheckBox_opacity;
+
+		}
+
+	}
+
+
+
+	property checked
+
+	{
+
+		setter(x)
+
+		{
+
+			CheckBox_checked = int x;
+
+			update();
+
+            onChange(CheckBox_checked);
+
+        }
+
+		getter
+
+		{
+
+			return CheckBox_checked;
+
+		}
+
+	}
+
+
+
+    function onChange(checked)
+
+	{
+
+	}
+
+
+
+}

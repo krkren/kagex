@@ -1,0 +1,1555 @@
+﻿// AnimationLayer.tjs - Layer that performs animations
+
+// Copyright (C) 2001-2008, W.Dee and contributors. Free to modify and distribute.
+
+
+
+
+
+/*
+
+-- Two Types of Animation ---------------------------------------------
+
+
+
+　There are two ways to perform animations in KAG.
+
+　One is cell-based animation using "cell images." In this case, 
+various parts of the "cell image" are sequentially cut out and pasted 
+onto a "base image."
+
+
+
+　The other is clipping-based animation, which became available in 
+KAG 3.05 beta 3. This method does not require a separate cell image.
+　The image tag has four attributes: clipleft, cliptop, clipwidth, 
+and clipheight. By (conceptually) changing these sequentially, you 
+can display different parts of a large image one after another. 
+This is suitable for cases where multiple frames are lined up 
+horizontally in one image.
+
+
+
+　The processing load for clipping-based animation is lighter. In 
+demo scenes where you animate by redrawing the entire area of a layer, 
+clipping-based animation is better.
+　Conversely, for things like blinking or lip-syncing, cell-based 
+animation is more flexible and easier to use.
+
+
+
+
+
+-- How to Write Cell-Based Animations -----------------------------------
+
+
+
+　First, to perform an animation, you need a "base image" and a 
+"cell image." The base image is the background/foundation for the 
+animation. The cell image contains the animation "parts." Parts of 
+the cell image are copied and layered onto the base image.
+
+
+
+　The base image is loaded using the [image] tag (the "base" here 
+refers to the layer's initial state, not the KAG background layer "base"). 
+The cell image is loaded using the [loadcell] tag within the 
+animation definition file.
+
+
+
+　The animation definition file is a text file with the same name 
+as the base image but with an .asd extension.
+　The animation definition file is written using KAG syntax, but 
+the tag system is different from standard KAG.
+
+
+
+　For simple animations that don't use animation segments, the 
+LineBreak or PageBreak files in the KAG system folder are useful references.
+　A sample using animation segments is currently located in the 
+Kirikiri source at environ/win32/kag3/scenario/animtest.ks.
+
+
+
+-- Segments -------------------------------------------------------------
+
+
+
+　A segment is a mechanism to allow multiple animations (sharing 
+the same base, cell, and asd file) to run simultaneously.
+　Segments are numbered starting from 0 for each layer.
+　Segment 0 is a special segment called the "default segment," 
+which starts automatically when the image is loaded. LineBreak 
+and PageBreak in the system folder only use this default segment. 
+For simple animations, this is sufficient.
+
+
+
+　If you want to handle lip-sync and blinking in a single image, 
+you must use multiple segments. For example, blinking can run 
+continuously in the default segment, while lip-sync is started 
+or stopped via scenario control.
+
+
+
+　Starting an animation for a specific segment is done using the 
+[animstart] tag in a normal KAG scenario. [animstart] starts 
+animation in any segment (other than the default segment).
+
+
+
+　When the loop attribute of the [animstart] tag is true, the 
+animation must be scripted to loop. It doesn't loop automatically; 
+you must write the asd file so it jumps back.
+　While failing to loop won't cause an error, the image might 
+not be reproduced correctly when loading a saved game.
+Also, when a save is loaded, animation restarts only if loop=true 
+was specified, starting from the beginning of the label in the 
+asd file specified in [animstart].
+
+
+
+　When loop=false, the animation runs but must eventually stop 
+using the [s] tag. Also, when stopped with [s], the image must 
+return to the same state as the base image. Use this for 
+one-shot animations.
+
+
+
+　[animstop] stops an animation but does not wait for it to finish. 
+In reality, the animation stops only after passing through a 
+[@home] tag.
+
+
+
+　[wa] waits for an animation in a specific segment to finish. 
+It can also wait for the default segment. This is only effective 
+when loop=false was specified in [animstart], or when the 
+animation was stopped with [animstop]. In other cases, [wa] 
+will wait forever.
+
+
+
+　The only information stored in save files is which segment 
+started from which label; the exact frame position is not recorded.
+　Only animations that were looping will be resumed when 
+loading a save.
+
+
+
+
+
+-- How to Write Clipping-Based Animations ---------------------------
+
+
+
+　Unlike cell-based animations, for clipping-based animations, 
+you prepare a single image where each frame is lined up horizontally.
+　For example, if you want to animate 8 frames on a 320x240 screen, 
+prepare a 2560x240 image (2560 = 320 * 8).
+　When loading the image, write the [image] tag so that the first 
+frame is displayed.
+　For example:
+
+
+
+@image storage=anim page=fore layer=0 mode=rect clipleft=0 cliptop=0 clipwidth=320 clipheight=240
+
+
+
+　In the .asd file, write descriptions to sequentially display 
+each frame lined up horizontally. Since no cell image is used, 
+there is no need for [loadcell].
+　Example:
+
+
+
+@wait time=80
+@clip left=320 top=0
+@wait time=80
+@clip left=640 top=0
+@wait time=80
+@clip left=960 top=0
+@wait time=80
+@clip left=1280 top=0
+@wait time=80
+@clip left=1600 top=0
+@wait time=80
+@clip left=1920 top=0
+@wait time=80
+@clip left=2240 top=0
+@wait time=80
+@s
+
+
+
+　As you might notice, they don't actually have to be horizontal.
+　Vertical is fine, but when compressing with PNG, lining 
+them up horizontally often yields a better compression ratio.
+
+
+
+　For clipping-based animations, information on how the layer was 
+animating is not stored in save files. Please invalidate the 
+clipping animation information (e.g., by loading a different 
+image to that layer) before passing the next "Save-able label."
+
+
+
+
+
+-- Description of tags in asd files ---------------------------------------
+
+
+
+
+
+■ loadcell
+
+
+
+・Attributes
+
+
+
+  storage (optional)        Specifies the cell image filename to load.
+
+
+
+・Description
+
+
+
+　This tag is used only for cell-based animations.
+　The [loadcell] tag loads the animation cell image. Since 
+animation cannot be performed without loading a cell image, 
+always include this at the beginning of the .asd file.
+If the storage attribute is omitted, an image with "_a" 
+appended to the base image's filename will be loaded.
+　Writing it at the start of the .asd file is sufficient; 
+you don't need to write it after every segment start label.
+
+
+
+
+
+■ loop
+
+
+
+・Attributes
+
+
+
+  (none)
+
+
+
+・Description
+
+
+
+　This tag is used only for cell-based animations.
+　The [loop] tag declares that the data is intended to loop.
+　Declaring this does not mean the data loops automatically. 
+Please write your script so it loops.
+　Place this tag near the entry label of segments that loop. 
+For the default segment, placing it after [loadcell] is fine.
+
+
+
+■ copy
+
+
+
+・Attributes
+
+
+
+  dx                        Destination x coordinate
+  dy                        Destination y coordinate
+  sx                        Source x coordinate
+  sy                        Source y coordinate
+  sw                        Width
+  sh                        Height
+
+
+
+・Description
+
+
+
+　This tag is used only for cell-based animations.
+　Copies from the cell image to the base image.
+
+
+
+■ wait
+
+
+
+・Attributes
+
+
+
+  time                      Wait time (ms)
+
+
+
+・Description
+
+
+
+　Waits for the specified time.
+　Usually, this is used in a cycle with the [copy] tag.
+
+
+
+■ jump, if/endif, eval, iscript/endscript
+
+
+
+　Same as KAG scenarios.
+　However, since multiple segments can run in parallel, 
+be careful not to overlap variables if you are manipulating them.
+
+
+
+■ s
+
+
+
+・Attributes
+
+
+
+  (none)
+
+
+
+・Description
+
+
+
+　Stops execution, just like in normal KAG.
+　If the animation does not loop, stop it with this tag 
+instead of using the [loop] tag.
+　If you don't want to animate immediately when the image 
+is loaded, write [s] immediately after [loadcell].
+
+
+
+
+
+
+
+■ home
+
+
+
+・Attributes
+
+
+
+  (none)
+
+
+
+・Description
+
+
+
+　This tag is used only for cell-based animations.
+　This is the point where execution stops when [animstop] 
+is called. You cannot stop via [animstop] without this. 
+When using [animstop], ensure at least one [home] tag is 
+placed within the loop.
+
+
+
+
+
+
+
+■ clip
+
+
+
+・Attributes
+
+
+
+  left                      Left position for clipping
+  top                       Top position for clipping
+
+
+
+　This tag is used only for clipping-based animations.
+　Specifies the clipping position, identical to the 
+clipleft and cliptop attributes in the [image] tag.
+　Since the width and height of the clipping cannot 
+be changed, the size specified in the [image] tag remains fixed.
+
+
+
+*/
+
+
+
+
+
+class AnimationConductor extends BaseConductor
+{
+	var owner;
+	var number; // Number of this conductor
+	var looping = false;
+	var startLabel = "";
+	var stopping = false; // Whether it is waiting to stop
+	var running = false; // Whether it is running
+
+	function AnimationConductor(owner)
+	{
+		super.BaseConductor(); // Call superclass constructor
+		ignoreCR = true; // Ignore CR
+		debugLevel = tkdlNone;
+//		debugLevel = tkdlVerbose;
+		this.owner = owner;
+	}
+
+	function finalize()
+	{
+		owner = void; // Clear reference to owner
+		super.finalize(...);
+	}
+
+	function onStop()
+	{
+		// Stop execution
+		var elm = %[];
+		elm.context = this;
+		owner.s(elm); // Call 's' tag
+	}
+
+	function onTag(obj)
+	{
+		// When a tag is executed
+		var func = owner[obj.tagname];
+		if(func == void)
+		{
+			dm(Storages.extractFileName(curStorage) + " : Unknown tag : " + obj.tagname);
+			return 0;
+		}
+		obj.context = this;
+		return func(obj);
+	}
+
+	function onScript(script, scriptname, lineofs)
+	{
+		// When iscript is executed
+		try
+		{
+			Scripts.exec(script, scriptname, lineofs);
+		}
+		catch(e)
+		{
+			throw new Exception(scriptname + " line " + lineofs + ": "
+				"Error occurred in iscript block."
+				"\n( See console for details )\n" + e.message);
+		}
+		return true;
+	}
+
+	function assign(src)
+	{
+		// Copy state from src to this object
+		super.assign(src);
+		looping = src.looping;
+		startLabel = src.startLabel;
+		stopping = src.stopping;
+		running = src.running;
+	}
+}
+
+
+
+
+
+class AnimationLayer extends AffineLayer
+{
+	var Anim_cellLayer; // Cell layer
+	var Anim_segments = []; // Conductors for each segment
+	var Anim_storageName; // Animation data filename
+	var Anim_loadParams = void; // Parameters specified during loading
+	var Anim_partialImageInfo = void; // Parameters for partial image loading
+	var Anim_interrupted = false; // Whether it is interrupted
+
+	var Anim_defaultFontInfo = %[];
+	var Anim_seLabelWait = void; // Waiting for SELabel
+
+	function AnimationLayer(win, par)
+	{
+		// AnimationLayer constructor
+		super.AffineLayer(...); // Call superclass constructor
+		initAnim();
+	}
+
+	function finalize()
+	{
+		if (Anim_seLabelWait !== void && isvalid window)
+			window.removeHook("onSELabel", this.onSELabel);
+		termAnim();
+		super.finalize(...);
+	}
+
+	function clearImage(process = true)
+	{
+		// Make it invisible (if possible) and clear the layer
+		// Override if necessary
+		if(process)
+		{
+			visible = false;
+			setSize(32, 32);
+			setImageSize(32, 32);
+			face = dfAlpha;
+			fillRect(0, 0, 32, 32, 0);
+			type = ltOpaque;
+			face = dfAuto;
+		}
+	}
+
+	function freeImage()
+	{
+		// Free image
+		clearAnim();
+		clearImage();
+		clearClipImage();
+		Anim_loadParams = void;
+		Anim_partialImageInfo = void;
+	}
+
+	function initAnim() {
+		if (typeof this.Anim_segments == "undefined") with (this) {
+			.Anim_segments = [];
+			.Anim_defaultFontInfo = %[];
+			.Anim_cellLayer = .Anim_storageName = .Anim_loadParams = .Anim_partialImageInfo = void;
+			.Anim_interrupted = false;
+		}
+		Anim_defaultFontInfo.face = font.face; // Default font
+		Anim_defaultFontInfo.height = font.height; // Default font size
+
+		Anim_segments[0] = new AnimationConductor(this); // Default conductor
+		Anim_segments[0].number = 0;
+	}
+
+	function termAnim() {
+		clearAnim(); // Clear animation info
+		invalidate Anim_segments[0]; // Invalidate default conductor
+		Anim_loadParams = void;
+		Anim_partialImageInfo = void;
+	}
+
+	function clearAnim()
+	{
+		// Clear animation info
+		// Clear animation segments
+		// Remove each segment (except default)
+		for(var i = Anim_segments.count -1; i>=1; i--)
+		{
+			var seg = Anim_segments[i];
+			invalidate Anim_segments[i] if seg !== void;
+		}
+		Anim_segments.count = 1;
+
+		// Stop default segment
+		Anim_segments[0].stop();
+
+		// Destroy animation cell layer
+		invalidate Anim_cellLayer if Anim_cellLayer !== void;
+		Anim_cellLayer = void;
+	}
+
+	function loadAnimInfo(segment, label)
+	{
+		// Load animation info into specified segment and start execution
+		// segment = segment index, label = start label (empty string for beginning)
+		// Loads the file specified in Anim_storageName
+		if(Anim_storageName == '')
+			throw new Exception(
+				(Anim_loadParams !== void ? "For " + Anim_loadParams.storage + ": " : "") +
+				"Animation information not found");
+
+		var seg;
+		if(Anim_segments[segment] === void)
+		{
+			Anim_segments[segment] = seg = new AnimationConductor(this);
+			seg.number = segment;
+				// Create conductor for new segment
+		}
+		else
+		{
+			// Stop segment
+			(seg = Anim_segments[segment]).stop();
+		}
+
+		seg.startLabel = label;
+		seg.stopping = false;
+		seg.running = true;
+		seg.clearCallStack();
+		seg.interrupted = Anim_interrupted;
+		seg.loadScenario(Anim_storageName);
+		if(label != '') seg.goToLabel(label);
+		seg.startProcess(true);
+	}
+
+	function startAnim(elm)
+	{
+		// Start animation according to elm
+		loadAnimInfo(+elm.seg, elm.target);
+	}
+
+	function stopAnim(segment)
+	{
+		// Stop animation in segment
+		var seg = Anim_segments[segment];
+		if(seg === void) return; // Cannot stop
+		seg.stopping = true;
+	}
+
+	function canWaitAnimStop(segment)
+	{
+		// Whether we can wait for segment's animation to end
+		var seg = Anim_segments[segment];
+		if(seg === void) return false; // Cannot wait
+		if(!seg.running) return false; // Cannot wait as it's not running
+		if(seg.looping && !seg.stopping) return false; // Cannot wait if looping and not stopping
+		return true;
+	}
+
+	function superLoadImages() { return super.loadImages(...); }
+
+	function loadImages(elm)
+	{
+		// loadImages override
+		// elm is the load information
+		if(elm === void)
+		{
+			freeImage();
+			return;
+		}
+
+		// Check if asd file exists
+		Anim_storageName =
+			Storages.getPlacedPath(
+				Storages.chopStorageExt(elm.storage) + ".asd");
+
+		// If the start of asd is ;!, overwrite elm
+		if(Anim_storageName != '') {
+			var tmp = [];
+			var exp = tmp.load(Anim_storageName)[0];
+			if (exp !== void && exp.charAt(0) == ';' && exp.charAt(1) == '!') {
+				tmp = exp.substr(2).split(" ",, true);
+				for (var i = 0; i < tmp.count; i++)
+					tmp[i] = "." + tmp[i] + (tmp[i].indexOf("=") < 0 ? "=true" : "");
+				exp = "with (this) " + tmp.join(",") + ";";
+				(function(e) { e!; } incontextof elm)(exp);
+			}
+		}
+
+		Anim_loadParams = %[];
+		(Dictionary.assign incontextof Anim_loadParams)(elm);
+			// Save parameters
+
+		// Clear animation info
+		clearAnim();
+
+		// Clear partial image info
+		Anim_partialImageInfo = void;
+
+		if (elm.color !== void) {
+			var opac = (elm.coloropacity !== void) ? +elm.coloropacity : 255;
+			// Fill color
+			setSize(+elm.width, +elm.height);
+			fillRect(0, 0, +elm.width, +elm.height, (opac << 24) | +elm.color);
+		} else {
+			// Load image
+			if (elm.storage !== void) {
+				var taginfo = superLoadImages(elm.storage, elm.key, elm);
+				// Adopt image tag info as default values
+				if(taginfo)	{
+					(Dictionary.assign incontextof taginfo)(elm, false);
+					elm = taginfo;
+				}
+			}
+		}
+
+		// Flip
+		var ud, lr;
+		if(elm.flipud !== void && +elm.flipud)
+		{
+			// Vertical flip
+			flipUD();
+			ud = true;
+		}
+		else
+		{
+			ud = false;
+		}
+
+		if(elm.fliplr !== void && +elm.fliplr)
+		{
+			// Horizontal flip
+			flipLR();
+			lr = true;
+		}
+		else
+		{
+			lr = false;
+		}
+
+		// Clipping
+		if(elm.clipleft !== void)
+		{
+			// Clipping specified
+			width = +elm.clipwidth;
+			height = +elm.clipheight;
+			var cl = elm.clipleft;
+			if(lr) cl = imageWidth - cl - width;
+			var ct = elm.cliptop;
+			if(ud) ct = imageHeight - ct - height;
+			imageLeft = -cl;
+			imageTop = -ct;
+		}
+		else
+		{
+			setSizeToImageSize();
+		}
+
+		// Layer mode
+		{
+			// affinelayer uses void to select appropriate initial mode
+			//var mode = ltAlpha;
+			var mode;
+
+			if(elm.mode !== void)
+			{
+				var layertypeinfo = imageTagLayerType[elm.mode];
+				if(layertypeinfo !== void)
+					mode = layertypeinfo.type;
+			}
+
+			type = mode;
+		}
+
+		// Color correction
+		applyColorCorrection(this, elm);
+
+		// Visibility, position, opacity, index
+		if ( elm !== void && elm.pos !== void ) {
+			// Determine position based on pos
+			if (window.scPositionX[elm.pos] !== void) {
+				left= window.scPositionX[elm.pos] - width \ 2;
+			} else {
+				left= +elm.pos - width \ 2;
+			}
+			top = window.scHeight - height + (elm.yoff !== void ? +elm.yoff : 0);
+		}
+		else
+		{
+			if(elm.left !== void) left = +elm.left;
+			if(elm.top !== void) top = +elm.top;
+		}
+		if(elm.visible !== void) visible = +elm.visible;
+		if(elm.opacity !== void) opacity = +elm.opacity;
+		absolute = +elm.index if elm.index !== void;
+
+		// Load animation info if present
+		if(Anim_storageName != '')
+		{
+			// Animation info found!
+			// Load animation info into default conductor
+			loadAnimInfo(0, ''); // And start animation (if it can start)
+		}
+	}
+
+	function addPartialImageInfo(elm)
+	{
+		// Add elm to partialImageInfo
+		if(Anim_partialImageInfo === void)
+			Anim_partialImageInfo = [];
+		var info = %[];
+		(Dictionary.assign incontextof info)(elm);
+		Anim_partialImageInfo.add(info);
+	}
+
+	function loadPartialImage(elm)
+	{
+		// Perform partial additional image loading
+		// This loading method follows the layer's own 
+		// color correction and flip settings.
+		// (Therefore, the pimage tag itself does not have 
+		// color correction or flip attributes.)
+		// pimage tags are not suitable for sequential loading 
+		// of partial images with timing offsets for animation.
+		// (Use the animation feature for such cases.)
+		 if(elm.tagname === void) elm.tagname = "pimage";
+
+		// Determine color key
+		var key;
+		if(elm.key !== void)
+		{
+			// key specified
+			key = elm.key;
+		}
+		else
+		{
+			// key not specified
+			if(Anim_loadParams !== void)
+				key = Anim_loadParams.key; // Use key from loadParams
+			else
+				key = void;
+		}
+
+		// Get temporary layer
+		var temp = window.temporaryLayer;
+
+		// Load image into temporary layer
+		var taginfo = temp.loadImages(elm.storage, key);
+
+		// Adopt image tag info as default values
+		if(taginfo)
+		{
+			(Dictionary.assign incontextof taginfo)(elm, false);
+			elm = taginfo;
+		}
+
+		// Layer mode
+		{
+			var mode = ltAlpha;
+
+			if(elm.mode !== void)
+			{
+				var layertypeinfo = imageTagLayerType[elm.mode];
+				if(layertypeinfo !== void)
+					mode = layertypeinfo.type;
+			}
+
+			temp.type = mode;
+		}
+
+		// Image adjustment
+		var lr = false, ud = false;
+		if(Anim_loadParams !== void)
+		{
+			// Apply color correction to temp layer
+			applyColorCorrection(temp, Anim_loadParams);
+
+			// Flip
+			if(Anim_loadParams.flipud !== void && +Anim_loadParams.flipud)
+			{
+				// Vertical flip
+				temp.flipUD();
+				ud = true;
+			}
+
+			if(Anim_loadParams.fliplr !== void && +Anim_loadParams.fliplr)
+			{
+				// Horizontal flip
+				temp.flipLR();
+				lr = true;
+			}
+		}
+
+		var dx = +elm.dx;
+		var dy = +elm.dy;
+		var sx = +elm.sx;
+		var sy = +elm.sy;
+		var sw = elm.sw === void ? temp.imageWidth : +elm.sw;
+		var sh = elm.sh === void ? temp.imageHeight : +elm.sh;
+		if(ud)
+		{
+			// Vertical flip adjustment
+			dy = imageHeight - dy - sh;
+			sy = temp.imageHeight - sy - sh;
+		}
+		if(lr)
+		{
+			// Horizontal flip adjustment
+			dx = imageWidth - dx - sw;
+			sx = temp.imageWidth - sx - sw;
+		}
+
+		if(elm.mode == 'copy' || elm.mode == 'opaque')
+		{
+			// Copy
+			face = dfAlpha;
+			copyRect(dx, dy, temp, sx, sy, sw, sh);
+		}
+		else
+		{
+			// Overlay
+			var opa = elm.opacity === void ? 255 : +elm.opacity;
+
+			switch(elm.mode)
+			{
+			case '': // default
+			case 'pile':
+			case 'alpha':
+				holdAlpha = false;
+				face = dfAlpha;
+				break;
+			case 'addalpha':
+				holdAlpha = false;
+				face = dfAddAlpha;
+				break;
+			default:
+				holdAlpha = true;
+				face = dfOpaque;
+				break;
+			}
+			operateRect(dx, dy, temp, sx, sy, sw, sh, omAuto, opa);
+
+			face = dfAuto;
+		}
+
+		// Add info to Anim_partialImageInfo
+		addPartialImageInfo(elm);
+
+		return 0;
+	}
+
+	function drawReconstructibleText(elm)
+	{
+		 // Draw text in a format that can be reconstructed (on load)
+		 // x, y = coordinates
+		 // text = string to draw
+		 // face = font, defaults to Anim_defaultFontInfo.face
+		 // size = font size, defaults to Anim_defaultFontInfo.height
+		 // color = color (default = 0xffffff)
+		 // italic = whether it's italic (default = false)
+		 // shadow = whether it has a shadow (default = true)
+		 // edge = whether it has an edge (default = false)
+		 // shadowcolor = shadow color (default = 0)
+		 // edgecolor = edge color (default = 0)
+		 // bold = whether it's bold (default = false)
+		 // vertical = whether it's vertical (default = false)
+		 // antialiased = whether to use anti-aliasing (default = true)
+		 // angle = draw angle (default = 2700 if vertical, else 0)
+		 if(elm.tagname === void) elm.tagname = "ptext";
+
+		var vertical = elm.vertical === void ? false : +elm.vertical;
+
+		with(font)
+		{
+			var face = elm.face === void ? Anim_defaultFontInfo.face : elm.face;
+			if(vertical) face = '@' + face;
+			.face = face;
+			.height = elm.size === void ? Anim_defaultFontInfo.height : +elm.size;
+			.angle = elm.angle === void ? vertical ? 2700:0 : +elm.angle;
+			.italic = elm.italic === void ? false : +elm.italic;
+			.bold = elm.bold === void ? false: +elm.bold;
+		}
+
+		var edge = elm.edge === void ? false : +elm.edge;
+		var shadow = elm.shadow === void ? true : +elm.shadow;
+		var color = elm.color === void ? 0xffffff : +elm.color;
+		var antialiased = elm.antialiased === void ? true : +elm.antialiased;
+
+		face = dfAuto;
+
+		var x = +elm.x;
+		var y = +elm.y;
+
+		if(edge)
+		{
+			var bcolor = elm.edgecolor === void ? 0 : +elm.edgecolor;
+			drawText(x, y, elm.text, color, 255, antialiased, 512, bcolor, 1, 0, 0);
+		}
+		else if(shadow)
+		{
+			var bcolor = elm.shadowcolor === void ? 0 : +elm.shadowcolor;
+			drawText(x, y, elm.text, color, 255, antialiased, 255, bcolor, 0, 2, 2);
+		}
+		else
+		{
+			drawText(x, y, elm.text, color, 255, antialiased); // text
+		}
+
+		// Add info to Anim_partialImageInfo
+		addPartialImageInfo(elm);
+
+		return 0;
+	}
+
+	function applyColorCorrection(layer, param)
+	{
+		if (param === void || (typeof layer.isBitmap == "Object" && !layer.isBitmap())) return;
+		// Apply color correction to layer
+		var orgface = layer.face;
+		var orgholdlpha = layer.holdAlpha;
+		layer.face = dfAuto;
+		if(param.grayscale !== void && +param.grayscale)
+		{
+			layer.doGrayScale();
+		}
+		if (param.rgamma !== void || param.rfloor !== void || param.rceil !== void ||
+			param.ggamma !== void || param.gfloor !== void || param.gceil !== void ||
+			param.bgamma !== void || param.bfloor !== void || param.bceil !== void) {
+			layer.adjustGamma(
+				param.rgamma, param.rfloor, param.rceil,
+				param.ggamma, param.gfloor, param.gceil,
+				param.bgamma, param.bfloor, param.bceil);
+		}
+		if(param.mcolor !== void)
+		{
+			// Color overlay
+			layer.face = dfOpaque;
+			layer.holdAlpha = true;
+			layer.colorRect(0, 0, layer.imageWidth, layer.imageHeight, +param.mcolor,
+				+param.mopacity);
+		}
+		if (param.lightcolor !== void) {
+			// Layer compositing
+			var mode = ltAlpha;
+			if(param.lighttype !== void)
+			{
+				var layertypeinfo = imageTagLayerType[param.lighttype];
+				if(layertypeinfo !== void)
+					mode = layertypeinfo.type;
+			}
+			layer.holdAlpha = true;
+			layer.fillOperateRect(0,0,layer.imageWidth, layer.imageHeight,
+								  +param.lightcolor,
+								  mode);
+		}
+		if (param.brightness !== void || param.contrast !== void) {
+			// Brightness adjustment
+			layer.light(+param.brightness, +param.contrast);
+		}
+		if (param.shadow !== void) {
+			// Drop shadow
+			var dx = param.shadowx !== void ? +param.shadowx : 10;
+			var dy = param.shadowy !== void ? +param.shadowy : 10;
+			var blur = param.shadowblur !== void ? +param.shadowblur : 3;
+			var color = param.shadow === true ? 0 : +param.shadow;
+			var opacity = param.shadowopacity !== void ? +param.shadowopacity : 200;
+			layer.doDropShadow(dx, dy, blur, color, opacity);
+		}
+		layer.face = orgface;
+		layer.holdAlpha = orgholdlpha;
+	}
+
+	function setInterrupted(x) {
+		if(Anim_interrupted != x)
+		{
+			for(var i = Anim_segments.count -1; i>=0; i--)
+			{
+				Anim_segments[i].interrupted = x;
+			}
+			Anim_interrupted = x;
+		}
+	}
+
+	property interrupted
+	{
+		// Set interrupted for all segments
+		getter() { return Anim_interrupted; }
+		setter(x) { setInterrupted(x); }
+	}
+
+	function assign(src)
+	{
+		// Copy layer info
+		// Note: position, opacity, size, and image offset are not copied.
+		// (Use KAGLayer.assignVisibleState if you want to copy those.)
+		super.assignImages(src);
+
+		// Copy animation cell layer
+		if(src.Anim_cellLayer !== void)
+		{
+			if(Anim_cellLayer === void)
+				Anim_cellLayer = new global.KAGLayer(window, this);
+			Anim_cellLayer.assignImages(src.Anim_cellLayer);
+		}
+		else
+		{
+			invalidate Anim_cellLayer if Anim_cellLayer !== void;
+			Anim_cellLayer = void;
+		}
+
+		// Copy image loading parameters
+		if(src.Anim_loadParams !== void)
+		{
+			Anim_loadParams = %[];
+			(Dictionary.assign incontextof Anim_loadParams)(src.Anim_loadParams);
+		}
+		else
+		{
+			Anim_loadParams = void;
+		}
+
+		// Copy partial image loading info
+		if(src.Anim_partialImageInfo !== void)
+		{
+			var destinfo;
+			Anim_partialImageInfo = destinfo = [];
+			var srcinfo = src.Anim_partialImageInfo;
+			var count = srcinfo.count;
+			for(var i = 0; i < count; i++)
+			{
+				var info = %[];
+				(Dictionary.assign incontextof info)(srcinfo[i]);
+				destinfo.add(info);
+			}
+		}
+		else
+		{
+			Anim_partialImageInfo = void;
+		}
+
+		// Copy animation segment info
+
+		// Clear current segments first
+		for(var i = Anim_segments.count -1; i>=0; i--)
+		{
+			var seg = Anim_segments[i];
+			invalidate Anim_segments[i] if seg !== void;
+		}
+
+		var srcanimseg = src.Anim_segments; // Alias
+		var src_animseg_count = srcanimseg.count;
+		var animseg = Anim_segments; // Alias
+
+		for(var i = src_animseg_count-1; i>=0; i--)
+		{
+			var seg = srcanimseg[i];
+			animseg[i] = void;
+			if(seg !== void)
+			{
+				animseg[i] = new AnimationConductor(this);
+				animseg[i].number = i;
+				animseg[i].assign(seg); // Assign
+			}
+		}
+
+		animseg.count = src_animseg_count;
+
+		// Miscellaneous
+		Anim_interrupted = src.Anim_interrupted;
+		Anim_storageName = src.Anim_storageName;
+	}
+
+	function store()
+	{
+		// Store info in dictionary
+		var dic = super.store();
+
+		// Load parameters
+		if(Anim_loadParams !== void)
+		{
+			dic.loadParams = %[];
+			(Dictionary.assign incontextof dic.loadParams)(Anim_loadParams);
+		}
+		else
+		{
+			dic.loadParams = void;
+		}
+
+		// Partial additional image info
+		if(Anim_partialImageInfo !== void)
+		{
+			var dest;
+			dic.partialImageInfo = dest = [];
+			var src = Anim_partialImageInfo;
+			var count = src.count;
+			for(var i = 0; i < count; i++)
+			{
+				var info = %[];
+				(Dictionary.assign incontextof info)(src[i]);
+				dest.add(info);
+			}
+		}
+		else
+		{
+			dic.partialImageInfo = void;
+		}
+
+		// Record animation segment info
+		dic.segments = [];
+		var animseg = Anim_segments; // Alias
+		var animsegcount = animseg.count;
+		for(var i = 1; i<animsegcount; i++)
+		{
+			var seg = animseg[i];
+			if(seg !== void)
+			{
+				if(seg.looping && !seg.stopping && seg.running)
+				{
+					// If looping and neither stopped nor waiting to stop
+					var dat = %[];
+					dat.label = seg.startLabel;
+					dic.segments[i] = dat;
+				}
+			}
+		}
+
+		return dic;
+	}
+
+	function restore(dic)
+	{
+		// Restore information from dic
+        try {
+            loadImages(dic.loadParams);
+        } catch (e) {
+            dm("Failed to load image during restore: " + dic.loadParams);
+        } 
+		if(dic.loadParams !== void)
+		{
+			// Restore animation segment info
+			var dicsegments = dic.segments;
+			if(dicsegments !== void)
+			{
+				var dicsegmentscount = dicsegments.count;
+				for(var i = 1; i < dicsegmentscount; i++)
+				{
+					var seg = dicsegments[i];
+					if(seg !== void)
+						loadAnimInfo(i, seg.label, true);
+				}
+			}
+		}
+
+		// Restore partial additional image info
+		if(dic.partialImageInfo !== void)
+		{
+			var src = dic.partialImageInfo;
+			var count = src.count;
+			for(var i = 0; i < count; i++)
+			{
+				var o = src[i];
+				var tagname = o.tagname;
+				dm(tagname);
+				var handler = global.AnimationLayer.Anim_reconstructHandlers[tagname];
+				dm(handler);
+				if(handler !== void)
+					(handler incontextof this)(o);
+			}
+		}
+		else
+		{
+			Anim_partialImageInfo = void;
+		}
+
+		super.restore(dic);
+	}
+
+	/* Tag handler */ function load(elm)
+	{
+		// Load image
+		var lp = Anim_loadParams !== void ? Anim_loadParams : %[];
+		var key = (elm.key !== void) ? elm.key : lp.key;
+		var storage = elm.storage;
+		var otype = type;
+		superLoadImages(storage, key, elm);
+		type = otype;
+		applyColorCorrection(this, lp);
+		// Vertical flip
+		flipUD() if (lp.flipud !== void && +lp.flipud);
+		// Horizontal flip
+		flipLR() if (lp.fliplr !== void && +lp.fliplr);
+
+		return -4; // Event processing once
+	}
+
+	/* Tag handler */ function loadcell(elm)
+	{
+		// Load cell image into cell layer
+
+		// Secure cell layer
+		if(Anim_cellLayer === void)
+			Anim_cellLayer = new global.KAGLayer(window, this); // Create layer
+
+		// Determine color key
+		var key;
+		if(elm.key !== void)
+		{
+			// key specified
+			key = elm.key;
+		}
+		else
+		{
+			// key not specified
+			key = Anim_loadParams.key; // Use key from loadParams
+		}
+
+		// Determine storage name
+		var storage;
+		if(elm.storage !== void)
+		{
+			// storage specified
+			storage = elm.storage;
+		}
+		else
+		{
+			// storage not specified
+			storage = Storages.chopStorageExt(Anim_loadParams.storage) + "_a";
+				// Use storage from loadParams
+		}
+
+		// Load image into cell layer
+		Anim_cellLayer.loadImages(storage, key);
+
+		// Apply color correction to cell layer
+		applyColorCorrection(Anim_cellLayer, Anim_loadParams);
+
+		// Flip
+		if(Anim_loadParams.flipud !== void && +Anim_loadParams.flipud)
+		{
+			// Vertical flip
+			Anim_cellLayer.flipUD();
+		}
+		if(Anim_loadParams.fliplr !== void && +Anim_loadParams.fliplr)
+		{
+			// Horizontal flip
+			Anim_cellLayer.flipLR();
+		}
+
+		return 0;
+	}
+
+	/* Tag handler */ function copy(elm)
+	{
+		var lp = Anim_loadParams;
+		if(lp === void) return -1;
+		var f;
+		f = lp.flipud;
+		var dx = +elm.dx;
+		var dy = +elm.dy;
+		var sx = +elm.sx;
+		var sy = +elm.sy;
+		var sw = +elm.sw;
+		var sh = +elm.sh;
+		var cl = Anim_cellLayer;
+		if(f !== void && +f)
+		{
+			// Vertical flip adjustment
+			dy = imageHeight - dy - sh;
+			sy = cl.imageHeight - sy - sh;
+		}
+		f = lp.fliplr;
+		if(f !== void && +f)
+		{
+			// Horizontal flip adjustment
+			dx = imageWidth - dx - sw;
+			sx = cl.imageWidth - sx - sw;
+		}
+
+		face = dfAuto;
+		copyRect(dx, dy, cl, sx, sy, sw, sh);
+
+		return 0;
+	}
+
+	/* Tag handler */ function s(elm)
+	{
+		// Stop
+		elm.context.running = false;
+		window.onAnimationStopped(name, elm.context.number);
+		return -1; // Stop
+	}
+
+	/* Tag handler */ function loop(elm)
+	{
+		// Declare intent to loop
+		elm.context.looping = true;
+		return 0;
+	}
+
+	/* Tag handler */ function home(elm)
+	{
+		// Home position
+		return elm.context.stopping?-1:0; // Stop according to stopping state
+	}
+
+	/* Tag handler */ function clip(elm)
+	{
+		// Change cliprect
+		with (elm) {
+			if (.left !== void && .top !== void) setImagePos(-.left, -.top);
+			else {
+				imageLeft = -.left if (.left !== void);
+				imageTop  = -.top  if (.top  !== void);
+			}
+		}
+		return 0;
+	}
+
+	/* Tag handler */ function wait(elm)
+	{
+		return elm.time; // Stop for specified time
+	}
+
+	/* Tag handler */ function eval(elm)
+	{
+		Scripts.eval(elm.exp); // Evaluate elm.exp as expression
+		return 0;
+	}
+
+	/* Tag handler */ function option(elm)
+	{
+		setOptions(elm);
+		return 0;
+	}
+
+	/* Tag handler */ function wsl(elm)
+	{
+		if (Anim_seLabelWait === void && typeof window.addHook == "Object") {
+			Anim_seLabelWait = "";
+			window.addHook("onSELabel", this.onSELabel);
+		}
+		if (Anim_seLabelWait !== void) {
+			Anim_seLabelWait = elm.name;
+			setInterrupted(true);
+			return -2;
+		}
+		return -1;
+	}
+	function onSELabel(label, id)
+	{
+		if (Anim_seLabelWait == "*" || Anim_seLabelWait == label) {
+			Anim_seLabelWait = "";
+			setInterrupted(false);
+		}
+	}
+}
+
+
+
+
+
+// Handlers used when restoring reconstructible information
+// during save file loading, such as pimage and ptext tags.
+// (Defines the tag name and corresponding handler)
+AnimationLayer.Anim_reconstructHandlers =
+	%[
+		pimage	:	AnimationLayer.loadPartialImage,
+		ptext	:	AnimationLayer.drawReconstructibleText
+	];
+
+
+
+
+
+class ClickGlyphLayer extends KAGLayer
+{
+	var copyMethods = [
+		/* AnimationLayer methods */
+		"clearImage",
+		"freeImage",
+		"initAnim",
+		"termAnim",
+		"clearAnim",
+		"loadAnimInfo",
+		"startAnim",
+		"stopAnim",
+		"canWaitAnimStop",
+		//"loadImages",						// Special handling
+		//"addPartialImageInfo",			// Disabled
+		//"loadPartialImage",				// 〃
+		//"drawReconstructibleText",		// 〃
+		//"applyColorCorrection",			// 〃
+		"setInterrupted",
+		//"assign",							// Not used (⇒KAGWindow#lineBreak/pageBreak)
+		//"store",							// 〃
+		//"restore",						// 〃
+
+		/* tag handlers */
+		"load",
+		"loadcell",
+		"copy",
+		"s",
+		"loop",
+		"home",
+		"clip",
+		"wait",
+		"eval",
+		"option",
+		];
+
+	// Stub methods for disabled functionality
+	function addPartialImageInfo() {}
+	function loadPartialImage() {}
+	function drawReconstructibleText() {}
+	function applyColorCorrection() {}
+	function assign(src) { super.assignImages(src); }
+
+	// superclass hack (⇒AnimationLayer#superLoadImages)
+	function superLoadImages() { return super.loadImages(...); }
+
+	// Click waiting glyph layer
+	var loadedImage; // Currently loaded image
+	var loadedKey; // Currently loaded key
+	var restartOnReload = false; // Whether to restart animation from beginning on reload
+
+	function ClickGlyphLayer(win, par)
+	{
+		// Constructor
+		super.KAGLayer(win, par);
+		hitType = htMask;
+		hitThreshold = 256; // Fully transparent to mouse messages
+
+		// Copy methods
+		var anim = global.AnimationLayer;
+		for (var i = copyMethods.count-1; i >= 0; i--) {
+			var mn = copyMethods[i];
+			this[mn] = (anim[mn] incontextof this) if (mn != "");
+		}
+		this.animLoadImages = (anim.loadImages incontextof this);
+
+		// Initialize
+		initAnim();
+	}
+
+	function finalize()
+	{
+		termAnim();
+		// finalize()
+		super.finalize(...);
+	}
+
+	function loadImages(storage, key)
+	{
+		// loadImage override
+		if(loadedImage !== storage || loadedKey !== key)
+		{
+			animLoadImages(%[storage : storage, key : key]);
+			loadedImage = storage;
+			loadedKey = key;
+		}
+		else
+		{
+			startAnim(%[ seg:0, target:"" ]) if (restartOnReload && Anim_storageName != '');
+		}
+	}
+
+	property type {
+		getter() { return super.type; }
+		setter(v) { super.type = v === void ? ltAlpha : v; }
+	}
+	
+	property visible
+	{
+		// visible override
+		getter()
+		{
+			return super.visible;
+		}
+		setter(x)
+		{
+			super.visible = x;
+			// Stop operation when invisible
+			setInterrupted(!x);
+		}
+	}
+}

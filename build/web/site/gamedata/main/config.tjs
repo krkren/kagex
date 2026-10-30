@@ -1,0 +1,1109 @@
+﻿// Config.tjs - KAG Settings
+// Copyright (C) 2001-2004 W.Dee and contributors  Modified/Distributed freely
+;global.config_version = "EX 3.27-dev.20070519"; // Do not delete this line
+
+// All items that can be set in this file are in the format of:
+// ;SettingName = Value;
+// Except for "Additional Settings", settings for each item must be written on a single line.
+
+
+//------------------------------------------------------- General Settings -----
+
+
+// ◆ Title
+// The window caption (title) and what is 
+// displayed in the taskbar.
+;System.title = "KAGEX Sample";
+
+
+// ◆ Scenario Analysis Mode
+// Set to false if you want to follow line breaks in the scenario file.
+// If false, line breaks in the KAG scenario will be treated as line breaks 
+// on the message layer unless \ or [p] is written at the end of the line.
+// If set to true, there will be no line breaks unless the [r] tag is written.
+// Specify false for KAG2.x compatibility.
+;global.ignoreCR = true;
+
+
+// ◆ Image Cache Limit
+// Specify the image cache limit in MB.
+// If gcsAuto is specified, it is determined automatically.
+;System.graphicCacheLimit = gcsAuto; // Image cache limit
+
+// ◆ Languages
+// The languages the game can be shown in, as language codes ("en", "ja", "zh-tw"...), the
+// first the one its scenarios are written in. Each other language reads its strings and
+// images from data/lang/<code>/ (doc/kagex.txt, "Languages"). The player switches with F9,
+// the controller's L2 or the Config screen, and the choice is saved; until then the game
+// follows the system (System.uiLanguage, then System.uiLanguageCandidates).
+;global.KAGLanguageList = "en,ja";
+
+
+// ◆ global Additional Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-global-additionals] and [end-global-additionals]
+// (Do not edit or delete the lines for 
+// [start-global-additionals] and [end-global-additionals])
+
+//[start-global-additionals]
+
+//[end-global-additionals]
+
+
+
+
+
+
+
+
+
+//-------------------------------------------- Window and Behavior Settings -----
+
+function KAGWindow_config()
+{
+// ◆ Screen Size
+// Specify the screen width in scWidth and the screen height in scHeight in pixels.
+// If you set a screen size that is not a standard size like 640x480 or 800x600,
+// you may not be able to go full screen.
+;scWidth = 1920;
+;scHeight = 1080;
+
+
+// ◆ Read-only Mode
+// If readOnlyMode = true, no writing operations to the disk will be performed.
+// Specify this when running from a CD-ROM, etc.
+// Of course, in that case, saving bookmarks will not be possible.
+;readOnlyMode = false;
+
+
+// ◆ Free Save
+// Specify the save format of bookmarks.
+// If false is specified, save data will be saved or loaded from the 
+// submenu items "Follow Bookmark" and "Place Bookmark" on the menu bar.
+// In this case, the maximum number of bookmarks that can be saved is limited by numBookMarks.
+// If true is specified, it becomes free save mode, and the "Open" dialog box opens 
+// for "Follow Bookmark", and the "Save As" dialog box opens for "Place Bookmark", 
+// which is a mode to save bookmarks as individual files.
+// In this case, there is no limit to the number of bookmarks that can be saved. Also,
+// managing bookmarks via Explorer becomes easier.
+;freeSaveDataMode = true;
+
+
+// ◆ Whether to Save Thumbnails
+// If false is specified, the extension of the save data will be .kdt, and thumbnails will not be saved.
+// If true is specified, the extension of the save data will be .png, and it will be possible to 
+// display a thumbnail at the time of saving in the "Thumbnail" view of Explorer or the "Open" dialog box.
+;saveThumbnail = true;
+
+
+// ◆ Thumbnail Save Size
+// Specify the width of the thumbnail. This setting is meaningless unless saveThumbnail is set to true.
+// Please specify the width in pixels. The height is automatically calculated using the same 
+// ratio as the scWidth and scHeight ratio.
+;thumbnailWidth = 234;
+
+// ◆ Thumbnail Save Mode
+// Specify the thumbnail save mode. This setting is meaningless unless saveThumbnail is set to true.
+// If 8 is specified, it is saved as a 256-color bitmap.
+// If 24 is specified, it is saved as a 24-bit full-color bitmap.
+// 256-color bitmaps can keep the file size smaller, but the image quality will be worse.
+// No longer used: thumbnails are now always saved as PNG.
+;thumbnailDepth = 24;
+
+
+// ◆ Data Name Prefix
+// Bookmark-related files will be created with a name starting with the name specified here.
+// Even in free save mode, it affects files that save system variables and system settings.
+;dataName = "data";
+
+
+// ◆ Data ID
+// To prevent KAG from accidentally loading save data from other works, 
+// specify a unique ID for the work enclosed in "" (anything is fine).
+// It is especially important in free save mode. It's not so important if you don't use free save mode.
+// A unique ID that does not overlap with others can also be obtained below.
+// http://kikyou.info/uuidgen/uuidgen.php (Copy & paste the ID that comes out)
+// Or start Kirikiri, press the "No Selection" button, press Shift + F4 to display the console,
+// and in the input field at the bottom, type:
+//       System.createUUID()
+//       (Not including the leading //)
+// and press the Enter key to obtain it.
+// ( Example : "371a6289-a084-ee18-2885-66314a0aa19d" )
+;saveDataID = "5695173f-89f4-41c4-9f44-52addcd4c556"
+
+
+// ◆ Save Mode
+// If "c" is specified, bookmarks are encrypted.
+// If "z" is specified, bookmarks are compressed.
+// Both "c" and "z" cannot be specified. Since compressing a bookmark results in 
+// data that cannot be easily read, bookmark compression also serves as encryption.
+// If "" is specified, bookmarks will not be encrypted or compressed.
+;saveDataMode = "";
+
+
+// ◆ Whether to save macro information in bookmarks
+// Specifies whether to save macro information in bookmarks. If true is specified, KAG 
+// macro information is saved in bookmarks, and when a bookmark is followed, the 
+// macro in the saved state is reproduced.
+// If false is specified, KAG macro information is not saved in bookmarks, and even if 
+// you follow a bookmark, the current macro information does not change.
+// Especially for applications where macro definitions are made at the beginning of the 
+// work every time, since old macro information being overwritten by new macro 
+// information due to loading a bookmark would hinder development, it is better to specify false.
+;saveMacros = false;
+
+
+
+
+
+
+
+// ◆ Text Display Speed (milliseconds/character)
+;chSpeeds.fast = 10; // "Fast" text display speed
+;chSpeeds.normal = 30; // "Normal" text display speed
+;chSpeeds.slow = 50; // "Slow" text display speed
+
+
+// ◆ Auto-mode Wait: Page End Wait Setting Value (milliseconds)
+;autoModePageWaits.fast = 800; // "Short"
+;autoModePageWaits.faster = 1400; // "Somewhat Short"
+;autoModePageWaits.medium = 2000; // "Normal"
+;autoModePageWaits.slower = 2600; // "Somewhat Slow"
+;autoModePageWaits.slow = 4000; // "Slow"
+
+
+// ◆ Auto-mode Wait: [l] Wait Setting Value (milliseconds)
+;autoModeLineWaits.fast = 180; // "Short"
+;autoModeLineWaits.faster = 240; // "Somewhat Short"
+;autoModeLineWaits.medium = 300; // "Normal"
+;autoModeLineWaits.slower = 360; // "Somewhat Slow"
+;autoModeLineWaits.slow = 500; // "Slow"
+
+
+// ◆ Mouse Cursor
+// Specify the mouse cursor. The mouse cursor must be a mouse cursor constant 
+// starting with cr (see Kirikiri 2 SDK Help) or a mouse cursor filename. 
+// Animated mouse cursors can also be specified.
+// When specifying a mouse cursor constant, it is not necessary to prefix it with & 
+// as specified in the cursor tag. When specifying a mouse cursor filename, 
+// enclose it in "" (double quotations).
+;cursorDefault = crArrow; // Default mouse cursor
+;cursorPointed = crHandPoint; // When pointing at links, etc.
+;cursorWaitingClick = crArrow; // While waiting for a click
+;cursorDraggable = crSizeAll; // When the message layer is draggable
+
+
+// ◆ Label Recording
+// Specifies whether to automatically record "read" labels.
+// If this setting is not false but true, every time a label is read, 1 is added 
+// to a system variable (sf) with the variable name:
+// trail_ScenarioFileName_LabelName
+// For example, if it is a label called *start in first.ks, the variable name 
+// will be trail_first_start. In places that have not yet been passed, 
+// it is undefined (treated as 0).
+// "Reading" is considered "read" only when the scenario is executed from the 
+// label until the end of that label.
+// "End of label" is considered terminated in the following cases, and the label is considered "read".
+//
+// ・The end of the [s] tag or scenario is reached
+// ・The next label appears
+// ・Jumped with jump tag
+// ・Jump to a link destination with link or button
+//    (Please note that even if the text is not completely displayed, jumping to the 
+//     link destination will be considered "read"; refer to the countpage attribute 
+//     of the link or button tag)
+// ・When returning with the return tag (it is not considered finished when jumping with call)
+;autoRecordPageShowing = true;
+
+
+// ◆ Passage Recording
+// Specifies whether to automatically perform passage recording.
+// It is different from label recording.
+// By performing passage recording, you can return to the place where the passage 
+// recording was performed just before with "System - Go Back".
+// Specify 0 to not perform automatic passage recording (passage recording can be 
+//   performed manually with the record tag)
+// Specify 1 to automatically perform passage recording every time a savable label is passed.
+// Specify 2 to perform passage recording for each choice (stop with s tag).
+;recordHistoryOfStore = 3;
+
+
+// ◆ Maximum Number of Passage Records
+// Specify the maximum number of passage records. You can go back up to the 
+// number of times specified here. Increasing it also increases save data size.
+;maxHistoryOfStore = 1;
+
+
+// ◆ quake's time attribute value
+// If true, the unit of quake's time attribute will be based on the character display 
+// speed specified by delay. If false, it will be specified in ms (milliseconds). 
+// Specify true for KAG 2.x compatibility.
+;defaultQuakeTimeInChUnit = false;
+
+
+
+// ◆ Whether to make the message layer a target of quake
+// If true, the message layer will also quake
+;quakeMessageLayer = false;
+
+
+
+// ◆ Number of available Sound Effect buffers
+// Specify the maximum number of available sound effect buffers. That is, you can 
+// play as many sound effects simultaneously as the number specified here. 
+// If you do not use sound effects, you can specify 0.
+;numSEBuffers = 9;
+
+
+
+
+
+// ◆ Number of Movie objects
+// Specify the maximum number of available movie objects. That is, you can 
+// play as many movies simultaneously as the number specified here.
+;numMovies = 1;
+
+
+
+
+
+// ◆ Number of foreground layers in the initial state
+// You can specify 0 if not needed.
+// If the number is large, the speed will decrease or memory will be consumed, 
+// so it is better not to specify a number larger than necessary.
+// It can also be changed within the scenario with the laycount tag.
+;numCharacterLayers = 3;
+
+
+
+
+
+// ◆ Foreground layer left-right center position specification
+// +---------+
+// |         |
+// | |  |  | |
+// | |  |  | |
+// +---------+
+// Specifies the position name (left, left_center, etc.) of the foreground layer 
+// specified by the pos attribute of the image tag or img tag and the corresponding 
+// center position (x coordinate). Specified in the format ;scPositionX.PositionName = CenterPosition;
+;scPositionX.left = 480;
+;scPositionX.left_center = 720;
+;scPositionX.center = 960;
+;scPositionX.right_center = 1200;
+;scPositionX.right = 1440;
+
+
+
+
+
+// Simple symbols
+// (Define aliases so that left, left_center, center, right_center, right 
+// specified in the pos attribute can also be specified as l, lc, c, rc, r)
+;scPositionX.l = scPositionX.left;
+;scPositionX.lc = scPositionX.left_center;
+;scPositionX.c = scPositionX.center;
+;scPositionX.rc = scPositionX.right_center;
+;scPositionX.r = scPositionX.right;
+
+
+
+
+
+// ◆ Number of message layers in the initial state
+// Unlike foreground layers, you cannot specify 0. This should also be secured 
+// only as many as necessary. It can also be changed within the scenario with 
+// the laycount tag.
+;numMessageLayers = 2;
+
+
+
+
+
+// ◆ Whether to display the message layer in the initial state
+// If true, message layer 0 will be visible in the initial state, 
+// but if false, all message layers will be hidden in the initial state.
+;initialMessageLayerVisible = false;
+
+
+
+
+
+// ◆ Number of available bookmarks
+// This is the number of bookmarks displayed in the menu and selectable by the user.
+// The number of bookmarks that can be saved with the save or load tag is not 
+// affected by this setting.
+// If you do not manage bookmarks by menu (e.g., managing all bookmarks within 
+// the game screen), set numBookMarks to the required number and set 
+// restoreMenu.visible and storeMenu.visible to false.
+;numBookMarks = 91;
+
+
+
+
+
+// ◆ Whether to include the date in the bookmark
+// If set to true, the date and time the bookmark was saved will be displayed 
+// in the format YY/MM/DD HH:MM next to the bookmark menu item.
+;showBookMarkDate = true;
+
+
+
+
+
+// ◆ Whether to display only fixed-pitch fonts in font selection
+// If true is specified, only fixed-pitch fonts will be displayed in the 
+// font selection window.
+;showFixedPitchOnlyInFontSelector = false;
+
+
+
+
+
+// ◆ File to execute when "Help > Index" is selected
+// The file specified here must be located in the same location as the 
+// Kirikiri executable file.
+;helpFile = "readme.txt";
+
+
+
+
+
+// ◆ Size of the display area of the window that appears when 
+// "Help > About this software" is selected
+// When this menu is selected, about.ks is executed within that window.
+;aboutWidth = 400; // Width (logo.png is 400x200)
+;aboutHeight = 200; // Height
+
+
+
+
+
+// ◆ Automatic Label Processing
+;autoLabelMode = true; // true: Automatic label mode
+;autoLabelType = 1;     // 0: Indirect label load 1: Line number specified load
+
+
+
+
+
+// ◆ Specify the name used for default name judgment in World Extension for voice switching
+;defaultName = "Name"; // Default name
+;defaultFamily = "Surname"; // Default surname
+
+
+
+
+
+// ◆ Line Breaking
+// How English text (and other languages with spaces between words) is broken into lines
+// where krkr_richtext draws it: "quality" evens out ragged lines, "balanced" makes the
+// lines of a passage about the same length, and "greedy" fills each line as far as it
+// goes. Where the plugin is missing, lines are filled as far as they go.
+;lineBreakStrategy = "quality";
+
+
+
+
+
+// Additional Window and Behavior Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-window-additionals] and [end-window-additionals]
+// (Do not edit or delete the lines for 
+// [start-window-additionals] and [end-window-additionals])
+
+//[start-window-additionals]
+
+// ◆ Start Full-Screen the First Time
+// Shadows KAGWindow.getInitialFullScreenState, which the constructor calls before
+// showing the window. The first launch is full-screen, whatever the display; after
+// that the player's last choice (the persisted scflags.fullScreen) is kept.
+;getInitialFullScreenState = function() { return scflags.fullScreen !== void ? !!scflags.fullScreen : true; };
+
+//[end-window-additionals]
+
+}
+
+
+
+
+
+//---------------------------------------------------- Menu Settings -----
+
+
+
+function Menu_visible_config()
+{
+// Menu visibility settings
+// Set to true to display, false to hide.
+// Please rewrite Menus.tjs for the menu item names displayed in the menu.
+
+
+
+
+
+// ◆ Whether to display the menu bar
+// If hidden, you will naturally be unable to access any menu items.
+;menu.visible = true;
+
+
+
+
+
+// ◆ "System > Hide Message"
+// Even if this menu item is hidden, hiding the message with a right-click 
+// remains effective.
+;rightClickMenuItem.visible = false;
+
+
+
+
+
+// ◆ "System > Show Message History"
+;showHistoryMenuItem.visible = true;
+
+
+
+
+
+// ◆ "System > Skip to Next Choice/Unread" or "Skip to Next Choice"
+;skipToNextStopMenuItem.visible = true;
+
+
+
+
+
+// ◆ "System > Auto Mode"
+;autoModeMenuItem.visible = true;
+
+
+
+
+
+// ◆ "System > Auto Mode Wait"
+//;autoModeWaitMenu.visible = true;
+
+
+
+
+
+// ◆ "System > Go Back"
+//;goBackMenuItem.visible = true;
+
+
+
+
+
+// ◆ "System > Go to Start"
+;goToStartMenuItem.visible = true;
+
+
+
+
+
+// ◆ "Text Display"
+//;characterMenu.visible = true;
+
+
+
+
+
+// ◆ "Text Display > Display Speed > At once to page end"
+// If the user checks this menu item,
+// the l tag will be ignored.
+//;chNonStopToPageBreakItem.visible = true;
+
+
+
+
+
+// ◆ "Text Display > For already read parts"
+//;ch2ndSpeedMenu.visible = true;
+
+
+
+
+
+// ◆ "Text Display > For already read parts > At once to page end"
+//;ch2ndNonStopToPageBreakItem.visible = true;
+
+
+
+
+
+// ◆ "Text Display > Antialiasing"
+//;chAntialiasMenuItem.visible = true;
+
+
+
+
+
+// ◆ "Text Display > Font"
+//;chChangeFontMenuItem.visible = true;
+
+
+
+
+
+// ◆ "Follow Bookmark"
+;restoreMenu.visible = true;
+
+
+
+
+
+// ◆ "Place Bookmark"
+;storeMenu.visible = true;
+
+
+
+
+
+// ◆ "Screen"
+;displayMenu.visible = true;
+
+
+
+
+
+// ◆ "Help"
+;helpMenu.visible = true;
+
+
+
+
+
+// ◆ "Help > Index ..."
+;helpIndexMenuItem.visible = false;
+
+
+
+
+
+// ◆ "Help > About this software ..."
+;helpAboutMenuItem.visible = true;
+
+
+
+
+
+// ◆ "Debug"
+;debugMenu.visible = true;
+
+
+
+
+
+// ◆ Additional Menu Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-menu-additionals] and [end-menu-additionals]
+// (Do not edit or delete the lines for 
+// [start-menu-additionals] and [end-menu-additionals])
+
+//[start-menu-additionals]
+
+//[end-menu-additionals]
+
+}
+
+
+
+//-------------------------------------------- Message Layer Settings -----
+
+
+
+
+
+function MessageLayer_config()
+{
+// ◆ Message Layer Display Mode
+// Specifies in which mode the message layer is displayed.
+// ltAddAlpha is a mode that can be specified from KAG3 3.23 beta 5,
+// and processing is slightly faster than ltAlpha.
+// ltAlpha is a mode compatible with previous KAG versions.
+// If ltAddAlpha is specified, the image for the message frame 
+// specified by frameGraphic also needs to use an image created 
+// for ltAddAlpha (it is not automatically determined).
+// Images for ltAddAlpha can be created with an image format converter.
+;layerType = ltAlpha;
+
+// ◆ Image for message frame
+// Specify the filename of the image for the message frame.
+// If "" is specified, the message frame image is not used. Also, if a message 
+// frame image is specified, changing the size of the message layer with the 
+// position tag will likely result in a strange display.
+;frameGraphic = "";  // Corresponds to the frame attribute of the position tag
+
+
+// ◆ Message Layer Color and Opacity
+// Specify the color of the message layer in frameColor in 0xRRGGBB format 
+// (RR GG BB are each 2-digit hex numbers). Specify the opacity in 
+// frameOpacity with a numerical value from 0 to 255. It is invalid if 
+// a message frame image is specified.
+;frameColor = 0x000088; // Corresponds to the color attribute of the position tag
+;frameOpacity = 128;  // Corresponds to the opacity attribute of the position tag
+
+
+// ◆ Left, Right, Top, and Bottom Margins
+// Specify margins in pixels. If a message frame image is specified, 
+// it must be set within the display range of the message frame.
+// These correspond to the marginl, maringt, marginr, and marginb attributes 
+// of the position tag.
+;marginL = 8; // Left margin
+;marginT = 8; // Top margin
+;marginR = 8; // Right margin
+;marginB = 8; // Bottom margin
+
+
+// ◆ Initial Position
+// These correspond to the left, top, width, and height attributes of the 
+// position tag respectively.
+;ml = 60;  // Left position
+;mt = 714;  // Top position
+;mw = 1800;   // Width
+;mh = 330;   // Height
+
+
+// ◆ Auto-return/Page Break
+// If true is set, automatic line breaks at the end of the line and automatic 
+// page breaks at the end of the page will be performed. If set to false, 
+// these will not be performed, and word wrapping, etc., will not be done.
+;defaultAutoReturn = true; 
+
+
+
+
+
+// ◆ Right Character Margin
+// Specify the number of characters at the right end to keep open for 
+// word wrapping.
+// (In vertical writing mode, it is interpreted as the number of characters 
+// at the bottom edge)
+;marginRCh = 2;
+
+
+
+
+
+// ◆ Font Size
+// Specify the default font size (height) in pixels.
+;defaultFontSize = 39;  // Corresponds to the size attribute of the deffont tag
+
+
+
+
+
+// ◆ Line Spacing
+// Specify the line spacing in pixels.
+;defaultLineSpacing = 5; // Corresponds to the linespacing attribute of the defstyle tag
+
+// ◆ Pitch (Character Spacing)
+// Specify the character spacing in pixels.
+// The default is 0, specified as a positive or negative offset.
+// Specifying a negative value tightens the character spacing. Specifying 
+// a positive value opens the character spacing.
+;defaultPitch = 0; // Corresponds to the pitch attribute of the defstyle tag
+
+
+
+
+
+// ◆ Typeface
+// Specify the default font name.
+// This setting is recorded in system variables and carried over to the next 
+// startup. If you change the userFace setting and want to apply it, delete 
+// the line "chdefaultFace" => in the system variable file ?????sc.*.
+// (Or delete the system variable file)
+// Multiple fonts can be specified separated by commas. In that case, 
+// if the font written first exists, it will take precedence.
+// Yu Gothic comes first on Windows: its Latin letters are proportional and kerned
+// (MS Gothic's are fixed-width). Elsewhere, and on Windows without Yu Gothic, it's
+// Noto Sans JP, which ships in template/system (Initialize.tjs registers it). A face
+// that an earlier release saved as its default is replaced by this one
+// (previousDefaultFaces in MainWindow.tjs).
+;userFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"; // Corresponds to the face attribute of the deffont tag
+
+
+
+
+
+// ◆ Font Color
+// Specify the default font color in 0xRRGGBB format.
+;defaultChColor = 0xffffff;  // Corresponds to the color attribute of the deffont tag
+
+
+
+
+
+// ◆ Whether to make the font bold
+// Specify true if yes, false if no.
+;defaultBold = true; // Corresponds to the bold attribute of the deffont tag
+
+
+
+
+
+// ◆ Ruby Size
+// Specify the ruby (furigana) size in pixels.
+;defaultRubySize = 15; // Corresponds to rubysize in the deffont tag
+
+
+
+
+
+// ◆ Ruby Display Offset
+// If a negative number is specified, it is displayed closer to the 
+// main text by that number of pixels.
+;defaultRubyOffset = -3; // Corresponds to rubyoffset in the deffont tag
+
+
+
+
+
+// ◆ Whether to draw antialiased characters
+// Specify true if yes, false if no.
+;defaultAntialiased = true;
+
+
+
+
+
+// ◆ Shadow Color
+// Specify the shadow color in 0xRRGGBB format.
+;defaultShadowColor = 0x000000;  // Corresponds to the shadowcolor attribute in the deffont tag
+
+// ◆ Edge Color
+// Specify the edge color in 0xRRGGBB format.
+;defaultEdgeColor = 0x000000;  // Corresponds to the edgecolor attribute in the deffont tag
+
+
+
+
+
+// ◆ Whether to draw a shadow
+// Specify true if yes, false if no.
+;defaultShadow = true;  // Corresponds to the shadow attribute of the deffont tag
+
+
+
+
+
+// ◆ Whether to draw an edge
+// Specify true if yes, false if no. From KAG3, it is no longer possible 
+// to draw an edge and a shadow at the same time. If an edge is specified, 
+// the edge takes precedence.
+;defaultEdge = false;  // Corresponds to the edge attribute of the deffont tag
+
+
+
+
+
+// ◆ Whether to draw text with the krkr_richtext plugin
+// Specify true if yes, false if no. Gives kerned text and smooth edges and shadows.
+// Text is drawn normally when the plugin or the fonts are not available.
+;useRichText = true;
+
+
+
+
+// ◆ Whether to draw each line's characters together (with krkr_richtext)
+// Specify true if yes, false if no. The characters are shaped and placed together
+// (kerning, ligatures, accents, emoji), as its line breaker laid them out.
+;useStyledLayout = true;
+
+
+
+
+
+// ◆ Image file for click waiting glyph
+// See the animation layer (AnimationLayer.tjs) for how to make images. 
+// Do not specify the extension.
+// If you need to specify a color key, specify it with the glyph tag 
+// in the scenario.
+
+
+
+// Line break click wait glyph
+;lineBreakGlyph = "LineBreak";  // Corresponds to the line attribute of the glyph tag
+;lineBreakBaseLine = 0;
+
+
+
+// Page break click wait glyph
+;pageBreakGlyph = "PageBreak";  // Corresponds to the page attribute of the glyph tag
+;pageBreakBaseLine = 0;
+
+
+
+
+
+// ◆ Whether to display the click wait glyph in a fixed location
+// If false is specified, the click wait symbol (glyph) is displayed at the 
+// current character display position. If true is specified, the click 
+// wait symbol is displayed at the position specified by glyphFixedLeft or 
+// glyphFixedTop.
+;glyphFixedPosition = false;  // Corresponds to the fix attribute of the glyph tag
+
+
+
+
+
+// ◆ Position when displaying the click wait glyph in a fixed location
+// Specify the left end position to display the glyph in glyphFixedLeft 
+// and the top end position to display the glyph in glyphFixedTop.
+;glyphFixedLeft = 740;  // Corresponds to the left attribute of the glyph tag
+;glyphFixedTop = 145;  // Corresponds to the top attribute of the glyph tag
+
+
+
+
+
+// ◆ Link Highlight Color
+// Default color of the semi-transparent rectangle that appears when 
+// a link is selected.
+;defaultLinkColor = 0x0080ff;  // Corresponds to the color attribute of the link tag
+
+
+
+
+
+// ◆ Link Opacity
+// Opacity of the semi-transparent rectangle that appears when 
+// a link is selected.
+;defaultLinkOpacity = 64;
+
+
+
+
+
+// ◆ Vertical Writing Mode
+// Specify true instead of false if you want the message layer to be in 
+// vertical writing mode by default.
+;vertical = false;  // Corresponds to the vertical attribute of the position tag
+
+
+
+
+
+// ◆ Whether draggable by mouse
+// If set to true, the user can move the message layer by grabbing areas outside 
+// the margins set by marginR, marginL, marginT, and marginB, and where the 
+// opacity of the frame image is 64 or higher.
+;draggable = false;  // Corresponds to the draggable attribute of the position tag
+
+
+
+
+
+// ◆ Additional Message Layer Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-messagelayer-additionals] and [end-messagelayer-additionals]
+// (Do not edit or delete the lines for 
+// [start-messagelayer-additionals] and [end-messagelayer-additionals])
+
+//[start-messagelayer-additionals]
+
+//[end-messagelayer-additionals]
+
+}
+
+
+
+//-------------------------------------------------------- BGM Settings -----
+
+
+
+
+
+function BGM_config()
+{
+// BGM settings.
+// CD-DA, Wave, or MIDI can be played as BGM.
+
+
+
+// ◆ BGM playback media
+// You can determine the sound buffer to use with the string set in the type variable.
+// "Wave"  : WaveSoundBuffer (wav, etc. (including things that can be played with plugins))
+// "MIDI"  : MIDISoundBuffer (mid, smf)
+// "CDDA"  : CDDASoundBuffer (cda)
+;type = "Wave";
+
+
+
+
+
+// ◆ CDDA playback volume label
+// If "CDDA" is specified, specify the volume label of the CD to play in the 
+// cdVolume variable. It is not the volume serial number.
+// KAG plays CD-DA in the CD-ROM drive where the CD with this volume label 
+// is inserted. Especially if multiple CD-ROM drives are installed in the 
+// machine, drives are distinguished based on this.
+;cdVolume = "xxxx";
+
+
+
+
+
+// ◆ Whether to perform crossfade
+// Specify whether to use two sound buffers in the doubleBuffered variable. 
+// If set to true, two sound buffers are prepared, enabling crossfade.
+// Set to false when using data that is not intended for multiple simultaneous 
+// playback with the MIDI sound buffer, or when using the CDDA sound buffer.
+;doubleBuffered = false;
+
+
+
+
+
+// ◆ Message to send before starting MIDI playback
+// This is a message sent to the MIDI sound source before starting playback 
+// of MIDI data.
+// If <% %> is specified, no message is sent.
+// <% f0 7e 7f 09 01 f7 ff 00 %> is GM System On.
+// Others
+// <% f0 41 10 42 12 40 00 7f 00 41 f7 ff 00 %> GS reset
+// <% f0 43 10 4c 00 00 7e 00 f7 ff 00 %> XG on
+// etc.
+// Inserting ff 00 in the middle will insert a 50ms wait at that point.
+// Insert when a wait is required for sound source initialization, etc.
+;midiInitialMessage = <% f0 7e 7f 09 01 f7 ff 00 %>;
+
+
+
+
+
+// ◆ Additional BGM Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-bgm-additionals] and [end-bgm-additionals]
+// (Do not edit or delete the lines for 
+// [start-bgm-additionals] and [end-bgm-additionals])
+
+//[start-bgm-additionals]
+
+//[end-bgm-additionals]
+
+}
+
+
+
+//---------------------------------------------- Message History Settings -----
+
+
+
+
+
+function HistoryLayer_config()
+{
+// Message history settings
+
+
+
+
+
+// ◆ Font Name
+;fontName = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+
+
+
+
+
+// ◆ Whether to make the font bold
+;fontBold = true;
+
+
+
+
+
+// ◆ Font Size (in pixels)
+;fontHeight = 36;
+
+
+
+
+
+// ◆ Line Height
+;lineHeight = 42;
+
+
+
+
+
+// ◆ True for vertical writing
+;verticalView = false;
+
+
+
+
+
+// ◆ Whether to browse by page
+// If you choose to browse by page,
+// page breaks in the message history will be performed by 
+// cm, ct, er tags, or the hr tag with the repage attribute set to true.
+;everypage = false;
+
+
+
+
+
+// ◆ Whether to perform auto-return
+;autoReturn = true;
+
+
+
+
+
+// ◆ Maximum number of history records to keep
+// If "◆ Whether to browse by page" is set to true, 
+// specify maxPages by page, and if set to false, specify maxLines by line.
+;maxPages = 100;
+;maxLines = 2000;
+
+
+
+
+
+// ◆ Whether to save message history in bookmarks
+// If true is specified, message history will be saved in bookmarks, 
+// but the bookmark data size will increase.
+;storeState = false;
+
+
+
+
+
+// ◆ Additional Message History Settings
+// If there are additional setting items, 
+// please describe the settings in the part surrounded by 
+// [start-historylayer-additionals] and [end-historylayer-additionals]
+// (Do not edit or delete the lines for 
+// [start-historylayer-additionals] and [end-historylayer-additionals])
+
+//[start-historylayer-additionals]
+
+marginL = 140; // room for the going-back and voice marks left of each message (MyHistoryLayer.tjs)
+marginR = 176; // clear of the page buttons and scroll bar at x 1766-1881 (MyHistoryLayer.tjs)
+marginT = 40;
+marginB = 40;
+    
+//[end-historylayer-additionals]
+
+}
+
+
+
+
+
+
+
+
+
+
+
+// ---------
+// There are no further items that can be set after this in this file

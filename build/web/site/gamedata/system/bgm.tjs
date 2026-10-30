@@ -1,0 +1,1277 @@
+// BGM.tjs - BGM Management
+
+// Copyright (C)2001-2008, W.Dee and contributors  Modification and distribution are free.
+
+
+
+class KAGSoundBuffer
+
+{
+
+	// Inherit this KAGSoundBuffer class into each sound buffer class for KAG
+
+
+
+	var sbclass; // Sound buffer class
+
+	var owner; // Owner
+
+
+
+	var inFadeAndStop = false; // Whether to stop playback when fading ends
+
+    var inFadeAndPause = false; // Whether to pause playback when fading ends
+
+    var inFading = false; // Is fading in progress?
+
+	var prevstatus = "unload"; // Previous status
+
+
+
+	function KAGSoundBuffer(owner, sbclass)
+
+	{
+
+		this.sbclass = sbclass;
+
+		this.owner = owner;
+
+	}
+
+
+
+	function finalize()
+
+	{
+
+	}
+
+
+
+	function fade()
+
+	{
+
+		// fade override
+
+		inFading = true;
+
+		inFadeAndStop = false;
+
+        inFadeAndPause = false;
+
+		sbclass.fade(...);
+
+	}
+
+
+
+	function stopFade()
+
+	{
+
+		// stopFade override
+
+		sbclass.stopFade(...);
+
+		inFadeAndStop = false;
+
+        inFadeAndPause = false;
+
+    }
+
+
+
+	function stop()
+
+	{
+
+		// stop override
+
+		sbclass.stop(...);
+
+		inFadeAndStop = false;
+
+		inFadeAndPause = false;
+
+	}
+
+
+
+	function fadeOutAndStop(time, delay = 0)
+
+	{
+
+		// Stops playback after fading out with time and delay
+
+		inFading = true;
+
+		inFadeAndStop = true;
+
+		sbclass.fade(0, time, delay);
+
+	}
+
+
+
+	function fadeOutAndPause(time, delay = 0)
+
+	{
+
+		// Stops playback after fading out with time and delay
+
+		inFading = true;
+
+		inFadeAndPause = true;
+
+		sbclass.fade(0, time, delay);
+
+	}
+
+    
+
+	function onFadeCompleted()
+
+	{
+
+        // Fading completed
+
+		inFading = false;
+
+		if(inFadeAndStop)
+
+		{
+
+			sbclass.stop(); // Stop if inFadeAndStop
+
+			inFadeAndStop = false;
+
+        } else if (inFadeAndPause) {
+
+			sbclass.paused = true; // Pause if inFadeAndPause
+
+			inFadeAndPause = false;
+
+        }
+
+		sbclass.onFadeCompleted(...);
+
+		owner.onSoundBufferFadeCompleted(this);
+
+	}
+
+
+
+	function onStatusChanged()
+
+	{
+
+        sbclass.onStatusChanged(...);
+
+		var ps = prevstatus; // prev. status
+
+		var cs = sbclass.status; // current status
+
+		prevstatus = cs;
+
+		if(ps == "play" && cs == "stop")
+
+			owner.onSoundBufferStop(this); // play => stop : Playback stopped
+
+	}
+
+}
+
+
+
+class KAGWaveSoundBuffer extends WaveSoundBuffer, KAGSoundBuffer
+
+{
+
+	function KAGWaveSoundBuffer(owner)
+
+	{
+
+		WaveSoundBuffer(owner);
+
+		KAGSoundBuffer(owner, global.WaveSoundBuffer);
+
+	}
+
+
+
+	function finalize()
+
+	{
+
+		global.KAGSoundBuffer.finalize(...);
+
+		global.WaveSoundBuffer.finalize(...);
+
+	}
+
+
+
+    function onLabel(label) {
+
+		// Note that owner == instanceof "BGM", so owner.owner == kag
+
+        owner.owner.onBGMLabel(label);
+
+    }
+
+}
+
+// List of extensions supported by WaveSoundBuffer
+
+KAGSoundBuffer.SupportedExtensions = [ "wav", "ogg", "opus", "tcw" ];
+
+class KAGCDDASoundBuffer extends CDDASoundBuffer, KAGSoundBuffer
+
+{
+
+	function KAGCDDASoundBuffer(owner)
+
+	{
+
+		CDDASoundBuffer(owner);
+
+		KAGSoundBuffer(owner, global.CDDASoundBuffer);
+
+	}
+
+
+
+	function finalize()
+
+	{
+
+		global.KAGSoundBuffer.finalize(...);
+
+		global.CDDASoundBuffer.finalize(...);
+
+	}
+
+}
+
+
+
+
+
+class BGM
+
+{
+
+	var owner; // Object of the KAGWindow class that holds this object
+
+
+
+	var type = "Wave"; // BGM type
+
+	var cdVolume = "xxxx"; // Volume label of the CD used for playback
+
+	var doubleBuffered = true; // Whether to perform crossfading
+
+	var midiInitialMessage = <% %>; // MIDI initialization message
+
+
+
+	var buf1; // Buffer 1
+
+	var buf2; // Buffer 2
+
+	var currentBuffer;  // buf1 or buf2
+
+	var looping = true; // Whether looping is active
+
+    var volume = 100000; // Volume
+
+
+
+	var playingStorage; // Storage currently playing
+
+	var currentStorage; // Apparent storage currently playing
+
+
+
+
+
+	var _enabled; // Whether it is enabled
+
+
+
+	function BGM(owner)
+
+	{
+
+		this.owner = owner;
+
+
+
+		(BGM_config incontextof this)();
+
+		(BGM_config_override incontextof this)()
+
+			if typeof global.BGM_config_override != "undefined";
+
+
+
+		createBuffers(); // Create sound buffers
+
+
+
+		currentStorage = '';
+
+		playingStorage = '';
+
+		currentBuffer = buf1;
+
+		_enabled = true;
+
+	}
+
+
+
+	function finalize()
+
+	{
+
+		invalidate buf1 if buf1 !== void;
+
+		invalidate buf2 if buf2 !== void;
+
+//		super.finalize(...);
+
+	}
+
+
+
+	function createBuffers()
+		{
+			if(type == "Wave" || type == "MIDI")
+			{
+				buf1 = new KAGWaveSoundBuffer(this);
+				buf2 = new KAGWaveSoundBuffer(this) if doubleBuffered;
+			}
+			else if(type == "CDDA")
+			{
+				buf1 = new KAGCDDASoundBuffer(this);
+				if(doubleBuffered)
+				{
+					throw new Exception("Crossfading is not available for CDDA. "
+						"Please set doubleBuffered = false.");
+				}
+			}
+			
+			// Final safety check: if buf1 is still void, force a Wave buffer
+			if (buf1 === void) buf1 = new KAGWaveSoundBuffer(this);
+
+			buf1.looping = looping;
+			if (buf2 !== void) buf2.looping = looping;
+		}
+
+
+
+	function freeBuffers()
+
+	{
+
+		// Free the buffers
+
+		invalidate buf1 if buf1 !== void;
+
+		invalidate buf2 if buf2 !== void;
+
+	}
+
+
+
+	function changeDevice(newtype)
+
+	{
+
+		// Change device 
+
+		var flags = %[];
+
+		store(flags); // Temporarily save state
+
+		freeBuffers(); // Free buffers
+
+		type = newtype;
+
+		createBuffers(); // Create buffers
+
+		restore(flags); // Restore state
+
+	}
+
+
+
+	function playBuffer(buf, storage, loop, paused = false, start)
+
+	{
+
+		// Start playback on buf
+
+
+
+		// Perform search if extension or drive letter is omitted
+
+		var found = true;
+
+		if(type == "CDDA")
+
+		{
+
+			if(storage[1] != ':')
+
+			{
+
+				var drive = Storages.searchCD(cdVolume);
+
+				if(drive == '')
+
+				{
+
+					// No usable CD found
+
+					dm("A CD with volume label " + cdVolume + " is not in the drive");
+
+					return; //------
+
+				}
+
+				else
+
+				{
+
+					storage = drive + ':' + storage;
+
+				}
+
+			}
+
+		}
+
+		else if(type == "Wave")
+
+		{
+
+			var test;
+
+			if(!Storages.isExistentStorage(storage))
+
+			{
+
+				@if (BGM_SUPPORT_MULTISONGS)
+
+				// If the wu plugin supports multisongs,
+
+				// passing "|" in the filename allows subsequent strings to be recognized as options.
+
+				var option;
+
+				{
+
+					var idx = ((string)storage).indexOf("|");
+
+					if (idx > 0) {
+
+						option  = storage.substr(idx);
+
+						storage = storage.substr(0, idx);
+
+					}
+
+				}
+
+				@endif
+
+				test = getExistFileNameAutoExtFill(storage, global.KAGSoundBuffer.SupportedExtensions*);
+
+				if (test == "") found = false;
+
+				else {
+
+					storage = test;
+
+				@if (BGM_SUPPORT_MULTISONGS)
+
+					if (option != "") with (Storages)
+
+						storage = .chopStorageExt(test) + .chopStorageExt(option) + .extractStorageExt(test);
+
+				@endif
+
+				}
+
+			}
+
+		}
+
+		if(_enabled)
+
+		{
+
+			if(!found)
+
+			{
+
+				owner.errorSound(storage + ": BGM file not found");
+
+                return;
+
+			}
+
+
+
+			try
+
+			{
+
+				buf.looping = loop; // Argument "loop"
+
+				buf.open(storage);
+
+                // Added by Gou: Playback position control
+
+                if (start !== void &&
+
+                    buf.labels !== void &&
+
+                    (start = buf.labels[start]) !== void &&
+
+                    (start = start.samplePosition) !== void) {
+
+                    buf.samplePosition = start;
+
+                }
+
+				owner.onBGMStart(buf.labels);
+
+				buf.paused = paused;
+
+				buf.play();
+
+			}
+
+			catch(e)
+
+			{
+
+				owner.errorSound(storage + ": Cannot play BGM : " + e.message);
+
+                return;
+
+			}
+
+		}
+
+		currentBuffer = buf;
+
+	}
+
+
+
+	function play(elm)
+
+	{
+
+		// Start BGM playback given by elm.storage
+
+		// Perform loop playback if elm.loop is true
+
+		// Start playback in a paused state if elm.paused is true
+
+		// Perform playback on buf1
+
+		var loop = elm.loop === void ? true : +elm.loop;
+
+
+
+		try
+
+		{
+
+			buf1.stop();
+
+			buf2.stop() if buf2 !== void;
+
+		}
+
+		catch(e)
+
+		{
+
+			dm("Failed to stop BGM (execution can continue) : " + e.message);
+
+		}
+
+		stopFade(); // Fading ended
+
+        buf1.volume = volume;
+
+        playBuffer(buf1, elm.storage, loop, elm.paused ? true : false, elm.start);
+
+		if(loop)
+
+			currentStorage = elm.storage; // For loop playback
+
+		else
+
+			currentStorage = ""; // For one-shot playback
+
+		playingStorage = elm.storage;
+
+		looping = loop;
+
+	}
+
+
+
+	function fadeIn(elm)
+
+	{
+
+        // Start playback from volume 0 and fade in
+
+		var loop = elm.loop === void ? true : +elm.loop;
+
+		var time = elm.time === void ? 5000 : +elm.time;
+
+
+
+//		stopFade();
+
+		try
+
+		{
+
+			buf1.stop();
+
+			buf2.stop() if buf2 !== void;
+
+		}
+
+		catch(e)
+
+		{
+
+			dm("Failed to stop BGM (execution can continue) : " + e.message);
+
+		}
+
+		if(time != 0) buf1.volume = 0; else buf1.volume = volume;
+
+		playBuffer(buf1, elm.storage, loop, false, elm.start);
+
+		if(_enabled) if(time !=0 ) currentBuffer.fade(volume, time);
+
+		looping = loop;
+
+		if(loop) currentStorage = elm.storage; else currentStorage = "";
+
+		playingStorage = elm.storage;
+
+	}
+
+
+
+	function stop()
+
+	{
+
+		// Stop playback
+
+		try
+
+		{
+
+			buf1.stop();
+
+			buf2.stop() if buf2 !== void;
+
+		}
+
+		catch(e)
+
+		{
+
+			dm("Failed to stop BGM (execution can continue) : " + e.message);
+
+		}
+
+//		stopFade();
+
+        currentStorage = "";
+
+		playingStorage = "";
+
+	}
+
+
+
+	function pause()
+
+	{
+
+		// Pause playback
+
+		buf1.paused = true;
+
+		buf2.paused = true if buf2 !== void;
+
+	}
+
+
+
+	function resume(resetVolume = true)
+
+	{
+
+		// Resume playback
+
+		buf1.volume = volume if (resetVolume);
+
+		buf1.paused = false;
+
+		buf2.paused = false if buf2 !== void;
+
+	}
+
+
+
+	function fadeOut(elm)
+
+	{
+
+		// Fade out
+
+//		stopFade();
+
+		if(_enabled) currentBuffer.fadeOutAndStop(elm.time);
+
+		currentStorage = "";
+
+	}
+
+
+
+	function fadePause(elm)
+
+	{
+
+		if(_enabled) currentBuffer.fadeOutAndPause(elm.time);
+
+	}
+
+
+
+	function fadeResume(elm)
+
+	{
+
+		var time = (elm !== void && elm.time !== void) ? +elm.time : 0;
+
+		if(time != 0) buf1.volume = 0; else buf1.volume = volume;
+
+		resume(false);
+
+		if(_enabled) if(time !=0 ) currentBuffer.fade(volume, time);
+
+	}
+
+
+
+	function fade(elm)
+
+	{
+
+		// Fade to specified volume
+
+		var time = elm.time === void ? 5000 : +elm.time;
+
+		var vol = +elm.volume * 1000;
+
+//		stopFade();
+
+		if(_enabled)
+
+		{
+
+			currentBuffer.fade(vol, time);
+
+		}
+
+		volume = vol;
+
+	}
+
+
+
+	function stopFade()
+
+	{
+
+		buf1.stopFade();
+
+		buf2.stopFade() if buf2 !== void;
+
+	}
+
+
+
+	function exchange(elm)
+
+	{
+
+		// Swap tracks
+
+		// The currently playing track will fade out over the time specified by 'time',
+
+		// and the track specified by 'storage' will fade in over the time specified by 'time'
+
+		// and play.
+
+		// If 'time' is not specified but 'intime' and 'outtime' are,
+
+		// it will use 'intime' for fade-in and 'outtime' for fade-out duration.
+
+		// 'overlap' is the wait time between the fade-out of the current track
+
+		// and the fade-in of the new track (note that positive/negative values are reversed),
+
+		// a positive value results in a crossfade.
+
+		// 'storage' starts playback as soon as this method is called.
+
+
+
+		if(elm.storage == playingStorage) return;
+
+
+
+//		stopFade();
+
+
+
+		var loop = elm.loop === void ? true : +elm.loop;
+
+		var intime, outtime;
+
+		if(elm.time === void)
+
+		{
+
+			intime = elm.intime === void ? 5000:+elm.intime;
+
+			outtime = elm.outtime === void ? 5000:+elm.outtime;
+
+		}
+
+		else
+
+		{
+
+			intime = outtime = elm.time === void ? 5000 : +elm.time;
+
+		}
+
+		var overlap = elm.overlap === void ? 0 : +elm.overlap;
+
+
+
+		if(!_enabled)
+
+		{
+
+			// If disabled, call 'play' just in case and return.
+
+			play(elm);
+
+			return;
+
+		}
+
+
+
+		if(playingStorage == '')
+
+		{
+
+			// If no track is currently playing, it behaves like a simple fade-in.
+
+			elm.time = intime;
+
+			fadeIn(elm);
+
+			return;
+
+		}
+
+
+
+		volume = int(+elm.volume * 1000) if elm.volume !== void;
+
+
+
+		if(doubleBuffered)
+
+		{
+
+			// For double buffering
+
+			if(outtime != 0)
+
+				currentBuffer.fadeOutAndStop(outtime); // Fade out current BGM
+
+			var nextbuffer; // Next playback buffer
+
+			nextbuffer = (currentBuffer == buf1) ? buf2 : buf1;
+
+			if(intime != 0) nextbuffer.volume = 0; else nextbuffer.volume = volume;
+
+			playBuffer(nextbuffer, elm.storage, loop, false, elm.start);
+
+			if(intime != 0) nextbuffer.fade(volume, intime, outtime - overlap);
+
+		}
+
+		else
+
+		{
+
+			// For single buffering
+
+			play(elm); // Simply play the next track
+
+		}
+
+
+
+		if(loop)
+
+			currentStorage = elm.storage;
+
+		else
+
+			currentStorage = "";
+
+		looping = loop;
+
+		playingStorage = elm.storage;
+
+
+
+	}
+
+
+
+	function setVolume(vol)
+
+	{
+
+		volume = +vol;
+
+		stopFade();
+
+		buf1.volume = volume;
+
+		buf2.volume = volume if doubleBuffered;
+
+	}
+
+
+
+	function setOptions(elm)
+
+	{
+
+		if(elm.device !== void)
+
+		{
+
+			changeDevice(elm.device);
+
+		}
+
+		if(elm.volume !== void)
+
+		{
+
+			setVolume(int(+elm.volume * 1000));
+
+		}
+
+		if(elm.gvolume !== void)
+
+		{
+
+			// Global volume
+
+			var sysvar = owner.scflags; // System (core) variable
+
+			if(sysvar.bgm === void) sysvar.bgm = %[];
+
+            sysvar = sysvar.bgm;
+
+            var v2 = +elm.gvolume;
+
+            v2 = int(v2 * 1000);
+
+			sysvar.globalVolume = v2;
+
+            if (sysvar.enable === void || sysvar.enable) {
+
+                buf1.volume2 = v2;
+
+                buf2.volume2 = v2 if doubleBuffered;
+
+            } else {
+
+                buf1.volume2 = 0;
+
+                buf2.volume2 = 0 if doubleBuffered;
+
+            }
+
+		}
+
+	}
+
+
+
+	property inFading // Return whether fading is in progress
+
+	{
+
+		getter { return  currentBuffer.inFading; }
+
+	}
+
+
+
+	property canWaitStop // Return whether playback end can be awaited
+
+	{
+
+		getter { return currentBuffer.inFadeAndStop || (currentBuffer.status == "play" && !currentBuffer.looping); }
+
+	}
+
+
+
+	property inPlaying
+
+	{
+
+		getter { return playingStorage != "" && currentBuffer.status == "play" && !currentBuffer.inFadeAndStop; }
+
+	}
+
+
+
+	// Label wait
+
+	function canWaitLabel(name) {
+
+		var linfo = currentBuffer.labels[name];
+
+		if (linfo !== void) {
+
+			dm(name + " Label position:" + linfo.samplePosition);
+
+			dm("Current playback position:" + currentBuffer.samplePosition);
+
+		}
+
+		return linfo !== void && linfo.samplePosition > currentBuffer.samplePosition;
+
+	}
+
+
+
+	function onSoundBufferFadeCompleted(source)
+
+	{
+
+		if(currentBuffer == source)
+
+		{
+
+			// Fading completed
+
+			owner.onBGMFadeCompleted();
+
+		}
+
+	}
+
+
+
+	function onSoundBufferStop(source)
+
+	{
+
+        if(currentBuffer == source)
+
+		{
+
+			// Playback completed
+
+			playingStorage = "";
+
+			currentStorage = "";
+
+			owner.onBGMStop();
+
+		}
+
+	}
+
+
+
+	function store()
+
+	{
+
+		// Save current state to dictionary array
+
+		var dic = %[];
+
+		dic.currentStorage = currentStorage;
+
+        dic.paused = buf1.paused;
+
+		dic.volume = volume;
+
+		return dic;
+
+	}
+
+
+
+	function restore(dic)
+
+	{
+
+		// Restore current state from dictionary array
+
+		stopFade();
+
+        setVolume(dic.volume);
+
+        if(dic.currentStorage != "") {
+
+            play(%[ storage : dic.currentStorage, loop : true, paused: dic.paused]);
+
+        } else
+
+			stop();
+
+	}
+
+
+
+	function restoreSystemState(dic)
+
+	{
+
+		// Set information from system variable dic
+
+		// Get global volume information
+
+        var sysvar = dic.bgm;
+
+        if(sysvar !== void)
+
+		{
+
+            if (sysvar.enable === void || sysvar.enable) {
+
+                var v2 = sysvar.globalVolume;
+
+                if(v2 !== void)	{
+
+                    v2 = +v2;
+
+                    buf1.volume2 = v2;
+
+                    buf2.volume2 = v2 if doubleBuffered;
+
+                }
+
+            } else {
+
+                buf1.volume2 = 0;
+
+                buf2.volume2 = 0 if doubleBuffered;
+
+            }
+
+		}
+
+	}
+
+
+
+
+
+    // If true, apply volume correction
+
+    var _voldown;
+
+
+
+    property voldown {
+
+        getter() {
+
+            return _voldown;
+
+        }
+
+        setter(v) {
+
+            _voldown = v;
+
+            if (_enabled &&  currentStorage != "") {
+
+                if (_voldown) {
+
+                    currentBuffer.fade(volume * owner.bgmdownlevel / 100, 300);
+
+                } else {
+
+                    currentBuffer.fade(volume, 300);
+
+                }
+
+            }
+
+        }
+
+    }
+
+
+
+    function setLoop(loop) {
+
+        if(_enabled) {
+
+            currentBuffer.looping = loop;
+
+            // Rule: Set flag 0 to 0 when looping!
+
+            currentBuffer.flags[0] = loop ? 0 : 1;
+
+        }
+
+        looping = loop;
+
+    }
+
+
+
+}

@@ -1,0 +1,22 @@
+﻿{
+	var throw_system_not_found =
+		function
+		{
+			throw new Exception(
+				"System not found\n"
+				"This introductory script will not function properly unless the\n"
+				"folder/file configuration is the same as when KAG is distributed.");
+		};
+
+	// A package's data/ is self-contained: the platform builds copy template/system into it
+	// as data/system (the browser and phone builds have nothing outside data/). In this
+	// repository the framework stays in template/system, next to data/.
+	if(Storages.isExistentStorage("system/Initialize.tjs"))	{
+		Scripts.execStorage("system/Initialize.tjs");
+	} else if(Storages.isExistentStorage("../template/system/Initialize.tjs"))	{
+		Storages.addAutoPath("../template/system/");
+		Scripts.execStorage("../template/system/Initialize.tjs");
+	} else {
+		throw_system_not_found();
+	}
+}

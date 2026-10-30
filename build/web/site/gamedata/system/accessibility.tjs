@@ -1,0 +1,150 @@
+// Accessibility.tjs - Screen readers
+//
+// KAG has no screen reader support of its own. The engine passes what a game gives it to the
+// system's screen reader (Narrator on Windows, VoiceOver on macOS, Orca on Linux) through
+// ElementsDialog (the engine guide's "Accessibility"): text to read out (announce), and the
+// game's own UI drawn on layers as a table of nodes, each with a name, a role and a place on
+// the screen (setGameA11y). KAGWindow reads each message out when it waits for a click
+// (a11yAnnounceText), SelectLayer shows the choices as a list, and the Yes/No prompts and the
+// About screen show their buttons. Elements screens (the menu bar and its menus, the controls
+// list) are read as they are.
+//
+// Where the engine has no such interface (the browser build; Android and iOS are built
+// without it) KAGA11y.available is false and every call here does nothing.
+//
+// Nodes come from whoever shows UI: setNodes(owner, nodes, focus) and removeNodes(owner).
+// The last owner to show some is in front (a Yes/No prompt over the choices), and only its
+// nodes are given to the engine; when it removes them, the ones behind it come back. The
+// screen reader's actions on a node (focus, click, ...) go to that owner's
+// onA11yAction(id, action, arg).
+//
+// To check without a screen reader, run the engine with a REPL (-replfile) and read
+// Agent.a11yLog() (roughly what it would say) and Agent.a11yTree(), or act on a node with
+// Agent.a11yAction(id, action) (tools/smoketest.py does).
+
+class KAGAccessibility
+{
+	var available = false; // the engine has the interface
+	var owners = [];       // %[ owner, nodes, focus ], the front one last
+
+	function KAGAccessibility()
+	{
+		// (not in a run whose window stays hidden: -scncompile, -voicelines; Initialize.tjs)
+		available = !(typeof global.KAGHiddenRun != "undefined" && KAGHiddenRun) &&
+			typeof global.ElementsDialog != "undefined" &&
+			typeof global.ElementsDialog.announce != "undefined" &&
+			typeof global.ElementsDialog.setGameA11y != "undefined";
+		if (available) {
+			try { ElementsDialog.onGameA11yAction = onAction; }
+			catch (e) { dm("Screen readers: " + e.message); available = false; }
+		}
+	}
+
+	function finalize()
+	{
+		// at the end the engine may have taken ElementsDialog away already
+		if (available && typeof global.ElementsDialog != "undefined") {
+			try { ElementsDialog.onGameA11yAction = void; ElementsDialog.clearGameA11y(); } catch {}
+		}
+	}
+
+	/**
+	 * Has the screen reader read text out (assertive: interrupting what it says)
+	 */
+	function announce(text, assertive = false)
+	{
+		if (!available || text === void || text == "") return;
+		try { ElementsDialog.announce(text, assertive); } catch (e) { dm("announce: " + e.message); }
+	}
+
+	/**
+	 * The root's name: the game's title
+	 */
+	function setLabel(text)
+	{
+		if (!available) return;
+		try { ElementsDialog.a11yLabel = text; } catch {}
+	}
+
+	/**
+	 * Shows owner's UI to the screen reader (nodes as ElementsDialog.setGameA11y takes them;
+	 * focus: the id of the node the player is on, or void), in front of every other owner's
+	 */
+	function setNodes(owner, nodes, focus)
+	{
+		if (!available) return;
+		var i = indexOf(owner);
+		if (i >= 0) owners.erase(i);
+		owners.add(%[ owner:owner, nodes:nodes, focus:focus ]);
+		publish();
+	}
+
+	/**
+	 * Updates owner's nodes where they are, without bringing them to the front
+	 */
+	function updateNodes(owner, nodes, focus)
+	{
+		if (!available) return;
+		var i = indexOf(owner);
+		if (i < 0) return setNodes(...);
+		owners[i].nodes = nodes, owners[i].focus = focus;
+		publish() if (i == owners.count - 1);
+	}
+
+	function removeNodes(owner)
+	{
+		if (!available) return;
+		var i = indexOf(owner);
+		if (i < 0) return;
+		owners.erase(i);
+		publish();
+	}
+
+	function indexOf(owner)
+	{
+		for (var i = 0; i < owners.count; i++) if (owners[i].owner === owner) return i;
+		return -1;
+	}
+
+	/**
+	 * Gives the front owner's nodes to the engine (owners that are gone are dropped)
+	 */
+	function publish()
+	{
+		for (var i = owners.count - 1; i >= 0; i--)
+			owners.erase(i) if (!isvalid owners[i].owner);
+		try {
+			if (owners.count == 0) ElementsDialog.clearGameA11y();
+			else with (owners[owners.count - 1]) ElementsDialog.setGameA11y(.nodes, .focus);
+		} catch (e) { dm("setGameA11y: " + e.message); }
+	}
+
+	/**
+	 * The screen reader acted on a node (ElementsDialog.onGameA11yAction)
+	 */
+	function onAction(id, action, arg)
+	{
+		for (var i = owners.count - 1; i >= 0; i--) {
+			var owner = owners[i].owner;
+			if (!isvalid owner) continue;
+			if (typeof owner.onA11yAction != "undefined") owner.onA11yAction(id, action, arg);
+			return;
+		}
+	}
+
+	/**
+	 * A layer's rectangle on the screen, [x, y, w, h] in the primary layer's coordinates
+	 * (what a node's rect is)
+	 */
+	function rectOf(layer, x = 0, y = 0, w = void, h = void)
+	{
+		w = layer.width if (w === void);
+		h = layer.height if (h === void);
+		var primary = layer.window.primaryLayer;
+		for (var l = layer; l !== null && l !== void && l !== primary; l = l.parent)
+			x += l.left, y += l.top;
+		return [ x, y, w, h ];
+	}
+}
+
+var KAGA11y = new KAGAccessibility();

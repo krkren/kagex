@@ -1,0 +1,2907 @@
+// Load partial image loading plugin (layerExSubImage), for layers saved in pieces ("images" in
+
+// the layer structure): linked when the first one is drawn, since most games have none
+
+function psdLinkSubImage() {
+
+	if (typeof global.Layer.loadSubImage == "undefined") {
+
+		var plug = "plugin/layerExSubImage.dll";
+
+		try {
+
+			Plugins.link (plug);
+
+		} catch(e) {}
+
+	}
+
+}
+
+
+
+/**
+
+ * Layer information held by PSDInfo
+
+ */
+
+class PSDInfoLayer extends Layer {
+
+
+
+	var images;    // Split image info
+
+	var ymax;      // Info for split images
+
+	var base;
+
+	var layerBasename;
+
+
+
+	/**
+
+	 * Constructor
+
+	 */
+
+	function PSDInfoLayer(window) {
+
+		var pool;
+
+		if (typeof window._psdpoollayer == "undefined") {
+
+			pool = new global.Layer(window, window.primaryLayer);
+
+			pool.name = "For PSD info pool";
+
+			pool.hasImage = false;
+
+			window.add(pool);
+
+			window._psdpoollayer = pool;
+
+		} else {
+
+			pool = window._psdpoollayer;
+
+		}
+
+		super.Layer(window, pool);
+
+	}
+
+
+
+	// For update notification processing
+
+	function updateRegion(region) {
+
+		if (images === void) {
+
+			region.update(this.left, this.top, width, height);
+
+		} else {
+
+			// All regions
+
+			for (var y=0;y<ymax;y++) {
+
+				var dy = y * base;
+
+				if (images[y].file != null && images[y].disp) {
+
+					region.update(this.left, this.top + dy, this.width, base);
+
+				}
+
+			}
+
+		}
+
+	}
+
+
+
+	// Specify image to load
+
+	// Split images / Single image
+
+	function setImageInfo(info) {
+
+		if (info.images !== void) {
+
+			// Generate loading information for split images
+
+			base = info.base;
+
+			ymax = info.height / base;
+
+			layerBasename = info.layerBasename;
+
+			images = [];
+
+			for (var i=0;i<ymax;i++) {
+
+				images[i] = %[file:info.images[i], disp:false];
+
+			}
+
+		} else {
+
+			// Load single images immediately
+
+			images = void;
+
+			try {
+
+				super.loadImages(info.layerFilename);
+
+			} catch(e) {
+
+				var text = "Image load failed:" + info.layerFilename;
+
+				dm (text);
+
+				if (typeof window.errorImage == "Object") {
+
+					/**/   window.errorImage(text);
+
+				}
+
+				super.setSize(info.width, info.height);
+
+				super.fillRect(0,0,info.width,info.height,0x88000000);
+
+				super.drawText(0,0,info.layerFilename,0xffffff);
+
+			}
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Update the target display area
+
+	 * @param rect Target display area void: do nothing null: all UpdateRegion: that region only
+
+	 * @return true if image loading occurs
+
+	 */
+
+	function updateDispRect(rect) {
+
+		// Only composite images are processed
+
+		if (images !== void && rect !== void) {
+
+			// Unloaded images remain
+
+			var update = false;
+
+			for (var y=0;y<ymax;y++) {
+
+				var f = images[y].file;
+
+				if (f != null && !images[y].disp) {
+
+					psdLinkSubImage();
+
+					var dy = y * base;
+
+					var ly = this.top + dy;
+
+					if (rect == null || (ly <= rect.bottom && ly+base > rect.top)) {
+
+						var filename = layerBasename + f + ".siz";
+
+						try {
+
+							loadSubImage(filename, 0, dy);
+
+							parent.update(this.left, ly, this.width, base);
+
+							//dm("Image load:%s %d/%d".sprintf(filename, y, ymax-1));
+
+						} catch (e) {
+
+							dm("Image load failed:%s %d".sprintf(filename, y));
+
+						}
+
+						images[y].disp = true;
+
+					}
+
+					update = true;
+
+				}
+
+			}
+
+			if (!update) {
+
+				images = void;
+
+				//dm(name + ":Full load");
+
+			}
+
+		}
+
+	}
+
+
+
+	function setLayerInfo(info) {
+
+		super.left    = info.left;
+
+		super.top     = info.top;
+
+		super.width   = info.width;
+
+		super.height  = info.height;
+
+		super.type    = info.type;
+
+		if (super.type == ltPsNormal) {
+
+			super.type = ltAlpha;
+
+		}
+
+		super.opacity = info.opacity;
+
+		super.name    = info.name;
+
+		super.absolute = info.absolute;
+
+	}
+
+	
+
+};
+
+
+
+/**
+
+ * PSD file info management class
+
+ */
+
+class PSDInfo {
+
+
+
+	// Parameters for saving layer information
+
+	var infonames = [
+
+		%[type:0,name:"layer_type"],
+
+		%[type:1,name:"name"],
+
+		%[type:0,name:"left"],
+
+		%[type:0,name:"top"],
+
+		%[type:0,name:"width"],
+
+		%[type:0,name:"height"],
+
+		%[type:0,name:"type"],
+
+		%[type:0,name:"opacity"],
+
+		%[type:0,name:"visible"],
+
+		%[type:0,name:"layer_id"],
+
+		%[type:0,name:"group_layer_id"],
+
+		%[type:0,name:"base"],
+
+		%[type:2,name:"images"]
+
+	];
+
+	
+
+	var layers;     // Layer info list
+
+	var layerIds;   // Layer dictionary (ID-based)
+
+	var layerNames; // Layer dictionary (name-based)
+
+	var groups;     // Group info list
+
+	var groupIds;   // Group dictionary (ID-based)
+
+	var groupNames; // Group dictionary (name-based)
+
+	var layerFullnames; // Layer name (fullname) dictionary
+
+
+
+
+
+	var width; // Image size info
+
+	var height;
+
+	var pageWidth;   // Virtual size info
+
+	var pageHeight;
+
+	var offsetX;
+
+	var offsetY;
+
+	var trimBase;   // Base size for trimming process
+
+
+
+	var window;
+
+	
+
+	/**
+
+	 * Constructor
+
+	 */
+
+	function PSDInfo(window, trimBase) {
+
+		this.window = window;
+
+		layers = [];
+
+		layerIds = %[];
+
+		layerNames = %[];
+
+		groups = [];
+
+		groupIds = %[];
+
+		groupNames = %[];
+
+		layerFullnames = %[];
+
+		this.trimBase = trimBase;
+
+	}
+
+
+
+	function clearLayerData() {
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			if (info.layer !== void) {
+
+				invalidate info.layer;
+
+				delete info.layer;
+
+			}
+
+		}
+
+	}
+
+	
+
+	function clear() {
+
+		for (var i=0;i<groups.count;i++) {
+
+			var info = groups[i];
+
+			if (info.layers !== void) {
+
+				invalidate info.layers;
+
+			}
+
+			if (info.layerMap !== void) {
+
+				invalidate info.layerMap;
+
+			}
+
+			invalidate info;
+
+		}
+
+		groups.clear();
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			if (info.layer !== void) {
+
+				invalidate info.layer;
+
+			}
+
+			invalidate info;
+
+		}
+
+		layers.clear();
+
+		(Dictionary.clear incontextof layerIds)();
+
+		(Dictionary.clear incontextof layerNames)();
+
+		(Dictionary.clear incontextof groupIds)();
+
+		(Dictionary.clear incontextof groupNames)();
+
+		(Dictionary.clear incontextof layerFullnames)();
+
+	}
+
+
+
+	/**
+
+	 * Delete layer info
+
+	 * @param index Layer index
+
+	 */
+
+	function eraseLayer(index) {
+
+		if (index >= 0 && index < layers.count) {
+
+			var info = layers[index];
+
+			delete layerIds[info.layer_id];
+
+			delete layerNames[info.name];
+
+			if (info.group_layer_id !==void) {
+
+				var group = groupIds[info.group_layer_id];
+
+				if (group !== void) {
+
+					group.layers.remove(info);
+
+					delete group.layerMap[info.name];
+
+				}
+
+			}
+
+			layers.erase(index);
+
+		}
+
+	}
+
+
+
+	/**
+
+	 * Delete layer info
+
+	 * @param info Layer or layer name (regex match)
+
+	 */
+
+	function removeLayer(info) {
+
+		if (typeof info == "Object") {
+
+			for (var i=layers.count-1;i>=0;i--) {
+
+				if (info == layers[i]) {
+
+					eraseLayer(i);
+
+				}
+
+			}
+
+		} else if (typeof info == "String") {
+
+			var reg = new RegExp(info);
+
+			for (var i=layers.count-1;i>=0;i--) {
+
+				if (reg.test(layers[i].name)) {
+
+					eraseLayer(i);
+
+				}
+
+			}
+
+		}
+
+	}
+
+	
+
+	function finalize() {
+
+		clear();
+
+		invalidate layers;
+
+		invalidate layerIds;
+
+		invalidate layerNames;
+
+		invalidate groups;
+
+		invalidate groupIds;
+
+		invalidate groupNames;
+
+		invalidate layerFullnames;
+
+	}
+
+
+
+	/**
+
+	 * Returns the fullname
+
+	 */
+
+	function getFullname(info) {
+
+		return info.group === void ? info.name : getFullname(info.group) + "/" + info.name;
+
+	}
+
+	
+
+	/**
+
+	 * Get property
+
+	 * @param info Layer info
+
+	 * @param propname Property name
+
+	 * @return Property value
+
+	 */
+
+	function getProp(info, propname) {
+
+		if (info.layer !== void && typeof info.layer[propname] !== "undefined") {
+
+			return info.layer[propname];
+
+		}
+
+		return info[propname];
+
+	}
+
+	
+
+	/**
+
+	 * Set property
+
+	 * @param info Layer info
+
+	 * @param propname Property name
+
+	 * @param value Property value
+
+	 */
+
+	function setProp(info, propname, value, recursive=false) {
+
+		if (recursive && info.layers !== void) {
+
+			for (var i=info.layers.count-1;i>=0;i--) {
+
+				setProp(info.layers[i], propname, value);
+
+			}
+
+		}
+
+		if (info[propname] !== void) {
+
+			info[propname] = value;
+
+			if (info.layer !== void && typeof info.layer[propname] !== "undefined") {
+
+				info.layer[propname] = value;
+
+			}
+
+		}
+
+	}
+
+
+
+	function getPropInfo(name) {
+
+		if (typeof name == "Integer") {
+
+			var info = groupIds[name];
+
+			if (info !== void) {
+
+				return info;
+
+			} else {
+
+				return layerIds[name];
+
+			}
+
+		} else {
+
+			var info = layerFullnames[name];
+
+			if (info !== void) {
+
+				return info;
+
+			} else{
+
+				info = groupNames[name];
+
+				if (info !== void) {
+
+					return info;
+
+				} else {
+
+					info = layerNames[name];
+
+					if (info !== void) {
+
+						return info;
+
+					}
+
+				}
+
+			}
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Get property
+
+	 * @param name Group/layer name or layer ID
+
+	 * @param propname Property name
+
+	 * @return Property value
+
+	 */
+
+	function getPropName(name, propname) {
+
+		var info = getPropInfo(name);
+
+		if (info !== void) {
+
+			return getProp(info, propname);
+
+		}
+
+	}
+
+
+
+	/**
+
+	 * Set property
+
+	 * @param name Group/layer name or layer ID
+
+	 * @param propname Property name
+
+	 * @param value Property value
+
+	 */
+
+	function setPropName(name, propname, value, recursive=false) {
+
+		var info = getPropInfo(name);
+
+		if (info !== void) {
+
+			setProp(info, propname, value, recursive);
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Get all actual layers
+
+	 * @param info Layer info
+
+	 * @param dispRect Target display area void: do nothing null: all UpdateRect: specified area only
+
+	 */
+
+	function getDispLayer(info, dispRect) {
+
+		if (info.layer === void) {
+
+			var layer = new PSDInfoLayer(window);
+
+			layer.setLayerInfo(info);
+
+			layer.setImageInfo(info);
+
+			info.layer = layer;
+
+		}
+
+		info.layer.updateDispRect(dispRect);
+
+		return info.layer;
+
+	}
+
+
+
+	/**
+
+	 * Recalculate the composition area size
+
+	 * @param extend Render area extension specification
+
+	 */
+
+	function calcArea(extend=0) {
+
+		var region = new UpdateRegion();
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			if (!isIgnoreLayer(info.name) && info.width > 0 && info.height > 0) {
+
+				region.update(info.left, info.top, info.width, info.height);
+
+			}
+
+		}
+
+		
+
+		//dm("%s:Original layer area:%d,%d size:%d,%d".sprintf(name,region.left, region.top, region.width, region.height));
+
+		// Expand the area slightly for processing
+
+		region.left   -= extend;
+
+		region.top    -= extend;
+
+		region.right  += extend;
+
+		region.bottom += extend;
+
+
+
+		offsetX     = region.left;
+
+		offsetY     = region.top;
+
+		this.width  = region.width;
+
+		this.height = region.height;
+
+		//dm("off:%d,%d  size:%d,%d".sprintf(offsetX, offsetY, width, height));
+
+	}
+
+	
+
+	/**
+
+	 * Reconstruct layer info
+
+	 * @param width Image width
+
+	 * @param height Image height
+
+	 */
+
+	function initLayers(width, height) {
+
+		pageWidth  = width;
+
+		pageHeight = height;
+
+		calcArea();
+
+		
+
+		// Register group references
+
+		for (var i=0;i<groups.count;i++) {
+
+			var info = groups[i];
+
+			groupIds[info.layer_id] = info;
+
+			groupNames[info.name] = info;
+
+			info.layers = [];
+
+			info.layerMap = %[];
+
+		}
+
+		var count = layers.count;
+
+		for (var i=0;i<count;i++) {
+
+			var info = layers[i];
+
+			info.absolute = count-i;
+
+			layerIds[info.layer_id] = info;
+
+			layerNames[info.name] = info;
+
+			if (info.group_layer_id !==void) {
+
+				var group = groupIds[info.group_layer_id];
+
+				if (group !== void) {
+
+					group.layers.add(info);
+
+					group.layerMap[info.name] = info;
+
+				}
+
+				info.group = group;
+
+			}
+
+		}
+
+		for (var i=0;i<groups.count;i++) {
+
+			var info = groups[i];
+
+			if (info.group_layer_id !== void) {
+
+				var group = groupIds[info.group_layer_id];
+
+				if (group !== void) {
+
+					group.layers.add(info);
+
+				}
+
+				info.group = group;
+
+			}
+
+		}
+
+		// Get fullname info
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			var name = getFullname(info);
+
+			info.fullname = name;
+
+			layerFullnames[name] = info;
+
+		}
+
+		for (var i=0;i<groups.count;i++) {
+
+			var info = groups[i];
+
+			var name = getFullname(info);
+
+			info.fullname = name;
+
+			layerFullnames[name] = info;
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * PSD image load process
+
+	 * @param storage PSD file to load
+
+	 */
+
+	function loadPSD(storage) {
+
+
+
+		// Load plugin
+
+		// The plugin is psdfile (libpsdfile.so on Linux); older Windows packages called it psd.dll
+
+		if (typeof global.PSD == "undefined") {
+
+			try { Plugins.link("plugin/psdfile.dll"); }
+
+			catch (e) { try { Plugins.link("plugin/psd.dll"); } catch { throw e; } }
+
+		}
+
+		
+
+		clear();
+
+		
+
+		var psd = new PSD();
+
+		if (!psd.load(storage)) {
+
+			throw new Exception("Failed to load PSD image:"+ storage);
+
+		}
+
+		// Layers some programs save without an ID get one, as kagex-release gives them when it
+
+		// splits a PSD into this text format and a picture per layer: groups and pictures go by ID
+
+		if (typeof psd.assignAutoIds != "undefined") {
+
+			psd.assignAutoIds();
+
+		}
+
+		var count = psd.layer_count-1 ;
+
+		for (var i=count;i>=0;i--) {
+
+			var info = psd.getLayerInfo(i);
+
+			//dm(@'■Layer${i}: "${psd.getLayerName(i)}"\n' + dictToString(info));
+
+			info.name = info.name.replace(/[\/]/g, "_");
+
+			switch (info.layer_type) {
+
+			case PSD.layer_type_normal:
+
+				// An empty layer has no picture (getLayerData leaves the layer as it was)
+
+				if (info.width <= 0 || info.height <= 0) {
+
+					break;
+
+				}
+
+				{
+
+					var layer = new PSDInfoLayer(window);
+
+					psd.getLayerData(layer, i);
+
+					if (layer.type == ltPsNormal) {
+
+						layer.type = ltAlpha;
+
+					}
+
+					info.layer = layer;
+
+				}
+
+				layers.add(info);
+
+				break;
+
+			case PSD.layer_type_folder:
+
+				groups.add(info);
+
+				break;
+
+			}
+
+		}
+
+		initLayers(psd.width, psd.height);
+
+
+
+		invalidate psd;
+
+	}
+
+
+
+	/**
+
+	 * CLIP STUDIO PAINT image load process (the clipfile plugin), the way loadPSD reads a PSD:
+
+	 * its layers are numbered as psdfile numbers a PSD's, bottom up with a folder after what it
+
+	 * holds, and give the same information, but for the layer type and the folder's ID
+
+	 * @param storage CLIP file to load
+
+	 */
+
+	function loadCLIP(storage) {
+
+		if (typeof global.CLIP == "undefined") {
+
+			try { Plugins.link("plugin/clipfile.dll"); } catch (e) {}
+
+			if (typeof global.CLIP == "undefined") {
+
+				throw new Exception("CLIP STUDIO PAINT files need the clipfile plugin, which this engine doesn't have: " + storage);
+
+			}
+
+		}
+
+		clear();
+
+		var clip = new CLIP();
+
+		if (!clip.load(storage)) {
+
+			throw new Exception("Failed to load CLIP STUDIO PAINT image:" + storage + (clip.error != "" ? " (" + clip.error + ")" : ""));
+
+		}
+
+		var ids = [];
+
+		for (var i=0;i<clip.layer_count;i++) {
+
+			ids[i] = clip.getLayerInfo(i).layer_id;
+
+		}
+
+		for (var i=clip.layer_count-1;i>=0;i--) {
+
+			var info = clip.getLayerInfo(i);
+
+			if (info.is_filter) {
+
+				continue; // adjustment layers have no picture
+
+			}
+
+			info.name = ((string)info.name).replace(/[\/]/g, "_");
+
+			if (info.parent_index >= 0) {
+
+				info.group_layer_id = ids[info.parent_index];
+
+			}
+
+			if (info.is_group) {
+
+				info.layer_type = 2; // PSD.layer_type_folder
+
+				groups.add(info);
+
+			} else if (info.width > 0 && info.height > 0) {
+
+				info.layer_type = 0; // PSD.layer_type_normal
+
+				var layer = new PSDInfoLayer(window);
+
+				clip.getLayerData(layer, i);
+
+				if (layer.type == ltPsNormal) {
+
+					layer.type = ltAlpha;
+
+				}
+
+				info.layer = layer;
+
+				layers.add(info);
+
+			}
+
+		}
+
+		initLayers(clip.width, clip.height);
+
+		invalidate clip;
+
+	}
+
+
+
+	/**
+
+	 * @return Individual image filename for saving layer structure
+
+	 */
+
+	function getLayerImageName(base, id) {
+
+		return base + "_" + id;
+
+	}
+
+
+
+	/**
+
+	 * Load layer structure data
+
+	 * @param basename Base name
+
+	 * @param savedata Array of layer info data
+
+	 */
+
+	function loadDATA(basename, savedata) {
+
+		var count = savedata.count;
+
+		var width;
+
+		var height;
+
+		for (var i=0;i<count;i++) {
+
+			var info = savedata[i];
+
+			if (info.layer_type === void) {
+
+				width  = info.width;
+
+				height = info.height;
+
+			} else {
+
+				switch (info.layer_type) {
+
+				case 0: //PSD.layer_type_normal
+
+					//dm("Add layer:" + info.name);
+
+					layers.add(info);
+
+					info.layerFilename = getLayerImageName(basename, info.layer_id);
+
+					info.layerBasename = Storages.extractStoragePath(basename);
+
+					break;
+
+				case 2: //PSD.layer_type_folder
+
+					//dm("Add group:" + info.name);
+
+					groups.add(info);
+
+					break;
+
+				}
+
+			}
+
+		}
+
+		initLayers(width, height);
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+
+
+	// Parse number
+
+	function parseTxtNumber(ret, line, num, name) {
+
+		if (num < line.count && line[num].length > 0) {
+
+			ret[name] = (int)line[num];
+
+		}
+
+	}
+
+
+
+	// Parse string
+
+	function parseTxtString(ret, line, num, name) {
+
+		if (num < line.count && line[num].length > 0) {
+
+			ret[name] = line[num];
+
+		}
+
+	}
+
+
+
+	// Parse TJS expression
+
+	function parseTJSString(ret, line, num, name) {
+
+		if (num < line.count && line[num].length > 0) {
+
+			ret[name] = Scripts.eval(line[num]);
+
+		}
+
+	}
+
+
+
+	/**
+
+	 * Restore original info from text line data
+
+	 * @param line Line info
+
+	 * @return Original layer info
+
+	 */
+
+	function parseTxtSaveData(line) {
+
+		var ret = %[];
+
+		line = line.split(/\t/);
+
+		for (var i=0;i<infonames.count;i++) {
+
+			var info = infonames[i];
+
+			switch (info.type) {
+
+			case 0:
+
+				parseTxtNumber(ret, line, i, info.name);
+
+				break;
+
+			case 1:
+
+				parseTxtString(ret, line, i, info.name);
+
+				break;
+
+			case 2:
+
+				parseTJSString(ret, line, i, info.name);
+
+				break;
+
+			}
+
+		}
+
+		return ret;
+
+	}
+
+
+
+	/**
+
+	 * Load layer structure data
+
+	 * @param storage Layer structure info file (tab-separated text)
+
+	 */
+
+	function loadTXT(storage) {
+
+		clear();
+
+		var savedata = [];
+
+		var data = [];
+
+		data.load(storage);
+
+		var count = data.count;
+
+		for (var i=0;i<count;i++) {
+
+			var line = data[i];
+
+			if (line.charAt(0) != "#") {
+
+				savedata.add(parseTxtSaveData(line));
+
+			}
+
+		}
+
+		loadDATA(Storages.chopStorageExt(storage), savedata);
+
+	}
+
+	
+
+	/**
+
+	 * Load layer structure data
+
+	 * @param storage Image structure info file (TJS)
+
+	 */
+
+	function loadTJS(storage) {
+
+		clear();
+
+		loadDATA(Storages.chopStorageExt(storage), Scripts.evalStorage(storage));
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+	
+
+	/**
+
+	 * Load image file
+
+	 */
+
+	function loadImages(storage) {
+
+		var ext = Storages.extractStorageExt(storage).toUpperCase();
+
+		// Search if no extension is specified
+
+		if (ext == "") {
+
+			if (Storages.isExistentStorage(storage + ".PSD")) {
+
+				ext = ".PSD";
+
+				storage += ext;
+
+			} else if (Storages.isExistentStorage(storage + ".CLIP")) {
+
+				ext = ".CLIP";
+
+				storage += ext;
+
+			} else if (Storages.isExistentStorage(storage + ".TXT")) {
+
+				ext = ".TXT";
+
+				storage += ext;
+
+			} else if (Storages.isExistentStorage(storage + ".TJS")) {
+
+				ext = ".TJS";
+
+				storage += ext;
+
+			}
+
+		}
+
+		if (ext == ".PSD") {
+
+			loadPSD(storage);
+
+		} else if (ext == ".CLIP") {
+
+			loadCLIP(storage);
+
+		} else if (ext == ".TXT") {
+
+			loadTXT(storage);
+
+		} else if (ext == ".TJS") {
+
+			loadTJS(storage);
+
+		} else {
+
+			throw new Exception("Failed to load composite image:"+ storage);
+
+		}
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+
+
+	var ignoreLayers = [];
+
+
+
+	/**
+
+	 * Register layer names to ignore
+
+	 * @param List of regex strings
+
+	 */
+
+	function setIgnoreLayer(args*) {
+
+		ignoreLayers.clear();
+
+		for (var i=0;i<args.count;i++) {
+
+			ignoreLayers.add(new RegExp(args[i]));
+
+		}
+
+		calcArea();
+
+	}
+
+
+
+	/**
+
+	 * @param name Layer name
+
+	 * @return True if target to ignore
+
+	 */
+
+	function isIgnoreLayer(name) {
+
+		for (var i=0;i<ignoreLayers.count;i++) {
+
+			if (ignoreLayers[i].test(name)) {
+
+				return true;
+
+			}
+
+		}
+
+		return false;
+
+	}
+
+
+
+	/**
+
+	 * Image data saving process
+
+	 */
+
+	function saveImageAll(basename, layers, groups, savedata, getSaveData, zoom, zoomType, noimage, split) {
+
+
+
+		var savelayer;
+
+		// Support zoom processing
+
+		var ooze = Math.ceil(150.0/zoom)+1;
+
+		calcArea(ooze);
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = %[];
+
+			(Dictionary.assign incontextof info)(layers[i]);
+
+			if (zoom != 100 && info.layer !== void) {
+
+				// Duplicate
+
+				var layer = new PSDInfoLayer(window);
+
+				layer.assignImages(info.layer);
+
+				layer.setLayerInfo(info);
+
+				info.layer = layer;
+
+				cropLayer(info, offsetX, offsetY, width, height);
+
+				info.layer.oozeColor(ooze);
+
+				scaleLayer(info, zoom, zoomType);
+
+				trimLayer(info, true);
+
+			}
+
+			if (info.layer !== void) {
+
+				if (!noimage && !isIgnoreLayer(info.name)) {
+
+					if (split && trimBase > 0) {
+
+						// Split images
+
+						// Trimmed to appropriate size, so it can be saved reliably
+
+						var images = [];
+
+						for (var y=0;y<info.height;y+=trimBase) {
+
+							// Currently not considering horizontal cropping
+
+							if (info.layer.isBlank(0,y,info.layer.width,trimBase)) {
+
+								images.add(null);
+
+							} else {
+
+								var base = System.createUUID();
+
+								var filename = Storages.extractStoragePath(basename) + base + ".siz";
+
+								info.layer.saveSubImage(filename, 0, y, info.layer.width, trimBase);
+
+								images.add(base);
+
+							}
+
+						}
+
+						info.base = trimBase;
+
+						info.images = images;
+
+					} else {
+
+						// Single image
+
+						var filename = getLayerImageName(basename, info.layer_id) + ".tlg";
+
+						if (typeof window.addSaveLayer != "undefined") {
+
+							window.addSaveLayer(info.layer, filename);
+
+						} else {
+
+							if (savelayer === void) {
+
+								savelayer = new global.Layer(window, this);
+
+							}
+
+							savelayer.assignImages(info.layer);
+
+							savelayer.saveLayerImageTlg5(filename);
+
+						}
+
+					}
+
+				}
+
+			}
+
+			savedata.add(getSaveData(info));
+
+		}
+
+		if (savelayer !== void) {
+
+			invalidate savelayer;
+
+		}
+
+		for (var i=0;i<groups.count;i++) {
+
+			var info = groups[i];
+
+			savedata.add(getSaveData(info));
+
+		}
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+
+
+	// Copy property if it exists
+
+	function copyProp(dest, src, name) {
+
+		if (src[name] !== void) {
+
+			dest[name] = src[name];
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Copy only information that needs to be saved
+
+	 * @param info Original data
+
+	 */
+
+	function getSaveData(info) {
+
+		var ret = %[];
+
+		for (var i=0;i<infonames.count;i++) {
+
+			copyProp(ret, info, infonames[i].name);
+
+		}
+
+		return ret;
+
+	}
+
+
+
+	/**
+
+	 * Save layer structure data
+
+	 * @param storage Image structure info file
+
+	 */
+
+	function saveTJS(storage, zoom=100, zoomType=stLinear, noimage=false, split=false) {
+
+		var basename = Storages.chopStorageExt(storage);
+
+		var savedata = [];
+
+		var w = (int)(pageWidth  * zoom / 100);
+
+		var h = (int)(pageHeight * zoom / 100);
+
+		savedata.add(%[width:w, height:h]);
+
+		saveImageAll(basename, layers, groups, savedata, getSaveData, zoom, zoomType, noimage, split);
+
+		savedata.saveStruct2(storage);
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+	
+
+	// Get line for text saving
+
+	function getTxtSaveData(info) {
+
+		var ret = "";
+
+		var count = infonames.count;
+
+		for (var i=0;i<count;i++) {
+
+			var name = infonames[i].name;
+
+			var type = infonames[i].type;
+
+			if (info === void) {
+
+				ret += (string)name;
+
+			} else{
+
+				if (info[name] !== void) {
+
+					switch (type) {
+
+					case 0:
+
+					case 1:
+
+						ret += (string)info[name];
+
+						break;
+
+					case 2:
+
+						{
+
+							var array = info[name];
+
+							if (typeof array == "Object" && array instanceof "Array") {
+
+								var str = "[";
+
+								for (var i=0;i<array.count;i++) {
+
+									var o = array[i];
+
+									if (i != 0) {
+
+										str += ",";
+
+									}
+
+									if (o === null) {
+
+										str += "null";
+
+									} else {
+
+										str += "\"%s\"".sprintf(o);
+
+									}
+
+								}
+
+								str += "]";
+
+								ret += str;
+
+							}
+
+						}
+
+						break;
+
+					}
+
+				}
+
+			}
+
+			ret += "\t";
+
+		}
+
+		return ret;
+
+	}
+
+
+
+	/**
+
+	 * Save layer structure data
+
+	 * @param storage Image structure info file
+
+	 */
+
+	function saveTXT(storage, zoom=100, zoomType=stLinear, noimage=false, split=false) {
+
+		var basename = Storages.chopStorageExt(storage);
+
+		var savedata = [];
+
+		var w = (int)(pageWidth  * zoom / 100);
+
+		var h = (int)(pageHeight * zoom / 100);
+
+		savedata.add("#" + getTxtSaveData());
+
+		savedata.add(getTxtSaveData(%[width:w, height:h]));
+
+		saveImageAll(basename, layers, groups, savedata, getTxtSaveData, zoom, zoomType, noimage, split);
+
+		savedata.save2(storage);
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+
+
+	/**
+
+	 * Save image file
+
+	 * @param storage Save filename
+
+	 * @param zoom Size adjustment for saving
+
+	 * @param zoomType Size adjustment for saving (interpolation method)
+
+	 * @param noimage Do not save image data itself
+
+	 */
+
+	function saveImages(storage, zoom=100, zoomType=stLinear, noimage=false, split=false) {
+
+		
+
+		// Load save plugin
+
+		useSaveStruct();
+
+		useLayerExSave();
+
+
+
+		var ext = Storages.extractStorageExt(storage).toUpperCase();
+
+		if (ext == ".TXT") {
+
+			saveTXT(storage, zoom, zoomType, noimage, split);
+
+		} else if (ext == ".TJS") {
+
+			saveTJS(storage, zoom, zoomType, noimage, split);
+
+		} else {
+
+			throw new Exception("Please specify an extension when saving:"+ storage);
+
+		}
+
+	}
+
+	// ---------------------------------------------------
+
+
+
+	/**
+
+	 * Save image file info
+
+	 * Saves the list of layer names in the image
+
+	 * @param storage Save filename
+
+	 */
+
+	function saveInfos(storage) {
+
+
+
+		// Load save plugin
+
+		useSaveStruct();
+
+
+
+		var savedata = [];
+
+		for (var i=0;i<layers.count;i++) {
+
+			savedata.add(getFullname(layers[i]));
+
+		}
+
+		savedata.save2(storage);
+
+	}
+
+	
+
+	// ---------------------------------------------------
+
+	
+
+	/**
+
+	 * Convert dictionary info to display text
+
+	 */
+
+	function dictToString(dic) {
+
+		var ret = [], tmp = [];
+
+		tmp.assign(dic);
+
+		for (var i = 0; i < tmp.count; i+=2) {
+
+			var name = tmp[i], value = tmp[i+1];
+
+			if (name != "") {
+
+				value = "0x%08X".sprintf(value) if (name.indexOf("color") >= 0);
+
+				ret.add(@"    ${name}:${value}");
+
+			}
+
+		}
+
+		ret.sort();
+
+		return ret.join("\n");
+
+	}
+
+
+
+	// ---------------------------------------------------
+
+
+
+	/**
+
+	 * Fit layer to standard screen size	
+
+	 * @param info Layer info
+
+	 * @param x Top-left X
+
+	 * @param y Top-left Y
+
+	 * @param w Width
+
+	 * @param h Height
+
+	 */
+
+	function cropLayer(info, x, y, w, h) {
+
+		//dm("cropLayer:" + info.name + ":" + ooze);
+
+		getDispLayer(info, null);
+
+
+
+		var layer, opr = omAlpha; //omPsNormal;
+
+
+
+		layer = new PSDInfoLayer(window);
+
+		layer.setSize(w, h);
+
+		layer.fillRect(0,0,w,h,0);
+
+		with (info.layer) {
+
+//				layer.operateRect(.left - x, .top - y, info.layer, 0, 0, .width, .height, opr);
+
+			layer.copyRect(.left - x, .top - y, info.layer, 0, 0, .width, .height);
+
+		}
+
+		info.left   = x;
+
+		info.top    = y;
+
+		info.width  = w;
+
+		info.height = h;
+
+		layer.setLayerInfo(info);
+
+		invalidate info.layer;
+
+		info.layer = layer;
+
+	}
+
+
+
+	/**
+
+	 * Scale layer to specified size
+
+	 * @param info Layer info
+
+	 * @param percent Scaling ratio
+
+	 * @param type Scaling method
+
+	 */
+
+	function scaleLayer(info, percent, type) {
+
+		var layer = new PSDInfoLayer(window);
+
+		var w = (int)(info.width  * percent / 100);
+
+		var h = (int)(info.height * percent / 100);
+
+		layer.setSize(w, h);
+
+		if (type == 4) {
+
+			with (info.layer) {
+
+				layer.shrinkCopy(0, 0, w, h, info.layer, 0, 0, .width, .height);
+
+			}
+
+		} else {
+
+			with (info.layer) {
+
+				layer.stretchCopy(0, 0, w, h, info.layer, 0, 0, .width, .height, type);
+
+			}
+
+		}
+
+		info.left = (int)(info.left * percent / 100);
+
+		info.top  = (int)(info.top  * percent / 100);
+
+		info.width  = w;
+
+		info.height = h;
+
+		layer.setLayerInfo(info);
+
+		invalidate info.layer;
+
+		info.layer = layer;
+
+	}
+
+
+
+	/**
+
+	 * Shift layer coordinates
+
+	 * @param info Layer info
+
+	 * @param x X shift amount
+
+	 * @param y Y shift amount
+
+	 */
+
+	function shiftLayer(info, x, y) {
+
+		info.left -= x;
+
+		info.top  -= y;
+
+		if (info.layer !== void) {
+
+			info.layer.setLayerInfo(info);
+
+		}
+
+	}
+
+
+
+	/**
+
+	 * Trim layer
+
+	 * @param info Layer info
+
+	 */
+
+	function trimLayer(info, zero=false) {
+
+		var layer;
+
+		var crop = zero ? info.layer.getCropRectZero() : info.layer.getCropRect();
+
+		if (crop === void) {
+
+			info.width = 0;
+
+			info.height = 0;
+
+			layer = new PSDInfoLayer(window);
+
+		} else {
+
+			if (trimBase === void) {
+
+				if (info.width != crop.w || info.height != crop.h) {
+
+					info.left   += crop.x;
+
+					info.top    += crop.y;
+
+					info.width  = crop.w;
+
+					info.height = crop.h;
+
+					layer = new PSDInfoLayer(window);
+
+					layer.setSize(crop.w, crop.h);
+
+					layer.copyRect(0, 0, info.layer, crop.x, crop.y, crop.w, crop.h);
+
+				}
+
+			} else {
+
+				// Normalize Y direction only
+
+				var cx = info.left + crop.x;
+
+				var cy = info.top  + crop.y;
+
+				var cw = crop.w;
+
+				var ch = crop.h;
+
+				var x = cx;
+
+				var y = cy \ trimBase * trimBase;
+
+				var w = cw;
+
+				var h = (ch + (cy - y) + (trimBase-1)) \ trimBase * trimBase;
+
+				//dm("Layer:%s (%d,%d,%d,%d)→(%d,%d,%d,%d)".sprintf(info.name, cx, cy, cw, ch, x, y, w, h));
+
+				if (info.left != x || info.top != y || info.width != w || info.width != h) {
+
+					info.left   = x;
+
+					info.top    = y;
+
+					info.width  = w;
+
+					info.height = h;
+
+					layer = new PSDInfoLayer(window);
+
+					layer.setSize(w, h);
+
+					layer.copyRect(0, 0, info.layer, crop.x, crop.y - (cy-y), w, h);
+
+				}
+
+			}
+
+		}
+
+		// Actually trimmed
+
+		if (layer !== void) {
+
+			layer.setLayerInfo(info);
+
+			invalidate info.layer;
+
+			info.layer = layer;
+
+		}
+
+	}
+
+
+
+	/**
+
+	 * Rescale entire image
+
+	 * @param percent Percentage specification
+
+	 */
+
+	function rescale(percent, type) {
+
+		useLayerExSave();
+
+		var ooze = Math.ceil(150.0/percent)+1;
+
+		calcArea(ooze);
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			cropLayer(info, offsetX, offsetY, width, height);
+
+			info.layer.oozeColor(ooze);
+
+			scaleLayer(info, percent, type);
+
+			trimLayer(info);
+
+		}
+
+		pageWidth  = (int)(pageWidth  * percent / 100);
+
+		pageHeight = (int)(pageHeight * percent / 100);
+
+		calcArea();
+
+	}
+
+
+
+	/**
+
+	 * Resize/Crop entire image
+
+	 * @param x Top-left X
+
+	 * @param y Top-left Y
+
+	 * @param w Width
+
+	 * @param h Height
+
+	 */
+
+	function resize(x, y, w, h) {
+
+		useLayerExSave();
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			cropLayer(info, x, y, w, h);
+
+			shiftLayer(info, x, y);
+
+			trimLayer(info);
+
+		}
+
+		pageWidth  = w;
+
+		pageHeight = h;
+
+		calcArea();
+
+	}
+
+
+
+	function clearLayerAlpha(info) {
+
+		if (info.layer) with (info.layer) {
+
+			.clearAlpha();
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Optimize entire image
+
+	 */
+
+	function fix(ooze) {
+
+		useLayerExSave();
+
+		calcArea(ooze);
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			cropLayer(info, offsetX, offsetY, width, height);
+
+			clearLayerAlpha(info);
+
+			if (info.layer) {
+
+				info.layer.oozeColor(ooze);
+
+			}
+
+			trimLayer(info, true);
+
+		}
+
+		calcArea();
+
+	}
+
+
+
+	/**
+
+	 * Clear alpha channel information to 0
+
+	 */
+
+	function clearAlpha() {
+
+		useLayerExSave();
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			getDispLayer(info, null);
+
+			clearLayerAlpha(info);
+
+			trimLayer(info);
+
+		}
+
+		calcArea();
+
+	}
+
+
+
+	/**
+
+	 * Load auxiliary plugins
+
+	 */
+
+	function useLayerExSave() { Plugins.link("plugin/layerExSave.dll") if (typeof global.Layer.saveLayerImageTlg5 != "Object"); }
+
+	function useSaveStruct()  { Plugins.link("plugin/saveStruct.dll")  if (typeof global.Array.save2              != "Object"); }
+
+};
+
+
+
+/**
+
+ * PSD layer class
+
+ */
+
+class PSDLayer extends Layer {
+
+	
+
+	var psdinfo; // PSD info
+
+	var visibleInfo = %[]; // Holds the visible state of individual layer info
+
+	var layvisible  = %[]; // Holds the visible state of layers
+
+	
+
+	/**
+
+	 * @param window Window
+
+	 * @param parent Parent layer
+
+	 */
+
+	function PSDLayer(window, parent, psdinfo, trimBase) {
+
+		super.Layer(window, parent);
+
+		if (psdinfo === void) {
+
+			this.psdinfo = new PSDInfo(window, trimBase);
+
+		} else {
+
+			this.psdinfo = psdinfo;
+
+		}
+
+		type = ltAlpha;
+
+		Scripts.setCallMissing(this);
+
+		resetSize();
+
+	}
+
+
+
+	/**
+
+	 * Returns a copy
+
+	 */
+
+	function clone(instance) {
+
+		if (instance == void) {
+
+			instance = new global.PSDLayer(window, parent, psdinfo);
+
+		}
+
+		instance.assignImages(this);
+
+		(Dictionary.assign incontextof instance.visibleInfo)(visibleInfo);
+
+		(Dictionary.assign incontextof instance.layvisible)(layvisible);
+
+		return instance;
+
+	}
+
+
+
+	function copyVisible(src) {
+
+		(Dictionary.assign incontextof visibleInfo)(src.visibleInfo);
+
+	}
+
+
+
+	function resetSize() {
+
+		if (psdinfo.width > 0 && psdinfo.height > 0) {
+
+			setSize(psdinfo.width, psdinfo.height);
+
+			setImagePos(0,0);
+
+			setImageSize(width, height);
+
+			fillRect(0,0,width,height,neutralColor);
+
+		}
+
+		(Dictionary.clear incontextof layvisible)();
+
+	}
+
+	
+
+	// XXX Exists for some reason and is not targeted by missing
+
+	function clear() {
+
+		psdinfo.clear();
+
+	}
+
+
+
+	// Override image loading
+
+	function loadImages(storage) {
+
+		dm("Reading image:" + storage);
+
+		psdinfo.loadImages(...);
+
+		resetSize();
+
+	}
+
+
+
+	// ------------------------
+
+	// For psdconv
+
+	// ------------------------
+
+	
+
+	function rescale() {
+
+		psdinfo.rescale(...);
+
+		resetSize();
+
+	}
+
+
+
+	function resize() {
+
+		psdinfo.resize(...);
+
+		resetSize();
+
+	}
+
+	
+
+	function fix() {
+
+		psdinfo.fix(...);
+
+		resetSize();
+
+	}
+
+
+
+	function clearAlpha() {
+
+		psdinfo.clearAlpha();
+
+		resetSize();
+
+	}
+
+	
+
+	// ----------------------------------------------------
+
+
+
+	// Process to pass through
+
+	function missing(set, name, value) {
+
+		//dm("missing:" + set  + ":" + name);
+
+		if (!set) {
+
+			if (typeof psdinfo[name] != "undefined") {
+
+				*value = psdinfo[name];
+
+				return true;
+
+			}
+
+		}
+
+		return false;
+
+	}
+
+
+
+	// Check display status
+
+	function hasDisp() {
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			if (isShowLayer(info) && info.images !== void && (info.layer === void || info.layer.images !== void)) {
+
+				return true;
+
+			}
+
+		}
+
+		return false;
+
+	}
+
+
+
+	// Get visible info for image
+
+	function getVisibleInfo(info) {
+
+		if (info !== void) {
+
+			var name = (string)info;
+
+			var v = visibleInfo[name];
+
+			if (v === void) {
+
+				visibleInfo[name] = info.visible;
+
+			}
+
+			return visibleInfo[name];
+
+		}
+
+		return false;
+
+	}
+
+
+
+	function setVisibleInfo(info, value) {
+
+		if (info !== void) {
+
+			var name = (string)info;
+
+			visibleInfo[name] = value;
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Hide all layers
+
+	 */
+
+	function hideAll() {
+
+		for (var i=0;i<layers.count;i++) {
+
+			var layer = layers[i];
+
+			// Only process layers not belonging to a group
+
+			if (layer.group === void) {
+
+				setVisibleInfo(layer, false);
+
+			}
+
+		}
+
+		// Hide all groups
+
+		for (var i=0;i<groups.count;i++) {
+
+			var group = groups[i];
+
+			setVisibleInfo(group, false);
+
+		}
+
+	}
+
+	
+
+	/**
+
+	 * Determine if the layer is displayed
+
+	 */
+
+	function isShowLayer(info) {
+
+		if (info.group === void || isShowLayer(info.group)) {
+
+			// Layer information
+
+			return getVisibleInfo(info);
+
+		}
+
+		return false;
+
+	}
+
+
+
+	/**
+
+	 * Redraw process
+
+	 * @return Updated area in the image
+
+	 */
+
+	function updateImage(dispRect=null) {
+
+
+
+		// Update region
+
+		var region;
+
+		
+
+		// Calculate the area where display state has changed
+
+		for (var i=0;i<layers.count;i++) {
+
+			var info = layers[i];
+
+			if (isShowLayer(info)) {
+
+				var layer = psdinfo.getDispLayer(info, dispRect);
+
+				var layerName = (string)layer;
+
+				if (!layvisible[layerName]) {
+
+					// Layer becomes visible
+
+					layvisible[layerName] = true;
+
+					region = new UpdateRegion() if region === void;
+
+					layer.updateRegion(region);
+
+				}
+
+			} else {
+
+				var layer = info.layer;
+
+				var layerName = (string)layer;
+
+				if (layer !== void && layvisible[layerName]) {
+
+					// Layer becomes hidden
+
+					layvisible[layerName] = false;
+
+					region = new UpdateRegion() if region === void;
+
+					layer.updateRegion(region);
+
+				}
+
+			}
+
+		}
+
+		
+
+		// Execute rendering for the update region
+
+		if (region !== void) {
+
+			var rl = region.left;
+
+			var rt = region.top;
+
+			var l = rl - offsetX;
+
+			var t = rt - offsetY;
+
+			var w = region.width;
+
+			var h = region.height;
+
+			fillRect(l, t, w, h, neutralColor);
+
+			var first = true;
+
+			for (var i=layers.count-1;i>=0;i--) {
+
+				var info = layers[i];
+
+				if (isShowLayer(info) && info.layer) {
+
+					if (first) {
+
+						holdAlpha = false;
+
+						copyRect(l, t,
+
+								 info.layer,
+
+								 rl - info.left,
+
+								 rt - info.top,
+
+								 w, h);
+
+						first = false;
+
+						holdAlpha = true;
+
+					} else {
+
+						operateRect(l,
+
+									t,
+
+									info.layer,
+
+									rl - info.left,
+
+									rt - info.top,
+
+									w, h, omAuto, info.opacity);
+
+					}
+
+				}
+
+			}
+
+			region.left   = l;
+
+			region.top    = t;
+
+			region.width  = w;
+
+			region.height = h;
+
+		}
+
+
+
+		return region;
+
+	}
+
+
+
+	// --------------------------------------------------------
+
+	// For exstand
+
+
+
+	/**
+
+	 * Set the visibility (enabled/disabled) of a specified layer or group
+
+	 * @param name Specification of group or layer (name or ID)
+
+	 * @return Visibility status
+
+	 */
+
+	function getVisible(name) {
+
+		return getVisibleInfo(psdinfo.getPropInfo(name));
+
+	}
+
+
+
+	/**
+
+	 * Set the visibility (enabled/disabled) of a specified layer or group
+
+	 * @param name Specification of group or layer (name or ID)
+
+	 * @param visible Visibility status
+
+	 */
+
+	function setVisible(name, visible) {
+
+		setVisibleInfo(psdinfo.getPropInfo(name), visible);
+
+	}
+
+};

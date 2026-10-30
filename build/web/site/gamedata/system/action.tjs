@@ -1,0 +1,1428 @@
+//
+// Classes for implementing general-purpose action functions
+//
+
+/**
+ * Action information for a single property
+ * Absolute action: Specifies the absolute value of the target property. Only one can be used.
+ * Relative action: Specifies a relative value for the target property. Multiple can be specified.
+ */
+class PropActionInfo {
+
+	var propName;      // Property name
+	var absolute;      // Absolute action handler
+	var relative = []; // Relative action handlers
+	var first;         // First execution flag
+	var done;          // Execution finished flag
+	var startTime;     // Start time
+	
+    /**
+	 * Constructor
+	 */
+	function PropActionInfo(propName) {
+		this.propName = propName;
+		first = true;
+		done  = false;
+	}
+
+	// For restarting/retrying
+	function next() {
+		first = true;
+		done  = false;
+		startTime = void;
+		if (absolute !== void) {
+			absolute.next();
+		}
+		for (var i=0;i<relative.count;i++) {
+			relative[i].next();
+		}
+	}
+
+	/**
+	 * Create a clone
+	 */
+	function clone() {
+		var ret = new global.PropActionInfo(propName);
+		ret.absolute = absolute;
+		for (var i=0;i<relative.count;i++) {
+			ret.relative.add(relative[i]);
+		}
+		ret.first = this.first;
+		ret.done  = this.done;
+		ret.startTime = this.startTime;
+		return ret;
+	}
+
+    /**
+     * Add an action
+     * @param target Target object
+     * @param handler Action handler
+     * @param elm Initialization parameters
+     */
+	function addAction(target, handler, elm) {
+		//dm("Adding action:" + propName);
+		if (typeof handler == "Object" && handler != null) {
+			if (typeof handler.AbsoluteActionHandler != "undefined") {
+				// Only one absolute action can be set
+				absolute = new handler(target, propName, elm);
+				first = true;
+				done  = false;
+				startTime = void;
+			} else if (typeof handler.RelativeActionHandler != "undefined") {
+				// Register default action
+				if (absolute === void) {
+					//dm("Registering default action");
+					absolute = new DefaultAction(target, propName, %[]);
+				}
+				// Multiple relative actions can be set
+				relative.add(new handler(target, propName, elm));
+			} else {
+				dm("Handler error:" + handler);
+			}
+		} else {
+			dm("Handler error:" + handler);
+		}
+    }
+
+	/**
+	 * Returns the execution result of the action
+	 */
+	function getResultValue(result) {
+		if (absolute !== void) {
+			absolute.getResultValue(result, propName);
+		}
+	}
+
+	/**
+	 * Execute action processing
+     * @param target Target object
+     * @param now Current time
+     * @param stopFlag Forced termination specification
+     * @return true if finished
+     */
+    function doAction(target, now, stopFlag) {
+		if (this.done) {
+			return true;
+		}
+		if (first) {
+			//dm("First action execution");
+			if (startTime === void) {
+				startTime = now;
+			}
+			if (absolute !== void) {
+				absolute.init(target, propName);
+			}
+			for (var i=0;i<relative.count;i++) {
+				relative[i].init(target, propName);
+			}
+			first = false;
+		}
+		now -= startTime;
+		//dm("Action state:"+ now + " stop:" + stopFlag);
+		done = true;
+		if (absolute !== void) {
+			if (!absolute.action(target, propName, now, stopFlag)) {
+				done = false;
+			}
+        }
+		if (!stopFlag) {
+			for (var i=0;i<relative.count;i++) {
+				if (!relative[i].action(target, propName, now)) {
+					done = false;
+				}
+			}
+		}
+		return done;
+    }
+};
+
+/**
+ * Action for multiple properties
+ */
+class ActionInfo {
+
+    var actionDict = %[]; // Action information dictionary
+    var actionList = [];  // Action information list
+
+    /**
+     * Constructor
+     */
+    function ActionInfo() {
+    }
+
+	/**
+	 * Finalizer
+	 */
+    function finalize() {
+        invalidate actionList;
+        invalidate actionDict;
+    }
+
+	/**
+	 * Create a clone
+	 */
+	function clone() {
+		var ret = new global.ActionInfo();
+		for (var i=0;i<actionList.count;i++) {
+			var newact = actionList[i].clone();
+			ret.actionList[i] = newact;
+			ret.actionDict[newact.propName] = newact;
+		}
+		return ret;
+	}
+
+	
+    function getPropActionInfo(propName) {
+        var ret = actionDict[propName];
+        if (ret === void) {
+            ret = new PropActionInfo(propName);
+            actionDict[propName] = ret;
+            actionList.add(ret);
+        }
+        return ret;
+    }
+
+	
+    /**
+     * Add an action for a specified property
+     * @param target Target
+     * @param propName Property name
+     * @param handler Action handler
+     * @param elm Initialization parameters
+     */
+    function addAction(target, propName, handler, elm) {
+		var info = getPropActionInfo(propName);
+		info.addAction(target, handler, elm);
+    }
+
+    /**
+     * Delete an action for a specified property
+     * @param target Target
+     * @param propName Property name
+     */
+    function delAction(target, propName) {
+		var ret = actionDict[propName];
+		if (ret !== void) {
+			ret.doAction(target, 0, true);
+			actionList.remove(ret);
+		}
+    }
+
+	/**
+	 * Get the result of the action
+	 */
+	function getResultValue(ret) {
+		for (var i=0;i<actionList.count;i++) {
+			var info = actionList[i];
+			info.getResultValue(ret);
+		}
+		return ret;
+	}
+	
+    /**
+     * Execute action processing
+     * @param target Target object
+     * @param now Current time
+     * @param stopFlag Forced termination specification
+     * @return true if finished
+     */
+    function doAction(target, now, stopFlag) {
+		if (!isvalid target) return true; // Finish if target is invalid
+        var done = true;
+        for (var i=0; i<actionList.count; i++) {
+			try {
+				done = false if (!actionList[i].doAction(target, now, stopFlag));
+			} catch {
+				return true; // Force terminate if an error occurs
+			}
+        }
+        return done;
+    }
+
+	function next() {
+		for (var i=0; i<actionList.count; i++) {
+			actionList[i].next();
+		}
+	}
+
+};
+
+class ActionWaitInfo {
+
+	var wait;
+	var first;
+	var startTime;
+
+	function ActionWaitInfo(wait) {
+		this.wait = wait;
+		first = true;
+	}
+
+	/**
+	 * Create a clone
+	 */
+	function clone() {
+		return new global.ActionWaitInfo(wait);
+	}
+
+	/**
+	 * Action processing
+	 * Waits for the specified wait time
+	 */
+	function doAction(target, now) {
+		if (!isvalid target) return true; // Finish if target is invalid
+		if (startTime === void) {
+			startTime = now;
+		}
+		now -= startTime;
+		return now >= wait;		
+	}
+
+	/**
+	 * For resetting
+	 */
+	function next() {
+		startTime = void;
+	}
+}
+
+class ActionLoopInfo {
+
+	var count; // Loop count
+	var point; // Loop destination point
+
+	/**
+	 * Constructor
+	 */
+	function ActionLoopInfo(point, count) {
+		this.point = point;
+		this.count = count;
+	}
+
+	/**
+	 * Create a clone
+	 */
+	function clone() {
+		return new global.ActionLoopInfo(point, count);
+	}
+
+    /**
+	 * Execute loop processing
+     * @param stopFlag Forced termination specification
+	 * @return Return destination (-1 if finished)
+     */
+	function doLoop(stopFlag) {
+		if (stopFlag) {
+			return -1;
+		}
+		if (count === void) {
+			return +point;
+		} else {
+			if (--count <= 0) {
+				return -1;
+			}
+			return +point;
+		}
+	}
+};
+
+
+/**
+ * A series of actions (Action Sequence)
+ */
+class ActionSequense {
+
+    var actions = [];
+
+	var target; // Target object
+	var create; // Action addition flag
+	var nowait; // No-wait flag
+	var cur;    // Current action position being executed
+	
+    /**
+     * Constructor
+     */
+	function ActionSequense(target) {
+		this.target = target;
+		create = true;
+		cur = 0;
+    }
+
+	function finalize() {
+		while (actions.count > 0) {
+			invalidate actions[0] if (isvalid actions[0]);
+			actions.erase(0);
+		}
+	}
+
+	/**
+	 * Create a clone
+	 */
+	function clone() {
+		var ret = new global.ActionSequense(target);
+		ret.create = create;
+		ret.nowait = nowait;
+		ret.cur    = cur;
+		for (var i=0;i<actions.count;i++) {
+			ret.actions.add(actions[i].clone());
+		}
+		return ret;
+	}
+	
+    /**
+     * Advance the action sequence
+     */
+    function next() {
+        create = true;
+    }
+    
+    /**
+     * Add an action
+     * @param propName Property name
+     * @param handler Action handler
+     * @param elm Initialization parameters
+     */
+    function addAction(propName, handler, elm) {
+		if (propName == "zoom") {
+			addAction("zoomx", handler, elm);
+			addAction("zoomy", handler, elm);
+			return;
+		}
+		if (typeof target[propName] == "undefined") {
+			dm("The specified property does not exist:" + target + ":" + propName);
+        } else {
+            if (create) {
+                actions.add(new ActionInfo());
+                create = false;
+            }
+            actions[actions.count - 1].addAction(target, propName, handler, elm);
+        }
+    }
+
+	/**
+	 * Add a loop
+	 * @param point Loop point (defaults to 0)
+	 * @param count Loop count (infinite if omitted)
+	 */
+	function addLoop(point, count) {
+		//dm("Adding loop action");
+		actions.add(new ActionLoopInfo(point, count));
+		create = true;
+	}
+
+	/**
+	 * Add a wait
+	 * @param wait Wait time (ms)
+	 */
+	function addWait(wait) {
+		//dm("Adding time wait");
+		actions.add(new ActionWaitInfo(wait));
+		create = true;
+	}
+
+    /**
+	 * Delete an action
+	 * @param propName Property name
+     */
+    function delAction(propName) {
+		if (propName == "zoom") {
+			delAction("zoomx");
+			delAction("zoomy");
+			return;
+		}
+		if (actions.count > 0 && actions[actions.count-1] instanceof "ActionInfo") {
+			actions[actions.count - 1].delAction(target, propName);
+		}
+    }
+    
+    /**
+     * Register multiple actions at once
+     * @param dict Dictionary containing action information
+     */
+    function addActions(dict) {
+		var time  = dict.time;
+		var delay = dict.delay;
+		var accel = dict.accel;
+		var starttime = dict.starttime;
+
+		if (dict.path !== void) {
+			var e = %[];
+			(Dictionary.assign incontextof e)(dict, false);
+			createMoveAction(e);
+			delete e.path;
+			delete e.spline;
+			dict = e;
+		}
+		
+		var names = [];
+		names.assign(dict);
+		for (var i=0; i<names.count; i+= 2) {
+			var name = names[i];
+			var elm  = names[i+1];
+			if (name == "time" || name == "delay" || name == "accel" || name == "starttime") {
+				continue;
+			}
+			// Evaluation process
+			if (typeof elm == "String") {
+				//dm("name:" + name + " elm:"  +elm);
+				elm = Scripts.eval(elm);
+			}
+			if (typeof elm == "Object") {
+				if (elm === null) {
+					delAction(name);
+				} else if (elm instanceof "Dictionary") {
+					var e = %[];
+					(Dictionary.assign incontextof e)(elm, false);
+					// Apply common parameters
+					if (time !== void) {
+						e.time = +time;
+					}
+					if (delay !== void) {
+						e.delay = +delay;
+					}
+					if (accel !== void) {
+						e.accel = accel;
+					}
+					if (starttime !== void) {
+						e.starttime = +starttime;
+					}
+					if (typeof e.handler == "String") {
+						var handler = Scripts.eval(e.handler);
+						addAction(name, handler, e);
+					} else if (typeof e.handler == "Object") {
+						addAction(name, e.handler, e);
+					} else {
+						dm("Invalid action handler specified:" + e.handler);
+					}
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------
+
+    /**
+	 * Get the results of the actions
+     */
+	function getResultValue() {
+		var ret = %[];
+		for (var i=cur;i<actions.count;i++) {
+			if (actions[i] instanceof "ActionInfo") {
+				actions[i].getResultValue(ret);
+			}
+		}
+		return ret;
+	}
+	
+    /**
+     * Execute action
+     * @param now Current time
+     * @param stopFlag Force stop specification
+     * @return true if finished
+     */
+    function doAction(now, stopFlag) {
+		if (cur < actions.count) {
+			do {
+				var action = actions[cur];
+				if (action instanceof "ActionInfo") {
+					if (action.doAction(target, now, stopFlag)) {
+						action.next();
+						cur++;
+					}
+				} else if (action instanceof "ActionWaitInfo") {
+					if (stopFlag || action.doAction(target, now)) {
+						action.next();
+						cur++;
+					}
+				} else if (action instanceof "ActionLoopInfo") {
+					var loop;
+					if ((loop = action.doLoop(stopFlag)) >= 0 && loop < cur) {
+						cur = loop;
+					} else {
+						cur++;
+					}
+				} else {
+					cur++;
+				}
+			} while (cur < actions.count && stopFlag);
+		}
+		return cur >= actions.count;
+    }
+
+    /**
+     * Force stop
+     */
+	function stopAction() {
+		for (var i=cur;i<actions.count;i++) {
+			var action = actions[i];
+			if (action instanceof "ActionInfo") {
+				try { action.doAction(target, 0, true); } catch {} // Ignore errors
+			}
+        }
+    }
+};
+
+// ----------------------------------------------------------------
+// Handler Classes
+// ----------------------------------------------------------------
+
+/**
+ * Base action handler class
+ */
+class ActionHandler {
+
+    var time;      // Duration
+	var delay;     // Start delay time
+	var starttime; // Offset start time
+
+    /**
+     * Constructor
+     * @param target Target object
+     * @param propName Target property
+     * @param elm Initialization parameters
+     */
+    function ActionHandler(target, propName, elm) {
+		time  = +elm.time if elm.time !== void;
+		delay = +elm.delay if elm.delay !== void;
+		starttime = elm.starttime !== void ? +elm.starttime : 0;
+		if (time !== void) {
+			time *= kag.effectspeed;
+		}
+		//dm("ActionHandler:" + propName + " time:" + time + " delay:" + delay);
+    }
+
+	/**
+	 * Initial execution process
+	 */
+	function init(target, propname) {
+	}
+
+	/**
+	 * Initialize state after action completion
+	 */
+	function next() {
+	}
+	
+    /**
+     * Base execution process
+     * @param target Target object
+     * @param propName Target property
+     * @param now Current time
+     * @param stopFlag Stop flag
+     * @return true if finished
+     */
+    function action(target, propName, now, stopFlag) {
+        if (!stopFlag && delay !== void) {
+            now -= delay;
+            if (now < 0) {
+                return false;
+            }
+		}
+		now += starttime;
+		return doAction(target, propName, now, stopFlag || (time !== void && now > time));
+    }
+    
+    /**
+     * Execute action
+     * @param target Target object
+     * @param propName Target property
+     * @param now Current time
+     * @param stopFlag Stop flag
+     * @return true if finished
+     */
+    function doAction(target, propName, now, stopFlag) {
+        // Implemented in each action
+        return true;
+    }
+
+    /**
+     * Relative value calculation
+     * @param value Specified value
+     * @param orig Original value
+     */
+    function getRelative(value, orig) {
+        if (typeof value == "String" && (value.indexOf("@") >= 0)) {
+            return Scripts.eval(value.replace(/@/, (string)orig));
+        } else {
+            return +value;
+        }
+    }
+
+}
+
+/**
+ * Absolute action base class
+ * Actions that maintain a value
+ */
+class AbsoluteActionHandler extends ActionHandler {
+    function AbsoluteActionHandler(target, propName, elm) {
+        super.ActionHandler(target, propName, elm);
+    }
+};
+
+/**
+ * Relative action base class
+ */
+class RelativeActionHandler extends ActionHandler {
+    function RelativeActionHandler(target, propName, elm) {
+        super.ActionHandler(target, propName, elm);
+    }
+};
+
+/**
+ * Value initialization action
+ * Used to maintain base value when only relative actions are present
+ */
+class DefaultAction extends AbsoluteActionHandler {
+    var initValue;
+    function DefaultAction(target, propName, elm) {
+        super.AbsoluteActionHandler(target, propName, elm);
+        initValue = target[propName];
+    }
+	/**
+	 * Movement result
+	 */
+	function getResultValue(ret, propName) {
+		ret[propName]= initValue;
+	}
+
+	function doAction(target, propName, now, stopFlag) {
+		target[propName] = initValue;
+		// Always finishes
+        return true;
+    }
+}
+
+/**
+ * Basic move action (Absolute action)
+ * @param start Initial value specification (defaults to current value if unspecified)
+ * @param value Setting value
+ * @param accel Acceleration specification
+ *  String specification:
+ *   "accel" Accelerated
+ *   "decel" Decelerated
+ *   "acdec" Accel/Decel
+ *   "accos" Cosine curve
+ *   "const" Constant speed
+ *  Function specification:
+ *   Can be specified directly as a movement function
+ *   function move(t); both t and return value are time specifications from 0 to 1.0
+ *  Numeric specification:
+ *   0: Constant speed
+ *   1: Accelerated
+ *   -1: Decelerated
+ */
+class MoveAction extends AbsoluteActionHandler {
+
+	var initValue; // Initial value
+	var setstart;  // Start point specification
+	var start;
+	var value;     // End point specification
+	var diff;      // Movement difference (delta)
+	var moveFunc;  // Movement function
+    
+    function MoveAction(target, propName, elm) {
+		super.AbsoluteActionHandler(target, propName, elm);
+		initValue = target[propName];
+		setstart  = elm.start !== void ? getRelative(elm.start, initValue) : void;
+
+		value = createValue(elm.value, initValue);
+
+		var accel = elm.accel;
+		moveFunc = void;
+		if (typeof accel == "String") {
+			// Determine movement function by string passed to accel
+			switch (accel.toLowerCase()) {
+			case "accel": moveFunc = getAccelMove; break;
+			case "decel": moveFunc = getDecelMove; break;
+			case "acdec": moveFunc = getAcDecMove; break;
+			case "accos": moveFunc = getAcCosMove; break;
+			case "const": moveFunc = getConstMove; break;
+			}
+		} else if (typeof accel == "Object" && accel instanceof "Function") {
+			moveFunc = accel; // If accel is a function, use it directly as the movement function
+		}
+		if (moveFunc === void) {
+			// Legacy specification method
+			accel = +accel;
+			if (!accel) moveFunc = getConstMove;
+			else {
+				@if (!KAGEX_ACCEL_KAGCOMPAT)
+					switch (accel) {
+					case  1: case  1.0: moveFunc = getAccelMove; break;
+					case -1: case -1.0: moveFunc = getDecelMove; break;
+					default:
+						accel += (accel < 0) ? -1 : 1;
+				@endif
+					/*
+						if (accel < 0) accel = 1/(-accel);
+						moveFunc = @"function (t) { return Math.pow(t, ${accel}); }"!;
+					*/
+						var func = (accel > 0) ? @"function (t) { return   Math.pow(t,   ${ accel}); }"
+							:                    @"function (t) { return 1-Math.pow(1-t, ${-accel}); }";
+						moveFunc = func!;
+				@if (!KAGEX_ACCEL_KAGCOMPAT)
+						break;
+					}
+				@endif
+			}
+		}
+		//dm("MoveAction", typeof accel, accel, moveFunc);
+	}
+
+	// Generate movement parameters
+	function createValue(value, initValue) {
+		return getRelative(value, initValue);
+	}
+	
+	/**
+	 * Movement result
+	 */
+	function getResultValue(ret, propName) {
+		ret[propName] = value;
+	}
+	
+	/**
+	 * Initial execution process
+	 */
+	function init(target, propName) {
+		if (setstart !== void) {
+			start = setstart;
+		} else {
+			start = target[propName];
+		}
+		diff  = value - start;
+		//dm("MoveAction:" + propName + " start:" + start + " diff:" + diff);
+	}
+
+	function doAction(target, propName, now, stopFlag) {
+		if (time == 0 || stopFlag) {
+			target[propName] = start + diff;
+			return true;
+		} else {
+			target[propName] = start + diff * moveFunc(now/time);
+			return false;
+		}
+	}
+	function getConstMove(t) { return t; }             // Constant speed
+	function getAccelMove(t) { return t*t; }           // Accelerated
+	function getDecelMove(t) { return t*(2-t); }       // Decelerated == 1-(1-t)*(1-t);
+	function getAcDecMove(t) { return (t*t*(3-2*t)); } // Accel/Decel
+	function getAcCosMove(t) { return (1-Math.cos(t*Math.PI))/2; } // Accel/Decel (using cos)
+}
+
+/**
+ * Multi-point movement action (Absolute action)
+ */
+class PathAction extends MoveAction {
+
+	function PathAction(target, propName, elm) {
+		super.MoveAction(target, propName, elm);
+	}
+
+	// Generate movement parameters
+	function createValue(value, initValue) {
+		var ret;
+		if (value.indexOf(",") >= 0){
+			ret = value.split(",");
+			for (var i=ret.count-1;i>=0;i--) {
+				ret[i+1] = getRelative(ret[i], initValue);
+			}
+			ret[0] = void;
+		} else {
+			ret = [void, getRelative(value, initValue)];
+		}
+		return ret;
+	}
+	
+	/**
+	 * Movement result
+	 */
+	function getResultValue(ret, propName) {
+		ret[propName] = value[value.count-1];
+	}
+	
+	/**
+	 * Initial execution process
+	 */
+	function init(target, propName) {
+		if (setstart !== void) {
+			value[0] = setstart;
+		} else {
+			value[0] = target[propName];
+		}
+	}
+
+	function doAction(target, propName, now, stopFlag) {
+		if (time == 0 || stopFlag) {
+			target[propName] = value[value.count-1];
+			return true;
+		} else {
+			var l = value.count - 1;
+			var t = moveFunc(now/time) * l;
+			var n = (int)t;
+			var tdiff = t - n;
+			var diff  = n >= l ? 0 : value[n+1] - value[n];
+			target[propName] = value[n] + diff * tdiff;
+			return false;
+		}
+	}
+}
+
+/**
+ * Parabola movement action (Absolute action)
+ * * Operates left/top regardless of specified property
+ */
+class ParabolaMoveAction extends AbsoluteActionHandler {
+
+    var t0;
+    var start_x;  // Initial value
+    var start_y;
+    var diff_x;
+    var diff_y;
+
+    function ParabolaMoveAction(target, propName, elm) {
+        super.AbsoluteActionHandler(target, propName, elm);
+        start_x = target["left"];
+        start_y = target["top"];
+        diff_x  = +elm.x - start_x;
+        diff_y  = +elm.y - start_y;
+        t0 = elm.topTime !== void ? (elm.topTime * 2) : time;
+    }
+
+	/**
+	 * Final value
+	 */
+	function getResultValue(ret, propName) {
+		ret["left"] = start_x + diff_x * 2;
+		ret["top"]  = start_y + diff_y;
+	}
+	
+    function doAction(target, propName, now, stopFlag) {
+        if (t0) {
+            // X-axis: constant speed, Y-axis: quadratic (parabolic) movement
+            var t = now*2/t0;
+            // Quadratic function that passes through the origin and (1,1), drawing an inverted U-curve
+            var n = ( 1-(1-t)*(1-t) );
+            target.setPos(start_x + diff_x*t, start_y + diff_y*n);
+        }
+        return stopFlag;
+    }
+}
+
+/**
+ * Loop movement action (Absolute action)
+ * @param start Start position (current value if omitted)
+ * @param min Loop minimum value
+ * @param max Loop maximum value
+ * @param loop Loop time duration
+ */
+class LoopMoveAction extends AbsoluteActionHandler {
+
+	var initValue; // Initial value
+	var setstart;  // Start point specification
+	var setmin;
+	var setmax;
+	var start;
+	var min;       // Loop minimum value
+	var max;       // Loop maximum value
+	var loop;      // Loop duration
+
+	/**
+	 * Constructor
+	 */
+    function LoopMoveAction(target, propName, elm) {
+		super.AbsoluteActionHandler(target, propName, elm);
+		initValue = target[propName];
+		if (elm.start !== void) {
+			setstart  = getRelative(elm.start, initValue);
+		}
+		setmin    = getRelative(elm.min, initValue);
+		setmax    = getRelative(elm.max, initValue);
+		loop   = elm.loop !== void ? +elm.loop : time;
+    }
+
+	/**
+	 * Final value
+	 */
+	function getResultValue(ret, propName) {
+		ret[propName] = initValue;
+	}
+	
+	/**
+	 * Initial execution process
+	 */
+	function init(target, propName) {
+		if (setstart !== void) {
+			start = setstart;
+		} else {
+			start = target[propName];
+		}
+		min = setmin;
+		max = setmax;
+		max   -= min;
+		start -= min;
+	}
+	
+    function doAction(target, propName, now, stopFlag) {
+		if (stopFlag) {
+			return true;
+		} else {
+			target[propName] = min + (start + max * (now%loop) / loop) % max;
+			return false;
+        }
+    }
+}
+
+/**
+ * Vibration action (Relative action)
+ * vibration : Vibration amount
+ * offset    : Correction value
+ */
+class VibrateAction extends RelativeActionHandler {
+
+    var vibration;
+    var offset;
+
+    function VibrateAction(target, propName, elm) {
+        super.RelativeActionHandler(target, propName, elm);
+        vibration  = getRelative(elm.value !== void ? elm.value : elm.vibration, target[propName]);
+        offset    = getRelative(elm.offset, target[propName]);
+    }
+};
+
+/**
+ * Random vibration action (Relative action)
+ * vibration : Vibration amount
+ * offset    : Correction value
+ * waittime  : Wait time between vibrations
+ */
+class RandomAction extends VibrateAction {
+
+    var waitTime;
+    var randomTime;
+    var randomValue;
+    
+    function RandomAction(target, propName, elm) {
+        super.RelativeActionHandler(target, propName, elm);
+        vibration = elm.value !== void ? elm.value : elm.vibration;
+        waitTime  = +elm.waittime;
+		next();
+    }
+
+	function next() {
+		randomTime = 0;
+		randomValue = 0;
+	}
+	
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true; 
+        } else {
+            if (now >= randomTime) {
+                randomValue = (Math.random() * vibration * 2 - vibration) + offset;
+                randomTime += waitTime;
+            }
+            target[propName] += randomValue;
+            return false;
+        }
+    }
+};
+
+/**
+ * Square wave action
+ * vibration : Vibration amount
+ * offset    : Correction value
+ * ontime    : ON time (value: vibration)
+ * offtime   : OFF time (value: -vibration)
+ */
+class SquareAction extends VibrateAction {
+
+    var ontime;
+    var offtime;
+
+    function SquareAction(target, propName, elm) {
+        super.VibrateAction(target, propName, elm);
+        ontime  = +elm.ontime if elm.ontime !== void;
+        offtime = +elm.offtime if elm.offtime  !== void;
+    };
+
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true;
+        } else {
+            target[propName] += ((now % (ontime + offtime) < ontime) ? vibration : -vibration) + offset;
+            return false;
+        }
+    }
+};
+
+/**
+ * Triangle wave action
+ * vibration : Vibration amount
+ * offset    : Correction value
+ * Repeats 0 to vibration
+ * ontime    : Rising time
+ * offtime   : Falling time
+ */
+class TriangleAction extends VibrateAction {
+
+    var ontime;
+    var offtime;
+
+    function TriangleAction(target, propName, elm) {
+        super.VibrateAction(target, propName, elm);
+        ontime  = +elm.ontime if elm.ontime !== void;
+        offtime = +elm.offtime if elm.offtime  !== void;
+    };
+
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true;
+        } else {
+            now = now % (ontime + offtime);
+            var v;
+            if (now <= ontime) {
+                v = vibration * now / ontime;
+            } else {
+                if (offtime > 0) {
+                    v = vibration * (offtime - (now - ontime)) / offtime;
+                } else {
+                    v = 0;
+                }
+            }
+            target[propName] += v + offset;
+            return false;
+        }
+    }
+};
+
+/**
+ * Trigonometric function vibration action (Relative action)
+ * vibration : Vibration amount
+ * offset    : Correction value
+ * cycle     : Period (ms)
+ * angvel    : Angular velocity (deg/sec) * Ignored if cycle is specified
+ */
+class TrigonoAction extends VibrateAction {
+    
+    var cycle;
+    var angvel;
+    
+    function TrigonoAction(target, propName, elm) {
+        super.VibrateAction(target, propName, elm);
+        cycle  = +elm.cycle if elm.cycle !== void;
+        angvel = +elm.angvel if elm.angvel !== void;
+		if (kag.effectspeed > 0) {
+			if (cycle !== void) {
+				cycle *= kag.effectspeed;
+			} else {
+				angvel /= kag.effectspeed;
+			}
+		}
+	}
+
+    function getAngle(now) {
+        return (cycle !== void) ? (Math.PI * 2 * now / cycle) : (Math.PI * 2 * now * angvel / 360000.0);
+    }
+};
+
+/**
+ * sine vibration action (Relative action)
+ */
+class SinAction extends TrigonoAction {
+
+    function SinAction(target, propName, elm) {
+        super.TrigonoAction(target, propName, elm);
+    }
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true;
+        } else {
+            target[propName] += vibration * Math.sin(getAngle(now)) + offset;
+            return false;
+        }
+    }
+}
+
+/**
+ * cosine vibration action (Relative action)
+ */
+class CosAction extends TrigonoAction {
+
+    function CosAction(target, propName, elm) {
+        super.TrigonoAction(target, propName, elm);
+    }
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true;
+        } else {
+            target[propName] += vibration * Math.cos(getAngle(now)) + offset;
+            return false;
+        } 
+    }
+}
+
+/**
+ * Fall action
+ * distance : Fall distance
+ * time     : Fall duration
+ */
+class FallAction extends RelativeActionHandler {
+
+    var distance;
+    var fallTime;
+    
+    function FallAction(target, propName, elm) {
+        super.RelativeActionHandler(target, propName, elm);
+        distance = +elm.distance;
+    }
+
+    function doAction(target, propName, now, stopFlag) {
+        if (stopFlag) {
+            return true;
+        } else {
+			//dm("fall:" + now);
+            target[propName] += distance * (now/time - 1.0);
+            return false;
+        }
+    }
+};
+
+// ----------------------------------------------------------------
+// Legacy Compatibility Modules
+// ----------------------------------------------------------------
+
+function LayerNormalZoomModule(info, elm) {
+    info.addAction("zoomx", MoveAction, %[start:elm.start, value:elm.zoom, time:elm.time, delay:elm.delay, accel:elm.accel]);
+    info.addAction("zoomy", MoveAction, %[start:elm.start, value:elm.zoom, time:elm.time, delay:elm.delay, accel:elm.accel]);
+}
+
+function LayerToRotateModule(info, elm) {
+    var rotate = elm.angle !== void ? elm.angle : elm.rotate;
+    info.addAction("rotate", MoveAction, %[start:elm.start, value:rotate, time:elm.time, delay:elm.delay, accel:elm.accel]);
+}
+
+function LayerFadeToModeModule(info, elm) {
+    info.addAction("opacity", MoveAction, %[start:elm.start, value:elm.opacity, time:elm.time, delay:elm.delay, accel:elm.accel]);
+}
+
+function LayerMoveModule(info, elm, accel) {
+    info.addAction("left", MoveAction, %[start:elm.startx, value:elm.x, time:elm.time, delay:elm.delay, accel:accel]);
+    info.addAction("top",  MoveAction, %[start:elm.starty, value:elm.y, time:elm.time, delay:elm.delay, accel:accel]);
+}
+
+function LayerNormalMoveModule(info, elm) {
+    LayerMoveModule(info, elm, 0);
+}
+
+function LayerAccelMoveModule(info, elm) {
+    LayerMoveModule(info, elm, 1);
+}
+
+function LayerDecelMoveModule(info, elm) {
+    LayerMoveModule(info, elm, -1);
+}
+
+function LayerParabolaMoveModule(info, elm) {
+    info.addAction("left", ParabolaMoveAction, elm);
+    info.delAction("top");
+}
+
+function LayerVibrateActionModule(info, elm) {
+    info.addAction("left", RandomAction, %[vibration:elm.vibration/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]);
+    info.addAction("top",  RandomAction, %[vibration:elm.vibration/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]);
+}
+
+function LayerJumpActionModule(info, elm) {
+    info.delAction("left");
+    info.addAction("top", SinAction, %[vibration:elm.vibration, cycle:elm.cycle, angvel:elm.angvel, time:elm.time, delay:elm.delay]);
+}
+
+function LayerJumpOnceActionModule(info, elm) {
+    info.delAction("left");
+    info.addAction("top", SinAction, %[vibration:-elm.vibration, cycle:elm.cycle, angvel:elm.angvel, time:elm.cycle/2, delay:elm.delay]);
+}
+
+function LayerWaveActionModule(info, elm) {
+    info.addAction("left", SinAction, %[vibration:elm.vibration, cycle:elm.cycle, angvel:elm.angvel, time:elm.time, delay:elm.delay]);
+    info.delAction("top");
+}
+
+function LayerWaveOnceActionModule(info, elm) {
+    info.addAction("left", SinAction, %[vibration:-elm.vibration, cycle:elm.cycle, angvel:elm.angvel, time:elm.cycle/2, delay:elm.delay]);
+    info.delAction("top");
+}
+
+function LayerFallActionModule(info, elm) {
+    var time = elm.falltime !== void ? elm.falltime : elm.time;
+    info.delAction("left");
+    info.addAction("top", FallAction, %[distance:elm.distance, time:time, delay:elm.delay]);
+}
+
+function LayerVRotateZoomModule(info, elm) {
+    info.addAction("zoomx", SinAction, %[vibration:"@", offset:"-@", cycle:elm.time, angvel:elm.angvel, time:elm.time, delay:elm.delay]);
+    info.delAction("zoomy");
+}
+
+function LayerHRotateZoomModule(info, elm) {
+    info.addAction("zoomy", SinAction, %[vibration:"@", offset:"-@", cycle:elm.time, angvel:elm.angvel, time:elm.time, delay:elm.delay]);
+    info.delAction("zoomx");
+}
+
+function LayerHeartBeatZoomModule(info, elm) {
+    info.addAction("zoomx", SinAction, %[vibration:elm.zoom-100, cycle:elm.time*2, time:elm.time, delay:elm.delay]);
+    info.addAction("zoomy", SinAction, %[vibration:elm.zoom-100, cycle:elm.time*2, time:elm.time, delay:elm.delay]);
+}
+
+function LayerVibrateZoomModule(info, elm) {
+    info.addAction("zoomx", RandomAction, %[vibration:elm.vibration/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]);
+    info.addAction("zoomy", RandomAction, %[vibration:elm.vibration/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]);
+}
+
+function LayerNormalRotateModule(info, elm) {
+    var cycle = elm.angvel !== void ? 360/elm.angvel*1000 : elm.cycle;
+	if (kag.effectspeed > 0) {
+		cycle *= kag.effectspeed;
+	}
+	info.addAction("rotate", TriangleAction, %[vibration:360, ontime:cycle, offtime:0, time:elm.time, delay:elm.delay]);
+}
+
+function LayerVibrateRotateModule(info, elm) {
+    info.addAction("rotate", RandomAction, %[vibration:elm.vibration/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]);
+}
+
+function LayerFalldownRotateModule(info, elm) {
+    info.addAction("rotate", MoveAction, %[value:"@+" + elm.angle, accel:1, time:elm.time, delay:elm.delay]);
+}
+
+function LayerBlinkModeModule(info, elm) {
+    info.addAction("visible", SquareAction, %[vibration:0.5, ontime:elm.showtime, offtime:elm.hidetime, time:elm.time, delay:elm.delay, offset:0.5]);
+}
+
+function LayerFadeModeModule(info, elm) {
+    info.addAction("opacity", TriangleAction, %[vibration:"@", offset:"-@", ontime:elm.intime, offtime:elm.outtime, time:elm.time, delay:elm.delay]);
+}
+
+function LayerQuakeActionModule(info, elm) {
+	var xvib, yvib;
+	xvib = yvib = elm.vibration;
+	xvib = elm.xvibration if (elm.xvibration !== void);
+	yvib = elm.yvibration if (elm.yvibration !== void);
+	info.addAction("camerax",  RandomAction, %[vibration:xvib/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]) if (xvib != 0);
+	info.addAction("cameray",  RandomAction, %[vibration:yvib/2, waittime:elm.waittime, time:elm.time, delay:elm.delay]) if (yvib != 0);
+}
+
+
+// path-based move action creation
+function createMoveAction(elm)
+{
+	// Decomposition of path
+	var path = (typeof elm.path == "Object" && elm.path instanceof "Array") ? elm.path :  [].split("(), ", elm.path, , true);
+	
+	// Coordinate information lists
+	var left    = "";
+	var top     = "";
+	var opacity = "";
+
+	if (elm.spline !== void && +elm.spline) {
+
+		if (path.count < 6)	{
+			// Cannot interpolate with less than 3 points (where 2 are specified points)
+			throw new Exception("Please specify 2 or more points");
+		}
+
+		var x = [0]; 
+		var y = [0];
+		var n = path.count;
+		for (var i=0;i<n;i+=3) {
+			if (i > 0) {
+				opacity += ",";
+			}
+			x.add(+path[i]);
+			y.add(+path[i+1]);
+			opacity += path[i+2];
+		}
+		
+		// Calculate workspace required for spline interpolation
+		var points = x.count;
+		var tmpx = [], tmpy = [];
+		var tx = [];
+		var ty = [];
+		tx[0] = 0;
+		ty[0] = 0;
+		tx[points-1] = 0;
+		ty[points-1] = 0;
+
+		for(var i = points-2, pi = x.count-2; i >= 0; i--, pi --)
+		{
+			tmpx[i+1] = (x[pi+1] - x[pi]);
+			tmpy[i+1] = (y[pi+1] - y[pi]);
+		}
+
+		tx[1] = tmpx[2] - tmpx[1] - tx[0];
+		ty[1] = tmpy[2] - tmpy[1] - ty[0];
+
+		tmpx[1] = 4;
+		tmpy[1] = 4;
+
+		var lim = points - 2;
+		for(var i = 1; i < lim; i++)
+		{
+			var x = 1 / tmpx[i];
+			var y = 1 / tmpy[i];
+			tx[i+1] = tmpx[i+2] - tmpx[i+1] - tmpx[i] * x;
+			ty[i+1] = tmpy[i+2] - tmpy[i+1] - tmpy[i] * y;
+			tmpx[i+1] = 4 - x;
+			tmpy[i+1] = 4 - y;
+		}
+
+		tx[points-2] -= tx[points-1];
+		ty[points-2] -= ty[points-1];
+
+		for(var i = points-2; i>0; i--)
+		{
+			tx[i] = (tx[i] - tx[i+1]) / tmpx[i];
+			ty[i] = (ty[i] - ty[i+1]) / tmpy[i];
+		}
+
+		// Interpolate at 10x
+		var l = (points-1) * 10;
+		for (var i=1;i<=l;i++) {
+			var index =  i \ 10;
+			var d = (i % 10) / 10;
+			var l_val = (((tx[index+1] - tx[index])*d +
+					  tx[index]*3)*d +
+					 ((x[index + 1] - x[index]) -
+					  (tx[index]*2 + tx[index+1]))) * d + x[index];
+			var t_val = (((ty[index+1] - ty[index])*d +
+					  ty[index]*3)*d +
+					 ((y[index + 1] - y[index]) -
+					  (ty[index]*2 + ty[index+1]))) * d + y[index];
+			if (i > 1) {
+				left += ",";
+				top += ",";
+			}
+			left += "@+"+(int)l_val;
+			top  += "@+"+(int)t_val;
+		}
+
+	} else {
+		// Simple movement
+		var n = path.count;
+		for (var i=0;i<n;i+=3) {
+			if (i > 0) {
+				left += ",";
+				top += ",";
+				opacity += ",";
+			}
+			left += "@+"+path[i];
+			top  += "@+"+path[i+1];
+			opacity += path[i+2];
+		}
+	}
+	// Reconstruct as action parameters
+	elm.left    = %[handler:"PathAction", value:left];
+	elm.top     = %[handler:"PathAction", value:top];
+	elm.opacity = %[handler:"PathAction", value:opacity];
+}

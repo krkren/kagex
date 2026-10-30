@@ -1,0 +1,52 @@
+class KAGEnvBase {
+
+	// Environment that holds various information
+	var env;
+	var name;
+
+	function KAGEnvBase(env, name) {
+		this.env = env;
+		this.name = name;
+	}
+
+	function finalize() {
+	}
+
+	function dm() {
+		env.dm(...);
+	}
+
+	// ----------------------------------
+
+
+	var syncCommand; //< Whether it was a command to be synchronized
+
+	function initCommand() {
+		syncCommand = false;
+	}
+
+	// ----------------------------------
+
+	// Tag execution
+	function tagfunc(elm, skipMode, skipNoDisp) {
+		initCommand();
+		command(elm);
+		checkSync(elm);
+		if (env.envinfo.autolabelSync && syncCommand) {
+			kag.setAutoLabel();
+		}
+		if (skipNoDisp) {
+			nodisp(elm);
+		} else {
+			sync(elm, skipMode);
+		}
+	}
+	// Command
+	function command(elm) {};
+	// Transition determination and sync status determination
+	function checkSync(elm) {}
+	// Reflect status
+	function sync(elm, skipMode) {}
+	// Reflect status without displaying
+	function nodisp(elm) {}
+};

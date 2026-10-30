@@ -1,0 +1,209 @@
+// YesNoDialog.tjs - Dialog box for selecting Yes/No
+// Copyright (C)2001-2008, W.Dee and contributors  Redistribution and modification are free.
+
+class YesNoDialogWindow extends Window
+{
+	var yesButton; // [Yes] button
+	var noButton; // [No] button
+
+	var result = false; // no:false yes:true
+	var _activate, _defaultFocus;
+	var _unit = 1; // layout scale from the 640x480 original, set by the constructor
+
+	function YesNoDialogWindow(message, cap, df)
+	{
+		super.Window();
+
+		_defaultFocus = df;
+
+		// Get cursor**** information from the main window
+		var mainWin = global.Window.mainWindow;
+		if (mainWin) {
+			this.cursorDefault = mainWin.cursorDefault if (typeof mainWin.cursorDefault != "undefined");
+			this.cursorPointed = mainWin.cursorPointed if (typeof mainWin.cursorPointed != "undefined");
+		}
+
+		// Appearance adjustment
+		borderStyle = bsDialog;
+		caption = cap;
+
+		// Create primary layer
+		add(new Layer(this, null));
+
+		// Set mouse cursor for the primary layer
+		if(typeof this.cursorDefault !== "undefined")
+			primaryLayer.cursor = cursorDefault;
+
+		// Font: the SDL engine draws an empty or unknown face with an icon font (arrows), so use
+		// the game's face list, and scale the layout from the 640x480 original to the screen
+		var u = (mainWin && typeof mainWin.scHeight != "undefined" && mainWin.scHeight > 480) ? mainWin.scHeight / 480 : 1;
+		_unit = u;
+		if (mainWin && typeof mainWin.chDefaultFace != "undefined" && mainWin.chDefaultFace != "")
+			primaryLayer.font.face = mainWin.chDefaultFace;
+		primaryLayer.font.height = int(12 * u);
+
+		// Determine size
+		var tw = primaryLayer.font.getTextWidth(message);
+		var th = primaryLayer.font.getTextHeight(message);
+
+		var w = tw + int(40 * u);
+		if(w<int(200 * u)) w = int(200 * u);
+		var h = th*2 + int(60 * u);
+
+		// Set zoom ratio
+		if (mainWin) with (mainWin) {
+			if (.fullScreen) {
+				if (.innerWidth/.pxWidth < .innerHeight/.pxHeight)
+					setZoom(.innerWidth, .pxWidth);
+				else
+					setZoom(.innerHeight, .pxHeight);
+			} else {
+				setZoom(.zoomNumer, .zoomDenom);
+			}
+		}
+		// Determine size
+		setInnerSize(w * zoomNumer / zoomDenom,
+			 h * zoomNumer / zoomDenom);
+
+		// Set primary layer size
+		primaryLayer.width = w;
+		primaryLayer.height = h;
+		primaryLayer.colorRect(0, 0, w, h, clBtnFace, 255);
+
+		// Adjust window position
+		var center = getParentWindowCenterPos(mainWin, width, height);
+		if (center !== void) setPos(center.x, center.y);
+
+		// Draw message
+		primaryLayer.drawText((w - tw)>>1, int(14 * u), message, clBtnText);
+
+		// Yes button
+		var bw = int(70 * u), gap = int(10 * u), by = th + int(35 * u);
+		add(yesButton = createButton(tr("Yes"), (w - (bw*2 + gap) >>1),            by));
+
+		// No button
+		add(noButton =  createButton(tr("No"), ((w - (bw*2 + gap))>>1) + bw + gap, by));
+	}
+
+	function createButton(caption, x, y, w, h)
+	{
+		if (w === void) w = int(70 * _unit);
+		if (h === void) h = int(25 * _unit);
+		var btn = new ButtonLayer(this, primaryLayer);
+		with (btn) {
+			.font.face = primaryLayer.font.face;
+			.font.height = primaryLayer.font.height;
+			.caption = caption;
+			.captionColor = clBtnText;
+			.width = w;
+			.height = h;
+			.top = y;
+			.left = x;
+			.visible = true;
+		}
+		return btn;
+	}
+
+	function finalize()
+	{
+		super.finalize(...);
+	}
+
+	function action(ev)
+	{
+		// action
+		if(ev.type == "onClick")
+		{
+			if(ev.target == yesButton)
+			{
+				result = true;
+				close();
+			}
+			else if(ev.target == noButton)
+			{
+				result = false;
+				close();
+			}
+		}
+		else if(ev.type == "onKeyDown" && ev.target === this)
+		{
+			// Process corresponding to pad input
+			switch(ev.key)
+			{
+			case VK_PADLEFT:
+				yesButton.focus();
+				break;
+			case VK_PADRIGHT:
+				noButton.focus();
+				break;
+			case VK_PAD1:
+				if(focusedLayer == yesButton)
+				{
+					result = true;
+					close();
+				}
+				else if(focusedLayer == noButton)
+				{
+					result = false;
+					close();
+				}
+				break;
+			case VK_PAD2:
+				result = false;
+				close();
+				break;
+			}
+		}
+		else if (ev.type == "onActivate" && !_activate)
+		{
+			_activate = true;
+			var btn = _defaultFocus + "Button";
+			if (typeof this[btn] == "Object") {
+				btn =  this[btn];
+				btn.focus();
+//				if (System.getArgument("-curmove") != "no")
+//					with (btn) .setCursorPos(.width\2, .height\2);
+			}
+		}
+	}
+
+	function onKeyDown(key, shift)
+	{
+		super.onKeyDown(...);
+		if(key == VK_ESCAPE)
+		{
+			// ESC key pressed
+			// Process as "No"
+			result = false;
+			close();
+		}
+	}
+}
+
+// Asks Yes or No in a separate OS window (the stock KAG dialog). askYesNo in
+// YesNoDialogLayer.tjs asks in the game window instead, and uses this only before the
+// game window exists.
+function askYesNoWindow(message, caption = "Confirm", yesFunc=void, noFunc=void, param=void, doneFunc=void, defaultFocus)
+{
+	var win = new YesNoDialogWindow(message, caption, defaultFocus);
+	win.showModal();
+	var res = win.result;
+	invalidate win;
+
+    if (res) {
+        if (yesFunc !== void) {
+            yesFunc(param);
+        }
+    } else {
+        if (noFunc !== void) {
+            noFunc(param);
+        }
+    }
+
+    if (doneFunc !== void) {
+        doneFunc(param);
+    }
+}
+
+// askYesNo, showAbout: in the game window
+KAGLoadScript("YesNoDialogLayer.tjs");

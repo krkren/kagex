@@ -1,0 +1,1404 @@
+﻿// Initialize.tjs - System Initialization
+
+// Copyright (C)2001-2008, W.Dee and contributors  Modification and distribution are free
+
+
+
+// For lock partition
+
+var lockKey = "";
+
+
+
+// System version
+
+var kagVersion = "EX 3.27-dev.20070519";
+
+
+
+/*
+
+	Shortcut to Debug.message
+
+*/
+
+
+
+var dm = Debug.message; // With this, dm("message"); can display the message in the console
+
+
+
+// A run that only compiles scenarios (-scncompile, as kagex-release does) or lists the voices'
+// lines (-voicelines, as kagex-lipsync does): its window stays hidden (KAGWindow), and nothing
+// that needs a window on the screen starts (the menu bar, screen readers, layerExSave)
+
+var KAGHiddenRun = (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") ||
+	System.getArgument("-voicelines") != "";
+
+
+
+// Plugins are linked as "plugin/Foo.dll" so Windows finds them (the x64 engine's own plugin
+
+// folder is plugin64/). The SDL engine on Linux/macOS maps "Foo.dll" to "libFoo.so" but puts
+
+// "lib" in front of the whole path ("libplugin/Foo.so"), and it already searches plugin/ next
+
+// to the exe, so drop the folder there. Engines without System.platformTag are unchanged.
+
+var origPluginsLink = Plugins.link;
+
+if (typeof System.platformTag != "undefined" && System.platformTag != "windows") {
+
+	Plugins.link = function(name) {
+
+		if (name.substring(0, 7) == "plugin/") name = name.substring(7);
+
+		return origPluginsLink(name);
+
+	};
+
+}
+
+
+
+/*
+
+	Whether the debug window is enabled
+
+*/
+
+
+
+("property debugWindowEnabled { getter() { return " + (System.getArgument("-debugwin") != "no") + "; } }")!;
+
+("property inXP3archivePacked { getter() { return " + (Storages.getPlacedPath("startup.tjs").indexOf(">") >= 0) + "; } }")!;
+
+Scripts.exec(@"@set (PACKED=${inXP3archivePacked})");
+
+
+
+// Signed-build check (a kagex-release build with signing on carries a public key). Loaded here,
+// before the auto paths and patches, so it can gate their mounting. In a signed build this also
+// refuses REPL / startup options straight away (SignatureCheck.tjs).
+
+{
+
+	var sigNames = [ "SignatureCheck.tjs", "system/SignatureCheck.tjs", "../template/system/SignatureCheck.tjs" ];
+
+	for (var i = 0; i < sigNames.count; i++) {
+
+		if (Storages.isExistentStorage(sigNames[i])) { Scripts.execStorage(sigNames[i]); break; }
+
+	}
+
+}
+
+if (typeof global.KAGSignatureInit != "undefined") KAGSignatureInit();
+
+else global.KAGSigned = false;
+
+// A refused option (or an unreadable key) in a signed build: stop the rest of start-up now.
+// System.terminate() is asynchronous, so without this the remainder would still run first.
+if (global.KAGSignatureAborted === true) return;
+
+
+
+if (!debugWindowEnabled) {
+
+	/*
+
+		Default "Uncaught Exception" handler
+
+	 */
+
+	// Processing at release
+
+	System.exceptionHandler = function (e) {
+
+		Debug.logAsError(); // Start writing logs to a file, etc.
+
+		var event_disabled = System.eventDisabled;
+
+		System.eventDisabled = true;
+
+		System.inform(e.message);
+
+		KAGUnlinkPluginsBeforeExit() if typeof global.KAGUnlinkPluginsBeforeExit != "undefined";
+
+		System.terminate();
+
+		return true;
+
+	};
+
+	// Kill the console controller
+
+	var dummy = %[];
+
+	&Debug.console    = dummy;
+
+	&Debug.controller = dummy;
+
+} else {
+
+	// Processing during debug
+
+	System.exceptionHandler = function (e) {
+
+		// This function is called if an exception that is not caught anywhere 
+
+		// is caught by the system. e is the exception object.
+
+		if (e instanceof "ConductorException") {
+
+			// In case of an exception thrown by the conductor
+
+			Debug.logAsError(); // Start writing logs to a file, etc.
+
+			var event_disabled = System.eventDisabled;
+
+			System.eventDisabled = true;
+
+			// It's troublesome if an event occurs while displaying the reason 
+
+			// for the error, so temporarily stop event generation
+
+			System.inform(e.message);
+
+			System.eventDisabled = event_disabled;
+
+			// Restore the state of whether to generate events
+
+			return true; // If true is returned, the exception handling will not be performed on the main body side
+
+		}
+
+		return false; // If false is returned, normal exception handling is performed
+
+	};
+
+	// Preprocessor specification
+
+	Scripts.exec("@set (DEBUG=1)");
+
+
+
+	// Loading messenger.dll only during debugging
+
+	try {
+
+		var plug = "tools/messenger.dll";
+
+		Plugins.link(plug) if (Storages.isExistentStorage(System.exePath+plug));
+
+	} catch(e) {}
+
+};
+
+
+
+/*
+
+	Path settings
+
+	Items specified later take higher priority.
+
+*/
+
+
+
+
+
+var archive_exists = %[]; // Cache whether the archive exists
+
+
+
+// Where the folders' archives (bgimage.xp3, voice.xp3...) are: beside the data.xp3 the game was
+// read from (next to the executable, or in a macOS app's Resources), or beside the executable
+// when the game runs from a folder or from data bound into the executable.
+
+global.KAGArchivePath = System.exePath;
+
+{
+
+	var placed = Storages.getPlacedPath("startup.tjs");
+
+	var at = placed.indexOf(">");
+
+	if (at >= 0) {
+
+		var arc = placed.substring(0, at);
+
+		if (Storages.extractStorageExt(arc).toLowerCase() == ".xp3") global.KAGArchivePath = Storages.extractStoragePath(arc);
+
+	}
+
+}
+
+
+
+function useArchiveIfExists(name, patch = false)
+
+{
+
+	// Normalize name
+
+	with (Storages) name = .chopStorageExt(.extractStorageName(name));
+
+	// Use the archive if name exists (a patch: next to the executable, with plain names)
+
+	var arcname = (patch ? System.exePath : KAGArchivePath) + name + ".xp3";
+
+	if(Storages.isExistentStorage(arcname)) {
+
+		archive_exists[name.toLowerCase()] = true;
+
+		// hidden file names: the archive's names are hashed, so the xp3crypt plugin serves it as
+		// xpcrypt://<name>/ (KAGMountHashedArchive)
+
+		if (global.kagexHashedArchive != "" && !patch) {
+
+			if (global.KAGSigned === true) KAGSignedUseHashedArchive(name, arcname);
+
+			else KAGMountHashedArchive(name, arcname);
+
+			return;
+
+		}
+
+		if (global.KAGSigned === true) { KAGSignedUseArchive(name, arcname); return; }
+
+		Storages.addAutoPath(arcname + ">");
+
+	}
+
+}
+
+
+
+// A folder's archive with hidden file names (<name>.xp3, its names hashed): mounted through the
+// xp3crypt plugin as xpcrypt://<name>/, then its subfolders' paths. Returns false when the plugin
+// can't open it
+
+function KAGMountHashedArchive(name, arcname, subs*)
+
+{
+
+	if (typeof global.XP3Crypt == "undefined" || !XP3Crypt.mount(name, arcname)) {
+
+		Debug.message("xp3crypt: " + arcname + " could not be opened");
+
+		return false;
+
+	}
+
+	Storages.addAutoPath("xpcrypt://" + name + "/");
+
+	for (var i = 0; i < subs.count; i++) Storages.addAutoPath("xpcrypt://" + name + "/" + subs[i] + "/");
+
+	return true;
+
+}
+
+
+
+function addArchive(name)
+
+{
+
+	// Hashed-name archive mode (the bootstrap startup.tjs set kagexHashedArchive to
+	// "xpcrypt://data/"): the folder is in data.xp3, or in its own <name>.xp3 beside it, both
+	// served by the xpcrypt plugin.
+
+	if (global.kagexHashedArchive != "") {
+
+		Storages.addAutoPath(global.kagexHashedArchive + name + "/");
+
+		useArchiveIfExists(name);
+
+		return;
+
+	}
+
+	// While setting the search path, use the archive if name.xp3 exists
+
+	Storages.addAutoPath(name + "/");
+
+	useArchiveIfExists(name);
+
+}
+
+
+
+// Register search path with subfolders
+
+function addArchiveWithSubFolder(name, arr*)
+
+{
+
+	var arcname = KAGArchivePath + name + ".xp3";
+
+	var isexist = archive_exists[name.toLowerCase()];
+
+	var hashed = global.kagexHashedArchive != "";
+
+	for (var i = 0; i < arr.count; i++) {
+
+		var sub = arr[i];
+
+		if (sub == "") continue;
+
+		if (hashed) {
+
+			Storages.addAutoPath(global.kagexHashedArchive + name + "/" + sub + "/");
+
+			if (isexist) {
+
+				var hpath = "xpcrypt://" + name + "/" + sub + "/";
+
+				if (global.KAGSigned === true) KAGSignedDeferSubPath(arcname, hpath);
+
+				else Storages.addAutoPath(hpath);
+
+			}
+
+			continue;
+
+		}
+
+		Storages.addAutoPath(name    + "/" + sub + "/");
+
+		if (isexist) {
+
+			if (global.KAGSigned === true) KAGSignedDeferSubPath(arcname, arcname + ">" + sub + "/");
+
+			else Storages.addAutoPath(arcname + ">" + sub + "/");
+
+		}
+
+	}
+
+}
+
+
+
+// Register subfolder search paths
+
+function setupSubFolders(list) {
+
+	var binds = %[], names = [];
+
+	for (var path, i = 0; i < list.count; i++) {
+
+		if ((path = list[i]) == "") continue;
+
+		var div = path.split("/");
+
+		var name = div[0];
+
+		if (name == "" || div.count <= 1) continue;
+
+		div.erase(0);
+
+		if (binds[name] === void) {
+
+			binds[name] = [];
+
+			names.add(name);
+
+		}
+
+		binds[name].add(div.join("/",,true));
+
+	}
+
+	for (var i = 0; i < names.count; i++) {
+
+		//dm("setupSubFolders", names[i], binds[names[i]]*);
+
+		addArchiveWithSubFolder(names[i], binds[names[i]]*);
+
+	}
+
+}
+
+
+
+// (obsolete) For legacy compatibility
+
+function addVoiceArchive(name) {
+
+	addArchiveWithSubFolder("voice", name);
+
+}
+
+
+
+/*
+
+	Folder registration and archive search/usage
+
+	(Items registered later have higher search priority)
+
+*/
+
+
+
+// Hashed-name archive mode: the bootstrap startup.tjs sets kagexHashedArchive to "xpcrypt://data/"
+// when the game ships as one encrypted, name-hashed archive; otherwise the folders are next to the
+// executable or in data/ as usual.
+
+if (typeof global.kagexHashedArchive == "undefined") global.kagexHashedArchive = "";
+
+if (debugWindowEnabled && global.kagexHashedArchive == "") {
+
+	Storages.addAutoPath(System.exePath + "tools/"); // tools/ under exePath
+
+	Storages.addAutoPath(System.exePath + "tools/debug/"); // tools/debug under exePath
+
+	useArchiveIfExists("debug");
+
+}
+
+// video/: in the hashed archive, or under exePath (a signed build ignores a loose folder beside the engine)
+
+if (global.kagexHashedArchive != "") Storages.addAutoPath(global.kagexHashedArchive + "video/");
+
+else if (global.KAGSigned !== true) Storages.addAutoPath(System.exePath + "video/");
+
+Storages.addAutoPath(global.kagexHashedArchive != "" ? global.kagexHashedArchive : "data/"); // data folder
+
+{
+
+	// Register subfolders under data
+
+	// If archives with these names are in the same location as the executable, 
+
+	// prioritize using them
+
+	var subfolders = [
+
+		"video",    // video folder
+
+		"others",   // others
+
+		"rule",     // rule image folder
+
+		"sound",    // sound effect folder
+
+		"bgm",      // BGM folder
+
+		"fgimage",  // foreground image folder
+
+		"bgimage",  // background image folder
+
+		"scenario", // scenario folder
+
+		"image",    // other image folder
+
+		"system",   // system folder
+
+		"voice",    // voice folder
+
+		"face",     // face folder
+
+		"init",     // initialization folder
+
+		"sysscn",   // system scenario
+
+		"main",     // system scenario
+
+		"evimage",  // event image
+
+		"thum",     // thumbnail
+
+		"uipsd",    // user interface part images
+
+		"effect",   // Effekseer effects (their textures and models in subfolders beside them)
+
+		];
+
+	for (var i = 0; i < subfolders.count; i++) {
+
+		var name = subfolders[i];
+
+		addArchive(name) if (name != "");
+
+	}
+
+}
+
+
+
+// Execute custom folder registration script (*evaluate before patches)
+
+if(Storages.isExistentStorage("Storages.tjs"))
+
+	Scripts.execStorage("Storages.tjs");
+
+
+
+// Patch archive (*patch contents are flattened; subfolders within the patch cannot be used)
+// (zip patches, patch.zip and on, come after the plugins below: KAGMountPatchZip)
+
+useArchiveIfExists("patch.xp3", true);
+
+
+
+// Search for additional patch archives
+
+for(var i = 2; ; i++)
+
+{
+
+	// If patch archives patch2.xp3, patch3.xp3 ... exist, 
+
+	// prioritize loading them
+
+	var pstore = System.exePath + "patch" + i + ".xp3";
+
+	if (!Storages.isExistentStorage(pstore)) break;
+
+	if (global.KAGSigned === true) KAGSignedDeferPatchXp3(pstore);
+
+	else Storages.addAutoPath(pstore + ">");
+
+}
+
+
+
+delete useArchiveIfExists; // delete useArchiveIfExists since it's finished for now
+
+
+
+/*
+
+	System version
+
+*/
+
+Debug.notice("OS : " + System.osName + " (" + System.platformName + ")");
+
+Debug.notice("KAG : " + kagVersion);
+
+Debug.notice("Kirikiri : " + System.versionString);
+
+
+
+/*
+
+	( Debug ) Time measurement
+
+*/
+
+
+
+var parseStartTick = System.getTickCount();
+
+
+
+
+
+/*
+
+	Script loading wrapper
+
+*/
+
+
+
+function KAGLoadScript(name)
+
+{
+
+	var start = System.getTickCount();
+
+	Scripts.execStorage(name);
+
+	dm(name + " loaded (" + (System.getTickCount() - start) + "ms)");
+
+}
+
+
+
+var loaded_scripts = %[];
+
+
+
+function KAGLoadScriptOnce(name)
+
+{
+
+	// Loads specified script, but only once
+
+	if(global.loaded_scripts[name] === true) return; // Already loaded
+
+	global.KAGLoadScript(name);
+
+	global.loaded_scripts[name] = true;
+
+}
+
+
+
+function KAGConfigEnabled(name, dflt) {
+
+	// Reference global variables
+
+	return (typeof global[name] == "undefined") ? dflt : global[name];
+
+}
+
+if (typeof Debug != "undefined" && typeof Debug.console == "undefined") {
+
+    Debug.console = %[];
+
+    Debug.console.visible = false;
+
+}
+
+
+
+// Links a plugin and logs a failure (console / krkr.console.log) instead of hiding it, so a
+// missing file shows up here rather than later as an unrelated "member does not exist"
+function KAGLinkPlugin(name) {
+	try { Plugins.link(name); return true; }
+	catch (e) { dm("Plugin not loaded: " + name + " (" + e.message + ")"); return false; }
+}
+// Load plugins (with guards to prevent double-loading on Linux where .dll/.DLL are case-sensitive)
+KAGLinkPlugin("plugin/KAGParserEx.dll");
+KAGLinkPlugin("plugin/csvParser.dll") if typeof global.CSVParser == "undefined";
+KAGLinkPlugin("plugin/layerExBTOA.dll") if typeof global.Layer.copyBottomBlueToTopAlpha == "undefined";
+// layerExImage.dll - must always load (operateRect may be defined by core engine as stub)
+KAGLinkPlugin("plugin/layerExImage.dll");
+KAGLinkPlugin("plugin/layerExRaster.dll") if typeof global.Layer.copyRaster == "undefined";
+// scriptsEx.dll - always try to load (Scripts class exists but this extends it)
+KAGLinkPlugin("plugin/scriptsEx.dll");
+KAGLinkPlugin("plugin/shrinkCopy.dll") if typeof global.Layer.shrinkCopy == "undefined";
+// layerExSave: Window.startSaveLayerImage writes a picture on another thread, so the screenshot
+// key (F12, KAGWindow.saveScreenshot) doesn't stop the game while a PNG is written. It gives
+// the method only to windows made after it's linked, so it's linked before the game window.
+// Where it's missing (the browser, Android and iOS builds) screenshots are written in one go
+KAGLinkPlugin("plugin/layerExSave.dll") if typeof global.Window.startSaveLayerImage == "undefined" && !KAGHiddenRun;
+// JSON (Scripts.evalJSON/evalJSONStorage/saveJSON/toJSONString): compiled scenarios are
+// <script>.scn.json until the scnfile plugin reads .scn (SceneParser.tjs, KAGEnvPlayer.tjs)
+KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
+// The json plugin's V2Unlink looks up Scripts, which is gone by the time the engine unlinks its
+// plugins on the way out: that throws, and the engine catches it, but in the Linux kit build
+// (made for the Steam Linux Runtime) each plugin carries its own copy of the C++ unwinder, and
+// unwinding through the plugin's frame aborted the process: every exit dumped core. Unlinked
+// while Scripts is still there, it throws nothing. Called before the framework's exits and when
+// the game window goes (KAGWindow.finalize)
+function KAGUnlinkPluginsBeforeExit() {
+	if (typeof System.platformTag == "undefined" || System.platformTag != "linux") return;
+	var list = Plugins.getList();
+	for (var i = 0; i < list.count; i++) {
+		var n = list[i].toLowerCase();
+		if (n == "json.dll" || n == "libjson.so") { try { Plugins.unlink(list[i]); } catch (e) {} }
+	}
+}
+// SCNFile: compiled scenarios as .scn (PSB) files, from https://github.com/krkren/scnfile.
+// Without it they're .scn.json
+KAGLinkPlugin("plugin/scnfile.dll") if typeof global.SCNFile == "undefined";
+
+// CLIP STUDIO PAINT files (the clipfile plugin): an image can be one layer of a .clip,
+// clip://name.clip/root/folder/layer.bmp (lower case; the plugin lower-cases the names), as
+// psdfile's psd:// does for Photoshop's (linked when one is first shown). A release reads such
+// layers from the pictures kagex-release splits the file into (AffineLayer.tjs)
+KAGLinkPlugin("plugin/clipfile.dll") if typeof global.CLIP == "undefined";
+
+// Patches and DLC as zip files (the minizip plugin), after the .xp3 patches above, so a later
+// one wins: patch.zip, patch2.zip, ... next to the engine, then the same names in the save
+// folder (System.dataPath), which is the one place the web, Android and iOS builds can add
+// files to. Unlike an .xp3 patch, a zip's folders count: every folder in it is searched, so a
+// patch can hold its files loose or in data/'s layout (scenario/, bgimage/, ...). A game mounts
+// others, such as DLC it knows the names of, with KAGMountPatchZip(storage) at any time; files
+// loaded before that (this script, Storages.tjs) can't be patched.
+KAGLinkPlugin("plugin/minizip.dll") if typeof Storages.mountZip == "undefined";
+
+// Signatures (the sigcheck plugin, Window.checkSignature). Only a signed build needs it, and only
+// the desktop engines have it, so link it just for a signed build (SignatureCheck.tjs verifies the
+// archives, the engine and the patches before kag.process at the very end).
+KAGLinkPlugin("plugin/sigcheck.dll") if (global.KAGSigned === true && typeof global.Window.checkSignature == "undefined");
+var KAGPatchZips = [];  // the zip files mounted, in order
+// Where a language's folder (lang/<code>/) can be: the game's data, then each zip patch that has
+// one. KAGLanguage (Language.tjs) puts the shown language's folders on the search path after
+// every other path, so a zip patch's lang/ folders aren't searched like its other folders
+var KAGLanguageRoots = [ global.kagexHashedArchive ];
+function KAGMountPatchZip(storage) {
+	if (global.KAGSigned === true && global.KAGSignedMountOK !== true) {
+		dm("Refused to mount an unverified patch in a signed build: " + storage + " (signed DLC uses KAGMountSignedPatchZip)");
+		return false;
+	}
+	if (typeof Storages.mountZip == "undefined" || typeof global.Unzip == "undefined") {
+		dm("Not mounted (no minizip plugin): " + storage);
+		return false;
+	}
+	if (!Storages.isExistentStorage(storage)) return false;
+	var files;
+	try {
+		var unzip = new Unzip();
+		unzip.open(storage);
+		files = unzip.list();
+		unzip.close();
+		invalidate unzip;
+	} catch (e) {
+		dm("Not a zip file: " + storage + " (" + e.message + ")");
+		return false;
+	}
+	var name = "kagexpatch" + KAGPatchZips.count;
+	if (!Storages.mountZip(name, storage)) {
+		dm("Could not mount " + storage);
+		return false;
+	}
+	// the root, then every folder in it (an entry's parents too: not every zip lists folders),
+	// but lang/ and the language folders in it: those are the languages' (KAGLanguageRoots)
+	var root = "zip://" + name + "/", folders = %[], order = [], langs = false;
+	Storages.addAutoPath(root);
+	for (var i = 0; i < files.count; i++) {
+		var path = files[i].filename.replace(/\\/g, "/");
+		for (var at = path.indexOf("/"); at > 0; at = path.indexOf("/", at + 1)) {
+			var dir = path.substring(0, at + 1);
+			if (dir.substring(0, 5) == "lang/") { langs = true; continue; }
+			if (folders[dir] === void) folders[dir] = true, order.add(dir);
+		}
+	}
+	order.sort();
+	for (var i = 0; i < order.count; i++) Storages.addAutoPath(root + order[i]);
+	KAGPatchZips.add(storage);
+	if (langs) {
+		KAGLanguageRoots.add(root);
+		if (typeof global.KAGLanguage == "Object") KAGLanguage.applyPaths(), KAGLanguage.loadTable();
+	}
+	dm("Patch mounted: " + storage + " (" + files.count + " files)");
+	return true;
+}
+{
+	var places = [System.exePath];
+	places.add(System.dataPath) if System.dataPath != System.exePath;
+	for (var p = 0; p < places.count; p++) {
+		for (var i = 1; ; i++) {
+			var zstore = places[p] + "patch" + (i == 1 ? "" : (string)i) + ".zip";
+			if (global.KAGSigned === true) { if (!KAGSignedDeferPatchZip(zstore)) break; }
+			else { if (!KAGMountPatchZip(zstore)) break; }
+		}
+	}
+}
+
+// Transitions from plugins: extrans's 7 and extNagano's 12. A transition whose plugin didn't
+// load runs as a crossfade (KAGTransitionMethod, which KAGLayer.beginTransition and the World's
+// layer transitions call), so a game that uses one still runs on an engine without the plugin.
+var KAGPluginTransitions = %[];  // transition => "linked", "missing" or "noted" (missing, logged)
+function KAGLinkTransitionPlugin(name, methods) {
+	var linked = KAGLinkPlugin(name);
+	for (var i = 0; i < methods.count; i++) KAGPluginTransitions[methods[i]] = linked ? "linked" : "missing";
+	return linked;
+}
+function KAGTransitionMethod(method) {
+	if (method === void) return method;
+	var state = KAGPluginTransitions[method];
+	if (state != "missing" && state != "noted") return method;
+	if (state == "missing") {
+		dm("Transition " + method + " runs as a crossfade: its plugin isn't loaded");
+		KAGPluginTransitions[method] = "noted";
+	}
+	return "crossfade";
+}
+KAGLinkTransitionPlugin("plugin/extrans.dll",
+	["wave", "mosaic", "turn", "rotatezoom", "rotatevanish", "rotateswap", "ripple"]);
+KAGLinkTransitionPlugin("plugin/extNagano.dll",
+	["3duniversal", "blurfade", "scanline", "zoomfade", "rgbfade", "spin", "flutter", "book",
+	 "imagewipe", "honeyturn", "morphing", "multiripple"]);
+// krkr_richtext.dll - optional; message text uses it when MessageLayer useRichText is set
+KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined";
+
+
+// The game font. Since engine 2.5.0 the engine embeds only a Latin font (Roboto), so Japanese
+// text depended on the fonts installed on the player's computer (Noto Sans CJK on Linux) and
+// showed as boxes without them. Noto Sans JP (SIL OFL 1.1, notosansjp-OFL.txt) ships next to
+// this file and is registered by name; the file is read the first time a face list uses it.
+// A game can drop the file and the name from its face lists to use system fonts instead.
+// Where the engine bundles a font of that name itself (the browser build), it is loaded now
+// instead: the engine finds a bundled font only in the exact style asked for, so text that was
+// bold when the font was first used (the [select] choices) fell back to the icon font, and every
+// text in that face came out as arrows. A loaded font is also found for bold and italic.
+if (typeof global.Font.registerFontFile != "undefined" && Storages.isExistentStorage("notosansjp-regular.otf")) {
+	try {
+		var notoPath = Storages.getPlacedPath("notosansjp-regular.otf");
+		if (typeof global.Font.getVarAxes != "undefined" && Font.getVarAxes("Noto Sans JP") !== void)
+			Font.addFont(notoPath);
+		else
+			Font.registerFontFile(notoPath, "Noto Sans JP");
+	}
+	catch (e) { dm("Could not register notosansjp-regular.otf (" + e.message + ")"); }
+}
+
+
+
+/*
+
+	Loading AppConfig.tjs
+
+*/
+
+if(Storages.isExistentStorage("AppConfig.tjs"))
+
+{
+
+	KAGLoadScript("AppConfig.tjs");
+
+}
+
+
+
+/*
+
+	Loading Config.tjs
+
+*/
+
+if(Storages.isExistentStorage("Config.tjs"))
+
+{
+
+	KAGLoadScript("Config.tjs");
+
+}
+
+else if(Storages.isExistentStorage("Config.~new"))
+
+{
+
+	System.inform("Config.tjs not found.\nPlease rename the "
+
+		"Config.~new file in the system folder to Config.tjs.");
+
+	System.exit();
+
+}
+
+else
+
+{
+
+	throw new Exception("Config.tjs not found.");
+
+}
+
+
+
+if (typeof global.ENV_GameName != "undefined") {
+
+	System.title = global.ENV_GameName;
+
+}
+
+if (typeof global.ENV_GameId != "undefined" && lockKey == "") {
+
+	lockKey = global.ENV_GameId;
+
+}
+
+
+
+/*
+
+	Config.tjs version check
+
+*/
+
+
+
+if(typeof global.config_version == "undefined" || config_version != kagVersion)
+
+{
+
+	KAGLoadScript("UpdateConfig.tjs");
+
+}
+
+
+
+/*
+
+	Languages (Language.tjs): the ones Config.tjs lists (KAGLanguageList, the source language
+	first), shown in the one the system prefers until the window reads the player's choice
+
+*/
+
+KAGLoadScript("Language.tjs");
+KAGLanguage = new KAGLanguageManager(typeof global.KAGLanguageList == "String" ? global.KAGLanguageList : "en");
+KAGLanguage.set(KAGLanguage.preferred(), false);
+
+
+
+/*
+
+	Double startup check
+
+*/
+
+// Polyfill for missing System desktop properties in SDL3 builds
+if (typeof System.desktopLeft == "undefined") {
+    System.desktopLeft = 0;
+    System.desktopTop = 0;
+    
+    // Attempt to use the screen's actual resolution, or fallback to a default
+    System.desktopWidth = (typeof System.screenWidth != "undefined") ? System.screenWidth : 1920;
+    System.desktopHeight = (typeof System.screenHeight != "undefined") ? System.screenHeight : 1080;
+}
+
+// Lock using the executable file path as the key
+
+// Polyfill for missing createAppLock in SDL3 builds
+if (typeof System.createAppLock == "undefined") {
+    System.createAppLock = function(key) { return true; };
+}
+
+if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[^A-Za-z0-9]/g, '_')) && typeof global.restart == "undefined")
+
+{
+
+	// Already running
+
+	if (debugWindowEnabled && typeof Window.sendMessage == "Object" &&   System.getArgument("-sendmessage") != "") {
+
+		// Send external control message
+
+		try { (Window.sendMessage incontextof %[ HWND:0 ])(System.title, System.getArgument("-sendmessage")); } catch {}
+
+	} else System.inform(System.title + " is already running");
+
+	KAGUnlinkPluginsBeforeExit();
+
+	System.exit();
+
+}
+
+
+
+
+
+/*
+
+	Definitions for performing on-demand loading
+
+*/
+
+
+
+
+
+property askYesNo { getter() { KAGLoadScript("YesNoDialog.tjs"); return global.askYesNo; } }
+
+property showAbout { getter() { KAGLoadScript("YesNoDialog.tjs"); return global.showAbout; } }
+
+property CheckBoxLayer { getter() { KAGLoadScript("CheckBoxLayer.tjs"); return global.CheckBoxLayer; } }
+
+//property ButtonLayer { getter() { KAGLoadScript("ButtonLayer.tjs"); return global.ButtonLayer; } }
+
+property EditLayer { getter() { KAGLoadScript("EditLayer.tjs"); return global.EditLayer; } }
+
+property SliderLayer { getter() { KAGLoadScript("SliderLayer.tjs"); return global.SliderLayer; } }
+
+property KAGPlugin { getter() { KAGLoadScript("Plugin.tjs"); return global.KAGPlugin; } }
+
+property execDialog { getter() { KAGLoadScript("ExecDialog.tjs"); return global.execDialog; } }
+
+property uiload { getter() { KAGLoadScript("UILoader.tjs"); return global.uiload; } }
+
+property uiloadSystem { getter() { KAGLoadScript("UILoader.tjs"); return global.uiloadSystem; } }
+
+
+
+/*
+
+	Loading each system
+
+*/
+
+dm("Loading KAG System scripts...");
+
+
+
+// add by takas, modified by miahmie.
+
+if (typeof global.ratPlayerEnabled != "undefined" && global.ratPlayerEnabled) {
+
+	KAGLoadScript("RATParser.tjs");
+
+	KAGLoadScript("RATPlayer.tjs");
+
+	KAGLoadScript("RATKAGParser.tjs");
+
+} else global.ratPlayerEnabled = false;
+
+
+
+// add by GoWatanabe
+
+KAGLoadScript("LayerEx.tjs");
+
+KAGLoadScript("BitmapFont.tjs")   if (KAGConfigEnabled("fontExBitmapEnabled", false));
+
+
+
+KAGLoadScript("Utils.tjs");
+
+KAGLoadScript("Accessibility.tjs");
+
+KAGLoadScript("KAGLayer.tjs");
+
+KAGLoadScript("AnimKAGLayer.tjs");
+
+
+
+KAGLoadScript("ButtonLayer.tjs");
+
+
+
+KAGLoadScript("TransLayer.tjs");
+
+KAGLoadScript("SelectLayer.tjs");
+
+KAGLoadScript("MapSelectLayer.tjs");
+
+KAGLoadScript("DialogLayer.tjs");
+
+KAGLoadScript("HistoryLayer.tjs");
+
+KAGLoadScript("BGM.tjs");
+
+KAGLoadScript("SE.tjs");
+
+KAGLoadScript("Movie.tjs");
+
+KAGLoadScript("Conductor.tjs");
+
+
+
+KAGLoadScript("UpdateRegion.tjs");
+
+KAGLoadScript("AffineLayer.tjs");
+
+KAGLoadScript("AnimationLayer.tjs");
+
+KAGLoadScript("GraphicLayer.tjs");
+
+
+
+KAGLoadScript("GFX_Fire.tjs")     if (KAGConfigEnabled("gfxFireEnabled",     true));
+
+KAGLoadScript("GFX_Movie.tjs")    if (KAGConfigEnabled("gfxMovieEnabled",    true));
+
+KAGLoadScript("GFX_Flash.tjs")    if (KAGConfigEnabled("gfxFlashEnabled",    true));
+
+KAGLoadScript("GFX_Particle.tjs") if (KAGConfigEnabled("gfxParticleEnabled", true));
+
+KAGLoadScript("GFX_AMovie.tjs")   if (KAGConfigEnabled("gfxAlphaMovieEnabled", true));
+
+KAGLoadScript("GFX_Effekseer.tjs") if (KAGConfigEnabled("gfxEffekseerEnabled", true));
+
+KAGLoadScript("GFX_Live2D.tjs")   if (KAGConfigEnabled("gfxLive2DEnabled",   true));
+
+
+
+KAGLoadScript("MessageLayer.tjs");
+
+KAGLoadScript("Menus.tjs");
+
+KAGLoadScript("ElementsScreen.tjs"); // screens drawn with Elements: the menu's drop-downs, the controls list
+
+KAGLoadScript("MenuBar.tjs");
+
+KAGLoadScript("Controls.tjs");
+
+KAGLoadScript("DefaultMover.tjs");
+
+KAGLoadScript("Action.tjs");
+
+KAGLoadScript("MainWindow.tjs");
+
+
+
+// Loading World extension features
+
+if (typeof global.worldEnabled == "undefined" || global.worldEnabled) {
+
+	KAGLoadScript("world.tjs");
+
+}
+
+
+
+if(Storages.isExistentStorage("Override.tjs")) {
+
+	KAGLoadScript("Override.tjs");
+
+}
+
+//if(Storages.isExistentStorage(System.exePath + "Override2.tjs"))
+
+//	KAGLoadScript(System.exePath + "Override2.tjs");
+
+
+
+/*
+
+	( Debug ) Time measurement
+
+*/
+
+dm("Script loading took " + (System.getTickCount() - parseStartTick) + "ms");
+
+parseStartTick = System.getTickCount();
+
+
+
+/*
+
+	( Debug ) VM code dump
+
+*/
+
+
+
+// Scripts.dump();
+
+
+
+/*
+
+	( Debug ) Time measurement
+
+*/
+
+
+
+parseStartTick = System.getTickCount();
+
+
+
+
+
+/*
+
+	Creating the KAG Main Window.
+
+	If the global member kag doesn't exist, create and insert 
+
+	a KAGWindow class object.
+
+*/
+
+
+
+global.kag = new KAGWindow() if typeof global.kag == "undefined";
+
+KAGA11y.setLabel(System.title); // what a screen reader calls the game's window
+
+	
+
+if (typeof global.KAGWorldPlugin != 'undefined') {
+
+
+
+	// World extension plugin
+
+	kag.addPlugin(global.world_object = new KAGWorldPlugin(kag));
+
+	if (kag.debugLevel >= tkdlSimple) {
+
+		dm("World environment setup complete");
+
+	}
+
+	// Stand view display verification window function
+
+	if (debugWindowEnabled) {
+
+		KAGLoadScript('standview.tjs');
+
+	}
+
+}
+
+
+
+/*
+
+	Create aliases for some variables for easy access from global scope
+
+*/
+
+
+
+var f = kag.flags;   // User variables (flags)
+
+var sf = kag.sflags; // System variables (system)
+
+var tf = kag.tflags; // Temporary variables (temporary flags)
+
+
+
+var mp_dummy = %[], mp_target, mp_override;
+
+property mp {
+
+	getter {
+
+		// a tag from a macro in a compiled scenario brings the macro's arguments with it
+
+		if (mp_override !== void) return mp_override;
+
+		var macroParams = mp_target ? mp_target.macroParams : void;
+
+		return macroParams  ? /*dict*/macroParams : /*null or void*/mp_dummy;
+
+	}
+
+}
+
+
+
+/*
+
+	Integrating RAT Player
+
+*/
+
+KAGLoadScript("RATInit.tjs") if (global.ratPlayerEnabled);
+
+
+
+/*
+
+	( Debug ) Time measurement
+
+*/
+
+dm("KAGMainWindow constructor took " + (System.getTickCount() - parseStartTick) + "ms");
+
+delete parseStartTick;
+
+
+
+
+
+/*
+
+	Execute AfterInit.tjs if it exists
+
+*/
+
+if(Storages.isExistentStorage("AfterInit.tjs"))
+
+	KAGLoadScript("AfterInit.tjs");
+
+//if(Storages.isExistentStorage(System.exePath + "AfterInit2.tjs"))
+
+//	KAGLoadScript(System.exePath + "AfterInit2.tjs");
+
+
+
+/*
+
+	If -ovr is specified as a command line parameter, 
+
+	execute that parameter as a TJS expression
+
+*/
+
+//{
+
+//	var ovr = System.getArgument('-ovr');
+
+//	if(ovr !== void && ovr != 'yes') Scripts.eval(ovr);
+
+//}
+
+
+
+/*
+    Executing first.ks
+*/
+
+// Force SDL3 window size right before processing the first script
+if (typeof global.kag !== "undefined") {
+    // Skip while full-screen: the fullScreen setter already sized the surface
+    // via setInnerSize(pxWidth, pxHeight), and resizing here would fight it.
+    // In a window, KAGWindow.setZoom sizes it to scWidth x scHeight (members of kag, not
+    // globals) at the zoom the constructor picked, which is below 1 when that doesn't fit
+    // the display, plus the menu bar's strip (MenuBar.tjs; a menuBarEnabled or menuBarHeight
+    // AfterInit.tjs set is in effect by now). setInnerSize(scWidth, scHeight) made it taller
+    // than a 1080p screen.
+    // fullScreened, not fullScreen: the start-up switch may not have taken effect yet
+    if (!global.kag.fullScreened)
+        global.kag.setZoom(global.kag.zoomNumer, global.kag.zoomDenom);
+}
+
+/*
+    Compiling scenarios: -scncompile compiles the scripts in !scnlist.txt that changed since
+    they were last compiled (-scncompile=all every one of them), writes what happened to the
+    console and exits, with 1 if one failed (doc/scn.txt)
+*/
+function KAGCompileScenarios(force = false)
+{
+	if (typeof global.world_object == "undefined") throw new Exception("compiling scenarios needs the World (KAGWorldPlugin)");
+	world_object.initPlayer();
+	var r = world_object.player.compileAll(force);
+	dm("Compiled scenarios: %d compiled, %d up to date, %d failed, %d warnings".sprintf(r.compiled, r.skipped, r.failed, r.warnings));
+	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	return r;
+}
+if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") {
+	var r = KAGCompileScenarios(System.getArgument("-scncompile") == "all");
+	KAGUnlinkPluginsBeforeExit();
+	System.exit(r.failed > 0 ? 1 : 0);
+}
+
+/*
+    Listing the voices' lines (kagex-lipsync): -voicelines=<file> compiles the scripts named in
+    <file> (a native path; a script a line, or none for !scnlist.txt's) without writing them,
+    writes every voiced message to <file>.out (a line each: the voice's file, its character, the
+    script, the text as shown and as read, and its language, tab-separated: a line in each of
+    the game's languages, the source language first; UTF-16) and exits, with 1 if a script
+    failed
+*/
+function KAGListVoiceLines(file)
+{
+	if (typeof global.world_object == "undefined") throw new Exception("listing the voices' lines needs the World (KAGWorldPlugin)");
+	world_object.initPlayer();
+	var storage = kag.localStorageName(file);
+	var list = [];
+	if (Storages.isExistentStorage(storage)) {
+		var names = [];
+		names.load(storage);
+		for (var i = 0; i < names.count; i++) {
+			var n = names[i].trim();
+			list.add(Storages.extractStorageName(n)) if n != "" && n.charAt(0) != "#";
+		}
+	}
+	var r = world_object.player.voiceLines(list);
+	r.lines.save(storage + ".out");
+	dm("Voice lines: %d voices in %d scripts, %d failed".sprintf(r.lines.count, r.scripts, r.failed));
+	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	return r;
+}
+if (System.getArgument("-voicelines") != "") {
+	var r = KAGListVoiceLines(System.getArgument("-voicelines"));
+	KAGUnlinkPluginsBeforeExit();
+	System.exit(r.failed > 0 ? 1 : 0);
+}
+
+// In a signed build, verify the archives, the engine files and the patches first, then start the
+// game from the completion (the check is asynchronous and can't be waited on inline). An unsigned
+// build starts straight away. See SignatureCheck.tjs.
+if (global.KAGSigned === true && typeof global.KAGSignatureVerifyAndStart != "undefined") {
+	if (typeof kag.checkSignature == "undefined")
+		KAGSignatureQuit("The signature plugin (sigcheck) is missing, so this signed build can't verify itself.");
+	else
+		KAGSignatureVerifyAndStart(function() { kag.process("first.ks"); });
+} else {
+	kag.process("first.ks");
+}

@@ -1,0 +1,203 @@
+// UpdateConfig.tjs - Script for carrying over Config.tjs settings
+
+// Copyright (C)2001-2008, W.Dee and contributors  Modification and distribution are free.
+
+
+
+// The Config.~new file is the new Config.tjs file.
+
+// This script file is called when the version information in the Config.tjs file
+
+// does not match the KAG version information.
+
+
+
+if(Storages.isExistentStorage("Config.~new"))
+
+{
+
+	// Config.~new file found
+
+
+
+	// Load Config.tjs
+
+	var settings = %[]; // Dictionary array to store configuration info
+
+	var oldconfig = [].load("Config.tjs"); // Load Config.tjs
+
+	var pattern = /^;\s*(.*?)\s*=(.*)$/; // Regex pattern for recognizing configuration lines
+
+	var pattern_adds = /^\/\/\[start-(.*?)-additionals\]$/;
+
+	for(var i = 0; i < oldconfig.count; i++)
+
+	{
+
+		var matched = pattern.match(oldconfig[i]);
+
+		if(matched.count) settings[matched[1]] = matched[2];
+
+		matched = pattern_adds.match(oldconfig[i]);
+
+		if(matched.count)
+
+		{
+
+			var end_mark = "//[end-" + matched[1] + "-additionals]";
+
+			i++;
+
+			var content = '';
+
+			while(oldconfig[i] != end_mark && i < oldconfig.count)
+
+			{
+
+				content += oldconfig[i] + "\n";
+
+				i++;
+
+			}
+
+			settings["additional" + matched[1]] = content;
+
+		}
+
+	}
+
+
+
+	// Write version information
+
+	settings['global.config_version'] = " \"" + kagVersion + "\"; // Do not delete this line";
+
+
+
+	// Loading Config.~new and carrying over settings
+
+	var newconfig = [].load("Config.~new"); // Load Config.~new
+
+	var lines = '';
+
+	for(var i = 0; i < newconfig.count; i++)
+
+	{
+
+		var matched = pattern.match(newconfig[i]);
+
+		var matched_adds = pattern_adds.match(newconfig[i]);
+
+		if(matched.count)
+
+		{
+
+			var setting_name = matched[1];
+
+			var setting = settings[setting_name];
+
+			if(setting !== void)
+
+				lines += ";" + setting_name + " =" + setting + "\n";
+
+			else
+
+				lines += newconfig[i] + "\n";
+
+		}
+
+		else if(matched_adds.count)
+
+		{
+
+			var setting_name = "additional" + matched_adds[1];
+
+			var end_mark = "//[end-" + matched_adds[1] + "-additionals]";
+
+			var setting = settings[setting_name];
+
+			if(setting !== void)
+
+			{
+
+				lines += "//[start-" + matched_adds[1] + "-additionals]\n" +
+
+					setting + end_mark + "\n";
+
+				i++;
+
+				while(newconfig[i] != end_mark && i < newconfig.count) i++;
+
+			}
+
+			else
+
+			{
+
+				lines += newconfig[i] + "\n";
+
+			}
+
+		}
+
+		else
+
+		{
+
+			lines += newconfig[i] + "\n";
+
+		}
+
+	}
+
+
+
+	// Display Pad (the SDL engine has none: the merged settings go to Config.tjs.merged in the
+
+	// save folder instead)
+
+	if (typeof global.Pad != "undefined") {
+
+	global.configPad = new Pad();
+
+	global.configPad.text = lines;
+
+	global.configPad.color = 0;
+
+	global.configPad.title = "Config.tjs";
+
+	global.configPad.fileName = Storages.getLocalName(Storages.getPlacedPath("Config.tjs"));
+
+	global.configPad.visible = true;
+
+
+
+	// Notification
+
+	System.inform("Settings have been carried over from the old Config.tjs.\n"
+
+		"If the content displayed in the “Config.tjs” window is correct, please\n"
+
+		"right-click in that window and select “Save” to save Config.tjs.\n"
+
+		"You may delete the Config.~new file.");
+
+	} else {
+
+	var merged = System.dataPath + "Config.tjs.merged"; // writable even when Config.tjs is in an archive
+
+	[ lines ].save(merged);
+
+	System.inform("Settings have been carried over from the old Config.tjs into\n" +
+
+		Storages.getLocalName(merged) + ".\n"
+
+		"If it is correct, replace Config.tjs with it. You may delete the Config.~new file.");
+
+	}
+
+	// Reload new config
+
+	Scripts.exec(lines);
+
+}

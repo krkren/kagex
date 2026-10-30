@@ -1,0 +1,16 @@
+﻿# Data for Replay Mode: a tile a line, on up to six tabs (in the order they first appear), with
+# up to 16 tiles a page
+# Tab,Scenario,Label,Thumbnail,Title
+#   Label      a label, or * for every scene of a compiled script that has a title
+#              (*label|Title); each plays on its own (doc/scn.txt, "Replays")
+#   Thumbnail  an image for the tile; empty: the scene's World at its first line, or a play
+#              tile where the World shows nothing there
+#   Title      what the tile says (for *, in place of "Start"); empty: the scene's title
+Characters,char,start,replay_char,Characters
+Characters,char,label6
+Characters,action,*,,Extended Action
+Characters,anim,*,,Animated Character
+Layers,layer,*,,Extended Layer
+World Layers,envlayer,*,,World Layers
+Transitions,transition,*,,Transitions
+Effects,effect,*,,Effekseer Effects

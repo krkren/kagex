@@ -1,0 +1,391 @@
+/**
+ * Background display layer
+ * Location and time set in the environment are automatically reflected
+ */
+class KAGEnvStage extends KAGEnvImage {
+
+	/**
+	 * Constructor
+	 * @param env Environment
+	 * @param name Environment layer name
+	 */
+	function KAGEnvStage(env, name, absolute) {
+		super.KAGEnvImage(env, name);
+		defaultAbsolute = absolute;
+	}
+	
+	/// Time
+    var time;
+	/// Stage
+	var stage;
+	/// Stage layers
+	var stagelayers;
+	/// Specify no stage layer
+	var nostagelayer;
+	
+	function initImage() {
+		super.initImage();
+		time = void;
+		stage = void;
+		stagelayers = [];
+		nostagelayer = false;
+	}
+
+	function onStore(f) {
+		super.onStore(f);
+		f.time = time if time !== void;
+		f.stage = stage if stage !== void;
+		if (stagelayers.count > 0) {
+			f.stagelayers = [];
+			f.stagelayers.assign(stagelayers);
+		}
+		f.nostagelayer = nostagelayer if nostagelayer == true;
+	}
+
+	function onRestore(f) {
+		time = f.time;
+		stage = f.stage;
+		stagelayers.assign(f.stagelayers) if (f.stagelayers !== void);
+		nostagelayer = f.nostagelayer;
+		initStageLayer();
+		super.onRestore(f);
+	}
+
+	/**
+	 * Initialize stage layers
+	 */
+	function initStageLayer() {
+		
+		// Discard old stagelayers
+		for (var i=0;i<stagelayers.count;i++) {
+			env.delLayer(%[name:stagelayers[i]]);
+		}
+		stagelayers.clear();
+
+		if (nostagelayer || stage == "") {
+			return;
+		}
+		if (typeof global.setStageLayerHook != "undefined" &&
+			/**/   global.setStageLayerHook(stage, time)) {
+			return;
+		}
+
+		//dm("New stage layer generation:" + stage + ":" + time);
+		
+		// Generate new stagelayers
+		var stageinfo = env.stages[stage];
+		if (stageinfo !== void && stageinfo.layers !== void) {
+			var names = [];
+			names.assign(stageinfo.layers);
+			for (var i=0;i<names.count;i+=2) {
+				var name = names[i];
+				var value = names[i+1];
+				if (name != "" && value !== void) {
+					var e = %[];
+					(Dictionary.assign incontextof e)(value);
+					var cond = e.condition;
+					delete     e.condition if (typeof e.condition != "undefined");
+					if (cond != "") {
+						var tmp;
+						switch (typeof cond) {
+						case "Object": tmp = []; tmp.assign(cond); break;
+						case "String": tmp = cond.split(","); break;
+						}
+						// Do not register if the condition is not met
+						if (tmp !== void && tmp.find(time) < 0) {
+							name = "";
+						}
+					}
+					if (name != "") {
+						e.name = name if (e.name == "");
+						// Register matched layer
+						stagelayers.add(e.name);
+						env.getNewLayer(e.name).command(e);
+					}
+				}
+			}
+		}
+
+		//dm("Stage layer status:" + stagelayers.count);
+	}
+
+	// Update display state of environment layers
+	function updateStageLayer(show) {
+		if (show) {
+			for (var i=0;i<stagelayers.count;i++) {
+				var lay = getEnvLayer(stagelayers[i]);
+				if (lay != null && !lay.isShow()) {
+					lay.disp = SHOW;
+				}
+			}
+		} else {
+			for (var i=0;i<stagelayers.count;i++) {
+				var lay = getEnvLayer(stagelayers[i]);
+				if (lay != null && lay.isShow()) {
+					lay.disp = CLEAR;
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Specify automatic transition for display processing
+	 */
+	function setDispAutoTrans(elm) {
+		var info = stage !== void ? env.stages[stage] : void;
+		if (info !== void) {
+			setAutoTrans([info.dispTrans, env.envinfo.stageDispTrans, env.envinfo.stageTrans, env.envinfo.envTrans], elm);
+		} else {
+			setAutoTrans([env.envinfo.stageDispTrans, env.envinfo.stageTrans, env.envinfo.envTrans], elm);
+		}
+	}
+
+    /**
+     * Set the stage
+     * @param stageName Stage name
+     * @param elm Other elements of the command
+     */
+	function setStage(stageName, elm) {
+		if (stageName == "" || env.stages[stageName] === void) {
+			env.errorCmd("Unknown stage specified: " + stageName) if (stageName != "");
+			return;
+		}
+		if (stageName != stage || isClear() || env.event.isShow()
+@if (KAGENV_OVERLAYER)
+			|| env.over.isShow()
+@endif
+			) {
+			
+			//dm("Stage specification:" + stageName);
+			stage = stageName;
+			time = env.defaultTime if time === void;
+			
+			// Filenames starting with 'ev' are registered as CG
+			var info = env.stages[stage];
+			var image = info.image;
+			if (image !== void && image.substring(0,2).toUpperCase() == "EV") {
+				env.setSFlag("cg_" + (image.toUpperCase()));
+			}
+			
+			disp = SHOW;
+			redraw = true;
+			reposition = true;
+
+			var ax = "center";
+			var ay = "center";
+			if (info.cox !== void || info.coy !== void) {
+				var cox = info.cox !== void ? +info.cox : 0;
+				var coy = info.coy !== void ? +info.coy : 0;
+				env.setCameraOrigin(cox, coy);
+				ax = cox != 0 ? "center + " + (int)(cox * (1-levelz/100)) : "center";
+				ay = coy != 0 ? "center - " + (int)(coy * (1-levelz/100)) : "center";
+				reposition = true;
+			}
+			if (info.afx !== void) { ax = info.afx; }
+			if (info.afy !== void) { ay = info.afy; }
+			defaultAfx = ax; afx = void;
+			defaultAfy = ay; afy = void;
+			
+			xpos = elm.xpos === void ? void : +elm.xpos;
+			ypos = elm.ypos === void ? void : +elm.ypos;
+			
+			initFile(elm);
+
+			// Hook upon stage change
+			if (typeof global.setStageHook != "undefined") {
+				global.setStageHook(stageName, elm);
+            }
+
+			// Update stage layer
+			nostagelayer = elm.nolayer;
+			initStageLayer(false, false);
+			
+			// Specify transition
+			setAutoTrans([info.trans, env.envinfo.stageTrans, env.envinfo.envTrans], elm);
+        }
+		// Erase event illustration
+		if (env.event.isShow()) {
+			env.event.disp = CLEAR;
+		}
+@if (KAGENV_OVERLAYER)
+		if (env.over.isShow()) {
+			env.over.disp = CLEAR;
+		}
+@endif
+	}
+
+    /**
+     * Set the time
+     * @param timeName Time name
+     * @param elm Other elements of the command
+     */
+    function setTime(timeName, elm) {
+		if (timeName == "" || timeName === true) return; // Do nothing if specification is empty
+		if (env.times[timeName] === void) {
+			env.errorCmd("Unknown time specified: "+timeName);
+			return;
+		}
+		if (timeName != time || isClear() || env.event.isShow()
+@if (KAGENV_OVERLAYER)
+			|| env.over.isShow()
+@endif
+			) {
+
+			time = timeName;
+
+			initFile(elm);
+			disp = SHOW;
+			redraw = true;
+			reposition = true;
+			
+            // Hook upon time change
+			if (typeof global.setTimeHook != "undefined") {
+				global.setTimeHook(timeName, elm);
+			}
+
+			// Character sprites also need to be redrawn when time changes
+			env.setRedrawCharacter();
+			
+			// Update stage layer
+			nostagelayer = elm.nolayer;
+			initStageLayer(false, false);
+			
+			// Specify transition
+			setAutoTrans([env.times[time].trans, env.envinfo.timeTrans, env.envinfo.stageTrans, env.envinfo.envTrans], elm);
+        }
+        // Erase event illustration
+		if (env.event.isShow()) {
+			env.event.disp = CLEAR;
+        }
+@if (KAGENV_OVERLAYER)
+		if (env.over.isShow()) {
+			env.over.disp = CLEAR;
+		}
+@endif
+    }
+
+	/**
+	 * Draw the image
+	 * @param layer Target layer
+	 */
+	function drawLayer(layer) {
+		if (isShowBU() && stage !== void) {
+			var info = env.stages[stage];
+			var image = info.image;
+			// Overwrite with time information
+			var timeInfo = env.currentTimeInfo;
+			if (timeInfo !== void) {
+				// Process image loading and coordinate correction
+				try {
+					image = image.replace(/TIME/, timeInfo.prefix);
+					env.loadBGFromCache(layer, image);
+				} catch(e) {
+					try {
+						// If image fails to load, handle with correction
+						image = info.image;
+						image = image.replace(/TIME/, env.defaultTimeInfo.prefix);
+						
+						env.loadBGFromCache(layer, image);
+						
+						// Color correction processing
+						// Layer composition
+						if (timeInfo.lightColor !== void) {
+							layer.holdAlpha = true;
+							layer.fillOperateRect(0,0,
+												  layer.width,layer.height,
+												  timeInfo.lightColor,
+												  timeInfo.lightType);
+						}
+						// Brightness correction
+						if (timeInfo.brightness !== void) {
+							layer.light(timeInfo.brightness,
+										timeInfo.contrast);
+						}
+
+                    } catch (e) {
+						var text = image + ": Could not load background image stage:" + stage + " time:" + time;
+						env.errorImage(text);
+						layer.fillRect(0,0,layer.width, layer.height, 0xff000000);
+						layer.drawText(0,0,text,0xffffff);
+                    }
+				}
+			}
+			with (info) {
+				if (reposition) {
+					if (xpos === void) {
+						xpos = (int).xoff;
+					}
+					if (ypos === void) {
+						ypos = (int).yoff;
+					}
+				}
+				// Special processing
+				if (.blurx !== void || .blury !== void) {
+					layer.doBoxBlur(.blurx, .blury);
+				}
+				var res = .resolution;
+				if (res !== void) layer.resolution  = res;
+				/**/res = .resolutionx;
+				if (res !== void) layer.resolutionx = res;
+				/**/res = .resolutiony;
+				if (res !== void) layer.resolutiony = res;
+			}
+		}
+	}
+
+    var stageCommands = %[
+	stage : this.setStage incontextof this,
+	stime : this.setTime incontextof this,
+	"delete" => function (param, elm) { disp = CLEAR; initImage(); } incontextof this, // If delete is specified, just erase
+	nolayer : null,
+		];
+	
+    /**
+	 * Execute command
+	 * @param cmd Command
+	 * @param param Parameter
+	 * @param elm All parameters including other commands
+     * @return true if execution occurred
+     */
+    function doCommand(cmd, param, elm) {
+
+		// Stage-specific command
+		var func;
+		if ((func = stageCommands[cmd]) !== void) {
+			//dm("Registered command exists:" + cmd);
+			if (func != null) {
+				func(param, elm);
+			}                
+			return true;
+        }
+
+		// Common command
+		if (super.doCommand(cmd, param, elm)) {
+			return true;
+		}
+		
+		var find = false;
+        
+		// Action
+		if (!find) {
+			find = setAction(cmd, elm);
+        }
+
+		// Update
+		if (!find) {
+			find = setTrans(cmd, elm);
+		}
+
+		// Time and Stage
+		var info;
+		if (env.times !== void && (info = env.times[cmd]) !== void) {
+			setTime(cmd, elm);
+			find = true;
+		} else if (env.stages !== void && (info = env.stages[cmd]) !== void) {
+			setStage(cmd, elm);
+			find = true;
+        }
+		
+		return find;
+    }
+}

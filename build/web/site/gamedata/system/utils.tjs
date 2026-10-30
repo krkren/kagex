@@ -1,0 +1,1273 @@
+// Utils.tjs - Utility Functions
+
+// Copyright (C)2001-2008, W.Dee and contributors  Redistribution and modification are free.
+
+
+
+try { Plugins.link("plugin/scriptsEx.dll"); } catch {};
+
+
+
+property random
+
+{
+
+	getter { return Math.random(); }
+
+}
+
+
+
+function intrandom(min = 0, max = 0) 
+
+{
+
+	// Returns a random integer between min and max inclusive
+
+	// If only one argument is provided, returns an integer from 0 to that number
+
+	if(min>max) { min <-> max; }
+
+	return int(Math.random() * (max-min+1)) + min;
+
+}
+
+
+
+function str2num(str)
+
+{
+
+	// String -> Number (Full-width support)
+
+	var res;
+
+	var i;
+
+	for(i=0; i<str.length; i++)
+
+	{
+
+		var ch = str[i];
+
+		switch(ch)
+
+		{
+
+		case "０": res+="0"; break;
+
+		case "１": res+="1"; break;
+
+		case "２": res+="2"; break;
+
+		case "３": res+="3"; break;
+
+		case "４": res+="4"; break;
+
+		case "５": res+="5"; break;
+
+		case "６": res+="6"; break;
+
+		case "７": res+="7"; break;
+
+		case "８": res+="8"; break;
+
+		case "９": res+="9"; break;
+
+		case "ｅ": res+="e"; break;
+
+		case "Ｅ": res+="E"; break;
+
+		case "。": res+="."; break;
+
+		case "．": res+="."; break;
+
+		case "−": res+="-"; break;
+
+		case "ー": res+="-"; break;
+
+		default: res+=ch; break;
+
+		}
+
+	}
+
+	return +res;
+
+}
+
+
+
+function str2escape(str)
+
+{
+
+	// String -> Escape characters
+
+	var r;
+
+	for (var i = 0; i < str.length; i++)
+
+		r += "\\x%X".sprintf(# str.charAt(i));
+
+	return r;
+
+}
+
+
+
+function han2zen(str)
+
+{
+
+	// Half-width -> Full-width (Supports alphanumeric and half-width kana)
+
+	var zenkana = "。「」、・ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン゛゜";
+
+	var res;
+
+	var i;
+
+	for(i=0;i<str.length;i++)
+
+	{
+
+		var ch = str.charAt(i);
+
+		var num=#ch;
+
+		if      (num==0x0020)                res+="　"; // 0x3000
+
+		else if (num> 0x0020 && num<=0x007e) res+=$(0xff00+num-0x20); // UNICODE
+
+		else if (num>=0xff61 && num<=0xff9f) res+=zenkana[num-0xff61]; // Half-width kana -> Full-width
+
+		else                                 res+=ch;
+
+	}
+
+	return res;
+
+}
+
+function zen2han(str)
+
+{
+
+	// Full-width -> Half-width (Also supports full-width voiced kana)
+
+	var zenkana1 = "。「」、・ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン゛゜";
+
+	var zenkana2 = "ガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ";
+
+	var hankana2 = "ｶﾞｷﾞｸﾞｹﾞｺﾞｻﾞｼﾞｽﾞｾﾞｿﾞﾀﾞﾁﾞﾂﾞﾃﾞﾄﾞﾊﾞﾋﾞﾌﾞﾍﾞﾎﾞﾊﾟﾋﾟﾌﾟﾍﾟﾎﾟ";
+
+	var res;
+
+	var i;
+
+	for(i=0;i<str.length;i++)
+
+	{
+
+		var ch = str.charAt(i);
+
+		var num=#ch, x;
+
+		if      (num==0x3000)                res+=" "; // "　" -> 0x20
+
+		else if (num> 0xff00 && num<=0xff5e) res+=$(num+0x20-0xff00); // Alphanumeric symbols
+
+		else if ((x=zenkana1.indexOf(ch))>=0)res+=$(x + 0xff61);
+
+		else if ((x=zenkana2.indexOf(ch))>=0)res+=hankana2.substr(x*2,2);
+
+		else res+=ch;
+
+	}
+
+	return res;
+
+}
+
+
+
+
+
+function kansuuji(
+
+	n,
+
+	digits = "〇一二三四五六七八九",
+
+	small_units = "　十百千",
+
+	large_units = "　万億兆京",
+
+	zero_expression = "Zero",
+
+	minus_expression = "Minus"
+
+	)
+
+{
+
+	// Returns n in standard Kanji numeral notation
+
+	// TJS integer types go up to about 922 quadrillion (Kei), so no processing is needed for digits above Kei.
+
+
+
+	n = int n;
+
+	if(n == 0) return zero_expression;
+
+	var out = ""; // Output string
+
+	if(n < 0) n = -n, out = minus_expression;
+
+	n = string n; // Convert to string
+
+
+
+	var n_len = n.length;
+
+	var n_pos = n_len - 1;
+
+	var nonzero = false;
+
+
+
+	for(var i = 0; i < n_len; i ++, n_pos --)
+
+	{
+
+		var small_unit = n_pos & 3;
+
+		var digit = +n[i];
+
+		switch(small_unit)
+
+		{
+
+		case 0: // Units place
+
+			if(digit != 0) out += digits[digit], nonzero = true;
+
+			if(nonzero && n_pos) out += large_units[n_pos >> 2];
+
+			nonzero = false;
+
+			break;
+
+		case 1: // Tens place
+
+		case 2: // Hundreds place
+
+		case 3: // Thousands place
+
+			if(digit != 0)
+
+			{
+
+				/* For the thousands place, it is idiomatically called 'Issen' (one thousand) when it is ten thousand or more.
+
+				   Also, 'Ippyaku' or 'Ichijuu' are not used. */
+
+				if(digit != 1 || (small_unit == 3 && n_pos > 4))
+
+					out += digits[digit] + small_units[small_unit];
+
+				else
+
+					out += small_units[small_unit];
+
+				nonzero = true;
+
+			}
+
+			break;
+
+		}
+
+	}
+
+
+
+	return out;
+
+}
+
+
+
+function kansuuji_simple(
+
+	n,
+
+	digits = "〇一二三四五六七八九",
+
+	point = "・",
+
+	minus = "Minus")
+
+{
+
+	// Formats n in Kanji numerals without unit suffixes
+
+
+
+	n = string n;
+
+	var n_len = n.length;
+
+	var out = "";
+
+	for(var i = 0; i < n_len; i++)
+
+	{
+
+		var digit = n[i];
+
+		if(digit == ".")
+
+			out += point;
+
+		else if(digit == "-")
+
+			out += minus;
+
+		else if(digit >= '0' && digit <= '9')
+
+			out += digits[+digit];
+
+		else
+
+			out += digit;
+
+	}
+
+	return out;
+
+}
+
+
+
+function number_format(n)
+
+{
+
+	// Formats n with commas every three digits
+
+	n = string n;
+
+	var n_len = n.length;
+
+	var n_digits = 0;
+
+
+
+	// Count the number of digits
+
+	for(var i = 0; i < n_len; i++)
+
+	{
+
+		var digit = n[i];
+
+		if(digit >= '0' && digit <= '9') n_digits ++;
+
+		else if(digit == '.' || digit == 'e') break;
+
+	}
+
+
+
+	var out = "";
+
+
+
+	// Insert commas
+
+	for(var i = 0; i < n_len; i++)
+
+	{
+
+		var digit = n[i];
+
+		if(digit >= '0' && digit <= '9')
+
+		{
+
+			n_digits --;
+
+			out += digit;
+
+			if(n_digits > 0 && n_digits % 3 == 0)
+
+				out += ",";
+
+		}
+
+		else
+
+		{
+
+			out += digit;
+
+		}
+
+	}
+
+
+
+	return out;
+
+}
+
+
+
+/**
+
+ * Dictionary iteration process
+
+ * @param dict Dictionary
+
+ * @func Processing function func(name, value, dict);
+
+ */
+
+function foreach(dict, func, *) {
+
+	if (dict) {
+
+        var names = [];
+
+		names.assign(dict);
+
+		var count = names.count;
+
+		for (var i=0; i<count; i+= 2) {
+
+			func(names[i], names[i+1], dict, *);
+
+		}
+
+    }
+
+}
+
+
+
+/**
+
+ * Completes existing file extensions and returns the file name
+
+ * @param storage File name (if no extension is specified, completed with exts*)
+
+ * @param exts* Extension list (priority given to earlier ones)
+
+ * @return Image file name including extension. void if it doesn't exist.
+
+ */
+
+function getExistFileNameAutoExtFill(storage, exts*)
+
+{
+
+	with (Storages) if (!.isExistentStorage(storage)/*&& .extractStorageExt(storage) == ""*/) {
+
+		var chop = .chopStorageExt(storage) + ".";
+
+		storage = void;
+
+		for (var i = 0, test, cnt = exts.count; i < cnt; i++) {
+
+			test = chop + exts[i];
+
+			if (.isExistentStorage(test)) {
+
+				storage = test;
+
+				break;
+
+			}
+
+		}
+
+	}
+
+	return storage;
+
+}
+
+
+
+/**
+
+ * Returns the name of the specified image file if it exists
+
+ * @return Image file name including extension. void if it doesn't exist.
+
+ */
+
+global.Layer.SupportedExtensions = [ "png", "tlg", "tlg5", "tlg6", "jpeg", "jpg", "bmp" ];
+
+function getExistImageName(storage)
+
+{
+
+	return getExistFileNameAutoExtFill(storage, global.Layer.SupportedExtensions*);
+
+}
+
+
+
+/**
+
+ * Rectangular range character drawing with line-breaking rules (Kinsoku)
+
+ * @param layer Layer to draw on
+
+ * @param text  Text to draw
+
+ * @param elm   Other information
+
+ *        %[ x, y, w, h, // Drawing range
+
+ *           linestep, // Line spacing
+
+ *           maxline, // Maximum lines
+
+ *           halign, valign, // -1 or omitted: Left/Top aligned, 0: Centering, 1: Right/Bottom aligned
+
+ *           fontface, fontheight, fontbold, fontitalic, fontangle, // Font attributes
+
+ *           color, param // Color, array of remaining drawText arguments
+
+ *           wwfollowing, wwleading, // Line-breaking characters
+
+ *           conttext, // Continuation character (default: "…")
+
+ *           nodraw, // If true, do not draw (return array only)
+
+ *           drawtext, // Drawing method override
+
+ *           gettextwidth, // Text width retrieval method override
+
+ *           chsep, // Draw character by character
+
+ *           ];
+
+ * @return Array of split text ([ line1, line2, ... ])
+
+ */
+
+function drawTextKinsokuRect(layer, text, elm) {
+
+	if (text == "" || layer === void) return [];
+
+	var wwFollowing = "%),:;]}｡｣ﾞﾟ。，、．：；゛゜ヽヾゝゞ々’”）〕］｝〉》」』】°′″℃¢％‰　" +
+
+		/**/          "!.?､･ｧｨｩｪｫｬゅョッー・？！ーぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ";
+
+	var wwLeading   = "\\$([{｢‘“（〔［｛〈《「『【￥＄£";
+
+
+
+	var font = layer.font;
+
+	var step, gtw = font.getTextWidth;
+
+	var w, h, cont = "…", maxline = 0;
+
+	with (elm) {
+
+		// Override
+
+		gtw = .gettextwidth if (typeof .gettextwidth == "Object");
+
+
+
+		// Line-breaking characters
+
+		wwFollowing = .wwfollowing if (.wwfollowing !== void);
+
+		wwLeading   = .wwleading   if (.wwleading   !== void);
+
+		cont        = .conttext    if (.conttext    !== void);
+
+
+
+		// Font update
+
+		font.face   = .fontface   if (.fontface   !== void);
+
+		font.height = .fontheight if (.fontheight !== void);
+
+		font.bold   = .fontbold   if (.fontbold   !== void);
+
+		font.italic = .fontitalic if (.fontitalic !== void);
+
+		font.angle  = .fontangle  if (.fontangle  !== void);
+
+
+
+		step = (.linestep !== void) ? +.linestep : font.height;
+
+		w = .w;
+
+		h = .h;
+
+		maxline = +.maxline if (.maxline !== void);
+
+	}
+
+
+
+	var cur = "", lines = [], len = text.length;
+
+	for (var ch, i = 0, y = 0; i <= len; i++) {
+
+		if (i == len || (ch = text.charAt(i)) == "\n" || gtw(cur + ch) >= w) {
+
+			var next = ch, cl;
+
+			if (next == "\n") next = "";
+
+			// Check end-of-line kinsoku
+
+			else while ((cl = cur.length) > 0 &&
+
+						wwLeading.indexOf((ch = cur.charAt(cl-1))) >= 0) {
+
+				next = ch + next;
+
+				cur  = cur.substr(0, cl-1);
+
+			}
+
+			// Process last line
+
+			if (y+step >= h || (maxline > 0 && maxline == lines.count+1)) {
+
+				if (i < len) {
+
+					while ((cl = cur.length) > 0 && gtw(cur + cont) >= w)
+
+						cur = cur.substr(0, cl-1);
+
+					lines.add(cur + cont);
+
+				} else
+
+					lines.add(cur);
+
+				break;
+
+			}
+
+			// Check start-of-line kinsoku
+
+			if (i < len && next != "") {
+
+				while ((cl = cur.length) > 0 &&
+
+					   wwFollowing.indexOf(next.charAt(0)) >= 0) {
+
+					next = cur.charAt(cl-1) + next;
+
+					cur  = cur.substr(0, cl-1);
+
+				}
+
+			}
+
+			lines.add(cur);
+
+			cur = next;
+
+			y += step;
+
+		} else cur += ch;
+
+	}
+
+	var lc = lines.count;
+
+	if (!elm.nodraw && lc > 0) {
+
+		var x, y, dt, color, param, valign, halign;
+
+		with (elm) {
+
+			color = .color;
+
+			param = (typeof .param == "Object") ? .param : [];
+
+			dt    = (typeof .drawtext == "Object") ? .drawtext
+
+				: function(self, *) { return drawText(*); } incontextof layer;
+
+			x = .x;
+
+			y = .y;
+
+			halign = (.halign !== void) ? +.halign : -1;
+
+			valign = (.valign !== void) ? +.valign : -1;
+
+			var th = (lc-1) * step + font.height;
+
+			switch  (valign) {
+
+			case  0: y += (h - th)\2; break;
+
+			case  1: y += (h - th);   break;
+
+			}
+
+		}
+
+		for (var i = 0; i < lc; i++, y+=step) {
+
+			var text = lines[i], dx = x;
+
+			switch (halign) {
+
+			case  0: dx += (w - gtw(text))\2; break;
+
+			case  1: dx += (w - gtw(text));   break;
+
+			}
+
+			if (!elm.chsep) dt(layer, dx, y, text, color, param*);
+
+			else if (text != "") {
+
+				// Draw character by character
+
+				for (var j = 0, len = text.length; j < len; j++) {
+
+					var ch = text.charAt(j);
+
+					dt(layer, dx, y, ch, color, param*);
+
+					dx += gtw(ch);
+
+				}
+
+			}
+
+		}
+
+	}
+
+	return lines;
+
+}
+
+
+
+
+
+/**
+
+ * Get center position of the window (for dialogs)
+
+ * @param  win Parent window to center against (centers on screen if not a Window object)
+
+ * @param  w   Width of the window to display
+
+ * @param  h   Height of the window to display
+
+ * @return %[ x, y ]
+
+ */
+
+function getParentWindowCenterPos(win, w, h)
+
+{
+
+	var x, y, x1, y1, x2, y2, monitor;
+
+	var iswin = (win && typeof win == "Object" && isvalid win && win instanceof "Window");
+
+
+
+	if (typeof System.getMonitorInfo != "undefined" && iswin) try {
+
+		var info = System.getMonitorInfo(true, win);
+
+		monitor = info.work if (typeof info == "Object");
+
+	} catch {}
+
+	monitor = %[ x:0, y:0, w:System.screenWidth, h:System.screenHeight ] if (monitor === void);
+
+	with (monitor) x1=.x, y1=.y, x2=.w+x1, y2=.h+y1;
+
+
+
+	if (iswin) with (win) {
+
+		var rx = x = ((.width  - w)\2) + .left;
+
+		var ry = y = ((.height - h)\2) + .top;
+
+		if (typeof .getClientRect == "Object") try {
+
+			with ( .getClientRect()) {
+
+				x = ((.w - w)\2) + .x;
+
+				y = ((.h - h)\2) + .y;
+
+			} 
+
+		} catch { x=rx, y=ry; } // revert.
+
+	} else {
+
+		x =  (x1+x2   - w)\2;
+
+		y =  (y1+y2   - h)\2;
+
+	}
+
+	x = x2 - w if (x > x2 - w);
+
+	y = y2 - h if (y > y2 - h);
+
+	x = x1     if (x < x1);
+
+	y = y1     if (y < y1);
+
+	return %[ x:x, y:y ];
+
+}
+
+
+
+/**
+
+ * Expand environment variables
+
+ */
+
+function expandEnvironmentString(text) {
+
+	// Use plugin if added (=> windowEx.dll)
+
+	if (typeof System.expandEnvString == "Object") return System.expandEnvString(text);
+
+	// Attempt to expand manually (simple implementation)
+
+	var expand = function (self, str, map = %[]) {
+
+		return /%(.*?)%/g.replace(str, function(m) {
+
+			if (m[1] != "") {
+
+				var name = m[1].toLowerCase(), read = global.System.readRegValue, assign = global.Dictionary.assign;
+
+				switch (name) {
+
+				case "username":
+
+				case "userprofile":
+
+				case "homepath":
+
+				case "homedrive":
+
+				case "appdata":
+
+				case "localappdata":
+
+					return read("HKEY_CURRENT_USER\\Volatile Environment\\"+name);
+
+				case "systemroot":
+
+					return read("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRoot");
+
+				default:
+
+					var usr = "HKEY_CURRENT_USER\\Environment\\"+name;
+
+					var sys = "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment\\"+name;
+
+					if        (!this.map[usr] && (name = read(usr)) != "") {
+
+						var cmap = %[ usr => true ];
+
+						(assign incontextof cmap)(this.map, false);
+
+						return this.self(this.self, name, cmap);
+
+					} else if (!this.map[sys] && (name = read(sys)) != "") {
+
+						var cmap = %[ usr => true, sys => true ];
+
+						(assign incontextof cmap)(this.map, false);
+
+						return this.self(this.self, name, cmap);
+
+					}
+
+					break;
+
+				}
+
+			}
+
+			return m[0];
+
+		} incontextof %[ self:self, map:map ]);
+
+	};
+
+	try { text = expand(expand, text); } catch(e) { Debug.message(e.message); }
+
+	return text;
+
+}
+
+/**
+
+ * Retrieve the system mouse cursor
+
+ */
+
+function getSystemMouseCursor(tag, noValue) {
+
+	var reg = System.readRegValue("HKEY_CURRENT_USER\\Control Panel\\Cursors\\"+tag);
+
+	if (reg == "") return noValue;
+
+	reg = expandEnvironmentString(reg);
+
+	var file = Storages.getFullPath(reg);
+
+	return Storages.isExistentStorage(file) ? file : noValue;
+
+}
+
+
+
+/**
+
+ * Create an array for text output of a dictionary or array
+
+ * elm: %[ target: Dictionary or array to output, indent: Indentation string, const: Whether to insert 'const' (default: false) ]
+
+ * output: Output array
+
+ */
+
+
+
+function       makeDictionaryOutputTexts(elm, output = []) {
+
+	var self = makeDictionaryOutputTexts;
+
+	var target = elm.target;
+
+	var level  = (int)elm.level, offset, cnst = elm["const"] ? "(const) " : "";
+
+	var indent = (typeof elm.indent == "String") ? elm.indent : " ";
+
+	var line   = offset = indent.repeat(level);
+
+
+
+	if (elm.key != "") line += '"'+elm.key.escape()+'" => ';
+
+	switch (typeof target) {
+
+	default: line += @"/* InvalidType:${typeof target} */void"; break;
+
+	case "void":    line += "void"; break;
+
+	case "Real":
+
+	case "Integer": line += (string)target; break;
+
+	case "String":  line += '"'+target.escape()+'"'; break;
+
+	case "Object":
+
+		if (target === null) line += "null";
+
+		else if (target instanceof "Dictionary") {
+
+			var items = [], keys = [];
+
+			items.assign(target);
+
+			for (var i = 0; i < items.count; i+=2) keys.add(items[i]) if (items[i] != "");
+
+			keys.sort();
+
+			line += cnst+"%[";
+
+			output.add(line);
+
+			for (var i = 0, cnt = keys.count; i < cnt; i++) {
+
+				var key = keys[i];
+
+				var subelm = %[ target:target[key], key:key, comma:(i<cnt-1), level:level+1, "const"=>elm["const"] ];
+
+				self(subelm, output);
+
+			}
+
+			line = offset+"]";
+
+		} else if (target instanceof "Array") {
+
+			line += cnst+"[";
+
+			output.add(line);
+
+			for (var i = 0, cnt = target.count; i < cnt; i++) {
+
+				var subelm = %[ target:target[i], comma:(i<cnt-1), level:level+1, "const"=>elm["const"] ];
+
+				self(subelm, output);
+
+			}
+
+			line = offset+"]";
+
+		} else line += "/* UnknownObject */void";
+
+		break;
+
+	}
+
+	if (elm.comma) line += ",";
+
+	output.add(line);
+
+	return output;
+
+}
+
+
+
+/**
+
+ * Inject another function into an existing class function or property
+
+ * @param elm Operation dictionary %[ target: Object to inject into,
+
+ *                            method: Method name to inject, func: Replacement function,
+
+ *                            prop: Property name to inject, get: Replacement getter, set: Replacement setter ]
+
+ */
+
+function objectHookInjection(elm) {
+
+	var target = elm.target;
+
+	if (typeof target != "Object") throw new Exception("Not an object");
+
+	if (elm.method == "" && elm.prop == "") throw new Exception("Injection target unknown");
+
+
+
+	var name = "__InjectionTable", table;
+
+	if (typeof global[name] != "undefined") table = global[name];
+
+	else global[name] = table = %[];
+
+	var gettag = function(table, target, name, suffix = "_") {
+
+		var tag = (string)target +"::"+ name;
+
+		while (typeof table[tag] != "undefined") tag += suffix;
+
+		//dm("injection/tag:", tag);
+
+		return tag;
+
+	} incontextof global;
+
+
+
+	if (elm.method != "") {
+
+		var method = elm.method, tag = gettag(table, target, method, elm.suffix);
+
+		var old = typeof target[method] == "Object" ? (&target[method]) : function {}; // Use dummy if it doesn't exist
+
+		if (!(old instanceof "Function")) throw new Exception("Not a function: "+method);
+
+
+
+		table[tag] = %[ ovr:elm.func, orig:old ];
+
+		target[method] = (@"function(*) { with (global.${name}['${tag}']) return (.ovr incontextof this)((.orig incontextof this), *); }")! incontextof null;
+
+	}
+
+	if (elm.prop != "") {
+
+		var prop = elm.prop, tag = gettag(table, target, prop, elm.suffix);
+
+		var get = elm.get, set = elm.set;
+
+		var  old, getprop = function(target, key) { return &target[key]; };
+
+		try { old = getprop(target, prop); } catch {}
+
+		if (old === void || !(old instanceof "Property")) throw new Exception("Not a property: "+prop);
+
+		if (!get && !set) throw new Exception("getter/setter not specified: "+prop);
+
+
+
+		table[tag] = %[ "getter" => get, "setter" => set, orig:old ];
+
+		var makeprop = function(tag, get, set, name) {
+
+			("property prop { " +
+
+			 (get ? @"getter    { with (global.${name}['${tag}']) return (.getter incontextof this)((\&.orig) incontextof this);    } " : "") +
+
+			 (set ? @"setter(v) { with (global.${name}['${tag}'])        (.setter incontextof this)((\&.orig) incontextof this, v); } " : "") +
+
+			 "}")!;
+
+			return &this.prop;
+
+		} incontextof %[];
+
+		(&target[prop]) = makeprop(tag, !!get, !!set, name) incontextof null;
+
+	}
+
+}
+
+
+
+
+
+/**
+
+ * Helper function to create a multiple inheritance class
+
+ * @param name  Class name to create (string)
+
+ * @param prefix Prefix for variable names holding super classes
+
+ * @param classes... List of classes to inherit (strings)
+
+ * @return Created class object
+
+ *
+
+ * - Inherited classes must exist under 'global' and have constructor/finalize methods.
+
+ * - Constructor arguments are passed as: array for classes[0]'s constructor, array for classes[1]'s constructor, etc.
+
+ * - classes objects can be referenced as ${prefix}super0, ${prefix}super1, etc.
+
+ */
+
+function createMultipleInheritanceClass(name, prefix = name+"_", classes*) {
+
+	var supers = [], constructors = [], finalizes = [];
+
+	for (var i = classes.count-1; i >= 0; i--) {
+
+		var cl = classes[i];
+
+		supers      .unshift(@"var ${prefix}super${i} = global.${cl};");
+
+		constructors.unshift(@"if (typeof args[${i}] == 'Object') ${prefix}super${i}.${cl}(args[${i}]*); else ${prefix}super${i}.${cl}();");
+
+		finalizes   .push   (@"${prefix}super${i}.finalize();");
+
+	}
+
+	var exp = (@"
+
+class ${name} extends ${classes.join(', ')} {
+
+	${supers.join('\n\t')}
+
+	function ${name}(args*) {
+
+		${constructors.join('\n\t\t')}
+
+	}
+
+	function finalize {
+
+		if (!isvalid this) return;
+
+		${finalizes.join('\n\t\t')}
+
+	}
+
+}");
+
+	//Debug.message(exp);
+
+	exp!;
+
+	return global[name];
+
+}
+
+/**
+
+ * Helper function to create a Proxy property object referencing another dictionary, etc.
+
+ * @param tag Property name
+
+ * @param defvalstr Default value for undefined/error (note: converted to string and evaluated at creation)
+
+ * @param base Base object for reference (base.tag is the target property)
+
+ */
+
+function createPropertyProxy(tag, defvalstr, base = "global.kag.scflags", prefix = "", context = %[]) {
+
+	var get = @"${prefix}(${base}.${tag})";
+
+	if (defvalstr == "") defvalstr = "void";
+
+	else get = @"(typeof ${base}.${tag} != 'undefined') ? ${get} : ${defvalstr}";
+
+	try { delete context[tag]; } catch {}
+
+	(function (exp) { exp!; } incontextof context)(@"
+
+property ${tag} {
+
+	setter(v) { try { ${base}.${tag} = ${prefix}(v); } catch {} }
+
+	getter    { try { return ${get}; } catch {} return ${defvalstr}; }
+
+}");
+
+	return &context[tag];
+
+}
+
+/**
+
+ */
+
+function applyInlineStringVariableExtract(str, context = null) {
+
+	var extractor = function (str) { return str!; };
+
+	return (extractor incontextof context)("@'"+str.escape()+"'");
+
+}

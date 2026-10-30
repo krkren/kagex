@@ -1,0 +1,1147 @@
+// KAGEnvCharacterEyeLip.tjs - eyes that blink and a mouth that moves with the voice
+//
+// The part World characters that draw their own picture share: those drawn from layers
+// (KAGEnvCharacterEx.tjs, charinit.csv) and Live2D characters (KAGEnvCharacterLive2D.tjs). It
+// holds the eyes' and the mouth's states and their commands (eyeopen, eyeflip, lipflip ...),
+// reads the voice for lip-sync (its lip track or its level) and runs the update handler that
+// moves them; a subclass draws the picture with eyeLevel, lipLevel and lipVowel (drawPose), and
+// can add work of its own to each frame (updateExtra, isAnimating). world.tjs loads it before
+// either, so Override.tjs can change the settings below.
+
+// Switching time for stand-alone animation patterns (shortest case)
+var eyeFlipTime = 60;
+
+// Eye blink frequency *Note that this increases as eyeFlipTime decreases, so correction is included below.
+var eyeFlipFreq = 0.025 * eyeFlipTime / 100;
+
+// Switching time for lip-sync animation patterns (shortest case)
+// Better for update timing if kept as an integer multiple of the eye timing
+var lipFlipTime = 120;
+
+// Voice levels (RMS, 0 to 1) at which the mouth is half open and open
+var lipSyncHalfLevel = 0.03;
+var lipSyncOpenLevel = 0.12;
+
+// Mouths by vowel: while the voice is loud enough to open the mouth, a face whose mouth group
+// has a layer for the vowel it says shows that layer instead of the half-open or open mouth.
+// The vowel comes from the voice's lip track (below), which kagex-lipsync makes for the voices
+// a game picks; the layers go by these names, in English or in kana. A mouth group needs
+// "Closed Mouth" and either the half-open and open mouths or at least one vowel.
+// A voice without a track opens and shuts its mouth by loudness alone, unless lipEngineVowels
+// is set: then the engine's WaveSoundBuffer.getVowel picks a vowel, but it mostly hears how
+// high the voice is, not what it says (UPSTREAM.md)
+var lipEngineVowels = false;
+var lipVowelLayerNames = %[
+	a : ["Mouth A", "あ"],
+	i : ["Mouth I", "い"],
+	u : ["Mouth U", "う"],
+	e : ["Mouth E", "え"],
+	o : ["Mouth O", "お"]
+];
+var lipVowelList = ["a", "i", "u", "e", "o"];
+// How much more (of 1) another vowel has to weigh to replace the one shown, so the mouth
+// doesn't flicker between two vowels that sound alike
+var lipVowelHold = 0.08;
+
+// Lip tracks: a voice can come with one, a text file beside it named like it with ".lip"
+// (ai000001.ogg's is ai000001.lip) whose lines are "<ms><tab><mouth>[<tab><open>]": the mouth
+// from that time on, a, i, u, e or o, n for the lips closed or "-" for any other sound, and how
+// open it is, 0 closed, 1 half or 2 wide (without it: 2 for a vowel, 0 for n, 1 for "-"); "#"
+// starts a comment. kagex-lipsync (tools/lipsync) writes them from the voice and its line; one
+// can also be written by hand. While such a voice plays, the track moves the mouth, rather than
+// the voice's level
+var lipSyncTracks = true;
+// How many frames ahead readVoice reads a voice, and how finely it keeps the readings (ms)
+var lipReadAhead = 3;
+var lipReadStep = 20;
+
+// Sound buffer processing
+// Lip-sync reads the voice's level: with the engine's WaveSoundBuffer.getSoundLevel where it
+// has one (the SDL3 engines kagex ships, on every platform), otherwise with the getSample
+// plugin's sampleValue
+// (lipSyncSource "level", "sample", or "" for a random mouth)
+var lipSyncSource = "";
+if (typeof WaveSoundBuffer.getSoundLevel != "undefined") {
+	lipSyncSource = "level";
+} else {
+	if (typeof WaveSoundBuffer.setDefaultAheads == "undefined") {
+		KAGLinkPlugin("plugin/getSample.dll");
+	}
+	if (typeof WaveSoundBuffer.setDefaultAheads != "undefined") {
+		// Sample pre-fetch value (for reducing lip-sync lag)
+		WaveSoundBuffer.setDefaultAheads((int)(200 * 44.1));
+		lipSyncSource = "sample";
+	}
+}
+
+class KAGEnvCharacterEyeLip extends KAGEnvCharacter {
+
+	function KAGEnvCharacterEyeLip(env, name, initName, init) {
+		super.KAGEnvCharacter(...);
+	}
+
+	function finalize() {
+		// the update handler goes with the character (the World throws characters away on a
+		// new scene, and a handler left behind ran on an invalidated object)
+		System.removeContinuousHandler(updateHandler);
+		super.finalize(...);
+	}
+
+	// Parameters for eye blink/lip-sync
+	var lipLevel;
+	var lipVowel; // the vowel the voice says, for a face with a mouth for each (mouths by vowel)
+	var eyeLevel;
+
+	// ---------------------------------------------
+	// Parameters for eye blink/lip-sync
+	// ---------------------------------------------
+
+	// Forced eye blink. Repeat specified number of times.
+	var eyeflip;
+
+	var _eyeflipTime;
+	property eyeflipTime {
+		getter() {
+			return _eyeflipTime !== void ? _eyeflipTime : global.eyeFlipTime;
+		}
+		setter(v) {
+			_eyeflipTime = v != global.eyeFlipTime ? v : void;
+		}
+	}
+
+	// Forced lip-sync. Repeat specified number of times.
+	var lipflip;
+	var _lipflipTime;
+	property lipflipTime {
+		getter() {
+			return _lipflipTime !== void ? _lipflipTime : global.lipFlipTime;
+		}
+		setter(v) {
+			_lipflipTime = v != global.lipFlipTime ? v : void;
+		}
+	}
+	
+	// Eye state
+	// 0:Default 1:Open 2:Closed 3:Blinking 4:Transition to open 5:Transition to closed 6:Open then blink -1:Do nothing
+	var eyestate = 0;
+
+	// Lip state
+	// 0:Default 1:Open 2:Closed 3:Lip-sync 4:Transition to open 5:Transition to closed 6:Closed then lip-sync -1:Do nothing
+	var lipstate = 0;
+
+	// For eye blinking
+	var eyePatterns = [2,1,0,1,2];
+	
+	// For eye blink control
+	var eyePattern;
+
+	// For lip-syncing
+	var lipPatterns = [0,1,2,1,0];
+	
+	// For lip-sync control
+	var lipPattern;
+	
+	// The lip track of the voice last played (loadLipTrack, lipSyncTracks), that voice, and
+	// when it started (System.getTickCount)
+	var lipTrack;
+	var lipTrackVoice;
+	var lipTrackStart;
+
+	// The voice's level and vowel read ahead, by position (readVoice)
+	var lipReadings;
+	
+	// For timing control
+	var flipEyeNextTime;
+	var flipLipNextTime;
+
+	function initEyeLip() {
+		switch (eyestate) {
+		case 0: // Default
+			if (eyeLevel !== void) {
+				eyeLevel = void;
+			}
+			break;
+		case 1: // Open
+		case 3:
+		case 4:
+		case 6:
+			if (eyeLevel !== 2) {
+				eyeLevel = 2;
+			}
+			break;
+		case 2: // Closed
+		case 5:
+			if (eyeLevel !== 0) {
+				eyeLevel = 0;
+			}
+			break;
+		}
+		switch (lipstate) {
+		case 0: // Default
+			if (lipLevel !== void) {
+				lipLevel = void;
+			}
+			break;
+		case 1: // Open
+		case 4:
+			if (lipLevel !== 2) {
+				lipLevel = 2;
+			}
+			break;
+		case 2: // Closed
+		case 3:
+		case 5:
+		case 6:
+			if (lipLevel !== 0) {
+				lipLevel = 0;
+			}
+			break;
+		}
+		lipVowel = void;
+	}
+
+	/**
+	 * Whether the face shown has a mouth for each vowel (mouths by vowel): only then is the voice's
+	 * vowel worth working out. A subclass that can show one says so
+	 */
+	function faceHasVowels() {
+		return false;
+	}
+
+	/**
+	 * The vowel to show from the weights WaveSoundBuffer.getVowel gives: the heaviest, unless it
+	 * doesn't outweigh the one shown by lipVowelHold
+	 */
+	function pickLipVowel(weights) {
+		if (weights === void || !weights.voiced) {
+			return void;
+		}
+		var best = lipVowel;
+		var bestWeight = best !== void ? weights[best] + global.lipVowelHold : -1;
+		for (var i=0;i<lipVowelList.count;i++) {
+			var v = lipVowelList[i];
+			if (weights[v] > bestWeight) {
+				best = v;
+				bestWeight = weights[v];
+			}
+		}
+		return best;
+	}
+
+	/**
+	 * A voice's lip track (lipSyncTracks): %[times, mouths, levels], each mark's time (ms), mouth
+	 * and how open it is, or void when it has none
+	 */
+	function loadLipTrack(storage) {
+		if (!lipSyncTracks || storage === void || storage == "") {
+			return void;
+		}
+		var name = Storages.chopStorageExt(storage) + ".lip";
+		if (!Storages.isExistentStorage(name)) {
+			return void;
+		}
+		var lines = [];
+		try {
+			lines.load(name);
+		} catch (e) {
+			dm("Couldn't read the lip track " + name + ": " + e.message);
+			return void;
+		}
+		var times = [], mouths = [], levels = [];
+		for (var i=0;i<lines.count;i++) {
+			var line = lines[i];
+			if (line == "" || line.charAt(0) == "#") {
+				continue;
+			}
+			var f = line.split("\t");
+			if (f.count < 2) {
+				continue;
+			}
+			var mouth = f[1].trim();
+			var t = +f[0];
+			// how open: as given, or wide for a vowel, closed for n, half for anything else
+			var level = f.count >= 3 && f[2].trim() != "" ? +f[2] : mouth == "n" ? 0 : lipVowelLayerNames[mouth] !== void ? 2 : 1;
+			if (times.count == 0 || t >= times[times.count-1]) {
+				times.add(t);
+				mouths.add(mouth);
+				levels.add(level);
+			}
+		}
+		return times.count > 0 ? %[times:times, mouths:mouths, levels:levels] : void;
+	}
+
+	/**
+	 * The voice's level (RMS) and vowel weights (getVowel, when vowels is true) at ms into it, as
+	 * [rms, weights]. The engine reads both at its own idea of where the voice is playing,
+	 * samplePosition, plus an offset; that runs half a second (a buffer) ahead of the sound now
+	 * and then (UPSTREAM.md), which put the mouth out of time. What it reads is at
+	 * samplePosition plus the offset all the same, so the offset that reaches the part wanted is
+	 * that part's position less samplePosition: but while the engine is ahead, that part is
+	 * gone from its buffers. So each frame also reads the parts the next frames will want, while
+	 * they're there, and keeps them (lipReadings, every lipReadStep ms)
+	 */
+	function readVoice(at, vowels) {
+		var b = soundBuffer;
+		var rate = b.frequency;
+		if (b.speed != 1 || lipReadings === void || rate <= 0) {
+			// a changed speed (the phase vocoder) maps positions otherwise: as the engine has it
+			var ahead = (int)(rate * lipflipTime / 2000);
+			return [b.getSoundLevel(ahead).rms, vowels ? b.getVowel(ahead) : void];
+		}
+		var sp = b.samplePosition;
+		// The engine decodes a voice into buffers of half a second each, from its start, and
+		// what it reads past the end of the one samplePosition is in can be an older part of
+		// the voice: so only that one is read, from samplePosition to its end. Never before
+		// samplePosition: a negative offset can read outside the buffer, and crashed the engine
+		var size = rate \ 2;
+		var end = (sp \ size + 1) * size;
+		var now;
+		for (var k = 0; k <= lipReadAhead; k++) {
+			var key = (int)((at + k * lipflipTime) / lipReadStep + 0.5);
+			if (k > 0) {
+				var r = lipReadings[(string)key];
+				if (r !== void && (r[1] !== void || !vowels)) {
+					continue;
+				}
+			}
+			var pos = (int)(key * lipReadStep * rate / 1000);
+			if (pos < sp || pos >= end) {
+				continue;
+			}
+			if (pos + 1024 > end) {
+				// a reading reaching past the end: the one just before it
+				pos = end - 1024;
+				if (pos < sp) {
+					continue;
+				}
+			}
+			var r = [b.getSoundLevel(pos - sp).rms, vowels ? b.getVowel(pos - sp) : void];
+			if (Math.abs(b.samplePosition - sp) > rate / 10) {
+				break; // the engine moved a buffer on meanwhile: what it read is in doubt
+			}
+			lipReadings[(string)key] = r;
+			if (k == 0) {
+				now = r;
+			}
+		}
+		if (now !== void) {
+			lipReadings.last = now;
+			return now;
+		}
+		// the part wanted is gone: read before, or else as the frame before
+		var key = (int)(at / lipReadStep + 0.5);
+		for (var d = 0; d <= 1; d++) {
+			var r = lipReadings[(string)(key - d)];
+			if (r === void) {
+				r = lipReadings[(string)(key + d)];
+			}
+			if (r !== void) {
+				lipReadings.last = r;
+				return r;
+			}
+		}
+		// not read in time: as the frame before
+		if (lipReadings.last !== void) {
+			return lipReadings.last;
+		}
+		var ahead = (int)(rate * lipflipTime / 2000);
+		return [b.getSoundLevel(ahead).rms, vowels ? b.getVowel(ahead) : void];
+	}
+
+	/**
+	 * The lip track's last mark at or before t (ms), or its first
+	 */
+	function lipTrackIndex(t) {
+		var times = lipTrack.times;
+		var lo = 0, hi = times.count - 1;
+		while (lo < hi) {
+			var m = (lo + hi + 1) \ 2;
+			if (times[m] <= t) {
+				lo = m;
+			} else {
+				hi = m - 1;
+			}
+		}
+		return lo;
+	}
+
+	/**
+	 * The mouth the lip track gives for the span (ms) from pos, as [mouth, how open]: the mark
+	 * in the middle of it, where the voice's level would be read; when that's a sound other
+	 * than a vowel ("-") with the mouth open, the vowel the span holds longest gives the shape
+	 */
+	function lipTrackAt(pos, span) {
+		var times = lipTrack.times, mouths = lipTrack.mouths, levels = lipTrack.levels;
+		var n = times.count;
+		var mid = pos + span / 2;
+		var k = lipTrackIndex(mid);
+		if (times[k] > mid || mouths[k] == "n" || levels[k] <= 0) {
+			return [mouths[k], 0];
+		}
+		var mouth = mouths[k];
+		if (lipVowelLayerNames[mouth] === void) {
+			var end = pos + span;
+			var best, bestWeight = 0, weights = %[];
+			for (var i=lipTrackIndex(pos);i<n && times[i] < end;i++) {
+				var v = mouths[i];
+				if (lipVowelLayerNames[v] !== void) {
+					var from = times[i] > pos ? times[i] : pos;
+					var to = i + 1 < n && times[i+1] < end ? times[i+1] : end;
+					weights[v] = (weights[v] !== void ? weights[v] : 0) + to - from;
+					if (weights[v] > bestWeight) {
+						best = v;
+						bestWeight = weights[v];
+					}
+				}
+			}
+			if (best !== void) {
+				mouth = best;
+			}
+		}
+		return [mouth, levels[k]];
+	}
+
+	/**
+	 * Update eye blink state
+	 */
+	function updateEye(tick) {
+		var updateFlag = false;
+		
+		// Forced blinking processing
+		if (eyeflip > 0) {
+			//dm("Forced blinking processing!");
+			if (eyePattern === void) {
+				eyePattern = 0;
+			} else {
+				var level = eyePatterns[eyePattern++];
+				if (eyeLevel !== level) {
+					eyeLevel = level;
+					updateFlag = true;
+				}
+				if (eyePattern >= eyePatterns.count) {
+					eyePattern = void;
+					eyeflip--;
+					if (eyeflip == 0) {
+						env.trigger(name + "_eyeflip");
+					}
+				}
+			}
+			return updateFlag;
+		}
+		
+		// For eye blinking processing
+		switch (eyestate) {
+		case 0: // Default
+			if (eyeLevel !== void) {
+				eyeLevel = void;
+				updateFlag = true;
+			}
+			break;
+		case 1: // Open
+			if (eyeLevel !== 2) {
+				eyeLevel = 2;
+				updateFlag = true;
+			}
+			break;
+		case 2: // Closed
+			if (eyeLevel !== 0) {
+				eyeLevel = 0;
+				updateFlag = true;
+			}
+			break;
+		case 3: // Animation
+			if (eyePattern === void) {
+				// Determine randomly whether to blink
+				if (Math.random() < eyeFlipFreq) {
+					eyePattern = 0;
+					//dm("Blinking started");
+				}
+			} else {
+				var level = eyePatterns[eyePattern++];
+				if (eyeLevel !== level) {
+					eyeLevel = level;
+					updateFlag = true;
+				}
+				if (eyePattern >= eyePatterns.count) {
+					eyePattern = void;
+					//dm("Blinking finished");
+				}
+			}
+			break;
+		case 4: // Transition to open state
+			switch (eyeLevel) {
+			case 0:
+				eyeLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (eyeLevel !== 2) {
+					eyeLevel = 2;
+					updateFlag = true;
+				} else {
+					eyestate = 1;
+					env.trigger(name + "_eyeopen");
+				}
+				break;
+			}
+			break;
+		case 5: // Transition to closed state
+			switch (eyeLevel) {
+			case 2:
+				eyeLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (eyeLevel !== 0) {
+					eyeLevel = 0;
+					updateFlag = true;
+				} else {
+					eyestate = 2;
+					env.trigger(name + "_eyeclose");
+				}
+				break;
+			}
+			break;
+		case 6: // Open then blink
+			switch (eyeLevel) {
+			case 0:
+				eyeLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (eyeLevel !== 2) {
+					eyeLevel = 2;
+					updateFlag = true;
+				} else {
+					eyestate = 3;
+					eyePattern = void;
+					env.trigger(name + "_eyeopen");
+				}
+				break;
+			}
+			break;
+		}
+		return updateFlag;
+	}
+
+	/**
+	 * Update eye blink state
+	 */
+	function updateLip(tick) {
+		var updateFlag = false;
+
+		// a vowel's mouth shows only while lip-syncing to a voice
+		if (lipVowel !== void && (lipflip > 0 || lipstate != 3)) {
+			lipVowel = void;
+			updateFlag = true;
+		}
+
+		// Forced processing
+		if (lipflip > 0) {
+			//dm("Forced blinking processing!");
+			if (lipPattern === void) {
+				lipPattern = 0;
+			} else {
+				var level = lipPatterns[lipPattern++];
+				if (lipLevel !== level) {
+					lipLevel = level;
+					updateFlag = true;
+				}
+				if (lipPattern >= lipPatterns.count) {
+					lipPattern = void;
+					lipflip--;
+					if (lipflip == 0) {
+						env.trigger(name + "_lipflip");
+					}
+				}
+			}
+			return updateFlag;
+		}
+		
+		switch (lipstate) {
+		case 0: // Default
+			if (lipLevel !== void) {
+				lipLevel = void;
+				updateFlag = true;
+			}
+			break;
+		case 1: // Open
+			if (lipLevel !== 2) {
+				lipLevel = 2;
+				updateFlag = true;
+			}
+			break;
+		case 2: // Closed
+			if (lipLevel !== 0) {
+				lipLevel = 0;
+				updateFlag = true;
+			}
+			break;
+		case 3: // Animation
+			// Get and set volume level
+			// Only voices in a state reacting to labels are targeted
+			var voiceLevel = 0;
+			var vowel;
+			if (soundBuffer !== void && soundBuffer.status == "play" && soundBuffer.mode) {
+				if (lipTrack !== void && lipTrackVoice == soundBuffer.storage) {
+					// the voice's lip track: its mouth over the time this one is shown, in the
+					// voice's own time (a changed voice speed counted), by the clock since the
+					// voice started, not the buffer's position or level: they're read from the
+					// wrong part of the voice now and then as it plays (UPSTREAM.md)
+					var at = (System.getTickCount() - lipTrackStart) * soundBuffer.speed;
+					var mouth = lipTrackAt(at, lipflipTime * soundBuffer.speed);
+					voiceLevel = mouth[1];
+					if (voiceLevel > 0 && lipVowelLayerNames[mouth[0]] !== void && faceHasVowels()) {
+						vowel = mouth[0];
+					}
+				} else if (lipSyncSource == "level") {
+					// The level around the middle of the time the mouth is shown, and the vowel
+					// it says, for a face with a mouth for each (readVoice)
+					var wantVowel = lipEngineVowels && typeof WaveSoundBuffer.getVowel != "undefined" && faceHasVowels();
+					var r = readVoice(System.getTickCount() - lipTrackStart + lipflipTime / 2, wantVowel);
+					if (r[0] > lipSyncOpenLevel) {
+						voiceLevel = 2;
+					} else if (r[0] > lipSyncHalfLevel) {
+						voiceLevel = 1;
+					}
+					if (voiceLevel > 0 && wantVowel) {
+						vowel = pickLipVowel(r[1]);
+					}
+				} else if (lipSyncSource == "sample") {
+					var a = soundBuffer.sampleValue;
+					//dm("Voice value: "+soundBuffer.position+" : %0.3f".sprintf(a));
+					if (a > 0.2) {
+						voiceLevel = 2;
+					} else if (a > 0.01) {
+						voiceLevel = 1;
+					}
+				} else {
+					// Random support for now
+					voiceLevel = (int)(Math.random() * 3);
+				}
+			}
+			// The mouth closes when the voice ends or is stopped
+			if (lipLevel !== voiceLevel || lipVowel !== vowel) {
+				lipLevel = voiceLevel;
+				lipVowel = vowel;
+				updateFlag = true;
+			}
+			break;
+		case 4: // Transition to open state
+			switch (lipLevel) {
+			case 0:
+				lipLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (lipLevel !== 2) {
+					lipLevel = 2;
+					updateFlag = true;
+				} else {
+					lipstate = 1;
+					env.trigger(name + "_lipopen");
+				}
+				break;
+			}
+			break;
+		case 5: // Transition to closed state
+			switch (lipLevel) {
+			case 2:
+				lipLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (lipLevel !== 0) {
+					lipLevel = 0;
+					updateFlag = true;
+				} else {
+					lipstate = 2;
+					env.trigger(name + "_lipclose");
+				}
+				break;
+			}
+			break;
+		case 6: // Closed then lip-sync
+			switch (lipLevel) {
+			case 2:
+				lipLevel = 1;
+				updateFlag = true;
+				break;
+			default:
+				if (lipLevel !== 0) {
+					lipLevel = 0;
+					updateFlag = true;
+				} else {
+					lipstate = 3;
+					lipPattern = void;
+					env.trigger(name + "_lipclose");
+				}
+				break;
+			}
+			break;
+		}
+		return updateFlag;
+	}
+
+	function waitEyeOpen(elm, main) {
+		if (eyestate == 4) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_eyeopen";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					eyestate = 1;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						eyestate = 1;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	function waitLipOpen(elm, main) {
+		if (lipstate == 4) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_lipopen";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					lipstate = 1;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						lipstate = 1;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	function waitEyeClose(elm, main) {
+		if (eyestate == 5) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_eyeclose";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					eyestate = 2;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						eyestate = 2;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	function waitLipClose(elm, main) {
+		if (lipstate == 5) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_lipclose";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					lipstate = 2;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						lipstate = 2;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	function waitEyeFlip(elm, main) {
+		if (eyeflip > 0) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_eyeflip";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					eyeflip = 0;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						eyeflip = 0;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	function waitLipFlip(elm, main) {
+		if (lipflip > 0) {
+			var canskip = elm.canskip !== void ? elm.canskip : true;
+			var name = this.name + "_lipflip";
+			if (canskip && main.clickSkipEnabled) {
+				if(main.skipMode){
+					lipflip = 0;
+					return 0;
+				}
+				main.conductor.wait(%[
+				    click : function(arg)
+					{
+						lipflip = 0;
+					} incontextof this,
+					click_arg : stopAnim,
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			} else {
+				main.conductor.wait(%[
+					name => function(arg)
+					{
+						return arg;
+					} incontextof this,
+					name + "_arg" => +elm.wait
+						]);
+			}
+			return -2;
+		} else {
+			return 0;
+		}
+	}
+
+	// Specify eye blink state
+	function setEyeState(state, elm){
+		//dm("Eye state specified:" + state);
+		eyeflipTime = elm !== void && elm.fliptime !== void ? +elm.fliptime : void;
+		eyestate = state;
+	}
+	
+	// Specify lip-sync state
+	function setLipState(state, elm) {
+		lipflipTime = elm !== void && elm.fliptime !== void ? +elm.fliptime : void;
+		lipstate = state;
+	}
+
+	/**
+	 * Play voice
+     */
+	function playVoice(voicename=void) {
+		// Lip-sync reads the voice from the buffer's visualization data, which has to be on
+		// before the voice starts: a short voice is decoded at once, and turning it on later
+		// leaves nothing to read for most of it
+		if (lipSyncSource != "") {
+			if (soundBuffer === void) {
+				soundBuffer = new VoiceTrack(this);
+			}
+			soundBuffer.useVisBuffer = true;
+		}
+		var ret = super.playVoice(...);
+		// and its lip track, read once for each voice, timed from now
+		if (soundBuffer !== void && soundBuffer.storage !== void && soundBuffer.storage != lipTrackVoice) {
+			lipTrackVoice = soundBuffer.storage;
+			lipTrack = loadLipTrack(lipTrackVoice);
+		}
+		lipTrackStart = System.getTickCount();
+		lipReadings = %[];
+		if (ret > 0 && lipstate == 3) {
+			startUpdateHandler();
+		}
+		return ret;
+	}
+	
+	// --------------------------------------------
+
+	// Update handler
+	function updateHandler(tick) {
+
+		// Do nothing if hidden or in transition
+		if (!isShow() || (targetLayer !== void && targetLayer.inTransition)) {
+			return;
+		}
+
+		var updateFlag = false;
+		var updatePos  = false;
+
+		if (flipEyeNextTime === void) {
+			flipEyeNextTime = tick;
+		}
+		if (tick >= flipEyeNextTime) {
+			if (updateEye(tick)) {
+				updateFlag = true;
+			}
+		}
+		while (flipEyeNextTime <= tick) {
+			flipEyeNextTime += eyeflipTime;
+		}
+
+		if (flipLipNextTime === void) {
+			flipLipNextTime = tick;
+		}
+		if (tick >= flipLipNextTime) {
+			if (updateLip(tick)) {
+				updateFlag = true;
+			}
+		}
+		// Next flip timing
+		while (flipLipNextTime <= tick) {
+			flipLipNextTime += lipflipTime;
+		}
+
+		// The subclass's own work: an animation (charanim.csv), a model moving (Live2D)
+		var extra = updateExtra(tick);
+		if (extra) {
+			updateFlag = true;
+			updatePos  = true if extra >= 2;
+		}
+
+		// Image update
+		if (updateFlag) {
+			// Forced redraw if target is fore layer, or the new picture of the character's own
+			// transition (a change of pose, outfit or face), which fades in from the back page:
+			// else its eyes and mouth stood still until the change was done, often for the
+			// first 300 ms of a line said with it
+			if (targetLayer !== void && (env.isForeLayer(targetLayer) || isInTransition())) {
+				drawLayer(targetLayer);
+				setSize(targetLayer);
+				if (updatePos) {
+					targetLayer.updateOffsetInfo();
+				}
+			}
+		}
+
+		if (!isNeedUpdate()) {
+			System.removeContinuousHandler(updateHandler);
+			flipEyeNextTime = void;
+			flipLipNextTime = void;
+		}
+	}
+
+	function isNeedUpdate() {
+		return !env.isNoeffect() && (isAnimating() || eyeflip > 0 || lipflip > 0 || eyestate >= 3 || lipstate >= 3 || (lipstate == 3 && soundBuffer !== void && soundBuffer.status == "play"));
+	}
+
+	// Start display update
+	function startUpdateHandler() {
+		System.removeContinuousHandler(updateHandler);
+		if (isNeedUpdate()) {
+			System.addContinuousHandler(updateHandler);
+			return true;
+		} else {
+			flipEyeNextTime = void;
+			flipLipNextTime = void;
+			return false;
+		}
+	}
+
+	/**
+	 * A subclass's own work for each frame of the update handler: 0 for nothing to draw, 1 to
+	 * draw the picture again, 2 to draw it again and place it again
+	 */
+	function updateExtra(tick) {
+		return 0;
+	}
+
+	/**
+	 * Whether the subclass has work for the update handler of its own (updateExtra)
+	 */
+	function isAnimating() {
+		return false;
+	}
+
+	/**
+	 * Stops the subclass's animation (the waits below end one when clicked)
+	 */
+	function stopAnim() {
+	}
+
+	// Commands for the eyes and the mouth
+	var eyeLipCommands = %[
+	eyeflipoff : function(param, elm) {setEyeState(0, elm);} incontextof this,
+	eyeopen    : function(param, elm) {setEyeState(1, elm);redraw=true;} incontextof this,
+	eyeclose   : function(param, elm) {setEyeState(2, elm);redraw=true;} incontextof this,
+	eyeflipon  : function(param, elm) {setEyeState(6, elm);} incontextof this,
+	eyeopento  : function(param, elm) {setEyeState(4, elm);} incontextof this,
+	eyecloseto : function(param, elm) {setEyeState(5, elm);} incontextof this,
+	eyeflip    : function(param, elm) {eyeflip=+param; setEyeState(1, elm);} incontextof this,
+	lipflipoff : function(param, elm) {setLipState(0, elm);} incontextof this,
+	lipopen    : function(param, elm) {setLipState(1, elm);redraw=true;} incontextof this,
+	lipclose   : function(param, elm) {setLipState(2, elm);redraw=true;} incontextof this,
+	lipflipon  : function(param, elm) {setLipState(6, elm);} incontextof this,
+	lipopento  : function(param, elm) {setLipState(4, elm);} incontextof this,
+	lipcloseto : function(param, elm) {setLipState(5, elm);} incontextof this,
+	lipflip    : function(param, elm) {lipflip=+param; setLipState(0, elm);} incontextof this,
+	fliptime : null,
+		];
+
+	/**
+	 * Runs an eye or mouth command: true when cmd is one
+	 */
+	function doEyeLipCommand(cmd, param, elm) {
+		var func;
+		if ((func = eyeLipCommands[cmd]) !== void) {
+			if (func != null) {
+				func(param, elm);
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Save processing: the eyes' and the mouth's states
+	 */
+	function onStore(f) {
+		super.onStore(f);
+		f.eyestate = eyestate if eyestate !== void && eyestate != 0;
+		f.lipstate = lipstate if lipstate !== void && lipstate != 0;
+		f.eyeflip = eyeflip if eyeflip !== void;
+		f.eyeflipTime = _eyeflipTime if _eyeflipTime !== void;
+		f.lipflip = lipflip if lipflip !== void;
+		f.lipflipTime = _lipflipTime if _lipflipTime !== void;
+	}
+
+	/**
+	 * Load processing for the eyes and the mouth, called by the subclass's onRestore once the
+	 * rest is back
+	 */
+	function restoreEyeLip(f) {
+		if (isShow()) {
+			eyeflip     = f.eyeflip;
+			eyeflipTime = f.eyeflipTime;
+			lipflip     = f.lipflip;
+			lipflipTime = f.lipflipTime;
+			setEyeState(f.eyestate !== void ? f.eyestate : 0);
+			setLipState(f.lipstate !== void ? f.lipstate : 0);
+			// blinking and lip-sync go on as they were (a load, going back, a seek's end): only a
+			// command or a voice started them before. Not in a World that draws nothing (the
+			// compiler's, snapshots) or while skipping unseen
+			startUpdateHandler() if !env.skipNoDisp;
+		}
+	}
+
+	function checkSync(elm) {
+		super.checkSync(elm);
+		syncCommand = true if (elm.eyeopento ||
+							   elm.eyecloseto ||
+							   elm.eyeflip ||
+							   elm.lipopento ||
+							   elm.lipcloseto ||
+							   elm.lipflip);
+	}
+
+	function sync(elm, skipMode) {
+		super.sync(...);
+		startUpdateHandler();
+		if (elm.eyeopento)  env.addFastTag("wcheopen", %[target:this]);
+		if (elm.eyecloseto) env.addFastTag("wcheclose", %[target:this]);
+		if (elm.eyeflip) env.addFastTag("wcheflip", %[target:this]);
+		if (elm.lipopento)  env.addFastTag("wchlopen", %[target:this]);
+		if (elm.lipcloseto) env.addFastTag("wchlclose", %[target:this]);
+		if (elm.lipflip) env.addFastTag("wchlflip", %[target:this]);
+	}
+};
+
+// -------------------------------------------------------------
+// Add functions to the world plugin: waits for the eyes, the mouth and an animation, which the
+// characters above queue (env.addFastTag)
+// -------------------------------------------------------------
+
+KAGWorldPlugin.addTag = function(kag, tagHandlers) {
+	tagHandlers["wchanim"]   = function(elm) { var ch = elm.target; return ch !== void ? ch.waitAnim(elm, this) : 0; } incontextof kag;
+	tagHandlers["wcheopen"]  = function(elm) { var ch = elm.target; return ch !== void ? ch.waitEyeOpen(elm, this) : 0; } incontextof kag;
+	tagHandlers["wchlopen"]  = function(elm) { var ch = elm.target; return ch !== void ? ch.waitLipOpen(elm, this) : 0; } incontextof kag;
+	tagHandlers["wcheclose"] = function(elm) { var ch = elm.target; return ch !== void ? ch.waitEyeClose(elm, this) : 0; } incontextof kag;
+	tagHandlers["wchlclose"] = function(elm) { var ch = elm.target;	return ch !== void ? ch.waitLipClose(elm, this) : 0; } incontextof kag;
+	tagHandlers["wcheflip"]  = function(elm) { var ch = elm.target; return ch !== void ? ch.waitEyeFlip(elm, this) : 0; } incontextof kag;
+	tagHandlers["wchlflip"]  = function(elm) { var ch = elm.target; return ch !== void ? ch.waitLipFlip(elm, this) : 0; } incontextof kag;
+};
