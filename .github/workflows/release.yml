@@ -54,6 +54,7 @@ jobs:
     uses: ./.github/workflows/platforms.yml
     with:
       ref: ${{ needs.release-commit.outputs.sha }}
+    secrets: inherit
     permissions:
       contents: write
       actions: write
