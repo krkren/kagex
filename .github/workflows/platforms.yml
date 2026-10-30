@@ -226,6 +226,8 @@ jobs:
           echo "LIVE2DLIB_FOLDER=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/driver" >> "$GITHUB_ENV"
           echo "LIVE2D_DRIVER_SOURCE=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/build/src/live2d" >> "$GITHUB_ENV"
           rm -rf "$RUNNER_TEMP/cubism-sdk"   # the private zips, after their extracts above
+      - name: Hiyori's model, as the other jobs' does
+        run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
       - name: kagex's plugins in the shared binary
         run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
       - name: Build the shared binary
