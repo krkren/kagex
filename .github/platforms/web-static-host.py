@@ -33,6 +33,12 @@ import shutil
 import sys
 from pathlib import Path
 
+# Live2D (web-plugins.py adds the plugin when the Live2D sources are fetched with build.py --web):
+# the Cubism Core's own wasm runs in the page, from the SDK for Web's script loaded before the
+# engine, and the engine's C++ calls it (tools/live2d/web/csm_web.cpp)
+LIVE2D_CORE_JS = "live2dcubismcore.min.js"
+LIVE2D_SRC = ("tools", "live2d", "build", "web", LIVE2D_CORE_JS)
+LIVE2D_TAG = '<script src="live2dcubismcore.min.js"></script>'
 COI_TAG = '<script src="coi-serviceworker.js"></script>'
 COI_CONFIG = ('<script>window.coi={doReload:function(){navigator.serviceWorker.ready'
               '.then(function(){window.location.reload();});}};</script>')
@@ -44,6 +50,7 @@ LEGACY = re.compile(r'<link rel=manifest [^>]*>|<link rel=apple-touch-icon [^>]*
                     r'<meta name=(?:theme-color|mobile-web-app-capable|apple-mobile-web-app-[a-z-]+) [^>]*>')
 BLOCK = re.compile(r"<!--kagex-head-->.*?<!--/kagex-head-->", re.S)
 SCRIPTS = ("webconfig.js", "krkrz.js", "kagex-web.js")
+# the Core before the engine's, when the page carries it (the script tag is added with the sidecar)
 
 
 def config(name, key, default):
@@ -125,6 +132,11 @@ def main():
         shutil.copyfile(site / "gamedata.krkrz_files.json", lst)
         print("copied gamedata.krkrz_files.json to gamedata/krkrz_files.json")
 
+    live2d = REPO / Path(*LIVE2D_SRC)
+    if live2d.exists():
+        shutil.copyfile(live2d, site / LIVE2D_CORE_JS)
+        print("copied %s: the Cubism Core, which the Live2D plugin calls from C++" % LIVE2D_CORE_JS)
+
     index = site / "index.html"
     html = index.read_text(encoding="utf-8")
     if "window.coi=" not in html:
@@ -159,7 +171,10 @@ def main():
     if not m:
         sys.exit("index.html doesn't load webconfig.js")
     html = html[:m.start()] + '<script src="kagex-web.js"></script>' + html[m.start():]
-    for s in SCRIPTS:
+    if (site / LIVE2D_CORE_JS).exists():
+        m = re.search(r'<script src=("|\')?krkrz\.js', html)
+        html = html[:m.start()] + LIVE2D_TAG + html[m.start():]
+    for s in SCRIPTS + ((LIVE2D_CORE_JS,) if (site / LIVE2D_CORE_JS).exists() else ()):
         html, n = re.subn(r'src=(["\']?)%s(?:\?v=[0-9a-f]*)?\1(?=[\s>])' % re.escape(s), 'src="%s?v=%s"' % (s, build), html)
         if n != 1:
             sys.exit("index.html: expected one script %s, found %d" % (s, n))

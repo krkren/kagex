@@ -12,3 +12,16 @@ index 3e1335e..7305eb4 100644
  #include <string>
  #include <CubismModelSettingJson.hpp>
  #include <Motion/CubismMotion.hpp>
+diff --git a/src/plive2d.cpp b/src/plive2d.cpp
+index 3372f39..37e5508 100644
+--- a/src/plive2d.cpp
++++ b/src/plive2d.cpp
+@@ -187,7 +187,7 @@ PLive2DDevice::PLive2DDevice(PLive2DRuntime *runtime, const ILive2DDevice::InitP
+ {
+   mRuntime->AddRef();
+ 
+-#ifdef USE_GLAD
++#if defined(USE_GLAD) && !defined(__EMSCRIPTEN__)
+   InitGlad();
+ #endif
+ 

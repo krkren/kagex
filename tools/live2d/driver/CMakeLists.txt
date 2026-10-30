@@ -78,6 +78,10 @@ if (IOS)
   endif()
 elseif (ANDROID)
   set(CORE_LIB ${CORE_PATH}/lib/android/${ANDROID_ABI}/libLive2DCubismCore.a)
+elseif (EMSCRIPTEN)
+  # nothing: the Core's wasm lives in live2dcubismcore.js the page loads before
+  # the engine, and kagex's web/csm_web.cpp implements this same C API over the
+  # Core's JavaScript class API, below, as the Live2DCubismCore target
 elseif (APPLE)
   if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64" OR (NOT CMAKE_OSX_ARCHITECTURES AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64"))
     set(CORE_LIB ${CORE_PATH}/lib/macos/x86_64/libLive2DCubismCore.a)
@@ -89,7 +93,7 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
 else()
   set(CORE_LIB ${CORE_PATH}/lib/linux/x86_64/libLive2DCubismCore.a)
 endif()
-if (NOT EXISTS ${CORE_LIB})
+if (NOT EMSCRIPTEN AND NOT EXISTS ${CORE_LIB})
   message(FATAL_ERROR "the Cubism Core has no library for this platform: ${CORE_LIB}")
 endif()
 
@@ -129,10 +133,18 @@ foreach(ZLIB_NG_TARGET zlibstatic zlib)
 endforeach()
 endif()
 
-add_library(Live2DCubismCore STATIC IMPORTED)
-set_target_properties(Live2DCubismCore PROPERTIES
-  IMPORTED_LOCATION ${CORE_LIB}
-  INTERFACE_INCLUDE_DIRECTORIES ${CORE_PATH}/include)
+if (EMSCRIPTEN)
+  add_library(Live2DCubismCore STATIC ${CMAKE_CURRENT_LIST_DIR}/../web/csm_web.cpp)
+  target_include_directories(Live2DCubismCore PUBLIC ${CORE_PATH}/include)
+  # emscripten::val's helpers need the embind library on the link line; --bind
+  # pulls the right variant (embind-mt here) as the driver's own link runs
+  target_link_options(Live2DCubismCore INTERFACE "SHELL:--bind")
+else()
+  add_library(Live2DCubismCore STATIC IMPORTED)
+  set_target_properties(Live2DCubismCore PROPERTIES
+    IMPORTED_LOCATION ${CORE_LIB}
+    INTERFACE_INCLUDE_DIRECTORIES ${CORE_PATH}/include)
+endif()
 
 # the Cubism Native Framework (the driver's fork) with its OpenGL ES 2 renderer
 set(FRAMEWORK_SOURCE OpenGL)
@@ -144,6 +156,11 @@ elseif (IOS)
   find_library(OPENGLES_LIBRARY OpenGLES REQUIRED)
   target_compile_definitions(Framework PUBLIC CSM_TARGET_IPHONE_ES2)
   target_link_libraries(Framework PUBLIC Live2DCubismCore ${OPENGLES_LIBRARY})
+elseif (EMSCRIPTEN)
+  # Emscripten ports' GLES 2 headers and the WebGL they turn into; nothing to
+  # link, the engine's binary resolves the calls with the plugin
+  target_compile_definitions(Framework PUBLIC CSM_TARGET_ANDROID_ES2)
+  target_link_libraries(Framework PUBLIC Live2DCubismCore)
 else()
   # GLAD's OpenGL ES 2 loader (the driver's copy; its CMakelists.txt is named so that only a
   # file system that ignores case finds it), with the EGL loader its own loader refers to.
@@ -162,6 +179,9 @@ endif()
 if (NOT TARGET ktx_read)
   set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
   set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
+  # KTX_FEATURE_JS defaults ON under Emscripten: it builds libktx's JavaScript
+  # bindings as emscripten executables, which the driver only wants to read from
+  set(KTX_FEATURE_JS OFF CACHE BOOL "" FORCE)
   set(LIBKTX_VERSION_READ_ONLY ON CACHE BOOL "" FORCE)
   set(LIBKTX_VERSION_FULL OFF CACHE BOOL "" FORCE)
   set(KTX_INSTALL OFF CACHE BOOL "" FORCE)
@@ -186,6 +206,10 @@ if (ANDROID OR IOS)
   if (IOS)
     target_compile_definitions(live2ddriver PUBLIC __IOS__)
   endif()
+elseif (EMSCRIPTEN)
+  # no GLAD: the Framework's GLES 2 calls link to Emscripten's own. The plugin still hands
+  # the device the engine's GLGetProcAddress, the same handle the other platforms pass
+  target_compile_definitions(live2ddriver PUBLIC __LINUX__ __EMSCRIPTEN__ USE_GLAD)
 else()
   target_sources(live2ddriver PRIVATE ${L2D}/src/ogl/glad.cpp)
   target_compile_definitions(live2ddriver PUBLIC USE_GLAD)

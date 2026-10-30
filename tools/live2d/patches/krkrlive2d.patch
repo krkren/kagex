@@ -1,3 +1,18 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7cf65e1..09a7987 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,3 +51,10 @@ krkrz_plugin(krkrlive2d
+     LIBRARIES
+         live2ddriver
+ )
++
++# web: the Core shim (tools/live2d/web/csm_web.cpp) calls the Web Core classes
++# through emscripten::val; --bind puts the matching embind runtime and JS
++# helpers on the link line of the engine binary this plugin joins
++if(EMSCRIPTEN)
++    target_link_options(krkrlive2d PUBLIC "SHELL:--bind")
++endif()
 diff --git a/src/Live2D.cpp b/src/Live2D.cpp
 index d599b1e..f957b34 100644
 --- a/src/Live2D.cpp
