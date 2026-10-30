@@ -18,7 +18,7 @@ set -u
 
 REPO=${REPO:-$GITHUB_REPOSITORY}
 marker=kagex-engine-build.json
-note() { echo "$*"; [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$*" >> "$GITHUB_STEP_SUMMARY"; }
+note() { echo "$*" >&2; [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$*" >> "$GITHUB_STEP_SUMMARY"; }
 
 case "$1" in
   find)
