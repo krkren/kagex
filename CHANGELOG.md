@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1
+
+### Added
+
+- **Live2D characters in web builds**: the browser engine draws World's Live2D characters like the desktop one does. Live2D's licence keeps the Cubism Core's own code out of kagex's packages, so on web the Core is `tools/live2d/web/csm_web.cpp`, a shim over the Web Core that comes in Live2D's Cubism SDK for the browser: `live2dcubismcore.min.js` runs as a script beside the engine (the page loads it before the engine, and `web-static-host.py` puts the tag in), and the engine talks to it as it does to the native Core, with the same `csm*` calls crossing the wasm/JS border (handles as emval ids, model data as byte copies). `tools/live2d/build.py --web` fetches both SDKs' zips from the private Cubism repository, builds krkrlive2d, the framework and the shim into the shared binary (the plugin's web fixes live in `tools/live2d/patches`), and stages the site with the Web Core beside it. The web job builds it and the smoke gate runs `--live2d required`: Hiyori's Animated Character demo plays in the browser, her picture, motions, faces, blinking and lip-sync, on the real plugin. A game's web engine gets the plugin the same way, with `--kit` readying its config, and as everywhere the Core itself is the game's to carry: `live2dcubismcore.min.js` beside the engine, from the game's own licensed copy of the SDK.
+
 ## 0.13.0
 
 ### Added
