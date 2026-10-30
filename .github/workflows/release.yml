@@ -104,6 +104,13 @@ jobs:
           echo "reuse=$tag" >> "$GITHUB_OUTPUT"
           if [ -n "$tag" ]; then
             bash ci/.github/release-build/engine-build.sh unpack "$tag" "$ASSET" stage
+            mkdir -p results
+            {
+              echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
+              echo "engine $ASSET of release $tag, not rebuilt: $ENGINE_REPO @ $ENGINE_SHA"
+              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA"
+              echo "windows $CONFIG, runner $ImageOS $ImageVersion"
+            } | tee results/versions.txt
           fi
 
       - name: Clone engine (recursive)
