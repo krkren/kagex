@@ -1,3 +1,47 @@
+diff --git a/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp b/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp
+index db1ca8e..516e32a 100644
+--- a/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp
++++ b/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp
+@@ -10,11 +10,17 @@
+ #include "CubismFramework.hpp"
+ 
+ #ifdef CSM_TARGET_ANDROID_ES2
++#ifdef __EMSCRIPTEN__
++#include <errno.h>
++#include <GLES2/gl2.h>
++#include <GLES2/gl2ext.h>
++#else
+ #include <jni.h>
+ #include <errno.h>
+ #include <GLES2/gl2.h>
+ #include <GLES2/gl2ext.h>
+ #endif
++#endif
+ 
+ #ifdef CSM_TARGET_IPHONE_ES2
+ #include <OpenGLES/ES2/gl.h>
+diff --git a/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp b/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp
+index 942b219..3884945 100644
+--- a/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp
++++ b/src/Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp
+@@ -19,11 +19,17 @@
+ #include "Type/csmMap.hpp"
+ 
+ #ifdef CSM_TARGET_ANDROID_ES2
++#ifdef __EMSCRIPTEN__
++#include <errno.h>
++#include <GLES2/gl2.h>
++#include <GLES2/gl2ext.h>
++#else
+ #include <jni.h>
+ #include <errno.h>
+ #include <GLES2/gl2.h>
+ #include <GLES2/gl2ext.h>
+ #endif
++#endif
+ 
+ #ifdef CSM_TARGET_IPHONE_ES2
+ #include <OpenGLES/ES2/gl.h>
 diff --git a/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp b/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp
 index 9ffcb13..4288327 100644
 --- a/src/Rendering/OpenGL/CubismShader_OpenGLES2.cpp
@@ -157,10 +201,28 @@ index 9ffcb13..4288327 100644
      GLuint blendTexture = 0;
  
 diff --git a/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp b/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
-index 0ff17df..797f82f 100644
+index 0ff17df..e116f78 100644
 --- a/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
 +++ b/src/Rendering/OpenGL/CubismShader_OpenGLES2.hpp
-@@ -197,6 +197,13 @@ private:
+@@ -12,11 +12,17 @@
+ #include "CubismOffscreenRenderTarget_OpenGLES2.hpp"
+ 
+ #ifdef CSM_TARGET_ANDROID_ES2
++#ifdef __EMSCRIPTEN__
++#include <errno.h>
++#include <GLES2/gl2.h>
++#include <GLES2/gl2ext.h>
++#else
+ #include <jni.h>
+ #include <errno.h>
+ #include <GLES2/gl2.h>
+ #include <GLES2/gl2ext.h>
+ #endif
++#endif
+ 
+ #ifdef CSM_TARGET_IPHONE_ES2
+ #include <OpenGLES/ES2/gl.h>
+@@ -197,6 +203,13 @@ private:
          GLint UniformScreenColorLocation;   ///< シェーダプログラムに渡す変数のアドレス(ScreenColor)
          GLint UnifromChannelFlagLocation;   ///< シェーダプログラムに渡す変数のアドレス(ChannelFlag)
          GLint UniformMosaicParamLocation;   ///< シェーダプログラムに渡す変数のアドレス(MosaicParam)
@@ -174,7 +236,7 @@ index 0ff17df..797f82f 100644
      };
      /**
       * @brief   CubismShaderSetを設定する
-@@ -216,6 +223,16 @@ private:
+@@ -216,6 +229,16 @@ private:
       */
      static csmInt32 GetShaderNamesBegin(const csmBlendMode blendMode);
  

@@ -201,6 +201,31 @@ jobs:
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+      - name: The Cubism Core and the Live2D sources
+        env:
+          SDK_TOKEN: ${{ secrets.CUBISM_SDK_TOKEN }}
+        run: |
+          [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
+          git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk" "$RUNNER_TEMP/cubism-sdk"
+          chmod -R u+w "$RUNNER_TEMP/cubism-sdk/.git" && rm -rf "$RUNNER_TEMP/cubism-sdk/.git"
+          # the native SDK's zip: its Core headers (and the version gate) go to the plugin's CMake;
+          # the Web SDK's zip holds the Core's own wasm, as the script the page runs before the engine
+          python3 - <<PY | tee results/sdk.txt
+          import hashlib
+          data = open("$RUNNER_TEMP/cubism-sdk/CubismSdkForNative-5-r.5.zip", "rb").read()
+          got = hashlib.sha256(data).hexdigest()
+          print("CubismSdkForNative-5-r.5.zip: SHA-256 %s" % got)
+          assert got == open("$RUNNER_TEMP/cubism-sdk/CubismSdkForNative-5-r.5.zip.sha256").read().split()[0]
+          PY
+          kirikiri/kagex/.github/platforms/run-logged.sh live2d python3 -B kirikiri/kagex/tools/live2d/build.py --web \
+            --sdk "$RUNNER_TEMP/cubism-sdk/CubismSdkForNative-5-r.5.zip" \
+            --web-sdk "$RUNNER_TEMP/cubism-sdk/CubismSdkForWeb-5-r.5.zip"
+          # the engine build: the plugin (driver/CMakeLists.txt) and its sources (krkrz_web's
+          # live2d-web-kit.cmake include_directories) read these
+          echo "CUBISM_SDK_CORE=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/build/sdk/CubismSdkForNative-5-r.5/Core" >> "$GITHUB_ENV"
+          echo "LIVE2DLIB_FOLDER=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/driver" >> "$GITHUB_ENV"
+          echo "LIVE2D_DRIVER_SOURCE=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/build/src/live2d" >> "$GITHUB_ENV"
+          rm -rf "$RUNNER_TEMP/cubism-sdk"   # the private zips, after their extracts above
       - name: kagex's plugins in the shared binary
         run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
       - name: Build the shared binary
@@ -242,7 +267,7 @@ jobs:
           (cd "$PROJECT_DIR/build/web/site" && exec python3 -m http.server 8100 > "$GITHUB_WORKSPACE/results/serve.log" 2>&1) &
           sleep 3
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep --effekseer required --vector required --zip required --clip required --encryption required || s=$?
+          kirikiri          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B "$PROJECT_DIR/tools/smoketest.py" --target web --url http://localhost:8100/ --channel chrome --keep --effekseer required --vector required --zip required --clip required --encryption required --live2d required || s=$?
           cp /tmp/kagex-smoke-*/console.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       - name: Publish results branch

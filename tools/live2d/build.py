@@ -145,6 +145,46 @@ def fetch(work, name):
     return path
 
 
+def web_setup(work, core, web_sdk):
+    """The web build has no library of the plugin to make: the engine (krkrz_web) compiles the
+    plugin's own C++ — kagex's patches applied (CMakeLists EMSCRIPTEN branches) — into its wasm,
+    exactly as Android and iOS kits do. The one thing here is the Cubism Core: the SDK for Web's
+    live2dcubismcore.min.js, a script the game's site loads before the engine (the engine's C++
+    calls into it: tools/live2d/web/csm_web.cpp), not a library that goes into any binary.
+    It lands at build/web/, where web-static-host.py stages it.
+    (--web-sdk is the SDK's zip; it's in the private Cubism repository, krkren/cubism-sdk,
+    beside the native one — its licence keeps both private, so neither ever leaves the runner
+    but in the sample packages and the engine binary, which holds no SDK but a shim's calls.)"""
+    if not web_sdk:
+        sys.exit("--web needs --web-sdk (the Cubism SDK for Web, zip or folder)")
+    web_sdk = os.path.abspath(os.path.expanduser(web_sdk))
+    dest = os.path.join(work, "web")
+    os.makedirs(dest, exist_ok=True)
+    if zipfile.is_zipfile(web_sdk):
+        with zipfile.ZipFile(web_sdk) as z:
+            for n in z.namelist():
+                if n.endswith("Core/live2dcubismcore.min.js"):
+                    with z.open(n) as src:
+                        with open(os.path.join(dest, "live2dcubismcore.min.js"), "wb") as out:
+                            shutil.copyfileobj(src, out)
+                    break
+            else:
+                sys.exit("%s has no Core/live2dcubismcore.min.js" % web_sdk)
+    elif os.path.isdir(web_sdk):
+        found = glob.glob(os.path.join(web_sdk, "**", "live2dcubismcore.min.js"), recursive=True)
+        if not found:
+            sys.exit("%s has no live2dcubismcore.min.js" % web_sdk)
+        shutil.copyfile(found[0], os.path.join(dest, "live2dcubismcore.min.js"))
+    else:
+        sys.exit("--web-sdk is neither the SDK's zip nor a folder: %s" % web_sdk)
+    js = os.path.join(dest, "live2dcubismcore.min.js")
+    print("the Cubism Core for the web at %s (%d bytes): the engine's wasm links the plugin "
+          "(web/csm_web.cpp speaks this Core's C API over its JavaScript class API), and the "
+          "site loads the script before the engine"
+          % (js, os.path.getsize(js)), flush=True)
+    return 0
+
+
 def kit(config, work, core, src):
     """Readies an Android or iOS kit (krkrz_android, krkrz_ios), which links every plugin into the
     engine, to build krkrlive2d with it: the folder that holds the plugin's checkout goes first in
@@ -260,6 +300,13 @@ def main():
                     help="Linux: build in the Steam Linux Runtime's SDK container (docker or podman), "
                          "so the plugin loads on every Linux the engines run on, Steam's runtime too")
     ap.add_argument("--in-steamrt", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--web", action="store_true",
+                    help="Emscripten: no build here — the engine builds the plugin into its wasm; "
+                         "fetches the sources (the CMake's EMSCRIPTEN branches take them) and "
+                         "stages the Web Core script from --web-sdk for the site")
+    ap.add_argument("--web-sdk", metavar="SDK",
+                    default=os.environ.get("CUBISM_SDK_WEB"),
+                    help="the Cubism SDK for Web (zip or folder): the live2dcubismcore.min.js the page loads")
     opts = ap.parse_args()
     if opts.steamrt:
         if not sys.platform.startswith("linux"):
@@ -282,6 +329,8 @@ def main():
     print("Cubism Core %s at %s" % (".".join(str(v) for v in version), core), flush=True)
 
     src = {name: fetch(work, name) for name in SOURCES}
+    if opts.web:
+        return web_setup(work, core, opts.web_sdk)
     if opts.kit:
         return kit(opts.kit, work, core, src)
 
