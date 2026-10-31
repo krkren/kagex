@@ -1,0 +1,141 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.17kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
+#2 DONE 0.9s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest@sha256:bb30053d3cd19d35c76ae69b2790dbaa1430448006f8240cb6d7e723f2d1940e
+#4 resolve registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest@sha256:bb30053d3cd19d35c76ae69b2790dbaa1430448006f8240cb6d7e723f2d1940e done
+#4 sha256:bb30053d3cd19d35c76ae69b2790dbaa1430448006f8240cb6d7e723f2d1940e 591B / 591B done
+#4 sha256:965c4747efbcbbe568c55b37566f2918d370e96dae68301f14b27059fb537e05 1.51kB / 1.51kB done
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 0B / 1.43GB 0.1s
+#4 sha256:8a7fdd3ed3ebb73bf5bbbae21d433191f3ac172c8efef8473f523cc4291a58dc 0B / 408B 0.1s
+#4 sha256:8a7fdd3ed3ebb73bf5bbbae21d433191f3ac172c8efef8473f523cc4291a58dc 408B / 408B 0.2s done
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 74.45MB / 1.43GB 1.4s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 150.99MB / 1.43GB 2.5s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 227.54MB / 1.43GB 3.7s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 306.18MB / 1.43GB 4.9s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 380.63MB / 1.43GB 6.0s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 458.23MB / 1.43GB 7.2s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 534.77MB / 1.43GB 8.4s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 612.37MB / 1.43GB 9.5s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 686.82MB / 1.43GB 10.6s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 772.80MB / 1.43GB 11.8s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 856.69MB / 1.43GB 13.3s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 934.28MB / 1.43GB 14.4s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.01GB / 1.43GB 15.5s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.09GB / 1.43GB 16.7s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.17GB / 1.43GB 17.8s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.24GB / 1.43GB 18.8s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.32GB / 1.43GB 19.9s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.39GB / 1.43GB 21.0s
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.43GB / 1.43GB 26.2s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f
+#4 sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 1.43GB / 1.43GB 26.9s done
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 5.1s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 10.2s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 15.2s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 20.3s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 25.3s
+#4 extracting sha256:1bebd51ca32bfa02f3880c9ffb166e1c32e76e84fa75aa2815e6bf7d48e6b63f 26.8s done
+#4 extracting sha256:8a7fdd3ed3ebb73bf5bbbae21d433191f3ac172c8efef8473f523cc4291a58dc
+#4 extracting sha256:8a7fdd3ed3ebb73bf5bbbae21d433191f3ac172c8efef8473f523cc4291a58dc done
+#4 DONE 55.2s
+
+#5 [2/5] RUN sed -i 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#'         /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null;     apt-get update && apt-get install -y --no-install-recommends nasm yasm smpq     && rm -rf /var/lib/apt/lists/*
+#5 0.670 Get:1 https://repo.steampowered.com/steamrt3/apt sniper InRelease [7927 B]
+#5 0.689 Get:2 https://repo.steampowered.com/steamrt3/apt sniper-runtime-overlay InRelease [7880 B]
+#5 0.783 Get:3 https://repo.steampowered.com/steamrt3/apt sniper/main Sources [48.5 kB]
+#5 0.899 Get:4 https://repo.steampowered.com/steamrt3/apt sniper/main amd64 Packages [206 kB]
+#5 0.899 Get:5 https://repo.steampowered.com/steamrt3/apt sniper/main i386 Packages [183 kB]
+#5 0.939 Get:6 https://repo.steampowered.com/steamrt3/apt sniper-runtime-overlay/main i386 Packages [363 B]
+#5 0.939 Get:7 https://repo.steampowered.com/steamrt3/apt sniper-runtime-overlay/main amd64 Packages [363 B]
+#5 1.244 Hit:8 http://archive.debian.org/debian bullseye InRelease
+#5 1.244 Hit:9 http://archive.debian.org/debian-debug bullseye-debug InRelease
+#5 1.244 Hit:10 http://archive.debian.org/debian-security bullseye-security InRelease
+#5 1.255 Hit:11 http://archive.debian.org/debian-security-debug bullseye-security-debug InRelease
+#5 1.554 Fetched 454 kB in 1s (464 kB/s)
+#5 1.554 Reading package lists...
+#5 2.472 Reading package lists...
+#5 3.350 Building dependency tree...
+#5 3.638 Reading state information...
+#5 3.829 The following additional packages will be installed:
+#5 3.830   libstorm9 libtomcrypt1 libtommath1
+#5 3.889 The following NEW packages will be installed:
+#5 3.890   libstorm9 libtomcrypt1 libtommath1 nasm smpq yasm
+#5 4.325 0 upgraded, 6 newly installed, 0 to remove and 0 not upgraded.
+#5 4.325 Need to get 1435 kB of archives.
+#5 4.325 After this operation, 7041 kB of additional disk space will be used.
+#5 4.325 Get:1 http://archive.debian.org/debian-security bullseye-security/main amd64 libtommath1 amd64 1.2.0-6+deb11u1 [66.4 kB]
+#5 4.358 Get:2 http://archive.debian.org/debian bullseye/main amd64 libtomcrypt1 amd64 1.18.2-5 [400 kB]
+#5 4.614 Get:3 http://archive.debian.org/debian bullseye/main amd64 libstorm9 amd64 9.22-1 [120 kB]
+#5 4.615 Get:4 http://archive.debian.org/debian bullseye/main amd64 nasm amd64 2.15.05-1 [421 kB]
+#5 4.627 Get:5 http://archive.debian.org/debian bullseye/main amd64 smpq amd64 1.6-2 [18.1 kB]
+#5 4.855 Get:6 http://archive.debian.org/debian bullseye/main amd64 yasm amd64 1.3.0-2.1 [409 kB]
+#5 5.058 debconf: unable to initialize frontend: Dialog
+#5 5.058 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#5 5.058 debconf: falling back to frontend: Readline
+#5 5.063 debconf: unable to initialize frontend: Readline
+#5 5.063 debconf: (This frontend requires a controlling tty.)
+#5 5.063 debconf: falling back to frontend: Teletype
+#5 5.066 dpkg-preconfigure: unable to re-open stdin: 
+#5 5.130 Fetched 1435 kB in 1s (1478 kB/s)
+#5 5.152 Selecting previously unselected package libtommath1:amd64.
+#5 5.152 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 60954 files and directories currently installed.)
+#5 5.202 Preparing to unpack .../0-libtommath1_1.2.0-6+deb11u1_amd64.deb ...
+#5 5.204 Unpacking libtommath1:amd64 (1.2.0-6+deb11u1) ...
+#5 5.224 Selecting previously unselected package libtomcrypt1:amd64.
+#5 5.228 Preparing to unpack .../1-libtomcrypt1_1.18.2-5_amd64.deb ...
+#5 5.229 Unpacking libtomcrypt1:amd64 (1.18.2-5) ...
+#5 5.270 Selecting previously unselected package libstorm9.
+#5 5.274 Preparing to unpack .../2-libstorm9_9.22-1_amd64.deb ...
+#5 5.275 Unpacking libstorm9 (9.22-1) ...
+#5 5.296 Selecting previously unselected package nasm.
+#5 5.300 Preparing to unpack .../3-nasm_2.15.05-1_amd64.deb ...
+#5 5.301 Unpacking nasm (2.15.05-1) ...
+#5 5.345 Selecting previously unselected package smpq.
+#5 5.350 Preparing to unpack .../4-smpq_1.6-2_amd64.deb ...
+#5 5.350 Unpacking smpq (1.6-2) ...
+#5 5.365 Selecting previously unselected package yasm.
+#5 5.369 Preparing to unpack .../5-yasm_1.3.0-2.1_amd64.deb ...
+#5 5.370 Unpacking yasm (1.3.0-2.1) ...
+#5 5.442 Setting up libtommath1:amd64 (1.2.0-6+deb11u1) ...
+#5 5.444 Setting up yasm (1.3.0-2.1) ...
+#5 5.446 Setting up nasm (2.15.05-1) ...
+#5 5.447 Setting up libtomcrypt1:amd64 (1.18.2-5) ...
+#5 5.449 Setting up libstorm9 (9.22-1) ...
+#5 5.450 Setting up smpq (1.6-2) ...
+#5 5.452 Processing triggers for man-db (2.9.4-2) ...
+#5 5.462 Processing triggers for libc-bin (2.31-13+deb11u14) ...
+#5 DONE 5.6s
+
+#6 [3/5] RUN mkdir -p /opt /usr/local/bin     && curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz"         | tar -xz -C /opt     && for f in /opt/cmake-3.31.7-linux-x86_64/bin/*; do         ln -sf "$f" /usr/local/bin/"$(basename "$f")"; done     && cmake --version
+#6 1.466 cmake version 3.31.7
+#6 1.466 
+#6 1.466 CMake suite maintained and supported by Kitware (kitware.com/cmake).
+#6 DONE 2.5s
+
+#7 [4/5] RUN git clone https://github.com/microsoft/vcpkg "/opt/vcpkg"     && "/opt/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+#7 0.100 Cloning into '/opt/vcpkg'...
+#7 11.45 Downloading vcpkg-glibc...
+#7 11.75 vcpkg package management program version 2026-10-29-139f2e53438b1529e178f6295bc563f4e0de734f
+#7 11.75 
+#7 11.75 See LICENSE.txt for license information.
+#7 DONE 12.4s
+
+#8 [5/5] WORKDIR /work
+#8 DONE 0.0s
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers 4.3s done
+#9 writing image sha256:a8b436102c0e25aaac10b0d85b1de22d11aa8a267e650971f355627f16055e85 done
+#9 naming to docker.io/library/deckbuild-sniper done
+#9 DONE 4.3s

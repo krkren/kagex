@@ -1,0 +1,39 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+libgl1-mesa-dri is already the newest version (25.2.8-0ubuntu0.24.04.4).
+libgl1-mesa-dri set to manually installed.
+The following NEW packages will be installed:
+  libegl-mesa0 libegl1 libgles2
+0 upgraded, 3 newly installed, 0 to remove and 1 not upgraded.
+Need to get 163 kB of archives.
+After this operation, 609 kB of additional disk space will be used.
+Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+Get:2 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libegl-mesa0 amd64 25.2.8-0ubuntu0.24.04.4 [117 kB]
+Get:3 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libegl1 amd64 1.7.0-1build1 [28.7 kB]
+Get:4 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libgles2 amd64 1.7.0-1build1 [17.1 kB]
+Fetched 163 kB in 0s (1160 kB/s)
+Selecting previously unselected package libegl-mesa0:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 215504 files and directories currently installed.)
+Preparing to unpack .../libegl-mesa0_25.2.8-0ubuntu0.24.04.4_amd64.deb ...
+Unpacking libegl-mesa0:amd64 (25.2.8-0ubuntu0.24.04.4) ...
+Selecting previously unselected package libegl1:amd64.
+Preparing to unpack .../libegl1_1.7.0-1build1_amd64.deb ...
+Unpacking libegl1:amd64 (1.7.0-1build1) ...
+Selecting previously unselected package libgles2:amd64.
+Preparing to unpack .../libgles2_1.7.0-1build1_amd64.deb ...
+Unpacking libgles2:amd64 (1.7.0-1build1) ...
+Setting up libegl-mesa0:amd64 (25.2.8-0ubuntu0.24.04.4) ...
+Setting up libgles2:amd64 (1.7.0-1build1) ...
+Setting up libegl1:amd64 (1.7.0-1build1) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
