@@ -23,6 +23,7 @@ python serve.py            # → http://localhost:8100/
 | webconfig.js | 起動時構成 (webbase / 起動引数) |
 | resource/ + resource.list | config.cf(文字コード) / messages / フォント |
 | gamedata/ | 案件データ (web:// でオンデマンド取得) |
+| gamedata/data.xp3 | delivery:"xp3" ソースの統合パック (このアーカイブ 1 個で起動) |
 | gamedata.krkrz_files.json | autopath 用ファイル一覧マニフェスト |
 | krkrz_prefetch.json | 起動後バックグラウンド先読みリスト (delivery:"prefetch" 指定時のみ) |
 
