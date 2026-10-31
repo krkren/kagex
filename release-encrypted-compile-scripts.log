@@ -1,0 +1,856 @@
+00:35:25 TVP Log system initialized with level: 2
+00:35:25 App name: SDL Application
+00:35:25 App version: <unspecified>
+00:35:25 App ID: <unspecified>
+00:35:25 SDL revision: SDL-3.4.0-release-3.4.0
+00:35:25 Found resource: SysInitScript.tjs
+00:35:25 Found resource: config.cf
+00:35:25 Found resource: elements_basic.ttf
+00:35:25 Found resource: gamecontrollerdb.txt
+00:35:25 Found resource: messages-chs.json
+00:35:25 Found resource: messages-cht.json
+00:35:25 Found resource: messages-en.json
+00:35:25 Found resource: messages.json
+00:35:25 Found resource: optiondesc-chs.json
+00:35:25 Found resource: optiondesc-cht.json
+00:35:25 Found resource: optiondesc-en.json
+00:35:25 Found resource: optiondesc.json
+00:35:25 Found resource: roboto-regular.ttf
+00:35:25 Total resources loaded: 13
+00:35:25 [stdapp.cpp:InitPath:262] appPath: /home/runner/work/kagex/kagex/cache/engines/local/kagex_engine_linux/
+00:35:25 ! [stdapp.cpp:InitPath:263] projectPath: /home/runner/work/kagex/kagex/game/release-encrypted/.work/compile/
+00:35:25 [stdapp.cpp:InitPath:298] pluginPath: /home/runner/work/kagex/kagex/cache/engines/local/kagex_engine_linux/plugin/
+00:35:25 [Application.cpp:LoadMessageResource:209] message file: resource://./messages.json (language tag: unknown)
+00:35:25 Audio stream created with channels: 2, sample rate: 48000
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/cache/engines/local/kagex_engine_linux/config.cf" failed (ignoring) : file not found.
+00:35:25 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/cache/engines/local/kagex_engine_linux/krkrz.cf" failed (ignoring) : file not found.
+00:35:25 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/game/release-encrypted/.work/krkrz.cfu" failed (ignoring) : file not found.
+00:35:25 ! (info) Data path : file://./home/runner/work/kagex/kagex/game/release-encrypted/.work/
+00:35:25 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+00:35:25 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x7f61ba694010
+00:35:25 [AudioStream.cpp:InitMiniAudio:138] miniaudio engine initialized: 2 channels, 48000 Hz
+00:35:25 ! Linux 6.8.0-1070-azure (Linux) 上で実行が開始されました
+00:35:25 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x7f6193fff010
+00:35:25 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x7f6183ffe010
+00:35:25 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:584] StorageCache: budget set to FileAllocator capacity=256MB
+00:35:25 ! (info) Total physical memory : 16764633088
+00:35:25 ! (info) Selected project directory : file://./home/runner/work/kagex/kagex/game/release-encrypted/.work/compile/
+00:35:25 ! 吉里吉里[きりきり] Z 実行コア/2.6.5.0 (Compiled on Oct 29 2026 22:56:08) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+00:35:25 ! バージョン情報の詳細は -about を付けて起動すると閲覧できます
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 system fonts: 20 name(s) registered (loaded on first use)
+00:35:25 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+00:35:25 [SysInitImpl.cpp:TVPAfterSystemInit:337] ImageCache enabled: limit=512MB (physmem=15988MB, source=BitmapPool)
+00:35:25 ! (info) Specified option(s) (earlier item has more priority) : -datapath=/home/runner/work/kagex/kagex/game/release-encrypted/.work/ -forcelog=clear -padinterval=70
+00:35:25 [SysInitImpl.cpp:TVPAfterSystemInit:445] CPU SIMD: MMX SSE SSE2 SSE3 SSSE3 SSE4.1 SSE4.2 AVX AVX2 FMA3 (TVPCPUType=0xffdbf120)
+00:35:25 ! (info) Auto Loading Static Plugin:xp3crypt
+00:35:25 xp3crypt
+00:35:25 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x7f6172ffc010
+00:35:25 [GlobalAllocStats.cpp:Initialize:526] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+00:35:25 (info) 起動スクリプト読込み中 : startup.tjs
+00:35:25 kagex-compile canary
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 1
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 文法エラーです(syntax error) at line 22
+00:35:25 kagex-compile 0
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 1
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 2
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 3
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 4
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 5
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 文法エラーです(syntax error) at line 13
+00:35:25 文法エラーです(syntax error) at line 18
+00:35:25 文法エラーです(syntax error) at line 20
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 120
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 168
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1230
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1246
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1253
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1258
+00:35:25 文法エラーです(syntax error) at line 1360
+00:35:25 kagex-compile 6
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 7
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 8
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 25
+00:35:25 文法エラーです(syntax error) at line 148
+00:35:25 kagex-compile 9
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 10
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 11
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 "..." は関数外では使えません at line 14
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 14
+00:35:25 文法エラーです(syntax error) at line 15
+00:35:25 文法エラーです(syntax error) at line 27
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 38
+00:35:25 文法エラーです(syntax error) at line 41
+00:35:25 文法エラーです(syntax error) at line 50
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 52
+00:35:25 文法エラーです(syntax error) at line 53
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 61
+00:35:25 文法エラーです(syntax error) at line 67
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 100
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 102
+00:35:25 文法エラーです(syntax error) at line 116
+00:35:25 kagex-compile 12
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 13
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 14
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 1
+00:35:25 文法エラーです(syntax error) at line 107
+00:35:25 kagex-compile 15
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 24
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 80
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 106
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 334
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 342
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 344
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 454
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 456
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 612
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 614
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 724
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 744
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 756
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 786
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 804
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 822
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 834
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 850
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 864
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 878
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 904
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 914
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 940
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 950
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 962
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 978
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 990
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1006
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1018
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1030
+00:35:25 文法エラーです(syntax error) at line 1154
+00:35:25 kagex-compile 16
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 31
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 71
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 195
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 213
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 229
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 241
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 255
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 269
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 283
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 301
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 315
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 339
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 347
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 359
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 375
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 387
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 403
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 415
+00:35:25 文法エラーです(syntax error) at line 537
+00:35:25 kagex-compile 17
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 18
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 17
+00:35:25 文法エラーです(syntax error) at line 40
+00:35:25 文法エラーです(syntax error) at line 71
+00:35:25 文法エラーです(syntax error) at line 122
+00:35:25 文法エラーです(syntax error) at line 158
+00:35:25 文法エラーです(syntax error) at line 164
+00:35:25 文法エラーです(syntax error) at line 190
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 205
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 210
+00:35:25 文法エラーです(syntax error) at line 339
+00:35:25 kagex-compile 19
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 7
+00:35:25 文法エラーです(syntax error) at line 265
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 287
+00:35:25 文法エラーです(syntax error) at line 445
+00:35:25 kagex-compile 20
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 15
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 22
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 27
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 35
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 39
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 54
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 61
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 81
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 83
+00:35:25 文法エラーです(syntax error) at line 87
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 103
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 110
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 121
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 126
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 131
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 137
+00:35:25 文法エラーです(syntax error) at line 154
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 168
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 175
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 192
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 197
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 202
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 208
+00:35:25 文法エラーです(syntax error) at line 217
+00:35:25 kagex-compile 21
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 19
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 79
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 135
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 521
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 535
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 653
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1013
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1069
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1083
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1099
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1299
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1447
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1459
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1475
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1487
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1499
+00:35:25 文法エラーです(syntax error) at line 1663
+00:35:25 kagex-compile 22
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (1ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 23
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 3
+00:35:25 文法エラーです(syntax error) at line 25
+00:35:25 文法エラーです(syntax error) at line 29
+00:35:25 kagex-compile 24
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 3
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 文法エラーです(syntax error) at line 213
+00:35:25 kagex-compile 25
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 25
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 36
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 63
+00:35:25 文法エラーです(syntax error) at line 119
+00:35:25 文法エラーです(syntax error) at line 127
+00:35:25 文法エラーです(syntax error) at line 129
+00:35:25 文法エラーです(syntax error) at line 357
+00:35:25 kagex-compile 26
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 27
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 3
+00:35:25 文法エラーです(syntax error) at line 3
+00:35:25 文法エラーです(syntax error) at line 15
+00:35:25 文法エラーです(syntax error) at line 21
+00:35:25 文法エラーです(syntax error) at line 189
+00:35:25 kagex-compile 28
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 29
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 3
+00:35:25 文法エラーです(syntax error) at line 9
+00:35:25 文法エラーです(syntax error) at line 235
+00:35:25 kagex-compile 30
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 1
+00:35:25 文法エラーです(syntax error) at line 511
+00:35:25 kagex-compile 31
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 7
+00:35:25 文法エラーです(syntax error) at line 37
+00:35:25 文法エラーです(syntax error) at line 51
+00:35:25 文法エラーです(syntax error) at line 61
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 107
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 127
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 157
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 163
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 201
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 225
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 273
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 315
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 465
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 511
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 629
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 641
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 659
+00:35:25 文法エラーです(syntax error) at line 681
+00:35:25 文法エラーです(syntax error) at line 705
+00:35:25 文法エラーです(syntax error) at line 715
+00:35:25 文法エラーです(syntax error) at line 731
+00:35:25 kagex-compile 32
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 7
+00:35:25 文法エラーです(syntax error) at line 21
+00:35:25 文法エラーです(syntax error) at line 31
+00:35:25 文法エラーです(syntax error) at line 41
+00:35:25 "..." は関数外では使えません at line 53
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 53
+00:35:25 文法エラーです(syntax error) at line 55
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 180
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 258
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1860
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1888
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1900
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 1910
+00:35:25 文法エラーです(syntax error) at line 2106
+00:35:25 kagex-compile 33
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 13
+00:35:25 文法エラーです(syntax error) at line 19
+00:35:25 文法エラーです(syntax error) at line 305
+00:35:25 kagex-compile 34
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 1
+00:35:25 文法エラーです(syntax error) at line 52
+00:35:25 kagex-compile 35
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 36
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 37
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 38
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 39
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 5
+00:35:25 文法エラーです(syntax error) at line 17
+00:35:25 文法エラーです(syntax error) at line 20
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 30
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 33
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 37
+00:35:25 文法エラーです(syntax error) at line 48
+00:35:25 kagex-compile 40
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 41
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 警告: 論理値が求められている場所で = 演算子が使用されています(== 演算子の間違いですか？代入した上でゼロと値を比較したい場合は、(A=B) != 0 の形式を使うことをお勧めします) at file://./home/runner/work/kagex/kagex/game/release-encrypted/.work/data/system/KAGEnvImage.tjs line 2509
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 警告: 論理値が求められている場所で = 演算子が使用されています(== 演算子の間違いですか？代入した上でゼロと値を比較したい場合は、(A=B) != 0 の形式を使うことをお勧めします) at file://./home/runner/work/kagex/kagex/game/release-encrypted/.work/compile/in/41.m.tjs line 2509
+00:35:25 kagex-compile 42
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 153
+00:35:25 kagex-compile 43
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 44
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 13
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 45
+00:35:25 文法エラーです(syntax error) at line 334
+00:35:25 kagex-compile 45
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 4
+00:35:25 文法エラーです(syntax error) at line 68
+00:35:25 kagex-compile 46
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 5
+00:35:25 文法エラーです(syntax error) at line 15
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 27
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 35
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 51
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 363
+00:35:25 文法エラーです(syntax error) at line 391
+00:35:25 kagex-compile 47
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 48
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 文法エラーです(syntax error) at line 76
+00:35:25 文法エラーです(syntax error) at line 81
+00:35:25 文法エラーです(syntax error) at line 86
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 141
+00:35:25 文法エラーです(syntax error) at line 142
+00:35:25 文法エラーです(syntax error) at line 160
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 166
+00:35:25 文法エラーです(syntax error) at line 167
+00:35:25 文法エラーです(syntax error) at line 174
+00:35:25 文法エラーです(syntax error) at line 178
+00:35:25 文法エラーです(syntax error) at line 182
+00:35:25 文法エラーです(syntax error) at line 184
+00:35:25 文法エラーです(syntax error) at line 187
+00:35:25 スーパークラスが存在しないかスーパークラスを特定できません at line 204
+00:35:25 文法エラーです(syntax error) at line 212
+00:35:25 文法エラーです(syntax error) at line 224
+00:35:25 文法エラーです(syntax error) at line 243
+00:35:25 文法エラーです(syntax error) at line 255
+00:35:25 文法エラーです(syntax error) at line 360
+00:35:25 kagex-compile 49
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 50
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 51
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:25 kagex-compile 52
+00:35:25 (info) 自動検索パステーブルを再構築しています ...
+00:35:25 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 9
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 55
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 101
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 115
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 157
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 173
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 195
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 215
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 245
+00:35:26 文法エラーです(syntax error) at line 249
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 395
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 459
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 495
+00:35:26 文法エラーです(syntax error) at line 909
+00:35:26 kagex-compile 53
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 54
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 10
+00:35:26 文法エラーです(syntax error) at line 39
+00:35:26 文法エラーです(syntax error) at line 41
+00:35:26 文法エラーです(syntax error) at line 64
+00:35:26 文法エラーです(syntax error) at line 66
+00:35:26 文法エラーです(syntax error) at line 74
+00:35:26 文法エラーです(syntax error) at line 276
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 292
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 311
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 339
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 345
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 366
+00:35:26 文法エラーです(syntax error) at line 391
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 400
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 454
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 455
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 470
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 513
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 518
+00:35:26 文法エラーです(syntax error) at line 519
+00:35:26 文法エラーです(syntax error) at line 609
+00:35:26 kagex-compile 55
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 23
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 51
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 69
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 79
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 91
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 101
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 137
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 151
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 161
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 187
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 199
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 205
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 303
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 309
+00:35:26 文法エラーです(syntax error) at line 333
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 365
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 379
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 389
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 429
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 439
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 449
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 461
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 511
+00:35:26 文法エラーです(syntax error) at line 523
+00:35:26 kagex-compile 56
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 7
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 31
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 195
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 199
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 245
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 269
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 393
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 469
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 501
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 537
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 539
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 669
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 671
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 679
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 799
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 801
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 837
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 839
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 845
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 847
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 909
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 911
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 955
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 965
+00:35:26 文法エラーです(syntax error) at line 1033
+00:35:26 kagex-compile 57
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 7
+00:35:26 kagex-compile 58
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 7
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 37
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 55
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 67
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 129
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 131
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 141
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 141
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 143
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 149
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 177
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 205
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 241
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 263
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 277
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 311
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 343
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 359
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 375
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 419
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 427
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 443
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 451
+00:35:26 文法エラーです(syntax error) at line 603
+00:35:26 kagex-compile 59
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 60
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 13
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 91
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 93
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 111
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 183
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 217
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 235
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 253
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 269
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 297
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 319
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 333
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 359
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 361
+00:35:26 文法エラーです(syntax error) at line 367
+00:35:26 文法エラーです(syntax error) at line 383
+00:35:26 文法エラーです(syntax error) at line 1601
+00:35:26 kagex-compile 61
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 62
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 11
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 46
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 63
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 109
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 283
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 292
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 296
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 302
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 310
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 374
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 386
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 403
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 413
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 419
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 426
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 433
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 440
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 448
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 454
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 462
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 468
+00:35:26 文法エラーです(syntax error) at line 666
+00:35:26 kagex-compile 63
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 28
+00:35:26 文法エラーです(syntax error) at line 957
+00:35:26 kagex-compile 64
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 8
+00:35:26 文法エラーです(syntax error) at line 220
+00:35:26 kagex-compile 65
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 66
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (1ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 15
+00:35:26 文法エラーです(syntax error) at line 203
+00:35:26 kagex-compile 67
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 4
+00:35:26 文法エラーです(syntax error) at line 89
+00:35:26 kagex-compile 68
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 69
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 16
+00:35:26 文法エラーです(syntax error) at line 41
+00:35:26 文法エラーです(syntax error) at line 54
+00:35:26 文法エラーです(syntax error) at line 64
+00:35:26 文法エラーです(syntax error) at line 86
+00:35:26 文法エラーです(syntax error) at line 102
+00:35:26 文法エラーです(syntax error) at line 107
+00:35:26 文法エラーです(syntax error) at line 122
+00:35:26 文法エラーです(syntax error) at line 128
+00:35:26 文法エラーです(syntax error) at line 144
+00:35:26 文法エラーです(syntax error) at line 196
+00:35:26 文法エラーです(syntax error) at line 207
+00:35:26 文法エラーです(syntax error) at line 222
+00:35:26 文法エラーです(syntax error) at line 277
+00:35:26 文法エラーです(syntax error) at line 316
+00:35:26 文法エラーです(syntax error) at line 326
+00:35:26 文法エラーです(syntax error) at line 336
+00:35:26 文法エラーです(syntax error) at line 358
+00:35:26 kagex-compile 70
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 文法エラーです(syntax error) at line 4
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 15
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 109
+00:35:26 スーパークラスが存在しないかスーパークラスを特定できません at line 172
+00:35:26 文法エラーです(syntax error) at line 181
+00:35:26 文法エラーです(syntax error) at line 206
+00:35:26 kagex-compile 71
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 72
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 73
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 74
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 75
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 76
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 kagex-compile 77
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 (info) 自動検索パステーブルを再構築しています ...
+00:35:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+00:35:26 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [FileAllocator] tag=FileCache alloc=2 free=0 current=188.33KB total_alloc=188.33KB total_freed=0B
+00:35:26 [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:326] MemoryAllocator [BitmapAllocator] clean (alloc=0 free=0 peak=0B)
+00:35:26 [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:326] MemoryAllocator [SoundAllocator] clean (alloc=4 free=4 peak=1.01MB)

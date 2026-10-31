@@ -1,0 +1,90 @@
+{
+ "check": {
+  "ran": true,
+  "started": true,
+  "errors": [],
+  "log": "/home/runner/work/kagex/kagex/game/release/test-run.log",
+  "ok": true,
+  "message": "The game started without script errors"
+ },
+ "ok": true,
+ "outputFolder": "/home/runner/work/kagex/kagex/game/release",
+ "outputs": [
+  {
+   "platform": "windows",
+   "title": "Windows",
+   "ok": true,
+   "folder": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-windows",
+   "package": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-windows.zip",
+   "bytes": 53023886
+  },
+  {
+   "platform": "linux",
+   "title": "Linux",
+   "ok": true,
+   "folder": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-linux",
+   "package": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-linux.tar.gz",
+   "bytes": 67469420
+  },
+  {
+   "platform": "steam",
+   "title": "Linux for Steam",
+   "ok": true,
+   "folder": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-steam",
+   "package": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-steam.tar.gz",
+   "bytes": 74996704
+  },
+  {
+   "platform": "web",
+   "title": "Web",
+   "ok": true,
+   "folder": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-web",
+   "package": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1-web.zip",
+   "bytes": 51102585
+  },
+  {
+   "platform": "android",
+   "title": "Android",
+   "ok": true,
+   "folder": "",
+   "package": "/home/runner/work/kagex/kagex/game/release/kagex-sample-0.13.1.apk",
+   "bytes": 119387606
+  }
+ ],
+ "notes": [
+  "3 files weren't converted because scripts name them with their extension (Media > Names with extensions)",
+  "6 files weren't converted because Effekseer effects use them",
+  "Scenarios: compiled, not encrypted (no key)",
+  "windows: the exe keeps the KAGEX icon and version info (they can be set when this tool runs on Windows)",
+  "android: signed with a debug key, for testing (Google Play needs your own key)"
+ ],
+ "media": {
+  "images": 475,
+  "sounds": 0,
+  "fromCache": 12,
+  "bytesBefore": 9148113,
+  "bytesAfter": 8625651,
+  "keptByReference": 3,
+  "keptForEffects": 6,
+  "rewrittenScripts": 0
+ },
+ "layered": {
+  "files": 1,
+  "pictures": 2,
+  "bytesBefore": 344793,
+  "bytesAfter": 60865
+ },
+ "scripts": {
+  "compiled": 78,
+  "expressions": 2,
+  "fixed": 23,
+  "truncates": true,
+  "kept": [],
+  "log": "/home/runner/work/kagex/kagex/game/release/compile-scripts.log"
+ },
+ "protection": {
+  "archive": "plain",
+  "scenes": "plain .scn",
+  "signed": false
+ }
+}

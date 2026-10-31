@@ -1,0 +1,129 @@
+Downloading https://services.gradle.org/distributions/gradle-9.3.1-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.3.1!
+
+Here are the highlights of this release:
+ - Test reporting improvements
+ - Error and warning improvements
+ - Build authoring improvements
+
+For more details see https://docs.gradle.org/9.3.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+[build-layout] BUILD_SYSTEM_DIR=/home/runner/work/kagex/kagex/game/release/.work/android
+[build-layout] PROJECT_DIR     =/home/runner/work/kagex/kagex/game/release/.work/android
+[playGames] disabled (from app-config.json cmake.plugins)
+[a11y] disabled (from app-config.json cmake.plugins)
+[playGames] disabled: stripped Play Games manifest entries -> /home/runner/work/kagex/kagex/game/release/.work/android/build/android/app/generated/manifest/AndroidManifest.xml
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+
+> Task :app:generateMyappCmake
+[generateMyappCmake] wrote /home/runner/work/kagex/kagex/game/release/.work/android/build/android/app/generated/cmake/myapp.cmake
+
+> Task :app:generatePadRes
+[generatePadRes] 0 fetch pack(s): []
+
+> Task :app:packAssets
+[assetPack] 16 file(s) total: 16 copied, 0 unchanged, 0 removed
+
+> Task :app:preBuild
+> Task :app:preReleaseDebugSignedBuild
+> Task :app:mergeReleaseDebugSignedJniLibFolders
+> Task :app:mergeReleaseDebugSignedNativeLibs
+> Task :app:checkReleaseDebugSignedDuplicateClasses
+
+> Task :app:stripReleaseDebugSignedDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libSDL3.so, libc++_shared.so, libkrkrz.so, libomp.so. Run with --info option to learn more.
+
+> Task :app:javaPreCompileReleaseDebugSigned
+> Task :app:checkReleaseDebugSignedAarMetadata
+> Task :app:generateReleaseDebugSignedResValues
+> Task :app:extractReleaseDebugSignedNativeSymbolTables
+> Task :app:mapReleaseDebugSignedSourceSetPaths
+> Task :app:mergeReleaseDebugSignedNativeDebugMetadata NO-SOURCE
+> Task :app:processReleaseDebugSignedNavigationResources
+> Task :app:compileReleaseDebugSignedNavigationResources
+> Task :app:generateReleaseDebugSignedResources
+> Task :app:packageReleaseDebugSignedResources
+> Task :app:mergeReleaseDebugSignedResources
+> Task :app:createReleaseDebugSignedCompatibleScreenManifests
+> Task :app:extractDeepLinksReleaseDebugSigned
+> Task :app:parseReleaseDebugSignedLocalResources
+> Task :app:processReleaseDebugSignedMainManifest
+> Task :app:processReleaseDebugSignedManifest
+> Task :app:processReleaseDebugSignedManifestForPackage
+> Task :app:mergeReleaseDebugSignedStartupProfile
+> Task :app:generateReleaseDebugSignedAssets UP-TO-DATE
+> Task :app:mergeReleaseDebugSignedArtProfile
+> Task :app:mergeReleaseDebugSignedAssets
+> Task :app:extractReleaseDebugSignedVersionControlInfo
+> Task :app:processReleaseDebugSignedJavaRes NO-SOURCE
+> Task :app:compressReleaseDebugSignedAssets
+> Task :app:processReleaseDebugSignedResources
+> Task :app:collectReleaseDebugSignedDependencies
+> Task :app:mergeReleaseDebugSignedJavaResource
+> Task :app:desugarReleaseDebugSignedFileDependencies
+
+> Task :app:compileReleaseDebugSignedJavaWithJavac
+Note: /home/runner/work/kagex/kagex/game/release/.work/android/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:dexBuilderReleaseDebugSigned
+> Task :app:mergeReleaseDebugSignedGlobalSynthetics
+> Task :app:sdkReleaseDebugSignedDependencyData
+> Task :app:validateSigningReleaseDebugSigned
+> Task :app:optimizeReleaseDebugSignedResources
+> Task :app:writeReleaseDebugSignedAppMetadata
+> Task :app:writeReleaseDebugSignedSigningConfigVersions
+> Task :app:mergeExtDexReleaseDebugSigned
+> Task :app:mergeDexReleaseDebugSigned
+> Task :app:compileReleaseDebugSignedArtProfile
+> Task :app:packageReleaseDebugSigned
+> Task :app:createReleaseDebugSignedApkListingFileRedirect
+> Task :app:assembleReleaseDebugSigned
+
+[Incubating] Problems report is available at: file:///home/runner/work/kagex/kagex/game/release/.work/android/build/android/root/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 49s
+45 actionable tasks: 45 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html
