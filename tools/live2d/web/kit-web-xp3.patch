@@ -1,0 +1,301 @@
+# krkrz_web kit patch: the web demo delivers its data as one gamedata/data.xp3.
+#
+# stage_web.py gains a delivery:"xp3" source mode (mirrored sources merge into a
+# single XP3 instead of loose files, and webconfig.js gets
+# KRKRZ_WEB_PROJECT_XP3), pre.js then opens the project as web://./data.xp3> --
+# the engine supports an archive project path natively (stdapp.cpp), and its
+# HttpStorageMedia existence check reads the manifest, which lists the archive.
+# xp3pack.py gains the library entry points and two fixes: the index name order
+# is the engine's UTF-16-le binary-search assumption, and a streamed index goes
+# back into the file being packed, not stdin.
+#
+# Upstream: ozerune1/krkrz_web branch web-xp3 (a PR against wamsoft/krkrz_web
+# replaces this file when it lands). Applied by platforms.yml right after the
+# kit clone; when the KRKRZ_WEB_SHA pin moves, rebase this patch and rerun the
+# web job.
+diff --git a/tools/stage_web.py b/tools/stage_web.py
+index 004ef8c..664a664 100644
+--- a/tools/stage_web.py
++++ b/tools/stage_web.py
+@@ -37,10 +37,14 @@
+         //       (mirror+相対→from と同じ / mirror+絶対→from の末尾フォルダ名 / flatten→ルート)。
+         //       gamedata ルートに置きたいときは "to": "" を明示する。
+         // include/exclude: Ant 風グロブ (**/*, *.xp3, **/*.bak)。既定 include=["**/*"]
+-        // delivery: "on-demand" (既定) / "prefetch"
++        // delivery: "on-demand" (既定) / "prefetch" / "xp3"
+         //       prefetch のソースのファイルは krkrz_prefetch.json に列挙され、
+         //       起動後に pre.js がバックグラウンドで fetch→OPFS 保存する
+         //       (初回プレイでもオンデマンド fetch がローカルヒットになる)。
++        //       xp3 のソースは個別配置せず gamedata/data.xp3 へ統合パック。
++        //       site はアーカイブ 1 個 (+必要ファイル) だけになり、起動引数は
++        //       web://./data.xp3> になる (pre.js の KRKRZ_WEB_PROJECT_XP3 経由、
++        //       webconfig.js に自動で立つ)。ミラー/フラット/単一ファイルいずれでも可。
+         //       同一ファイルが複数ソースに載る場合は先勝ち (delivery も先勝ち)。
+         //       動画 (VideoOverlay) は <video> の URL 直接ストリーミングで OPFS を
+         //       通らないため prefetch 対象にしないこと。
+@@ -83,6 +87,10 @@ WEB_ROOT = Path(__file__).resolve().parent.parent   # krkrz_web/
+ # Python str.lower() は全角英字等まで変換してしまうため使わない)
+ ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+ 
++# delivery:"xp3" ソースの統合パック先 (gamedata/ 直下。エンジンはここを
++# プロジェクト archive として web://./data.xp3> で開く)
++ARCHIVE_NAME = "data.xp3"
++
+ 
+ # ---------------------------------------------------------------------------
+ # 変数展開 (${PROJECT_DIR} / ${KRKRZ_BASE} / ${BUILD_SYSTEM_DIR} / ${ENVVAR}) と
+@@ -173,20 +181,22 @@ def remove_dest(dest: Path) -> None:
+ 
+ def build_expected(sources: list, base_folder, ctx: dict, label: str,
+                    lowercase: bool = False) -> tuple:
+-    """sources を評価し、({配置先相対パス: 元ファイル}, {prefetch 対象の配置先相対パス})
+-    を返す (krkrz_android runCopyRules の 1. と同じ。重複は先勝ち。delivery も先勝ち)。
++    """sources を評価し、({配置先相対パス: 元ファイル}, {prefetch 対象の配置先相対パス},
++    {xp3 パック対象の配置先相対パス: 元ファイル}) を返す (krkrz_android runCopyRules の
++    1. と同じ。重複は先勝ち。delivery も先勝ち)。
+     lowercase=True なら配置先パスを ASCII 小文字化する (case-sensitive な静的
+     ホスティング向け。リクエスト URL は常に小文字なので実ファイル名が一致する)。"""
+     expected: dict = {}
+     prefetch: set = set()
++    xp3: dict = {}
+     dups: list = []
+     for src in sources:
+         typ = str(src.get("type", ""))
+         if typ not in ("mirror", "flatten"):
+             raise SystemExit(f"[{label}] unknown type '{typ}' (mirror/flatten)")
+         delivery = str(src.get("delivery", "on-demand"))
+-        if delivery not in ("on-demand", "prefetch"):
+-            raise SystemExit(f"[{label}] unknown delivery '{delivery}' (on-demand/prefetch)")
++        if delivery not in ("on-demand", "prefetch", "xp3"):
++            raise SystemExit(f"[{label}] unknown delivery '{delivery}' (on-demand/prefetch/xp3)")
+         raw_from = src.get("from")
+         if not raw_from:
+             raise SystemExit(f"[{label}] 'from' is required")
+@@ -231,37 +241,41 @@ def build_expected(sources: list, base_folder, ctx: dict, label: str,
+                 dest_rel = dest_rel.lstrip("/")
+                 if lowercase:
+                     dest_rel = dest_rel.translate(ASCII_LOWER)
+-                if dest_rel in expected:
++                if dest_rel in expected or dest_rel in xp3:
+                     # 重なりは仕様 (先勝ちオーバーレイ。prefetch ソース + 全体 mirror 等)。
+                     # 大量に出るためまとめて報告する
+                     dups.append(dest_rel)
+                     continue
+-                expected[dest_rel] = fp
+-                if delivery == "prefetch":
+-                    prefetch.add(dest_rel)
++                if delivery == "xp3":
++                    xp3[dest_rel] = fp
++                else:
++                    expected[dest_rel] = fp
++                    if delivery == "prefetch":
++                        prefetch.add(dest_rel)
+     if dups:
+         head = ", ".join(dups[:3])
+         more = f" ほか {len(dups) - 3} 件" if len(dups) > 3 else ""
+         print(f"[{label}] {len(dups)} duplicate(s) skipped (first wins): {head}{more}",
+               file=sys.stderr)
+-    return expected, prefetch
++    return expected, prefetch, xp3
+ 
+ 
+ def run_copy_rules(sources: list, out_dir: Path, base_folder, ctx: dict,
+                    label: str, stats: dict, lowercase: bool = False) -> tuple:
+-    """sources を out_dir にマージ配置する (古いファイルは剪定)。
++    """sources を out_dir にマージ配置する (古いファイルは剪定)し、delivery:"xp3"
++    のソースは (gamedata/) 直下の data.xp3 へ統合パックする。
+     krkrz_android runCopyRules の Python 版。転送はハードリンク自動判定。
+-    (expected, prefetch 対象相対パス集合) を返す。"""
++    (expected, prefetch 対象相対パス集合, xp3 パック対象) を返す。"""
+     out_dir = Path(out_dir)
+     out_dir.mkdir(parents=True, exist_ok=True)
+-    expected, prefetch = build_expected(sources, base_folder, ctx, label, lowercase)
++    expected, prefetch, xp3 = build_expected(sources, base_folder, ctx, label, lowercase)
+ 
+-    # 期待に無い古いファイルを除去
++    # 期待に無い古いファイルを除去 (アーカイブ data.xp3 は毎回 PACK で作り直すので残す)
+     for root, _dirs, files in os.walk(out_dir):
+         for name in files:
+             fp = Path(root) / name
+             rel = fp.relative_to(out_dir).as_posix()
+-            if rel not in expected:
++            if rel not in expected and rel != ARCHIVE_NAME:
+                 fp.unlink()
+                 stats["removed"] += 1
+     # 空になったディレクトリを下から除去
+@@ -281,7 +295,18 @@ def run_copy_rules(sources: list, out_dir: Path, base_folder, ctx: dict,
+                 stats["unchanged"] += 1
+                 continue
+         link_or_copy(src, dest, stats)
+-    return expected, prefetch
++
++    if xp3:
++        # delivery:"xp3" ソースは個別配置せず 1 本の data.xp3 に統合パック。
++        # 索引の並び順はエンジン前提 (UTF-16 昇順) に xp3pack 側が揃える。
++        arc = out_dir / ARCHIVE_NAME
++        if str(WEB_ROOT / "tools") not in sys.path:
++            sys.path.insert(0, str(WEB_ROOT / "tools"))
++        from xp3pack import pack_map
++        pack_map([(rel, str(p)) for rel, p in xp3.items()], str(arc), quiet=True)
++        print(f"[{label}] xp3 pack = {len(xp3)} file(s) -> {arc.name} "
++              f"({arc.stat().st_size} bytes)")
++    return expected, prefetch, xp3
+ 
+ 
+ # ---------------------------------------------------------------------------
+@@ -474,6 +499,7 @@ python serve.py            # → http://localhost:{port}/
+ | webconfig.js | 起動時構成 (webbase / 起動引数) |
+ | resource/ + resource.list | config.cf(文字コード) / messages / フォント |
+ | gamedata/ | 案件データ (web:// でオンデマンド取得) |
++| gamedata/data.xp3 | delivery:"xp3" ソースの統合パック (このアーカイブ 1 個で起動) |
+ | gamedata.krkrz_files.json | autopath 用ファイル一覧マニフェスト |
+ | krkrz_prefetch.json | 起動後バックグラウンド先読みリスト (delivery:"prefetch" 指定時のみ) |
+ 
+@@ -580,24 +606,27 @@ def main() -> int:
+                                         encoding="utf-8")
+ 
+     # 3) webconfig.js サイドカー (案件の webbase/args)
++    has_xp3 = any(str(s.get("delivery", "on-demand")) == "xp3" for s in ap_sources)
+     webconfig = (
+         "// 生成物 (stage_web.py): 案件の起動時構成。shell が krkrz.js より先に読む\n"
+         "var KRKRZ_WEB_DATA_XP3 = false;\n"
+         "var KRKRZ_WEB_DATA_PRELOAD = false;\n"
++        f"var KRKRZ_WEB_PROJECT_XP3 = {'true' if has_xp3 else 'false'};\n"
+         "var KRKRZ_WEB_RESOURCE_BASE = \"resource/\";\n"
+         f"var KRKRZ_WEB_DEFAULT_WEBBASE = {js_str('gamedata/')};\n"
+         f"var KRKRZ_WEB_DEFAULT_ARGS = {js_str(default_args)};\n"
+     )
+     (site / "webconfig.js").write_text(webconfig, encoding="utf-8")
+ 
+-    # 4) gamedata (web:// 配信元) を sources マージで組む (ハードリンク自動判定)
++    # 4) gamedata (web:// 配信元) を sources マージで組む (ハードリンク自動判定)。
++    #    delivery:"xp3" 指定分はここで data.xp3 に統合パックされる
+     gamedata = site / "gamedata"
+     # 旧構成が junction ならまず安全に外す (rmtree で target を消さないため)
+     if gamedata.is_symlink():
+         remove_dest(gamedata)
+     print(f"[stage_web] gamedata を構成中 (sources マージ, ハードリンク自動判定)…")
+-    _expected, prefetch_rels = run_copy_rules(ap_sources, gamedata, ap_base, ctx,
+-                                              "gamedata", xfer, lowercase)
++    _expected, prefetch_rels, _xp3 = run_copy_rules(ap_sources, gamedata, ap_base, ctx,
++                                                    "gamedata", xfer, lowercase)
+ 
+     # 5) web:// autopath マニフェスト (組み上がった gamedata から生成)
+     manifest = site / "gamedata.krkrz_files.json"
+diff --git a/tools/xp3pack.py b/tools/xp3pack.py
+index 0fc1e8f..3f54c23 100644
+--- a/tools/xp3pack.py
++++ b/tools/xp3pack.py
+@@ -53,14 +53,25 @@ def collect_files(srcdir: str):
+     return result
+ 
+ 
+-def cmd_pack(args) -> int:
+-    files = collect_files(args.srcdir)
++def _sort_key(rel: str) -> bytes:
++    # エンジンの索引名は UTF-16 で比較される (XP3Archive::GetFirstIndexStartsWith は
++    # 索引が「UTF-16 の昇順」である前提で範囲を張る)。Python のコードポイント順は
++    # UTF-16 のサロート順と非 BMP で食い違うので、utf-16-le のバイト列で揃える。
++    return rel.encode('utf-16-le')
++
++
++def pack_map(files, output: str, no_compress: bool = False,
++             protect: bool = False, quiet: bool = False) -> int:
++    """[(rel, fullpath)] を XP3 にパックして output に書く。
++    索引はエンジンと同じ UTF-16 昇順で並べる (前提並び順が違うと in-archive 検索が
++    壊れる)。成否で 0、ファイル 0 で 1 を返す。"""
++    files = sorted(files, key=lambda t: _sort_key(t[0]))
+     if not files:
+-        print(f'error: no files under {args.srcdir}', file=sys.stderr)
++        if not quiet:
++            print('error: no files to pack', file=sys.stderr)
+         return 1
+-
+     index = bytearray()
+-    with open(args.output, 'wb') as f:
++    with open(output, 'wb') as f:
+         f.write(XP3_MAGIC)
+         f.write(struct.pack('<Q', 0))  # インデックスオフセット (後で書き戻す)
+ 
+@@ -72,7 +83,7 @@ def cmd_pack(args) -> int:
+             stored = data
+             seg_flags = 0  # raw
+             ext = os.path.splitext(rel)[1].lower()
+-            if not args.no_compress and data and ext not in STORE_EXTS:
++            if not no_compress and data and ext not in STORE_EXTS:
+                 comp = zlib.compress(data, 9)
+                 if len(comp) < len(data):
+                     stored = comp
+@@ -83,7 +94,7 @@ def cmd_pack(args) -> int:
+ 
+             name16 = rel.encode('utf-16-le')
+             info = struct.pack('<IQQH',
+-                               0x80000000 if args.protect else 0,
++                               0x80000000 if protect else 0,
+                                len(data), len(stored),
+                                len(name16) // 2) + name16
+             segm = struct.pack('<IQQQ', seg_flags, start, len(data), len(stored))
+@@ -92,8 +103,9 @@ def cmd_pack(args) -> int:
+                            chunk(b'info', info) +
+                            chunk(b'segm', segm) +
+                            chunk(b'adlr', adlr))
+-            mark = 'z' if seg_flags else '-'
+-            print(f'  {mark} {rel} ({len(data)} -> {len(stored)})')
++            if not quiet:
++                mark = 'z' if seg_flags else '-'
++                print(f'  {mark} {rel} ({len(data)} -> {len(stored)})')
+ 
+         index_ofs = f.tell()
+         zindex = zlib.compress(bytes(index), 9)
+@@ -102,11 +114,17 @@ def cmd_pack(args) -> int:
+         f.write(zindex)
+         f.seek(11)
+         f.write(struct.pack('<Q', index_ofs))
+-
+-    print(f'packed {len(files)} file(s) -> {args.output}')
++    if not quiet:
++        print(f'packed {len(files)} file(s) -> {output}')
+     return 0
+ 
+ 
++def cmd_pack(args) -> int:
++    rc = pack_map(collect_files(args.srcdir), args.output,
++                  args.no_compress, args.protect)
++    return rc
++
++
+ def read_index(path: str):
+     """(entries, f) を返す。entry = (name, org_size, segments, adler)"""
+     f = open(path, 'rb')
+diff --git a/web/pre.js b/web/pre.js
+index 1f2df23..1a09614 100644
+--- a/web/pre.js
++++ b/web/pre.js
+@@ -526,6 +526,10 @@ if (typeof window !== 'undefined') {
+     }
+     var args = ['-drawdevice=' + dd, '-drawthread=1'];
+     var xp3 = (typeof KRKRZ_WEB_DATA_XP3 !== 'undefined') && KRKRZ_WEB_DATA_XP3;
++    // KRKRZ_WEB_PROJECT_XP3 (webconfig.js; stage_web の delivery:"xp3" で立つ):
++    // 案件データが gamedata/data.xp3 1 個にパック済み。個別配信 (バラファイル)
++    // 構成の KRKRZ_WEB_DATA_XP3 とは違い、こちらはプロジェクト側の話。
++    var projxp3 = (typeof KRKRZ_WEB_PROJECT_XP3 !== 'undefined') && KRKRZ_WEB_PROJECT_XP3;
+     var params = (typeof window !== 'undefined')
+         ? new URLSearchParams(window.location.search) : new URLSearchParams();
+ 
+@@ -559,7 +563,15 @@ if (typeof window !== 'undefined') {
+     }
+ 
+     if (params.get('webproject') === '1' || (defbase && !sample)) {
+-        args.push('web://./');
++        // ?webproject=1 は強制的にバラ置き起動 (オンデマンド配信テスト用)。
++        // パック構成 (projxp3) は既定でアーカイブ直下をプロジェクトとして開く
++        // (エンジン側が "arc>" 指定のプロジェクト_path をサポート、内部ファイルは
++        // アーカイブ検索へ)。web://./ → web://./data.xp3>/ の順で startup.tjs 等解決。
++        if (params.get('webproject') === '1' || !projxp3) {
++            args.push('web://./');
++        } else {
++            args.push('web://./data.xp3>');
++        }
+     } else if (sample) {
+         // 相対パス指定はエンジン側で appPath (=/) 前置で解決される
+         args.push(xp3 ? ('data.xp3>' + sample + '/') : ('data/' + sample + '/'));

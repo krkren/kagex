@@ -194,6 +194,11 @@ jobs:
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
       - name: Clone the engine and krkrz_web
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
+      - name: Patch the web kit (the demo ships as one data.xp3)
+        # delivery:"xp3" (stage_web) + the archive-root project path (pre.js): see the patch
+        # header. applied on the pinned kit commit; recheck it when KRKRZ_WEB_SHA moves.
+        # the patch path is absolute: git -C resolves its file argument from the kit dir
+        run: git -C kirikiri/krkrz_web apply "$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/web/kit-web-xp3.patch"
       - name: Set up emsdk and vcpkg
         run: |
           git clone -q https://github.com/emscripten-core/emsdk.git "$EMSDK"
