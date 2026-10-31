@@ -6,6 +6,10 @@
 
 - **The web demo delivers its data as one archive**: the browser demo's game data ships as `gamedata/data.xp3`, not as loose files: the page makes one request for that instead of a few hundred for the game's parts, the engine's file list lists the archive, and it opens the archive as the web project's own path, `web://./data.xp3>`, which the engine already supports as a project path (desktop engines read their own `data.xp3` the same way). The archive is built and opened by the web kit: `stage_web.py` gains a `delivery: "xp3"` source mode, where a `web-config.json` source goes into that one archive instead of loose files, `pre.js` boots a site packed that way, and `xp3pack.py` learned to stream an archive's index back into the file being packed and orders names the UTF-16 way the engine's archive reader looks them up. The changes ride into the web job as `tools/live2d/web/kit-web-xp3.patch`, applied right after the kit is cloned at its pinned commit; when `KRKRZ_WEB_SHA` moves, rebase the patch onto the newer kit and let the web job run it. The job's smoke test and the Pages check go through the same scenarios as always, packed; the site's `?webbase` and offline-cache paths are unchanged. A game's `web-config.json` sets `delivery: "xp3"` on its sources to ship the same way.
 
+### Fixed
+
+- **kagex-release stamps the Live2D engine's web sidecar**: the release tool's web build stamps the site's script tags with its own build id, but a Live2D engine's (0.13.1+) `live2dcubismcore.min.js` tag was left with the id it carried in the engine package, and the tag sits between `webconfig.js` and `krkrz.js`, which tripped the release tool's own web smoke check (the 0.13.2 release cut ran it against 0.13.1's engine). The sidecar now gets stamped with the rest, and the check tolerates its tag in that position.
+
 ## 0.13.1
 
 ### Added
