@@ -1,0 +1,282 @@
+-- Running vcpkg install
+Detecting compiler hash for triplet arm64-osx...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+The following packages will be built and installed:
+    drlibs:arm64-osx@2026-03-03
+    libebur128:arm64-osx@1.2.6#3
+    libjpeg-turbo:arm64-osx@3.2.0#1
+    libogg:arm64-osx@1.3.6#1
+    libopusenc:arm64-osx@0.3
+    libpng:arm64-osx@1.6.59
+  * libspng:arm64-osx@0.7.4#1
+    libtomcrypt:arm64-osx@1.18.2#4
+    libtommath:arm64-osx@1.3.0#3
+    libvorbis:arm64-osx@1.3.7#4
+    opus:arm64-osx@1.6.1
+    opusfile:arm64-osx@0.12+20221121#1
+  * vcpkg-cmake:arm64-osx@2025-08-07
+  * vcpkg-cmake-config:arm64-osx@2026-07-21
+    zlib:arm64-osx@1.3.2#2
+Additional packages (*) will be modified to complete this operation.
+Restored 15 package(s) from /Users/runner/work/kagex/kagex/vcpkg-archives in 242 ms. Use --debug to see more details.
+Installing 1/15 drlibs:arm64-osx@2026-03-03...
+drlibs:arm64-osx@2026-03-03 package ABI: 79584c1e69e45c9054d3e3d2938aea6b145d06cae16f5598ca79a8da159ef2da
+Elapsed time to handle drlibs:arm64-osx: 2.59 ms
+Installing 2/15 vcpkg-cmake:arm64-osx@2025-08-07...
+vcpkg-cmake:arm64-osx@2025-08-07 package ABI: 7250be847ad3557506c15d0dbfe5effaa06422d7cd98c6958907f0a46f81fc36
+Elapsed time to handle vcpkg-cmake:arm64-osx: 4.21 ms
+Installing 3/15 libebur128:arm64-osx@1.2.6#3...
+libebur128:arm64-osx@1.2.6#3 package ABI: bb19d2b69bc32de5c756e3e499d568d90dbffea65f7a6ca42c180fb23bdaa370
+Elapsed time to handle libebur128:arm64-osx: 2.46 ms
+Installing 4/15 vcpkg-cmake-config:arm64-osx@2026-07-21...
+vcpkg-cmake-config:arm64-osx@2026-07-21 package ABI: af56cabcaa0d4c43f39dc2106ecc7f9d09747fea35dce809dbc02195a3dc9e1c
+Elapsed time to handle vcpkg-cmake-config:arm64-osx: 1.41 ms
+Installing 5/15 zlib:arm64-osx@1.3.2#2...
+zlib:arm64-osx@1.3.2#2 package ABI: d25ef9f39a35bac65a14ae33d4d9c8f57636821f5ece97a460957930d68e924a
+Elapsed time to handle zlib:arm64-osx: 3.14 ms
+Installing 6/15 libspng:arm64-osx@0.7.4#1...
+libspng:arm64-osx@0.7.4#1 package ABI: f4f560be38467e9531ea268859e99d83346c1bd77a35137e4d4f0b2c44abfcf7
+Elapsed time to handle libspng:arm64-osx: 2.23 ms
+Installing 7/15 libjpeg-turbo:arm64-osx@3.2.0#1...
+libjpeg-turbo:arm64-osx@3.2.0#1 package ABI: dddded867457bbd1af4983c3332cf1aaebbaceea348440f9fdb84238cfe027f9
+Elapsed time to handle libjpeg-turbo:arm64-osx: 8.96 ms
+Installing 8/15 libogg:arm64-osx@1.3.6#1...
+libogg:arm64-osx@1.3.6#1 package ABI: 9f3bfe899f50457dd71e135fd80411087e1eab228efa6b099a19fe335ab7cbc7
+Elapsed time to handle libogg:arm64-osx: 6.5 ms
+Installing 9/15 opus:arm64-osx@1.6.1...
+opus:arm64-osx@1.6.1 package ABI: f95d45347684f10bf4f1262835baee3a89bb768303f3f15c74afb7843e7dd26a
+Elapsed time to handle opus:arm64-osx: 7.35 ms
+Installing 10/15 libopusenc:arm64-osx@0.3...
+libopusenc:arm64-osx@0.3 package ABI: c805b98ee63154c4f78e3c103f85dce76f5ba4b935d96769e754213f6be8c96e
+Elapsed time to handle libopusenc:arm64-osx: 1.81 ms
+Installing 11/15 libpng:arm64-osx@1.6.59...
+libpng:arm64-osx@1.6.59 package ABI: f29b91ba1690277f1d85733663d1335b7d573262a699851a094ad9822930c519
+Elapsed time to handle libpng:arm64-osx: 6.42 ms
+Installing 12/15 libtommath:arm64-osx@1.3.0#3...
+libtommath:arm64-osx@1.3.0#3 package ABI: 6af4f61e62c9ca71b4986dcf08f5488640ad9632791b759a974b15b685ce5dd5
+Elapsed time to handle libtommath:arm64-osx: 3.64 ms
+Installing 13/15 libtomcrypt:arm64-osx@1.18.2#4...
+libtomcrypt:arm64-osx@1.18.2#4 package ABI: 5d6217a199e70b098853982f0183319606e090f633abc971bcad8b8b9c275a35
+Elapsed time to handle libtomcrypt:arm64-osx: 4.69 ms
+Installing 14/15 libvorbis:arm64-osx@1.3.7#4...
+libvorbis:arm64-osx@1.3.7#4 package ABI: 1450603f0e6bf136309be163f445638c361f636c1939cc09d98a3a8fd5e39749
+Elapsed time to handle libvorbis:arm64-osx: 6.98 ms
+Installing 15/15 opusfile:arm64-osx@0.12+20221121#1...
+opusfile:arm64-osx@0.12+20221121#1 package ABI: d9bf725b37f95e3cd84d85d54f17557c0619d21a6465add2cb7d2e88a9b1d4fa
+Elapsed time to handle opusfile:arm64-osx: 5.34 ms
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Some packages did not declare an SPDX license. Check the `copyright` file for each package for more information about their licensing.
+Packages installed in this vcpkg installation declare the following licenses:
+(Unlicense OR MIT-0)
+BSD-2-Clause
+BSD-3-Clause
+IJG
+MIT
+Zlib
+libpng-2.0
+drlibs is header-only and can be used from CMake via:
+
+  find_path(DRLIBS_INCLUDE_DIRS "dr_flac.h")
+  target_include_directories(main PRIVATE ${DRLIBS_INCLUDE_DIRS})
+
+libebur128 provides pkg-config modules:
+
+  # EBU R 128 standard for loudness normalisation
+  libebur128
+
+zlib is compatible with built-in CMake targets:
+
+  find_package(ZLIB REQUIRED)
+  target_link_libraries(main PRIVATE ZLIB::ZLIB)
+
+zlib provides pkg-config modules:
+
+  # zlib compression library
+  zlib
+
+libjpeg-turbo is compatible with built-in implementation-agnostic CMake targets:
+
+  find_package(JPEG REQUIRED)
+  target_link_libraries(main PRIVATE JPEG::JPEG)
+
+libjpeg-turbo provides CMake targets for the TurboJPEG C API:
+
+  find_package(libjpeg-turbo CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>)
+
+libjpeg-turbo provides pkg-config modules:
+
+  # A SIMD-accelerated JPEG codec that provides the libjpeg API
+  libjpeg
+
+  # A SIMD-accelerated JPEG codec that provides the TurboJPEG API
+  libturbojpeg
+
+libogg provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Ogg CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Ogg::ogg)
+
+libogg provides pkg-config modules:
+
+  # ogg is a library for manipulating ogg bitstreams
+  ogg
+
+opus provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Opus CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Opus::opus)
+
+opus provides pkg-config modules:
+
+  # Opus IETF audio codec ( build)
+  opus
+
+libpng provides CMake targets:
+
+  find_package(PNG REQUIRED)
+  target_link_libraries(main PRIVATE PNG::PNG)
+
+libtommath provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libtommath CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libtommath)
+
+libtommath provides pkg-config modules:
+
+  # public domain library for manipulating large integer numbers
+  libtommath
+
+The package libvorbis provides CMake targets:
+
+    # Vorbis reference encoder and decoder, low-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbis)
+
+    # Audio stream decoding and basic manipulation, high-level API
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisfile)
+
+    # Convenience API for setting up an encoding environment
+    find_package(Vorbis CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package opusfile provides CMake targets:
+
+    find_package(OpusFile CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE OpusFile::opusfile)
+
+    # To use the opusurl API
+    target_link_libraries(main PRIVATE OpusFile::opusurl)
+
+All requested installations completed successfully in: 69.9 ms
+-- Running vcpkg install - done
+-- The C compiler identification is AppleClang 17.0.0.17000013
+-- The CXX compiler identification is AppleClang 17.0.0.17000013
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- krkrz_dev: not found (KRKRZ_BASE が未設定。本体ソースを使うツールはまだ無いので続行)
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+CMake Warning (author) at /opt/homebrew/share/cmake/Modules/FetchContent.cmake:1386 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  /Users/runner/work/kagex/kagex/krkrz_tools/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Found ZLIB: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libz.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libz.a (found version "1.3.2")
+-- Found PNG: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libpng16.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libpng16d.a (found version "1.6.59")
+-- Found JPEG: optimized;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/lib/libjpeg.a;debug;/Users/runner/work/kagex/kagex/kagex/tools/release/build/macos/vcpkg_installed/arm64-osx/debug/lib/libjpeg.a (found version "62")
+-- xp3crypt: /Users/runner/work/kagex/kagex/xp3crypt (archive encryption on)
+-- kagex-release: encrypting scenarios with scnfile from /Users/runner/work/kagex/kagex/scnfile
+-- Looking for unistd.h
+-- Looking for unistd.h - found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for sys/stat.h
+-- Looking for sys/stat.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for snprintf
+-- Looking for snprintf - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of long
+-- Check size of long - done
+-- Check size of long long
+-- Check size of long long - done
+-- Looking for include file ctype.h
+-- Looking for include file ctype.h - found
+-- Looking for include file dirent.h
+-- Looking for include file dirent.h - found
+-- Looking for include file fcntl.h
+-- Looking for include file fcntl.h - found
+-- Looking for include file inttypes.h
+-- Looking for include file inttypes.h - found
+-- Looking for include file io.h
+-- Looking for include file io.h - not found
+-- Looking for include file memory.h
+-- Looking for include file memory.h - found
+-- Looking for include file setjmp.h
+-- Looking for include file setjmp.h - found
+-- Looking for include file stdlib.h
+-- Looking for include file stdlib.h - found
+-- Looking for include file strings.h
+-- Looking for include file strings.h - found
+-- Looking for include file string.h
+-- Looking for include file string.h - found
+-- Looking for include file sys/mman.h
+-- Looking for include file sys/mman.h - found
+-- Looking for include file sys/times.h
+-- Looking for include file sys/times.h - found
+-- Looking for include file windows.h
+-- Looking for include file windows.h - not found
+-- Looking for getenv
+-- Looking for getenv - found
+-- Looking for getpagesize
+-- Looking for getpagesize - found
+-- Looking for mmap
+-- Looking for mmap - found
+-- Looking for opendir
+-- Looking for opendir - found
+-- Looking for setjmp
+-- Looking for setjmp - found
+-- Looking for sqrt
+-- Looking for sqrt - found
+-- Looking for strstr
+-- Looking for strstr - found
+-- Looking for iconv_open in iconv
+-- Looking for iconv_open in iconv - found
+-- Looking for sqrt in m
+-- Looking for sqrt in m - found
+-- Check size of char
+-- Check size of char - done
+-- Check size of int
+-- Check size of int - done
+-- Check size of short
+-- Check size of short - done
+-- Check size of size_t
+-- Check size of size_t - done
+-- Configuring done (25.6s)
+-- Generating done (0.9s)
+-- Build files have been written to: /Users/runner/work/kagex/kagex/kagex/tools/release/build/macos
