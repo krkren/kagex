@@ -34,6 +34,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     outputs:
       page_url: ${{ steps.deploy.outputs.page_url }}
+      build_id: ${{ steps.staging.outputs.build }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +50,7 @@ jobs:
       - id: pages
         uses: actions/configure-pages@v5
       - name: Download the site
+        id: staging
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
@@ -62,6 +64,7 @@ jobs:
           # the home-screen manifest and icons, kagex-web.js and the build id (each for zips
           # built before it had them), and link previews with this site's address
           python3 .github/platforms/web-static-host.py site --url "$SITE_URL"
+          echo "build=$(python3 -c 'import json;print(json.load(open("site/kagex-build.json"))["build"])')" >> "$GITHUB_OUTPUT"
           # serve.py is for running the site locally
           rm -f site/serve.py
           du -sh site
@@ -85,6 +88,27 @@ jobs:
             tools/smoketest.py
             .github/platforms
           sparse-checkout-cone-mode: false
+      - name: Wait until Pages serves this run's build
+        timeout-minutes: 10
+        env:
+          URL: ${{ needs.deploy.outputs.page_url }}
+          EXPECT: ${{ needs.deploy.outputs.build_id }}
+        run: |
+          # deploy-pages reports success before the CDN has switched over (and Pages caches
+          # a page for a good ten minutes): the fresh files and the old ones can be served
+          # side by side, a krkrz.js that doesn't match its wasm, the smoke dying on that
+          # mismatch. wait the address out, it's what kagex-build.json is stamped with
+          for i in $(seq 1 60); do
+            got=$(curl -s "$URL/kagex-build.json" | grep -o '[0-9a-f]\{16\}')
+            if [ "$got" = "$EXPECT" ]; then
+              echo "Pages serving build $got"
+              exit 0
+            fi
+            [ -n "$got" ] && echo "still serving ${got:-none} (want $EXPECT)"
+            sleep 10
+          done
+          echo "Pages never served build $EXPECT"
+          exit 1
       - name: Smoke test of the live site
         timeout-minutes: 15
         env:
