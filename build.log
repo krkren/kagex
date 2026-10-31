@@ -1,0 +1,580 @@
+Cubism Core 6.0.1 at D:\a\_temp\live2d\sdk\CubismSdkForNative-5-r.5\Core
+fetching krkrlive2d at 8edeb8e
++ git -C D:\a\_temp\live2d\src\krkrlive2d apply --whitespace=nowarn D:\a\kagex\kagex\tools\live2d\patches\krkrlive2d.patch
+fetching live2d at 58c4c66
+fetching live2d's submodules
++ git -c core.autocrlf=false -C D:\a\_temp\live2d\src\live2d submodule update --init --force --depth 1
+Submodule 'CubismNativeFramework' (https://github.com/wtnbgo/CubismNativeFramework.git) registered for path 'external/CubismNativeFramework'
+Submodule 'CubismNativeSamples' (https://github.com/wtnbgo/CubismNativeSamples.git) registered for path 'external/CubismNativeSamples'
+Submodule 'KTX-Software' (https://github.com/wtnbgo/KTX-Software.git) registered for path 'external/KTX-Software'
+Cloning into 'D:/a/_temp/live2d/src/live2d/external/CubismNativeFramework'...
+Cloning into 'D:/a/_temp/live2d/src/live2d/external/CubismNativeSamples'...
+Cloning into 'D:/a/_temp/live2d/src/live2d/external/KTX-Software'...
+Submodule path 'external/CubismNativeFramework': checked out 'a1bd031712ae29c9f1a7b72e0dcebaf514c3a6f9'
+From https://github.com/wtnbgo/CubismNativeSamples
+ * branch            f4be00e964bd54aefa95e95ee33e03af243284e5 -> FETCH_HEAD
+Submodule path 'external/CubismNativeSamples': checked out 'f4be00e964bd54aefa95e95ee33e03af243284e5'
+From https://github.com/wtnbgo/KTX-Software
+ * branch            7c771f80dabf8c0411f07ceee248ed1a31a15f65 -> FETCH_HEAD
+Submodule path 'external/KTX-Software': checked out '7c771f80dabf8c0411f07ceee248ed1a31a15f65'
++ git -C D:\a\_temp\live2d\src\live2d apply --whitespace=nowarn D:\a\kagex\kagex\tools\live2d\patches\live2d.patch
++ git -C D:\a\_temp\live2d\src\live2d\external/CubismNativeFramework apply --whitespace=nowarn D:\a\kagex\kagex\tools\live2d\patches\live2d-CubismNativeFramework.patch
+fetching tp_stub at 35ef31a
+fetching ncbind at 256502b
++ cmake -S D:\a\_temp\live2d\src\krkrlive2d -B D:\a\_temp\live2d\build-x64 -DCMAKE_BUILD_TYPE=Release -DKRKRZ_VARIANT=SDL -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DTPSTUB_DIR=D:\a\_temp\live2d\src\tp_stub -DNCBIND_DIR=D:\a\_temp\live2d\src\ncbind -DLIVE2DLIB_FOLDER=D:\a\kagex\kagex\tools\live2d\driver -DLIVE2D_DRIVER_SOURCE=D:\a\_temp\live2d\src\live2d -DCUBISM_SDK_CORE=D:\a\_temp\live2d\sdk\CubismSdkForNative-5-r.5\Core -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug> -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+-- The C compiler identification is MSVC 19.44.35229.0
+-- The CXX compiler identification is MSVC 19.44.35229.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- live2d driver: using local source at D:/a/kagex/kagex/tools/live2d/driver
+-- Cubism Core 06.00.0001: D:/a/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core
+-- Using CMake version 3.31.6
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for inttypes.h
+-- Looking for inttypes.h - found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of off64_t
+-- Check size of off64_t - failed
+-- Looking for fseeko
+-- Looking for fseeko - not found
+-- Looking for symlink
+-- Looking for symlink - not found
+-- Looking for readlink
+-- Looking for readlink - not found
+-- Fetching zlib https://github.com/zlib-ng/zlib-ng 2.2.4
+CMake Warning (dev) at C:/Program Files/CMake/share/cmake-3.31/Modules/FetchContent.cmake:1953 (message):
+  Calling FetchContent_Populate(zlib) is deprecated, call
+  FetchContent_MakeAvailable(zlib) instead.  Policy CMP0169 can be set to OLD
+  to allow FetchContent_Populate(zlib) to be called directly for now, but the
+  ability to call it with declared details will be removed completely in a
+  future version.
+Call Stack (most recent call first):
+  D:/a/_temp/live2d/build-x64/_deps/minizip-ng-src/cmake/clone-repo.cmake:29 (FetchContent_Populate)
+  D:/a/_temp/live2d/build-x64/_deps/minizip-ng-src/CMakeLists.txt:226 (clone_repo)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Using CMake version 3.31.6
+-- ZLIB_HEADER_VERSION: 1.3.1
+-- ZLIBNG_HEADER_VERSION: 2.2.4
+-- Arch detected: 'x86_64'
+-- Basearch of 'x86_64' has been detected as: 'x86'
+-- Looking for arm_acle.h
+-- Looking for arm_acle.h - not found
+-- Looking for sys/auxv.h
+-- Looking for sys/auxv.h - not found
+-- Looking for sys/sdt.h
+-- Looking for sys/sdt.h - not found
+-- Looking for unistd.h
+-- Looking for unistd.h - not found
+-- Looking for linux/auxvec.h
+-- Looking for linux/auxvec.h - not found
+-- Check size of _off64_t
+-- Check size of _off64_t - failed
+-- Check size of __off64_t
+-- Check size of __off64_t - failed
+-- Looking for strerror
+-- Looking for strerror - found
+-- Looking for posix_memalign
+-- Looking for posix_memalign - not found
+-- Looking for aligned_alloc
+-- Looking for aligned_alloc - not found
+-- Performing Test HAVE_NO_INTERPOSITION
+-- Performing Test HAVE_NO_INTERPOSITION - Failed
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_HIDDEN - Failed
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL
+-- Performing Test HAVE_ATTRIBUTE_VISIBILITY_INTERNAL - Failed
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED
+-- Performing Test HAVE_ATTRIBUTE_ALIGNED - Failed
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED
+-- Performing Test HAVE_BUILTIN_ASSUME_ALIGNED - Success
+-- Performing Test HAVE_BUILTIN_CTZ
+-- Performing Test HAVE_BUILTIN_CTZ - Failed
+-- Performing Test HAVE_BUILTIN_CTZLL
+-- Performing Test HAVE_BUILTIN_CTZLL - Failed
+-- Performing Test HAVE_PTRDIFF_T
+-- Performing Test HAVE_PTRDIFF_T - Success
+-- Performing Test HAVE_XSAVE_INTRIN
+-- Performing Test HAVE_XSAVE_INTRIN - Success
+-- Performing Test HAVE_SSE2_INTRIN
+-- Performing Test HAVE_SSE2_INTRIN - Success
+-- Performing Test HAVE_SSSE3_INTRIN
+-- Performing Test HAVE_SSSE3_INTRIN - Success
+-- Performing Test HAVE_SSE42_INTRIN
+-- Performing Test HAVE_SSE42_INTRIN - Success
+-- Performing Test HAVE_PCLMULQDQ_INTRIN
+-- Performing Test HAVE_PCLMULQDQ_INTRIN - Success
+-- Performing Test HAVE_AVX2_INTRIN
+-- Performing Test HAVE_AVX2_INTRIN - Success
+-- Performing Test HAVE_AVX512_INTRIN
+-- Performing Test HAVE_AVX512_INTRIN - Success
+-- Performing Test HAVE_AVX512VNNI_INTRIN
+-- Performing Test HAVE_AVX512VNNI_INTRIN - Success
+-- Performing Test HAVE_VPCLMULQDQ_INTRIN
+-- Performing Test HAVE_VPCLMULQDQ_INTRIN - Success
+-- Architecture-specific source files: arch/x86/x86_features.c;arch/x86/chunkset_sse2.c;arch/x86/compare256_sse2.c;arch/x86/slide_hash_sse2.c;arch/x86/adler32_ssse3.c;arch/x86/chunkset_ssse3.c;arch/x86/adler32_sse42.c;arch/x86/crc32_pclmulqdq.c;arch/x86/slide_hash_avx2.c;arch/x86/chunkset_avx2.c;arch/x86/compare256_avx2.c;arch/x86/adler32_avx2.c;arch/x86/adler32_avx512.c;arch/x86/chunkset_avx512.c;arch/x86/adler32_avx512_vnni.c;arch/x86/crc32_vpclmulqdq.c
+-- The following features have been enabled:
+
+ * CMAKE_BUILD_TYPE, Build type: Release (selected)
+ * XSAVE, Support XSAVE intrinsics using ""
+ * SSSE3_ADLER32, Support SSSE3-accelerated adler32, using ""
+ * SSE42_CRC, Support SSE4.2 optimized adler32 hash generation, using ""
+ * PCLMUL_CRC, Support CRC hash generation using PCLMULQDQ, using " "
+ * AVX2_SLIDEHASH, Support AVX2 optimized slide_hash, using "/arch:AVX2"
+ * AVX2_CHUNKSET, Support AVX2 optimized chunkset, using "/arch:AVX2"
+ * AVX2_COMPARE256, Support AVX2 optimized compare256, using "/arch:AVX2"
+ * AVX2_ADLER32, Support AVX2-accelerated adler32, using "/arch:AVX2"
+ * AVX512_ADLER32, Support AVX512-accelerated adler32, using "/arch:AVX512"
+ * AVX512_CHUNKSET, Support AVX512 optimized chunkset, using "/arch:AVX512"
+ * AVX512VNNI_ADLER32, Support AVX512VNNI adler32, using "/arch:AVX512"
+ * VPCLMUL_CRC, Support CRC hash generation using VPCLMULQDQ, using "  /arch:AVX512"
+ * WITH_GZFILEOP, Compile with support for gzFile related functions
+ * ZLIBNG_ENABLE_TESTS, Test zlib-ng specific API
+ * WITH_SANITIZER, Enable sanitizer support
+ * WITH_OPTIM, Build with optimisation
+ * WITH_NEW_STRATEGIES, Use new strategies
+ * WITH_RUNTIME_CPU_DETECTION, Build with runtime CPU detection
+ * WITH_AVX2, Build with AVX2
+ * WITH_AVX512, Build with AVX512
+ * WITH_AVX512VNNI, Build with AVX512 VNNI
+ * WITH_SSE2, Build with SSE2
+ * WITH_SSSE3, Build with SSSE3
+ * WITH_SSE42, Build with SSE42
+ * WITH_PCLMULQDQ, Build with PCLMULQDQ
+ * WITH_VPCLMULQDQ, Build with VPCLMULQDQ
+
+-- The following OPTIONAL packages have been found:
+
+ * Git
+
+-- The following features have been disabled:
+
+ * ZLIB_SYMBOL_PREFIX, Publicly exported symbols DO NOT have a custom prefix
+ * ZLIB_COMPAT, Compile with zlib compatible API
+ * ZLIB_ENABLE_TESTS, Build test binaries
+ * WITH_GTEST, Build gtest_zlib
+ * WITH_FUZZERS, Build test/fuzz
+ * WITH_BENCHMARKS, Build test/benchmarks
+ * WITH_BENCHMARK_APPS, Build application benchmarks
+ * WITH_NATIVE_INSTRUCTIONS, Instruct the compiler to use the full instruction set on this host (gcc/clang -march=native)
+ * WITH_MAINTAINER_WARNINGS, Build with project maintainer warnings
+ * WITH_CODE_COVERAGE, Enable code coverage reporting
+ * WITH_INFLATE_STRICT, Build with strict inflate distance checking
+ * WITH_INFLATE_ALLOW_INVALID_DIST, Build with zero fill for inflate invalid distances
+ * INSTALL_UTILS, Copy minigzip and minideflate during install
+
+-- ZLIB repository detected as ZLIB-NG
+-- The following features have been enabled:
+
+ * CMAKE_BUILD_TYPE, Build type: Release (selected)
+ * XSAVE, Support XSAVE intrinsics using ""
+ * SSSE3_ADLER32, Support SSSE3-accelerated adler32, using ""
+ * SSE42_CRC, Support SSE4.2 optimized adler32 hash generation, using ""
+ * PCLMUL_CRC, Support CRC hash generation using PCLMULQDQ, using " "
+ * AVX2_SLIDEHASH, Support AVX2 optimized slide_hash, using "/arch:AVX2"
+ * AVX2_CHUNKSET, Support AVX2 optimized chunkset, using "/arch:AVX2"
+ * AVX2_COMPARE256, Support AVX2 optimized compare256, using "/arch:AVX2"
+ * AVX2_ADLER32, Support AVX2-accelerated adler32, using "/arch:AVX2"
+ * AVX512_ADLER32, Support AVX512-accelerated adler32, using "/arch:AVX512"
+ * AVX512_CHUNKSET, Support AVX512 optimized chunkset, using "/arch:AVX512"
+ * AVX512VNNI_ADLER32, Support AVX512VNNI adler32, using "/arch:AVX512"
+ * VPCLMUL_CRC, Support CRC hash generation using VPCLMULQDQ, using "  /arch:AVX512"
+ * WITH_GZFILEOP, Compile with support for gzFile related functions
+ * ZLIBNG_ENABLE_TESTS, Test zlib-ng specific API
+ * WITH_SANITIZER, Enable sanitizer support
+ * WITH_OPTIM, Build with optimisation
+ * WITH_NEW_STRATEGIES, Use new strategies
+ * WITH_RUNTIME_CPU_DETECTION, Build with runtime CPU detection
+ * WITH_AVX2, Build with AVX2
+ * WITH_AVX512, Build with AVX512
+ * WITH_AVX512VNNI, Build with AVX512 VNNI
+ * WITH_SSE2, Build with SSE2
+ * WITH_SSSE3, Build with SSSE3
+ * WITH_SSE42, Build with SSE42
+ * WITH_PCLMULQDQ, Build with PCLMULQDQ
+ * WITH_VPCLMULQDQ, Build with VPCLMULQDQ
+ * MZ_ZLIB, Enables ZLIB compression
+ * MZ_FETCH_LIBS, Enables fetching third-party libraries if not found
+ * MZ_FORCE_FETCH_LIBS, Enables fetching third-party libraries always
+ * MZ_DECOMPRESS_ONLY, Only support decompression
+
+-- The following features have been disabled:
+
+ * ZLIB_SYMBOL_PREFIX, Publicly exported symbols DO NOT have a custom prefix
+ * ZLIB_COMPAT, Compile with zlib compatible API
+ * ZLIB_ENABLE_TESTS, Build test binaries
+ * WITH_GTEST, Build gtest_zlib
+ * WITH_FUZZERS, Build test/fuzz
+ * WITH_BENCHMARKS, Build test/benchmarks
+ * WITH_BENCHMARK_APPS, Build application benchmarks
+ * WITH_NATIVE_INSTRUCTIONS, Instruct the compiler to use the full instruction set on this host (gcc/clang -march=native)
+ * WITH_MAINTAINER_WARNINGS, Build with project maintainer warnings
+ * WITH_CODE_COVERAGE, Enable code coverage reporting
+ * WITH_INFLATE_STRICT, Build with strict inflate distance checking
+ * WITH_INFLATE_ALLOW_INVALID_DIST, Build with zero fill for inflate invalid distances
+ * INSTALL_UTILS, Copy minigzip and minideflate during install
+ * MZ_COMPAT, Enables compatibility layer
+ * MZ_BZIP2, Enables BZIP2 compression
+ * MZ_LZMA, Enables LZMA & XZ compression
+ * MZ_ZSTD, Enables ZSTD compression
+ * MZ_LIBCOMP, Enables Apple compression
+ * MZ_PKCRYPT, Enables PKWARE traditional encryption
+ * MZ_WZAES, Enables WinZIP AES encryption
+ * MZ_OPENSSL, Enables OpenSSL for encryption
+ * MZ_LIBBSD, Builds with libbsd crypto random
+ * MZ_ICONV, Enables iconv string encoding conversion library
+ * MZ_COMPRESS_ONLY, Only support compression
+ * MZ_FILE32_API, Builds using posix 32-bit file api
+ * MZ_BUILD_TESTS, Builds minizip test executable
+ * MZ_BUILD_UNIT_TESTS, Builds minizip unit test project
+ * MZ_BUILD_FUZZ_TESTS, Builds minizip fuzzer executables
+ * MZ_CODE_COVERAGE, Builds with code coverage flags
+
+-- Found Bash: C:/Program Files/Git/bin/bash.exe
+fatal: No names found, cannot describe anything.
+CMake Warning at D:/a/_temp/live2d/src/live2d/external/KTX-Software/cmake/version.cmake:166 (message):
+  Error retrieving version from GIT tag.  Falling back to 0.0.0-noversion
+Call Stack (most recent call first):
+  D:/a/_temp/live2d/src/live2d/external/KTX-Software/CMakeLists.txt:13 (include)
+
+
+Initial BASISU_BUILD_X64=1
+Initial CMAKE_BUILD_TYPE=Release
+Initial BASISU_SSE=OFF
+Initial BASISU_ZSTD=ON
+Initial BASISU_OPENCL=OFF
+Initial BASISU_SAN=OFF
+initial BASISU_TOOL=FALSE
+initial BASISU_EXAMPLES=FALSE
+basisu build type: Release
+Building 64-bit
+SSE disabled
+Zstandard enabled
+-- Arm backend options
+--   SVE 256b backend     - OFF
+--   SVE 128b backend     - OFF
+--   NEON backend         - OFF
+-- x86-64 backend options
+--   AVX2 backend         - OFF
+--   SSE4.1 backend       - OFF
+--   SSE2 backend         - ON
+--   Use native gathers   - ON
+-- Agnostic backend options
+--   NONE backend         - OFF
+--   NATIVE backend       - OFF
+-- Build options
+--   Invariance           - ON
+--   Shared libs          - OFF
+--   Decompressor         - OFF
+-- Developer options
+--   Diagnostics          - OFF
+--   ASAN                 - OFF
+--   UBSAN                - OFF
+--   Unit tests           - OFF
+-- Configuring done (22.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/a/_temp/live2d/build-x64
++ cmake --build D:\a\_temp\live2d\build-x64 --config Release --parallel 4
+[1/255] Building CXX object CMakeFiles\krkrlive2d.dir\src\MemoryAllocator.cpp.obj
+[2/255] Building CXX object CMakeFiles\krkrlive2d.dir\src\LicensesGen.cpp.obj
+[3/255] Building CXX object CMakeFiles\krkrlive2d.dir\src\utils.cpp.obj
+[4/255] Building CXX object CMakeFiles\krkrlive2d.dir\D_\a\_temp\live2d\src\tp_stub\tp_stub.cpp.obj
+[5/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\MyCubismPose.cpp.obj
+[6/255] Building CXX object CMakeFiles\krkrlive2d.dir\D_\a\_temp\live2d\src\ncbind\ncbind.cpp.obj
+[7/255] Building CXX object CMakeFiles\krkrlive2d.dir\src\Live2D.cpp.obj
+[8/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\MyCubismModel.cpp.obj
+[9/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\zipinfo.cpp.obj
+[10/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\plive2d.cpp.obj
+[11/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\LAppModel.cpp.obj
+[12/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\LAppAllocator.cpp.obj
+[13/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_crypt.c.obj
+[14/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_os.c.obj
+[15/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm.c.obj
+[16/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\win\plive2d_dll.cpp.obj
+[17/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm_mem.c.obj
+[18/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm_buf.c.obj
+[19/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm_split.c.obj
+[20/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\ogl\glad.cpp.obj
+[21/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_zip.c.obj
+[22/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm_zlib.c.obj
+[23/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_zip_rw.c.obj
+[24/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_os_win32.c.obj
+[25/255] Building C object _deps\minizip-ng-build\CMakeFiles\minizip-ng.dir\mz_strm_os_win32.c.obj
+[26/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\adler32_c.c.obj
+[27/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\adler32_fold_c.c.obj
+[28/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\chunkset_c.c.obj
+[29/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\crc32_braid_c.c.obj
+[30/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\crc32_fold_c.c.obj
+[31/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\compare256_c.c.obj
+[32/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\generic\slide_hash_c.c.obj
+[33/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\compress.c.obj
+[34/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\adler32.c.obj
+[35/255] Building CXX object live2ddriver\upstream\CMakeFiles\live2ddriver.dir\src\ogl\LAppModelOGL.cpp.obj
+[36/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\crc32.c.obj
+[37/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\crc32_braid_comb.c.obj
+[38/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_fast.c.obj
+[39/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_huff.c.obj
+[40/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate.c.obj
+[41/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_medium.c.obj
+[42/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_quick.c.obj
+[43/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_slow.c.obj
+[44/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_rle.c.obj
+[45/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\deflate_stored.c.obj
+[46/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\functable.c.obj
+[47/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\infback.c.obj
+[48/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\insert_string.c.obj
+[49/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\inftrees.c.obj
+[50/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\insert_string_roll.c.obj
+[51/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\uncompr.c.obj
+[52/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\inflate.c.obj
+[53/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\trees.c.obj
+[54/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\zutil.c.obj
+[55/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\cpu_features.c.obj
+[56/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\x86_features.c.obj
+[57/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\compare256_sse2.c.obj
+[58/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\slide_hash_sse2.c.obj
+[59/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\chunkset_sse2.c.obj
+[60/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\adler32_ssse3.c.obj
+[61/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\adler32_sse42.c.obj
+[62/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\crc32_pclmulqdq.c.obj
+[63/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\chunkset_ssse3.c.obj
+[64/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\slide_hash_avx2.c.obj
+[65/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\compare256_avx2.c.obj
+[66/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\adler32_avx2.c.obj
+[67/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\chunkset_avx2.c.obj
+[68/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\adler32_avx512.c.obj
+[69/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\adler32_avx512_vnni.c.obj
+[70/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\gzlib.c.obj
+[71/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\chunkset_avx512.c.obj
+[72/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\arch\x86\crc32_vpclmulqdq.c.obj
+[73/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\gzread.c.obj
+[74/255] Building C object _deps\zlib-build\CMakeFiles\zlib.dir\gzwrite.c.obj
+[75/255] Linking C static library _deps\zlib-build\zlibstatic-ng.lib
+[76/255] Linking C static library _deps\minizip-ng-build\minizip-ng.lib
+[77/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\CubismDefaultParameterId.cpp.obj
+[78/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\CubismCdiJson.cpp.obj
+[79/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\CubismFramework.cpp.obj
+[80/255] Building C object live2ddriver\upstream\glad\CMakeFiles\glad.dir\src\egl.c.obj
+[81/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\CubismModelSettingJson.cpp.obj
+[82/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Effect\CubismEyeBlink.cpp.obj
+[83/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Effect\CubismLook.cpp.obj
+[84/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Effect\CubismBreath.cpp.obj
+[85/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Id\CubismId.cpp.obj
+[86/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Id\CubismIdManager.cpp.obj
+[87/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Effect\CubismPose.cpp.obj
+[88/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismMath.cpp.obj
+[89/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismMatrix44.cpp.obj
+[90/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismModelMatrix.cpp.obj
+[91/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismViewMatrix.cpp.obj
+[92/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismTargetPoint.cpp.obj
+[93/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Math\CubismVector2.cpp.obj
+[94/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismMoc.cpp.obj
+[95/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismModel.cpp.obj
+[96/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismModelUserData.cpp.obj
+[97/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismModelMultiplyAndScreenColor.cpp.obj
+[98/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismModelUserDataJson.cpp.obj
+[99/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Model\CubismUserModel.cpp.obj
+[100/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\ACubismMotion.cpp.obj
+[101/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismExpressionMotion.cpp.obj
+[102/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismFixMotion.cpp.obj
+[103/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismExpressionMotionManager.cpp.obj
+[104/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismMotionJson.cpp.obj
+[105/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismMotionManager.cpp.obj
+[106/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismMotion.cpp.obj
+[107/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismMotionQueueEntry.cpp.obj
+[108/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismMotionQueueManager.cpp.obj
+[109/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismUpdateScheduler.cpp.obj
+[110/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismBreathUpdater.cpp.obj
+[111/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismExpressionUpdater.cpp.obj
+[112/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismEyeBlinkUpdater.cpp.obj
+[113/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismLookUpdater.cpp.obj
+[114/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismLipSyncUpdater.cpp.obj
+[115/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismPhysicsUpdater.cpp.obj
+[116/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\ICubismUpdater.cpp.obj
+[117/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\CubismPoseUpdater.cpp.obj
+[118/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Motion\IParameterProvider.cpp.obj
+[119/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\csmBlendMode.cpp.obj
+[120/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Physics\CubismPhysicsJson.cpp.obj
+[121/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Physics\CubismPhysics.cpp.obj
+[122/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\CubismRenderer.cpp.obj
+[123/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\OpenGL\CubismOffscreenManager_OpenGLES2.cpp.obj
+[124/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\OpenGL\CubismOffscreenRenderTarget_OpenGLES2.cpp.obj
+[125/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\OpenGL\CubismRenderTarget_OpenGLES2.cpp.obj
+[126/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\OpenGL\CubismRenderer_OpenGLES2.cpp.obj
+[127/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Type\csmRectF.cpp.obj
+[128/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Rendering\OpenGL\CubismShader_OpenGLES2.cpp.obj
+[129/255] Building C object live2ddriver\upstream\glad\CMakeFiles\glad.dir\src\gles2.c.obj
+[130/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Utils\CubismDebug.cpp.obj
+[131/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Type\csmString.cpp.obj
+[132/255] Linking C static library live2ddriver\upstream\glad\glad.lib
+[133/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Utils\CubismJson.cpp.obj
+[134/255] Building CXX object live2ddriver\upstream\Framework\CMakeFiles\Framework.dir\src\Utils\CubismString.cpp.obj
+[135/255] Linking CXX static library live2ddriver\upstream\Framework\Framework.lib
+[136/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\astc_codec.cpp.obj
+[137/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\miniz_wrapper.cpp.obj
+[138/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\basis_transcode.cpp.obj
+[139/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\colourspaces.c.obj
+[140/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\createdfd.c.obj
+[141/255] Building CXX object live2ddriver\upstream\external\KTX-Software\CMakeFiles\objUtil.dir\utils\argparser.cpp.obj
+[142/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\checkheader.c.obj
+[143/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\interpretdfd.c.obj
+[144/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\objUtil.lib
+[145/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\printdfd.c.obj
+[146/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\queries.c.obj
+[147/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\vk2dfd.c.obj
+[148/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\filestream.c.obj
+[149/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\etcunpack.cxx.obj
+[150/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\glformat_str.c.obj
+[151/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\strings.c.obj
+[152/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\hashlist.c.obj
+[153/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\swap.c.obj
+[154/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\memstream.c.obj
+[155/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\info.c.obj
+[156/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vkformat_check.c.obj
+[157/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vkformat_check_variant.c.obj
+[158/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vkformat_typesize.c.obj
+[159/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\texture.c.obj
+[160/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vkformat_str.c.obj
+[161/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\texture2.c.obj
+[162/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\etcdec\etcdec.cxx.obj
+[163/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\gl_funcs.c.obj
+[164/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\glloader.c.obj
+[165/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\texture1.c.obj
+[166/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vk_funcs.c.obj
+[167/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx_read.dir\src\vkloader.c.obj
+[168/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_basis_file.cpp.obj
+[169/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_backend.cpp.obj
+[170/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_comp.cpp.obj
+[171/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_enc.cpp.obj
+[172/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_etc.cpp.obj
+[173/255] Generate D:/a/_temp/live2d/src/live2d/external/KTX-Software/lib/src/version.h
+[174/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\astc_codec.cpp.obj
+[175/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_gpu_texture.cpp.obj
+[176/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_pvrtc1_4.cpp.obj
+[177/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\miniz_wrapper.cpp.obj
+[178/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\checkheader.c.obj
+[179/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\colourspaces.c.obj
+[180/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_frontend.cpp.obj
+[181/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\createdfd.c.obj
+[182/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\basis_transcode.cpp.obj
+[183/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\interpretdfd.c.obj
+[184/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\queries.c.obj
+[185/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\printdfd.c.obj
+[186/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\dfdutils\vk2dfd.c.obj
+[187/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\filestream.c.obj
+[188/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\glformat_str.c.obj
+[189/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\etcunpack.cxx.obj
+[190/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\strings.c.obj
+[191/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\hashlist.c.obj
+[192/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\memstream.c.obj
+[193/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\info.c.obj
+[194/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\swap.c.obj
+[195/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vkformat_check.c.obj
+[196/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vkformat_check_variant.c.obj
+[197/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vkformat_typesize.c.obj
+[198/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\texture.c.obj
+[199/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\texture2.c.obj
+[200/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vkformat_str.c.obj
+[201/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\D_\a\_temp\live2d\src\live2d\external\KTX-Software\external\etcdec\etcdec.cxx.obj
+[202/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\glloader.c.obj
+[203/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\gl_funcs.c.obj
+[204/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\writer1.c.obj
+[205/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\writer2.c.obj
+[206/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\texture1.c.obj
+[207/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vk_funcs.c.obj
+[208/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\vkloader.c.obj
+[209/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_resampler.cpp.obj
+[210/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_resample_filters.cpp.obj
+[211/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\CMakeFiles\ktx.dir\src\basis_encode.cpp.obj
+[212/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\jpgd.cpp.obj
+[213/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_ssim.cpp.obj
+[214/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_bc7enc.cpp.obj
+[215/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_kernels_sse.cpp.obj
+[216/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_opencl.cpp.obj
+[217/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_uastc_enc.cpp.obj
+[218/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\pvpngreader.cpp.obj
+[219/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\3rdparty\android_astc_decomp.cpp.obj
+[220/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_uastc_hdr_4x4_enc.cpp.obj
+[221/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_astc_hdr_common.cpp.obj
+[222/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\3rdparty\tinyexr.cpp.obj
+[223/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\encoder\basisu_astc_hdr_6x6_enc.cpp.obj
+[224/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\transcoder\basisu_transcoder.cpp.obj
+[225/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_averages_and_directions.cpp.obj
+[226/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_block_sizes.cpp.obj
+[227/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_color_quantize.cpp.obj
+[228/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_color_unquantize.cpp.obj
+[229/255] Building C object live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\CMakeFiles\basisu_encoder.dir\zstd\zstd.c.obj
+[230/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_compress_symbolic.cpp.obj
+[231/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_diagnostic_trace.cpp.obj
+[232/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_compute_variance.cpp.obj
+[233/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\lib\basisu-encoder\basisu_encoder.lib
+[234/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_decompress_symbolic.cpp.obj
+[235/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_ideal_endpoints_and_weights.cpp.obj
+[236/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_entry.cpp.obj
+[237/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_find_best_partitioning.cpp.obj
+[238/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_mathlib.cpp.obj
+[239/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_integer_sequence.cpp.obj
+[240/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_mathlib_softfloat.cpp.obj
+[241/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_image.cpp.obj
+[242/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_percentile_tables.cpp.obj
+[243/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_partition_tables.cpp.obj
+[244/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_quantization.cpp.obj
+[245/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_pick_best_endpoint_format.cpp.obj
+[246/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_weight_quant_xfer_tables.cpp.obj
+[247/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_symbolic_physical.cpp.obj
+[248/255] Building CXX object live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\CMakeFiles\astcenc-sse2-static.dir\astcenc_weight_align.cpp.obj
+[249/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\lib\astc-encoder\Source\astcenc-sse2-static.lib
+[250/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\lib\ktx.lib
+[251/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\lib\ktx_read.lib
+basisu_comp.cpp.obj : warning LNK4006: "void __cdecl buminiz::mz_free(void *)" (?mz_free@buminiz@@YAXPEAX@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned long __cdecl buminiz::mz_adler32(unsigned long,unsigned char const *,unsigned __int64)" (?mz_adler32@buminiz@@YAKKPEBE_K@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned long __cdecl buminiz::mz_crc32(unsigned long,unsigned char const *,unsigned __int64)" (?mz_crc32@buminiz@@YAKKPEBE_K@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "char const * __cdecl buminiz::mz_version(void)" (?mz_version@buminiz@@YAPEBDXZ) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_deflateInit(struct buminiz::mz_stream_s *,int)" (?mz_deflateInit@buminiz@@YAHPEAUmz_stream_s@1@H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_deflateInit2(struct buminiz::mz_stream_s *,int,int,int,int,int)" (?mz_deflateInit2@buminiz@@YAHPEAUmz_stream_s@1@HHHHH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_deflateReset(struct buminiz::mz_stream_s *)" (?mz_deflateReset@buminiz@@YAHPEAUmz_stream_s@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_deflate(struct buminiz::mz_stream_s *,int)" (?mz_deflate@buminiz@@YAHPEAUmz_stream_s@1@H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_deflateEnd(struct buminiz::mz_stream_s *)" (?mz_deflateEnd@buminiz@@YAHPEAUmz_stream_s@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned long __cdecl buminiz::mz_deflateBound(struct buminiz::mz_stream_s *,unsigned long)" (?mz_deflateBound@buminiz@@YAKPEAUmz_stream_s@1@K@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_compress(unsigned char *,unsigned long *,unsigned char const *,unsigned long)" (?mz_compress@buminiz@@YAHPEAEPEAKPEBEK@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_compress2(unsigned char *,unsigned long *,unsigned char const *,unsigned long,int)" (?mz_compress2@buminiz@@YAHPEAEPEAKPEBEKH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned long __cdecl buminiz::mz_compressBound(unsigned long)" (?mz_compressBound@buminiz@@YAKK@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_inflateInit(struct buminiz::mz_stream_s *)" (?mz_inflateInit@buminiz@@YAHPEAUmz_stream_s@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_inflateInit2(struct buminiz::mz_stream_s *,int)" (?mz_inflateInit2@buminiz@@YAHPEAUmz_stream_s@1@H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_inflate(struct buminiz::mz_stream_s *,int)" (?mz_inflate@buminiz@@YAHPEAUmz_stream_s@1@H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_inflate2(struct buminiz::mz_stream_s *,int,int)" (?mz_inflate2@buminiz@@YAHPEAUmz_stream_s@1@HH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_inflateEnd(struct buminiz::mz_stream_s *)" (?mz_inflateEnd@buminiz@@YAHPEAUmz_stream_s@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::mz_uncompress(unsigned char *,unsigned long *,unsigned char const *,unsigned long)" (?mz_uncompress@buminiz@@YAHPEAEPEAKPEBEK@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "char const * __cdecl buminiz::mz_error(int)" (?mz_error@buminiz@@YAPEBDH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "void * __cdecl buminiz::tinfl_decompress_mem_to_heap(void const *,unsigned __int64,unsigned __int64 *,int)" (?tinfl_decompress_mem_to_heap@buminiz@@YAPEAXPEBX_KPEA_KH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned __int64 __cdecl buminiz::tinfl_decompress_mem_to_mem(void *,unsigned __int64,void const *,unsigned __int64,int)" (?tinfl_decompress_mem_to_mem@buminiz@@YA_KPEAX_KPEBX1H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::tinfl_decompress_mem_to_callback(void const *,unsigned __int64 *,int (__cdecl*)(void const *,int,void *),void *,int)" (?tinfl_decompress_mem_to_callback@buminiz@@YAHPEBXPEA_KP6AH0HPEAX@Z2H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "enum buminiz::tinfl_status __cdecl buminiz::tinfl_decompress(struct buminiz::tinfl_decompressor_tag *,unsigned char const *,unsigned __int64 *,unsigned char *,unsigned char *,unsigned __int64 *,unsigned int)" (?tinfl_decompress@buminiz@@YA?AW4tinfl_status@1@PEAUtinfl_decompressor_tag@1@PEBEPEA_KPEAE32I@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "void * __cdecl buminiz::tdefl_compress_mem_to_heap(void const *,unsigned __int64,unsigned __int64 *,int)" (?tdefl_compress_mem_to_heap@buminiz@@YAPEAXPEBX_KPEA_KH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned __int64 __cdecl buminiz::tdefl_compress_mem_to_mem(void *,unsigned __int64,void const *,unsigned __int64,int)" (?tdefl_compress_mem_to_mem@buminiz@@YA_KPEAX_KPEBX1H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "void * __cdecl buminiz::tdefl_write_image_to_png_file_in_memory_ex(void const *,int,int,int,unsigned __int64 *,unsigned int,int)" (?tdefl_write_image_to_png_file_in_memory_ex@buminiz@@YAPEAXPEBXHHHPEA_KIH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "void * __cdecl buminiz::tdefl_write_image_to_png_file_in_memory(void const *,int,int,int,unsigned __int64 *)" (?tdefl_write_image_to_png_file_in_memory@buminiz@@YAPEAXPEBXHHHPEA_K@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "int __cdecl buminiz::tdefl_compress_mem_to_output(void const *,unsigned __int64,int (__cdecl*)(void const *,int,void *),void *,int)" (?tdefl_compress_mem_to_output@buminiz@@YAHPEBX_KP6AH0HPEAX@Z2H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "enum buminiz::tdefl_status __cdecl buminiz::tdefl_init(struct buminiz::tdefl_compressor *,int (__cdecl*)(void const *,int,void *),void *,int)" (?tdefl_init@buminiz@@YA?AW4tdefl_status@1@PEAUtdefl_compressor@1@P6AHPEBXHPEAX@Z2H@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "enum buminiz::tdefl_status __cdecl buminiz::tdefl_compress(struct buminiz::tdefl_compressor *,void const *,unsigned __int64 *,void *,unsigned __int64 *,enum buminiz::tdefl_flush)" (?tdefl_compress@buminiz@@YA?AW4tdefl_status@1@PEAUtdefl_compressor@1@PEBXPEA_KPEAX2W4tdefl_flush@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "enum buminiz::tdefl_status __cdecl buminiz::tdefl_compress_buffer(struct buminiz::tdefl_compressor *,void const *,unsigned __int64,enum buminiz::tdefl_flush)" (?tdefl_compress_buffer@buminiz@@YA?AW4tdefl_status@1@PEAUtdefl_compressor@1@PEBX_KW4tdefl_flush@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "enum buminiz::tdefl_status __cdecl buminiz::tdefl_get_prev_return_status(struct buminiz::tdefl_compressor *)" (?tdefl_get_prev_return_status@buminiz@@YA?AW4tdefl_status@1@PEAUtdefl_compressor@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned int __cdecl buminiz::tdefl_get_adler32(struct buminiz::tdefl_compressor *)" (?tdefl_get_adler32@buminiz@@YAIPEAUtdefl_compressor@1@@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+basisu_comp.cpp.obj : warning LNK4006: "unsigned int __cdecl buminiz::tdefl_create_comp_flags_from_zip_params(int,int,int)" (?tdefl_create_comp_flags_from_zip_params@buminiz@@YAIHHH@Z) already defined in miniz_wrapper.cpp.obj; second definition ignored
+[252/255] Linking CXX static library live2ddriver\upstream\live2ddriver.lib
+[253/255] Building CXX object live2ddriver\upstream\external\KTX-Software\interface\basisu_c_binding\CMakeFiles\obj_basisu_cbind.dir\src\basisu_c_binding.cpp.obj
+[254/255] Linking CXX static library live2ddriver\upstream\external\KTX-Software\interface\basisu_c_binding\obj_basisu_cbind.lib
+[255/255] Linking CXX shared library krkrlive2d.dll
+D:/a/_temp/live2d-plugin\krkrlive2d.dll: 2313216 bytes. It holds the Cubism Core: it goes into your game's packages, and into nothing handed to other developers.
