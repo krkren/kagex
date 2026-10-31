@@ -1,0 +1,124 @@
+== sample (data, desktop)
+ok   start-up reaches the title screen                                1.0s
+     the system's language here: ja (System.uiLanguage "", candidates ja)
+ok   the sample is in English for the steps that read its text (KAGLanguageList)   0.7s
+ok   Extras start locked                                              0.1s
+     (a package with compiled scenarios: the demos play those)
+ok   the scripts in !scnlist.txt compile, so the demos play compiled   0.1s
+     (skipped: a read-only package doesn't compile)
+ok   a compiled script starts from the World the script that goes to it leaves   0.1s
+ok   demo layer.ks plays to the end                                   3.3s
+ok   demo char.ks plays to the end                                    6.0s
+ok   demo envlayer.ks plays to the end                                1.6s
+ok   demo transition.ks plays to the end                              4.2s
+ok   demo action.ks plays to the end                                  1.9s
+ok   demo effect.ks plays to the end                                  1.9s
+ok   demo anim.ks plays to the end                                    5.0s
+ok   finishing every demo unlocks Extras                              0.1s
+ok   compiled text gets the word wrap                                 2.9s
+     greedy from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from x 900, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 6 lines, 0 page(s), planned by krkr_richtext
+     quality from x 600, 3 lines a page: 14 lines, 4 page(s), planned by krkr_richtext
+ok   English lines break between words, where krkr_richtext draws as its line breaker plans them   0.7s
+     'あ。あ。あ。'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'あ「い」あ「'... from the line's start: 3 lines (41, 40, 39), planned by krkr_richtext
+     'きゃきゃきゃ'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'ああああああ'... from the line's start: 3 lines (45, 45, 16), planned by krkr_richtext
+     'ああああああ'... from x 900: 3 lines (19, 49, 38), planned by krkr_richtext
+ok   Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese   0.5s
+     1 run(s); ink to x 1036 (2154568) together, 1036 (2236566) a character at a time
+ok   krkr_richtext draws a line's characters together, where KAG put them   0.2s
+     saved at char.ks*start,6,5,1
+ok   a compiled scene saves in the middle and loads where it was      4.7s
+     text, history, backlog marks, Ai shown: 6,6,6,1, then BACK: 5,5,5,1
+ok   BACK goes back a message, and the backlog's marks go back to theirs   6.5s
+ok   a demo chosen from the menu: BACK goes back to the menu, and another choice plays   5.5s
+     layer 0 at *label2,1,1,255,164, after BACK *label1,1,1,200,120 (label, text, visible, opacity, pen y)
+     the pen at Start and Translucent while playing: 76,120
+     loaded there: *label1,1,1,200,120, 1 line(s) "Start" in the backlog
+ok   BACK in a scene on KAG's own layers brings them back as they were   4.0s
+     Pip: 959 of its samples drawn, from y 10 to 747
+     lip-sync from level: 53 mouth samples while the voice played (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 2 2 0 0 0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0), at 47 positions
+     its synthesized line: a lip track of 111 marks; vowel mouths shown: a e i
+     a voice with no lip track: 102 mouth samples (0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 1 1)
+ok   the animated character blinks, and its mouth follows its voice  13.6s
+     Live2D: the krkrlive2d plugin and Hiyori's model
+     an error through the plugin: caught: (int)1 から Object へ型を変換できません。Object 型が要求される文脈で Object
+     first use (ms): draw 128, shaders 3, model hiyori.l2d 4, device 7
+     Hiyori: 1315 of her picture's samples drawn, 1176x1650 at (372, 15)
+     upright: shutting her eyes changes 73 samples, 18% of the way down
+     the World's parameters: 15; her copy is off by at most 0
+     blinking: the eyes from 0.999971973141967 down to 0.0338404444193242; the smile face: ParamEyeLSmile 0.5 halfway through its fade, then 1
+     lip-sync: the mouth open up to 1.00, vowels e u a o i, mouth forms 0.3 0.9 0.2 0.8 0.6 0.4 0.5 1.0 0.7; after it 0.00 (the face's 0.00)
+     over 671 samples: her copy off by at most +0.0
+     idle5: Hiyori_m06
+     m03: Hiyori_m03
+     with effects off: face surprised, off the face's values by at most +0.0, the eyes' target +0.0
+     after a load: pose, face, shown: standard,normal,1,1
+ok   a Live2D character draws, moves, blinks and lip-syncs (--live2d required), or does with the stand-in plugin  49.2s
+     found smokepip_0.psd: 47 layers, 0 differing from pip_0.txt
+     composited: 0 of 47724 samples differ with the open mouth, 0 of 47724 with the O mouth
+     psd:// Mouth O differs in 0,0,0 pixels (by name, by ID, from the split pip_0.txt; -1: didn't load)
+ok   a character's layers read from a PSD match its layer structure, vowel mouths included   0.9s
+ok   extrans's and extNagano's transitions are there, not crossfades   0.1s
+     Effekseer: available
+ok   an Effekseer effect draws (--effekseer required), or the build says why not   1.8s
+     plain: 2083 opaque samples, average red 144, blue 249
+     zoomed: 8330 opaque samples, average red 144, blue 250
+     turned: 2073 opaque samples, average red 144, blue 249
+ok   an SVG image draws, zoomed and turned too (--vector required), or the build says why not   2.0s
+     from the pictures kagex-release split emblem.clip into
+     badge: 2085 opaque samples
+     star: 257 opaque samples
+     star by id, turned: 257 opaque samples
+ok   a CLIP STUDIO PAINT layer loads through clip:// and turns (--clip required)   2.0s
+     xp3crypt: built in, filter installed; scnfile: reads what it writes
+ok   encryption: xp3crypt is in the engine and scnfile reads compiled scenarios (--encryption required)   0.1s
+     DLC zip in the save folder: zz_zipcheck.tjs ran: True
+ok   zip patches: the ones in the save folder were mounted at start, and DLC mounts later   0.2s
+ok   the demo menu's choices are drawn in a text font                 0.1s
+ok   screen readers: the demo menu's choices are a list, one picked through it plays, and its text is read   3.2s
+ok   save and load a bookmark                                         6.3s
+ok   the save.ks screen opens from the game and closes with Esc       1.2s
+ok   the load.ks screen opens from the game and closes with Esc       1.2s
+ok   the config.ks screen opens from the game and closes with Esc     1.3s
+ok   controller: Y switches auto mode, X shows the history, B closes it   1.9s
+ok   controller: START opens config.ks and B closes it                1.0s
+ok   controller: BACK opens save.ks and B closes it                   1.0s
+ok   controller: L1 opens load.ks and B closes it                     1.2s
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.6s
+ok   the About screen opens in the game window and closes             0.6s
+ok   screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers   0.5s
+     window 960x570, the game 960x540 under a 30 px strip
+ok   in a window the menu bar sits above the game: F10 and a click on a title drop its menus down, Help > Controls works, and full screen has no bar   2.5s
+     sections: Keyboard (15), Mouse (4), Controller (12)
+ok   the controls list reads the window's key and controller bindings, and opens and closes   0.9s
+     screenshot-20261031-203005.png, 1920x1080 (written in the background)
+ok   F12 saves the screen as a PNG and says so                        0.9s
+ok   the controls list has the sample's own keys and buttons (AfterInit.tjs)   0.2s
+     x: far left -2.20, far right 2.20, xpos=0 0.00, unplaced off
+ok   positional sound: an SE placed at the stage's far left or right is panned there (World pos=, xpos=)   0.4s
+ok   back to the title through the Yes/No prompt                      2.1s
+ok   Extras: cgmode.ks opens and returns to the title                 1.2s
+ok   Extras: replay.ks opens and returns to the title                 1.4s
+ok   Extras: musicmode.ks opens and returns to the title              1.8s
+ok   a Replay tile plays its scene from the script's start, and comes back to Replay   3.0s
+     "layer": 14 lines
+ok   Search finds a word typed in the lines read, and plays from one   6.6s
+     eye levels ['2', '1', '0'], mouth levels while the voice played ['2', '1', '0']
+ok   after a search jump into Pip's scene he still blinks and lip-syncs   8.6s
+     Japanese: start_normal from file://./home/runner/work/_temp/sample/kagex-sample-0.13.2-linux/data.xp3>lang/ja/start_normal.tlg, 0 samples unlike it
+ok   languages: F9 shows the title screen in Japanese, with its own images, then English again   1.2s
+     English: [Ai] Name display, text display, and key input wait are automatically performed in theprescribed format.
+     Japanese: [あい] 規定の書式で自動的に名前表示・テキスト表示・キー入力待ちが行われます
+     next: [？？？] 表示名を変更する場合はスラッシュにつづけて表示名を記載すればＯＫです
+ok   languages: the line on screen is drawn again in the other language, and the backlog keeps what was shown  13.6s
+     KAGEX 拡張レイヤ, ワールド拡張：キャラクタ, ワールド拡張：レイヤ
+ok   languages: the demo menu's choices are drawn again in the other language   2.9s
+     chosen, saved, config_base: 1|ja|file://./home/runner/work/_temp/sample/kagex-sample-0.13.2-linux/data.xp3>lang/ja/config_base.tlg
+ok   languages: Config's buttons choose one, the screen is drawn in it, and the choice is saved   2.7s
+ok   quit: the game closes and the engine exits with 0                0.2s
+smoke test: passed
