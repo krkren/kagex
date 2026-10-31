@@ -1,0 +1,601 @@
+python3 -I "/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/scripts/gen-config.py"
+[gen-config] BUILD_SYSTEM_DIR=/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+[gen-config] PROJECT_DIR=/Users/runner/work/kagex/kagex/kirikiri/kagex
+[gen-config] config=/Users/runner/work/kagex/kagex/kirikiri/kagex/ios-config.json
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/app.cmake
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/myapp.cmake
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/Assets.xcassets/Contents.json
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/Assets.xcassets/AppIcon.appiconset/Contents.json
+[gen-config] icon: default
+[gen-config] [assetPack] 644 file(s) total: 644 copied, 0 unchanged, 0 removed
+/Applications/Xcode_16.4.app/Contents/Developer/usr/bin/make configure
+python3 -I "/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/scripts/gen-config.py"
+[gen-config] BUILD_SYSTEM_DIR=/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+[gen-config] PROJECT_DIR=/Users/runner/work/kagex/kagex/kirikiri/kagex
+[gen-config] config=/Users/runner/work/kagex/kagex/kirikiri/kagex/ios-config.json
+[gen-config] wrote /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/Assets.xcassets/AppIcon.appiconset/Contents.json
+[gen-config] icon: default
+[gen-config] [assetPack] 644 file(s) total: 0 copied, 644 unchanged, 0 removed
+cmake -S "/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios" -B "/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64" -G Xcode \
+		-DCMAKE_SYSTEM_NAME=iOS \
+		-DCMAKE_OSX_SYSROOT=iphonesimulator \
+		-DCMAKE_OSX_ARCHITECTURES=arm64 \
+		-DCMAKE_TOOLCHAIN_FILE="/Users/runner/work/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+		-DVCPKG_TARGET_TRIPLET=arm64-ios-simulator-krkrz \
+		-DMYAPP_DIR="/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated" \
+		
+-- krkrz_merge_vcpkg_manifest: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg.json
+--   + /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: libogg, libvorbis, libvpx
+--   - /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/external/movie-player: excluded glew, glfw3
+--   + /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/minizip: minizip-ng
+-- Running vcpkg install
+Detecting compiler hash for triplet arm64-osx...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+Detecting compiler hash for triplet arm64-ios-simulator-krkrz...
+Compiler found: /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++
+The following packages will be built and installed:
+  * brotli:arm64-ios-simulator-krkrz@1.2.0
+  * bzip2[core,tool]:arm64-ios-simulator-krkrz@1.0.8#6
+    freetype[brotli,bzip2,core,png,zlib]:arm64-ios-simulator-krkrz@2.13.3
+    glm:arm64-ios-simulator-krkrz@1.0.2
+    libjpeg-turbo:arm64-ios-simulator-krkrz@3.1.2
+  * liblzma:arm64-ios-simulator-krkrz@5.8.1
+    libogg:arm64-ios-simulator-krkrz@1.3.6#1
+    libpng:arm64-ios-simulator-krkrz@1.6.51
+    libvorbis:arm64-ios-simulator-krkrz@1.3.7#4
+    libvpx:arm64-ios-simulator-krkrz@1.16.0#2 -- /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/vcpkg-ports/libvpx
+    miniaudio:arm64-ios-simulator-krkrz@0.11.23
+    minizip-ng[bzip2,core,lzma,openssl,pkcrypt,wzaes,zlib,zstd]:arm64-ios-simulator-krkrz@4.0.10#1
+    oniguruma:arm64-ios-simulator-krkrz@6.9.10
+  * openssl:arm64-ios-simulator-krkrz@3.6.0#3
+    opus:arm64-ios-simulator-krkrz@1.5.2#1
+    picojson:arm64-ios-simulator-krkrz@1.3.0#3
+    plog:arm64-ios-simulator-krkrz@1.1.11
+  * vcpkg-cmake:arm64-osx@2024-04-23
+  * vcpkg-cmake-config:arm64-osx@2024-05-23
+  * vcpkg-cmake-get-vars:arm64-osx@2025-05-29
+    zlib:arm64-ios-simulator-krkrz@1.3.1
+  * zstd:arm64-ios-simulator-krkrz@1.5.7
+Additional packages (*) will be modified to complete this operation.
+Restored 0 package(s) from /Users/runner/.cache/vcpkg/archives in 31.8 us. Use --debug to see more details.
+Installing 1/22 vcpkg-cmake:arm64-osx@2024-04-23...
+vcpkg-cmake:arm64-osx@2024-04-23 package ABI: 6aab616690d0479775e666c6337663964888471ff106ca79624aebb7b9ac4861
+Building vcpkg-cmake:arm64-osx@2024-04-23...
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_configure.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_build.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg_cmake_install.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/vcpkg-port-config.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake_arm64-osx/share/vcpkg-cmake/copyright
+-- Performing post-build validation
+Starting submission of vcpkg-cmake:arm64-osx@2024-04-23 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake:arm64-osx: 27.1 ms
+Installing 2/22 zlib:arm64-ios-simulator-krkrz@1.3.1...
+zlib:arm64-ios-simulator-krkrz@1.3.1 package ABI: d24070afdad2ca9c61de9de6acf4dadd4bdcb59608237d25495b3b07cff91967
+Building zlib:arm64-ios-simulator-krkrz@1.3.1...
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_ios/triplets/arm64-ios-simulator-krkrz.cmake: info: loaded overlay triplet from here
+Downloading https://github.com/madler/zlib/archive/v1.3.1.tar.gz -> madler-zlib-v1.3.1.tar.gz
+Successfully downloaded madler-zlib-v1.3.1.tar.gz
+-- Extracting source /Users/runner/work/_temp/vcpkg/downloads/madler-zlib-v1.3.1.tar.gz
+-- Applying patch 0001-Prevent-invalid-inclusions-when-HAVE_-is-set-to-0.patch
+-- Applying patch 0002-build-static-or-shared-not-both.patch
+-- Applying patch 0003-android-and-mingw-fixes.patch
+-- Using source at /Users/runner/work/_temp/vcpkg/buildtrees/zlib/src/v1.3.1-2e5db616bf.clean
+-- Configuring arm64-ios-simulator-krkrz
+-- Building arm64-ios-simulator-krkrz-dbg
+-- Building arm64-ios-simulator-krkrz-rel
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-simulator-krkrz/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-simulator-krkrz/lib/pkgconfig/zlib.pc
+-- Fixing pkgconfig file: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-simulator-krkrz/debug/lib/pkgconfig/zlib.pc
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/zlib_arm64-ios-simulator-krkrz/share/zlib/copyright
+-- Performing post-build validation
+Starting submission of zlib:arm64-ios-simulator-krkrz@1.3.1 to 1 binary cache(s) in the background
+Elapsed time to handle zlib:arm64-ios-simulator-krkrz: 3.7 s
+Completed submission of vcpkg-cmake:arm64-osx@2024-04-23 to 1 binary cache(s) in 12.4 ms
+Installing 3/22 vcpkg-cmake-config:arm64-osx@2024-05-23...
+vcpkg-cmake-config:arm64-osx@2024-05-23 package ABI: db6bc8ed6f1b7bee8877509fc18b2adf8b14f7619a7d28fa6897dd2d65afee7a
+Building vcpkg-cmake-config:arm64-osx@2024-05-23...
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/vcpkg_cmake_config_fixup.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/vcpkg-port-config.cmake
+-- Installing: /Users/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_arm64-osx/share/vcpkg-cmake-config/copyright
+-- Skipping post-build validation due to VCPKG_POLICY_EMPTY_PACKAGE
+...
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:433:15: note: overridden virtual function is here
+  433 |         virtual void SetWaitVSync(bool enable) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:400:7: warning: 'OnTouchScaling' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  400 |         void OnTouchScaling( double startdist, double currentdist, double cx, double cy, int flag );
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:12:15: note: overridden virtual function is here
+   12 |         virtual void OnTouchScaling( double startdist, double currentdist, double cx, double cy, int flag ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:401:7: warning: 'OnTouchRotate' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |         void OnTouchRotate( double startangle, double currentangle, double distance, double cx, double cy, int flag );
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:13:15: note: overridden virtual function is here
+   13 |         virtual void OnTouchRotate( double startangle, double currentangle, double distance, double cx, double cy, int flag ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:402:7: warning: 'OnMultiTouch' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  402 |         void OnMultiTouch();
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:14:15: note: overridden virtual function is here
+   14 |         virtual void OnMultiTouch() = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:426:15: warning: 'SendMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  426 |         virtual void SendMessage( tjs_int message, tjs_int64 wparam, tjs_int64 lparam );
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:9:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:66:15: note: overridden virtual function is here
+   66 |         virtual void SendMessage( tjs_int message, tjs_int64 wparam, tjs_int64 lparam ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:427:15: warning: 'SendTouchMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  427 |         virtual void SendTouchMessage( tjs_int type, float x, float y, float c, int id, tjs_uint64 tick );
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:9:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:67:15: note: overridden virtual function is here
+   67 |         virtual void SendTouchMessage( tjs_int type, float x, float y, float c, int id, tjs_uint64 tick ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:10:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:428:15: warning: 'SendMouseMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  428 |         virtual void SendMouseMessage( tjs_int type, int button, int shift, int x, int y);
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/AgentInput.cpp:9:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:68:15: note: overridden virtual function is here
+   68 |         virtual void SendMouseMessage( tjs_int type, int button, int shift, int x, int y) = 0;
+      |                      ^
+58 warnings generated.
+
+CompileC /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/AgentControlIntf.o /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp normal arm64 c++ com.apple.compilers.llvm.clang.1_0.compiler (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    
+    Using response file: /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/82b82416624d2658e5098eb0a28c15c5-common-args.resp
+    
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c++ -ivfsstatcache /var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/C/com.apple.DeveloperTools/16.4-16F6/Xcode/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wno-non-virtual-dtor -Wno-overloaded-virtual -Wno-exit-time-destructors -Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function -Wno-unused-label -Wno-unused-parameter -Wno-unused-variable -Wunused-value -Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wno-constant-conversion -Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wno-newline-eof -Wno-c++11-extensions -Wno-implicit-fallthrough -fstrict-aliasing -Wdeprecated-declarations -Winvalid-offsetof -Wno-sign-conversion -Wno-infinite-recursion -Wno-move -Wno-comma -Wno-block-capture-autoreleasing -Wno-strict-prototypes -Wno-range-loop-analysis -Wno-semicolon-before-method-body @/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/82b82416624d2658e5098eb0a28c15c5-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/AgentControlIntf.d --serialize-diagnostics /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/AgentControlIntf.dia -c /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp -o /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/AgentControlIntf.o
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:21:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/WindowIntf.h:20:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:506:31: warning: 'Destruct' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  506 |         virtual void TJS_INTF_METHOD Destruct();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:45:31: note: overridden virtual function is here
+   45 |         virtual void TJS_INTF_METHOD Destruct() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:509:31: warning: 'SetWindowInterface' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  509 |         virtual void TJS_INTF_METHOD SetWindowInterface(iTVPWindow * window);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:51:31: note: overridden virtual function is here
+   51 |         virtual void TJS_INTF_METHOD SetWindowInterface(iTVPWindow * window) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:512:31: warning: 'AddLayerManager' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  512 |         virtual void TJS_INTF_METHOD AddLayerManager(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:59:31: note: overridden virtual function is here
+   59 |         virtual void TJS_INTF_METHOD AddLayerManager(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:513:31: warning: 'RemoveLayerManager' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  513 |         virtual void TJS_INTF_METHOD RemoveLayerManager(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:64:31: note: overridden virtual function is here
+   64 |         virtual void TJS_INTF_METHOD RemoveLayerManager(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:516:31: warning: 'SetDestRectangle' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  516 |         virtual void TJS_INTF_METHOD SetDestRectangle(const tTVPRect & rect);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:90:31: note: overridden virtual function is here
+   90 |         virtual void TJS_INTF_METHOD SetDestRectangle(const tTVPRect & rect) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:517:31: warning: 'SetClipRectangle' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  517 |         virtual void TJS_INTF_METHOD SetClipRectangle(const tTVPRect & rect);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:99:31: note: overridden virtual function is here
+   99 |         virtual void TJS_INTF_METHOD SetClipRectangle(const tTVPRect & rect) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:518:31: warning: 'GetSrcSize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  518 |         virtual void TJS_INTF_METHOD GetSrcSize(tjs_int &w, tjs_int &h);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:106:31: note: overridden virtual function is here
+  106 |         virtual void TJS_INTF_METHOD GetSrcSize(tjs_int &w, tjs_int &h) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:519:31: warning: 'NotifyLayerResize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  519 |         virtual void TJS_INTF_METHOD NotifyLayerResize(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:112:31: note: overridden virtual function is here
+  112 |         virtual void TJS_INTF_METHOD NotifyLayerResize(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:520:31: warning: 'NotifyLayerImageChange' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  520 |         virtual void TJS_INTF_METHOD NotifyLayerImageChange(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:122:31: note: overridden virtual function is here
+  122 |         virtual void TJS_INTF_METHOD NotifyLayerImageChange(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:547:31: warning: 'OnClick' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  547 |         virtual void TJS_INTF_METHOD OnClick(tjs_int x, tjs_int y);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:128:31: note: overridden virtual function is here
+  128 |         virtual void TJS_INTF_METHOD OnClick(tjs_int x, tjs_int y) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:548:31: warning: 'OnDoubleClick' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  548 |         virtual void TJS_INTF_METHOD OnDoubleClick(tjs_int x, tjs_int y);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:133:31: note: overridden virtual function is here
+  133 |         virtual void TJS_INTF_METHOD OnDoubleClick(tjs_int x, tjs_int y) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:549:31: warning: 'OnMouseDown' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  549 |         virtual void TJS_INTF_METHOD OnMouseDown(tjs_int x, tjs_int y, tTVPMouseButton mb, tjs_uint32 flags);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:140:31: note: overridden virtual function is here
+  140 |         virtual void TJS_INTF_METHOD OnMouseDown(tjs_int x, tjs_int y, tTVPMouseButton mb, tjs_uint32 flags) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:550:31: warning: 'OnMouseUp' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  550 |         virtual void TJS_INTF_METHOD OnMouseUp(tjs_int x, tjs_int y, tTVPMouseButton mb, tjs_uint32 flags);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:147:31: note: overridden virtual function is here
+  147 |         virtual void TJS_INTF_METHOD OnMouseUp(tjs_int x, tjs_int y, tTVPMouseButton mb, tjs_uint32 flags) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:551:31: warning: 'OnMouseMove' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  551 |         virtual void TJS_INTF_METHOD OnMouseMove(tjs_int x, tjs_int y, tjs_uint32 flags);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:153:31: note: overridden virtual function is here
+  153 |         virtual void TJS_INTF_METHOD OnMouseMove(tjs_int x, tjs_int y, tjs_uint32 flags) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:552:31: warning: 'OnReleaseCapture' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  552 |         virtual void TJS_INTF_METHOD OnReleaseCapture();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:158:31: note: overridden virtual function is here
+  158 |         virtual void TJS_INTF_METHOD OnReleaseCapture() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:553:31: warning: 'OnMouseOutOfWindow' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  553 |         virtual void TJS_INTF_METHOD OnMouseOutOfWindow();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:161:31: note: overridden virtual function is here
+  161 |         virtual void TJS_INTF_METHOD OnMouseOutOfWindow() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:554:31: warning: 'OnKeyDown' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  554 |         virtual void TJS_INTF_METHOD OnKeyDown(tjs_uint key, tjs_uint32 shift);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:166:31: note: overridden virtual function is here
+  166 |         virtual void TJS_INTF_METHOD OnKeyDown(tjs_uint key, tjs_uint32 shift) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:555:31: warning: 'OnKeyUp' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  555 |         virtual void TJS_INTF_METHOD OnKeyUp(tjs_uint key, tjs_uint32 shift);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:171:31: note: overridden virtual function is here
+  171 |         virtual void TJS_INTF_METHOD OnKeyUp(tjs_uint key, tjs_uint32 shift) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:556:31: warning: 'OnKeyPress' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  556 |         virtual void TJS_INTF_METHOD OnKeyPress(tjs_char key);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:175:31: note: overridden virtual function is here
+  175 |         virtual void TJS_INTF_METHOD OnKeyPress(tjs_char key) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:557:31: warning: 'OnMouseWheel' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  557 |         virtual void TJS_INTF_METHOD OnMouseWheel(tjs_uint32 shift, tjs_int delta, tjs_int x, tjs_int y);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:182:31: note: overridden virtual function is here
+  182 |         virtual void TJS_INTF_METHOD OnMouseWheel(tjs_uint32 shift, tjs_int delta, tjs_int x, tjs_int y) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:558:31: warning: 'OnTouchDown' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  558 |         virtual void TJS_INTF_METHOD OnTouchDown( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:190:31: note: overridden virtual function is here
+  190 |         virtual void TJS_INTF_METHOD OnTouchDown( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:559:31: warning: 'OnTouchUp' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  559 |         virtual void TJS_INTF_METHOD OnTouchUp( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:198:31: note: overridden virtual function is here
+  198 |         virtual void TJS_INTF_METHOD OnTouchUp( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:560:31: warning: 'OnTouchMove' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  560 |         virtual void TJS_INTF_METHOD OnTouchMove( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:206:31: note: overridden virtual function is here
+  206 |         virtual void TJS_INTF_METHOD OnTouchMove( tjs_real x, tjs_real y, tjs_real cx, tjs_real cy, tjs_uint32 id ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:561:31: warning: 'OnTouchScaling' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  561 |         virtual void TJS_INTF_METHOD OnTouchScaling( tjs_real startdist, tjs_real curdist, tjs_real cx, tjs_real cy, tjs_int flag );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:214:31: note: overridden virtual function is here
+  214 |         virtual void TJS_INTF_METHOD OnTouchScaling( tjs_real startdist, tjs_real curdist, tjs_real cx, tjs_real cy, tjs_int flag ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:562:31: warning: 'OnTouchRotate' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  562 |         virtual void TJS_INTF_METHOD OnTouchRotate( tjs_real startangle, tjs_real curangle, tjs_real dist, tjs_real cx, tjs_real cy, tjs_int flag );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:223:31: note: overridden virtual function is here
+  223 |         virtual void TJS_INTF_METHOD OnTouchRotate( tjs_real startangle, tjs_real curangle, tjs_real dist, tjs_real cx, tjs_real cy, tjs_int flag ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:563:31: warning: 'OnMultiTouch' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  563 |         virtual void TJS_INTF_METHOD OnMultiTouch();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:226:31: note: overridden virtual function is here
+  226 |         virtual void TJS_INTF_METHOD OnMultiTouch() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:564:31: warning: 'OnDisplayRotate' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  564 |         virtual void TJS_INTF_METHOD OnDisplayRotate( tjs_int orientation, tjs_int rotate, tjs_int bpp, tjs_int width, tjs_int height );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:234:31: note: overridden virtual function is here
+  234 |         virtual void TJS_INTF_METHOD OnDisplayRotate( tjs_int orientation, tjs_int rotate, tjs_int bpp, tjs_int width, tjs_int height ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:565:31: warning: 'RecheckInputState' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  565 |         virtual void TJS_INTF_METHOD RecheckInputState();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:243:31: note: overridden virtual function is here
+  243 |         virtual void TJS_INTF_METHOD RecheckInputState() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:574:31: warning: 'SetDefaultMouseCursor' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  574 |         virtual void TJS_INTF_METHOD SetDefaultMouseCursor(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:248:31: note: overridden virtual function is here
+  248 |         virtual void TJS_INTF_METHOD SetDefaultMouseCursor(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:575:31: warning: 'SetMouseCursor' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  575 |         virtual void TJS_INTF_METHOD SetMouseCursor(iTVPLayerManager * manager, tjs_int cursor);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:253:31: note: overridden virtual function is here
+  253 |         virtual void TJS_INTF_METHOD SetMouseCursor(iTVPLayerManager * manager, tjs_int cursor) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:576:31: warning: 'GetCursorPos' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  576 |         virtual void TJS_INTF_METHOD GetCursorPos(iTVPLayerManager * manager, tjs_int &x, tjs_int &y);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:260:31: note: overridden virtual function is here
+  260 |         virtual void TJS_INTF_METHOD GetCursorPos(iTVPLayerManager * manager, tjs_int &x, tjs_int &y) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:577:31: warning: 'SetCursorPos' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  577 |         virtual void TJS_INTF_METHOD SetCursorPos(iTVPLayerManager * manager, tjs_int x, tjs_int y);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:267:31: note: overridden virtual function is here
+  267 |         virtual void TJS_INTF_METHOD SetCursorPos(iTVPLayerManager * manager, tjs_int x, tjs_int y) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:578:31: warning: 'SetHintText' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  578 |         virtual void TJS_INTF_METHOD SetHintText(iTVPLayerManager * manager, iTJSDispatch2* sender, const ttstr & text);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:282:31: note: overridden virtual function is here
+  282 |         virtual void TJS_INTF_METHOD SetHintText(iTVPLayerManager * manager, iTJSDispatch2* sender, const ttstr & text) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:579:31: warning: 'WindowReleaseCapture' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  579 |         virtual void TJS_INTF_METHOD WindowReleaseCapture(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:277:31: note: overridden virtual function is here
+  277 |         virtual void TJS_INTF_METHOD WindowReleaseCapture(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:581:31: warning: 'SetAttentionPoint' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  581 |         virtual void TJS_INTF_METHOD SetAttentionPoint(iTVPLayerManager * manager, tTJSNI_BaseLayer *layer,
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:295:31: note: overridden virtual function is here
+  295 |         virtual void TJS_INTF_METHOD SetAttentionPoint(iTVPLayerManager * manager, tTJSNI_BaseLayer *layer,
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:583:31: warning: 'DisableAttentionPoint' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  583 |         virtual void TJS_INTF_METHOD DisableAttentionPoint(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:300:31: note: overridden virtual function is here
+  300 |         virtual void TJS_INTF_METHOD DisableAttentionPoint(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:584:31: warning: 'SetImeMode' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  584 |         virtual void TJS_INTF_METHOD SetImeMode(iTVPLayerManager * manager, tTVPImeMode mode);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:305:31: note: overridden virtual function is here
+  305 |         virtual void TJS_INTF_METHOD SetImeMode(iTVPLayerManager * manager, tTVPImeMode mode) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:585:31: warning: 'ResetImeMode' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  585 |         virtual void TJS_INTF_METHOD ResetImeMode(iTVPLayerManager * manager);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:309:31: note: overridden virtual function is here
+  309 |         virtual void TJS_INTF_METHOD ResetImeMode(iTVPLayerManager * manager) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:588:45: warning: 'GetPrimaryLayer' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  588 |         virtual tTJSNI_BaseLayer * TJS_INTF_METHOD GetPrimaryLayer();
+      |                                                    ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:316:45: note: overridden virtual function is here
+  316 |         virtual tTJSNI_BaseLayer * TJS_INTF_METHOD GetPrimaryLayer() = 0;
+      |                                                    ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:589:45: warning: 'GetFocusedLayer' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  589 |         virtual tTJSNI_BaseLayer * TJS_INTF_METHOD GetFocusedLayer();
+      |                                                    ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:322:45: note: overridden virtual function is here
+  322 |         virtual tTJSNI_BaseLayer * TJS_INTF_METHOD GetFocusedLayer() = 0;
+      |                                                    ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:590:31: warning: 'SetFocusedLayer' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  590 |         virtual void TJS_INTF_METHOD SetFocusedLayer(tTJSNI_BaseLayer * layer);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:328:31: note: overridden virtual function is here
+  328 |         virtual void TJS_INTF_METHOD SetFocusedLayer(tTJSNI_BaseLayer * layer) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:593:31: warning: 'RequestInvalidation' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  593 |         virtual void TJS_INTF_METHOD RequestInvalidation(const tTVPRect & rect);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:337:31: note: overridden virtual function is here
+  337 |         virtual void TJS_INTF_METHOD RequestInvalidation(const tTVPRect & rect) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:594:31: warning: 'Update' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  594 |         virtual void TJS_INTF_METHOD Update();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:344:31: note: overridden virtual function is here
+  344 |         virtual void TJS_INTF_METHOD Update() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:595:31: warning: 'Show' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  595 |         virtual void TJS_INTF_METHOD Show() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:352:31: note: overridden virtual function is here
+  352 |         virtual void TJS_INTF_METHOD Show() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:596:31: warning: 'WaitForVBlank' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  596 |         virtual bool TJS_INTF_METHOD WaitForVBlank( tjs_int* in_vblank, tjs_int* delayed );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:419:31: note: overridden virtual function is here
+  419 |         virtual bool TJS_INTF_METHOD WaitForVBlank( tjs_int* in_vblank, tjs_int* delayed ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:599:31: warning: 'DumpLayerStructure' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  599 |         virtual void TJS_INTF_METHOD DumpLayerStructure();
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:389:31: note: overridden virtual function is here
+  389 |         virtual void TJS_INTF_METHOD DumpLayerStructure() = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:600:31: warning: 'SetShowUpdateRect' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  600 |         virtual void TJS_INTF_METHOD SetShowUpdateRect(bool b);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:396:31: note: overridden virtual function is here
+  396 |         virtual void TJS_INTF_METHOD SetShowUpdateRect(bool b) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:603:31: warning: 'SwitchToFullScreen' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  603 |         virtual bool TJS_INTF_METHOD SwitchToFullScreen( HWND window, tjs_uint w, tjs_uint h, tjs_uint bpp, tjs_uint color, bool changeresolution 
+);
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:405:31: note: overridden virtual function is here
+  405 |         virtual bool TJS_INTF_METHOD SwitchToFullScreen( HWND window, tjs_uint w, tjs_uint h, tjs_uint bpp, tjs_uint color, bool changeresolution ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:604:31: warning: 'RevertFromFullScreen' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  604 |         virtual void TJS_INTF_METHOD RevertFromFullScreen( HWND window, tjs_uint w, tjs_uint h, tjs_uint bpp, tjs_uint color );
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:413:31: note: overridden virtual function is here
+  413 |         virtual void TJS_INTF_METHOD RevertFromFullScreen( HWND window, tjs_uint w, tjs_uint h, tjs_uint bpp, tjs_uint color ) = 0;
+      |                                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:610:15: warning: 'SetWaitVSync' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  610 |         virtual void SetWaitVSync(bool enable) {}
+      |                      ^
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/visual/DrawDevice.h:433:15: note: overridden virtual function is here
+  433 |         virtual void SetWaitVSync(bool enable) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:326:50: warning: implicit conversion loses integer precision: 'size_type' (aka 'unsigned long') to 'tjs_int' (aka 'int') [-Wshorten-64-to-32]
+  326 |         tjs_int GetArgumentCount() const { return _args.size(); }
+      |                                            ~~~~~~ ~~~~~~^~~~~~
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:330:57: warning: implicit conversion loses integer precision: 'size_type' (aka 'unsigned long') to 'tjs_int' (aka 'int') [-Wshorten-64-to-32]
+  330 |         tjs_int GetNormalArgumentCount() const { return _nargs.size(); }
+      |                                                  ~~~~~~ ~~~~~~~^~~~~~
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:400:7: warning: 'OnTouchScaling' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  400 |         void OnTouchScaling( double startdist, double currentdist, double cx, double cy, int flag );
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:12:15: note: overridden virtual function is here
+   12 |         virtual void OnTouchScaling( double startdist, double currentdist, double cx, double cy, int flag ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:401:7: warning: 'OnTouchRotate' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  401 |         void OnTouchRotate( double startangle, double currentangle, double distance, double cx, double cy, int flag );
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:13:15: note: overridden virtual function is here
+   13 |         virtual void OnTouchRotate( double startangle, double currentangle, double distance, double cx, double cy, int flag ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:402:7: warning: 'OnMultiTouch' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  402 |         void OnMultiTouch();
+      |              ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:5:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/TouchPoint.h:14:15: note: overridden virtual function is here
+   14 |         virtual void OnMultiTouch() = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:426:15: warning: 'SendMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  426 |         virtual void SendMessage( tjs_int message, tjs_int64 wparam, tjs_int64 lparam );
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:27:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:66:15: note: overridden virtual function is here
+   66 |         virtual void SendMessage( tjs_int message, tjs_int64 wparam, tjs_int64 lparam ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:427:15: warning: 'SendTouchMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  427 |         virtual void SendTouchMessage( tjs_int type, float x, float y, float c, int id, tjs_uint64 tick );
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:27:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:67:15: note: overridden virtual function is here
+   67 |         virtual void SendTouchMessage( tjs_int type, float x, float y, float c, int id, tjs_uint64 tick ) = 0;
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:28:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:428:15: warning: 'SendMouseMessage' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  428 |         virtual void SendMouseMessage( tjs_int type, int button, int shift, int x, int y);
+      |                      ^
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/common/environ/AgentControlIntf.cpp:27:
+In file included from /Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/Application.h:27:
+/Users/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowFormEvent.h:68:15: note: overridden virtual function is here
+   68 |         virtual void SendMouseMessage( tjs_int type, int button, int shift, int x, int y) = 0;
+      |                      ^
+58 warnings generated.
+
+LinkAssetCatalog /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/generated/Assets.xcassets (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    builtin-linkAssetCatalog --thinned /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_output/thinned --thinned-dependencies /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_generated_info.plist_thinned --unthinned /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_output/unthinned --unthinned-dependencies /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_generated_info.plist_unthinned --output /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app --plist-output /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_generated_info.plist
+note: Emplaced /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/AppIcon60x60@2x.png (in target 'krkrz' from project 'krkrz_ios')
+note: Emplaced /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/AppIcon76x76@2x~ipad.png (in target 'krkrz' from project 'krkrz_ios')
+note: Emplaced /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/Assets.car (in target 'krkrz' from project 'krkrz_ios')
+
+ProcessInfoPlistFile /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/Info.plist /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/CMakeFiles/krkrz.dir/Info.plist (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    builtin-infoPlistUtility /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/CMakeFiles/krkrz.dir/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/assetcatalog_generated_info.plist -o /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/Info.plist
+
+Ld /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/krkrz normal (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++ -Xlinker -reproducible -target arm64-apple-ios16.0-simulator -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator -F/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator -F/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/Debug-iphonesimulator -filelist /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/krkrz.LinkFileList -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/krkrz_lto.o -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Objects-normal/arm64/krkrz_dependency_info.dat -fobjc-link-runtime -lpthread -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/json/Debug-iphonesimulator/libjson.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/KAGParserEx/Debug-iphonesimulator/libKAGParserEx.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/csvParser/Debug-iphonesimulator/libcsvParser.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/getSample/Debug-iphonesimulator/libgetSample.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExBTOA/Debug-iphonesimulator/liblayerExBTOA.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExImage/Debug-iphonesimulator/liblayerExImage.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExRaster/Debug-iphonesimulator/liblayerExRaster.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExVector/Debug-iphonesimulator/liblayerExVector.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/minizip/Debug-iphonesimulator/libminizip.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/clipfile/Debug-iphonesimulator/libclipfile.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/saveStruct/Debug-iphonesimulator/libsaveStruct.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/scriptsEx/Debug-iphonesimulator/libscriptsEx.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/shrinkCopy/Debug-iphonesimulator/libshrinkCopy.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/extrans/Debug-iphonesimulator/libextrans.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/extNagano/Debug-iphonesimulator/libextNagano.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/virtualpad/Debug-iphonesimulator/libvirtualpad.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/iosconfig/Debug-iphonesimulator/libiosconfig.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/xp3crypt/Debug-iphonesimulator/libxp3crypt.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/scnfile/Debug-iphonesimulator/libscnfile.a -Wl,-force_load,/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/Debug-iphonesimulator/libkrkrlive2d.a -Wl,-search_paths_first -Wl,-headerpad_max_install_names /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libfreetyped.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/glyphware/Debug-iphonesimulator/libglyphware.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libturbojpeg.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_ogg-build/Debug-iphonesimulator/libogg.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_vorbis-build/lib/Debug-iphonesimulator/libvorbis.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_vorbis-build/lib/Debug-iphonesimulator/libvorbisenc.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_vorbis-build/lib/Debug-iphonesimulator/libvorbisfile.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libonig.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libpng16d.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libglm.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libopus.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/movie-player/Debug-iphonesimulator/libmovieplayer.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/sdl3-build/Debug-iphonesimulator/libSDL3.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/elements/lib/Debug-iphonesimulator/libelements.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/elements/external/elements_modal/Debug-iphonesimulator/libelements_modal.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/json/Debug-iphonesimulator/libjson.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/KAGParserEx/Debug-iphonesimulator/libKAGParserEx.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/csvParser/Debug-iphonesimulator/libcsvParser.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/getSample/Debug-iphonesimulator/libgetSample.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExBTOA/Debug-iphonesimulator/liblayerExBTOA.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExImage/Debug-iphonesimulator/liblayerExImage.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExRaster/Debug-iphonesimulator/liblayerExRaster.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExVector/Debug-iphonesimulator/liblayerExVector.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/minizip/Debug-iphonesimulator/libminizip.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/clipfile/Debug-iphonesimulator/libclipfile.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/saveStruct/Debug-iphonesimulator/libsaveStruct.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/scriptsEx/Debug-iphonesimulator/libscriptsEx.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/shrinkCopy/Debug-iphonesimulator/libshrinkCopy.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/extrans/Debug-iphonesimulator/libextrans.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/extNagano/Debug-iphonesimulator/libextNagano.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/virtualpad/Debug-iphonesimulator/libvirtualpad.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/iosconfig/Debug-iphonesimulator/libiosconfig.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/xp3crypt/Debug-iphonesimulator/libxp3crypt.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/scnfile/Debug-iphonesimulator/libscnfile.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/Debug-iphonesimulator/libkrkrlive2d.a -framework AVFoundation -framework AudioToolbox -framework CoreAudio -framework CoreText -framework CoreGraphics -framework CoreFoundation -framework OpenGLES /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/appserve/Debug-iphonesimulator/libappserve_core.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libfreetyped.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libpng16d.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libpng16d.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libbrotlidec.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libbrotlicommon.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libbz2d.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/harfbuzz_source-build/Debug-iphonesimulator/libharfbuzz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libfreetyped.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/sheenbidi-build/Debug-iphonesimulator/libSheenBidi.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_vorbis-build/lib/Debug-iphonesimulator/libvorbis.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_ogg-build/Debug-iphonesimulator/libogg.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libopus.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libvpx.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/movie-player/extlibs/libyuv/Debug-iphonesimulator/libyuv.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/elements/lib/Debug-iphonesimulator/libelements.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/layerExVector/thorvg/Debug-iphonesimulator/libthorvg-1.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libminizip-ng.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libzstd.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/clipfile/external/clipparse/clipparse/Debug-iphonesimulator/libclipparse.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/clipfile/external/clipparse/clipparse/Debug-iphonesimulator/libsqlite3_static.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/sdl3-build/Debug-iphonesimulator/libSDL3.a -lm -framework CoreMedia -framework CoreVideo -framework CoreAudio -framework AudioToolbox -framework AVFoundation -framework CoreBluetooth -framework CoreGraphics -framework CoreMotion -framework Foundation -framework GameController -framework Metal -framework OpenGLES -framework QuartzCore -framework UIKit -Xlinker -weak_framework -Xlinker CoreHaptics -framework UIKit /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/live2ddriver/Debug-iphonesimulator/liblive2ddriver.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/live2ddriver/Framework/Debug-iphonesimulator/libFramework.a /Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a -framework OpenGLES /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/Debug-iphonesimulator/ktx_read.framework/ktx_read /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libminizip-ng.a -lcompression /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libbz2d.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/liblzma.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libssl.a /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libcrypto.a -ldl /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libzstd.a -lobjc -lobjc -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/krkrz.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/krkrz.app-Simulated.xcent.der -Xlinker -no_adhoc_codesign -o /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/krkrz
+ld: warning: ignoring duplicate libraries: '-lobjc', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_ogg-build/Debug-iphonesimulator/libogg.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/krkrz_vorbis-build/lib/Debug-iphonesimulator/libvorbis.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/_deps/sdl3-build/Debug-iphonesimulator/libSDL3.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/external/elements/lib/Debug-iphonesimulator/libelements.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libbz2d.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libfreetyped.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libminizip-ng.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libopus.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libpng16d.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libz.a', '/Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/vcpkg_installed/arm64-ios-simulator-krkrz/debug/lib/libzstd.a'
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[2](AffectObjects.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[3](BlendObjects.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[4](DebugUtils.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[5](DeformerTransform.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[6](InitializeModelRuntime.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[7](InitializeModelSource.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[8](InterpolateObjects.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[9](Interpolator.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[10](Interpolator_Neon.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[11](Live2DCubismCore.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[12](MathUtils.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[13](Memory.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[14](NeonFeature.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[15](OptimizedFunctions.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[16](TransformObjects.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[17](UpdateDynamicFlags.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[18](UpdateKeyformCaches.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[19](UpdateModelRuntime.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[20](UpdateObjectHierarchy.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[21](UpdateParameters.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[22](UpdateRenderOrders.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[23](PlatformLogger.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: object file (/Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core/lib/ios/Release-iphonesimulator-arm64/libLive2DCubismCore.a[24](PlatformLogger_iOS.o)) was built for newer 'iOS-simulator' version (26.2) than being linked (16.0)
+ld: warning: reducing alignment of section __DATA,__common from 0x8000 to 0x4000 because it exceeds segment maximum alignment
+
+GenerateDSYMFile /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app.dSYM /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/krkrz (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app/krkrz -o /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app.dSYM
+
+PhaseScriptExecution CMake\ PostBuild\ Rules /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Script-F8735ECCC0CAF34902957472.sh (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    /bin/sh -c /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/build/krkrz.build/Debug-iphonesimulator/Script-F8735ECCC0CAF34902957472.sh
+
+CodeSign /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app
+
+RegisterExecutionPolicyException /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    builtin-RegisterExecutionPolicyException /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app
+
+Validate /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    builtin-validationUtility /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app -infoplist-subpath Info.plist
+
+Touch /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app (in target 'krkrz' from project 'krkrz_ios')
+    cd /Users/runner/work/kagex/kagex/kirikiri/krkrz_ios
+    /usr/bin/touch -c /Users/runner/work/kagex/kagex/kirikiri/kagex/build/ios/simulator-arm64/krkrz/Debug-iphonesimulator/krkrz.app
+
+** BUILD SUCCEEDED **
+
