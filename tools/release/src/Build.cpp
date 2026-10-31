@@ -2009,7 +2009,8 @@ private:
 		std::smatch m;
 		if (!std::regex_search(html, m, configTag)) throw Failure{ "The web engine's index.html doesn't load webconfig.js" };
 		html.insert((size_t)m.position(0), "<script src=\"kagex-web.js\"></script>");
-		for (const char* script : { "webconfig.js", "krkrz.js", "kagex-web.js" }) {
+		// live2dcubismcore.min.js (the Live2D engine sidecar) when the engine package has one
+		for (const char* script : { "webconfig.js", "krkrz.js", "kagex-web.js", "live2dcubismcore.min.js" }) {
 			std::string name = script;
 			const std::regex re(std::string(R"re(src=(["']?))re") + std::regex_replace(name, std::regex(R"(\.)"), R"(\.)") + R"re((?:\?v=[0-9a-f]*)?\1(?=[\s>]))re");
 			html = std::regex_replace(html, re, "src=\"" + name + "?v=" + build + "\"");

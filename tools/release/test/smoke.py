@@ -473,9 +473,14 @@ def web_tests(exe, proj, args):
         build = json.loads((site / "kagex-build.json").read_text())["build"] if (site / "kagex-build.json").exists() else ""
         builds[mode] = build
         scripts = re.findall(r'<script src="?([^" >]+)', html)
+        # the Live2D engine sidecar loads between webconfig.js and krkrz.js (Core before the engine);
+        # the release tool stamps it too when the engine package carries one
+        live2d = [s for s in scripts if s.startswith("live2dcubismcore.min.js")]
+        scripts = [s for s in scripts if not s.startswith("live2dcubismcore.min.js")]
         step("web (%s): the build's id in the page and its scripts" % mode,
              len(build) == 16 and ('<meta name=kagex-build content="%s">' % build) in html and (site / "kagex-web.js").exists()
-             and scripts[-3:] == ["kagex-web.js?v=" + build, "webconfig.js?v=" + build, "krkrz.js?v=" + build], "%s %s" % (build, scripts))
+             and scripts[-3:] == ["kagex-web.js?v=" + build, "webconfig.js?v=" + build, "krkrz.js?v=" + build]
+             and all(l == "live2dcubismcore.min.js?v=" + build for l in live2d), "%s %s" % (build, scripts + live2d))
         step("web (%s): link previews" % mode,
              '<meta property=og:image content="https://studio.example/game/preview.jpg">' in html and (site / "preview.jpg").exists()
              and '<meta property=og:description content="A test &amp; a &lt;preview&gt;">' in html
