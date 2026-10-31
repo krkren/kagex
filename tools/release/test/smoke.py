@@ -539,23 +539,32 @@ SLOW_OPFS_WRITES = """(() => {
   const close = W.close;
   W.close = function () { const s = this; return new Promise(r => setTimeout(r, 1500)).then(() => close.call(s)); };
   // ...and the storm itself must fit a CI runner: a released engine's prefetch fetches its
-  // whole file list at once (0.13.1's web sidecar did; 0.13.2's bounds it at two), and with
+  // whole file list at once (0.13.1's web sidecar did; 0.13.2's kit bounds it at two), and with
   // every OPFS close slow, every response is held to the end — the prefetch plus the engine's
   // heap kills the renderer on the runner. The fetch cap keeps the race honest (writes stay
-  // concurrent and slow under boot reads) at a footprint the runner can take.
+  // concurrent and slow under boot reads) at a footprint the runner can take: the cap slot is
+  // held until the response body is fully read, not just until fetch resolves, so the page
+  // never has more than four bodies in flight.
   const fetch0 = window.fetch;
   let busy = 0;
   const max = 4, waiters = [];
+  const release = () => { busy--; if (waiters.length) waiters.shift()(); };
   window.fetch = function () {
     const a = arguments;
     return new Promise((go) => {
       const start = () => {
         busy++;
-        go(fetch0.apply(window, a).then((r) => {
-          busy--;
-          if (waiters.length) waiters.shift()();
-          return r;
-        }, (e) => { busy--; if (waiters.length) waiters.shift()(); throw e; }));
+        go(fetch0.apply(window, a).then((res) => {
+          if (!res.body) { release(); return res; }
+          const obs = new TransformStream({
+            flush() { release(); },
+          });
+          res.body.pipeTo(obs.writable, { preventAbort: true, preventCancel: true })
+            .catch(() => release());
+          return new Response(obs.readable, {
+            status: res.status, statusText: res.statusText, headers: res.headers,
+          });
+        }, (e) => { release(); throw e; }));
       };
       if (busy < max) start(); else waiters.push(start);
     });
