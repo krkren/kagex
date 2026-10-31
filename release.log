@@ -1,0 +1,417 @@
+make: Entering directory '/home/runner/work/kagex/kagex/kirikiri/krkrz_android'
+./gradlew  :app:assembleReleaseDebugSigned
+
+> Configure project :app
+WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+The current default is 'false'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+[build-layout] BUILD_SYSTEM_DIR=/home/runner/work/kagex/kagex/kirikiri/krkrz_android
+[build-layout] PROJECT_DIR     =/home/runner/work/kagex/kagex/kirikiri/kagex
+[playGames] disabled (from app-config.json cmake.plugins)
+[a11y] disabled (from app-config.json cmake.plugins)
+[playGames] disabled: stripped Play Games manifest entries -> /home/runner/work/kagex/kagex/kirikiri/kagex/build/android/app/generated/manifest/AndroidManifest.xml
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+
+> Task :app:generateMyappCmake UP-TO-DATE
+> Task :app:generatePadRes UP-TO-DATE
+> Task :app:packAssets UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseDebugSignedBuild UP-TO-DATE
+
+> Task :app:configureCMakeRelWithDebInfo[arm64-v8a]
+C/C++: CMake Warning at /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/harfbuzz_source-src/CMakeLists.txt:4 (message):
+C/C++:   The main build system for HarfBuzz is Meson.  CMake build support is
+C/C++:   community-maintained and is not actively supported by HarfBuzz developers.
+C/C++: CMake Warning (dev) at /usr/local/lib/android/sdk/cmake/3.31.6/share/cmake-3.31/Modules/FetchContent.cmake:1373 (message):
+C/C++:   The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+C/C++:   not set.  The policy's OLD behavior will be used.  When using a URL
+C/C++:   download, the timestamps of extracted files should preferably be that of
+C/C++:   the time of extraction, otherwise code that depends on the extracted
+C/C++:   contents might not be rebuilt if the URL changes.  The OLD behavior
+C/C++:   preserves the timestamps from the archive instead, but this is usually not
+C/C++:   what you want.  Update your project to the NEW behavior or specify the
+C/C++:   DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+C/C++:   robustness issue.
+C/C++: Call Stack (most recent call first):
+C/C++:   /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/clipfile/external/clipparse/clipparse/CMakeLists.txt:33 (FetchContent_Declare)
+C/C++: This warning is for project developers.  Use -Wno-dev to suppress it.
+C/C++: CMake Deprecation Warning at /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/krkrz_ogg-src/CMakeLists.txt:1 (cmake_minimum_required):
+C/C++:   Compatibility with CMake < 3.10 will be removed from a future version of
+C/C++:   CMake.
+C/C++:   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+C/C++:   to tell CMake that the project requires at least <min> but has been updated
+C/C++:   to work with policies introduced by <max> or earlier.
+C/C++: CMake Deprecation Warning at /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/krkrz_vorbis-src/CMakeLists.txt:1 (cmake_minimum_required):
+C/C++:   Compatibility with CMake < 3.10 will be removed from a future version of
+C/C++:   CMake.
+C/C++:   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+C/C++:   to tell CMake that the project requires at least <min> but has been updated
+C/C++:   to work with policies introduced by <max> or earlier.
+C/C++: CMake Warning (dev) at /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/krkrz_vorbis-src/CMakeLists.txt:2 (project):
+C/C++:   Policy CMP0048 is not set: project() command manages VERSION variables.
+C/C++:   Run "cmake --help-policy CMP0048" for policy details.  Use the cmake_policy
+C/C++:   command to set the policy and suppress this warning.
+C/C++:   The following variable(s) would be set to empty:
+C/C++:     PROJECT_VERSION
+C/C++:     PROJECT_VERSION_MAJOR
+C/C++:     PROJECT_VERSION_MINOR
+C/C++:     PROJECT_VERSION_PATCH
+C/C++: This warning is for project developers.  Use -Wno-dev to suppress it.
+C/C++: libjpeg-turbo found
+
+> Task :app:buildCMakeRelWithDebInfo[arm64-v8a][krkrz]
+C/C++: ninja: Entering directory `/home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a'
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/ubrk.cpp:179:12: warning: 'ubrk_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   179 |     return ubrk_safeClone(bi, nullptr, nullptr, status);
+C/C++:       |            ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:515:24: note: expanded from macro 'ubrk_safeClone'
+C/C++:   515 | #define ubrk_safeClone U_ICU_ENTRY_POINT_RENAME(ubrk_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:198:1: note: expanded from here
+C/C++:   198 | ubrk_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/ubrk.h:320:1: note: 'ubrk_safeClone_77' has been explicitly marked deprecated here
+C/C++:   320 | U_DEPRECATED UBreakIterator * U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 1 warning generated.
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/ucnv2022.cpp:3620:13: warning: 'ucnv_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:  3620 |             ucnv_safeClone(cnvData->currentConverter,
+C/C++:       |             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:710:24: note: expanded from macro 'ucnv_safeClone'
+C/C++:   710 | #define ucnv_safeClone U_ICU_ENTRY_POINT_RENAME(ucnv_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:74:1: note: expanded from here
+C/C++:    74 | ucnv_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/ucnv.h:554:1: note: 'ucnv_safeClone_77' has been explicitly marked deprecated here
+C/C++:   554 | U_DEPRECATED UConverter * U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 1 warning generated.
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/ucnv.cpp:326:12: warning: 'ucnv_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   326 |     return ucnv_safeClone(cnv, nullptr, nullptr, status);
+C/C++:       |            ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:710:24: note: expanded from macro 'ucnv_safeClone'
+C/C++:   710 | #define ucnv_safeClone U_ICU_ENTRY_POINT_RENAME(ucnv_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:116:1: note: expanded from here
+C/C++:   116 | ucnv_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/ucnv.h:554:1: note: 'ucnv_safeClone_77' has been explicitly marked deprecated here
+C/C++:   554 | U_DEPRECATED UConverter * U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/ucnv.cpp:492:13: warning: 'ucnv_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   492 |     clone = ucnv_safeClone(cnv, cloneBuffer, &cloneSize, err);
+C/C++:       |             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:710:24: note: expanded from macro 'ucnv_safeClone'
+C/C++:   710 | #define ucnv_safeClone U_ICU_ENTRY_POINT_RENAME(ucnv_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:142:1: note: expanded from here
+C/C++:   142 | ucnv_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/ucnv.h:554:1: note: 'ucnv_safeClone_77' has been explicitly marked deprecated here
+C/C++:   554 | U_DEPRECATED UConverter * U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 2 warnings generated.
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/ucnvhz.cpp:558:9: warning: 'ucnv_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   558 |         ucnv_safeClone(((UConverterDataHZ*)cnv->extraInfo)->gbConverter, &localClone->subCnv, &size, status);
+C/C++:       |         ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:710:24: note: expanded from macro 'ucnv_safeClone'
+C/C++:   710 | #define ucnv_safeClone U_ICU_ENTRY_POINT_RENAME(ucnv_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:158:1: note: expanded from here
+C/C++:   158 | ucnv_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/ucnv.h:554:1: note: 'ucnv_safeClone_77' has been explicitly marked deprecated here
+C/C++:   554 | U_DEPRECATED UConverter * U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 1 warning generated.
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/uidna.cpp:514:17: warning: 'uidna_toASCII_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   514 |         b3Len = uidna_toASCII(b2, b2Len, b3, b3Capacity, options, parseError, status);
+C/C++:       |                 ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:1058:23: note: expanded from macro 'uidna_toASCII'
+C/C++:  1058 | #define uidna_toASCII U_ICU_ENTRY_POINT_RENAME(uidna_toASCII)
+C/C++:       |                       ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:134:1: note: expanded from here
+C/C++:   134 | uidna_toASCII_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uidna.h:597:1: note: 'uidna_toASCII_77' has been explicitly marked deprecated here
+C/C++:   597 | U_DEPRECATED int32_t U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/uidna.cpp:527:22: warning: 'uidna_toASCII_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   527 |             b3Len =  uidna_toASCII(b2,b2Len,b3,b3Len,options,parseError, status);
+C/C++:       |                      ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:1058:23: note: expanded from macro 'uidna_toASCII'
+C/C++:  1058 | #define uidna_toASCII U_ICU_ENTRY_POINT_RENAME(uidna_toASCII)
+C/C++:       |                       ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:136:1: note: expanded from here
+C/C++:   136 | uidna_toASCII_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uidna.h:597:1: note: 'uidna_toASCII_77' has been explicitly marked deprecated here
+C/C++:   597 | U_DEPRECATED int32_t U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 2 warnings generated.
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/i18n/ucol.cpp:108:12: warning: 'ucol_safeClone_77' is deprecated [-Wdeprecated-declarations]
+C/C++:   108 |     return ucol_safeClone(coll, nullptr, nullptr, status);
+C/C++:       |            ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/urename.h:787:24: note: expanded from macro 'ucol_safeClone'
+C/C++:   787 | #define ucol_safeClone U_ICU_ENTRY_POINT_RENAME(ucol_safeClone)
+C/C++:       |                        ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:123:47: note: expanded from macro 'U_ICU_ENTRY_POINT_RENAME'
+C/C++:   123 | #       define U_ICU_ENTRY_POINT_RENAME(x)    U_DEF2_ICU_ENTRY_POINT_RENAME(x,U_ICU_VERSION_SUFFIX)
+C/C++:       |                                               ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:122:51: note: expanded from macro 'U_DEF2_ICU_ENTRY_POINT_RENAME'
+C/C++:   122 | #       define U_DEF2_ICU_ENTRY_POINT_RENAME(x,y) U_DEF_ICU_ENTRY_POINT_RENAME(x,y)
+C/C++:       |                                                   ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/uvernum.h:121:50: note: expanded from macro 'U_DEF_ICU_ENTRY_POINT_RENAME'
+C/C++:   121 | #       define U_DEF_ICU_ENTRY_POINT_RENAME(x,y) x ## y
+C/C++:       |                                                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/<scratch space>:23:1: note: expanded from here
+C/C++:    23 | ucol_safeClone_77
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/i18n/unicode/ucol.h:1359:1: note: 'ucol_safeClone_77' has been explicitly marked deprecated here
+C/C++:  1359 | U_DEPRECATED UCollator* U_EXPORT2
+C/C++:       | ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:116:29: note: expanded from macro 'U_DEPRECATED'
+C/C++:   116 | #define U_DEPRECATED U_CAPI U_ATTRIBUTE_DEPRECATED
+C/C++:       |                             ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_android/app/.cxx/RelWithDebInfo/6x4b1151/arm64-v8a/_deps/icu_source-src/icu4c/source/common/unicode/umachine.h:96:52: note: expanded from macro 'U_ATTRIBUTE_DEPRECATED'
+C/C++:    96 | #    define U_ATTRIBUTE_DEPRECATED __attribute__ ((deprecated))
+C/C++:       |                                                    ^
+C/C++: 1 warning generated.
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/GreedyLineBreaker.cpp:20:
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/LineBreaker.h:31:
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:123:10: warning: 'isRtl' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   123 |     bool isRtl() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:39:18: note: overridden virtual function is here
+C/C++:    39 |     virtual bool isRtl() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:124:10: warning: 'canBreak' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   124 |     bool canBreak() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:42:18: note: overridden virtual function is here
+C/C++:    42 |     virtual bool canBreak() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:125:14: warning: 'getLocaleListId' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   125 |     uint32_t getLocaleListId() const { return mLocaleListId; }
+C/C++:       |              ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:45:22: note: overridden virtual function is here
+C/C++:    45 |     virtual uint32_t getLocaleListId() const = 0;
+C/C++:       |                      ^
+C/C++: 3 warnings generated.
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/LineBreaker.cpp:17:
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/LineBreaker.h:31:
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:123:10: warning: 'isRtl' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   123 |     bool isRtl() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:39:18: note: overridden virtual function is here
+C/C++:    39 |     virtual bool isRtl() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:124:10: warning: 'canBreak' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   124 |     bool canBreak() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:42:18: note: overridden virtual function is here
+C/C++:    42 |     virtual bool canBreak() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:125:14: warning: 'getLocaleListId' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   125 |     uint32_t getLocaleListId() const { return mLocaleListId; }
+C/C++:       |              ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:45:22: note: overridden virtual function is here
+C/C++:    45 |     virtual uint32_t getLocaleListId() const = 0;
+C/C++:       |                      ^
+C/C++: 3 warnings generated.
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/LineBreakerUtil.cpp:17:
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/LineBreakerUtil.h:23:
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:123:10: warning: 'isRtl' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   123 |     bool isRtl() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:39:18: note: overridden virtual function is here
+C/C++:    39 |     virtual bool isRtl() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:124:10: warning: 'canBreak' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   124 |     bool canBreak() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:42:18: note: overridden virtual function is here
+C/C++:    42 |     virtual bool canBreak() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:125:14: warning: 'getLocaleListId' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   125 |     uint32_t getLocaleListId() const { return mLocaleListId; }
+C/C++:       |              ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:45:22: note: overridden virtual function is here
+C/C++:    45 |     virtual uint32_t getLocaleListId() const = 0;
+C/C++:       |                      ^
+C/C++: 3 warnings generated.
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/MeasuredText.cpp:18:
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:123:10: warning: 'isRtl' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   123 |     bool isRtl() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:39:18: note: overridden virtual function is here
+C/C++:    39 |     virtual bool isRtl() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:124:10: warning: 'canBreak' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   124 |     bool canBreak() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:42:18: note: overridden virtual function is here
+C/C++:    42 |     virtual bool canBreak() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:125:14: warning: 'getLocaleListId' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   125 |     uint32_t getLocaleListId() const { return mLocaleListId; }
+C/C++:       |              ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:45:22: note: overridden virtual function is here
+C/C++:    45 |     virtual uint32_t getLocaleListId() const = 0;
+C/C++:       |                      ^
+C/C++: 3 warnings generated.
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/OptimalLineBreaker.cpp:17:
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/libs/minikin/OptimalLineBreaker.h:20:
+C/C++: In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/LineBreaker.h:31:
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:123:10: warning: 'isRtl' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   123 |     bool isRtl() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:39:18: note: overridden virtual function is here
+C/C++:    39 |     virtual bool isRtl() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:124:10: warning: 'canBreak' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   124 |     bool canBreak() const { return false; }
+C/C++:       |          ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:42:18: note: overridden virtual function is here
+C/C++:    42 |     virtual bool canBreak() const = 0;
+C/C++:       |                  ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:125:14: warning: 'getLocaleListId' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+C/C++:   125 |     uint32_t getLocaleListId() const { return mLocaleListId; }
+C/C++:       |              ^
+C/C++: /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkr_richtext/richtext/ext/minikin/include/minikin/MeasuredText.h:45:22: note: overridden virtual function is here
+C/C++:    45 |     virtual uint32_t getLocaleListId() const = 0;
+C/C++:       |                      ^
+C/C++: 3 warnings generated.
