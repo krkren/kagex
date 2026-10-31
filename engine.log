@@ -1,0 +1,601 @@
+20:41:26 TVP Log system initialized with level: 2
+20:41:26 App name: SDL Application
+20:41:26 App version: <unspecified>
+20:41:26 App ID: <unspecified>
+20:41:26 SDL revision: SDL-3.4.0-release-3.4.0
+20:41:27 Found resource: krkrz.cf
+20:41:27 Found resource: messages-cht.json
+20:41:27 Found resource: optiondesc.json
+20:41:27 Found resource: roboto-regular.ttf
+20:41:27 Found resource: messages.json
+20:41:27 Found resource: config.cf
+20:41:27 Found resource: messages-en.json
+20:41:27 Found resource: elements_basic.ttf
+20:41:27 Found resource: messages-chs.json
+20:41:27 Found resource: optiondesc-cht.json
+20:41:27 Found resource: SysInitScript.tjs
+20:41:27 Found resource: optiondesc-en.json
+20:41:27 Found resource: kagex.icns
+20:41:27 Found resource: data
+20:41:27 Found resource: optiondesc-chs.json
+20:41:27 Found resource: gamecontrollerdb.txt
+20:41:27 [stdapp.cpp:InitPath:262] appPath: /Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/
+20:41:27 ! [stdapp.cpp:InitPath:263] projectPath: /Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/data/
+20:41:27 [stdapp.cpp:InitPath:298] pluginPath: /Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/MacOS/
+20:41:27 Resource path: messages-en.json
+20:41:27 Resource path: messages-en.json
+20:41:27 [Application.cpp:LoadMessageResource:210] message file: resource://./messages-en.json (language tag: en-US)
+20:41:27 Audio stream created with channels: 2, sample rate: 48000
+20:41:27 Resource path: config_macos.cf
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+20:41:27 Resource path: config.cf
+20:41:27 Resource path: config.cf
+20:41:27 ! (info) Loading configuration file "/Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/config.cf" succeeded.
+20:41:27 ! (info) Loading configuration file "/Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/MacOS/krkrz.cf" succeeded.
+20:41:27 ! (info) Loading configuration file "/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/kagex-smoke-ykedwyez/savedata/krkrz.cfu" failed (ignoring) : file not found.
+20:41:27 ! (info) Data path : file://./var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/kagex-smoke-ykedwyez/savedata/
+20:41:27 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+20:41:27 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x118000000
+20:41:27 [AudioStream.cpp:InitMiniAudio:139] miniaudio engine initialized: 2 channels, 48000 Hz
+20:41:27 ! Program started on macOS 24.6.0 (macOS)
+20:41:27 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x138000000
+20:41:27 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x158004000
+20:41:27 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:585] StorageCache: budget set to FileAllocator capacity=256MB
+20:41:27 ! (info) Total physical memory : 7516192768
+20:41:27 ! (info) Selected project directory : file://./Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/data/
+20:41:27 Resource path: SysInitScript.tjs
+20:41:27 Resource path: SysInitScript.tjs
+20:41:27 ! Kirikiri Z Executable core /2.6.5.0 (Compiled on Oct 31 2026 20:39:40) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+20:41:27 ! The details of version information can be perused if -about is attached and started. 
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+20:41:27 Resource path: 
+20:41:27 Resource path: roboto-regular.ttf
+20:41:27 Resource path: roboto-regular.ttf
+20:41:27 Resource path: elements_basic.ttf
+20:41:27 Resource path: elements_basic.ttf
+20:41:27 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+20:41:27 [SysInitImpl.cpp:TVPAfterSystemInit:340] ImageCache enabled: limit=512MB (physmem=7168MB, source=BitmapPool)
+20:41:27 ! (info) Specified option(s) (earlier item has more priority) : -datapath=/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/kagex-smoke-ykedwyez/savedata/ -replfile=/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/kagex-smoke-ykedwyez/repl -replmodaltimeout=0 -orgname=krkren -appname=kagex -padinterval=70 -padinterval=70
+20:41:27 [SysInitImpl.cpp:TVPAfterSystemInit:446] CPU SIMD: NEON ASIMD (TVPCPUType=0x00000003)
+20:41:27 ! (info) Auto Loading Static Plugin:xp3crypt
+20:41:27 xp3crypt
+20:41:27 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x16f254000
+20:41:27 [GlobalAllocStats.cpp:Initialize:527] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+20:41:27 [main.cpp:SDL_AppInit:501] ANGLE: /Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/../Frameworks/liblibGLESv2_angle.dylib / /Users/runner/work/kagex/kagex/stage/KAGEX.app/Contents/Resources/../Frameworks/liblibEGL_angle.dylib
+20:41:27 ! ReplFileChannel: watching /var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/kagex-smoke-ykedwyez/repl
+20:41:27 (info) Loading startup script : startup.tjs
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 3 file(s) found, 3 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 5 file(s) found, 5 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 6 file(s) found, 6 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 15 file(s) found, 15 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 19 file(s) found, 19 file(s) activated. (1ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 38 file(s) found, 38 file(s) activated. (0ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 223 file(s) found, 223 file(s) activated. (6ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 310 file(s) found, 310 file(s) activated. (5ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 323 file(s) found, 323 file(s) activated. (3ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 323 file(s) found, 323 file(s) activated. (4ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 323 file(s) found, 323 file(s) activated. (3ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 323 file(s) found, 323 file(s) activated. (4ms)
+20:41:27 (info) Rebuilding Auto Path Table ...
+20:41:27 (info) Total 346 file(s) found, 345 file(s) activated. (4ms)
+...
+20:41:57 [a11y] [polite] Zoom event image (Relative specification)
+20:41:57 [a11y] [polite] Remove event image
+20:41:57 [a11y] [polite] Expression change (Happy)
+20:41:57 (info) Rebuilding Auto Path Table ...
+20:41:57 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:41:57 [a11y] [polite] Expression change (Angry)
+20:41:57 [a11y] [polite] Movement with time specification (→Right)
+20:41:57 [a11y] [polite] Movement with initial position specified (Center→Right)
+20:41:57 [a11y] [polite] Movement with initial position specified (Center→Right with opacity control)
+20:41:58 [a11y] [polite] Combined with zoom
+20:41:58 [a11y] [polite] A chime at the far left of the stage (positional sound)
+20:41:58 [a11y] [polite] And at the far right
+20:41:58 [a11y] [polite] Footsteps that go with Ai as she walks
+20:41:58 (info) Rebuilding Auto Path Table ...
+20:41:58 (info) Total 514 file(s) found, 511 file(s) activated. (10ms)
+20:41:58 [a11y] [polite] Cloning technique
+20:41:58 [a11y] [polite] Applying Bow/Boing/Shake actions to each respectively
+20:41:58 [a11y] [polite] Move so they overlap
+20:41:58 (info) Rebuilding Auto Path Table ...
+20:41:58 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:41:58 [a11y] [polite] Bring Ai2 to the front
+20:41:59 [a11y] [polite] Move Ai2 to the back
+20:41:59 [a11y] [polite] The End
+20:41:59 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:41:59 (info) Rebuilding Auto Path Table ...
+20:42:00 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:00 (info) Rebuilding Auto Path Table ...
+20:42:00 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:00 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:00 (info) Rebuilding Auto Path Table ...
+20:42:00 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:01 (info) Rebuilding Auto Path Table ...
+20:42:01 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:01 (info) Rebuilding Auto Path Table ...
+20:42:01 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:01 (info) Rebuilding Auto Path Table ...
+20:42:01 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:01 [a11y] [polite] This is a sample of the World Extension's "Environment Layer". It can be applied to staging effects such as cut-ins.
+20:42:01 (info) Rebuilding Auto Path Table ...
+20:42:01 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:01 [a11y] [polite] Show Star 1
+20:42:01 [a11y] [polite] Show Star 2
+20:42:01 [a11y] [polite] Show Star 3
+20:42:01 [a11y] [polite] Rotate Star 1
+20:42:02 (info) Rebuilding Auto Path Table ...
+20:42:02 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:02 [a11y] [polite] Rotate Star 2
+20:42:02 [a11y] [polite] Rotate Star 3
+20:42:02 [a11y] [polite] Move stars
+20:42:02 [a11y] [polite] Clear Star 1
+20:42:02 [a11y] [polite] Clear Star 2
+20:42:02 [a11y] [polite] Clear Star 3
+20:42:02 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:03 (info) Rebuilding Auto Path Table ...
+20:42:03 (info) Total 514 file(s) found, 511 file(s) activated. (7ms)
+20:42:03 (info) Rebuilding Auto Path Table ...
+20:42:03 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:03 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:03 (info) Rebuilding Auto Path Table ...
+20:42:03 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:03 (info) Rebuilding Auto Path Table ...
+20:42:03 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:04 (info) Rebuilding Auto Path Table ...
+20:42:04 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:04 (info) Rebuilding Auto Path Table ...
+20:42:04 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:04 (info) Rebuilding Auto Path Table ...
+20:42:04 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:04 [a11y] [polite] Example of transition description in the World function
+20:42:04 [a11y] [polite] Individual Update
+20:42:04 [a11y] [polite] Individual Update
+20:42:05 (info) Rebuilding Auto Path Table ...
+20:42:05 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:05 [a11y] [polite] Boing Boing action
+20:42:05 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:05 -- Disassembled VM code --
+20:42:05 #(1876) 		lay.loadImages(storage);
+20:42:05 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:05 -- Register dump --
+20:42:05 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x1708b3520:0x1708b3520)
+20:42:05 %-4=(string)"bg01_02"  %-3=(object)(object 0x17201b970:0x17201b970)
+20:42:05 %-2=(object)(object 0x16ee79fe8:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:05 %1=(object)(object 0x1708b3520:0x1708b3520)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:05 ---------------------------------------------------------------------------------------------------
+20:42:05 [a11y] [polite] Update all at once
+20:42:05 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:05 -- Disassembled VM code --
+20:42:05 #(1876) 		lay.loadImages(storage);
+20:42:05 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:05 -- Register dump --
+20:42:05 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x17230bd90:0x17230bd90)
+20:42:05 %-4=(string)"bg01_03"  %-3=(object)(object 0x1729fe7a0:0x1729fe7a0)
+20:42:05 %-2=(object)(object 0x16ee7a478:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:05 %1=(object)(object 0x17230bd90:0x17230bd90)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:05 ---------------------------------------------------------------------------------------------------
+20:42:05 [a11y] [polite] wave
+20:42:05 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:05 -- Disassembled VM code --
+20:42:05 #(1876) 		lay.loadImages(storage);
+20:42:05 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:05 -- Register dump --
+20:42:05 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x173985e60:0x173985e60)
+20:42:05 %-4=(string)"bg01_02"  %-3=(object)(object 0x1706978a0:0x1706978a0)
+20:42:05 %-2=(object)(object 0x16ee7a478:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:05 %1=(object)(object 0x173985e60:0x173985e60)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:05 ---------------------------------------------------------------------------------------------------
+20:42:05 [a11y] [polite] mosaic
+20:42:05 (info) Rebuilding Auto Path Table ...
+20:42:05 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:05 [a11y] [polite] turn
+20:42:05 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:05 -- Disassembled VM code --
+20:42:05 #(1876) 		lay.loadImages(storage);
+20:42:05 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:05 -- Register dump --
+20:42:05 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x17227b530:0x17227b530)
+20:42:05 %-4=(string)"bg01_03"  %-3=(object)(object 0x17082eb70:0x17082eb70)
+20:42:05 %-2=(object)(object 0x16ee7a478:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:05 %1=(object)(object 0x17227b530:0x17227b530)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:05 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:05 ---------------------------------------------------------------------------------------------------
+20:42:06 [a11y] [polite] rotatezoom
+20:42:06 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:06 -- Disassembled VM code --
+20:42:06 #(1876) 		lay.loadImages(storage);
+20:42:06 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:06 -- Register dump --
+20:42:06 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x17351ad30:0x17351ad30)
+20:42:06 %-4=(string)"bg01_02"  %-3=(object)(object 0x17243a9e0:0x17243a9e0)
+20:42:06 %-2=(object)(object 0x16ee7a478:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:06 %1=(object)(object 0x17351ad30:0x17351ad30)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:06 ---------------------------------------------------------------------------------------------------
+20:42:06 [a11y] [polite] rotatevanish
+20:42:06 [a11y] [polite] rotateswap
+20:42:06 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:06 -- Disassembled VM code --
+20:42:06 #(1876) 		lay.loadImages(storage);
+20:42:06 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:06 -- Register dump --
+20:42:06 %-6=(object)(object 0x171fcdf30:0x171fcdf30)  %-5=(object)(object 0x171d7b020:0x171d7b020)
+20:42:06 %-4=(string)"bg01_03"  %-3=(object)(object 0x1729004b0:0x1729004b0)
+20:42:06 %-2=(object)(object 0x16ee7a478:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:06 %1=(object)(object 0x171d7b020:0x171d7b020)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:06 ---------------------------------------------------------------------------------------------------
+20:42:06 (info) Rebuilding Auto Path Table ...
+20:42:06 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:06 [a11y] [polite] ripple
+20:42:06 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:06 -- Disassembled VM code --
+20:42:06 #(1876) 		lay.loadImages(storage);
+20:42:06 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:06 -- Register dump --
+20:42:06 %-6=(void)  %-5=(object)(object 0x173cd7fa0:0x173cd7fa0)  %-4=(string)"bg01_03"
+20:42:06 %-3=(object)(object 0x1722490a0:0x1722490a0)  %-2=(object)(object 0x16ee79668:0x0)
+20:42:06 %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:06 %1=(object)(object 0x173cd7fa0:0x173cd7fa0)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:06 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:06 ---------------------------------------------------------------------------------------------------
+20:42:06 [a11y] [polite] The extNagano plugin adds twelve more transitions.
+20:42:07 (info) Rebuilding Auto Path Table ...
+20:42:07 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:07 [a11y] [polite] book: a page turns
+20:42:07 [a11y] [polite] flutter: the picture peels away like paper
+20:42:07 [a11y] [polite] blurfade: a crossfade through a blur
+20:42:07 (info) Rebuilding Auto Path Table ...
+20:42:07 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:07 [a11y] [polite] zoomfade: the picture zooms in as it fades
+20:42:08 [a11y] [polite] scanline: lines slide in from alternate sides
+20:42:08 [a11y] [polite] rgbfade: red, green and blue change one after another
+20:42:08 (info) Rebuilding Auto Path Table ...
+20:42:08 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:08 [a11y] [polite] spin: the picture turns like the side of a box
+20:42:08 [a11y] [polite] multiripple: ripples spread from five points
+20:42:08 [a11y] [polite] imagewipe: a wipe led by a picture, here a brush stroke
+20:42:09 (info) Rebuilding Auto Path Table ...
+20:42:09 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:09 [a11y] [polite] 3duniversal: a rule picture sends pieces flying, here shards
+20:42:09 [a11y] [polite] honeyturn: hexagons flip over one by one
+20:42:09 [a11y] [polite] morphing: triangles warp the picture, here into a swirl (envinit.tjs)
+20:42:09 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:09 (info) Rebuilding Auto Path Table ...
+20:42:09 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:10 (info) Rebuilding Auto Path Table ...
+20:42:10 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:10 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:10 (info) Rebuilding Auto Path Table ...
+20:42:10 (info) Total 514 file(s) found, 511 file(s) activated. (9ms)
+20:42:10 (info) Rebuilding Auto Path Table ...
+20:42:10 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:11 (info) Rebuilding Auto Path Table ...
+20:42:11 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:11 (info) Rebuilding Auto Path Table ...
+20:42:11 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:11 [a11y] [polite] This is a test sample for KAGEX show/hide actions.
+20:42:11 (info) Rebuilding Auto Path Table ...
+20:42:11 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:11 [a11y] [polite] Character appearance (slide)
+20:42:11 [a11y] [polite] Character removal (slide)
+20:42:11 [a11y] [polite] Character appearance (zoom)
+20:42:12 (info) Rebuilding Auto Path Table ...
+20:42:12 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:12 [a11y] [polite] Character removal (zoom)
+20:42:12 [a11y] [polite] Simultaneous display (nosync specified)
+20:42:12 [a11y] [polite] This is a sample of composite actions.
+20:42:12 [a11y] [polite] Multiple continuous actions can be executed as a single action.
+20:42:12 [a11y] [polite] Example 2. This is a combination of separately defined actions.
+20:42:12 [a11y] [polite] End
+20:42:12 (info) Rebuilding Auto Path Table ...
+20:42:12 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:12 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:13 (info) Rebuilding Auto Path Table ...
+20:42:13 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:13 (info) Rebuilding Auto Path Table ...
+20:42:13 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:14 (info) Rebuilding Auto Path Table ...
+20:42:14 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:14 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:14 (info) Rebuilding Auto Path Table ...
+20:42:14 (info) Total 514 file(s) found, 511 file(s) activated. (7ms)
+20:42:14 (info) Rebuilding Auto Path Table ...
+20:42:14 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:15 (info) Rebuilding Auto Path Table ...
+20:42:15 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:15 (info) Rebuilding Auto Path Table ...
+20:42:15 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:15 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:15 -- Disassembled VM code --
+20:42:15 #(1876) 		lay.loadImages(storage);
+20:42:15 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:15 -- Register dump --
+20:42:15 %-6=(object)(object 0x173b2ad80:0x173b2ad80)  %-5=(object)(object 0x172acdad0:0x172acdad0)
+20:42:15 %-4=(string)"bg01_03"  %-3=(object)(object 0x1719e4930:0x1719e4930)
+20:42:15 %-2=(object)(object 0x16ee79b88:0x0)  %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:15 %1=(object)(object 0x172acdad0:0x172acdad0)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:15 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:15 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:15 ---------------------------------------------------------------------------------------------------
+20:42:15 TVP_PLUGIN_NAME
+20:42:16 (info) Rebuilding Auto Path Table ...
+20:42:16 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:16 [a11y] [polite] Glowing petals drift over the road: an Effekseer effect on a World layer, drawn by the krkreffekseer plugin.
+20:42:16 [a11y] [polite] Ai: Petals... that glow?
+20:42:16 [a11y] [polite] Ai: And sparkles, all around me!
+20:42:16 [a11y] [polite] Each effect is a layer of its own: efk= names it, efkmag sizes it, and efkwidth and efkheight set the size of its canvas, which is placed like any layer.
+20:42:17 [a11y] [polite] Ai: Fireworks!
+20:42:17 (info) Rebuilding Auto Path Table ...
+20:42:17 (info) Total 514 file(s) found, 511 file(s) activated. (10ms)
+20:42:17 [a11y] [polite] Their rockets go up about once a second, for as long as the layer plays.
+20:42:17 [a11y] [polite] Ai: Hm? Something's glowing over there...
+20:42:18 [a11y] [polite] Ai: Whoa!
+20:42:18 (info) Rebuilding Auto Path Table ...
+20:42:18 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:18 [a11y] [polite] A burst like that one plays once, and its layer clears when it's over.
+20:42:18 (info) Rebuilding Auto Path Table ...
+20:42:18 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:19 [a11y] [polite] With efkstop, an effect stops making particles and fades out.
+20:42:19 [a11y] [polite] Ai: Thanks for watching!
+20:42:19 (info) Rebuilding Auto Path Table ...
+20:42:19 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:19 ==== An exception occured at KAGEnvironment.tjs(1876)[(function) loadBGFromCache], VM ip = 114 ====
+20:42:19 -- Disassembled VM code --
+20:42:19 #(1876) 		lay.loadImages(storage);
+20:42:19 00000114 calld %0, %-5.*13(%-4)	// *13 = (string)"loadImages"
+20:42:19 -- Register dump --
+20:42:19 %-6=(void)  %-5=(object)(object 0x1724b6360:0x1724b6360)  %-4=(string)"bg01_03"
+20:42:19 %-3=(object)(object 0x1723fab50:0x1723fab50)  %-2=(object)(object 0x16ee79668:0x0)
+20:42:19 %-1=(object)(object 0x170757ae0:0x170757ae0)  %0=(void)
+20:42:19 %1=(object)(object 0x1724b6360:0x1724b6360)  %2=(object)(object 0x1705cf920:0x1705cf920)
+20:42:19 %3=(object)(object 0x16fe4e600:0x16fe4e600)  %4=(object)(object 0x1705cf920:0x1705cf920)
+20:42:19 %5=(object)(object 0x6000006854d0:0x0)  %6=(object)(object 0x600000385130:0x0)
+20:42:19 ---------------------------------------------------------------------------------------------------
+20:42:19 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:20 (info) Rebuilding Auto Path Table ...
+20:42:20 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:20 (info) Rebuilding Auto Path Table ...
+20:42:20 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:20 (info) Rebuilding Auto Path Table ...
+20:42:20 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:20 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:20 (info) Rebuilding Auto Path Table ...
+20:42:20 (info) Total 514 file(s) found, 511 file(s) activated. (2ms)
+20:42:21 (info) Rebuilding Auto Path Table ...
+20:42:21 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:21 (info) Rebuilding Auto Path Table ...
+20:42:21 (info) Total 514 file(s) found, 511 file(s) activated. (7ms)
+20:42:21 (info) Rebuilding Auto Path Table ...
+20:42:21 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:22 [a11y] [polite] Pip is drawn from layers, put together as it's shown: a body, two outfits, three arm poses and six faces.
+20:42:22 (info) Rebuilding Auto Path Table ...
+20:42:22 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:22 [a11y] [polite] Pip: Hi! I'm Pip.
+20:42:22 [a11y] [polite] Pip: I blink by myself, and my mouth moves with my voice.
+20:42:22 (info) Rebuilding Auto Path Table ...
+20:42:22 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:22 [a11y] [polite] Its eyes blink every few seconds, and while it speaks, its mouth opens as wide as its voice is loud.
+20:42:22 [a11y] [polite] Pip: Hi again! Listen closely. When I speak with a real voice, my mouth makes the shape of every vowel I say. Ah, ee, ooh, eh, oh. Isn't that so much better than mumbling?
+20:42:22 [a11y] [polite] For that line, kagex-lipsync worked out from the voice and its text when each vowel is said, and wrote pip000009.lip beside the voice. Every other voice moves the mouth by its loudness alone.
+20:42:22 [a11y] [polite] Pip: Oh! A new face!
+20:42:23 (info) Rebuilding Auto Path Table ...
+20:42:23 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:23 [a11y] [polite] An x in front of a face, as in xsurprised, closes the eyes while the face changes.
+20:42:23 [a11y] [polite] Pip: Oops, did I startle you?
+20:42:23 [a11y] [polite] Pip: How do I look?
+20:42:23 (info) Rebuilding Auto Path Table ...
+20:42:23 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:23 [a11y] [polite] Pip: Ha ha! I like it!
+20:42:23 [a11y] [polite] The laughing face has its eyes drawn shut, so they don't blink, while the mouth still moves.
+20:42:24 [a11y] [polite] Pip: Hey! I liked that hat!
+20:42:24 [a11y] [polite] Outfits change like faces: beret puts the hat on, and plain takes it off.
+20:42:24 [a11y] [polite] Each World level has its own set of layers, drawn at that size, so Pip stays sharp up close.
+20:42:24 (info) Rebuilding Auto Path Table ...
+20:42:24 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:24 [a11y] [polite] The eyes and the mouth also take orders: eyecloseto closes the eyes and waits until they're shut.
+20:42:24 [a11y] [polite] Then eyeopento opens them again.
+20:42:24 [a11y] [polite] eyeflip=3 blinks three times.
+20:42:25 [a11y] [polite] And lipflip=4 moves the mouth four times, without a voice.
+20:42:25 (info) Rebuilding Auto Path Table ...
+20:42:25 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:25 [a11y] [polite] Pip: Bye for now!
+20:42:25 [a11y] [polite] That wave is an animation: waving, in data/main/charanim.csv, steps through the arm poses on a timer until something else changes.
+20:42:25 ==== An exception occured at Initialize.tjs(56)[(function expression) (anonymous)], VM ip = 33 ====
+20:42:25 -- Disassembled VM code --
+20:42:25 #(56) 		return origPluginsLink(name);
+20:42:25 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+20:42:25 -- Register dump --
+20:42:25 %-3=(string)"krkrlive2d.dll"  %-2=(object)(object 0x16ee78a38:0x0)
+20:42:25 %-1=(object)(object 0x6000006854d0:0x6000006854d0)  %0=(void)  %1=(void)
+20:42:25 %2=(string)"krkrlive2d.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+20:42:25 ---------------------------------------------------------------------------------------------------
+20:42:25 Plugin not loaded: plugin/krkrlive2d.dll (Cannot load Plugin krkrlive2d.dll)
+20:42:25 Live2D models are unavailable: the krkrlive2d plugin isn't there (a game builds it with Live2D's Cubism SDK)
+20:42:25 [a11y] [polite] This build doesn't play Live2D models. That takes the krkrlive2d plugin, built with Live2D's Cubism SDK, and a model: "Live2D Characters" in doc/world.txt says how to add them.
+20:42:25 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:26 (info) Rebuilding Auto Path Table ...
+20:42:26 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:26 (info) Rebuilding Auto Path Table ...
+20:42:26 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:26 (info) Rebuilding Auto Path Table ...
+20:42:26 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:26 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:26 (info) Rebuilding Auto Path Table ...
+20:42:26 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:27 (info) Rebuilding Auto Path Table ...
+20:42:27 (info) Total 514 file(s) found, 511 file(s) activated. (11ms)
+20:42:27 (info) Rebuilding Auto Path Table ...
+20:42:27 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:28 (info) Rebuilding Auto Path Table ...
+20:42:28 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:28 (info) Rebuilding Auto Path Table ...
+20:42:28 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:29 [a11y] [polite] This is a scripting sample using KAGEX World Extension.
+20:42:29 (info) Rebuilding Auto Path Table ...
+20:42:29 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:29 (info) Rebuilding Auto Path Table ...
+20:42:29 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:29 (info) Rebuilding Auto Path Table ...
+20:42:29 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:30 (info) Rebuilding Auto Path Table ...
+20:42:30 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:30 (info) Rebuilding Auto Path Table ...
+20:42:30 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:30 Resource path: roboto-regular.ttf
+20:42:30 (info) Rebuilding Auto Path Table ...
+20:42:30 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:31 Resource path: roboto-regular.ttf
+20:42:31 (info) Rebuilding Auto Path Table ...
+20:42:31 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:31 Resource path: roboto-regular.ttf
+20:42:31 (info) Rebuilding Auto Path Table ...
+20:42:31 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:31 Resource path: roboto-regular.ttf
+20:42:31 (info) Rebuilding Auto Path Table ...
+20:42:31 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:31 Resource path: roboto-regular.ttf
+20:42:31 (info) Rebuilding Auto Path Table ...
+20:42:31 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:32 Resource path: roboto-regular.ttf
+20:42:32 (info) Rebuilding Auto Path Table ...
+20:42:32 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:32 (info) Rebuilding Auto Path Table ...
+20:42:32 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:32 (info) Rebuilding Auto Path Table ...
+20:42:32 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:32 Resource path: roboto-regular.ttf
+20:42:32 (info) Rebuilding Auto Path Table ...
+20:42:33 (info) Total 514 file(s) found, 511 file(s) activated. (14ms)
+20:42:33 Resource path: roboto-regular.ttf
+20:42:33 (info) Rebuilding Auto Path Table ...
+20:42:33 (info) Total 514 file(s) found, 511 file(s) activated. (15ms)
+20:42:33 Resource path: roboto-regular.ttf
+20:42:33 (info) Rebuilding Auto Path Table ...
+20:42:33 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:33 Resource path: roboto-regular.ttf
+20:42:33 (info) Rebuilding Auto Path Table ...
+20:42:33 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:33 Resource path: roboto-regular.ttf
+20:42:33 (info) Rebuilding Auto Path Table ...
+20:42:33 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:34 (info) Rebuilding Auto Path Table ...
+20:42:34 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:34 (info) Rebuilding Auto Path Table ...
+20:42:34 (info) Total 514 file(s) found, 511 file(s) activated. (7ms)
+20:42:34 Resource path: roboto-regular.ttf
+20:42:34 (info) Rebuilding Auto Path Table ...
+20:42:34 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:35 Resource path: roboto-regular.ttf
+20:42:35 (info) Rebuilding Auto Path Table ...
+20:42:35 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:35 (info) Rebuilding Auto Path Table ...
+20:42:35 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:35 (info) Rebuilding Auto Path Table ...
+20:42:35 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:35 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:36 (info) Rebuilding Auto Path Table ...
+20:42:36 (info) Total 514 file(s) found, 511 file(s) activated. (6ms)
+20:42:36 (info) Rebuilding Auto Path Table ...
+20:42:36 (info) Total 514 file(s) found, 511 file(s) activated. (2ms)
+20:42:36 [a11y] [polite] This is a scripting sample using KAGEX World Extension.
+20:42:36 (info) Rebuilding Auto Path Table ...
+20:42:36 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:36 [a11y] [polite] You can perform advanced staging with relatively simple descriptions.
+20:42:36 [a11y] [polite] It's easier to understand if you open char.ks and compare it with the actual file.
+20:42:37 [a11y] [polite] Character appearance
+20:42:37 (info) Rebuilding Auto Path Table ...
+20:42:37 (info) Total 514 file(s) found, 511 file(s) activated. (4ms)
+20:42:37 [a11y] [polite] Ai: Name display, text display, and key input wait are automatically performed in the prescribed format.
+20:42:37 [a11y] [polite] ???: To change the display name, just write the display name after the slash.
+20:42:37 (info) Rebuilding Auto Path Table ...
+20:42:37 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:38 (info) Rebuilding Auto Path Table ...
+20:42:38 (info) Total 514 file(s) found, 511 file(s) activated. (5ms)
+20:42:38 (info) Rebuilding Auto Path Table ...
+20:42:38 (info) Total 514 file(s) found, 511 file(s) activated. (3ms)
+20:42:38 (info) Rebuilding Auto Path Table ...
+20:42:38 (info) Total 515 file(s) found, 512 file(s) activated. (7ms)
+20:42:38 (info) Rebuilding Auto Path Table ...
+20:42:38 (info) Total 515 file(s) found, 512 file(s) activated. (5ms)
+20:42:38 (info) Rebuilding Auto Path Table ...
+20:42:38 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:39 (info) Rebuilding Auto Path Table ...
+20:42:39 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:39 Conductor restore processing:0/0:*init:0
+20:42:39 Restore to specified label position:*init
+20:42:39 Current line:0 Restore planned position:0
+20:42:39 (info) Rebuilding Auto Path Table ...
+20:42:39 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:40 (info) Rebuilding Auto Path Table ...
+20:42:40 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:40 (info) Rebuilding Auto Path Table ...
+20:42:40 (info) Total 515 file(s) found, 512 file(s) activated. (5ms)
+20:42:40 Conductor restore processing:6/0:*start:3
+20:42:40 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+20:42:40 Restore to specified label position:*start
+20:42:40 Current line:3 Restore planned position:3
+20:42:40 (info) Rebuilding Auto Path Table ...
+20:42:40 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:41 (info) Rebuilding Auto Path Table ...
+20:42:41 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:41 (info) Rebuilding Auto Path Table ...
+20:42:41 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:42 [a11y] [polite] ???: To change the display name, just write the display name after the slash.
+20:42:42 (info) Rebuilding Auto Path Table ...
+20:42:42 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:42 (info) Rebuilding Auto Path Table ...
+20:42:42 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:42 (info) Rebuilding Auto Path Table ...
+20:42:42 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:43 (info) Rebuilding Auto Path Table ...
+20:42:43 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:43 (info) Rebuilding Auto Path Table ...
+20:42:43 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:43 (info) Rebuilding Auto Path Table ...
+20:42:43 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:43 (info) Rebuilding Auto Path Table ...
+20:42:43 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:43 History jump:char.ks*start:5
+20:42:43 Jumping to text:5
+20:42:44 (info) Rebuilding Auto Path Table ...
+20:42:44 (info) Total 515 file(s) found, 512 file(s) activated. (3ms)
+20:42:45 (info) Rebuilding Auto Path Table ...
+20:42:45 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:45 (info) Rebuilding Auto Path Table ...
+20:42:45 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:46 [a11y] [polite] Ai: Name display, text display, and key input wait are automatically performed in the prescribed format.
+20:42:46 (info) Rebuilding Auto Path Table ...
+20:42:46 (info) Total 515 file(s) found, 512 file(s) activated. (4ms)
+20:42:46 (info) Rebuilding Auto Path Table ...
+20:42:46 (info) Total 515 file(s) found, 512 file(s) activated. (5ms)

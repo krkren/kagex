@@ -1,0 +1,36 @@
+== sample (data, desktop)
+ok   start-up reaches the title screen                               10.8s
+     the system's language here: en (System.uiLanguage "en-US", candidates en,ja)
+ok   the sample is in English for the steps that read its text (KAGLanguageList)   1.6s
+ok   Extras start locked                                              0.3s
+     8 compiled to .scn, 0 warning(s)
+ok   the scripts in !scnlist.txt compile, so the demos play compiled   1.9s
+     compiled, Ai in B's first state, its stage, B's entry key, still to compile: 2,1,yes,302c4ffd,0
+ok   a compiled script starts from the World the script that goes to it leaves   0.8s
+ok   demo layer.ks plays to the end                                   8.9s
+ok   demo char.ks plays to the end                                    9.9s
+ok   demo envlayer.ks plays to the end                                3.0s
+ok   demo transition.ks plays to the end                              6.8s
+ok   demo action.ks plays to the end                                  3.7s
+ok   demo effect.ks plays to the end                                  6.5s
+ok   demo anim.ks plays to the end                                    5.9s
+ok   finishing every demo unlocks Extras                              0.1s
+ok   compiled text gets the word wrap                                 3.5s
+     greedy from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from x 900, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 6 lines, 0 page(s), planned by krkr_richtext
+     quality from x 600, 3 lines a page: 14 lines, 4 page(s), planned by krkr_richtext
+ok   English lines break between words, where krkr_richtext draws as its line breaker plans them   2.5s
+     'あ。あ。あ。'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'あ「い」あ「'... from the line's start: 3 lines (41, 40, 39), planned by krkr_richtext
+     'きゃきゃきゃ'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'ああああああ'... from the line's start: 3 lines (45, 45, 16), planned by krkr_richtext
+     'ああああああ'... from x 900: 3 lines (19, 49, 38), planned by krkr_richtext
+ok   Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese   1.6s
+     1 run(s); ink to x 1036 (2154568) together, 1036 (2236566) a character at a time
+ok   krkr_richtext draws a line's characters together, where KAG put them   1.5s
+     saved at char.ks*start,6,5,1
+ok   a compiled scene saves in the middle and loads where it was      7.3s
+     text, history, backlog marks, Ai shown: 6,6,6,1, then BACK: 5,5,5,1
