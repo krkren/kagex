@@ -1,0 +1,31 @@
+d)
+set(SIMPLEBIND_DIR ${PLUGINS_DIR}/simplebinder)
+
+# 家庭用ゲーム機版と同じ組み込みプラグイン一式 (Android/コンソール専用の
+# virtualpad / androidconfig / license / ps5* を除く)。KAG3 の ADV が
+# 依存するプラグインを揃える。+ web で追加した extrans / extNagano。
+LIST(APPEND TVP_PLUGINS_STATIC
+# krkrz_dev/src/plugins
+  csvParser
+  getSample
+  json
+  KAGParserEx
+  layerExBTOA
+  layerExImage
+  layerExRaster
+  layerExVector
+  saveStruct
+  scriptsEx
+  shrinkCopy
+# krkrtemplate/plugins_utf8
+# wamsoft_work
+# web 追加 (トランジション)
+  extrans
+  extNagano
+  krkreffekseer
+  minizip
+  clipfile
+  xp3crypt
+  scnfile
+  krkrlive2d
+)

@@ -1,0 +1,29 @@
+Resolving SDK alias 'latest' to '6.0.13'
+Resolving SDK version '6.0.13' to 'sdk-releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'
+Installing SDK 'sdk-releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'..
+Installing tool 'node-24.19.0-64bit'..
+Downloading: /home/runner/work/kagex/kagex/emsdk/downloads/node-v24.19.0-linux-x64.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/deps/node-v24.19.0-linux-x64.tar.xz, 31633904 Bytes
+ [----------------------------------------------------------------------------]
+Unpacking '/home/runner/work/kagex/kagex/emsdk/downloads/node-v24.19.0-linux-x64.tar.xz' to '/home/runner/work/kagex/kagex/emsdk/node/24.19.0_64bit'
+Done installing tool 'node-24.19.0-64bit'.
+Installing tool 'releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'..
+Downloading: /home/runner/work/kagex/kagex/emsdk/downloads/eb132757325583b787fe9414b09afea9442b72ad-wasm-binaries.tar.xz from https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/eb132757325583b787fe9414b09afea9442b72ad/wasm-binaries.tar.xz, 311791988 Bytes
+ [----------------------------------------------------------------------------]
+Unpacking '/home/runner/work/kagex/kagex/emsdk/downloads/eb132757325583b787fe9414b09afea9442b72ad-wasm-binaries.tar.xz' to '/home/runner/work/kagex/kagex/emsdk/upstream'
+Done installing tool 'releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'.
+Done installing SDK 'sdk-releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'.
+Resolving SDK alias 'latest' to '6.0.13'
+Resolving SDK version '6.0.13' to 'sdk-releases-eb132757325583b787fe9414b09afea9442b72ad-64bit'
+Setting the following tools as active:
+   node-24.19.0-64bit
+   releases-eb132757325583b787fe9414b09afea9442b72ad-64bit
+
+Next steps:
+- To conveniently access emsdk tools from the command line,
+  consider adding the following directories to your PATH:
+    /home/runner/work/kagex/kagex/emsdk
+    /home/runner/work/kagex/kagex/emsdk/upstream/emscripten
+- This can be done for the current shell by running:
+    source "/home/runner/work/kagex/kagex/emsdk/emsdk_env.sh"
+- Configure emsdk in your shell startup scripts by running:
+    echo 'source "/home/runner/work/kagex/kagex/emsdk/emsdk_env.sh"' >> $HOME/.bash_profile

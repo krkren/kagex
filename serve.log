@@ -1,0 +1,67 @@
+127.0.0.1 - - [31/Oct/2026 20:41:25] "GET /?audiogate=0 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /coi-serviceworker.js HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /webconfig.js?v=ac561b0bbc37ea73 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /live2dcubismcore.min.js?v=ac561b0bbc37ea73 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /kagex-web.js?v=ac561b0bbc37ea73 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /krkrz.js?v=ac561b0bbc37ea73 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /coi-serviceworker.js HTTP/1.1" 304 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /krkrz.data HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] code 404, message File not found
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /resource/loading.json HTTP/1.1" 404 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /krkrz.wasm HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /?audiogate=0 HTTP/1.1" 304 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /icon-192.png HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 52864)
+Traceback (most recent call last):
+  File "/usr/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/lib/python3.12/http/server.py", line 1311, in finish_request
+    self.RequestHandlerClass(request, client_address, self,
+  File "/usr/lib/python3.12/http/server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "/usr/lib/python3.12/http/server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+  File "/usr/lib/python3.12/http/server.py", line 878, in copyfile
+    shutil.copyfileobj(source, outputfile)
+  File "/usr/lib/python3.12/shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+  File "/usr/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+----------------------------------------
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /krkrz.data HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] code 404, message File not found
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /resource/loading.json HTTP/1.1" 404 -
+127.0.0.1 - - [31/Oct/2026 20:41:26] "GET /krkrz.wasm HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /kagex-build.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource.list HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/SysInitScript.tjs HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/config.cf HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/elements_basic.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/gamecontrollerdb.txt HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/messages-chs.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/messages-cht.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/messages-en.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/messages.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/notoemoji-regular.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/notosansjp-regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/optiondesc-chs.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/optiondesc-cht.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/optiondesc-en.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/optiondesc.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /resource/roboto-regular.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /gamedata/krkrz_files.json HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:27] "GET /gamedata/data.xp3 HTTP/1.1" 200 -
+127.0.0.1 - - [31/Oct/2026 20:41:29] code 404, message File not found
+127.0.0.1 - - [31/Oct/2026 20:41:29] "GET /krkrz_prefetch.json HTTP/1.1" 404 -
+127.0.0.1 - - [31/Oct/2026 20:41:35] code 404, message File not found
+127.0.0.1 - - [31/Oct/2026 20:41:35] "GET /gamedata/data.xp3%3Evideo/test.webm HTTP/1.1" 404 -
+127.0.0.1 - - [31/Oct/2026 20:41:38] "GET /icon-192.png HTTP/1.1" 304 -
+127.0.0.1 - - [31/Oct/2026 20:42:26] "GET /coi-serviceworker.js HTTP/1.1" 304 -

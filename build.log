@@ -1,0 +1,601 @@
+make: Entering directory '/home/runner/work/kagex/kagex/kirikiri/krkrz_web'
+cmake --preset wasm32-emscripten -DCMAKE_BUILD_TYPE=Release 
+Preset CMake variables:
+
+  CMAKE_CXX_STANDARD="20"
+  CMAKE_CXX_STANDARD_REQUIRED="ON"
+  CMAKE_TOOLCHAIN_FILE="/home/runner/work/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake"
+  VCPKG_CHAINLOAD_TOOLCHAIN_FILE="/home/runner/work/kagex/kagex/kirikiri/krkrz_web/cmake/toolchains/wasm32-emscripten-pthread.toolchain.cmake"
+  VCPKG_OVERLAY_TRIPLETS="/home/runner/work/kagex/kagex/kirikiri/krkrz_web/cmake/triplets"
+  VCPKG_TARGET_TRIPLET="wasm32-emscripten-pthread"
+
+Preset environment variables:
+
+  BUILD_DIR="build/wasm32-emscripten/Release"
+
+-- krkrlive2d: the Cubism Core's headers from /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/sdk/CubismSdkForNative-5-r.5/Core, the Core itself in live2dcubismcore.js
+-- krkrz_merge_vcpkg_manifest: /home/runner/work/kagex/kagex/kirikiri/krkrz_web/build/wasm32-emscripten/Release/manifest/vcpkg.json
+--   + /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/plugins/krkreffekseer: minizip-ng
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.4).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.4/cmake-4.4.4-linux-x86_64.tar.gz -> cmake-4.4.4-linux-x86_64.tar.gz
+Successfully downloaded cmake-4.4.4-linux-x86_64.tar.gz
+Extracting cmake...
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+Detecting compiler hash for triplet wasm32-emscripten-pthread...
+Compiler found: /home/runner/work/kagex/kagex/emsdk/upstream/emscripten/em++
+The following packages will be built and installed:
+  * brotli:wasm32-emscripten-pthread@1.2.0
+  * bzip2[core,tool]:wasm32-emscripten-pthread@1.0.8#6
+    freetype[brotli,bzip2,core,png,zlib]:wasm32-emscripten-pthread@2.13.3
+    glm:wasm32-emscripten-pthread@1.0.2
+    libjpeg-turbo:wasm32-emscripten-pthread@3.1.2
+  * liblzma:wasm32-emscripten-pthread@5.8.1
+    libpng:wasm32-emscripten-pthread@1.6.51
+    miniaudio:wasm32-emscripten-pthread@0.11.23
+    minizip-ng[bzip2,core,lzma,openssl,pkcrypt,wzaes,zlib,zstd]:wasm32-emscripten-pthread@4.0.10#1
+    oniguruma:wasm32-emscripten-pthread@6.9.10
+  * openssl:wasm32-emscripten-pthread@3.6.0#3
+    opus:wasm32-emscripten-pthread@1.5.2#1
+    picojson:wasm32-emscripten-pthread@1.3.0#3
+    plog:wasm32-emscripten-pthread@1.1.11
+  * vcpkg-cmake:x64-linux@2024-04-23
+  * vcpkg-cmake-config:x64-linux@2024-05-23
+  * vcpkg-cmake-get-vars:x64-linux@2025-05-29
+    zlib:wasm32-emscripten-pthread@1.3.1
+  * zstd:wasm32-emscripten-pthread@1.5.7
+Additional packages (*) will be modified to complete this operation.
+Restored 0 package(s) from /home/runner/.cache/vcpkg/archives in 26.5 us. Use --debug to see more details.
+Installing 1/19 vcpkg-cmake:x64-linux@2024-04-23...
+vcpkg-cmake:x64-linux@2024-04-23 package ABI: 1c656a08fd97fa3fa3e8d1a7bce71733d48808032c65976bc08c0b6d44fac7e3
+Building vcpkg-cmake:x64-linux@2024-04-23...
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_configure.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_build.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg_cmake_install.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/vcpkg-port-config.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake_x64-linux/share/vcpkg-cmake/copyright
+-- Performing post-build validation
+Starting submission of vcpkg-cmake:x64-linux@2024-04-23 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake:x64-linux: 18.4 ms
+Installing 2/19 zlib:wasm32-emscripten-pthread@1.3.1...
+zlib:wasm32-emscripten-pthread@1.3.1 package ABI: f8de833bd10011779f3073eb70651088e3cced9fc3512be4dbebbb15424f2c9d
+Building zlib:wasm32-emscripten-pthread@1.3.1...
+/home/runner/work/kagex/kagex/kirikiri/krkrz_web/cmake/triplets/wasm32-emscripten-pthread.cmake: info: loaded overlay triplet from here
+Downloading https://github.com/madler/zlib/archive/v1.3.1.tar.gz -> madler-zlib-v1.3.1.tar.gz
+Successfully downloaded madler-zlib-v1.3.1.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/madler-zlib-v1.3.1.tar.gz
+-- Applying patch 0001-Prevent-invalid-inclusions-when-HAVE_-is-set-to-0.patch
+-- Applying patch 0002-build-static-or-shared-not-both.patch
+-- Applying patch 0003-android-and-mingw-fixes.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/zlib/src/v1.3.1-2e5db616bf.clean
+-- Configuring wasm32-emscripten-pthread
+-- Building wasm32-emscripten-pthread-dbg
+-- Building wasm32-emscripten-pthread-rel
+-- Installing: /home/runner/work/_temp/vcpkg/packages/zlib_wasm32-emscripten-pthread/share/zlib/vcpkg-cmake-wrapper.cmake
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/zlib_wasm32-emscripten-pthread/lib/pkgconfig/zlib.pc
+-- Fixing pkgconfig file: /home/runner/work/_temp/vcpkg/packages/zlib_wasm32-emscripten-pthread/debug/lib/pkgconfig/zlib.pc
+-- Installing: /home/runner/work/_temp/vcpkg/packages/zlib_wasm32-emscripten-pthread/share/zlib/copyright
+-- Performing post-build validation
+Starting submission of zlib:wasm32-emscripten-pthread@1.3.1 to 1 binary cache(s) in the background
+Elapsed time to handle zlib:wasm32-emscripten-pthread: 8.2 s
+Completed submission of vcpkg-cmake:x64-linux@2024-04-23 to 1 binary cache(s) in 18.8 ms
+Installing 3/19 vcpkg-cmake-config:x64-linux@2024-05-23...
+vcpkg-cmake-config:x64-linux@2024-05-23 package ABI: ed6a7c60e97f919cbbe371721a9f10993378376e354db55cc6013274251dd2fc
+Building vcpkg-cmake-config:x64-linux@2024-05-23...
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/vcpkg_cmake_config_fixup.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/vcpkg-port-config.cmake
+-- Installing: /home/runner/work/_temp/vcpkg/packages/vcpkg-cmake-config_x64-linux/share/vcpkg-cmake-config/copyright
+-- Skipping post-build validation due to VCPKG_POLICY_EMPTY_PACKAGE
+Starting submission of vcpkg-cmake-config:x64-linux@2024-05-23 to 1 binary cache(s) in the background
+Elapsed time to handle vcpkg-cmake-config:x64-linux: 17.7 ms
+Installing 4/19 libpng:wasm32-emscripten-pthread@1.6.51...
+libpng:wasm32-emscripten-pthread@1.6.51 package ABI: 0b65d70a9b1922af97dcfa831822f3f1735ec8c2fe48b0cb30aee5f0332477d4
+Building libpng:wasm32-emscripten-pthread@1.6.51...
+/home/runner/work/kagex/kagex/kirikiri/krkrz_web/cmake/triplets/wasm32-emscripten-pthread.cmake: info: loaded overlay triplet from here
+Downloading https://github.com/pnggroup/libpng/archive/v1.6.51.tar.gz -> pnggroup-libpng-v1.6.51.tar.gz
+Successfully downloaded pnggroup-libpng-v1.6.51.tar.gz
+-- Extracting source /home/runner/work/_temp/vcpkg/downloads/pnggroup-libpng-v1.6.51.tar.gz
+-- Applying patch cmake.patch
+-- Using source at /home/runner/work/_temp/vcpkg/buildtrees/libpng/src/v1.6.51-cfe5eddac0.clean
+...
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:134:15: warning: 'SetWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  134 |         virtual void SetWidth(int w);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:247:15: note: overridden virtual function is here
+  247 |         virtual void SetWidth( int w ){}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:135:15: warning: 'GetWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  135 |         virtual int  GetWidth() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:248:14: note: overridden virtual function is here
+  248 |         virtual int GetWidth() const { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:136:15: warning: 'SetHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  136 |         virtual void SetHeight(int h);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:249:15: note: overridden virtual function is here
+  249 |         virtual void SetHeight( int h ){}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:137:15: warning: 'GetHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  137 |         virtual int  GetHeight() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:250:14: note: overridden virtual function is here
+  250 |         virtual int GetHeight() const { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:138:15: warning: 'SetSize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  138 |         virtual void SetSize(int w, int h);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:251:15: note: overridden virtual function is here
+  251 |         virtual void SetSize( int w, int h ){}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:140:15: warning: 'SetMinWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  140 |         virtual void SetMinWidth(int v);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:253:15: note: overridden virtual function is here
+  253 |         virtual void SetMinWidth( int v ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:141:15: warning: 'SetMinHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  141 |         virtual void SetMinHeight(int v);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:255:15: note: overridden virtual function is here
+  255 |         virtual void SetMinHeight( int v ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:142:15: warning: 'SetMinSize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  142 |         virtual void SetMinSize(int w, int h);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:257:15: note: overridden virtual function is here
+  257 |         virtual void SetMinSize( int w, int h ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:143:15: warning: 'SetMaxWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  143 |         virtual void SetMaxWidth(int v);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:258:15: note: overridden virtual function is here
+  258 |         virtual void SetMaxWidth( int v ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:144:15: warning: 'SetMaxHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  144 |         virtual void SetMaxHeight(int v);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:260:15: note: overridden virtual function is here
+  260 |         virtual void SetMaxHeight( int v ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:145:15: warning: 'SetMaxSize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  145 |         virtual void SetMaxSize(int w, int h);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:262:15: note: overridden virtual function is here
+  262 |         virtual void SetMaxSize( int w, int h ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:147:15: warning: 'GetMinWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  147 |         virtual int  GetMinWidth() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:254:14: note: overridden virtual function is here
+  254 |         virtual int GetMinWidth() const { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:148:15: warning: 'GetMinHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  148 |         virtual int  GetMinHeight();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:256:14: note: overridden virtual function is here
+  256 |         virtual int GetMinHeight() { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:149:15: warning: 'GetMaxWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  149 |         virtual int  GetMaxWidth();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:259:14: note: overridden virtual function is here
+  259 |         virtual int GetMaxWidth() { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:150:15: warning: 'GetMaxHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  150 |         virtual int  GetMaxHeight();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:261:14: note: overridden virtual function is here
+  261 |         virtual int GetMaxHeight() { return 0; }
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:153:15: warning: 'GetInnerWidth' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  153 |         virtual int  GetInnerWidth() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:269:14: note: overridden virtual function is here
+  269 |         virtual int GetInnerWidth() const;
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:154:15: warning: 'GetInnerHeight' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  154 |         virtual int  GetInnerHeight() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:270:14: note: overridden virtual function is here
+  270 |         virtual int GetInnerHeight() const;
+      |                     ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:156:15: warning: 'SetBorderStyle' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  156 |         virtual void SetBorderStyle(enum tTVPBorderStyle st);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:274:15: note: overridden virtual function is here
+  274 |         virtual void SetBorderStyle( enum tTVPBorderStyle st) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:157:31: warning: 'GetBorderStyle' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  157 |         virtual enum tTVPBorderStyle GetBorderStyle() const;
+      |                                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:275:31: note: overridden virtual function is here
+  275 |         virtual enum tTVPBorderStyle GetBorderStyle() const { return bsNone; }
+      |                                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:158:15: warning: 'SetStayOnTop' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  158 |         virtual void SetStayOnTop(bool b);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:278:15: note: overridden virtual function is here
+  278 |         virtual void SetStayOnTop( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:159:15: warning: 'GetStayOnTop' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  159 |         virtual bool GetStayOnTop() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:279:15: note: overridden virtual function is here
+  279 |         virtual bool GetStayOnTop() const { return true; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:160:15: warning: 'BringToFront' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  160 |         virtual void BringToFront();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:281:15: note: overridden virtual function is here
+  281 |         virtual void BringToFront() {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:161:15: warning: 'SetFullScreenMode' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  161 |         virtual void SetFullScreenMode(bool b);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:284:15: note: overridden virtual function is here
+  284 |         virtual void SetFullScreenMode(bool b) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:162:15: warning: 'GetFullScreenMode' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  162 |         virtual bool GetFullScreenMode() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:285:15: note: overridden virtual function is here
+  285 |         virtual bool GetFullScreenMode() const { return true; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:164:15: warning: 'GetCursorPos' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  164 |         virtual void GetCursorPos(tjs_int &x, tjs_int &y);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:192:15: note: overridden virtual function is here
+  192 |         virtual void GetCursorPos(tjs_int &x, tjs_int &y);
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:165:15: warning: 'SetCursorPos' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  165 |         virtual void SetCursorPos(tjs_int x, tjs_int y);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:193:15: note: overridden virtual function is here
+  193 |         virtual void SetCursorPos(tjs_int x, tjs_int y);
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:169:15: warning: 'SetCursorVisible' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  169 |         virtual void SetCursorVisible(bool visible);
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:194:15: note: overridden virtual function is here
+  194 |         virtual void SetCursorVisible(bool visible) {};
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:171:15: warning: 'SetEnableTouch' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  171 |         virtual void SetEnableTouch( bool b );
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:365:15: note: overridden virtual function is here
+  365 |         virtual void SetEnableTouch( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:172:15: warning: 'GetEnableTouch' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  172 |         virtual bool GetEnableTouch() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:366:15: note: overridden virtual function is here
+  366 |         virtual bool GetEnableTouch() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:174:15: warning: 'SetEnableTouchMouse' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  174 |         virtual void SetEnableTouchMouse( bool b );
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:367:15: note: overridden virtual function is here
+  367 |         virtual void SetEnableTouchMouse( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:175:15: warning: 'GetEnableTouchMouse' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  175 |         virtual bool GetEnableTouchMouse() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:368:15: note: overridden virtual function is here
+  368 |         virtual bool GetEnableTouchMouse() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:178:15: warning: 'GetMaximized' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  178 |         virtual bool GetMaximized() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:290:15: note: overridden virtual function is here
+  290 |         virtual bool GetMaximized() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:179:15: warning: 'GetMinimized' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  179 |         virtual bool GetMinimized() const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:291:15: note: overridden virtual function is here
+  291 |         virtual bool GetMinimized() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:180:15: warning: 'Maximize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  180 |         virtual void Maximize();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:292:15: note: overridden virtual function is here
+  292 |         virtual void Maximize() {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:181:15: warning: 'Minimize' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  181 |         virtual void Minimize();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:293:15: note: overridden virtual function is here
+  293 |         virtual void Minimize() {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:182:15: warning: 'ShowRestore' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  182 |         virtual void ShowRestore();
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:294:15: note: overridden virtual function is here
+  294 |         virtual void ShowRestore() {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:183:15: warning: 'GetNormalRect' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  183 |         virtual bool GetNormalRect( int& l, int& t, int& w, int& h ) const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:295:15: note: overridden virtual function is here
+  295 |         virtual bool GetNormalRect( int& l, int& t, int& w, int& h ) const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:184:15: warning: 'GetWindowRectScreen' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  184 |         virtual bool GetWindowRectScreen( int& l, int& t, int& w, int& h ) const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:310:15: note: overridden virtual function is here
+  310 |         virtual bool GetWindowRectScreen( int& l, int& t, int& w, int& h ) const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:185:15: warning: 'GetClientRectScreen' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  185 |         virtual bool GetClientRectScreen( int& l, int& t, int& w, int& h ) const;
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:311:15: note: overridden virtual function is here
+  311 |         virtual bool GetClientRectScreen( int& l, int& t, int& w, int& h ) const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:186:15: warning: 'SetClientRectScreen' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  186 |         virtual bool SetClientRectScreen( int l, int t, int w, int h );
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:312:15: note: overridden virtual function is here
+  312 |         virtual bool SetClientRectScreen( int l, int t, int w, int h ) { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:187:15: warning: 'SetMoveDisabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  187 |         virtual void SetMoveDisabled( bool b );
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:299:15: note: overridden virtual function is here
+  299 |         virtual void SetMoveDisabled( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:188:15: warning: 'GetMoveDisabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  188 |         virtual bool GetMoveDisabled() const { return mMoveDisabled; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:300:15: note: overridden virtual function is here
+  300 |         virtual bool GetMoveDisabled() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:189:15: warning: 'SetResizeDisabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  189 |         virtual void SetResizeDisabled( bool b );
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:301:15: note: overridden virtual function is here
+  301 |         virtual void SetResizeDisabled( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:190:15: warning: 'GetResizeDisabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  190 |         virtual bool GetResizeDisabled() const { return mResizeDisabled; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:302:15: note: overridden virtual function is here
+  302 |         virtual bool GetResizeDisabled() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:191:15: warning: 'SetDeviceChangeEnabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  191 |         virtual void SetDeviceChangeEnabled( bool b ) { mDeviceChangeEnabled = b; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:304:15: note: overridden virtual function is here
+  304 |         virtual void SetDeviceChangeEnabled( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:192:15: warning: 'GetDeviceChangeEnabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  192 |         virtual bool GetDeviceChangeEnabled() const { return mDeviceChangeEnabled; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:305:15: note: overridden virtual function is here
+  305 |         virtual bool GetDeviceChangeEnabled() const { return false; }
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:193:15: warning: 'SetExEventEnabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  193 |         virtual void SetExEventEnabled( bool b ) { mExEventEnabled = b; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:306:15: note: overridden virtual function is here
+  306 |         virtual void SetExEventEnabled( bool b ) {}
+      |                      ^
+In file included from /home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/stdapp.cpp:7:
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/environ/app.h:194:15: warning: 'GetExEventEnabled' overrides a member function but is not marked 'override' [-Winconsistent-missing-override]
+  194 |         virtual bool GetExEventEnabled() const { return mExEventEnabled; }
+      |                      ^
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/generic/environ/WindowForm.h:307:15: note: overridden virtual function is here
+  307 |         virtual bool GetExEventEnabled() const { return false; }
+      |                      ^
+117 warnings generated.
+[1180/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/sdl3/base/WebMoviePlayer.cpp.o
+[1181/1286] Linking CXX static library krkrz/plugins/csvParser/libcsvParser.a
+[1182/1286] Linking CXX static library krkrz/plugins/getSample/libgetSample.a
+[1183/1286] Linking CXX static library krkrz/plugins/json/libjson.a
+[1184/1286] Linking CXX static library krkrz/plugins/KAGParserEx/libKAGParserEx.a
+[1185/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/StaticPlugins.cpp.o
+[1186/1286] Linking CXX static library krkrz/plugins/layerExBTOA/liblayerExBTOA.a
+[1187/1286] Linking CXX static library krkrz/plugins/layerExImage/liblayerExImage.a
+[1188/1286] Linking CXX static library krkrz/plugins/layerExVector/liblayerExVector.a
+[1189/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/common/utils/ReplWasmBridge.cpp.o
+[1190/1286] Linking CXX static library krkrz/plugins/layerExRaster/liblayerExRaster.a
+[1191/1286] Linking CXX static library krkrz/plugins/saveStruct/libsaveStruct.a
+[1192/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/tp_stub/tp_stub.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/tp_stub/tp_stub.cpp:41:4: warning: indirection of non-volatile null pointer will be deleted, not trap [-Wnull-dereference]
+   41 |                         *(int*)0 = 0; // causes an error
+      |                         ^~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/tp_stub/tp_stub.cpp:41:4: note: consider using __builtin_trap() or qualifying pointer with 'volatile'
+1 warning generated.
+[1193/1286] Linking CXX static library krkrz/plugins/extrans/libextrans.a
+[1194/1286] Linking CXX static library krkrz/plugins/shrinkCopy/libshrinkCopy.a
+[1195/1286] Linking CXX static library krkrz/plugins/scriptsEx/libscriptsEx.a
+[1196/1286] Linking CXX static library krkrz/plugins/clipfile/libclipfile.a
+[1197/1286] Linking CXX static library krkrz/plugins/extNagano/libextNagano.a
+[1198/1286] Linking CXX static library krkrz/plugins/minizip/libminizip.a
+[1199/1286] Linking CXX static library krkrz/plugins/krkreffekseer/libkrkreffekseer.a
+[1200/1286] Linking CXX static library krkrz/plugins/scnfile/libscnfile.a
+[1201/1286] Linking CXX static library krkrz/plugins/xp3crypt/libxp3crypt.a
+[1202/1286] Linking CXX static library krkrz/plugins/krkrlive2d/libkrkrlive2d.a
+[1203/1286] Generate /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/lib/src/version.h
+[1204/1286] Linking CXX static library krkrz/external/glyphware/libglyphware.a
+[1205/1286] Linking C static library _deps/krkrz_vorbis-build/lib/libvorbisenc.a
+[1206/1286] Linking C static library _deps/krkrz_vorbis-build/lib/libvorbisfile.a
+[1207/1286] Linking CXX static library krkrz/external/elements/external/elements_modal/libelements_modal.a
+[1208/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/sdl3/base/HttpStorageMedia.cpp.o
+/home/runner/work/kagex/kagex/kirikiri/krkrz_dev/src/core/sdl3/base/HttpStorageMedia.cpp:65:11: warning: empty character constant [-Winvalid-pp-token]
+   65 |                 }).join('');
+      |                         ^
+1 warning generated.
+[1209/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster.cc.o
+[1210/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-draw.cc.o
+[1211/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-zlib.cc.o
+[1212/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-image.cc.o
+[1213/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-base.cc.o
+[1214/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-defs-scan.cc.o
+[1215/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-defs.cc.o
+[1216/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-clip.cc.o
+[1217/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-gradient.cc.o
+[1218/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-bbox.cc.o
+[1219/1286] Building CXX object krkrz/CMakeFiles/krkrz.dir/common/sound/AudioStream.cpp.o
+[1220/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-fill.cc.o
+[1221/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-use.cc.o
+[1222/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-parse.cc.o
+[1223/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-color.cc.o
+[1224/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-paint.cc.o
+[1225/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-zlib.cc.o
+[1226/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-raster-svg-render.cc.o
+[1227/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector.cc.o
+[1228/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector-svg-path.cc.o
+[1229/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector-svg-utils.cc.o
+[1230/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector-svg-draw.cc.o
+[1231/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector-svg-paint.cc.o
+[1232/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-vector-svg-subset.cc.o
+[1233/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-raster.dir/src/hb-static.cc.o
+[1234/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/miniz_wrapper.cpp.o
+[1235/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/astc_codec.cpp.o
+[1236/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/checkheader.c.o
+[1237/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/createdfd.c.o
+[1238/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/colourspaces.c.o
+[1239/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/interpretdfd.c.o
+[1240/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/printdfd.c.o
+[1241/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/queries.c.o
+[1242/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/dfdutils/vk2dfd.c.o
+[1243/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/filestream.c.o
+[1244/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/etcunpack.cxx.o
+[1245/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/glformat_str.c.o
+[1246/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/basis_transcode.cpp.o
+[1247/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/info.c.o
+[1248/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/memstream.c.o
+[1249/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/hashlist.c.o
+[1250/1286] Building CXX object _deps/harfbuzz_source-build/CMakeFiles/harfbuzz-vector.dir/src/hb-static.cc.o
+[1251/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/strings.c.o
+[1252/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/swap.c.o
+[1253/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/vkformat_check.c.o
+[1254/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/CMakeFiles/objUtil.dir/utils/argparser.cpp.o
+[1255/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/texture.c.o
+[1256/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/vkformat_check_variant.c.o
+[1257/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/texture2.c.o
+[1258/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/vkformat_str.c.o
+[1259/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/vkformat_typesize.c.o
+[1260/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/gl_funcs.c.o
+[1261/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/writer1.c.o
+[1262/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/glloader.c.o
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/lib/src/glloader.c:155:18: warning: variable 'supportsSwizzle' set but not used [-Wunused-but-set-global]
+  155 | static GLboolean supportsSwizzle = GL_TRUE;
+      |                  ^
+1 warning generated.
+[1263/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/writer2.c.o
+[1264/1286] Building C object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/texture1.c.o
+[1265/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_assert.c.o
+[1266/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/etcdec/etcdec.cxx.o
+[1267/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_common.c.o
+[1268/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_font.c.o
+[1269/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_crc32.c.o
+[1270/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_compare.c.o
+[1271/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_harness.c.o
+[1272/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_fuzzer.c.o
+[1273/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_log.c.o
+[1274/1286] Linking C static library _deps/harfbuzz_source-build/libharfbuzz-raster.a
+[1275/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_memory.c.o
+[1276/1286] Building C object _deps/sdl3-build/CMakeFiles/SDL3_test.dir/src/test/SDL_test_md5.c.o
+[1277/1286] Linking CXX static library krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/libobjUtil.a
+[1278/1286] Linking C static library _deps/harfbuzz_source-build/libharfbuzz-vector.a
+[1279/1286] Linking C static library _deps/sdl3-build/libSDL3_test.a
+[1280/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/interface/basisu_c_binding/CMakeFiles/obj_basisu_cbind.dir/src/basisu_c_binding.cpp.o
+[1281/1286] Linking CXX static library krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/interface/basisu_c_binding/libobj_basisu_cbind.a
+[1282/1286] Building CXX object krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/CMakeFiles/ktx.dir/src/basis_encode.cpp.o
+In file included from /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/lib/src/basis_encode.cpp:40:
+In file included from /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_comp.h:16:
+In file included from /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_frontend.h:16:
+In file included from /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_enc.h:4368:
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2362:53: warning: arithmetic between different enumeration types ('bu_math::matrix<2, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2362 |         template<typename X, typename Y> matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> matrix_kronecker_product(const X& a, const Y& b)
+      |                                                 ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2411:33: note: while substituting deduced template arguments into function template 'matrix_kronecker_product' [with X = matrix22F, Y = matrix<1, 2, float>]
+ 2411 |                 matrix<2, 4, float> haar4_0 = matrix_kronecker_product(haar2, b0);
+      |                                               ^
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2362:79: warning: arithmetic between different enumeration types ('bu_math::matrix<2, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2362 |         template<typename X, typename Y> matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> matrix_kronecker_product(const X& a, const Y& b)
+      |                                                                           ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2362:53: warning: arithmetic between different enumeration types ('bu_math::matrix<4, 4, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2362 |         template<typename X, typename Y> matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> matrix_kronecker_product(const X& a, const Y& b)
+      |                                                 ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2416:33: note: while substituting deduced template arguments into function template 'matrix_kronecker_product' [with X = matrix<4, 4, float>, Y = matrix<1, 2, float>]
+ 2416 |                 matrix<4, 8, float> haar8_0 = matrix_kronecker_product(haar4, b0);
+      |                                               ^
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2362:79: warning: arithmetic between different enumeration types ('bu_math::matrix<4, 4, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2362 |         template<typename X, typename Y> matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> matrix_kronecker_product(const X& a, const Y& b)
+      |                                                                           ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2364:21: warning: arithmetic between different enumeration types ('bu_math::matrix<2, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2364 |                 matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> result;
+      |                        ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2411:33: note: in instantiation of function template specialization 'bu_math::matrix_kronecker_product<bu_math::matrix<2, 2, float>, bu_math::matrix<1, 2, float>>' requested here
+ 2411 |                 matrix<2, 4, float> haar4_0 = matrix_kronecker_product(haar2, b0);
+      |                                               ^
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2364:47: warning: arithmetic between different enumeration types ('bu_math::matrix<2, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2364 |                 matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> result;
+      |                                                  ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2364:21: warning: arithmetic between different enumeration types ('bu_math::matrix<4, 4, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2364 |                 matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> result;
+      |                        ~~~~~~~~~~~^ ~~~~~~~~~~~
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2416:33: note: in instantiation of function template specialization 'bu_math::matrix_kronecker_product<bu_math::matrix<4, 4, float>, bu_math::matrix<1, 2, float>>' requested here
+ 2416 |                 matrix<4, 8, float> haar8_0 = matrix_kronecker_product(haar4, b0);
+      |                                               ^
+/home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:2364:47: warning: arithmetic between different enumeration types ('bu_math::matrix<4, 4, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)' and 'bu_math::matrix<1, 2, float>::(unnamed enum at /home/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/build/src/live2d/external/KTX-Software/external/basis_universal/encoder/basisu_math.h:1189:3)') is deprecated [-Wdeprecated-anon-enum-enum-conversion]
+ 2364 |                 matrix<X::num_rows* Y::num_rows, X::num_cols* Y::num_cols, typename X::scalar_type> result;
+      |                                                  ~~~~~~~~~~~^ ~~~~~~~~~~~
+8 warnings generated.
+[1283/1286] Linking CXX static library krkrz/plugins/krkrlive2d/live2ddriver/KTX-Software/lib/libktx.a
+[1284/1286] Linking CXX executable krkrz/krkrz.html
+em++: warning: ASYNCIFY=1 is not compatible with -fwasm-exceptions. Parts of the program that mix ASYNCIFY and exceptions will not compile. [-Wemcc]
+em++: warning: -pthread + ALLOW_MEMORY_GROWTH may run non-wasm code slowly, consider -sGROWABLE_ARRAYBUFFERS=2 [-Wpthreads-mem-growth]
+[1285/1286] Staging web sidecars (resource/, resource.list, webconfig.js)
+make: Leaving directory '/home/runner/work/kagex/kagex/kirikiri/krkrz_web'
