@@ -490,7 +490,12 @@ class WebEngine(Engine):
         self.log_path = os.path.join(workdir, "console.txt")
         self.pw = sync_playwright().start()
         self.browser = self.pw.chromium.launch(channel=channel,
-                                               args=["--autoplay-policy=no-user-gesture-required"])
+                                               args=["--autoplay-policy=no-user-gesture-required",
+                                                     # the classic runner fix: a runner's /dev/shm is
+                                                     # 64 MB, and the prefetch storm plus the engine's
+                                                     # heap put the renderer's shared memory over it —
+                                                     # the page dies as "Target crashed" mid-boot
+                                                     "--disable-dev-shm-usage"])
         self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
         if init_script:
             self.page.add_init_script(init_script)
