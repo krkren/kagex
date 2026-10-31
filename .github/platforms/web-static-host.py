@@ -172,6 +172,9 @@ def main():
         sys.exit("index.html doesn't load webconfig.js")
     html = html[:m.start()] + '<script src="kagex-web.js"></script>' + html[m.start():]
     if (site / LIVE2D_CORE_JS).exists():
+        # as with kagex-web.js: whatever tag is already there goes first, the fresh one in front
+        # of the engine's. a staged web package brings its own stamped tag, this is run again on it
+        html = re.sub(r'<script src="live2dcubismcore\.min\.js(?:\?v=[0-9a-f]*)?"></script>', "", html)
         m = re.search(r'<script src=("|\')?krkrz\.js', html)
         html = html[:m.start()] + LIVE2D_TAG + html[m.start():]
     for s in SCRIPTS + ((LIVE2D_CORE_JS,) if (site / LIVE2D_CORE_JS).exists() else ()):
