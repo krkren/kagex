@@ -1,0 +1,251 @@
+21:01:52 TVP Log system initialized with level: 2
+21:01:52 App name: SDL Application
+21:01:52 App version: <unspecified>
+21:01:52 App ID: <unspecified>
+21:01:52 SDL revision: SDL-3.4.0-release-3.4.0
+21:01:52 Found resource: messages-cht.json
+21:01:52 Found resource: optiondesc.json
+21:01:52 Found resource: licenses
+21:01:52 Found resource: roboto-regular.ttf
+21:01:52 Found resource: messages.json
+21:01:52 Found resource: config.cf
+21:01:52 Found resource: messages-en.json
+21:01:52 Found resource: elements_basic.ttf
+21:01:52 Found resource: AppIcon.icns
+21:01:52 Found resource: messages-chs.json
+21:01:52 Found resource: optiondesc-cht.json
+21:01:52 Found resource: SysInitScript.tjs
+21:01:52 Found resource: optiondesc-en.json
+21:01:52 Found resource: license.txt
+21:01:52 Found resource: data
+21:01:52 Found resource: optiondesc-chs.json
+21:01:52 Found resource: gamecontrollerdb.txt
+21:01:52 [stdapp.cpp:InitPath:234] data/startup.tjs found, using data/ as project path
+21:01:52 [stdapp.cpp:InitPath:262] appPath: /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/
+21:01:52 ! [stdapp.cpp:InitPath:263] projectPath: /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/data/
+21:01:52 [stdapp.cpp:InitPath:298] pluginPath: /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/MacOS/
+21:01:52 Resource path: messages-en.json
+21:01:52 Resource path: messages-en.json
+21:01:52 [Application.cpp:LoadMessageResource:210] message file: resource://./messages-en.json (language tag: en-US)
+21:01:52 Audio stream created with channels: 2, sample rate: 48000
+21:01:52 Resource path: config_macos.cf
+21:01:52 (info) Rebuilding Auto Path Table ...
+21:01:52 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+21:01:52 Resource path: config.cf
+21:01:52 Resource path: config.cf
+21:01:52 ! (info) Loading configuration file "/private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/config.cf" succeeded.
+21:01:52 ! (info) Loading configuration file "/private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/MacOS/krkrz.cf" succeeded.
+21:01:52 ! (info) Loading configuration file "/private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/save/krkrz.cfu" failed (ignoring) : file not found.
+21:01:52 ! (info) Data path : file://./private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/save/
+21:01:52 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+21:01:52 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x132f00000
+21:01:52 [AudioStream.cpp:InitMiniAudio:139] miniaudio engine initialized: 2 channels, 48000 Hz
+21:01:52 ! Program started on macOS 24.6.0 (macOS)
+21:01:52 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x110a1c000
+21:01:52 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x16d770000
+21:01:52 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:585] StorageCache: budget set to FileAllocator capacity=256MB
+21:01:52 ! (info) Total physical memory : 7516192768
+21:01:52 ! (info) Selected project directory : file://./private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/data/
+21:01:52 Resource path: SysInitScript.tjs
+21:01:52 Resource path: SysInitScript.tjs
+21:01:52 ! Kirikiri Z Executable core /2.6.5.0 (Compiled on Oct 30 2026 23:48:35) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+21:01:52 ! The details of version information can be perused if -about is attached and started. 
+21:01:52 (info) Rebuilding Auto Path Table ...
+21:01:52 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+21:01:52 Resource path: 
+21:01:52 Resource path: roboto-regular.ttf
+21:01:52 Resource path: roboto-regular.ttf
+21:01:52 Resource path: elements_basic.ttf
+21:01:52 Resource path: elements_basic.ttf
+21:01:52 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+21:01:52 [SysInitImpl.cpp:TVPAfterSystemInit:340] ImageCache enabled: limit=512MB (physmem=7168MB, source=BitmapPool)
+21:01:52 ! (info) Specified option(s) (earlier item has more priority) : -datapath=/private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/save/ -replfile=/private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/repl -orgname=krkren -appname=kagex-sample -debugwin=no -padinterval=70 -padinterval=70
+21:01:52 [SysInitImpl.cpp:TVPAfterSystemInit:446] CPU SIMD: NEON ASIMD (TVPCPUType=0x00000003)
+21:01:52 ! (info) Auto Loading Static Plugin:xp3crypt
+21:01:52 xp3crypt
+21:01:52 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x300000000
+21:01:52 [GlobalAllocStats.cpp:Initialize:527] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+21:01:52 [main.cpp:SDL_AppInit:501] ANGLE: /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/../Frameworks/liblibGLESv2_angle.dylib / /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/kagex-sample-0.13.2-macos/KAGEX Sample.app/Contents/Resources/../Frameworks/liblibEGL_angle.dylib
+21:01:52 ! ReplFileChannel: watching /private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/repl
+21:01:53 (info) Loading startup script : startup.tjs
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 3 file(s) found, 3 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 8 file(s) found, 8 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 10 file(s) found, 10 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 21 file(s) found, 21 file(s) activated. (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 25 file(s) found, 25 file(s) activated. (1ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 36 file(s) found, 36 file(s) activated. (1ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 222 file(s) found, 222 file(s) activated. (1ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 309 file(s) found, 309 file(s) activated. (3ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 324 file(s) found, 324 file(s) activated. (9ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 324 file(s) found, 324 file(s) activated. (11ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 324 file(s) found, 324 file(s) activated. (3ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 324 file(s) found, 324 file(s) activated. (2ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 347 file(s) found, 346 file(s) activated. (8ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 347 file(s) found, 346 file(s) activated. (3ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 351 file(s) found, 350 file(s) activated. (9ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 351 file(s) found, 350 file(s) activated. (5ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 356 file(s) found, 355 file(s) activated. (3ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 501 file(s) found, 500 file(s) activated. (4ms)
+21:01:53 ! OS : macOS 24.6.0 (macOS)
+21:01:53 ! KAG : EX 3.27-dev.20070519
+21:01:53 ! Kirikiri : 2.6.5.0
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 ! 
+----- MiniZip Copyright START -----
+Condition of use and distribution are the same as zlib:
+https://github.com/zlib-ng/minizip-ng
+----- MiniZip Copyright END -----
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 ! RichText: using the engine's font service
+21:01:53 Config.tjs loaded (0ms)
+21:01:53 Language.tjs loaded (0ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 501 file(s) found, 500 file(s) activated. (4ms)
+21:01:53 Language: en
+21:01:53 Loading KAG System scripts...
+21:01:53 LayerEx.tjs loaded (1ms)
+21:01:53 Utils.tjs loaded (0ms)
+21:01:53 Accessibility.tjs loaded (0ms)
+21:01:53 KAGLayer.tjs loaded (0ms)
+21:01:53 AnimKAGLayer.tjs loaded (0ms)
+21:01:53 ButtonLayer.tjs loaded (0ms)
+21:01:53 TransLayer.tjs loaded (1ms)
+21:01:53 SelectLayer.tjs loaded (0ms)
+21:01:53 MapSelectLayer.tjs loaded (0ms)
+21:01:53 DialogLayer.tjs loaded (0ms)
+21:01:53 HistoryLayer.tjs loaded (1ms)
+21:01:53 BGM.tjs loaded (0ms)
+21:01:53 SE.tjs loaded (0ms)
+21:01:53 Movie.tjs loaded (1ms)
+21:01:53 Conductor.tjs loaded (0ms)
+21:01:53 UpdateRegion.tjs loaded (0ms)
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 AffineLayer.tjs loaded (6ms)
+21:01:53 AnimationLayer.tjs loaded (1ms)
+21:01:53 GraphicLayer.tjs loaded (2ms)
+21:01:53 ==== An exception occured at Initialize.tjs(1)[(function expression) (anonymous)], VM ip = 33 ====
+21:01:53 -- Disassembled VM code --
+21:01:53 #(1) Bytecode.
+21:01:53 00000000 const %1, *0	// *0 = (int)0
+21:01:53 00000003 const %2, *1	// *1 = (int)7
+21:01:53 00000006 calld %3, %-3.*2(%1, %2)	// *2 = (string)"substring"
+21:01:53 00000013 const %4, *3	// *3 = (string)"plugin/"
+21:01:53 00000016 ceq %3, %4
+21:01:53 00000019 jnf 000000033
+21:01:53 00000021 const %1, *1	// *1 = (int)7
+21:01:53 00000024 calld %2, %-3.*2(%1)	// *2 = (string)"substring"
+21:01:53 00000030 cp %-3, %2
+21:01:53 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+21:01:53 -- Register dump --
+21:01:53 %-3=(string)"gfxEffect.dll"  %-2=(object)(object 0x16d53b6d8:0x0)
+21:01:53 %-1=(object)(object 0x600000ee8870:0x600000ee8870)  %0=(void)  %1=(void)
+21:01:53 %2=(string)"gfxEffect.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+21:01:53 --------------------------------------------------------------------------------------------------
+21:01:53 GFX_Fire.tjs loaded (1ms)
+21:01:53 GFX_Movie.tjs loaded (2ms)
+21:01:53 ==== An exception occured at Initialize.tjs(1)[(function expression) (anonymous)], VM ip = 33 ====
+21:01:53 -- Disassembled VM code --
+21:01:53 #(1) Bytecode.
+21:01:53 00000000 const %1, *0	// *0 = (int)0
+21:01:53 00000003 const %2, *1	// *1 = (int)7
+21:01:53 00000006 calld %3, %-3.*2(%1, %2)	// *2 = (string)"substring"
+21:01:53 00000013 const %4, *3	// *3 = (string)"plugin/"
+21:01:53 00000016 ceq %3, %4
+21:01:53 00000019 jnf 000000033
+21:01:53 00000021 const %1, *1	// *1 = (int)7
+21:01:53 00000024 calld %2, %-3.*2(%1)	// *2 = (string)"substring"
+21:01:53 00000030 cp %-3, %2
+21:01:53 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+21:01:53 -- Register dump --
+21:01:53 %-3=(string)"flashPlayer.dll"  %-2=(object)(object 0x16d53b6d8:0x0)
+21:01:53 %-1=(object)(object 0x600000ee8870:0x600000ee8870)  %0=(void)  %1=(void)
+21:01:53 %2=(string)"flashPlayer.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+21:01:53 --------------------------------------------------------------------------------------------------
+21:01:53 GFX_Flash.tjs loaded (1ms)
+21:01:53 GFX_Particle.tjs loaded (2ms)
+21:01:53 TVP_PLUGIN_NAME
+21:01:53 GFX_AMovie.tjs loaded (7ms)
+21:01:53 GFX_Effekseer.tjs loaded (1ms)
+21:01:53 GFX_Live2D.tjs loaded (0ms)
+21:01:53 MessageLayer.tjs loaded (1ms)
+21:01:53 Menus.tjs loaded (0ms)
+21:01:53 ElementsScreen.tjs loaded (0ms)
+21:01:53 MenuBar.tjs loaded (1ms)
+21:01:53 Controls.tjs loaded (0ms)
+21:01:53 DefaultMover.tjs loaded (0ms)
+21:01:53 Action.tjs loaded (0ms)
+21:01:53 MainWindow.tjs loaded (7ms)
+21:01:53 YAML.tjs loaded (0ms)
+21:01:53 KAGEnvBase.tjs loaded (0ms)
+21:01:53 KAGEnvImage.tjs loaded (2ms)
+21:01:53 KAGEnvLayer.tjs loaded (1ms)
+21:01:53 KAGEnvEvent.tjs loaded (0ms)
+21:01:53 KAGEnvStage.tjs loaded (1ms)
+21:01:53 KAGEnvLevelLayer.tjs loaded (0ms)
+21:01:53 KAGEnvSimpleLayer.tjs loaded (1ms)
+21:01:53 KAGEnvCharacter.tjs loaded (1ms)
+21:01:53 KAGEnvBGM.tjs loaded (1ms)
+21:01:53 KAGEnvSE.tjs loaded (0ms)
+21:01:53 KAGEnvironment.tjs loaded (2ms)
+21:01:53 KAGEnvCharacterEyeLip.tjs loaded (0ms)
+21:01:53 psdlayer.tjs loaded (1ms)
+21:01:53 KAGEnvCharacterEx.tjs loaded (4ms)
+21:01:53 KAGEnvCharacterLive2D.tjs loaded (0ms)
+21:01:53 world.tjs loaded (15ms)
+21:01:53 MyHistoryLayer.tjs loaded (0ms)
+21:01:53 Override.tjs loaded (1ms)
+21:01:53 Script loading took 91ms
+21:01:53 [form.cpp:TVPUpdateBaselineTextInput:121] BaselineTextInput: driver=cocoa screenKB=0 hasKB=1 steamdeck=0 imeMode=0 -> start
+21:01:53 ! [form.cpp:TVPCreateGLContextWithFallback:294] SDL_GL_CreateContext failed (Could not create EGL context (call to eglCreateContext failed, reporting an error of EGL_BAD_MATCH)); retrying with GLES 3.1
+21:01:53 ! [form.cpp:TVPCreateGLContextWithFallback:294] SDL_GL_CreateContext failed (Could not create EGL context (call to eglCreateContext failed, reporting an error of EGL_BAD_MATCH)); retrying with GLES 3.0
+21:01:53 [OpenGLError.cpp:InitGLES:49] Loaded GLES 3.0
+21:01:53 Save data storage location: file://./private/var/folders/y3/p6x0rn5562l5qyxy7x6jqrsc0000gn/T/tmpv32h5n89/My Game/release/.work/test/save/
+21:01:53 Resource path: roboto-regular.ttf
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 501 file(s) found, 500 file(s) activated. (4ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 501 file(s) found, 500 file(s) activated. (5ms)
+21:01:53 (info) Rebuilding Auto Path Table ...
+21:01:53 (info) Total 501 file(s) found, 500 file(s) activated. (4ms)
+21:01:53 Plugin.tjs loaded (4ms)
+21:01:53 KAGMainWindow constructor took 373ms
+21:01:53 YesNoDialogLayer.tjs loaded (0ms)
+21:01:53 YesNoDialog.tjs loaded (0ms)
+21:01:53 AfterInit.tjs loaded (0ms)
+21:01:53 (info) Startup script ended.
+21:01:53 Window shown: KAGEX Sample
+21:01:53 window show:No gamepads connected
+21:01:53 [GLTexture.cpp:InitSupported:682] GLES: BGRA Texture Supported
+21:01:53 [GLTexture.cpp:InitSupported:685] GLES: Texture Swizzle Supported
+21:01:59 (info) Rebuilding Auto Path Table ...
+21:01:59 (info) Total 501 file(s) found, 500 file(s) activated. (7ms)
