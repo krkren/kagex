@@ -1,0 +1,601 @@
+[0/2] Re-checking globbed directories...
+[1/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Subprocess.cpp.o
+[2/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Archive.cpp.o
+[3/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Icons.cpp.o
+[4/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Project.cpp.o
+[5/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Plan.cpp.o
+[6/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Engine.cpp.o
+[7/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Host.cpp.o
+[8/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Encrypt.cpp.o
+[9/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Keys.cpp.o
+[10/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Sign.cpp.o
+[11/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Scenes.cpp.o
+[12/267] Building CXX object CMakeFiles/kagex_release_core.dir/Release/src/Layered.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/kagex/tools/release/src/Layered.cpp:14:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:18:27: warning: multi-character character constant [-Wmultichar]
+   18 |     TYPE_REFERENCE      = 'obj ',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:19:27: warning: multi-character character constant [-Wmultichar]
+   19 |     TYPE_DESCRIPTOR     = 'Objc',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:20:27: warning: multi-character character constant [-Wmultichar]
+   20 |     TYPE_LIST           = 'VlLs',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:21:27: warning: multi-character character constant [-Wmultichar]
+   21 |     TYPE_DOUBLE         = 'doub',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:22:27: warning: multi-character character constant [-Wmultichar]
+   22 |     TYPE_UNIT_FLOAT     = 'UntF',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:23:27: warning: multi-character character constant [-Wmultichar]
+   23 |     TYPE_STRING         = 'TEXT',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:24:27: warning: multi-character character constant [-Wmultichar]
+   24 |     TYPE_ENUMERATED     = 'enum',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:25:27: warning: multi-character character constant [-Wmultichar]
+   25 |     TYPE_INTEGER        = 'long',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:26:27: warning: multi-character character constant [-Wmultichar]
+   26 |     TYPE_BOOLEAN        = 'bool',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:27:27: warning: multi-character character constant [-Wmultichar]
+   27 |     TYPE_GLOBAL_OBJECT  = 'GlbO',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:28:27: warning: multi-character character constant [-Wmultichar]
+   28 |     TYPE_CLASS1         = 'type',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:29:27: warning: multi-character character constant [-Wmultichar]
+   29 |     TYPE_CLASS2         = 'GlbC',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:30:27: warning: multi-character character constant [-Wmultichar]
+   30 |     TYPE_ALIAS          = 'alis',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:31:27: warning: multi-character character constant [-Wmultichar]
+   31 |     TYPE_RAW_DATA       = 'tdta',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:32:27: warning: multi-character character constant [-Wmultichar]
+   32 |     TYPE_LARGE_INTEGER  = 'comp',   // 64bit 整数
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:33:27: warning: multi-character character constant [-Wmultichar]
+   33 |     TYPE_UNIT_FLOATS    = 'UnFl',   // 単位付き実数の配列
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:34:27: warning: multi-character character constant [-Wmultichar]
+   34 |     TYPE_OBJECT_ARRAY   = 'ObAr',   // オブジェクト配列 (件数 + descriptor 本体)
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:38:25: warning: multi-character character constant [-Wmultichar]
+   38 |     UNIT_POINTS       = '#Pnt',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:39:25: warning: multi-character character constant [-Wmultichar]
+   39 |     UNIT_MILLIMETERS  = '#Mlm',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:40:25: warning: multi-character character constant [-Wmultichar]
+   40 |     UNIT_ANGLE        = '#Ang', // degrees
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:41:25: warning: multi-character character constant [-Wmultichar]
+   41 |     UNIT_DENSITY      = '#Rsl', // base per inch
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:42:25: warning: multi-character character constant [-Wmultichar]
+   42 |     UNIT_DISTANCE     = '#Rlt', // base 72ppi
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:43:25: warning: multi-character character constant [-Wmultichar]
+   43 |     UNIT_NONE         = '#Nne',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:44:25: warning: multi-character character constant [-Wmultichar]
+   44 |     UNIT_PERCENT      = '#Prc',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:45:25: warning: multi-character character constant [-Wmultichar]
+   45 |     UNIT_PIXELS       = '#Pxl',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:50:29: warning: multi-character character constant [-Wmultichar]
+   50 |     REF_TYPE_PROPERTY     = 'prop',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:51:29: warning: multi-character character constant [-Wmultichar]
+   51 |     REF_TYPE_CLASS        = 'Clss',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:52:29: warning: multi-character character constant [-Wmultichar]
+   52 |     REF_TYPE_ENUM_REF     = 'Enmr',
+      |                             ^~~~~~
+...
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:22: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:35: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:48: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:61: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:74: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:22: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:35: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:48: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:22: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:35: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:48: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:61: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:74: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:22: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:35: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:48: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                                ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Psd.cpp:8:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:135:38: warning: multi-character character constant [-Wmultichar]
+  135 |                   int blendModeKey = 'norm', int opacity = 255, int destIndex = -1);
+      |                                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:147:60: warning: multi-character character constant [-Wmultichar]
+  147 |                    bool closed = false, int blendModeKey = 'pass',
+      |                                                            ^~~~~~
+[97/267] Building CXX object krkrz_tools/libs/image/CMakeFiles/krt_image.dir/Release/src/Clip.cpp.o
+[98/267] Building CXX object krkrz_tools/libs/image/CMakeFiles/krt_image.dir/Release/src/Jpeg.cpp.o
+[99/267] Building CXX object xp3crypt/CMakeFiles/xp3crypt_core.dir/Release/crypt.cpp.o
+[100/267] Building CXX object xp3crypt/CMakeFiles/xp3crypt_lib.dir/Release/slot.cpp.o
+[101/267] Building CXX object xp3crypt/CMakeFiles/xp3crypt_core.dir/Release/read.cpp.o
+[102/267] Building CXX object krkrz_tools/libs/image/CMakeFiles/krt_image.dir/Release/src/Layers.cpp.o
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:18:27: warning: multi-character character constant [-Wmultichar]
+   18 |     TYPE_REFERENCE      = 'obj ',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:19:27: warning: multi-character character constant [-Wmultichar]
+   19 |     TYPE_DESCRIPTOR     = 'Objc',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:20:27: warning: multi-character character constant [-Wmultichar]
+   20 |     TYPE_LIST           = 'VlLs',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:21:27: warning: multi-character character constant [-Wmultichar]
+   21 |     TYPE_DOUBLE         = 'doub',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:22:27: warning: multi-character character constant [-Wmultichar]
+   22 |     TYPE_UNIT_FLOAT     = 'UntF',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:23:27: warning: multi-character character constant [-Wmultichar]
+   23 |     TYPE_STRING         = 'TEXT',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:24:27: warning: multi-character character constant [-Wmultichar]
+   24 |     TYPE_ENUMERATED     = 'enum',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:25:27: warning: multi-character character constant [-Wmultichar]
+   25 |     TYPE_INTEGER        = 'long',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:26:27: warning: multi-character character constant [-Wmultichar]
+   26 |     TYPE_BOOLEAN        = 'bool',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:27:27: warning: multi-character character constant [-Wmultichar]
+   27 |     TYPE_GLOBAL_OBJECT  = 'GlbO',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:28:27: warning: multi-character character constant [-Wmultichar]
+   28 |     TYPE_CLASS1         = 'type',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:29:27: warning: multi-character character constant [-Wmultichar]
+   29 |     TYPE_CLASS2         = 'GlbC',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:30:27: warning: multi-character character constant [-Wmultichar]
+   30 |     TYPE_ALIAS          = 'alis',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:31:27: warning: multi-character character constant [-Wmultichar]
+   31 |     TYPE_RAW_DATA       = 'tdta',
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:32:27: warning: multi-character character constant [-Wmultichar]
+   32 |     TYPE_LARGE_INTEGER  = 'comp',   // 64bit 整数
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:33:27: warning: multi-character character constant [-Wmultichar]
+   33 |     TYPE_UNIT_FLOATS    = 'UnFl',   // 単位付き実数の配列
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:34:27: warning: multi-character character constant [-Wmultichar]
+   34 |     TYPE_OBJECT_ARRAY   = 'ObAr',   // オブジェクト配列 (件数 + descriptor 本体)
+      |                           ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:38:25: warning: multi-character character constant [-Wmultichar]
+   38 |     UNIT_POINTS       = '#Pnt',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:39:25: warning: multi-character character constant [-Wmultichar]
+   39 |     UNIT_MILLIMETERS  = '#Mlm',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:40:25: warning: multi-character character constant [-Wmultichar]
+   40 |     UNIT_ANGLE        = '#Ang', // degrees
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:41:25: warning: multi-character character constant [-Wmultichar]
+   41 |     UNIT_DENSITY      = '#Rsl', // base per inch
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:42:25: warning: multi-character character constant [-Wmultichar]
+   42 |     UNIT_DISTANCE     = '#Rlt', // base 72ppi
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:43:25: warning: multi-character character constant [-Wmultichar]
+   43 |     UNIT_NONE         = '#Nne',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:44:25: warning: multi-character character constant [-Wmultichar]
+   44 |     UNIT_PERCENT      = '#Prc',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:45:25: warning: multi-character character constant [-Wmultichar]
+   45 |     UNIT_PIXELS       = '#Pxl',
+      |                         ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:50:29: warning: multi-character character constant [-Wmultichar]
+   50 |     REF_TYPE_PROPERTY     = 'prop',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:51:29: warning: multi-character character constant [-Wmultichar]
+   51 |     REF_TYPE_CLASS        = 'Clss',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:52:29: warning: multi-character character constant [-Wmultichar]
+   52 |     REF_TYPE_ENUM_REF     = 'Enmr',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:53:29: warning: multi-character character constant [-Wmultichar]
+   53 |     REF_TYPE_OFFSET       = 'rele',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:54:29: warning: multi-character character constant [-Wmultichar]
+   54 |     REF_TYPE_IDENTIFIER   = 'Idnt',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:55:29: warning: multi-character character constant [-Wmultichar]
+   55 |     REF_TYPE_INDEX        = 'indx',
+      |                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddesc.h:56:29: warning: multi-character character constant [-Wmultichar]
+   56 |     REF_TYPE_NAME         = 'name',
+      |                             ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:5,
+                 from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:117:10: warning: multi-character character constant [-Wmultichar]
+  117 |     case 'norm': return BLEND_MODE_NORMAL;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:118:10: warning: multi-character character constant [-Wmultichar]
+  118 |     case 'diss': return BLEND_MODE_DISSOLVE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:119:10: warning: multi-character character constant [-Wmultichar]
+  119 |     case 'dark': return BLEND_MODE_DARKEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:120:10: warning: multi-character character constant [-Wmultichar]
+  120 |     case 'mul ': return BLEND_MODE_MULTIPLY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:121:10: warning: multi-character character constant [-Wmultichar]
+  121 |     case 'idiv': return BLEND_MODE_COLOR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:122:10: warning: multi-character character constant [-Wmultichar]
+  122 |     case 'lbrn': return BLEND_MODE_LINEAR_BURN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:123:10: warning: multi-character character constant [-Wmultichar]
+  123 |     case 'dkCl': return BLEND_MODE_DARKER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:124:10: warning: multi-character character constant [-Wmultichar]
+  124 |     case 'lite': return BLEND_MODE_LIGHTEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:125:10: warning: multi-character character constant [-Wmultichar]
+  125 |     case 'scrn': return BLEND_MODE_SCREEN;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:126:10: warning: multi-character character constant [-Wmultichar]
+  126 |     case 'div ': return BLEND_MODE_COLOR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:127:10: warning: multi-character character constant [-Wmultichar]
+  127 |     case 'lddg': return BLEND_MODE_LINEAR_DODGE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:130:10: warning: multi-character character constant [-Wmultichar]
+  130 |     case 'lgCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:131:10: warning: multi-character character constant [-Wmultichar]
+  131 |     case 'ltCl': return BLEND_MODE_LIGHTER_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:132:10: warning: multi-character character constant [-Wmultichar]
+  132 |     case 'over': return BLEND_MODE_OVERLAY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:133:10: warning: multi-character character constant [-Wmultichar]
+  133 |     case 'sLit': return BLEND_MODE_SOFT_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:134:10: warning: multi-character character constant [-Wmultichar]
+  134 |     case 'hLit': return BLEND_MODE_HARD_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:135:10: warning: multi-character character constant [-Wmultichar]
+  135 |     case 'vLit': return BLEND_MODE_VIVID_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:136:10: warning: multi-character character constant [-Wmultichar]
+  136 |     case 'lLit': return BLEND_MODE_LINEAR_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:137:10: warning: multi-character character constant [-Wmultichar]
+  137 |     case 'pLit': return BLEND_MODE_PIN_LIGHT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:138:10: warning: multi-character character constant [-Wmultichar]
+  138 |     case 'hMix': return BLEND_MODE_HARD_MIX;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:139:10: warning: multi-character character constant [-Wmultichar]
+  139 |     case 'diff': return BLEND_MODE_DIFFERENCE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:140:10: warning: multi-character character constant [-Wmultichar]
+  140 |     case 'smud': return BLEND_MODE_EXCLUSION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:141:10: warning: multi-character character constant [-Wmultichar]
+  141 |     case 'fsub': return BLEND_MODE_SUBTRACT;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:142:10: warning: multi-character character constant [-Wmultichar]
+  142 |     case 'fdiv': return BLEND_MODE_DIVIDE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:143:10: warning: multi-character character constant [-Wmultichar]
+  143 |     case 'hue ': return BLEND_MODE_HUE;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:144:10: warning: multi-character character constant [-Wmultichar]
+  144 |     case 'sat ': return BLEND_MODE_SATURATION;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:145:10: warning: multi-character character constant [-Wmultichar]
+  145 |     case 'colr': return BLEND_MODE_COLOR;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:146:10: warning: multi-character character constant [-Wmultichar]
+  146 |     case 'lum ': return BLEND_MODE_LUMINOSITY;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:147:10: warning: multi-character character constant [-Wmultichar]
+  147 |     case 'pass': return BLEND_MODE_PASS_THROUGH;
+      |          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:22: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:35: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:48: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:61: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:180:74: warning: multi-character character constant [-Wmultichar]
+  180 |                 case 'LMsk': case 'Lr16': case 'Lr32': case 'Layr': case 'Mt16':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:22: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:35: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:48: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:61: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:181:74: warning: multi-character character constant [-Wmultichar]
+  181 |                 case 'Mt32': case 'Mtrn': case 'Alph': case 'FMsk': case 'lnk2':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:22: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:35: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:182:48: warning: multi-character character constant [-Wmultichar]
+  182 |                 case 'FEid': case 'FXid': case 'PxSD':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:22: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:35: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:48: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:61: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                             ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:183:74: warning: multi-character character constant [-Wmultichar]
+  183 |                 case 'lnk3': case 'lnkE': case 'pths': case 'extd': case 'extn':
+      |                                                                          ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:22: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:35: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                   ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psddata.h:184:48: warning: multi-character character constant [-Wmultichar]
+  184 |                 case 'FELS': case 'cinf': case 'artd':
+      |                                                ^~~~~~
+In file included from /home/runner/work/kagex/kagex/krkrz_tools/libs/image/src/Layers.cpp:7:
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:135:38: warning: multi-character character constant [-Wmultichar]
+  135 |                   int blendModeKey = 'norm', int opacity = 255, int destIndex = -1);
+      |                                      ^~~~~~
+/home/runner/work/kagex/kagex/krkrz_tools/external/psdparse/psdparse/psdfile.h:147:60: warning: multi-character character constant [-Wmultichar]
+  147 |                    bool closed = false, int blendModeKey = 'pass',
+      |                                                            ^~~~~~
+[103/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/allphone_search.c.o
+[104/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/acmod.c.o
+[105/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/vad/vad_gmm.c.o
+[106/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/vad/webrtc_vad.c.o
+[107/267] Building CXX object xp3crypt/CMakeFiles/xp3crypt_lib.dir/Release/crypt_random.cpp.o
+[108/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/vad/vad_filterbank.c.o
+[109/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/bin_mdef.c.o
+[110/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/division_operations.c.o
+[111/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/vad/vad_sp.c.o
+[112/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/resample_48khz.c.o
+[113/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/vad/vad_core.c.o
+[114/267] Building C object xp3crypt/CMakeFiles/xp3crypt_core.dir/Release/monocypher/monocypher.c.o
+[115/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/downsample_fast.c.o
+[116/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/resample_fractional.c.o
+[117/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/cross_correlation.c.o
+[118/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/resample.c.o
+[119/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/min_max_operations.c.o
+[120/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/energy.c.o
+[121/267] Linking CXX static library xp3crypt/Release/libxp3crypt_core.a
+[122/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/spl_inl.c.o
+[123/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/get_scaling_square.c.o
+[124/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/resample_by_2_internal.c.o
+[125/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/common_audio/signal_processing/vector_scaling_operations.c.o
+[126/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fixlog.c.o
+[127/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/dict.c.o
+[128/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_warp_inverse_linear.c.o
+[129/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/dict2pid.c.o
+[130/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_noise.c.o
+[131/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_warp.c.o
+[132/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_warp_affine.c.o
+[133/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/yin.c.o
+[134/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_warp_piecewise_linear.c.o
+[135/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_sigproc.c.o
+[136/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/feat/cmn.c.o
+[137/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/feat/agc.c.o
+[138/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/feat/cmn_live.c.o
+[139/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fe/fe_interface.c.o
+[140/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/feat/lda.c.o
+[141/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fsg_history.c.o
+[142/267] Building CXX object xp3crypt/CMakeFiles/xp3crypt_lib.dir/Release/xp3.cpp.o
+[143/267] Linking CXX static library xp3crypt/Release/libxp3crypt_lib.a
+[144/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/kws_detections.c.o
+[145/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/hmm.c.o
+[146/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fsg_lextree.c.o
+[147/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/fsg_search.c.o
+[148/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/lm_trie_quant.c.o
+[149/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/kws_search.c.o
+[150/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/ngram_model_trie.c.o
+[151/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/feat/feat.c.o
+[152/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/ngrams_raw.c.o
+[153/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/jsgf.c.o
+[154/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/bitarr.c.o
+[155/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/fsg_model.c.o
+[156/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/ngram_model_set.c.o
+[157/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/jsgf_scanner.c.o
+[158/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/jsgf_parser.c.o
+[159/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/lm_trie.c.o
+[160/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/lm/ngram_model.c.o
+[161/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ms_mgau.c.o
+[162/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/mdef.c.o
+[163/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ms_gauden.c.o
+[164/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ms_senone.c.o
+[165/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ngram_search.c.o
+[166/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/phone_loop_search.c.o
+[167/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ngram_search_fwdflat.c.o
+[168/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_endpointer.c.o
+[169/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/pocketsphinx.c.o
+[170/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ngram_search_fwdtree.c.o
+[171/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_alignment.c.o
+[172/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_vad.c.o
+[173/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_mllr.c.o
+[174/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_config.c.o
+[175/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/tmat.c.o
+[176/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/state_align_search.c.o
+[177/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/strfuncs.c.o
+[178/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ps_lattice.c.o
+[179/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/filename.c.o
+[180/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/case.c.o
+[181/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/ptm_mgau.c.o
+[182/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/s2_semi_mgau.c.o
+[183/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/slamch.c.o
+[184/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/blkarray_list.c.o
+[185/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/vector.c.o
+[186/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/mmio.c.o
+[187/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/cmd_ln.c.o
+[188/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/err.c.o
+[189/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/ckd_alloc.c.o
+[190/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/hash_table.c.o
+[191/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/slapack_lite.c.o
+[192/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/dtoa.c.o
+[193/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/matrix.c.o
+[194/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/priority_queue.c.o
+[195/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/bitvec.c.o
+[196/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/errno.c.o
+[197/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/heap.c.o
+[198/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/profile.c.o
+[199/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/bio.c.o
+[200/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/glist.c.o
+[201/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/f2c_lite.c.o
+[202/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/listelem_alloc.c.o
+[203/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/logmath.c.o
+[204/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/genrand.c.o
+[205/267] Building CXX object lipsync-build/CMakeFiles/kagex_mecab_dict_index.dir/Release/__/_deps/kagex_openjtalk-src/src/mecab/src/mecab-dict-index.cpp.o
+[206/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/jpcommon/jpcommon.c.o
+[207/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/pio.c.o
+[208/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/soundfiles.c.o
+[209/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/jpcommon/jpcommon_node.c.o
+[210/267] Building C object lipsync-build/CMakeFiles/kagex_pocketsphinx.dir/Release/__/_deps/kagex_pocketsphinx-src/src/util/blas_lite.c.o
+[211/267] Linking C static library lipsync-build/Release/libkagex_pocketsphinx.a
+[212/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/jpcommon/jpcommon_label.c.o
+[213/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/connector.cpp.o
+[214/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/context_id.cpp.o
+[215/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/dictionary_compiler.cpp.o
+[216/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/dictionary_generator.cpp.o
+[217/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/char_property.cpp.o
+[218/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/dictionary_rewriter.cpp.o
+[219/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/dictionary.cpp.o
+[220/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/iconv_utils.cpp.o
+[221/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/eval.cpp.o
+[222/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/lbfgs.cpp.o
+[223/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/mecab-dict-index.cpp.o
+[224/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/mecab.cpp.o
+[225/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/feature_index.cpp.o
+[226/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/libmecab.cpp.o
+[227/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/nbest_generator.cpp.o
+[228/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/string_buffer.cpp.o
+[229/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/learner.cpp.o
+[230/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/learner_tagger.cpp.o
+[231/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/param.cpp.o
+[232/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/tagger.cpp.o
+[233/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab2njd/mecab2njd.c.o
+[234/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd/njd.c.o
+[235/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/utils.cpp.o
+[236/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd2jpcommon/njd2jpcommon.c.o
+[237/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_accent_phrase/njd_set_accent_phrase.c.o
+[238/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd/njd_node.c.o
+[239/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_accent_type/njd_set_accent_type.c.o
+[240/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_long_vowel/njd_set_long_vowel.c.o
+[241/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/writer.cpp.o
+[242/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_pronunciation/njd_set_pronunciation.c.o
+[243/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/text2mecab/text2mecab.c.o
+[244/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_unvoiced_vowel/njd_set_unvoiced_vowel.c.o
+[245/267] Building C object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/njd_set_digit/njd_set_digit.c.o
+[246/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/viterbi.cpp.o
+[247/267] Building CXX object lipsync-build/openjtalk/CMakeFiles/openjtalk.dir/Release/mecab/src/tokenizer.cpp.o
+[248/267] Linking CXX static library lipsync-build/openjtalk/Release/libopenjtalk.a
+[249/267] Linking CXX executable lipsync-build/Release/kagex_mecab_dict_index
+[250/267] Building the OpenJTalk dictionary (NAIST-jdic)
+/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/pos-id.def is not found. minimum setting is used
+reading /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/unk.def ... 40
+emitting double-array:   9% |###                                        | emitting double-array:  18% |#######                                    | emitting double-array:  27% |###########                                | emitting double-array:  36% |###############                            | emitting double-array:  45% |###################                        | emitting double-array:  54% |#######################                    | emitting double-array:  63% |###########################                | emitting double-array:  72% |###############################            | emitting double-array:  81% |###################################        | emitting double-array:  90% |#######################################    | emitting double-array: 100% |###########################################| 
+/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/model.def is not found. skipped.
+/home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/pos-id.def is not found. minimum setting is used
+reading /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/unidic-csj.csv ... 302157
+reading /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/naist-jdic.csv ... 486757
+emitting double-array:   0% |                                           | emitting double-array:   1% |                                           | emitting double-array:   2% |                                           | emitting double-array:   3% |#                                          | emitting double-array:   4% |#                                          | emitting double-array:   5% |##                                         | emitting double-array:   6% |##                                         | emitting double-array:   7% |###                                        | emitting double-array:   8% |###                                        | emitting double-array:   9% |###                                        | emitting double-array:  10% |####                                       | emitting double-array:  11% |####                                       | emitting double-array:  12% |#####                                      | emitting double-array:  13% |#####                                      | emitting double-array:  14% |######                                     | emitting double-array:  15% |######                                     | emitting double-array:  16% |######                                     | emitting double-array:  17% |#######                                    | emitting double-array:  18% |#######                                    | emitting double-array:  19% |########                                   | emitting double-array:  20% |########                                   | emitting double-array:  21% |#########                                  | emitting double-array:  22% |#########                                  | emitting double-array:  23% |#########                                  | emitting double-array:  24% |##########                                 | emitting double-array:  25% |##########                                 | emitting double-array:  26% |###########                                | emitting double-array:  27% |###########                                | emitting double-array:  28% |############                               | emitting double-array:  29% |############                               | emitting double-array:  30% |############                               | emitting double-array:  31% |#############                              | emitting double-array:  32% |#############                              | emitting double-array:  33% |##############                             | emitting double-array:  34% |##############                             | emitting double-array:  35% |###############                            | emitting double-array:  36% |###############                            | emitting double-array:  37% |###############                            | emitting double-array:  38% |################                           | emitting double-array:  39% |################                           | emitting double-array:  40% |#################                          | emitting double-array:  41% |#################                          | emitting double-array:  42% |##################                         | emitting double-array:  43% |##################                         | emitting double-array:  44% |##################                         | emitting double-array:  45% |###################                        | emitting double-array:  46% |###################                        | emitting double-array:  47% |####################                       | emitting double-array:  48% |####################                       | emitting double-array:  49% |#####################                      | emitting double-array:  50% |#####################                      | emitting double-array:  51% |#####################                      | emitting double-array:  52% |######################                     | emitting double-array:  53% |######################                     | emitting double-array:  54% |#######################                    | emitting double-array:  55% |#######################                    | emitting double-array:  56% |########################                   | emitting double-array:  57% |########################                   | emitting double-array:  58% |########################                   | emitting double-array:  59% |#########################                  | emitting double-array:  60% |#########################                  | emitting double-array:  61% |##########################                 | emitting double-array:  62% |##########################                 | emitting double-array:  63% |###########################                | emitting double-array:  64% |###########################                | emitting double-array:  65% |###########################                | emitting double-array:  66% |############################               | emitting double-array:  67% |############################               | emitting double-array:  68% |#############################              | emitting double-array:  69% |#############################              | emitting double-array:  70% |##############################             | emitting double-array:  71% |##############################             | emitting double-array:  72% |##############################             | emitting double-array:  73% |###############################            | emitting double-array:  74% |###############################            | emitting double-array:  75% |################################           | emitting double-array:  76% |################################           | emitting double-array:  77% |#################################          | emitting double-array:  78% |#################################          | emitting double-array:  79% |#################################          | emitting double-array:  80% |##################################         | emitting double-array:  81% |##################################         | emitting double-array:  82% |###################################        | emitting double-array:  83% |###################################        | emitting double-array:  84% |####################################       | emitting double-array:  85% |####################################       | emitting double-array:  86% |####################################       | emitting double-array:  87% |#####################################      | emitting double-array:  88% |#####################################      | emitting double-array:  89% |######################################     | emitting double-array:  90% |######################################     | emitting double-array:  91% |#######################################    | emitting double-array:  92% |#######################################    | emitting double-array:  93% |#######################################    | emitting double-array:  94% |########################################   | emitting double-array:  95% |########################################   | emitting double-array:  96% |#########################################  | emitting double-array:  97% |#########################################  | emitting double-array:  98% |########################################## | emitting double-array:  99% |########################################## | emitting double-array: 100% |###########################################| 
+reading /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/_deps/kagex_openjtalk-src/src/mecab-naist-jdic/matrix.def ... 1377x1377
+emitting matrix      :   0% |                                           | emitting matrix      :   1% |                                           | emitting matrix      :   2% |                                           | emitting matrix      :   3% |#                                          | emitting matrix      :   4% |#                                          | emitting matrix      :   5% |##                                         | emitting matrix      :   6% |##                                         | emitting matrix      :   7% |###                                        | emitting matrix      :   8% |###                                        | emitting matrix      :   9% |###                                        | emitting matrix      :  10% |####                                       | emitting matrix      :  11% |####                                       | emitting matrix      :  12% |#####                                      | emitting matrix      :  13% |#####                                      | emitting matrix      :  14% |######                                     | emitting matrix      :  15% |######                                     | emitting matrix      :  16% |######                                     | emitting matrix      :  17% |#######                                    | emitting matrix      :  18% |#######                                    | emitting matrix      :  19% |########                                   | emitting matrix      :  20% |########                                   | emitting matrix      :  21% |#########                                  | emitting matrix      :  22% |#########                                  | emitting matrix      :  23% |#########                                  | emitting matrix      :  24% |##########                                 | emitting matrix      :  25% |##########                                 | emitting matrix      :  26% |###########                                | emitting matrix      :  27% |###########                                | emitting matrix      :  28% |############                               | emitting matrix      :  29% |############                               | emitting matrix      :  30% |############                               | emitting matrix      :  31% |#############                              | emitting matrix      :  32% |#############                              | emitting matrix      :  33% |##############                             | emitting matrix      :  34% |##############                             | emitting matrix      :  35% |###############                            | emitting matrix      :  36% |###############                            | emitting matrix      :  37% |###############                            | emitting matrix      :  38% |################                           | emitting matrix      :  39% |################                           | emitting matrix      :  40% |#################                          | emitting matrix      :  41% |#################                          | emitting matrix      :  42% |##################                         | emitting matrix      :  43% |##################                         | emitting matrix      :  44% |##################                         | emitting matrix      :  45% |###################                        | emitting matrix      :  46% |###################                        | emitting matrix      :  47% |####################                       | emitting matrix      :  48% |####################                       | emitting matrix      :  49% |#####################                      | emitting matrix      :  50% |#####################                      | emitting matrix      :  51% |#####################                      | emitting matrix      :  52% |######################                     | emitting matrix      :  53% |######################                     | emitting matrix      :  54% |#######################                    | emitting matrix      :  55% |#######################                    | emitting matrix      :  56% |########################                   | emitting matrix      :  57% |########################                   | emitting matrix      :  58% |########################                   | emitting matrix      :  59% |#########################                  | emitting matrix      :  60% |#########################                  | emitting matrix      :  61% |##########################                 | emitting matrix      :  62% |##########################                 | emitting matrix      :  63% |###########################                | emitting matrix      :  64% |###########################                | emitting matrix      :  65% |###########################                | emitting matrix      :  66% |############################               | emitting matrix      :  67% |############################               | emitting matrix      :  68% |#############################              | emitting matrix      :  69% |#############################              | emitting matrix      :  70% |##############################             | emitting matrix      :  71% |##############################             | emitting matrix      :  72% |##############################             | emitting matrix      :  73% |###############################            | emitting matrix      :  74% |###############################            | emitting matrix      :  75% |################################           | emitting matrix      :  76% |################################           | emitting matrix      :  77% |#################################          | emitting matrix      :  78% |#################################          | emitting matrix      :  79% |#################################          | emitting matrix      :  80% |##################################         | emitting matrix      :  81% |##################################         | emitting matrix      :  82% |###################################        | emitting matrix      :  83% |###################################        | emitting matrix      :  84% |####################################       | emitting matrix      :  85% |####################################       | emitting matrix      :  86% |#####################################      | emitting matrix      :  87% |#####################################      | emitting matrix      :  88% |#####################################      | emitting matrix      :  89% |######################################     | emitting matrix      :  90% |######################################     | emitting matrix      :  91% |#######################################    | emitting matrix      :  92% |#######################################    | emitting matrix      :  93% |########################################   | emitting matrix      :  94% |########################################   | emitting matrix      :  95% |########################################   | emitting matrix      :  96% |#########################################  | emitting matrix      :  97% |#########################################  | emitting matrix      :  98% |########################################## | emitting matrix      :  99% |########################################## | emitting matrix      : 100% |###########################################| 
+
+done!
+[251/267] Building C object krkrz_tools/external/clipparse/clipparse/CMakeFiles/sqlite3_static.dir/Release/__/__/__/__/_deps/sqlite3_amalg-src/sqlite3.c.o
+[252/267] Linking C static library krkrz_tools/external/clipparse/clipparse/Release/libsqlite3_static.a
+[253/267] Linking CXX static library krkrz_tools/external/clipparse/clipparse/Release/libclipparse.a
+[254/267] Linking CXX static library krkrz_tools/libs/image/Release/libkrt_image.a
+[255/267] Linking CXX static library Release/libkagex_release_core.a
+[256/267] appserve: packing /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/lipsync-build/web -> web.zip
+[257/267] appserve: packing /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/web -> web.zip
+[258/267] appserve: embedding web.zip into kagex_lipsync_web.cpp
+-- bin2c: /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/lipsync-build/appserve_embed/kagex-lipsync/web.zip -> /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/lipsync-build/appserve_embed/kagex-lipsync/kagex_lipsync_web.cpp (15478 bytes)
+[259/267] appserve: embedding web.zip into kagex_release_web.cpp
+-- bin2c: /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/appserve_embed/kagex-release/web.zip -> /home/runner/work/kagex/kagex/kagex/tools/release/build/linux/appserve_embed/kagex-release/kagex_release_web.cpp (22022 bytes)
+[260/267] Building CXX object CMakeFiles/kagex-release.dir/Release/appserve_embed/kagex-release/kagex_release_web.cpp.o
+[261/267] Building CXX object lipsync-build/CMakeFiles/kagex-lipsync.dir/Release/appserve_embed/kagex-lipsync/kagex_lipsync_web.cpp.o
+[262/267] Building CXX object lipsync-build/CMakeFiles/kagex-lipsync.dir/Release/src/Align.cpp.o
+[263/267] Building CXX object CMakeFiles/kagex-release.dir/Release/src/main.cpp.o
+[264/267] Building CXX object lipsync-build/CMakeFiles/kagex-lipsync.dir/Release/src/Voices.cpp.o
+[265/267] Building CXX object lipsync-build/CMakeFiles/kagex-lipsync.dir/Release/src/main.cpp.o
+[266/267] Linking CXX executable Release/kagex-release
+[267/267] Linking CXX executable Release/kagex-lipsync

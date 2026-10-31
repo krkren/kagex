@@ -1,0 +1,283 @@
+18:03:09 TVP Log system initialized with level: 2
+18:03:09 App name: SDL Application
+18:03:09 App version: <unspecified>
+18:03:09 App ID: <unspecified>
+18:03:09 SDL revision: SDL-3.4.0-release-3.4.0
+18:03:09 Found resource: SysInitScript.tjs
+18:03:09 Found resource: config.cf
+18:03:09 Found resource: elements_basic.ttf
+18:03:09 Found resource: gamecontrollerdb.txt
+18:03:09 Found resource: messages-chs.json
+18:03:09 Found resource: messages-cht.json
+18:03:09 Found resource: messages-en.json
+18:03:09 Found resource: messages.json
+18:03:09 Found resource: optiondesc-chs.json
+18:03:09 Found resource: optiondesc-cht.json
+18:03:09 Found resource: optiondesc-en.json
+18:03:09 Found resource: optiondesc.json
+18:03:09 Found resource: roboto-regular.ttf
+18:03:09 Total resources loaded: 13
+18:03:09 [stdapp.cpp:InitPath:234] data/startup.tjs found, using data/ as project path
+18:03:09 [stdapp.cpp:InitPath:262] appPath: /tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/
+18:03:09 ! [stdapp.cpp:InitPath:263] projectPath: /tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/data/
+18:03:09 [stdapp.cpp:InitPath:298] pluginPath: /tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/plugin/
+18:03:09 [Application.cpp:LoadMessageResource:209] message file: resource://./messages.json (language tag: unknown)
+18:03:09 Audio stream created with channels: 2, sample rate: 48000
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+18:03:09 ! (info) Loading configuration file "/tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/config.cf" failed (ignoring) : file not found.
+18:03:09 ! (info) Loading configuration file "/tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/kagex-sample.cf" succeeded.
+18:03:09 ! (info) Loading configuration file "/tmp/tmpn3mckr_6/save/kagex-sample.cfu" failed (ignoring) : file not found.
+18:03:09 ! (info) Data path : file://./tmp/tmpn3mckr_6/save/
+18:03:09 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+18:03:09 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x7f42a23fe010
+18:03:09 [AudioStream.cpp:InitMiniAudio:138] miniaudio engine initialized: 2 channels, 48000 Hz
+18:03:09 ! Linux 6.8.0-1070-azure (Linux) 上で実行が開始されました
+18:03:09 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x7f427bfff010
+18:03:09 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x7f426bffe010
+18:03:09 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:584] StorageCache: budget set to FileAllocator capacity=256MB
+18:03:09 ! (info) Total physical memory : 16764633088
+18:03:09 ! (info) Selected project directory : file://./tmp/tmp8cxe40n9/My Game/release/kagex-sample-0.13.2-linux/data/
+18:03:09 ! 吉里吉里[きりきり] Z 実行コア/2.6.5.0 (Compiled on Oct 29 2026 22:56:08) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+18:03:09 ! バージョン情報の詳細は -about を付けて起動すると閲覧できます
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+18:03:09 system fonts: 42 name(s) registered (loaded on first use)
+18:03:09 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+18:03:09 [SysInitImpl.cpp:TVPAfterSystemInit:337] ImageCache enabled: limit=512MB (physmem=15988MB, source=BitmapPool)
+18:03:09 ! (info) Specified option(s) (earlier item has more priority) : -datapath=/tmp/tmpn3mckr_6/save/ -replfile=/tmp/tmpn3mckr_6/repl -replmodaltimeout=0 -orgname=krkren -appname=kagex-sample -debugwin=no -padinterval=70
+18:03:09 [SysInitImpl.cpp:TVPAfterSystemInit:445] CPU SIMD: MMX SSE SSE2 SSE3 SSSE3 SSE4.1 SSE4.2 AVX AVX2 FMA3 (TVPCPUType=0xffdbf120)
+18:03:09 ! (info) Auto Loading Static Plugin:xp3crypt
+18:03:09 xp3crypt
+18:03:09 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x7f425affc010
+18:03:09 [GlobalAllocStats.cpp:Initialize:526] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+18:03:09 (info) 起動スクリプト読込み中 : startup.tjs
+18:03:09 ! ReplFileChannel: watching /tmp/tmpn3mckr_6/repl
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 1 file(s) found, 1 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 3 file(s) found, 3 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 8 file(s) found, 8 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 10 file(s) found, 10 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 21 file(s) found, 21 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 25 file(s) found, 25 file(s) activated. (1ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 36 file(s) found, 36 file(s) activated. (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 222 file(s) found, 222 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 309 file(s) found, 309 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 324 file(s) found, 324 file(s) activated. (3ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 324 file(s) found, 324 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 324 file(s) found, 324 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 324 file(s) found, 324 file(s) activated. (3ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 347 file(s) found, 346 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 347 file(s) found, 346 file(s) activated. (3ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 351 file(s) found, 350 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 351 file(s) found, 350 file(s) activated. (3ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 356 file(s) found, 355 file(s) activated. (2ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 501 file(s) found, 500 file(s) activated. (3ms)
+18:03:09 ! OS : Linux 6.8.0-1070-azure (Linux)
+18:03:09 ! KAG : EX 3.27-dev.20070519
+18:03:09 ! Kirikiri : 2.6.5.0
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 ! 
+----- MiniZip Copyright START -----
+Condition of use and distribution are the same as zlib:
+https://github.com/zlib-ng/minizip-ng
+----- MiniZip Copyright END -----
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 ! RichText: using the engine's font service
+18:03:09 Config.tjs loaded (0ms)
+18:03:09 Language.tjs loaded (0ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 628 file(s) found, 501 file(s) activated. (4ms)
+18:03:09 Language: ja (was en)
+18:03:09 Loading KAG System scripts...
+18:03:09 LayerEx.tjs loaded (0ms)
+18:03:09 Utils.tjs loaded (0ms)
+18:03:09 Accessibility.tjs loaded (0ms)
+18:03:09 KAGLayer.tjs loaded (0ms)
+18:03:09 AnimKAGLayer.tjs loaded (0ms)
+18:03:09 ButtonLayer.tjs loaded (1ms)
+18:03:09 TransLayer.tjs loaded (0ms)
+18:03:09 SelectLayer.tjs loaded (0ms)
+18:03:09 MapSelectLayer.tjs loaded (0ms)
+18:03:09 DialogLayer.tjs loaded (1ms)
+18:03:09 HistoryLayer.tjs loaded (0ms)
+18:03:09 BGM.tjs loaded (0ms)
+18:03:09 SE.tjs loaded (1ms)
+18:03:09 Movie.tjs loaded (0ms)
+18:03:09 Conductor.tjs loaded (0ms)
+18:03:09 UpdateRegion.tjs loaded (0ms)
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 AffineLayer.tjs loaded (2ms)
+18:03:09 AnimationLayer.tjs loaded (0ms)
+18:03:09 GraphicLayer.tjs loaded (1ms)
+18:03:09 ==== An exception occured at Initialize.tjs(1)[(function expression) (anonymous)], VM ip = 33 ====
+18:03:09 -- Disassembled VM code --
+18:03:09 #(1) Bytecode.
+18:03:09 00000000 const %1, *0	// *0 = (int)0
+18:03:09 00000003 const %2, *1	// *1 = (int)7
+18:03:09 00000006 calld %3, %-3.*2(%1, %2)	// *2 = (string)"substring"
+18:03:09 00000013 const %4, *3	// *3 = (string)"plugin/"
+18:03:09 00000016 ceq %3, %4
+18:03:09 00000019 jnf 000000033
+18:03:09 00000021 const %1, *1	// *1 = (int)7
+18:03:09 00000024 calld %2, %-3.*2(%1)	// *2 = (string)"substring"
+18:03:09 00000030 cp %-3, %2
+18:03:09 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+18:03:09 -- Register dump --
+18:03:09 %-3=(string)"gfxEffect.dll"  %-2=(object)(object 0x7ffced1cc830:0x0)
+18:03:09 %-1=(object)(object 0x55a03fb165d0:0x55a03fb165d0)  %0=(void)  %1=(void)
+18:03:09 %2=(string)"gfxEffect.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+18:03:09 --------------------------------------------------------------------------------------------------
+18:03:09 GFX_Fire.tjs loaded (0ms)
+18:03:09 GFX_Movie.tjs loaded (0ms)
+18:03:09 ==== An exception occured at Initialize.tjs(1)[(function expression) (anonymous)], VM ip = 33 ====
+18:03:09 -- Disassembled VM code --
+18:03:09 #(1) Bytecode.
+18:03:09 00000000 const %1, *0	// *0 = (int)0
+18:03:09 00000003 const %2, *1	// *1 = (int)7
+18:03:09 00000006 calld %3, %-3.*2(%1, %2)	// *2 = (string)"substring"
+18:03:09 00000013 const %4, *3	// *3 = (string)"plugin/"
+18:03:09 00000016 ceq %3, %4
+18:03:09 00000019 jnf 000000033
+18:03:09 00000021 const %1, *1	// *1 = (int)7
+18:03:09 00000024 calld %2, %-3.*2(%1)	// *2 = (string)"substring"
+18:03:09 00000030 cp %-3, %2
+18:03:09 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+18:03:09 -- Register dump --
+18:03:09 %-3=(string)"flashPlayer.dll"  %-2=(object)(object 0x7ffced1cc830:0x0)
+18:03:09 %-1=(object)(object 0x55a03fb165d0:0x55a03fb165d0)  %0=(void)  %1=(void)
+18:03:09 %2=(string)"flashPlayer.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+18:03:09 --------------------------------------------------------------------------------------------------
+18:03:09 GFX_Flash.tjs loaded (1ms)
+18:03:09 GFX_Particle.tjs loaded (0ms)
+18:03:09 TVP_PLUGIN_NAME
+18:03:09 GFX_AMovie.tjs loaded (0ms)
+18:03:09 GFX_Effekseer.tjs loaded (0ms)
+18:03:09 GFX_Live2D.tjs loaded (1ms)
+18:03:09 MessageLayer.tjs loaded (1ms)
+18:03:09 Menus.tjs loaded (1ms)
+18:03:09 ElementsScreen.tjs loaded (0ms)
+18:03:09 MenuBar.tjs loaded (0ms)
+18:03:09 Controls.tjs loaded (0ms)
+18:03:09 DefaultMover.tjs loaded (0ms)
+18:03:09 Action.tjs loaded (1ms)
+18:03:09 MainWindow.tjs loaded (5ms)
+18:03:09 YAML.tjs loaded (0ms)
+18:03:09 KAGEnvBase.tjs loaded (0ms)
+18:03:09 KAGEnvImage.tjs loaded (1ms)
+18:03:09 KAGEnvLayer.tjs loaded (1ms)
+18:03:09 KAGEnvEvent.tjs loaded (0ms)
+18:03:09 KAGEnvStage.tjs loaded (0ms)
+18:03:09 KAGEnvLevelLayer.tjs loaded (0ms)
+18:03:09 KAGEnvSimpleLayer.tjs loaded (0ms)
+18:03:09 KAGEnvCharacter.tjs loaded (0ms)
+18:03:09 KAGEnvBGM.tjs loaded (1ms)
+18:03:09 KAGEnvSE.tjs loaded (0ms)
+18:03:09 KAGEnvironment.tjs loaded (1ms)
+18:03:09 KAGEnvCharacterEyeLip.tjs loaded (0ms)
+18:03:09 psdlayer.tjs loaded (0ms)
+18:03:09 KAGEnvCharacterEx.tjs loaded (2ms)
+18:03:09 KAGEnvCharacterLive2D.tjs loaded (1ms)
+18:03:09 world.tjs loaded (7ms)
+18:03:09 MyHistoryLayer.tjs loaded (1ms)
+18:03:09 Override.tjs loaded (1ms)
+18:03:09 Script loading took 35ms
+18:03:09 [form.cpp:TVPUpdateBaselineTextInput:118] BaselineTextInput: driver=offscreen screenKB=0 hasKB=0 steamdeck=0 imeMode=0 -> start
+18:03:09 [OpenGLError.cpp:InitGLES:49] Loaded GLES 3.2
+18:03:09 Save data storage location: file://./tmp/tmpn3mckr_6/save/
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 628 file(s) found, 501 file(s) activated. (4ms)
+18:03:09 Plugin.tjs loaded (5ms)
+18:03:09 KAGMainWindow constructor took 141ms
+18:03:09 YesNoDialogLayer.tjs loaded (1ms)
+18:03:09 YesNoDialog.tjs loaded (1ms)
+18:03:09 AfterInit.tjs loaded (1ms)
+18:03:09 (info) 起動スクリプト実行終了。
+18:03:09 Window shown: KAGEX Sample
+18:03:09 window show:No gamepads connected
+18:03:09 (info) 自動検索パステーブルを再構築しています ...
+18:03:09 (info) Total 628 file(s) found, 501 file(s) activated. (4ms)
+18:03:09 [GLTexture.cpp:InitSupported:685] GLES: Texture Swizzle Supported
+18:03:09 [GLTexture.cpp:InitSupported:688] GLES: Copy Image Extension Supported
+18:03:09 [GLTexture.cpp:InitSupported:691] GLES: sRGB Write Control Supported
+18:03:10 (info) 自動検索パステーブルを再構築しています ...
+18:03:10 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:10 (info) 自動検索パステーブルを再構築しています ...
+18:03:10 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:10 (info) 自動検索パステーブルを再構築しています ...
+18:03:10 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:11 (info) 自動検索パステーブルを再構築しています ...
+18:03:11 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:11 (info) 自動検索パステーブルを再構築しています ...
+18:03:11 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:11 (info) 自動検索パステーブルを再構築しています ...
+18:03:11 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:12 (info) 自動検索パステーブルを再構築しています ...
+18:03:12 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:12 (info) 自動検索パステーブルを再構築しています ...
+18:03:12 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:12 (info) 自動検索パステーブルを再構築しています ...
+18:03:12 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:13 (info) 自動検索パステーブルを再構築しています ...
+18:03:13 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:13 (info) 自動検索パステーブルを再構築しています ...
+18:03:13 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:13 (info) 自動検索パステーブルを再構築しています ...
+18:03:13 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:13 (info) 自動検索パステーブルを再構築しています ...
+18:03:13 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:14 (info) 自動検索パステーブルを再構築しています ...
+18:03:14 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:14 (info) 自動検索パステーブルを再構築しています ...
+18:03:14 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:14 (info) 自動検索パステーブルを再構築しています ...
+18:03:14 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:14 (info) 自動検索パステーブルを再構築しています ...
+18:03:14 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:15 (info) 自動検索パステーブルを再構築しています ...
+18:03:15 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:15 (info) 自動検索パステーブルを再構築しています ...
+18:03:15 (info) Total 628 file(s) found, 501 file(s) activated. (4ms)
+18:03:15 (info) 自動検索パステーブルを再構築しています ...
+18:03:15 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:16 (info) 自動検索パステーブルを再構築しています ...
+18:03:16 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:16 (info) 自動検索パステーブルを再構築しています ...
+18:03:16 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:16 (info) 自動検索パステーブルを再構築しています ...
+18:03:16 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
+18:03:16 TVP_PLUGIN_NAME
+18:03:18 (info) 自動検索パステーブルを再構築しています ...
+18:03:18 (info) Total 628 file(s) found, 501 file(s) activated. (5ms)
