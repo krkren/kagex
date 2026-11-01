@@ -512,6 +512,21 @@ class WebEngine(Engine):
         last = None
         while time.time() < end:
             try:
+                # wait for the module to fully instantiate before entering it: a ccall
+                # that races the running wasm (packed sites boot fast: one archive, warm
+                # CDN) re-enters a half-built module and crashes the renderer outright.
+                # The engine's own boot banner is printed from inside main(), so once it
+                # is in the console the exports are usable; touching no wasm itself.
+                if not any("TVP Log system" in l for l in self.lines):
+                    # pump the Playwright event loop (console lines are only dispatched
+                    # during a page call; a sleep-only loop would buffer them all until
+                    # teardown and this wait would time out with the page very much alive)
+                    try:
+                        self.page.evaluate("1")  # plain JS: no wasm exports, can't crash
+                    except Exception:
+                        pass  # mid-navigation (COI reload); events pump next call
+                    time.sleep(1)
+                    continue
                 # ccall throws until the runtime is up; then wait for the game window
                 if self._raw('typeof global.kag == "Object" && kag !== void').get("result") == "1":
                     return
