@@ -28,3 +28,6 @@ tools/live2d/build/
 /engines/
 /*.app/
 *.dylib
+# the web kit stages the site here (tools/stage_web.py): with Live2D it holds the Web Core and the
+# game's data, Hiyori included, and is never committed
+/build/

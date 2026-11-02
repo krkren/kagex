@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Live2D's Web Core and Hiyori stay out of the web engine package**: 0.13.1 and 0.13.2's `kagex_engine_web.zip` held `live2dcubismcore.min.js` and a copy of Hiyori's model (`hiyori_test.l2d`), so every web game kagex-release built carried both, and the repository held the staged web site (`build/web/site`, with the Core and Hiyori's files). Both releases' engine packages are replaced, the site is gone from the repository and its history, and `/build/` is ignored. `engine-package.py` leaves the Web Core, its script tag and any Live2D model out of the web package, and the three package scripts refuse the Web Core (as the native one) unless given `--with-cubism-core`, and a Live2D model always. A Live2D web game brings its own Core: kagex-release copies `plugins/web/live2dcubismcore.min.js` into the site with its script tag, `check` warns when a game with Live2D models has none, and the web build leaves out a Core an older engine package brought.
+- **Live2D on the web: part opacities, released models, and no Core**: the web's Core (`tools/live2d/web/csm_web.cpp`) passes the parts' opacities to the Web Core before each update, so a model's pose groups (Hiyori's two sets of arms) switch as on the other platforms; frees each moc's and model's Web Core objects and copies when the Framework frees them (a call kagex's Framework patch adds), where every load, BACK and scene change used to leave them behind; answers a moc's version after its header is gone; copies a model's indices and masks once and its draw orders every update; and reads no model when the page has no Core, instead of throwing.
+- The smoke test checks that `idle5` plays the fifth motion of Hiyori's Idle group, not any of hers; the Live2D sample packages' build tools leave out `tools/live2d/build/`; the release tool's web race test can't be stalled by a response nobody reads.
+
 ## 0.13.2
 
 ### Changed

@@ -24,10 +24,12 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/val.h>
 
+#include <cstdint>
 #include <cstring>
 #include <cstdlib>
 #include <new>
 #include <string>
+#include <unordered_map>
 
 #include "Live2DCubismCore.h"
 
@@ -72,6 +74,24 @@ val l2dcore()
 {
     static val core = val::global("Live2DCubismCore");
     return core;
+}
+
+// the page may not load the Core (a game that ships no Live2D, or forgot the script): then
+// every entry point answers as a Core that can read no model, and the driver reports the
+// model as unreadable instead of the page throwing
+bool core_present()
+{
+    static const bool present = !l2dcore().isUndefined() && !l2dcore().isNull();
+    return present;
+}
+
+// the mocs revived here, by the address the handle was placed at, with their version: the
+// Framework asks csmGetMocVersion of that address after csmReviveMocInPlace has put the
+// handle over the moc's header
+std::unordered_map<const void*, unsigned int>& revived()
+{
+    static std::unordered_map<const void*, unsigned int> mocs;
+    return mocs;
 }
 
 val moc_class()
@@ -179,11 +199,17 @@ struct WebModel {
     val model;
     Mirror m;
 
+    // what the Framework writes before an update: the parameters' values, and the parts'
+    // opacities (CubismPose fades a pose group's parts in and out through them)
     void refresh_in()
     {
         if (m.pcount > 0) {
             model["parameters"]["values"].call<void>("set",
                          val(emscripten::typed_memory_view(m.pcount, m.pvalues)));
+        }
+        if (m.ocount > 0) {
+            model["parts"]["opacities"].call<void>("set",
+                         val(emscripten::typed_memory_view(m.ocount, m.opacities)));
         }
     }
 
@@ -195,6 +221,7 @@ struct WebModel {
         pull_into(parts["opacities"], m.opacities, m.ocount * 4);
         val d = model["drawables"];
         pull_into(d["dynamicFlags"], m.idyn, m.dcount);
+        pull_into(d["drawOrders"], m.drawOrder, m.dcount * 4);
         pull_into(d["opacities"], m.dopacity, m.dcount * 4);
         pull_into(d["multiplyColors"], m.mul, m.dcount * 16);
         pull_into(d["screenColors"], m.screen, m.dcount * 16);
@@ -203,12 +230,7 @@ struct WebModel {
                      d["vertexPositions"][i]["byteLength"].as<int>());
             pull_into(d["vertexUvs"][i], m.uvs[i],
                      d["vertexUvs"][i]["byteLength"].as<int>());
-            pull_into(d["indices"][i], m.indices[i],
-                     d["indices"][i]["byteLength"].as<int>());
-            if (m.masks != nullptr && i < d["masks"]["length"].as<int>()) {
-                pull_into(d["masks"][i], m.masks[i],
-                         d["masks"][i]["byteLength"].as<int>());
-            }
+            // indices and masks are the moc's and never change: build_mirror copied them
         }
         val oo = model["offscreens"];
         pull_into(oo["opacities"], m.ooOpacity, m.oocount * 4);
@@ -216,6 +238,40 @@ struct WebModel {
         pull_into(oo["screenColors"], m.ooScreen, m.oocount * 16);
         pull_into(model.call<val>("getRenderOrders"), m.renderOrders,
                  m.dcount * 4);
+    }
+
+    void free_mirror()
+    {
+        auto strings = [](char** list, int n) {
+            if (list == nullptr) return;
+            for (int i = 0; i < n; ++i) std::free(list[i]);
+            std::free(list);
+        };
+        auto tables = [](void* table, int n) {
+            void** list = static_cast<void**>(table);
+            if (list == nullptr) return;
+            for (int i = 0; i < n; ++i) std::free(list[i]);
+            std::free(list);
+        };
+        strings(m.pids, m.pcount);
+        std::free(m.ptypes); std::free(m.pmin); std::free(m.pmax); std::free(m.pdef);
+        std::free(m.pvalues); std::free(m.prepeats); std::free(m.pkeyCounts);
+        tables(m.pkeyValues, m.pcount);
+        strings(m.oids, m.ocount);
+        std::free(m.opacities); std::free(m.parent); std::free(m.offscreenIdx);
+        strings(m.dids, m.dcount);
+        std::free(m.iconst); std::free(m.idyn); std::free(m.blend); std::free(m.tex);
+        std::free(m.drawOrder); std::free(m.dopacity); std::free(m.maskCounts);
+        tables(m.masks, m.dcount);
+        std::free(m.vcounts); std::free(m.icounts);
+        tables(m.verts, m.dcount); tables(m.uvs, m.dcount); tables(m.indices, m.dcount);
+        std::free(m.mul); std::free(m.screen); std::free(m.dparent);
+        std::free(m.ooBlend); std::free(m.ooOwner); std::free(m.ooMaskCounts);
+        std::free(m.ooOpacity); std::free(m.ooMul); std::free(m.ooScreen);
+        tables(m.ooMasks, m.oocount);
+        std::free(m.ooConst);
+        std::free(m.renderOrders);
+        m = Mirror();
     }
 
     void build_mirror()
@@ -284,16 +340,22 @@ extern "C" {
 
 csmVersion csmGetVersion()
 {
+    if (!core_present()) return 0;
     return static_cast<csmVersion>(l2dcore()["Version"].call<int>("csmGetVersion"));
 }
 
 csmMocVersion csmGetLatestMocVersion()
 {
+    if (!core_present()) return 0;
     return static_cast<csmMocVersion>(l2dcore()["Version"].call<int>("csmGetLatestMocVersion"));
 }
 
 csmMocVersion csmGetMocVersion(const void* address, const unsigned int size)
 {
+    // a moc revived here: its header is under the handle now, the version was kept
+    auto known = revived().find(address);
+    if (known != revived().end()) return static_cast<csmMocVersion>(known->second);
+    if (!core_present()) return 0;
     val ab = heap_to_ab_copy(address, (int)size);
     return static_cast<csmMocVersion>(
         l2dcore()["Version"].call<int>("csmGetMocVersion", ab));
@@ -301,6 +363,7 @@ csmMocVersion csmGetMocVersion(const void* address, const unsigned int size)
 
 int csmHasMocConsistency(void* address, const unsigned int size)
 {
+    if (!core_present()) return 0;
     try {
         val ab = heap_to_ab_copy(address, (int)size);
         val moc = moc_class().call<val>("fromArrayBuffer", ab);
@@ -330,11 +393,16 @@ csmMoc* csmReviveMocInPlace(void* address, const unsigned int size)
     // snapshot the moc bytes before the handle lands on the buffer head:
     // the placement WebMoc carries val members, and their ids would
     // clobber the moc header in place
+    if (!core_present() || size < sizeof(WebMoc)) return nullptr;
     val bytes = heap_to_ab_copy(address, (int)size);
+    val moc = moc_class().call<val>("fromArrayBuffer", bytes);
+    if (moc.isNull() || moc.isUndefined()) return nullptr;
+    const unsigned int version = l2dcore()["Version"].call<int>("csmGetMocVersion", bytes);
     WebMoc* handle = new (address) WebMoc();
     handle->bytes = bytes;
-    handle->version = l2dcore()["Version"].call<int>("csmGetMocVersion", bytes);
-    handle->moc = moc_class().call<val>("fromArrayBuffer", bytes);
+    handle->version = version;
+    handle->moc = moc;
+    revived()[address] = version;
     return static_cast<csmMoc*>(address);
 }
 
@@ -345,12 +413,14 @@ unsigned int csmGetSizeofModel(const csmMoc* /*moc*/)
 
 csmModel* csmInitializeModelInPlace(const csmMoc* moc, void* address, const unsigned int size)
 {
-    if (size < sizeof(WebModel)) {
+    if (!core_present() || moc == nullptr || size < sizeof(WebModel)) {
         return nullptr;
     }
     WebMoc* mh = reinterpret_cast<WebMoc*>(const_cast<csmMoc*>(moc));
+    val js = model_class().call<val>("fromMoc", mh->moc);
+    if (js.isNull() || js.isUndefined()) return nullptr;
     WebModel* model = new (address) WebModel();
-    model->model = model_class().call<val>("fromMoc", mh->moc);
+    model->model = js;
     model->build_mirror();
     return static_cast<csmModel*>(address);
 }
@@ -612,6 +682,31 @@ const csmFlags* csmGetOffscreenConstantFlags(const csmModel* model_)
 {
     return reinterpret_cast<const csmFlags*>(
         reinterpret_cast<const WebModel*>(model_)->m.ooConst);
+}
+
+// Not the Core's API: the native Core needs no release (its mocs and models live in memory the
+// Framework frees), but here each holds the Web Core's objects, the mirrors and val handles.
+// kagex's patch of the Framework calls these as it frees a moc's or a model's memory
+// (CubismMoc::~CubismMoc, CubismModel::~CubismModel, under __EMSCRIPTEN__)
+void csmWebReleaseModel(void* address)
+{
+    if (address == nullptr) return;
+    WebModel* model = reinterpret_cast<WebModel*>(address);
+    if (!model->model.isUndefined() && !model->model.isNull()) {
+        model->model.call<void>("release");
+    }
+    model->free_mirror();
+    model->~WebModel();
+}
+
+void csmWebReleaseMoc(void* address)
+{
+    if (address == nullptr || revived().erase(address) == 0) return;
+    WebMoc* handle = reinterpret_cast<WebMoc*>(address);
+    if (!handle->moc.isUndefined() && !handle->moc.isNull()) {
+        handle->moc.call<void>("_release");
+    }
+    handle->~WebMoc();
 }
 
 } // extern "C"

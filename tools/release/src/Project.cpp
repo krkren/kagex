@@ -119,6 +119,9 @@ bool isPluginFor(const std::string& platform, const std::string& name)
 	if (platform == "macos") return endsWith(".dylib");
 	if (platform == "linux" || platform == "steam")
 		return n.rfind("lib", 0) == 0 && (endsWith(".so") || n.find(".so.") != std::string::npos);
+	// the web engine has its plugins linked in, but a Live2D game's page loads Live2D's Web Core
+	// (from the developer's Cubism SDK for Web) before the engine
+	if (platform == "web") return n == "live2dcubismcore.min.js";
 	return false;
 }
 

@@ -1,3 +1,55 @@
+diff --git a/src/Model/CubismMoc.cpp b/src/Model/CubismMoc.cpp
+index 5a2b977..5655345 100644
+--- a/src/Model/CubismMoc.cpp
++++ b/src/Model/CubismMoc.cpp
+@@ -8,6 +8,11 @@
+ #include "CubismMoc.hpp"
+ #include "CubismModel.hpp"
+ 
++#ifdef __EMSCRIPTEN__
++// kagex: the web's Core (tools/live2d/web/csm_web.cpp) holds the Web Core's objects for a moc
++extern "C" void csmWebReleaseMoc(void* address);
++#endif
++
+ namespace Live2D { namespace Cubism { namespace Framework {
+ 
+ CubismMoc* CubismMoc::Create(const csmByte* mocBytes, csmSizeInt size, csmBool shouldCheckMocConsistency)
+@@ -58,6 +63,9 @@ CubismMoc::~CubismMoc()
+ {
+     CSM_ASSERT(_modelCount == 0);
+ 
++#ifdef __EMSCRIPTEN__
++    csmWebReleaseMoc(_moc);
++#endif
+     CSM_FREE_ALIGNED(_moc);
+ }
+ 
+diff --git a/src/Model/CubismModel.cpp b/src/Model/CubismModel.cpp
+index b87e863..1f5aca8 100644
+--- a/src/Model/CubismModel.cpp
++++ b/src/Model/CubismModel.cpp
+@@ -11,6 +11,11 @@
+ #include "Id/CubismIdManager.hpp"
+ #include "Math/CubismMath.hpp"
+ 
++#ifdef __EMSCRIPTEN__
++// kagex: the web's Core (tools/live2d/web/csm_web.cpp) holds the Web Core's objects for a model
++extern "C" void csmWebReleaseModel(void* address);
++#endif
++
+ namespace Live2D { namespace Cubism { namespace Framework {
+ 
+ static csmBool IsBitSet(const csmUint8 byte, const csmUint8 mask)
+@@ -33,6 +38,9 @@ CubismModel::CubismModel(Core::csmModel* model)
+ 
+ CubismModel::~CubismModel()
+ {
++#ifdef __EMSCRIPTEN__
++    csmWebReleaseModel(_model);
++#endif
+     CSM_FREE_ALIGNED(_model);
+ }
+ 
 diff --git a/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp b/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp
 index db1ca8e..516e32a 100644
 --- a/src/Rendering/OpenGL/CubismRenderTarget_OpenGLES2.hpp

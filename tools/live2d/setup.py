@@ -319,7 +319,8 @@ def main():
     ui.say("    and the kit's build with tools/live2d/build/kit.env's variables set, then make your game's")
     ui.say("    engine package from it (tools/release/scripts/android-engine.py or ios-engine.py, with")
     ui.say("    --with-cubism-core) into engines/ next to data/: tools/live2d/README.md.")
-    ui.say("  The web: not yet (no Cubism Core for it: TODO.md).")
+    ui.say("  The web: the engine has the plugin; the page needs Live2D's Web Core. Put Core/live2dcubismcore.min.js")
+    ui.say("    from your Cubism SDK for Web in plugins/web/ next to data/, and kagex-release adds it to your web package.")
 
     ui.step(6, "Models and your players")
     hiyori = os.path.join(DATA, "fgimage", "hiyori.l2d")

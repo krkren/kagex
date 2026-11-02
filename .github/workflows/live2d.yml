@@ -371,6 +371,8 @@ jobs:
           pkg = sys.argv[1]
           files = ["tools/assets/make_hiyori.py"]
           for root, dirs, names in os.walk("tools/live2d"):
+            # never what a build left there: build/ holds the SDK's extract and the plugin
+            dirs[:] = sorted(d for d in dirs if d not in ("build", "__pycache__"))
             for name in sorted(names):
               files.append(os.path.join(root, name))
           with zipfile.ZipFile(pkg, "a") as z:

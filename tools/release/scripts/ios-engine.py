@@ -49,16 +49,27 @@ def keep(rel):
         and not rel.split("/")[-1].startswith("._")
 
 
-# Live2D's Cubism Core (the Live2D plugin, or an engine with it linked in) may go out inside a
-# game only, never in an engine package handed to other developers (tools/live2d/README.md):
-# this string is the Core's own
-CUBISM_CORE_MARK = b"Live2D Cubism SDK Core Version"
+# Live2D's Cubism Core may go out inside a game only, never in an engine package handed to other
+# developers (tools/live2d/README.md): the native Core (the Live2D plugin, or an engine with it
+# linked in) and the Web Core (live2dcubismcore.min.js, which a Live2D web game's page loads).
+# These strings are the Cores' own
+CUBISM_CORE_MARKS = (b"Live2D Cubism SDK Core Version", b"var Live2DCubismCore;")
+
+
+def live2d_model(name, data):
+    """Whether a file is a Live2D model: a .moc3, or a .l2d (a model's folder zipped), a game's
+    data that an engine package never holds"""
+    return name.lower().endswith((".moc3", ".l2d")) or data[:4] == b"MOC3" or \
+        (data[:2] == b"PK" and b".moc3" in data)
 
 
 def refuse_cubism_core(files, allowed):
     """Stops when a file holds the Cubism Core, unless the package is the game's own
-    (--with-cubism-core): files is {name: (data, mode)}"""
-    held = sorted(n for n, (data, _mode) in files.items() if CUBISM_CORE_MARK in data)
+    (--with-cubism-core), and when it holds a Live2D model: files is {name: (data, mode)}"""
+    models = sorted(n for n, (data, _mode) in files.items() if live2d_model(n, data))
+    if models:
+        sys.exit("%s: Live2D models are a game's data, never part of an engine package" % ", ".join(models))
+    held = sorted(n for n, (data, _mode) in files.items() if any(m in data for m in CUBISM_CORE_MARKS))
     if not held:
         return
     if not allowed:

@@ -370,11 +370,15 @@ own Cubism SDK: `tools/live2d`), goes in `plugins/<platform>/` next to `data/`: 
 app) after the engine's, so one with the name of an engine plugin replaces it; they're all copied,
 whatever `contents.plugins` says, and a signed build signs them with the engine. The plan lists
 them. The web, Android and iOS engines have their plugins linked in, so there a plugin of your
-own means an engine package built with it (`engines/`); `check` warns about a
-`plugins/web`, `plugins/android` or `plugins/ios` folder for an enabled platform, and about files in the desktops'
-folders that aren't plugins for them. A game with Live2D models (`.l2d`) gets a warning for each
-enabled desktop platform whose folder lacks the Live2D plugin (`tools/live2d/setup.py` builds it):
-its package wouldn't draw its Live2D characters.
+own means an engine package built with it (`engines/`); `check` warns about a `plugins/android`
+or `plugins/ios` folder for an enabled platform, and about files in the others' folders that
+aren't plugins for them. On the web the one file of your own is Live2D's Web Core: the web
+engine has the Live2D plugin, and a Live2D game's page loads `live2dcubismcore.min.js` (from your
+Cubism SDK for Web) before the engine, so put it in `plugins/web/`: the build copies it into the
+site and adds its script tag. An engine package never brings one (0.13.1 and 0.13.2's did, and
+the build leaves theirs out). A game with Live2D models (`.l2d`) gets a warning for each enabled
+platform that lacks what draws them: the Live2D plugin in a desktop's folder
+(`tools/live2d/setup.py` builds it), the Web Core in `plugins/web/`.
 
 ### release.json
 

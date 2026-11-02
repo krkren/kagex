@@ -17,6 +17,7 @@ from another package.
 """
 import argparse
 import json
+import re
 import stat
 import sys
 import tarfile
@@ -58,16 +59,27 @@ def read_package(path):
     return files
 
 
-# Live2D's Cubism Core (the Live2D plugin, or an engine with it linked in) may go out inside a
-# game only, never in an engine package handed to other developers (tools/live2d/README.md):
-# this string is the Core's own
-CUBISM_CORE_MARK = b"Live2D Cubism SDK Core Version"
+# Live2D's Cubism Core may go out inside a game only, never in an engine package handed to other
+# developers (tools/live2d/README.md): the native Core (the Live2D plugin, or an engine with it
+# linked in) and the Web Core (live2dcubismcore.min.js, which a Live2D web game's page loads).
+# These strings are the Cores' own
+CUBISM_CORE_MARKS = (b"Live2D Cubism SDK Core Version", b"var Live2DCubismCore;")
+
+
+def live2d_model(name, data):
+    """Whether a file is a Live2D model: a .moc3, or a .l2d (a model's folder zipped), a game's
+    data that an engine package never holds"""
+    return name.lower().endswith((".moc3", ".l2d")) or data[:4] == b"MOC3" or \
+        (data[:2] == b"PK" and b".moc3" in data)
 
 
 def refuse_cubism_core(files, allowed):
     """Stops when a file holds the Cubism Core, unless the package is the game's own
-    (--with-cubism-core): files is {name: (data, mode)}"""
-    held = sorted(n for n, (data, _mode) in files.items() if CUBISM_CORE_MARK in data)
+    (--with-cubism-core), and when it holds a Live2D model: files is {name: (data, mode)}"""
+    models = sorted(n for n, (data, _mode) in files.items() if live2d_model(n, data))
+    if models:
+        sys.exit("%s: Live2D models are a game's data, never part of an engine package" % ", ".join(models))
+    held = sorted(n for n, (data, _mode) in files.items() if any(m in data for m in CUBISM_CORE_MARKS))
     if not held:
         return
     if not allowed:
@@ -90,7 +102,13 @@ def keep(platform, name):
     if platform in ("linux", "steam"):
         return name == "krkrz" or name == "libSDL3.so.0" or parts[0] == "plugin"
     if platform == "web":
-        # the game's files and lists, and what belongs to the sample's build (its id and preview)
+        # the game's files and lists, and what belongs to the sample's build (its id and preview),
+        # and Live2D's Web Core, which the sample's site loads and a game brings its own of
+        # (kagex-release's plugins/web/), and any Live2D model (a game's data)
+        if leaf.lower().startswith("live2dcubismcore") and leaf.lower().endswith(".js"):
+            return False
+        if leaf.lower().endswith((".l2d", ".moc3")):
+            return False
         return parts[0] != "gamedata" and name not in ("gamedata.krkrz_files.json", "krkrz_prefetch.json", "README.md",
                                                        "kagex-build.json", "preview.jpg")
     if platform == "macos":
@@ -127,6 +145,13 @@ def main():
         sys.exit("%s has no .app with Contents/MacOS/krkrz" % a.package)
     if a.platform == "web" and not {"index.html", "krkrz.js", "krkrz.wasm", "webconfig.js"} <= set(files):
         sys.exit("%s isn't a krkrz_web site" % a.package)
+    if a.platform == "web":
+        # the Web Core's script tag goes with the file (kagex-release adds the game's own)
+        data, mode = files["index.html"]
+        html, n = re.subn(rb'<script src=["\']?live2dcubismcore[^"\'\s>]*["\']?></script>', b"", data)
+        if n:
+            print("index.html: the Web Core's script tag left out")
+        files["index.html"] = (html, mode)
     manifest = {"format": 1, "platform": a.platform, "version": a.version, "debug": a.debug}
     refuse_cubism_core(files, a.with_cubism_core)
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:

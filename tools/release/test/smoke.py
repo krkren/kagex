@@ -194,6 +194,26 @@ def own_plugin_tests(exe, proj):
     step("own plugins: a Live2D model without the plugin is warned about, per platform",
          "plugins/windows/ has no krkrlive2d.dll" in w and "libkrkrlive2d.so" not in w, w)
     (proj / "plugins" / "linux" / "libkrkrlive2d.so").unlink()
+    # the web: Live2D's Web Core is the game's own (plugins/web/live2dcubismcore.min.js), which
+    # the plan lists; without it a game with Live2D models is warned about, and another file
+    # in plugins/web/ is a stray one
+    t["platforms"] = json.loads(json.dumps(s["platforms"]))
+    t["platforms"]["web"]["enabled"] = True
+    code, errs, warns = check_issues(exe, proj, t)
+    w = " ".join(warns.get("contents.plugins", []))
+    step("own plugins: a web game with Live2D models and no Web Core is warned about",
+         "plugins/web/ has no live2dcubismcore.min.js" in w, w)
+    (proj / "plugins" / "web").mkdir(parents=True, exist_ok=True)
+    (proj / "plugins" / "web" / "live2dcubismcore.min.js").write_text("var Live2DCubismCore; // a stand-in\n")
+    (proj / "plugins" / "web" / "notes.txt").write_text("not the Core")
+    code, errs, warns = check_issues(exe, proj, t)
+    w = " ".join(warns.get("contents.plugins", []))
+    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=web")
+    lines = {o["platform"]: " | ".join(o.get("contents", [])) for o in json.loads(out)["outputs"]}
+    step("own plugins: the web's Core is listed, a stray file there is warned about",
+         "live2dcubismcore.min.js" in lines.get("web", "") and "plugins/web/notes.txt" in w
+         and "has no live2dcubismcore.min.js" not in w, "%s | %s" % (lines.get("web", ""), w))
+    shutil.rmtree(proj / "plugins" / "web")
     model.unlink()
 
 
@@ -554,17 +574,22 @@ SLOW_OPFS_WRITES = """(() => {
     return new Promise((go) => {
       const start = () => {
         busy++;
+        // the slot goes back once: when the body has been read, when reading it fails, or
+        // after 30 s whatever happened (a body nobody reads would otherwise hold it for good)
+        let held = true;
+        const free = () => { if (held) { held = false; release(); } };
+        setTimeout(free, 30000);
         go(fetch0.apply(window, a).then((res) => {
-          if (!res.body) { release(); return res; }
+          if (!res.body) { free(); return res; }
           const obs = new TransformStream({
-            flush() { release(); },
+            flush() { free(); },
           });
           res.body.pipeTo(obs.writable, { preventAbort: true, preventCancel: true })
-            .catch(() => release());
+            .catch(() => free());
           return new Response(obs.readable, {
             status: res.status, statusText: res.statusText, headers: res.headers,
           });
-        }, (e) => { release(); throw e; }));
+        }, (e) => { free(); throw e; }));
       };
       if (busy < max) start(); else waiters.push(start);
     });

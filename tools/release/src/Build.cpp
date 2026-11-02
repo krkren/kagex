@@ -1770,9 +1770,18 @@ private:
 		for (const auto& e : fs::directory_iterator(engine, ec)) {
 			const std::string n = krt::fromPath(e.path().filename());
 			if (n == "engine.json" || n == "license.txt" || n == "licenses") continue;
+			// Live2D's Web Core goes out in a game only, as the game's own (plugins/web/): an
+			// engine package that brought one (0.13.1 and 0.13.2's did) leaves it out
+			if (n.rfind("live2dcubismcore", 0) == 0 && n.size() > 3 && n.compare(n.size() - 3, 3, ".js") == 0) {
+				const std::string note = "web: the engine package's " + n + " left out: a Live2D game puts its own in plugins/web/";
+				pr_.log(note);
+				notes_.push_back(note);
+				continue;
+			}
 			if (e.is_directory(ec)) copyTree(e.path(), dir / e.path().filename());
 			else copyFile(e.path(), dir / e.path().filename());
 		}
+		gamePluginsInto("web", dir);
 		scenesInto("web", dir);
 		std::string js;
 		if (!krt::readFile(dir / "krkrz.js", js)) throw Failure{ "The web engine has no krkrz.js" };
@@ -2009,7 +2018,15 @@ private:
 		std::smatch m;
 		if (!std::regex_search(html, m, configTag)) throw Failure{ "The web engine's index.html doesn't load webconfig.js" };
 		html.insert((size_t)m.position(0), "<script src=\"kagex-web.js\"></script>");
-		// live2dcubismcore.min.js (the Live2D engine sidecar) when the engine package has one
+		// Live2D's Web Core (the game's own, plugins/web/): its script right before the engine's,
+		// which calls into it; no tag for it without the file
+		static const std::regex coreTag(R"re(<script src=["']?live2dcubismcore\.min\.js[^"'\s>]*["']?></script>)re");
+		html = std::regex_replace(html, coreTag, "");
+		if (fs::exists(dir / "live2dcubismcore.min.js")) {
+			static const std::regex engineTag(R"re(<script src=["']?krkrz\.js)re");
+			if (!std::regex_search(html, m, engineTag)) throw Failure{ "The web engine's index.html doesn't load krkrz.js" };
+			html.insert((size_t)m.position(0), "<script src=\"live2dcubismcore.min.js\"></script>");
+		}
 		for (const char* script : { "webconfig.js", "krkrz.js", "kagex-web.js", "live2dcubismcore.min.js" }) {
 			std::string name = script;
 			const std::regex re(std::string(R"re(src=(["']?))re") + std::regex_replace(name, std::regex(R"(\.)"), R"(\.)") + R"re((?:\?v=[0-9a-f]*)?\1(?=[\s>]))re");

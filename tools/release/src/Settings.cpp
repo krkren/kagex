@@ -317,12 +317,14 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	// contents and media
 	const std::string plugins = str(s, "contents.plugins");
 	if (!oneOf(plugins, { "all", "linked" })) error("contents.plugins", "plugins is \"all\" or \"linked\"");
-	// the game's own plugins: a desktop's libraries in plugins/<platform>/ (Project.h). The web,
-	// Android and iOS engines link their plugins in, so a game's own go into its own engine
-	// package there (engines/)
+	// the game's own plugins: a desktop's libraries in plugins/<platform>/ (Project.h), and on the
+	// web Live2D's Web Core (plugins/web/live2dcubismcore.min.js). The web, Android and iOS
+	// engines link their plugins in, so a game's own go into its own engine package there
+	// (engines/)
 	{
 		std::error_code ec;
-		const std::pair<const char*, const char*> desktops[] = { { "windows", "Windows (.dll)" }, { "linux", "Linux (lib*.so)" }, { "macos", "macOS (.dylib)" } };
+		const std::pair<const char*, const char*> desktops[] = { { "windows", "Windows (.dll)" }, { "linux", "Linux (lib*.so)" }, { "macos", "macOS (.dylib)" },
+		                                                         { "web", "web (live2dcubismcore.min.js, Live2D's Web Core)" } };
 		for (const auto& [id, kind] : desktops) {
 			const fs::path dir = gamePluginFolder(p, id);
 			if (p.root.empty() || !fs::is_directory(dir, ec)) continue;
@@ -332,7 +334,7 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 					warn("contents.plugins", "plugins/" + std::string(id) + "/" + n + " isn't a " + kind + " plugin: it stays out of the packages");
 			}
 		}
-		for (const char* id : { "web", "android", "ios" })
+		for (const char* id : { "android", "ios" })
 			if (!p.root.empty() && fs::is_directory(p.root / "plugins" / id, ec) && flag(s, std::string("platforms.") + id + ".enabled"))
 				warn("contents.plugins", std::string("plugins/") + id + "/ stays out of the packages: that engine has its plugins linked in, so a game's own "
 				     "plugins need an engine package built with them (engines/ next to data/)");
@@ -354,6 +356,10 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 				if (flag(s, std::string("platforms.") + id + ".enabled") && !fs::exists(gamePluginFolder(p, id) / file, ec))
 					warn("contents.plugins", std::string("The game has Live2D models, but plugins/") + krt::fromPath(gamePluginFolder(p, id).filename()) + "/ has no " +
 					     file + ": its " + id + " package won't draw its Live2D characters. tools/live2d/setup.py builds it");
+			// the web engine has the plugin; the page needs the Web Core, which no engine package has
+			if (flag(s, "platforms.web.enabled") && !fs::exists(gamePluginFolder(p, "web") / "live2dcubismcore.min.js", ec))
+				warn("contents.plugins", "The game has Live2D models, but plugins/web/ has no live2dcubismcore.min.js: its web package won't draw its "
+				     "Live2D characters. Put the one from your Cubism SDK for Web there (Core/live2dcubismcore.min.js)");
 		}
 	}
 	if (!p.frameworkInData && p.framework.empty())

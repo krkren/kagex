@@ -62,8 +62,17 @@ adds `krkrlive2d` to its plugins, and writes the environment the plugin's and th
 read to `kit.env`. An engine built so holds the Cubism Core: for kagex-release, make your game's
 own engine package of it (`tools/release/scripts/android-engine.py` or `ios-engine.py`, which
 refuse a package holding the Core unless given `--with-cubism-core`) and put it in `engines/`
-next to `data/`. The web has no Cubism Core for Native: it would need Live2D's Cubism Core for
-Web bridged into the engine (`TODO.md`).
+next to `data/`.
+
+## The web
+
+The web engine has the plugin built in, over Live2D's Cubism Core for Web: `web/csm_web.cpp`
+gives the driver the Core's C API through the `live2dcubismcore.min.js` the page loads before the
+engine. That script is the Core, so it's yours to add, as on the other platforms: put
+`Core/live2dcubismcore.min.js` from your Cubism SDK for Web in `plugins/web/` next to `data/`, and
+kagex-release copies it into your web package with its script tag (`tools/release/README.md`,
+"Your own plugins"). kagex's engine packages never carry it; without it, a Live2D character on
+the web draws nothing and the log says the model can't be read.
 
 ## What's here
 

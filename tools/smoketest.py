@@ -1099,13 +1099,15 @@ def live2d_steps(eng):
     eng.tjs(hiyori + 'c.playOnce("tap", %[]); return 1;')
     eng.wait("the tap motion", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)
     eng.wait("the pose's motions again", '!world_object.env.characters["hiyori"].oneShotPlaying', timeout=20)
-    # a motion of a group's number (idle5: "Idle:4"), and one named by its file (m03, which the
-    # driver keeps as Hiyori_m03), which is in the Idle group here
-    for name, want in (("idle5", "Hiyori_m"), ("m03", "Hiyori_m03")):
+    # a motion of a group's number (idle5: "Idle:4", the fifth the player lists in that group),
+    # and one named by its file (m03, which the driver keeps as Hiyori_m03), which is in the Idle
+    # group here
+    fifth = str(eng.tjs(hiyori + 'return c.player.getMotionName("Idle", 4);'))
+    for name, want in (("idle5", fifth), ("m03", "Hiyori_m03")):
         eng.tjs(hiyori + 'c.playOnce("' + name + '", %[]); return 1;')
         eng.wait(name + " to play", 'world_object.env.characters["hiyori"].oneShotPlaying', timeout=5)
         got = str(eng.tjs(hiyori + 'return c.poseMotion;'))
-        if not got.startswith(want):
+        if want in ("", "void") or got != want:
             raise SmokeError("%s (%s) didn't play a motion of %s: %s" % (name, want, want, got))
         print("     %s: %s" % (name, got), flush=True)
         eng.wait("the pose's motions again", '!world_object.env.characters["hiyori"].oneShotPlaying', timeout=20)

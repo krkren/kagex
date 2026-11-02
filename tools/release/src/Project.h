@@ -46,7 +46,8 @@ std::string slug(const std::string& s);
 std::filesystem::path gamePluginFolder(const Project& project, const std::string& platform);
 
 /// Whether a file name is a plugin library for a desktop platform: a .dll (Windows), lib*.so
-/// (Linux, Steam), a .dylib (macOS); false for the others, whose engines link plugins in
+/// (Linux, Steam), a .dylib (macOS); on the web, whose engine links its plugins in, Live2D's Web
+/// Core (live2dcubismcore.min.js), which a Live2D game's page loads; false for Android and iOS
 bool isPluginFor(const std::string& platform, const std::string& name);
 
 /// The game's own plugins for a platform (gamePluginFolder's libraries for it), by name; a build

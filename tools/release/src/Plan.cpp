@@ -436,6 +436,7 @@ Json makePlan(const Json& s, const Project& p)
 			package = str(s, base + "format") == "dmg" ? folder + ".dmg" : archived("zip");
 		} else if (id == "web") {
 			add("index.html, krkrz.js, krkrz.wasm, coi-serviceworker.js, manifest.webmanifest, icons");
+			if (!ownPlugins().empty()) add("the game's own: " + ownPlugins());
 			add(dataMode == "xp3" ? "gamedata/data.xp3" : "gamedata/ (each file loaded when the game needs it)");
 			package = archived("zip");
 		} else if (id == "android") {
