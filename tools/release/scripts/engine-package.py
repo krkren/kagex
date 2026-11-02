@@ -152,7 +152,14 @@ def main():
         if n:
             print("index.html: the Web Core's script tag left out")
         files["index.html"] = (html, mode)
-    manifest = {"format": 1, "platform": a.platform, "version": a.version, "debug": a.debug}
+        # how the sample delivers its data (gamedata/data.xp3) isn't the engine's: a game's site
+        # opened as web://./data.xp3> finds nothing
+        data, mode = files["webconfig.js"]
+        config, n = re.subn(rb"var KRKRZ_WEB_PROJECT_XP3\s*=\s*[^;\n]*;", b"var KRKRZ_WEB_PROJECT_XP3 = false;", data)
+        if n:
+            print("webconfig.js: KRKRZ_WEB_PROJECT_XP3 set to false")
+        files["webconfig.js"] = (config, mode)
+    manifest ={"format": 1, "platform": a.platform, "version": a.version, "debug": a.debug}
     refuse_cubism_core(files, a.with_cubism_core)
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         info = zipfile.ZipInfo("engine.json", date_time=(2026, 1, 1, 0, 0, 0))

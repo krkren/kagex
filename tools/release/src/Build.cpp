@@ -1855,6 +1855,9 @@ private:
 			else config += line + "\n";
 		};
 		setVar("KRKRZ_WEB_DATA_XP3", xp3 ? "true" : "false");
+		// the sample site's gamedata/data.xp3 (0.13.2's engine package says true): this site's data
+		// is gamedata/'s files or the preloaded data.xp3, so the page mustn't open web://./data.xp3>
+		setVar("KRKRZ_WEB_PROJECT_XP3", "false");
 		setVar("KRKRZ_WEB_DATA_PRELOAD", "false");
 		setVar("KRKRZ_WEB_DEFAULT_WEBBASE", xp3 ? "\"\"" : "\"gamedata/\"");
 		setVar("KRKRZ_WEB_DEFAULT_ARGS", Json(args).dump());
