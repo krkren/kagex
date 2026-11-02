@@ -428,7 +428,10 @@ class AndroidEngine(Engine):
             except (OSError, SmokeError, ValueError) as e:
                 last = e
             time.sleep(2)
-        raise SmokeError("no REPL socket from %s: %s" % (package, last))
+        # the log says why (a crash, the engine's error): the workflows keep logcat.txt
+        log = self.output()
+        died = [l for l in log.splitlines() if " F DEBUG" in l or "FATAL" in l or "Script exception" in l]
+        raise SmokeError("no REPL socket from %s: %s%s" % (package, last, "".join("\n  " + l for l in died[:12])))
 
     def run_adb(self, *args):
         r = subprocess.run([self.adb] + list(args), capture_output=True, text=True)
