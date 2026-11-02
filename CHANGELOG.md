@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.13.3
+
+### Changed
+
+- **Every release gets the Live2D sample game packages**: once a release is out, the release workflow starts `live2d.yml` with its tag, which builds that release's code and adds `kagex_sample_live2d_<windows|linux|macos>.zip`, `kagex_sample_live2d_android.apk` and `kagex_sample_live2d_ios_simulator.zip` to it. 0.13.0's were added by hand, and 0.13.1 and 0.13.2 have none.
 
 ### Fixed
 
