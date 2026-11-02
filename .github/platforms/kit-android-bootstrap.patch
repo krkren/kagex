@@ -1,0 +1,20 @@
+diff --git a/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java b/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java
+index d140dc1..5e9bf0b 100644
+--- a/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java
++++ b/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java
+@@ -183,7 +183,14 @@ public class BootstrapActivity extends Activity {
+ 
+     private void runCopyThenLaunch() {
+         try {
+-            ensureAssetsCached();
++            // kagex: one copy at a time. setRequestedOrientation in onCreate restarts the
++            // activity on a device held the other way, and each onCreate starts this
++            // thread: two copies at once deleted each other's files and listed folders as
++            // files (FileNotFoundException: data/rule), and the engine found no project.
++            // The second waits, then finds the cache up to date.
++            synchronized (BootstrapActivity.class) {
++                ensureAssetsCached();
++            }
+         } catch (Exception e) {
+             Log.e(TAG, "asset cache failed", e);
+             // 失敗しても KrkrzActivity 起動は試みる (engine が AssetManager に

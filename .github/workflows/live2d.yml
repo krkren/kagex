@@ -479,6 +479,9 @@ jobs:
           kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" \
             "ndk;$ndk" "$cmake" "platforms;android-36" "build-tools;36.0.0"
           sed -i -E "s/version = \"3\.22\.1\"/version = \"${cmake#cmake;}\"/" kirikiri/krkrz_android/app/build.gradle
+          # the bootstrap copies the game files once at a time (a restarted loading screen ran a
+          # second copy alongside the first, which left the engine without its data)
+          git -C kirikiri/krkrz_android apply "$PROJECT_DIR/.github/platforms/kit-android-bootstrap.patch"
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
           echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt
