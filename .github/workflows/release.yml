@@ -3,7 +3,7 @@
 # creates the release tag at KAGEX_SHA and publishes the zips. The platform builds (Linux for
 # Steam, web, Android, iOS Simulator, macOS) come from platforms.yml, copied here from the
 # release commit and called with it. After publishing, the web build goes on GitHub Pages
-# (pages.yml on main). kagex-release (tools/release) comes from release-tool.yml, also called
+# (pages.yml on main), and live2d.yml adds the Live2D sample game packages. kagex-release (tools/release) comes from release-tool.yml, also called
 # with the release commit; tool-check makes its engine packages (kagex_engine_*.zip) from this
 # release's packages and builds the sample with them, and publish adds the tool to the Windows
 # and Linux zips (tools/) and as downloads of its own, with kagex-lipsync (tools/lipsync, built
@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.13.2"
-  KAGEX_SHA: d6290d8cb4c415c9b4d2dabfbd61f020846f9e46
+  RELEASE_TAG: "0.13.3"
+  KAGEX_SHA: 13a0b33fce897483e2c33c3ce8a3f05ae34a2c45
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -957,3 +957,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: gh workflow run pages.yml --repo "$REPO" --ref main -f tag="$RELEASE_TAG"
+
+      # the Live2D sample game packages: live2d.yml builds the release's code (its desktop jobs
+      # with these engine packages) and adds kagex_sample_live2d_* to the release
+      - name: Add the Live2D sample game packages
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh workflow run live2d.yml --repo "$REPO" --ref main -f release="$RELEASE_TAG"
