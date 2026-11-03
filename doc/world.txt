@@ -1352,7 +1352,9 @@ not in an engine handed to other developers, so kagex's engines don't have the p
 builds it with its own copy of the Cubism SDK (Building the plugin, below). Without the plugin,
 OpenGL ES or the model's file, a Live2D character draws nothing and the log says why, once.
 KAGLive2DCanDraw("hiyori") tells a script whether a model can be drawn (anim.ks says so when it
-can't).
+can't). A model can also play on a layer as it was made, without the World's poses and faces:
+l2d on World layers (Layer Functions, below), [image flip=hiyori.l2d] on KAG layers (doc/kagex.txt;
+the layer demo, layer.ks, shows Hiyori so).
 
 
 
@@ -1520,7 +1522,9 @@ tools/live2d/setup.py walks you through the steps below (python3 tools/live2d/se
    krkrlive2d.dll on Windows (--arch: the engine's, arm64 or x86_64 on macOS, Win32 or x64 on
    Windows). CI builds and tests it on all three (.github/workflows/live2d.yml). The driver's
    own CMake builds for Windows, Android and iOS, so on Linux and macOS it's built through
-   tools/live2d/driver. Android, iOS and the web aren't built yet (TODO.md).
+   tools/live2d/driver. Android's and iOS's engines have their plugins linked in, so there
+   build.py --kit builds it with the engine, by the platform's kit; the web engine has it
+   built in, over Live2D's Web Core, which the game adds (tools/live2d/README.md).
 3. The framework links plugin/krkrlive2d.dll (the engine's name for the plugin on every
    platform) the first time a Live2D character is drawn.
 4. Put each model's .l2d in the game's data, where its scripts find it (fgimage/, say).
@@ -1659,6 +1663,28 @@ copyrighted by Live2D Inc." shown; no one may hand out the model files themselve
     loop        Plays the effect again each time it ends (until efkstop).
     efkmag, efkwidth, efkheight and efkframe count when the effect starts.
     When every effect has ended, the trigger efkdone is sent ([waittrig name=efkdone]).
+    l2d         Live2D model (.l2d; the extension can be left out), as it was made: a motion
+                that goes on, its own blinking and physics (template/system/GFX_Live2D.tjs).
+                Drawn by the krkrlive2d plugin with OpenGL ES into a canvas the screen's size,
+                the model's canvas filling its height, centred; the layer is placed like any
+                other. Without the plugin or OpenGL ES nothing shows (the console says why).
+                A model the World poses, gives faces and lip-syncs is a Live2D character
+                ("Live2D Characters", above). Options are given with `l2d`, or later with
+                `flipupdate`: [mascot flipupdate l2donce=TapBody]
+    l2dwidth    Canvas width. Default: the screen's.
+    l2dheight   Canvas height. Default: the screen's.
+    l2dmotion   The motion that goes on, a motion spec as for Live2D characters' poses
+                ("<group>", "<group>:<n>", ":<name>"). Default: Idle. Empty: none.
+    l2donce     Plays a motion once, then the one that goes on; the trigger l2donce is sent
+                when it ends ([waittrig name=l2donce]).
+    l2dexpression  An expression of the model; empty for none.
+    l2dparam    Values added to what the motions set: parameter:value[,...].
+    l2dblink    The model's own blinking: true always, false never (default: while no motion
+                plays).
+    l2dspeed    Playback speed (1.0: as made).
+    l2dlip      An SE buffer (its number) whose sound opens the model's mouth.
+    l2dwidth and l2dheight count when the model starts. doc/kagex.txt has the details
+    ("Optional parameters for l2d", for KAG layers: [image flip=hiyori.l2d]).
 
 
 

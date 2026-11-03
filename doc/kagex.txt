@@ -478,6 +478,8 @@ Attributes
 
 				efk: .efk .efkefc .efkzip (Effekseer effects)
 
+				l2d: .l2d (Live2D models)
+
     movie   Equivalent to flip specification + fliptype:movie  * For compatibility
 
     fire    Equivalent to flip specification + fliptype:fire   * For compatibility
@@ -625,6 +627,72 @@ Attributes
 		efkmag, efkwidth, efkheight and efkframe count when the effect starts; the others can be
 
 		changed while it plays ([layopt layer=0 efkstop=true]).
+
+	Optional parameters for l2d (Live2D models, template/system/GFX_Live2D.tjs)
+
+		The krkrlive2d plugin draws the model with OpenGL ES into a canvas that is read back
+
+		into the layer 30 times a second (an ltOpaque layer becomes ltAlpha): the model's
+
+		canvas fills its height, centred. The layer is placed, zoomed and turned like any
+
+		other. The model plays as it was made: a motion that goes on, its own blinking and
+
+		physics, an expression. The plugin is built with Live2D's Cubism SDK ("Live2D
+
+		Characters" in doc/world.txt says how), so kagex's engines don't have it: without it
+
+		or OpenGL ES the layer shows nothing (the console says why; l2donce's trigger still
+
+		goes), and KAGLive2DCanDraw("<model>") tells a script whether it can be drawn. A model the
+
+		World poses, gives faces and lip-syncs with a voice is a World character instead.
+
+		When every model's flip has ended, the trigger l2ddone is sent.
+
+		l2dwidth      Canvas width. Default: the screen's.
+
+		l2dheight     Canvas height. Default: the screen's.
+
+		l2dmotion     The motion that goes on: <group> (its motions, one after another),
+
+		              <group>:<n> (its n-th, from 0, looping) or <group>:<name> / :<name> (the
+
+		              motion of that file, motions/<name>.motion3.json, looping). Default:
+
+		              Idle. Empty: none, and the model stands still.
+
+		l2donce       Plays a motion once (the same forms), then the one that goes on. The
+
+		              trigger l2donce is sent when it ends ([waittrig name=l2donce]), or a
+
+		              frame later when the model has no such motion or can't be drawn.
+
+		l2dexpression An expression of the model (its .exp3.json's name); empty for none.
+
+		l2dparam      Values added to what the motions set: parameter:value[,...], a
+
+		              parameter by its id or its display name.
+
+		l2dblink      The model's own blinking: true always, false never. Default: while no
+
+		              motion plays, as in Cubism's own samples (a motion blinks as it was made).
+
+		l2dspeed      Playback speed (1.0: as made).
+
+		l2dlip        An SE buffer (its number) whose sound opens the model's mouth (the
+
+		              model3.json's LipSync parameters); empty for none. live2dLipLevel (0.12)
+
+		              is the sound's level (RMS) that opens it all the way.
+
+		l2dwidth and l2dheight count when the model starts; the others can be changed while
+
+		it plays ([layopt layer=0 l2donce=TapBody]). A save keeps the options, and a load
+
+		starts the motion that goes on again; a motion played once isn't kept.
+
+		The layer demo (layer.ks) shows Hiyori on a layer.
 
 
 

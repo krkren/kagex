@@ -185,6 +185,31 @@ So each part can move on its own.
 
 [freeimage layer=1]
 [freeimage layer=2]
+
+*label18|Live2D Model
+
+; A Live2D model on a KAG layer: the l2d flip type (GFX_Live2D.tjs; "Optional parameters for
+; l2d" in doc/kagex.txt). Hiyori's model comes from tools/assets/make_hiyori.py, and the
+; krkrlive2d plugin is built with Live2D's Cubism SDK ("Live2D Characters" in doc/world.txt)
+[cm]
+[if exp="KAGLive2DCanDraw('hiyori')"]
+[image layer=1 page=fore flip=hiyori.l2d l2dwidth=500 l2dheight=680 visible=true left=960 top=350 dafx=center dafy=center]
+A layer can play a Live2D model too: flip=hiyori.l2d moves it as it was made, motions, blinking, hair and all. This content uses sample data owned and copyrighted by Live2D Inc.
+[l][r]
+
+[layopt layer=1 l2donce=TapBody]
+l2donce plays one of the model's motions once, and then its idle motions go on.
+[l][r]
+
+[layopt layer=1 zoom=70 rotate=-12 time=800]
+And it is a layer like any other: it moves, zooms and turns.
+[l][r]
+
+[freeimage layer=1]
+[else]
+This build doesn't play Live2D models. That takes the krkrlive2d plugin, built with Live2D's Cubism SDK, and a model: "Live2D Characters" in doc/world.txt says how to add them.
+[l][r]
+[endif]
 [layopt layer=0 visible=true]
 
 [demodone name=layer]

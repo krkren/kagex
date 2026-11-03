@@ -185,6 +185,31 @@ CLIP STUDIO PAINT のファイルひとつから、レイヤを二枚それぞ�
 
 [freeimage layer=1]
 [freeimage layer=2]
+
+*label18|Live2D モデル
+
+; A Live2D model on a KAG layer: the l2d flip type (GFX_Live2D.tjs; "Optional parameters for
+; l2d" in doc/kagex.txt). Hiyori's model comes from tools/assets/make_hiyori.py, and the
+; krkrlive2d plugin is built with Live2D's Cubism SDK ("Live2D Characters" in doc/world.txt)
+[cm]
+[if exp="KAGLive2DCanDraw('hiyori')"]
+[image layer=1 page=fore flip=hiyori.l2d l2dwidth=500 l2dheight=680 visible=true left=960 top=350 dafx=center dafy=center]
+レイヤでは Live2D のモデルも再生できます。flip=hiyori.l2d で、モーションもまばたきも髪の揺れも、作られたとおりに動きます。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
+[l][r]
+
+[layopt layer=1 l2donce=TapBody]
+l2donce はモデルのモーションをひとつ一度だけ再生し、そのあとは待機モーションに戻ります。
+[l][r]
+
+[layopt layer=1 zoom=70 rotate=-12 time=800]
+もちろんふつうのレイヤと同じように、動かしたり、拡大したり、回したりもできます。
+[l][r]
+
+[freeimage layer=1]
+[else]
+このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
+[l][r]
+[endif]
 [layopt layer=0 visible=true]
 
 [demodone name=layer]

@@ -206,3 +206,453 @@ function KAGLive2DOf(win) {
 	}
 	return win.live2dSystem;
 }
+
+/**
+ * A motion spec's motions, by name, for a player (or a model): "<group>", every motion of the
+ * model3.json group (one of them at random each time it's played); "<group>:<n>" its n-th (from
+ * 0); "<group>:<name>" or ":<name>" the motion of that file name (motions/<name>.motion3.json, as
+ * the plugin keeps them)
+ */
+function live2dMotionNames(player, spec) {
+	var s = spec !== void ? (string)spec : "";
+	var i = s.indexOf(":");
+	var group = i >= 0 ? s.substr(0, i) : s;
+	var which = i >= 0 ? s.substr(i + 1) : "";
+	var names = [];
+	if (group != "") {
+		var count = player.getMotionCount(group);
+		for (var n = 0; n < count; n++) names.add(player.getMotionName(group, n));
+	}
+	if (which == "") return names;
+	if (/^[0-9]+$/.test(which)) {
+		return +which < names.count ? [ names[+which] ] : [];
+	}
+	return [ which ];
+}
+
+// ----------------------------------------------------------------
+// A model on a layer: the l2d flip type
+//
+//   [image layer=0 page=fore flip=hiyori.l2d visible=true]          (KAG layers)
+//   [newlay name=mascot l2d=hiyori l2dmotion=TapBody show]         (World layers)
+//
+// The flip draws the model every frameInterval ms into a picture the size of its canvas
+// (l2dwidth x l2dheight, the screen's unless they say otherwise), the model's canvas filling its
+// height, centred, and the layers showing it are placed, zoomed and turned like any other. It
+// plays the model as made: a motion (a group's, one after another, or one looping), the model's
+// own blinking and physics, and an expression; l2donce plays a motion once (the trigger l2donce
+// goes when it ends), l2dparam adds to parameters, and l2dlip opens its mouth with a sound
+// buffer's level. A model the World poses, gives faces, blinks and lip-syncs with a voice is a
+// World character (KAGEnvCharacterLive2D.tjs); this one plays as it was made.
+// doc/kagex.txt ("Optional parameters for l2d") and doc/world.txt (l2d).
+// ----------------------------------------------------------------
+
+// The level (RMS) of a sound at which l2dlip opens the mouth all the way
+var live2dLipLevel = 0.12;
+
+class Live2DFlip extends GenericFlip, Layer
+{
+	var FLIP  = global.GenericFlip;
+	var SUPER = global.Layer;
+
+	var frameInterval = 33;     // ms between the frames drawn (30 a second)
+	var motionFade = 500;       // ms a motion fades in and out over (0: a very short fade)
+	var mouthSmooth = 50;       // ms the mouth takes to follow the sound (l2dlip)
+
+	var system;
+	var player;
+	var file = "";
+	var options = %[];          // the options in effect (flipStore keeps them)
+	// options kept as the flip's state; l2donce is an action
+	var stateOptions = [ "l2dmotion", "l2dexpression", "l2dparam", "l2dblink", "l2dspeed", "l2dlip" ];
+
+	var canvasWidth;            // the picture's size, as asked (the read-back may round it up)
+	var canvasHeight;
+	var lastTick;
+	var frames = 0;             // frames drawn
+	var speed = 1.0;
+	var motionSpec;             // the motion that goes on, as given ("Idle" when none is)
+	var poseStart;              // it's to start (again)
+	var poseMotion;             // the motion of it playing (a name), void when none plays
+	var once;                   // a motion to play once (its spec), until it starts
+	var oncePlaying;            // a motion playing once
+	var onceDone = 0;           // motions played once that have ended (each sends l2donce)
+	var expression = "";        // the model's expression shown
+	var paramIds;               // the model's parameter ids, by id and by display name
+	var params = %[];           // id => the value added to it (l2dparam)
+	var lipBuffer;              // the sound buffer the mouth follows (l2dlip)
+	var voice = 0.0;            // how open the mouth is (0 to 1), on its way to the sound's level
+	var missing = %[];          // what the model doesn't have, logged once
+	var unavailable = false;    // no way to draw: it shows nothing, and l2donce ends at once
+
+	function Live2DFlip(win) {
+		FLIP.GenericFlip(win);
+		SUPER.Layer(win, win.primaryLayer);
+		name = "Live2DFlip";
+		system = KAGLive2DOf(win);
+	}
+
+	function finalize() {
+		releasePlayer();
+		SUPER.finalize(...);
+		FLIP.finalize();
+	}
+
+	function releasePlayer() {
+		if (player !== void) {
+			if (system !== void && isvalid system) {
+				system.releasePlayer(player);
+			} else {
+				try { invalidate player; } catch {}
+			}
+			player = void;
+		}
+	}
+
+	// a motion played once is over (or didn't start): l2donce, for [waittrig name=l2donce]
+	function onceEnded() {
+		onceDone++;
+		window.trigger("l2donce");
+	}
+
+	// ends the flip with nothing showing
+	function finish() {
+		releasePlayer();
+		if (once !== void || oncePlaying) {
+			once = void;
+			oncePlaying = false;
+			onceEnded();
+		}
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		showFrame();
+		flipStop();
+	}
+
+	function showFrame() {
+		for (var i = flipLayers.count - 1; i >= 0; i--) {
+			var lay = flipLayers[i];
+			lay.assignImagesForMovie(this);
+			// the picture has an alpha channel: an opaque layer would show it on black
+			lay.type = ltAlpha if (lay.type == ltOpaque);
+		}
+	}
+
+	function logOnce(key, message) {
+		if (missing[key] !== void) return;
+		missing[key] = true;
+		dm(@"Live2D model ${file}: ${message}");
+	}
+
+	function flipStart(storage, elm) {
+		releasePlayer();
+		elm = %[] if (elm === void);
+		file = storage;
+		name = "Live2D:" + storage;
+		(Dictionary.clear incontextof options)();
+		(Dictionary.clear incontextof params)();
+		(Dictionary.clear incontextof missing)();
+		motionSpec = void;
+		poseStart = true;
+		poseMotion = once = void;
+		oncePlaying = false;
+		expression = "";
+		lipBuffer = void;
+		voice = 0.0;
+		speed = 1.0;
+		lastTick = void;
+		frames = 0;
+		unavailable = false;
+
+		var prim = window.primaryLayer;
+		var w = elm.l2dwidth  !== void ? (int)+elm.l2dwidth  : prim.width;
+		var h = elm.l2dheight !== void ? (int)+elm.l2dheight : prim.height;
+		w = 1 if w < 1;
+		h = 1 if h < 1;
+		canvasWidth = w;
+		canvasHeight = h;
+		setImageSize(w, h);
+		setSizeToImageSize();
+		fillRect(0, 0, w, h, 0);
+
+		var fn = system.findModel(storage);
+		if (fn == "") throw new Exception(@"Live2D model ${storage} not found");
+		if (elm.l2donce !== void) {
+			once = elm.l2donce;
+			// a World layer passes every option it was given each time: play it once
+			delete elm.l2donce;
+		}
+		// no way to draw (the console said why, as the window's Live2D device was made): the
+		// layer shows nothing, and stays, so that a motion played once still sends l2donce, a
+		// frame later, and [layopt l2donce=...][waittrig name=l2donce] goes on
+		if (!system.available) {
+			unavailable = true;
+			setStateOptions(elm);
+			showFrame();
+			return;
+		}
+		player = system.newPlayer(fn);
+		if (player === void) throw new Exception(@"Live2D model ${storage} can't be read");
+		paramIds = %[];
+		var infos = [];
+		for (var i = 0; i < player.getParameterCount(); i++) {
+			var info = player.getParameterInfo(i);
+			if (info !== void && info.id !== void) {
+				paramIds[info.id] = info.id;
+				infos.add(info);
+			}
+		}
+		for (var i = 0; i < infos.count; i++) {
+			var n = infos[i].name;
+			paramIds[n] = infos[i].id if n !== void && n != "" && paramIds[n] === void;
+		}
+		player.setVoiceValue(0);
+		setStateOptions(elm);
+		// the first picture now: a layer shown for a transition has it at once
+		drawFrame(0);
+	}
+
+	function flipSetOptions(elm) {
+		if (elm === void) return;
+		if (elm.l2donce !== void) {
+			// it starts with the next frame (and ends there when it can't): l2donce goes after
+			// the tags that follow, a [waittrig name=l2donce] among them, have run
+			once = elm.l2donce;
+			delete elm.l2donce;
+		}
+		setStateOptions(elm);
+	}
+
+	function setStateOptions(elm) {
+		for (var i = stateOptions.count - 1; i >= 0; i--) {
+			var key = stateOptions[i];
+			options[key] = elm[key] if (elm[key] !== void);
+		}
+		if (player === void) return; // kept for a save all the same
+		with (options) {
+			// the motion that goes on: another starts it (a motion played once goes on first)
+			var spec = .l2dmotion !== void ? (string).l2dmotion : "Idle";
+			if (spec != motionSpec) {
+				motionSpec = spec;
+				poseStart = true;
+			}
+			// the model's blinking: as made (while no motion plays, as Cubism's samples do),
+			// always (true) or never (false)
+			player.setBlinkingMode(.l2dblink === void ? 1 : +.l2dblink ? 2 : 0);
+			speed = .l2dspeed !== void ? +.l2dspeed : 1.0;
+			speed = 0 if speed < 0;
+			setParams(.l2dparam);
+			setLip(.l2dlip);
+		}
+	}
+
+	// "<parameter>:<value>[,...]": added to what the motions set (a parameter by its id or its
+	// display name); one left out goes back to the motions'
+	function setParams(v) {
+		var next = %[];
+		if (v !== void) {
+			var list = ((string)v).split(",");
+			for (var i = 0; i < list.count; i++) {
+				var pair = list[i].split(":");
+				if (pair.count < 2) continue;
+				var key = pair[0].trim();
+				if (key == "") continue;
+				var id = paramIds[key];
+				if (id === void) {
+					logOnce("param " + key, @"it has no parameter ${key}");
+					continue;
+				}
+				next[id] = +pair[1];
+			}
+		}
+		var old = [];
+		old.assign(params);
+		for (var i = 0; i < old.count; i += 2) {
+			player.setDiffParameterValue(old[i], 0) if next[old[i]] === void;
+		}
+		(Dictionary.assign incontextof params)(next);
+	}
+
+	// the SE buffer (its number) whose sound opens the mouth, or none ("")
+	function setLip(v) {
+		var b;
+		if (v !== void && (string)v != "") {
+			var n = (int)+v;
+			if (typeof window.se != "undefined" && n >= 0 && n < window.se.count) {
+				b = window.se[n];
+			} else {
+				logOnce("lip " + v, @"no sound buffer ${v} for l2dlip");
+			}
+			if (b !== void && typeof b.getSoundLevel == "undefined") {
+				logOnce("lip", "this engine can't read a sound's level (WaveSoundBuffer.getSoundLevel) for l2dlip");
+				b = void;
+			}
+		}
+		if (b !== void) {
+			// the level is read from the buffer's visualization data, on before the sound plays
+			b.useVisBuffer = true;
+		}
+		lipBuffer = b;
+		if (b === void) {
+			voice = 0.0;
+			player.setVoiceValue(0);
+		}
+	}
+
+	/**
+	 * Starts one of the motions (by name) as the model's main motion; true when there was one
+	 */
+	function playMotion(names, loop) {
+		if (names.count == 0) return false;
+		var motion = names[0];
+		if (names.count > 1) {
+			// at random, but not the one playing again (unless the group is only that one)
+			for (var tries = 0; tries < 8; tries++) {
+				motion = names[(int)(Math.random() * names.count)];
+				if (motion != poseMotion) break;
+			}
+		}
+		// the plugin fades over its default for 0, so no fade is a very short one
+		var fade = motionFade > 0 ? motionFade / 1000.0 : 0.001;
+		player.startMotion("main", motion, loop ? 1 : 0, fade, fade);
+		// a motion the model doesn't have leaves the one before playing
+		var current = player.getCurrentMotions();
+		for (var i = 0; current !== void && i < current.count; i++) {
+			if (current[i] !== void && current[i].name == "main." + motion) {
+				poseMotion = motion;
+				return true;
+			}
+		}
+		logOnce("motion " + motion, @"it has no motion ${motion}");
+		return false;
+	}
+
+	// a motion spec that named none of the model's (playMotion logs a name it doesn't have)
+	function noMotion(spec, names) {
+		if (names.count == 0 && spec != "") logOnce("motion " + spec, @"it has no motion ${spec}");
+	}
+
+	/**
+	 * Moves the model on by dt ms: its motions, expression, parameters and mouth
+	 */
+	function step(dt) {
+		if (once !== void) {
+			var spec = once;
+			var names = live2dMotionNames(player, spec);
+			once = void;
+			if (playMotion(names, false)) {
+				oncePlaying = true;
+				poseStart = false;
+			} else {
+				noMotion(spec, names);
+				onceEnded();
+			}
+		} else if ((poseStart && !oncePlaying) || (poseMotion !== void && !player.isPlaying("main"))) {
+			if (oncePlaying) {
+				oncePlaying = false;
+				onceEnded();
+			}
+			var names = live2dMotionNames(player, motionSpec);
+			// one motion loops, a group's play one after another; none: the model stands
+			if (!playMotion(names, names.count == 1)) {
+				poseMotion = void;
+				noMotion(motionSpec, names);
+				player.stopMotion("main") if poseStart && motionSpec == "";
+			}
+			poseStart = false;
+		}
+
+		var exp = options.l2dexpression !== void ? (string)options.l2dexpression : "";
+		if (exp != expression) {
+			player.setExpression(exp);
+			expression = exp;
+		}
+
+		// added after the main motion, and put back when one starts: every frame
+		var list = [];
+		list.assign(params);
+		for (var i = 0; i < list.count; i += 2) player.setDiffParameterValue(list[i], list[i + 1]);
+
+		if (lipBuffer !== void && isvalid lipBuffer) {
+			var level = 0.0;
+			if (lipBuffer.status == "play") {
+				try {
+					var ahead = (int)(lipBuffer.frequency * frameInterval / 2000);
+					level = lipBuffer.getSoundLevel(ahead).rms;
+				} catch {}
+			}
+			var target = live2dLipLevel > 0 ? level / live2dLipLevel : 0.0;
+			target = 1.0 if target > 1.0;
+			voice = mouthSmooth <= 0 || dt >= mouthSmooth ? target : voice + (target - voice) * dt / mouthSmooth;
+			player.setVoiceValue(voice);
+		}
+
+		player.progress(dt * speed);
+	}
+
+	function drawFrame(dt) {
+		try {
+			step(dt);
+			system.render(this, player);
+		} catch (e) {
+			dm(@"Live2D model ${file} stopped: ${e.message}");
+			finish();
+			return false;
+		}
+		frames++;
+		showFrame();
+		return true;
+	}
+
+	function flipUpdate(tick) {
+		if (unavailable) {
+			if (once !== void) {
+				once = void;
+				onceEnded();
+			}
+			return;
+		}
+		if (player === void || !isvalid player) {
+			player = void;
+			finish();
+			return;
+		}
+		lastTick = tick - frameInterval if (lastTick === void);
+		var dt = tick - lastTick;
+		if (dt < frameInterval) return;
+		lastTick = tick;
+		dt = 100 if (dt > 100);   // after a pause, from where it was
+		drawFrame(dt);
+	}
+
+	function flipStore(dic) {
+		// a motion playing once isn't kept
+		if (dic === void || file == "") return;
+		dic.file    = file;
+		dic.width   = canvasWidth;
+		dic.height  = canvasHeight;
+		dic.options = %[];
+		(Dictionary.assign incontextof dic.options)(options);
+	}
+
+	function flipRestore(dic) {
+		if (dic === void || dic.file == "") return; // flipUpdate ends it
+		var elm = %[];
+		(Dictionary.assign incontextof elm)(dic.options) if (dic.options !== void);
+		elm.l2dwidth  = dic.width;
+		elm.l2dheight = dic.height;
+		flipStart(dic.file, elm);
+	}
+}
+
+// Registration
+GenericFlip.Entry(
+	%[
+		"type"     => "l2d",                          // Registration tag ([newlay l2d=...])
+		"class"    => Live2DFlip,                     // Controller class
+		"trigger"  => "l2ddone",                      // Trigger sent when every model's flip has ended
+		"ext"      => [ "l2d" ],                      // Extensions
+		"options"  => [ "l2dwidth", "l2dheight", "l2dmotion", "l2donce", "l2dexpression", "l2dparam",
+						"l2dblink", "l2dspeed", "l2dlip" ], // Option values (for KAGEnvLayer)
+		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
+		"keepOnRedraw" => true,                       // Plays on through a World layer's redraw
+		]);

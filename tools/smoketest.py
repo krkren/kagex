@@ -10,10 +10,11 @@ and what a screen reader is given. On the desktop it also compiles the scripts w
 script exception, or when the engine opens a native modal dialog (an error message box or a
 Yes/No that should have been drawn in the game window).
 
-The Animated Character demo's Live2D character needs the krkrlive2d plugin, built with Live2D's
-Cubism SDK, which kagex's own builds don't have: without it the test puts a stand-in for the
-plugin in its place (tools/live2d-standin.tjs), which draws through OpenGL ES as the plugin
-does, so the framework's part is tested all the same; --live2d required wants the real one.
+The Animated Character demo's Live2D character, and the same model on a KAG layer and a World
+layer (the l2d flip), need the krkrlive2d plugin, built with Live2D's Cubism SDK, which kagex's
+own builds don't have: without it the test puts a stand-in for the plugin in its place
+(tools/live2d-standin.tjs), which draws through OpenGL ES as the plugin does, so the
+framework's part is tested all the same; --live2d required wants the real one.
 
 It then runs template/ as a game of its own, the way a new game starts out, and checks that
 it starts and that its prompts are drawn in the game window too.
@@ -1187,6 +1188,126 @@ def live2d_steps(eng):
     eng.clicker(False)
     if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
         raise SmokeError("Hiyori's model wasn't let go when she left: %s"
+                         % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
+    live2d_flip_steps(eng, standin)
+
+
+def live2d_flip_steps(eng, standin):
+    """The l2d flip type (Live2DFlip, GFX_Live2D.tjs): Hiyori's model on a KAG layer ([image
+    flip=hiyori.l2d]) and on a World layer ([newlay l2d=hiyori]), with the plugin or the stand-in
+    as live2d_steps has it: drawn into its canvas, playing its idle motions, a motion played once
+    (l2donce, and its trigger, also for a motion it doesn't have), an expression, a parameter
+    added, blinking off, lip-sync to an SE buffer, kept through a store and a restore, played on
+    through a World layer's redraw, and let go with its layer"""
+    if eng.tjs('return typeof global.Live2DFlip != "undefined" ? 1 : 0;') != 1:
+        print("     (the l2d flip: skipped, this build's framework predates Live2D models on layers)", flush=True)
+        return
+    lay = 'var l = kag.fore.layers[0], f = l.flip; '
+    eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"hiyori.l2d", visible:"true", left:"100", top:"100",'
+            ' l2dwidth:"480", l2dheight:"640", l2dparam:"ParamCheek:0.5", l2dexpression:"F01"]); return 1;')
+    time.sleep(1.0)
+    r = str(eng.tjs(lay + 'var t = new global.Layer(kag, kag.primaryLayer), n = 0; t.assignImages(f);'
+                    ' for (var y = 0; y < t.imageHeight; y += 8) for (var x = 0; x < t.imageWidth; x += 8)'
+                    ' if (t.getMaskPixel(x, y) > 0) n++; invalidate t;'
+                    ' return [l.flipType, n, f.canvasWidth, f.canvasHeight, f.frames, f.poseMotion, l.type == ltAlpha ? 1 : 0,'
+                    ' f.player !== void ? 1 : 0].join(",");')).split(",")
+    kind, n, frames, motion = r[0], int(r[1]), int(r[4]), r[5]
+    print("     on a KAG layer: %s, %d of its samples drawn in %sx%s, %d frames, motion %s"
+          % (kind, n, r[2], r[3], frames, motion), flush=True)
+    if kind != "l2d" or r[7] != "1":
+        raise SmokeError("[image flip=hiyori.l2d] didn't start the l2d flip with a player: %s" % r)
+    if n < 50 or r[2:4] != ["480", "640"] or r[6] != "1":
+        raise SmokeError("the l2d flip didn't draw the model into a 480x640 ltAlpha picture: %s" % r)
+    if frames < 10 or not motion.startswith("Hiyori_m") or motion == "Hiyori_m04":
+        raise SmokeError("the l2d flip isn't playing the model's idle motions (%d frames, %s)" % (frames, motion))
+    if standin:
+        r = str(eng.tjs(lay + 'var s = Live2DStandIn; return [s.last.ParamCheek, s.expressions.find("F01") >= 0 ? 1 : 0,'
+                        ' f.player.blinkingMode].join(",");')).split(",")
+        print("     the stand-in drew ParamCheek %s, the expression set %s, blinking mode %s" % tuple(r), flush=True)
+        if abs(float(r[0]) - 0.5) > 0.001 or r[1] != "1" or r[2] != "1":
+            raise SmokeError("l2dparam, l2dexpression or the model's own blinking didn't reach the model: %s" % r)
+    # a motion played once, then the idle ones again; l2donce's trigger as it ends
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"0", page:"fore", l2donce:"TapBody", l2dblink:"false"]); return 1;')
+    kf = 'kag.fore.layers[0].flip'
+    eng.wait("TapBody once", kf + '.oncePlaying && ' + kf + '.poseMotion == "Hiyori_m04"', timeout=5)
+    eng.wait("the idle motions again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=20)
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"0", page:"fore", l2donce:"NoSuchMotion"]); return 1;')
+    eng.wait("l2donce for a motion it doesn't have", kf + '.onceDone == 2', timeout=5)
+    if standin and eng.tjs(lay + 'return f.player.blinkingMode;') != 0:
+        raise SmokeError("l2dblink=false didn't turn the model's blinking off")
+    print("     l2donce: TapBody played once, the idle motions went on, and a missing motion ended at once", flush=True)
+    # lip-sync to SE buffer 0
+    eng.tjs('global.__smokeFlipLip = %[ max : 0.0, pos : %[] ]; global.__smokeFlipTimer = new Timer(function() {'
+            '  var f = kag.fore.layers[0].flip; if (f === void) return; var s = global.__smokeFlipLip;'
+            '  s.max = f.voice if f.voice > s.max; s.pos[kag.se[0].position] = 1; }, "");'
+            ' __smokeFlipTimer.interval = 20; __smokeFlipTimer.enabled = true;'
+            ' kag.tagHandlers.layopt(%[layer:"0", page:"fore", l2dlip:"0"]); kag.se[0].play(%[storage:"pip000009"]); return 1;')
+    time.sleep(3.0)
+    r = str(eng.tjs('__smokeFlipTimer.enabled = false; invalidate __smokeFlipTimer; kag.se[0].stop();'
+                    ' kag.tagHandlers.layopt(%[layer:"0", page:"fore", l2dlip:""]); var p = []; p.assign(__smokeFlipLip.pos);'
+                    ' return [__smokeFlipLip.max, p.count \\ 2, kag.fore.layers[0].flip.voice].join(",");')).split(",")
+    print("     l2dlip: the mouth open up to %.2f over %s positions of the sound, then %s" % (float(r[0]), r[1], r[2]), flush=True)
+    if int(r[1]) <= 1:
+        print("     (the sound doesn't play here, so the mouth isn't checked)", flush=True)
+    elif float(r[0]) < 0.3:
+        raise SmokeError("l2dlip=0 didn't open the model's mouth with the sound: %s" % r)
+    if float(r[2]) != 0.0:
+        raise SmokeError("l2dlip= (none) didn't shut the model's mouth: %s" % r)
+    # kept through a store and a restore (a save and a load); let go with its layer
+    eng.tjs(lay + 'global.__smokeFlipStore = %[]; l.storeFlip(__smokeFlipStore);'
+            ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+    eng.wait("the flip to go", 'KAGLive2DOf(kag).players.count == 0', timeout=5)
+    eng.tjs('var l = kag.fore.layers[0]; l.restoreFlip(__smokeFlipStore); l.visible = true; return 1;')
+    time.sleep(0.5)
+    r = str(eng.tjs(lay + 'return [f.file, f.canvasWidth, f.canvasHeight, f.options.l2dexpression, f.options.l2dparam,'
+                    ' f.player !== void ? 1 : 0, f.frames > 0 ? 1 : 0].join(",");'))
+    print("     restored: %s" % r, flush=True)
+    if r != "hiyori.l2d,480,640,F01,ParamCheek:0.5,1,1":
+        raise SmokeError("the l2d flip wasn't restored as it was stored: %s" % r)
+    eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+    eng.wait("the flip to go", 'KAGLive2DOf(kag).players.count == 0', timeout=5)
+    # on a World layer: options from newlay and flipupdate, a redraw that keeps it playing
+    env = 'var e = world_object.env, t = e.layers["smokel2d"] !== void ? e.layers["smokel2d"].targetLayer : void,'\
+          ' f = t !== void ? t.flip : void; '
+    wl = 'world_object.env.layers["smokel2d"]'
+    wf = wl + '.targetLayer.flip'
+    eng.tjs('world_object.env.unknown("newlay", %[name:"smokel2d", l2d:"hiyori", l2dwidth:"450", l2dheight:"600", show:"true"]); return 1;')
+    eng.wait("the World layer's model", wl + ' !== void && ' + wl + '.targetLayer !== void && ' + wf + ' !== void && '
+             + wf + '.frames > 5', timeout=10)
+    r = str(eng.tjs(env + 'return [t.flipType, f.canvasWidth, f.canvasHeight, t.visible ? 1 : 0].join(",");'))
+    if r != "l2d,450,600,1":
+        raise SmokeError("[newlay l2d=hiyori] didn't show the model as asked: %s" % r)
+    eng.tjs('world_object.env.unknown("smokel2d", %[flipupdate:"true", l2donce:"TapBody"]); return 1;')
+    eng.wait("TapBody on the World layer", wf + '.oncePlaying', timeout=5)
+    eng.tjs(env + 'global.__smokeFlipObj = f; e.unknown("smokel2d", %[grayscale:"true"]); return 1;')
+    time.sleep(0.5)
+    r = str(eng.tjs(env + 'return [f === global.__smokeFlipObj ? 1 : 0, e.layers["smokel2d"].flipInfo.l2donce === void ? 1 : 0].join(",");'))
+    print("     on a World layer: 450x600, l2donce through flipupdate, the same flip after a redraw: %s" % r, flush=True)
+    if r != "1,1":
+        raise SmokeError("a World layer's l2d flip didn't play on through a redraw, or kept l2donce to play again: %s" % r)
+    eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokel2d"]); world_object.env.destroy(); return 1;')
+    eng.wait("the World layer's model to go", 'KAGLive2DOf(kag).players.count == 0', timeout=5)
+    # in a scenario, [layopt l2donce=...][waittrig name=l2donce] goes on when the motion ends: the
+    # motion starts with the next frame, never inside the tag (a trigger sent while nothing waits
+    # is lost); and so it does where the model can't be drawn (a Live2D device without the plugin)
+    if isinstance(eng, DesktopEngine):
+        with open(os.path.join(eng.savedir, "zz_l2dwait.ks"), "w", encoding="utf-8") as f:
+            f.write('*start\n[image layer=1 page=fore flip=hiyori.l2d visible=true]\n'
+                    '[layopt layer=1 page=fore l2donce=TapBody]\n[waittrig name=l2donce]\n'
+                    '[eval exp="global.__smokeL2DWaited = 1"]\n[freeimage layer=1 page=fore]\n[s]\n')
+        dirname = tjs_string(storage_name(eng.savedir) + "/")
+        eng.tjs('global.__smokeL2DWaited = 0; Storages.addAutoPath(%s); kag.process("zz_l2dwait.ks"); return 1;' % dirname)
+        eng.wait("[waittrig name=l2donce] after TapBody", "global.__smokeL2DWaited", timeout=20)
+        eng.tjs('global.__smokeL2DSys = kag.live2dSystem; var u = new KAGLive2D(kag); u.release(); kag.live2dSystem = u;'
+                ' global.__smokeL2DWaited = 0; kag.process("zz_l2dwait.ks"); return 1;')
+        eng.wait("[waittrig name=l2donce] where the model can't be drawn", "global.__smokeL2DWaited", timeout=10)
+        time.sleep(0.3)
+        eng.tjs('var u = kag.live2dSystem; kag.live2dSystem = global.__smokeL2DSys; invalidate u;'
+                ' Storages.removeAutoPath(%s); kag.process("s0001.ks"); return 1;' % dirname)
+        eng.wait("the demo menu again", "kag.inStable && kag.selectShowing", timeout=30)
+        print("     [layopt l2donce=TapBody][waittrig name=l2donce] went on, with the model drawn and without", flush=True)
+    if standin and eng.tjs("return Live2DStandIn.players + Live2DStandIn.models;") != 0:
+        raise SmokeError("the l2d flips' models weren't let go: %s"
                          % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
 
 

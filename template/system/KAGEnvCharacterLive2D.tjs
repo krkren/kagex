@@ -214,20 +214,7 @@ class KAGEnvCharacterLive2D extends KAGEnvCharacterEyeLip {
 	 * motion of that file name (motions/<name>.motion3.json, as the plugin keeps them)
 	 */
 	function motionNames(spec) {
-		var s = spec !== void ? (string)spec : "";
-		var i = s.indexOf(":");
-		var group = i >= 0 ? s.substr(0, i) : s;
-		var which = i >= 0 ? s.substr(i + 1) : "";
-		var names = [];
-		if (group != "") {
-			var count = player.getMotionCount(group);
-			for (var n = 0; n < count; n++) names.add(player.getMotionName(group, n));
-		}
-		if (which == "") return names;
-		if (/^[0-9]+$/.test(which)) {
-			return +which < names.count ? [ names[+which] ] : [];
-		}
-		return [ which ];
+		return live2dMotionNames(player, spec); // GFX_Live2D.tjs
 	}
 
 	/**

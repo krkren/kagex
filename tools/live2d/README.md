@@ -1,7 +1,8 @@
 # tools/live2d
 
 Builds the krkrlive2d plugin, which draws Live2D characters (`doc/world.txt`, "Live2D
-Characters"), with your own copy of Live2D's Cubism SDK for Native. kagex holds no part of the
+Characters") and Live2D models on layers (`[image flip=model.l2d]`; `doc/kagex.txt`, "Optional
+parameters for l2d"), with your own copy of Live2D's Cubism SDK for Native. kagex holds no part of the
 SDK: download it from Live2D (https://www.live2d.com/en/sdk/download/native/), which agrees to its
 licences, and keep it, and the plugin built with it, out of the repository.
 
