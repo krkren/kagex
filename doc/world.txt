@@ -1562,9 +1562,8 @@ VRM animations and the layer demo's glTF star.
 
 
 It takes the krkrthreepp plugin (threepp, a C++ port of three.js, with VRM), which draws the
-avatar with OpenGL ES into the character's layer (GFX_Three.tjs, KAGEnvCharacterVRM.tjs). The
-Windows, Linux and macOS engines have it; the Android, iOS and web engines
-don't yet. Without the plugin, OpenGL ES or the model's file, a VRM character draws nothing
+avatar with OpenGL ES into the character's layer (GFX_Three.tjs, KAGEnvCharacterVRM.tjs). Every
+engine has it: Windows, Linux, macOS, the web, Android and iOS. Without the plugin, OpenGL ES or the model's file, a VRM character draws nothing
 and the log says why, once. KAGVRMCanDraw("vee") tells a script whether an avatar can be drawn
 (anim.ks says so when it can't). An avatar can also play on a layer, without the World's poses
 and faces: 3d on World layers (Layer Functions, below), [image flip=vee.vrm] on KAG layers

@@ -6,7 +6,7 @@ Planned features. Each needs changes to the builds as well as work in this repos
 
 These change the builds too: native code for every platform, including the web, Android and iOS engines in kagex-release's engine packages (the web build links its plugins into `krkrz.wasm`).
 
-- [ ] **3D on Android, iOS and the web** (`krkrthreepp`): the 3d flip type and VRM characters (`GFX_Three.tjs`, `KAGEnvCharacterVRM.tjs`) draw with the Windows, Linux and macOS engines, which ship the plugin; the Android, iOS and web engines don't have it, so 3D layers show nothing there and the demos say so. Android's kit and the web's plugin list would take it as they take krkreffekseer (`app-config.json`, `web-plugins.py`; threepp has an Emscripten path), and iOS may stop at the Xcode generator's duplicate object ids as krkr_richtext and krkreffekseer do (`UPSTREAM.md` 32), though threepp's folders have a `project()` of their own.
+Nothing at the moment.
 
 ## Looked at, not planned
 
