@@ -56,7 +56,7 @@ marker = "LIST(APPEND TVP_PLUGIN_FOLDERS"
 inc = 'include("%s")\n' % os.path.join(here, "live2d-web-kit.cmake").replace("\\", "/")
 if inc not in s:
     s = s.replace(marker, inc + marker, 1)
-for kit in ("krkreffekseer-kit.cmake", "monocypher-kit.cmake"):
+for kit in ("krkreffekseer-kit.cmake", "monocypher-kit.cmake", "krkrthreepp-kit.cmake"):
     line = 'include("%s")\n' % os.path.join(here, kit).replace("\\", "/")
     if line not in s:
         s = s.rstrip("\n") + "\n\n" + line

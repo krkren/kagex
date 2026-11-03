@@ -42,7 +42,8 @@ REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file
 COMMON_PINS = ["ENGINE_SHA", "XP3CRYPT_SHA", "SCNFILE_SHA"]
 # the workflow (every step of every job builds as it says), the clones
 COMMON_FILES = [".github/workflows/platforms.yml", ".github/platforms/setup.sh"]
-STATIC = [".github/platforms/monocypher-kit.cmake", ".github/platforms/scnfile-monocypher-names.h"]
+STATIC = [".github/platforms/monocypher-kit.cmake", ".github/platforms/scnfile-monocypher-names.h",
+          ".github/platforms/krkrthreepp-kit.cmake"]
 KIT = [".github/platforms/kit-vcpkg.py", ".github/platforms/krkreffekseer-kit.cmake"]
 
 PLATFORMS = {
