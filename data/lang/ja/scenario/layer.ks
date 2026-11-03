@@ -210,6 +210,44 @@ l2donce はモデルのモーションをひとつ一度だけ再生し、その
 このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
 [l][r]
 [endif]
+
+*label19|3D モデルとシーン
+
+; 3D on KAG layers: the 3d flip type (GFX_Three.tjs; "Optional parameters for 3d" in
+; doc/kagex.txt), drawn by the krkrthreepp plugin. The stage is a scene built in script
+; (data/main/Scenes3D.tjs); the star and Vee are the sample's own models (tools/assets/make_vrm.py)
+[cm]
+[if exp="KAGThreeCanDraw()"]
+[image layer=1 page=fore flip=stage3d visible=true left=960 top=400 dafx=center dafy=center]
+レイヤには 3D のシーンも表示できます。これはスクリプトで組み立てたシーンで、形とマテリアルとライトがあり、カメラがまわりを回ります。
+[l][r]
+
+[layopt layer=1 3donce=jump]
+3donce は何かを一度だけ再生します。このシーンのスクリプトでは結び目が跳びます。
+[l][r]
+
+[freeimage layer=1]
+[image layer=1 page=fore flip=star3d.glb 3dwidth=600 3dheight=600 3dframe="-0.7,0.7" visible=true left=960 top=440 dafx=center dafy=center]
+glTF のモデルは自分のアニメーションを再生します。spin がずっと続き、3donce=hop で跳びます。
+[layopt layer=1 3donce=hop]
+[l][r]
+
+[freeimage layer=1]
+[image layer=2 page=fore flip=vee.vrm 3dmotion=vee_idle 3dframe="-0.03,1.47" 3dwidth=520 3dheight=860 visible=true left=960 top=470 dafx=center dafy=center]
+VRM のアバターは立って、まばたきして、VRM アニメーションを再生します。3dmotion はずっと続き、3donce=vee_wave で一度手を振ります。
+[layopt layer=2 3donce=vee_wave 3dexpression=happy]
+[l][r]
+
+[layopt layer=2 3dexpression="" 3dturn=90]
+3dturn はモデルを回します。絵はふつうのレイヤと同じように、動かしたり、拡大したり、回したりできます。
+[layopt layer=2 zoom=80 rotate=8 time=800]
+[l][r]
+
+[freeimage layer=2]
+[else]
+このビルドでは 3D を描けません。krkrthreepp プラグインと OpenGL ES が必要です。くわしくは doc/kagex.txt の「Optional parameters for 3d」にあります。
+[l][r]
+[endif]
 [layopt layer=0 visible=true]
 
 [demodone name=layer]

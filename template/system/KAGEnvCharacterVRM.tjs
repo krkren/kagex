@@ -1,0 +1,384 @@
+// KAGEnvCharacterVRM.tjs - World characters played by VRM avatars
+//
+// A character whose envinit.tjs entry has "vrm" is a VRM avatar (.vrm: VRoid Studio's and the
+// like, VRM 0.x or 1.0), which the krkrthreepp plugin draws each frame into the character's layer
+// (GFX_Three.tjs), at the size of its World level, framed by a camera in front of it. Its poses
+// are VRM animations (.vrma) that go on (looping), its motions VRM animations played once, which
+// fade into the pose's again, and its faces are weights for the avatar's expressions (VRM's
+// presets: happy, angry, sad, relaxed, surprised; or its own). It blinks and lip-syncs to its
+// voice as a character drawn from layers does (KAGEnvCharacterEyeLip.tjs): blinking sets its
+// blink expression, and its voice its mouth's, a lip track's vowels each their own (aa, ih, ou,
+// ee, oh; VRM 0.x's a, i, u, e, o). Its eyes look at the camera, where it has eye bones. What it
+// shares with Live2D characters (poses, motions, faces, commands, waits, its picture's size and
+// place) is KAGEnvCharacterModel.tjs. doc/world.txt, "VRM Characters".
+//
+//   "vee" => %[
+//       "voiceFile" => "vee%s%06d",
+//       "vrm" => %[
+//           "model"  => "vee",               // vee.vrm
+//           "height" => 1500,                // the picture's height on the screen at 100%
+//           "aspect" => 0.6,                 // its width for its height
+//           "frame"  => [-0.02, 1.47],       // what it shows of the avatar, bottom to top (m)
+//           "poses"  => %[ standard:"vee_idle" ],   // VRM animations that go on
+//           "motions" => %[ wave:"vee_wave" ],      // and played once
+//           "faces"  => %[ normal:%[], smile:%[ happy:0.5 ] ],
+//           "defaultPose" => "standard",
+//           "defaultFace" => "normal",
+//           ],
+//       ],
+
+// Settings, which Override.tjs can change
+// The time between the frames an avatar is drawn (ms): 33 is 30 a second
+var vrmFrameTime = 33;
+// The tallest picture drawn: a character taller on the screen is drawn at this and enlarged
+var vrmMaxHeight = 2048;
+// How long a VRM animation fades into the next, and a face into the next (ms)
+var vrmMotionFade = 400;
+var vrmFaceFade = 300;
+// How long the eyes and the mouth take to reach the level they're going to (ms), which turns
+// the steps of a blink and of lip-sync into movement: longer than a frame (vrmFrameTime)
+var vrmEyeSmooth = 40;
+var vrmMouthSmooth = 50;
+// The camera's field of view (degrees): narrow, so the avatar is seen from far, as a picture is
+var vrmFov = 20;
+// The expression for each vowel of a lip track (VRM 1.0's names; a VRM 0.x avatar's a, i, u, e,
+// o are found for them). An avatar's "vowels" can give its own
+var vrmVowels = %[ a:"aa", i:"ih", u:"ou", e:"ee", o:"oh" ];
+
+/**
+ * Whether an avatar can be drawn here: the krkrthreepp plugin, OpenGL ES and the model's file
+ * @param model the model's file name, with or without .vrm
+ */
+function KAGVRMCanDraw(model) {
+	if (typeof global.KAGThreeOf == "undefined" || typeof global.kag == "undefined") {
+		return false;
+	}
+	var sys = KAGThreeOf(kag);
+	return sys.available && sys.findFile(model, "vrm") != "";
+}
+
+class KAGEnvCharacterVRM extends KAGEnvCharacterModel {
+
+	var modelName;       // its model's file name
+	var system;          // the window's KAGThree
+	var vrm;             // the avatar (Threepp.VRM), read when first drawn
+	var renderer;        // its Threepp.GLRenderer
+	var expressions;     // its expressions by name (KAGThreeExpressions)
+	var scene;           // the scene it stands in, and the camera on it
+	var camera;
+	var holder;          // the group it stands in, turned by "angle"
+	var lights = [];
+	var springsReset;    // its hair and clothes have been put at rest
+
+	var poseAnim;        // the pose's animation (Threepp.VRMAnimation), and where it is in it
+	var poseTime = 0.0;
+	var onceAnim;        // a motion's, played once
+	var onceTime = 0.0;
+	var showingAnim;     // the animation shown last, and where
+	var showingTime = 0.0;
+	var showingLoops;
+	var fromAnim;        // the one fading out
+	var fromTime = 0.0;
+	var fromLoops;
+	var fadeLeft = 0.0;  // ms of that fade left
+
+	var weights = %[];   // the expressions it was given last (name => weight)
+	var eyeValue = 1.0;  // the eyes, 1 open to 0 shut, on their way to eyeLevel
+	var mouth = %[];     // the mouth's expressions (name => weight), on their way to lipLevel
+
+	var blinkName;       // the expression blinking sets
+	var mouthName;       // the one the voice opens, without a lip track's vowels
+
+	/**
+	 * Constructor
+	 */
+	function KAGEnvCharacterVRM(env, name, initName, init) {
+		var c = init.vrm;
+		super.KAGEnvCharacterModel(env, name, initName, init, typeof c == "Object" && c !== null ? c : %[ model:(string)c ]);
+		kind = "VRM";
+		modelName = config.model !== void ? (string)config.model : initName;
+		aspect = config.aspect !== void ? +config.aspect : 0.6;
+		aspect = 0.6 if !(aspect > 0);
+		blinkName = config.blink !== void ? (string)config.blink : "blink";
+		mouthName = config.mouth !== void ? (string)config.mouth : "aa";
+		setFaceValues(true);
+	}
+
+	function frameTime() { return vrmFrameTime; }
+	function faceFadeTime() { return vrmFaceFade; }
+	function maxPictureHeight() { return vrmMaxHeight; }
+
+	function modelReady() { return vrm !== void; }
+
+	// the system lets go of everything as the window goes
+	function releaseThree() {
+		releasePlayer();
+	}
+
+	// Lets go of the avatar; it's read again on the next draw
+	function releaseModel() {
+		if (system !== void && isvalid system) {
+			system.makeCurrent();
+			system.removeUser(this);
+		}
+		try { invalidate vrm if vrm !== void; } catch {}
+		for (var i = lights.count - 1; i >= 0; i--) {
+			try { invalidate lights[i]; } catch {}
+		}
+		lights.clear();
+		try { invalidate holder if holder !== void; } catch {}
+		try { invalidate camera if camera !== void; } catch {}
+		try { invalidate scene if scene !== void; } catch {}
+		if (renderer !== void) {
+			if (system !== void && isvalid system) system.releaseRenderer(renderer);
+			else try { invalidate renderer; } catch {}
+		}
+		vrm = holder = camera = scene = renderer = expressions = void;
+		poseAnim = onceAnim = showingAnim = fromAnim = void;
+		fadeLeft = 0.0;
+		springsReset = false;
+		(Dictionary.clear incontextof weights)();
+		(Dictionary.clear incontextof mouth)();
+	}
+
+	// ----------------------------------------------------------------
+	// Poses, motions and faces
+	// ----------------------------------------------------------------
+
+	/**
+	 * Starts a VRM animation: the pose's, which loops, or a motion's, played once. The animation
+	 * shown fades out into it
+	 */
+	function startMotion(spec, asPose) {
+		if (spec === void || (string)spec == "") return false;
+		var fn = system.findFile((string)spec, "vrma");
+		var anim = fn != "" ? system.animation(fn) : void;
+		if (anim === void) {
+			noMotion((string)spec);
+			return false;
+		}
+		fromAnim = showingAnim;
+		fromTime = showingTime;
+		fromLoops = showingLoops;
+		fadeLeft = fromAnim !== void ? vrmMotionFade : 0.0;
+		if (asPose) {
+			poseAnim = anim;
+			poseTime = 0.0;
+		} else {
+			onceAnim = anim;
+			onceTime = 0.0;
+		}
+		return true;
+	}
+
+	function motionPlaying() {
+		return !oneShotPlaying || (onceAnim !== void && onceTime < onceAnim.getDuration());
+	}
+
+	/**
+	 * A face's expression weights: %[ expression:weight ] (a face that's a name is that
+	 * expression at 1)
+	 */
+	function faceValuesOf(faceName) {
+		var spec = faceSpec(faceName);
+		var ret = %[];
+		if (typeof spec == "String") {
+			ret[spec] = 1.0 if spec != "";
+		} else if (typeof spec == "Object" && spec !== null) {
+			(Dictionary.assign incontextof ret)(spec, false);
+		}
+		return ret;
+	}
+
+	// sets an expression by its name (or the VRM 1.0 preset's), as the avatar names it
+	function setExpression(name, w, missing) {
+		var n = expressions.find(name);
+		if (n !== void) {
+			vrm.setExpression(n, w);
+		} else if (missing !== void && missing[name] === void) {
+			missing[name] = true;
+			dm(@"VRM character ${this.name}: its avatar has no expression ${name}");
+		}
+	}
+	var missingExpressions = %[];
+
+	// ----------------------------------------------------------------
+	// Drawing
+	// ----------------------------------------------------------------
+
+	/**
+	 * Reads the avatar and sets up its scene: true, or false with failed saying why
+	 */
+	function prepareModel() {
+		if (typeof global.KAGThreeOf == "undefined") {
+			failed = "GFX_Three.tjs isn't loaded (gfxThreeEnabled)";
+			return false;
+		}
+		system = KAGThreeOf(env.window);
+		if (!system.available) {
+			failed = system.reason;
+			return false;
+		}
+		var file = system.findFile(modelName, "vrm");
+		if (file == "") {
+			failed = @"its model ${modelName}.vrm isn't there";
+			return false;
+		}
+		renderer = system.newRenderer();
+		vrm = system.loadVRM(file);
+		if (vrm === void) {
+			failed = @"its model ${file} can't be read";
+			return false;
+		}
+		system.addUser(this);
+		expressions = new KAGThreeExpressions(vrm);
+		scene = new Threepp.Scene();
+		holder = new Threepp.Group();
+		scene.add(holder);
+		holder.add(vrm.getScene());
+		holder.setRotation(0, (config.angle !== void ? +config.angle : 0) * Math.PI / 180, 0);
+		// MToon lights itself (a light fixed to the camera); other materials take these
+		var amb = new Threepp.HemisphereLight(0xffffff, 0x9088c0, 0.6);
+		scene.add(amb);
+		lights.add(amb);
+		var dir = new Threepp.DirectionalLight(0xffffff, 1.8);
+		dir.setPosition(1.5, 3, 4);
+		scene.add(dir);
+		lights.add(dir);
+		camera = new Threepp.PerspectiveCamera(config.fov !== void ? +config.fov : vrmFov, aspect, 0.05, 100);
+		placeCamera();
+		showingAnim = fromAnim = void;
+		fadeLeft = 0.0;
+		springsReset = false;
+		return true;
+	}
+
+	// the camera in front, the avatar's frame ("frame": bottom and top, in metres; by default its
+	// feet to 0.3 above its head bone, where a VRoid's head ends) filling the picture's height
+	function placeCamera() {
+		var frame = config.frame;
+		if (frame === void || frame.count < 2) {
+			frame = [ -0.05, 1.7 ];
+			try {
+				var head = vrm.getBoneNode("head");
+				if (head !== void) {
+					vrm.getScene().updateMatrixWorld(true);
+					frame = [ -0.05, head.getWorldPosition().y + 0.3 ];
+				}
+			} catch {}
+		}
+		var bottom = +frame[0], top = +frame[1];
+		var fov = config.fov !== void ? +config.fov : vrmFov;
+		var mid = (bottom + top) / 2;
+		var half = (top - bottom) / 2;
+		half = 0.05 if half < 0.05;
+		var dist = half / Math.tan(fov * Math.PI / 360);
+		camera.fov = fov;
+		camera.aspect = aspect;
+		camera.setPosition(0, mid, dist);
+		camera.lookAt(0, mid, 0);
+		camera.updateProjectionMatrix();
+		// its eyes on the camera, where it has eyes that turn
+		if (vrm.hasLookAt()) {
+			if (config.look === void || +config.look) vrm.setLookAtTarget(0, mid + half * 0.2, dist);
+			else vrm.clearLookAtTarget();
+		}
+	}
+
+	/**
+	 * Moves the avatar on to tick: its animations, its face, its eyes and mouth
+	 */
+	function step(tick) {
+		var dt = lastStep !== void ? tick - lastStep : 0;
+		dt = 0 if dt < 0;
+		dt = 100 if dt > 100; // after a pause, from where it was
+		lastStep = tick;
+		var sec = dt / 1000.0;
+
+		// the animations: one played once, else the pose's (again)
+		stepMotions();
+		if (poseAnim !== void) {
+			var d = poseAnim.getDuration();
+			poseTime += sec;
+			poseTime %= d if d > 0;
+		}
+		if (oneShotPlaying) onceTime += sec;
+		var anim = oneShotPlaying ? onceAnim : poseAnim;
+		var at = oneShotPlaying ? onceTime : poseTime;
+		if (fadeLeft > 0 && fromAnim !== void) {
+			fromTime += sec;
+			var fd = fromAnim.getDuration();
+			fromTime %= fd if fromLoops && fd > 0;
+			vrm.applyAnimation(fromAnim, fromTime);
+			fadeLeft -= dt;
+			var k = 1.0 - (fadeLeft > 0 ? fadeLeft / vrmMotionFade : 0.0);
+			if (anim !== void) vrm.applyAnimationBlend(anim, at, k);
+		} else if (anim !== void) {
+			vrm.applyAnimation(anim, at);
+		}
+		showingAnim = anim;
+		showingTime = at;
+		showingLoops = !oneShotPlaying;
+
+		// the face
+		var values = currentFaceValues(tick);
+		faceStart = void if faceStart !== void && tick - faceStart >= vrmFaceFade;
+
+		// the eyes, closed by the blink (a face's own blink holds), and the mouth, as open as the
+		// voice (lipLevel), with the expression of its vowel
+		var eyeTarget = eyeLevel !== void ? eyeLevel / 2.0 : 1.0;
+		eyeValue = approach(eyeValue, eyeTarget, dt, vrmEyeSmooth);
+		var faceBlink = values[blinkName] !== void ? +values[blinkName] : 0.0;
+		values[blinkName] = 1.0 - (1.0 - faceBlink) * eyeValue;
+		var level = lipLevel !== void ? lipLevel / 2.0 : 0.0;
+		var vowels = config.vowels !== void ? config.vowels : global.vrmVowels;
+		var open = mouthName;
+		if (lipVowel !== void && vowels[lipVowel] !== void) open = (string)vowels[lipVowel];
+		var names = [];
+		names.assign(vowels);
+		for (var i = 1; i < names.count; i += 2) mouth[names[i]] = +mouth[names[i]] if mouth[names[i]] === void;
+		mouth[mouthName] = +mouth[mouthName];
+		names.assign(mouth);
+		for (var i = 0; i < names.count; i += 2) {
+			var m = names[i];
+			mouth[m] = approach(+mouth[m], m == open ? level : 0.0, dt, vrmMouthSmooth);
+			if (mouth[m] > 0.001) {
+				var w = (values[m] !== void ? +values[m] : 0.0) + mouth[m];
+				values[m] = w > 1.0 ? 1.0 : w;
+			}
+		}
+
+		// each expression set: the face's, the blink's and the mouth's; those no longer set to 0
+		names.assign(weights);
+		for (var i = 0; i < names.count; i += 2) {
+			if (values[names[i]] === void) setExpression(names[i], 0.0);
+		}
+		names.assign(values);
+		for (var i = 0; i < names.count; i += 2) {
+			setExpression(names[i], +names[i + 1], names[i] != blinkName && mouth[names[i]] === void ? missingExpressions : void);
+		}
+		(Dictionary.assign incontextof weights)(values);
+
+		// the rig, the expressions, the eyes and the spring bones
+		vrm.update(sec);
+		if (!springsReset) {
+			// the hair and clothes at rest in the first pose, not falling into it
+			vrm.resetSpringBones();
+			springsReset = true;
+		}
+	}
+
+	/**
+	 * Draws the avatar into a picture of the character's size at its level
+	 */
+	function renderModel(layer) {
+		system.render(layer, renderer, scene, camera);
+	}
+
+	/**
+	 * Mouths by vowel: an avatar has an expression for each (aa ... oh)
+	 */
+	function faceHasVowels() {
+		return true;
+	}
+};

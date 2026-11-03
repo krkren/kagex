@@ -1311,6 +1311,302 @@ def live2d_flip_steps(eng, standin):
                          % eng.tjs('return [Live2DStandIn.players, Live2DStandIn.models].join(",");'))
 
 
+def three_framework(eng):
+    return eng.tjs('return typeof global.KAGThreeOf != "undefined" && typeof global.ThreeFlip != "undefined" ? 1 : 0;') == 1
+
+
+def three_why(eng):
+    """Why 3D can't be drawn here ("" when it can): the krkrthreepp plugin, OpenGL ES, Vee's model"""
+    return str(eng.tjs('var s = KAGThreeOf(kag); return !s.available ? s.reason : s.findFile("vee", "vrm") == ""'
+                       ' ? "no fgimage/vee.vrm (tools/assets/make_vrm.py)" : "";'))
+
+
+def vrm_steps(eng):
+    """The Animated Character demo's VRM character, Vee (KAGEnvCharacterVRM.tjs, drawn by the
+    krkrthreepp plugin; her model and motions are tools/assets/make_vrm.py's): her picture where
+    the World puts her, upright, drawn again as she moves, blinking, a face fading in and reaching
+    the avatar's expressions, lip-sync to her voice through its lip track (the expression of each
+    vowel), a motion played once and the pose's again, another pose, a save and a load, and the
+    avatar let go when she leaves. Where 3D can't be drawn the demo says so (checked as the demos
+    played)."""
+    if not three_framework(eng) or eng.tjs('return typeof global.KAGEnvCharacterVRM != "undefined"'
+                                           ' && world_object.env.characterInits["vee"] !== void ? 1 : 0;') != 1:
+        if eng.opts.three == "required":
+            raise SmokeError("--three required, but this build's framework or sample predates VRM characters")
+        print("     (skipped: this build's framework or sample predates VRM characters)", flush=True)
+        return
+    why = three_why(eng)
+    if why:
+        if eng.opts.three == "required":
+            raise SmokeError("3D can't be drawn here: " + why)
+        print("     (skipped: 3D can't be drawn here: %s)" % why, flush=True)
+        return
+    vee = 'var c = world_object.env.characters["vee"]; '
+    eng.tjs('global.__smokeVRMBlink = eyeFlipFreq; eyeFlipFreq = 1.0; kag.process("anim.ks", "*start"); return 1;')
+    eng.wait("Pip", 'world_object.env.characters["pip"] !== void && kag.inStable', timeout=20)
+    eng.tjs('kag.process("anim.ks", "*vrm"); return 1;')
+    eng.wait("Vee", 'world_object.env.characters["vee"] !== void && world_object.env.characters["vee"].vrm !== void'
+             ' && kag.inStable', timeout=60)
+    time.sleep(1.5)
+    print("     first use (ms): %s" % eng.tjs('var t = KAGThreeOf(kag).timings, a = [], k = []; k.assign(t);'
+                                             ' for (var i = 0; i < k.count; i += 2) a.add(k[i] + " " + k[i + 1]);'
+                                             ' return a.join(", ") + "; MSAA " + KAGThreeOf(kag).samples;'), flush=True)
+    # drawn, and on the screen: the World puts her picture's centre at center, 190 below the
+    # screen's centre; upright: her head and twin tails (the top quarter) are wider than her legs
+    drawn = str(eng.tjs(vee + 'var t = c.targetLayer, l = c.renderLayer, n = 0, top = 0, bottom = 0, h = l.imageHeight;'
+                        ' for (var y = 0; y < h; y += 8) for (var x = 0; x < l.imageWidth; x += 8)'
+                        ' if (l.getMaskPixel(x, y) > 0) { n++; top++ if y < h / 4; bottom++ if y >= h * 3 / 4; }'
+                        ' var left = (int)(t._affineleft - t.afx), tp = (int)(t._affinetop - t.afy);'
+                        ' return [n, t.visible ? 1 : 0, left, tp, l.imageWidth, l.imageHeight, top, bottom].join(",");'))
+    n, visible, left, top, width, height, upper, lower = [int(v) for v in drawn.split(",")]
+    print("     Vee: %d of her picture's samples drawn, %dx%d at (%d, %d); %d in its top quarter, %d in its bottom one"
+          % (n, width, height, left, top, upper, lower), flush=True)
+    if n < 300 or not visible:
+        raise SmokeError("Vee isn't drawn: %s" % drawn)
+    if abs(left + width / 2 - 960) > 2 or abs(top + height / 2 - 730) > 2:
+        raise SmokeError("Vee's picture is centred at (%d, %d), not at center's (960, 730)" % (left + width / 2, top + height / 2))
+    if upper < lower * 1.5:
+        raise SmokeError("Vee's head isn't at the top of her picture (upside down?): %s" % drawn)
+    eng.tjs(vee + 'global.__smokeVRMDraw = c.lastDraw; return 1;')
+    time.sleep(1.0)
+    if eng.tjs(vee + 'return c.lastDraw != global.__smokeVRMDraw ? 1 : 0;') != 1:
+        raise SmokeError("Vee was drawn once, and not again as she moved")
+    # blinking (eyeFlipFreq 1: a blink every frame or so) and open eyes between; a face that
+    # fades in and reaches the avatar
+    eng.tjs('global.__smokeVRM = %[ blinkMin : 9.0, blinkMax : 0.0, mouth : %[], samples : 0, after : 0 ];'
+            ' global.__smokeVRMTimer = new Timer(function() {'
+            '  var c = world_object.env.characters["vee"]; if (c === void || c.vrm === void) return; var s = global.__smokeVRM;'
+            '  var b = c.weights.blink; if (b !== void) { s.blinkMin = b if b < s.blinkMin; s.blinkMax = b if b > s.blinkMax; }'
+            '  s.samples++;'
+            '  var v = c.soundBuffer; if (v !== void && v.status == "play") {'
+            '   var k = []; k.assign(c.mouth); for (var i = 0; i < k.count; i += 2) {'
+            '    var w = c.vrm.getExpression(c.expressions.find(k[i]));'
+            '    s.mouth[k[i]] = w if s.mouth[k[i]] === void || w > s.mouth[k[i]]; } }'
+            ' }, ""); __smokeVRMTimer.interval = 20; __smokeVRMTimer.enabled = true;'
+            ' var c = world_object.env.characters["vee"]; c.setFace("laugh", %[]);'
+            ' global.__smokeVRMMid = c.currentFaceValues(c.faceStart + vrmFaceFade / 2).happy; return 1;')
+    time.sleep(1.5)
+    r = str(eng.tjs(vee + 'var s = global.__smokeVRM;'
+                    ' return [s.blinkMin, s.blinkMax, global.__smokeVRMMid, c.weights.happy, c.vrm.getExpression("happy"), c.face].join(",");')).split(",")
+    print("     blinking: blink from %s up to %s; laugh: happy %s halfway through its fade, then %s (the avatar's %s)"
+          % (r[0], r[1], r[2], r[3], r[4]), flush=True)
+    # (laugh is all of happy, which fades blinking out: the blink was seen before it)
+    if float(r[1]) < 0.8 or float(r[0]) > 0.05:
+        raise SmokeError("Vee didn't blink, or her eyes didn't open between blinks: %s" % r)
+    if not 0.3 < float(r[2]) < 0.7 or abs(float(r[3]) - 1.0) > 0.01 or abs(float(r[4]) - 1.0) > 0.01 or r[5] != "laugh":
+        raise SmokeError("Vee's laugh face didn't fade in and reach her avatar: %s" % r)
+    # lip-sync to her voice (vee000001, which has a lip track): each vowel's expression opens
+    eng.tjs(vee + 'c.setFace("normal", %[]); c.playVoice("vee000001"); return 1;')
+    end = time.time() + 14
+    while time.time() < end:
+        time.sleep(0.5)
+        if eng.tjs(vee + 'var b = c.soundBuffer; return b !== void && b.status != "play" ? 1 : 0;') == 1:
+            break
+    time.sleep(0.6)
+    r = str(eng.tjs(vee + 'var m = [], k = []; k.assign(global.__smokeVRM.mouth); for (var i = 0; i < k.count; i += 2) m.add(k[i] + ":" + "%.2f".sprintf(k[i + 1]));'
+                    ' var after = 0.0; k.assign(c.mouth); for (var i = 0; i < k.count; i += 2) after = k[i + 1] if k[i + 1] > after;'
+                    ' return [m.join(" "), after, c.lipTrack === void ? 0 : c.lipTrack.times.count, c.soundBuffer.position].join(",");')).split(",")
+    opened = dict((kv.split(":")[0], float(kv.split(":")[1])) for kv in r[0].split()) if r[0] else {}
+    print("     lip-sync: the mouth's expressions at most %s; after the voice %s; a lip track of %s marks"
+          % (r[0] or "none", r[1], r[2]), flush=True)
+    if int(r[2]) == 0:
+        raise SmokeError("vee000001.lip wasn't read for Vee's line")
+    if not opened:
+        print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
+    elif len([v for v in opened.values() if v > 0.3]) < 2:
+        raise SmokeError("Vee's mouth didn't make the expressions of her lip track's vowels: %s" % r[0])
+    if float(r[1]) > 0.05:
+        raise SmokeError("Vee's mouth stayed open after her voice: %s" % r[1])
+    # a motion played once (wave), fading in from the pose and back; another pose (think)
+    eng.tjs(vee + 'c.playOnce("wave", %[]); return 1;')
+    eng.wait("the wave", 'world_object.env.characters["vee"].oneShotPlaying', timeout=5)
+    r = str(eng.tjs(vee + 'return [c.onceAnim !== void ? c.onceAnim.getDuration() : 0, c.fromAnim !== void ? 1 : 0].join(",");'))
+    eng.wait("the pose again", '!world_object.env.characters["vee"].oneShotPlaying', timeout=10)
+    print("     wave: a VRM animation of %s s, faded in from the pose: %s" % tuple(r.split(",")), flush=True)
+    if abs(float(r.split(",")[0]) - 2.6) > 0.05:
+        raise SmokeError("wave didn't play vee_wave.vrma: %s" % r)
+    eng.tjs(vee + 'c.setPose("think", %[]); return 1;')
+    eng.wait("the think pose", 'world_object.env.characters["vee"].poseAnim !== void && world_object.env.characters["vee"].poseAnim'
+             ' === KAGThreeOf(kag).animation(KAGThreeOf(kag).findFile("vee_think", "vrma"))', timeout=5)
+    eng.tjs(vee + 'c.setPose("standard", %[]); __smokeVRMTimer.enabled = false; invalidate __smokeVRMTimer;'
+            ' eyeFlipFreq = global.__smokeVRMBlink; return 1;')
+    print("     think: the pose's VRM animation changed", flush=True)
+    # a save and a load with her on the screen: drawn again from a new avatar
+    eng.tjs("kag.saveBookMark(4); return 1;")
+    eng.wait("data4 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(4))", timeout=10)
+    eng.tjs('kag.goToStart(); return 1;')
+    eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+    if eng.tjs('return KAGThreeOf(kag).users.count;') != 0:
+        raise SmokeError("Vee's avatar wasn't let go when the game went back to the title")
+    eng.tjs("loadFunction(4); return 1;")
+    eng.wait("Vee after the load", 'world_object.env.characters["vee"] !== void'
+             ' && world_object.env.characters["vee"].vrm !== void && kag.inStable', timeout=30)
+    r = str(eng.tjs(vee + 'return [c.pose, c.isShow() ? 1 : 0, c.targetLayer.visible ? 1 : 0].join(",");'))
+    print("     after a load: pose, shown: %s" % r, flush=True)
+    if r != "standard,1,1":
+        raise SmokeError("after a load Vee is %s, not standard and shown" % r)
+    eng.clicker(True, until="s0001.ks")
+    eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=180)
+    eng.clicker(False)
+    if eng.tjs('return KAGThreeOf(kag).users.count;') != 0:
+        raise SmokeError("Vee's avatar wasn't let go when she left")
+
+
+def three_flip_steps(eng):
+    """The 3d flip type (ThreeFlip, GFX_Three.tjs) on KAG layers and a World layer: Vee's avatar
+    (its VRM animation, one played once and its trigger, expressions, lip-sync to an SE buffer, a
+    store and a restore), the glTF star (its clip, another once, a missing one ending at once),
+    the sample's scene built in script (3donce through its script), [layopt 3donce=...]
+    [waittrig name=3donce] going on in a scenario, and everything let go; where 3D can't be drawn,
+    the flip shows nothing and 3donce still ends."""
+    if not three_framework(eng):
+        print("     (skipped: this build's framework predates 3D)", flush=True)
+        return
+    why = three_why(eng)
+    kf = 'kag.fore.layers[1].flip'
+    lay = 'var l = kag.fore.layers[1], f = l.flip; '
+    count = ('var t = new global.Layer(kag, kag.primaryLayer), n = 0; t.assignImages(f);'
+             ' for (var y = 0; y < t.imageHeight; y += 8) for (var x = 0; x < t.imageWidth; x += 8)'
+             ' if (t.getMaskPixel(x, y) > 0) n++; invalidate t; ')
+    if why:
+        if eng.opts.three == "required":
+            raise SmokeError("3D can't be drawn here: " + why)
+        # nothing drawn, and 3donce ends a frame later
+        eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"vee.vrm", visible:"true", "3dwidth" => "100", "3dheight" => "100"]);'
+                ' kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "vee_wave"]); return 1;')
+        eng.wait("3donce where 3D can't be drawn", kf + '.onceDone == 1', timeout=5)
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"1", page:"fore"]); return 1;')
+        print("     3D can't be drawn here (%s): the flip showed nothing, and 3donce ended at once" % why, flush=True)
+        return
+    # Vee's avatar
+    eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"vee.vrm", visible:"true", left:"100", top:"100",'
+            ' "3dwidth" => "400", "3dheight" => "640", "3dmotion" => "vee_idle", "3dframe" => "-0.03,1.47",'
+            ' "3dexpression" => "happy:1"]); return 1;')
+    time.sleep(1.0)
+    r = str(eng.tjs(lay + count + 'return [l.flipType, n, f.canvasWidth, f.canvasHeight, f.frames, f.kind, l.type == ltAlpha ? 1 : 0,'
+                    ' f.vrm.getExpression("happy"), f.motionAnim !== void ? f.motionAnim.getDuration() : 0].join(",");')).split(",")
+    print("     a VRM avatar on a KAG layer: %s %s, %s of its samples drawn in %sx%s, %s frames, happy %s, its motion %s s"
+          % (r[0], r[5], r[1], r[2], r[3], r[4], r[7], r[8]), flush=True)
+    if r[0] != "3d" or r[5] != "vrm" or int(r[1]) < 100 or r[2:4] != ["400", "640"] or r[6] != "1":
+        raise SmokeError("[image flip=vee.vrm] didn't draw the avatar into a 400x640 ltAlpha picture: %s" % r)
+    if int(r[4]) < 10 or abs(float(r[7]) - 1) > 0.01 or abs(float(r[8]) - 4.0) > 0.05:
+        raise SmokeError("the 3d flip isn't playing vee_idle with happy set: %s" % r)
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "vee_wave", "3dexpression" => ""]); return 1;')
+    eng.wait("vee_wave once", kf + '.oncePlaying', timeout=5)
+    eng.wait("the idle motion again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=10)
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "no_such_motion"]); return 1;')
+    eng.wait("3donce for a motion it doesn't have", kf + '.onceDone == 2', timeout=5)
+    if float(eng.tjs(lay + 'return f.vrm.getExpression("happy");')) != 0.0:
+        raise SmokeError('3dexpression="" didn\'t take happy off the avatar')
+    print("     3donce: vee_wave played once, the idle motion went on, a missing one ended at once", flush=True)
+    # lip-sync to SE buffer 0
+    eng.tjs('global.__smoke3DLip = %[ max : 0.0, aa : 0.0, pos : %[] ]; global.__smoke3DTimer = new Timer(function() {'
+            '  var f = kag.fore.layers[1].flip; if (f === void || f.vrm === void) return; var s = global.__smoke3DLip;'
+            '  s.max = f.voice if f.voice > s.max; var a = f.vrm.getExpression("aa"); s.aa = a if a > s.aa;'
+            '  s.pos[kag.se[0].position] = 1; }, "");'
+            ' __smoke3DTimer.interval = 20; __smoke3DTimer.enabled = true;'
+            ' kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3dlip" => "0"]); kag.se[0].play(%[storage:"vee000001"]); return 1;')
+    time.sleep(3.0)
+    r = str(eng.tjs('__smoke3DTimer.enabled = false; invalidate __smoke3DTimer; kag.se[0].stop();'
+                    ' kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3dlip" => ""]); var p = []; p.assign(__smoke3DLip.pos);'
+                    ' return [__smoke3DLip.max, __smoke3DLip.aa, p.count \\ 2, kag.fore.layers[1].flip.voice].join(",");')).split(",")
+    print("     3dlip: the mouth open up to %.2f (aa %.2f) over %s positions of the sound, then %s"
+          % (float(r[0]), float(r[1]), r[2], r[3]), flush=True)
+    if int(r[2]) <= 1:
+        print("     (the sound doesn't play here, so the mouth isn't checked)", flush=True)
+    elif float(r[0]) < 0.3 or float(r[1]) < 0.3:
+        raise SmokeError("3dlip=0 didn't open the avatar's mouth with the sound: %s" % r)
+    if float(r[3]) != 0.0:
+        raise SmokeError("3dlip= (none) didn't shut the avatar's mouth: %s" % r)
+    # kept through a store and a restore; let go with its layer
+    eng.tjs(lay + 'global.__smoke3DStore = %[]; l.storeFlip(__smoke3DStore); kag.tagHandlers.freeimage(%[layer:"1", page:"fore"]); return 1;')
+    eng.wait("the flip to go", 'KAGThreeOf(kag).users.count == 0', timeout=5)
+    eng.tjs('var l = kag.fore.layers[1]; l.restoreFlip(__smoke3DStore); l.visible = true; return 1;')
+    time.sleep(0.5)
+    r = str(eng.tjs(lay + 'return [f.file, f.canvasWidth, f.canvasHeight, f.options["3dmotion"], f.options["3dframe"],'
+                    ' f.vrm !== void ? 1 : 0, f.frames > 0 ? 1 : 0].join(",");'))
+    print("     restored: %s" % r, flush=True)
+    if r != "vee.vrm,400,640,vee_idle,-0.03,1.47,1,1":
+        raise SmokeError("the 3d flip wasn't restored as it was stored: %s" % r)
+    eng.tjs('kag.tagHandlers.freeimage(%[layer:"1", page:"fore"]); return 1;')
+    eng.wait("the flip to go", 'KAGThreeOf(kag).users.count == 0', timeout=5)
+    # the glTF star: its first clip (spin) goes on; hop once; a clip it doesn't have
+    eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"star3d.glb", visible:"true",'
+            ' "3dwidth" => "300", "3dheight" => "300", "3dframe" => "-0.7,0.7"]); return 1;')
+    time.sleep(1.0)
+    r = str(eng.tjs(lay + count + 'return [f.kind, n, f.frames, f.action !== void ? 1 : 0, f.model.getAnimationCount(),'
+                    ' f.model.getAnimationName(0)].join(",");')).split(",")
+    print("     a glTF model: %s, %s samples drawn, %s frames, a clip playing %s, clips %s (%s first)" % tuple(r), flush=True)
+    if r[0] != "gltf" or int(r[1]) < 50 or r[3] != "1" or r[4] != "2":
+        raise SmokeError("[image flip=star3d.glb] didn't draw the star playing its clip: %s" % r)
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "hop"]); return 1;')
+    eng.wait("hop once", kf + '.oncePlaying', timeout=5)
+    eng.wait("spin again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=10)
+    eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "nothing"]); return 1;')
+    eng.wait("3donce for a clip it doesn't have", kf + '.onceDone == 2', timeout=5)
+    eng.tjs('kag.tagHandlers.freeimage(%[layer:"1", page:"fore"]); return 1;')
+    eng.wait("the flip to go", 'KAGThreeOf(kag).users.count == 0', timeout=5)
+    print("     glTF: hop played once, spin went on, a missing clip ended at once", flush=True)
+    # the scene built in script (Scenes3D.tjs: stage3d)
+    if eng.tjs('return KAGThreeScenes["stage3d"] !== void ? 1 : 0;') == 1:
+        eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"stage3d", visible:"true", "3dwidth" => "480", "3dheight" => "270"]); return 1;')
+        time.sleep(1.0)
+        r = str(eng.tjs(lay + count + 'return [f.kind, n, f.frames, f.ctx.knot !== void ? 1 : 0, "%.2f".sprintf(f.time)].join(",");')).split(",")
+        print("     a scene built in script: %s, %s samples drawn, %s frames, %s s played" % (r[0], r[1], r[2], r[4]), flush=True)
+        if r[0] != "scene" or int(r[1]) < 50 or int(r[2]) < 10 or r[3] != "1":
+            raise SmokeError("[image flip=stage3d] didn't build and draw the scene: %s" % r)
+        eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "jump"]); return 1;')
+        eng.wait("the knot's jump", kf + '.oncePlaying && ' + kf + '.ctx.jump > 0', timeout=5)
+        eng.wait("its end", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=5)
+        eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "dance"]); return 1;')
+        eng.wait("3donce the scene doesn't know", kf + '.onceDone == 2', timeout=5)
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"1", page:"fore"]); return 1;')
+        eng.wait("the flip to go", 'KAGThreeOf(kag).users.count == 0', timeout=5)
+        print("     the scene: 3donce=jump through its script, an unknown one ended at once", flush=True)
+    # on a World layer: options from newlay and flipupdate, a redraw that keeps it playing
+    env = 'var e = world_object.env, t = e.layers["smoke3d"] !== void ? e.layers["smoke3d"].targetLayer : void,'\
+          ' f = t !== void ? t.flip : void; '
+    wl = 'world_object.env.layers["smoke3d"]'
+    wf = wl + '.targetLayer.flip'
+    eng.tjs('world_object.env.unknown("newlay", %[name:"smoke3d", "3d" => "vee", "3dwidth" => "300", "3dheight" => "480",'
+            ' "3dmotion" => "vee_idle", show:"true"]); return 1;')
+    eng.wait("the World layer's avatar", wl + ' !== void && ' + wl + '.targetLayer !== void && ' + wf + ' !== void && '
+             + wf + '.frames > 5', timeout=10)
+    r = str(eng.tjs(env + 'return [t.flipType, f.kind, f.canvasWidth, f.canvasHeight, t.visible ? 1 : 0].join(",");'))
+    if r != "3d,vrm,300,480,1":
+        raise SmokeError("[newlay 3d=vee] didn't show the avatar as asked: %s" % r)
+    eng.tjs('world_object.env.unknown("smoke3d", %[flipupdate:"true", "3donce" => "vee_nod"]); return 1;')
+    eng.wait("the nod on the World layer", wf + '.oncePlaying', timeout=5)
+    eng.tjs(env + 'global.__smoke3DObj = f; e.unknown("smoke3d", %[grayscale:"true"]); return 1;')
+    time.sleep(0.5)
+    r = str(eng.tjs(env + 'return [f === global.__smoke3DObj ? 1 : 0, e.layers["smoke3d"].flipInfo["3donce"] === void ? 1 : 0].join(",");'))
+    print("     on a World layer: 300x480, 3donce through flipupdate, the same flip after a redraw: %s" % r, flush=True)
+    if r != "1,1":
+        raise SmokeError("a World layer's 3d flip didn't play on through a redraw, or kept 3donce to play again: %s" % r)
+    eng.tjs('global.__smoke3DObj = void; world_object.env.delLayer(%[name:"smoke3d"]); world_object.env.destroy(); return 1;')
+    eng.wait("the World layer's avatar to go", 'KAGThreeOf(kag).users.count == 0', timeout=5)
+    # in a scenario, [layopt 3donce=...][waittrig name=3donce] goes on when the motion ends, as
+    # it does where 3D can't be drawn (a 3D system without the plugin)
+    if isinstance(eng, DesktopEngine):
+        with open(os.path.join(eng.savedir, "zz_3dwait.ks"), "w", encoding="utf-8") as f:
+            f.write('*start\n[image layer=1 page=fore flip=star3d.glb 3dwidth=200 3dheight=200 visible=true]\n'
+                    '[layopt layer=1 page=fore 3donce=hop]\n[waittrig name=3donce]\n'
+                    '[eval exp="global.__smoke3DWaited = 1"]\n[freeimage layer=1 page=fore]\n[s]\n')
+        dirname = tjs_string(storage_name(eng.savedir) + "/")
+        eng.tjs('global.__smoke3DWaited = 0; Storages.addAutoPath(%s); kag.process("zz_3dwait.ks"); return 1;' % dirname)
+        eng.wait("[waittrig name=3donce] after hop", "global.__smoke3DWaited", timeout=20)
+        eng.tjs('global.__smoke3DSys = kag.threeSystem; var u = new KAGThree(kag); u.release(); kag.threeSystem = u;'
+                ' global.__smoke3DWaited = 0; kag.process("zz_3dwait.ks"); return 1;')
+        eng.wait("[waittrig name=3donce] where 3D can't be drawn", "global.__smoke3DWaited", timeout=10)
+        time.sleep(0.3)
+        eng.tjs('var u = kag.threeSystem; kag.threeSystem = global.__smoke3DSys; invalidate u;'
+                ' Storages.removeAutoPath(%s); kag.process("s0001.ks"); return 1;' % dirname)
+        eng.wait("the demo menu again", "kag.inStable && kag.selectShowing", timeout=30)
+        print("     [layopt 3donce=hop][waittrig name=3donce] went on, with the model drawn and without", flush=True)
+    if eng.tjs('return KAGThreeOf(kag).users.count;') != 0:
+        raise SmokeError("the 3d flips' models weren't let go")
+
+
 def compiled_framework(eng):
     """Whether the framework compiles scenarios (SceneParser.tjs; pages.yml may test an older
     release's site)"""
@@ -2020,6 +2316,14 @@ def sample_steps(eng):
     @step("a Live2D character draws, moves, blinks and lip-syncs (--live2d required), or does with the stand-in plugin")
     def _():
         live2d_steps(eng)
+
+    @step("a VRM character draws, moves, blinks and lip-syncs (--three required)")
+    def _():
+        vrm_steps(eng)
+
+    @step("3D on layers: a VRM avatar, a glTF model and a scene built in script (the 3d flip)")
+    def _():
+        three_flip_steps(eng)
 
     @step("a character's layers read from a PSD match its layer structure, vowel mouths included")
     def _():
@@ -2832,6 +3136,9 @@ def main():
                     help="whether the build must draw Live2D characters (the krkrlive2d plugin, OpenGL ES "
                     "and Hiyori's model, tools/assets/make_hiyori.py): required fails when it can't; "
                     "optional tests the framework with a stand-in for the plugin (tools/live2d-standin.tjs)")
+    ap.add_argument("--three", choices=["required", "optional"], default="optional",
+                    help="whether the build must draw 3D (the krkrthreepp plugin and OpenGL ES: the 3d flip "
+                    "and VRM characters): required fails when it can't; optional skips those checks")
     ap.add_argument("--vector", choices=["required", "optional"], default="optional",
                     help="whether the build must draw SVG images (the layerExVector plugin): "
                     "required fails when it can't; optional reports it")

@@ -1548,6 +1548,160 @@ in their works, a game shipping them inside it, with "This content uses sample d
 copyrighted by Live2D Inc." shown; no one may hand out the model files themselves, as material.
 
 
+● VRM Characters
+
+
+
+A character can be a VRM avatar: a 3D model in the format VRoid Studio and other tools export
+(.vrm, VRM 0.x or 1.0). Its poses are VRM animations (.vrma) that go on, its motions VRM
+animations played once, its faces weights for its expressions, and it blinks and lip-syncs to its
+voice as a character drawn from layers does. The Animated Character demo's Vee is one (anim.ks):
+the sample's own avatar, built from shapes by tools/assets/make_vrm.py, which also makes her
+VRM animations and the layer demo's glTF star.
+
+
+
+It takes the krkrthreepp plugin (threepp, a C++ port of three.js, with VRM), which draws the
+avatar with OpenGL ES into the character's layer (GFX_Three.tjs, KAGEnvCharacterVRM.tjs). The
+Windows, Linux and macOS engines have it; the Android, iOS and web engines
+don't yet. Without the plugin, OpenGL ES or the model's file, a VRM character draws nothing
+and the log says why, once. KAGVRMCanDraw("vee") tells a script whether an avatar can be drawn
+(anim.ks says so when it can't). An avatar can also play on a layer, without the World's poses
+and faces: 3d on World layers (Layer Functions, below), [image flip=vee.vrm] on KAG layers
+(doc/kagex.txt; the layer demo, layer.ks, shows Vee so).
+
+
+
+The character's envinit.tjs entry has "vrm"; the rest is as for any character:
+
+
+
+------------------------------------
+"vee" => %[
+    "nameAlias" => "Vee",
+    "yoffset" => 190,                // her picture's centre, below the screen's centre
+    "voiceFile" => "vee%s%06d",
+    "voiceName" => "voice0",
+    "vrm" => %[
+        "model" => "vee",                // vee.vrm
+        "height" => 1340,                // the picture's height on the screen at 100%
+        "aspect" => 0.62,                // its width for its height
+        "frame" => [-0.03, 1.47],        // what it shows of her, bottom to top (metres)
+        "poses" => %[ "standard" => "vee_idle", "think" => "vee_think" ],
+        "defaultPose" => "standard",
+        "motions" => %[ "wave" => "vee_wave", "nod" => "vee_nod" ],
+        "faces" => %[
+            "normal" => %[],
+            "smile"  => %[ "happy" => 0.45 ],
+            "laugh"  => %[ "happy" => 1 ],
+            "blush"  => %[ "relaxed" => 0.5, "blush" => 1 ],   // blush: one of her own
+            "sad"    => "sad",           // an expression at 1
+            ],
+        "defaultFace" => "normal",
+        ],
+    ],
+------------------------------------
+
+
+
+    model       The avatar's file, with or without .vrm.
+    height      The picture's height on the screen at a World level of 100% (the screen's
+                height without it). Each level draws the avatar at its own size (its zoom, or
+                imgzoom), up to vrmMaxHeight (2048) pixels tall and enlarged beyond that.
+    aspect      The picture's width for its height (0.6 without it).
+    frame       [bottom, top]: what the picture shows of the avatar, in metres from the ground:
+                a camera in front of it, far enough back to fit that much, fills the picture's
+                height with it (from its feet to 0.3 above its head bone without it, where a
+                VRoid's head ends; an avatar's hair can reach further).
+    fov         The camera's field of view in degrees (vrmFov, 20: from far, as a picture is
+                drawn).
+    angle       The avatar's turn about its upright axis, in degrees (it faces the camera
+                without it).
+    look        Whether its eyes look at the camera (where it has eyes that turn). Default:
+                true.
+    anchor      [x, y]: the point of the picture the World places where it places a character,
+                from the picture's centre, at 100% ([0, 0] without it).
+    poses       Names, each for a VRM animation (.vrma, with or without the extension) that
+                goes on, looping, while nothing else plays.
+    defaultPose The pose it starts in.
+    motions     Names, each for a VRM animation played once, then the pose's again.
+    faces       Names, each for weights of the avatar's expressions: %[ name:weight ], or a
+                name alone (weight 1). Names are the avatar's, or VRM 1.0's presets (happy,
+                angry, sad, relaxed, surprised; aa, ih, ou, ee, oh; blink ...), which find a
+                VRM 0.x avatar's own (joy, sorrow, fun; a, i, u, e, o; blink_l ...). An
+                expression the face doesn't name is at 0, and weights fade into the next face's
+                over vrmFaceFade ms (300).
+    defaultFace The face it starts with (none without it).
+    blink       The expression blinking sets ("blink").
+    mouth       The expression the voice opens without a lip track's vowels ("aa").
+    vowels      The expression for each vowel of a lip track: %[ a:"aa", i:"ih", ... ]
+                (vrmVowels: VRM 1.0's aa, ih, ou, ee, oh).
+
+
+
+◇ How it moves
+
+
+
+While the character shows, the avatar is drawn again every vrmFrameTime ms (33: 30 times a
+second), each frame read back from OpenGL into the character's layer, at the size the level
+draws it. Its pose's VRM animation loops; a motion's plays once, fading in from wherever the
+pose had it and back out into the pose's over vrmMotionFade ms (400). Its spring bones (hair,
+clothes) swing as it moves, and are put at rest in its first pose.
+
+
+
+Its eyes and mouth go as a character drawn from layers' do (Blinking and lip-sync, above): the
+eyes' level (open, half, closed) sets its blink expression (a face's own blink holds: "blink"
+=> 1 is eyes shut), and the voice opens its mouth, eased over vrmEyeSmooth and vrmMouthSmooth ms
+(40, 50): with a lip track, each vowel's expression (vowels), else its mouth expression. A
+face's mouth expressions add to the voice's. An expression that overrides blinking (VRM's
+overrideBlink: an avatar's happy often does) holds the eyes as it says.
+
+
+
+Its pose and face are kept in a save, and a load starts the pose's animation again. An avatar
+is let go when its character leaves the screen, and read again when it comes back. While a skip
+shows nothing, the character keeps its last picture, and a motion played once doesn't play.
+There's no face window (facewin) for an avatar. Edges aren't smoothed on the SDL engine (no
+MSAA: GFX_Three.tjs). The settings are global variables in KAGEnvCharacterVRM.tjs, which
+Override.tjs can change: vrmFrameTime, vrmMaxHeight, vrmMotionFade, vrmFaceFade, vrmEyeSmooth,
+vrmMouthSmooth, vrmFov and vrmVowels.
+
+
+
+◆ KAG Commands
+
+
+
+    <pose>      Changes the pose (also pose=<pose>): its animation fades in.
+    <motion>    Plays a motion once, then the pose's again (also motion=<motion>). With
+                motionwait the command waits for it to end; a click ends it. Nothing waits
+                when the avatar can't be drawn or effects are off.
+    <face>      Changes the face (also face=<face>), fading.
+    x<face>     Changes the face with a blink (also xface=<face>).
+    eyeopen, eyeclose, eyeopento, eyecloseto, eyeflip, eyeflipon, eyeflipoff, lipopen,
+    lipclose, lipopento, lipcloseto, lipflip, lipflipon, lipflipoff, fliptime
+                As for characters drawn from layers.
+
+
+
+Example
+------------------------------------
+[vee standard center]
+[vee smile voice=1]
+【vee】Hi! I'm Vee.
+[vee wave motionwait]
+------------------------------------
+
+
+
+A VRM file carries its own licence (its meta: who may use it, and how); an avatar is yours or
+one whose licence lets your game ship it. Vee's is VRM's public licence, to anyone. VRM
+animations are made with tools such as VRoid Studio, Blender's VRM add-on or VRM Posing Desktop,
+or written by a script as make_vrm.py does.
+
+
 
 
 
@@ -1685,6 +1839,31 @@ copyrighted by Live2D Inc." shown; no one may hand out the model files themselve
     l2dlip      An SE buffer (its number) whose sound opens the model's mouth.
     l2dwidth and l2dheight count when the model starts. doc/kagex.txt has the details
     ("Optional parameters for l2d", for KAG layers: [image flip=hiyori.l2d]).
+    3d          A 3D model or scene (template/system/GFX_Three.tjs), drawn by the krkrthreepp
+                plugin with OpenGL ES into a picture the screen's size with a transparent
+                background: a VRM avatar (.vrm) standing, blinking and playing a VRM animation;
+                a glTF model (.glb, .gltf) playing its own animation; or a scene built in script,
+                by the name KAGThreeScene gave it. The extension can be left out. Without the
+                plugin or OpenGL ES nothing shows (the console says why). An avatar the World
+                poses, gives faces and lip-syncs to a voice is a VRM character ("VRM Characters",
+                above). Options are given with `3d`, or later with `flipupdate`:
+                [prop flipupdate 3donce=hop]
+    3dwidth     Picture width. Default: the screen's.
+    3dheight    Picture height. Default: the screen's.
+    3dmotion    What goes on: a VRM animation (.vrma) for an avatar, a clip (number or name)
+                for a glTF model.
+    3donce      Plays one once, then what goes on; the trigger 3donce is sent when it ends
+                ([waittrig name=3donce]).
+    3dexpression  An avatar's expressions: name[:weight][,...]; empty for none.
+    3dblink     Whether an avatar blinks (default true).
+    3dlook      Whether an avatar's eyes follow the camera (default true).
+    3dlip       An SE buffer (its number) whose sound opens an avatar's mouth.
+    3dframe     bottom,top: what the picture shows, in metres from the ground.
+    3dcamera    x,y,z: the camera's place; 3dtarget x,y,z, what it looks at; 3dfov, degrees.
+    3dangle     A model's turn (degrees); 3dturn, degrees a second.
+    3dspeed     Playback speed (1.0: as made).
+    3dwidth and 3dheight count when it starts. doc/kagex.txt has the details ("Optional
+    parameters for 3d", for KAG layers: [image flip=vee.vrm]), and what not to do with lights.
 
 
 

@@ -480,6 +480,8 @@ Attributes
 
 				l2d: .l2d (Live2D models)
 
+				3d: .vrm .glb .gltf (3D models), or a scene built in script by its name
+
     movie   Equivalent to flip specification + fliptype:movie  * For compatibility
 
     fire    Equivalent to flip specification + fliptype:fire   * For compatibility
@@ -693,6 +695,122 @@ Attributes
 		starts the motion that goes on again; a motion played once isn't kept.
 
 		The layer demo (layer.ks) shows Hiyori on a layer.
+
+	Optional parameters for 3d (3D models and scenes, template/system/GFX_Three.tjs)
+
+		The krkrthreepp plugin (threepp, a C++ port of three.js) draws with OpenGL ES into a
+
+		picture that is read back into the layer 30 times a second, with a transparent
+
+		background (an ltOpaque layer becomes ltAlpha); the layer is placed, zoomed and turned
+
+		like any other. It draws:
+
+		  - a VRM avatar (.vrm, VRM 0.x or 1.0: VRoid Studio's and the like), standing at the
+
+		    centre, facing the camera, its eyes on it, framed whole: its VRM animation (.vrma),
+
+		    expressions and blinking, its mouth opening with a sound;
+
+		  - a glTF model (.glb, or .gltf with its files beside it), lit from above and in front,
+
+		    playing its own animations;
+
+		  - a scene built in script: KAGThreeScene("<name>", function(s) { ... }) registers a
+
+		    function that fills s.scene and places s.camera, with s.update called each frame
+
+		    and s.once for 3donce (GFX_Three.tjs says what s holds; data/main/Scenes3D.tjs is
+
+		    the sample's); [image flip=<name>] plays it.
+
+		Without the plugin or OpenGL ES (the Android, iOS and web builds, a GPU draw device) the layer
+
+		shows nothing (the console says why; 3donce's trigger still goes), and
+
+		KAGThreeCanDraw("<model or scene>") tells a script whether it can be drawn. When every
+
+		3D flip has ended, the trigger 3ddone is sent.
+
+		threepp keeps one set of light values for all the lit materials of a kind (glTF models'
+
+		materials, MeshStandardMaterial and the like) at krkrthreepp 78138f4, so two pictures
+
+		whose lit materials have different lights (another number of lights, a shadow) on the
+
+		screen at once, or one freed while another is drawn, crash the engine or stop the other
+
+		(UPSTREAM.md): show one such picture at a time, or give them the same lights (the
+
+		hemisphere light and the directional one a glTF model gets). A VRM avatar's MToon
+
+		materials and MeshBasicMaterial aren't affected. MSAA is off where the engine's
+
+		offscreen buffer can't take it (threeSamples; the console says so), so edges aren't
+
+		smoothed on the SDL engine.
+
+		3dwidth       Picture width. Default: the screen's.
+
+		3dheight      Picture height. Default: the screen's.
+
+		3dmotion      A VRM avatar's VRM animation that goes on (looping; with or without
+
+		              .vrma); a glTF model's clip, by number or name (Default: the first);
+
+		              a scene's, its script's to read (s.options).
+
+		3donce        Plays one once: a VRM animation, which fades in and back out into the
+
+		              one that goes on; a glTF clip; for a scene, its s.once. The trigger 3donce
+
+		              is sent when it ends ([waittrig name=3donce]), or a frame later when there
+
+		              is no such motion or 3D can't be drawn.
+
+		3dexpression  A VRM avatar's expressions: name[:weight][,...] (1 without a weight), by
+
+		              the avatar's names or VRM 1.0's (happy, sad, aa ... also find a VRM 0.x
+
+		              avatar's joy, sorrow, a ...). Empty for none.
+
+		3dblink       Whether a VRM avatar blinks (by itself, every few seconds). Default: true.
+
+		3dlook        Whether a VRM avatar's eyes follow the camera. Default: true.
+
+		3dlip         An SE buffer (its number) whose sound opens a VRM avatar's mouth (aa);
+
+		              empty for none. threeLipLevel (0.12) is the sound's level (RMS) that
+
+		              opens it all the way.
+
+		3dframe       bottom,top: what the picture shows of a model, in metres from the ground
+
+		              (the camera moves back to frame it). Default: a VRM avatar's feet to 0.3
+
+		              above its head bone; a glTF model 0 to 2.
+
+		3dcamera      x,y,z: where the camera is instead (metres); 3dtarget x,y,z what it looks
+
+		              at; 3dfov its field of view (degrees, 30). For a scene built in script
+
+		              these move its camera only when given.
+
+		3dangle       A model's turn about its upright axis (degrees).
+
+		3dturn        Degrees a second a model turns by.
+
+		3dspeed       Playback speed (1.0: as made).
+
+		3dwidth and 3dheight count when the flip starts; the others can be changed while it
+
+		plays ([layopt layer=1 3donce=vee_wave]). A save keeps the options, and a load starts
+
+		the motion that goes on again; a motion played once isn't kept.
+
+		The layer demo (layer.ks) shows a scene built in script, the glTF star and Vee, the
+
+		sample's VRM avatar (tools/assets/make_vrm.py), on layers.
 
 
 

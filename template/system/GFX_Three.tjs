@@ -1,0 +1,1019 @@
+// GFX_Three.tjs - 3D scenes, glTF models and VRM avatars, drawn into layers
+//
+// The krkrthreepp plugin is threepp, a C++ port of three.js (scenes, cameras, lights, materials,
+// glTF), with VRM avatars (VRM 0.x and 1.0: expressions, eye direction, VRM animations, spring
+// bones, MToon toon shading), under the Threepp namespace. It draws with OpenGL ES into an
+// offscreen buffer (the engine's GLCompositor) the size of a layer, which is read back into the
+// layer, as Effekseer's effects and Live2D's models are. This file has the window's 3D system
+// (KAGThreeOf) and the 3d flip type, which plays a model or a scene built in script on a layer;
+// World characters can be VRM avatars too (KAGEnvCharacterVRM.tjs; doc/world.txt, "VRM
+// Characters").
+//
+// Without the plugin or OpenGL ES (a GPU draw device), available is false, reason says why, and
+// the first use logs it once.
+
+// MSAA (multisample anti-aliasing) samples for the edges, 0 for none. The engine's offscreen
+// buffer is BGRA where the GPU has BGRA textures, and OpenGL ES copies a multisampled buffer only
+// into one of the same format (threepp's is RGBA): nothing came out (UPSTREAM.md). So the window's
+// first use draws a test picture with it, and turns it off when that comes back empty
+var threeSamples = 4;
+
+// The window's 3D system: a GLCompositor shared by every 3D layer and character, made on first
+// use, each of which has a Threepp.GLRenderer of its own (newRenderer): renderers shared between
+// scenes crashed the engine when one of the scenes had shadows (threepp's light uniforms). It's a
+// KAG plugin so that the window releases the GL objects while its OpenGL context still exists
+class KAGThree extends KAGPlugin
+{
+	var window;
+	var compositor;
+	var available = false;
+	var reason = "";     // why not, when not available
+	var samples = 0;     // the MSAA samples in use
+	var animations = %[];// placed path => Threepp.VRMAnimation, shared (they don't change)
+	var users = [];      // the flips and characters drawing, let go of with the system
+	var timings = %[];   // how long the first uses took (ms): the renderer, and each model read
+	var drawArgs = %[];  // the renderer, scene and camera drawScene draws
+
+	function KAGThree(win) {
+		super.KAGPlugin();
+		window = win;
+		try {
+			if (typeof global.GLCompositor == "undefined")
+				throw new Exception("this engine has no GLCompositor");
+			KAGLinkPlugin("plugin/krkrthreepp.dll") if (typeof global.Threepp == "undefined");
+			if (typeof global.Threepp == "undefined")
+				throw new Exception("the krkrthreepp plugin isn't there");
+			var t0 = System.getTickCount();
+			compositor = new GLCompositor(win);
+			if (!compositor.GLGetProcAddress)
+				throw new Exception("the draw device has no OpenGL ES context");
+			// threepp draws premultiplied: the layers are ltAlpha
+			compositor.unpremultiply = true;
+			compositor.makeCurrent();
+			available = true;
+			checkSamples();
+			timings.renderer = System.getTickCount() - t0;
+		} catch (e) {
+			reason = e.message;
+			dm("3D models and scenes are unavailable: " + reason);
+			release();
+		}
+	}
+
+	function finalize() {
+		release();
+		super.finalize(...);
+	}
+
+	function release() {
+		// the GL objects go in the context they were made in
+		try { compositor.makeCurrent() if compositor !== void; } catch {}
+		var list = [];
+		list.assign(users);
+		for (var i = list.count - 1; i >= 0; i--) {
+			try { list[i].releaseThree() if isvalid list[i]; } catch {}
+		}
+		users.clear();
+		list.assign(animations);
+		for (var i = 1; i < list.count; i += 2) {
+			try { invalidate list[i]; } catch {}
+		}
+		(Dictionary.clear incontextof animations)();
+		try { invalidate compositor if compositor !== void; } catch {}
+		compositor = void;
+		available = false;
+	}
+
+	// a flip or a character that draws (its releaseThree lets go of its objects)
+	function addUser(u) {
+		users.remove(u);
+		users.add(u);
+	}
+
+	function removeUser(u) {
+		users.remove(u);
+	}
+
+	/**
+	 * A renderer for a 3D layer or character (Threepp.GLRenderer), with a transparent background;
+	 * its owner lets it go with releaseRenderer
+	 */
+	function newRenderer() {
+		compositor.makeCurrent();
+		var r = new Threepp.GLRenderer(compositor, 16, 16);
+		r.setClearColor(0x000000, 0.0);
+		r.setSampleCount(samples > 1 ? samples : 0);
+		return r;
+	}
+
+	function releaseRenderer(r) {
+		if (r === void || !isvalid r) return;
+		makeCurrent();
+		try { r.dispose(); } catch {}
+		invalidate r;
+	}
+
+	// MSAA where it works: a frame cleared to white through the multisampled buffer, which comes
+	// back empty where the copy out of it fails
+	function checkSamples() {
+		samples = 0;
+		if (threeSamples <= 1) return;
+		var renderer = newRenderer();
+		renderer.setSampleCount(threeSamples);
+		var ok = false;
+		var l = new global.Layer(window, window.primaryLayer);
+		var scene = new Threepp.Scene();
+		var camera = new Threepp.PerspectiveCamera(30, 1, 0.1, 10);
+		try {
+			l.setImageSize(4, 4);
+			l.fillRect(0, 0, 4, 4, 0);
+			renderer.setClearColor(0xffffff, 1.0);
+			render(l, renderer, scene, camera);
+			ok = l.getMaskPixel(1, 1) > 0;
+		} catch (e) {
+			dm("3D: the MSAA check failed: " + e.message);
+		}
+		invalidate camera;
+		invalidate scene;
+		invalidate l;
+		releaseRenderer(renderer);
+		if (ok) {
+			samples = threeSamples;
+		} else {
+			dm(@"3D: MSAA (${threeSamples} samples) draws nothing with this engine's offscreen buffer: drawn without it");
+		}
+	}
+
+	// draws a scene (the compositor calls back with this = the compositor)
+	function drawScene(w, h, a) {
+		a.renderer.onBeginScene(w, h);
+		a.renderer.render(a.scene, a.camera);
+		a.renderer.onEndScene();
+	}
+
+	/**
+	 * Draws a scene through a camera with a renderer (newRenderer's) into layer, the size of its
+	 * image
+	 */
+	function render(layer, renderer, scene, camera) {
+		drawArgs.renderer = renderer;
+		drawArgs.scene = scene;
+		drawArgs.camera = camera;
+		var t0 = timings.draw === void ? System.getTickCount() : void;
+		try {
+			compositor.capture(layer, drawScene, drawArgs, 0);
+		} catch (e) {
+			drawArgs.renderer = drawArgs.scene = drawArgs.camera = void;
+			throw e;
+		}
+		drawArgs.renderer = drawArgs.scene = drawArgs.camera = void;
+		if (t0 !== void) timings.draw = System.getTickCount() - t0;
+	}
+
+	// makes the GL context current, before GL objects are let go of
+	function makeCurrent() {
+		try { compositor.makeCurrent() if available; } catch {}
+	}
+
+	/**
+	 * A file for a name: the name as given, or with one of the extensions; "" when there's none
+	 */
+	function findFile(name, exts*) {
+		if (name === void || name == "") return "";
+		var fn = getExistFileNameAutoExtFill(name, exts*);
+		return fn !== void ? fn : "";
+	}
+
+	/**
+	 * Reads a VRM avatar (its own: an avatar has its pose and expressions); void when it can't be
+	 */
+	function loadVRM(storage) {
+		if (!available) return void;
+		var path = Storages.getPlacedPath(storage);
+		if (path == "") return void;
+		var loader = new Threepp.VRMLoader();
+		var t0 = System.getTickCount();
+		var vrm;
+		try {
+			vrm = loader.loadStorage(path);
+		} catch (e) {
+			dm(@"VRM model ${storage} can't be read: ${e.message}");
+		}
+		invalidate loader;
+		timings["model " + Storages.extractStorageName(path)] = System.getTickCount() - t0;
+		if (vrm === void) dm(@"VRM model ${storage} can't be read (not a VRM?)");
+		return vrm;
+	}
+
+	/**
+	 * A VRM animation (.vrma), read once and shared; void when it can't be read
+	 */
+	function animation(storage) {
+		if (!available) return void;
+		var path = Storages.getPlacedPath(storage);
+		if (path == "") return void;
+		var anim = animations[path];
+		if (anim === void) {
+			var loader = new Threepp.VRMAnimationLoader();
+			try {
+				anim = loader.loadStorage(path);
+			} catch (e) {
+				dm(@"VRM animation ${storage} can't be read: ${e.message}");
+			}
+			invalidate loader;
+			if (anim === void) return void;
+			animations[path] = anim;
+		}
+		return anim;
+	}
+
+	/**
+	 * Reads a glTF model (.glb, or .gltf with its files beside it); void when it can't be
+	 */
+	function loadGLTF(storage) {
+		if (!available) return void;
+		var path = Storages.getPlacedPath(storage);
+		if (path == "") return void;
+		var loader = new Threepp.GLTFLoader();
+		var t0 = System.getTickCount();
+		var model;
+		try {
+			model = loader.loadStorage(path);
+		} catch (e) {
+			dm(@"glTF model ${storage} can't be read: ${e.message}");
+		}
+		invalidate loader;
+		timings["model " + Storages.extractStorageName(path)] = System.getTickCount() - t0;
+		return model;
+	}
+}
+
+// the window's KAGThree, made on first use
+function KAGThreeOf(win) {
+	if (typeof win.threeSystem == "undefined" || win.threeSystem === void) {
+		var sys = new KAGThree(win);
+		win.threeSystem = sys;
+		win.addPlugin(sys) if (typeof win.addPlugin != "undefined");
+	}
+	return win.threeSystem;
+}
+
+/**
+ * Whether 3D can be drawn here: the krkrthreepp plugin and OpenGL ES, and the file when one is
+ * named (a model, with or without its extension, or a scene built in script)
+ */
+function KAGThreeCanDraw(name = "") {
+	if (typeof global.kag == "undefined") return false;
+	var sys = KAGThreeOf(kag);
+	if (!sys.available) return false;
+	return name == "" || KAGThreeScenes[name] !== void || sys.findFile(name, "vrm", "glb", "gltf") != "";
+}
+
+// The scenes built in script, by name (KAGThreeScene)
+var KAGThreeScenes = %[];
+
+/**
+ * Registers a scene built in script, which the 3d flip plays by its name
+ * ([image layer=1 flip=<name>], [newlay name=... 3d=<name>]). The builder is called with a
+ * dictionary s when the flip starts: s.scene (a Threepp.Scene) and s.camera (a
+ * Threepp.PerspectiveCamera at 0, 1.6, 6 looking at 0, 1, 0, its aspect the picture's) to fill,
+ * s.width and s.height (the picture's), s.options (the flip's options: 3dmotion and the like, and
+ * any of the game's own), s.renderer (the flip's Threepp.GLRenderer, which it may set up:
+ * shadows), s.system (KAGThreeOf) and s.flip. It may set:
+ *   s.update = function(s, dt) { ... }   // before each frame: dt seconds since the last, s.time
+ *                                        // seconds since the start (times 3dspeed)
+ *   s.once = function(s, name) { ...; return seconds; }  // 3donce=<name>: plays something for
+ *                                        // that long; 0 or void when it can't (l2donce's trigger
+ *                                        // 3donce goes when it ends)
+ *   s.release = function(s) { ... }      // when the flip ends
+ * The Threepp objects it keeps in s are let go of when the flip ends.
+ */
+function KAGThreeScene(name, builder) {
+	KAGThreeScenes[name] = builder;
+}
+
+// a function to call: one written outside any object (whose context is null) would run with the
+// dictionary it's called through as this, where every global (Threepp, Math) is void, so it runs
+// in the global object's
+function threeFunction(f) {
+	if (typeof f != "Object" || f === null) return void;
+	if (typeof Scripts.getObjectContext != "undefined" && Scripts.getObjectContext(f) === null) return f incontextof global;
+	return f;
+}
+
+// numbers from "x,y,z": an array of n, or void when there aren't n
+function threeNumbers(v, n) {
+	if (v === void || (string)v == "") return void;
+	var list = ((string)v).split(",");
+	if (list.count < n) return void;
+	var ret = [];
+	for (var i = 0; i < n; i++) ret[i] = +list[i];
+	return ret;
+}
+
+// "<name>[:<weight>],...": %[ name:weight ]; a name alone is 1
+function threeWeights(v) {
+	var ret = %[];
+	if (v === void) return ret;
+	var list = ((string)v).split(",");
+	for (var i = 0; i < list.count; i++) {
+		var pair = list[i].split(":");
+		var key = pair[0].trim();
+		if (key == "") continue;
+		ret[key] = pair.count >= 2 ? +pair[1] : 1.0;
+	}
+	return ret;
+}
+
+/**
+ * A VRM's expressions by name, for the names the VRM 1.0 presets go by: a VRM 0.x avatar's
+ * (a, i, u, e, o, joy, sorrow, fun, blink_l ...) are found for them too
+ */
+class KAGThreeExpressions
+{
+	var names = %[];    // lower-case name => the avatar's
+
+	var aliases = %[
+		aa : [ "aa", "a" ], ih : [ "ih", "i" ], ou : [ "ou", "u" ], ee : [ "ee", "e" ], oh : [ "oh", "o" ],
+		happy : [ "happy", "joy" ], sad : [ "sad", "sorrow" ], relaxed : [ "relaxed", "fun" ],
+		blinkleft : [ "blinkleft", "blink_l" ], blinkright : [ "blinkright", "blink_r" ],
+		];
+
+	function KAGThreeExpressions(vrm) {
+		for (var i = 0; i < vrm.getExpressionCount(); i++) {
+			var n = vrm.getExpressionName(i);
+			names[n.toLowerCase()] = n if n != "";
+		}
+	}
+
+	// the avatar's name for an expression, void when it has none
+	function find(name) {
+		var key = ((string)name).toLowerCase();
+		var n = names[key];
+		if (n !== void) return n;
+		var list = aliases[key];
+		for (var i = 0; list !== void && i < list.count; i++) {
+			n = names[list[i]];
+			if (n !== void) return n;
+		}
+		return void;
+	}
+}
+
+// ----------------------------------------------------------------
+// A model or a scene on a layer: the 3d flip type
+//
+//   [image layer=1 page=fore flip=vee.vrm 3dmotion=vee_idle visible=true]     (KAG layers)
+//   [newlay name=prop 3d=star3d.glb 3dwidth=600 3dheight=600 show]             (World layers)
+//
+// The flip draws every frameInterval ms into a picture of 3dwidth x 3dheight (the screen's size
+// unless they say otherwise), with a transparent background, and the layers showing it are
+// placed, zoomed and turned like any other. What it draws is:
+//  - a VRM avatar (.vrm): standing at the centre, facing the camera, framed whole (3dframe), its
+//    VRM animation (3dmotion, a .vrma, looping; 3donce plays one once), expressions
+//    (3dexpression), blinking (3dblink), eyes on the camera (3dlook), its mouth opening with a
+//    sound buffer's level (3dlip);
+//  - a glTF model (.glb, .gltf): lit from above and in front, its own animation (3dmotion: a clip
+//    by number or name, the first by default);
+//  - a scene built in script, by the name KAGThreeScene registered.
+// 3dcamera, 3dtarget and 3dfov place the camera; 3dangle and 3dturn turn a model.
+// doc/kagex.txt ("Optional parameters for 3d") and doc/world.txt (3d).
+// ----------------------------------------------------------------
+
+// The level (RMS) of a sound at which 3dlip opens the mouth all the way
+var threeLipLevel = 0.12;
+
+class ThreeFlip extends GenericFlip, Layer
+{
+	var FLIP  = global.GenericFlip;
+	var SUPER = global.Layer;
+
+	var frameInterval = 33;     // ms between the frames drawn (30 a second)
+	var motionFade = 400;       // ms a VRM animation fades into the next over
+	var mouthSmooth = 50;       // ms the mouth takes to follow the sound (3dlip)
+	var blinkTime = 150;        // ms a blink takes (3dblink)
+
+	var system;
+	var file = "";
+	var kind;                   // "vrm", "gltf" or "scene"
+	var options = %[];          // the options in effect (flipStore keeps them)
+	// options kept as the flip's state; 3donce is an action
+	var stateOptions = [ "3dmotion", "3dexpression", "3dblink", "3dlook", "3dlip", "3dangle", "3dturn",
+						 "3dspeed", "3dcamera", "3dtarget", "3dfov", "3dframe" ];
+
+	var canvasWidth;            // the picture's size, as asked (the read-back may round it up)
+	var canvasHeight;
+	var lastTick;
+	var frames = 0;             // frames drawn
+	var time = 0.0;             // seconds played (times 3dspeed)
+	var speed = 1.0;
+	var angle = 0.0;            // the model's turn (degrees)
+	var turn = 0.0;             // degrees a second
+
+	var renderer;               // Threepp.GLRenderer
+	var scene;                  // Threepp.Scene
+	var camera;                 // Threepp.PerspectiveCamera
+	var holder;                 // the group the model stands in (turned by 3dangle)
+	var lights = [];
+	var vrm;                    // Threepp.VRM
+	var expressions;            // KAGThreeExpressions of it
+	var shown = %[];            // the expressions it was given (name => weight)
+	var model;                  // Threepp.GLTFModel
+	var animator;               // its Threepp.ModelAnimator
+	var action;                 // the clip playing
+	var ctx;                    // a scene built in script: what its builder was given
+
+	var motionSpec;             // the motion that goes on, as given
+	var motionAnim;             // a VRM's: its animation, and where it is in it
+	var motionTime = 0.0;
+	var fromAnim;               // the animation fading out (into the one playing)
+	var fromTime = 0.0;
+	var fadeLeft = 0.0;         // ms of that fade left
+	var once;                   // a motion to play once (its spec), until it starts
+	var oncePlaying = false;
+	var onceAnim;               // a VRM's animation playing once, or how long one plays
+	var onceLeft = 0.0;         // seconds of it left
+	var onceDone = 0;           // motions played once that have ended (each sends 3donce)
+
+	var blinkNext;              // when the next blink starts (ms of play)
+	var blinkAt;                // when the one going started
+	var lipBuffer;              // the sound buffer the mouth follows (3dlip)
+	var voice = 0.0;            // how open the mouth is (0 to 1), on its way to the sound's level
+	var missing = %[];          // what the model doesn't have, logged once
+	var unavailable = false;    // no way to draw: it shows nothing, and 3donce ends at once
+
+	function ThreeFlip(win) {
+		FLIP.GenericFlip(win);
+		SUPER.Layer(win, win.primaryLayer);
+		name = "ThreeFlip";
+		system = KAGThreeOf(win);
+	}
+
+	function finalize() {
+		releaseThree();
+		SUPER.finalize(...);
+		FLIP.finalize();
+	}
+
+	// lets go of the scene and everything in it (the system calls it when it goes)
+	function releaseThree() {
+		if (system !== void && isvalid system) {
+			system.makeCurrent();
+			system.removeUser(this);
+		}
+		if (ctx !== void) {
+			var f = threeFunction(ctx.release);
+			if (f !== void) {
+				try { f(ctx); } catch (e) { dm(@"3D scene ${file}: release: ${e.message}"); }
+			}
+			// the objects the builder kept go now, while the GL context is current (cleared, as
+			// something may still hold the dictionary)
+			(Dictionary.clear incontextof ctx)();
+			ctx = void;
+		}
+		action = void;
+		try { invalidate animator if animator !== void; } catch {}
+		try { invalidate model if model !== void; } catch {}
+		try { invalidate vrm if vrm !== void; } catch {}
+		for (var i = lights.count - 1; i >= 0; i--) {
+			try { invalidate lights[i]; } catch {}
+		}
+		lights.clear();
+		try { invalidate holder if holder !== void; } catch {}
+		try { invalidate camera if camera !== void; } catch {}
+		try { invalidate scene if scene !== void; } catch {}
+		if (renderer !== void) {
+			if (system !== void && isvalid system) system.releaseRenderer(renderer);
+			else try { invalidate renderer; } catch {}
+		}
+		animator = model = vrm = holder = camera = scene = renderer = void;
+		expressions = void;
+		motionAnim = fromAnim = onceAnim = void;
+	}
+
+	// a motion played once is over (or didn't start): 3donce, for [waittrig name=3donce]
+	function onceEnded() {
+		onceDone++;
+		window.trigger("3donce");
+	}
+
+	// ends the flip with nothing showing
+	function finish() {
+		releaseThree();
+		if (once !== void || oncePlaying) {
+			once = void;
+			oncePlaying = false;
+			onceEnded();
+		}
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		showFrame();
+		flipStop();
+	}
+
+	function showFrame() {
+		for (var i = flipLayers.count - 1; i >= 0; i--) {
+			var lay = flipLayers[i];
+			lay.assignImagesForMovie(this);
+			// the picture has an alpha channel: an opaque layer would show it on black
+			lay.type = ltAlpha if (lay.type == ltOpaque);
+		}
+	}
+
+	function logOnce(key, message) {
+		if (missing[key] !== void) return;
+		missing[key] = true;
+		dm(@"3D ${file}: ${message}");
+	}
+
+	function flipStart(storage, elm) {
+		releaseThree();
+		elm = %[] if (elm === void);
+		file = storage;
+		name = "3D:" + storage;
+		(Dictionary.clear incontextof options)();
+		(Dictionary.clear incontextof shown)();
+		(Dictionary.clear incontextof missing)();
+		motionSpec = once = void;
+		oncePlaying = false;
+		onceLeft = motionTime = fromTime = fadeLeft = 0.0;
+		lipBuffer = void;
+		voice = 0.0;
+		speed = 1.0;
+		angle = turn = 0.0;
+		time = 0.0;
+		lastTick = void;
+		frames = 0;
+		blinkNext = blinkAt = void;
+		unavailable = false;
+
+		var prim = window.primaryLayer;
+		var w = elm["3dwidth"]  !== void ? (int)+elm["3dwidth"]  : prim.width;
+		var h = elm["3dheight"] !== void ? (int)+elm["3dheight"] : prim.height;
+		w = 1 if w < 1;
+		h = 1 if h < 1;
+		canvasWidth = w;
+		canvasHeight = h;
+		setImageSize(w, h);
+		setSizeToImageSize();
+		fillRect(0, 0, w, h, 0);
+
+		// what it is: a scene built in script, a VRM or a glTF model
+		var fn = "";
+		if (KAGThreeScenes[storage] !== void) {
+			kind = "scene";
+		} else {
+			fn = system.findFile(storage, "vrm", "glb", "gltf");
+			if (fn == "") throw new Exception(@"3D model ${storage} not found");
+			var ext = Storages.extractStorageExt(fn).toLowerCase();
+			kind = ext == ".vrm" ? "vrm" : "gltf";
+		}
+		if (elm["3donce"] !== void) {
+			once = elm["3donce"];
+			// a World layer passes every option it was given each time: play it once
+			delete elm["3donce"];
+		}
+		// no way to draw (the console said why, as the window's 3D system was made): the layer
+		// shows nothing, and stays, so that a motion played once still sends 3donce, a frame
+		// later, and [layopt 3donce=...][waittrig name=3donce] goes on
+		if (!system.available) {
+			unavailable = true;
+			setStateOptions(elm);
+			showFrame();
+			return;
+		}
+
+		renderer = system.newRenderer();
+		scene = new Threepp.Scene();
+		camera = new Threepp.PerspectiveCamera(30, (real)w / h, 0.05, 200);
+		holder = new Threepp.Group();
+		scene.add(holder);
+		system.addUser(this);
+		if (kind == "vrm") {
+			vrm = system.loadVRM(fn);
+			if (vrm === void) {
+				releaseThree();
+				throw new Exception(@"VRM model ${storage} can't be read");
+			}
+			holder.add(vrm.getScene());
+			expressions = new KAGThreeExpressions(vrm);
+			// MToon lights itself (a light fixed to the camera); other materials take these
+			addLights(0.6, 1.8);
+		} else if (kind == "gltf") {
+			model = system.loadGLTF(fn);
+			if (model === void) {
+				releaseThree();
+				throw new Exception(@"glTF model ${storage} can't be read");
+			}
+			holder.add(model.getScene());
+			if (model.getAnimationCount() > 0) animator = new Threepp.ModelAnimator(model.getScene());
+			addLights(1.0, 2.5);
+		} else {
+			camera.setPosition(0, 1.6, 6);
+			camera.lookAt(0, 1, 0);
+			ctx = %[ scene:scene, camera:camera, renderer:renderer, width:w, height:h, options:options, system:system, flip:this, time:0.0 ];
+			try {
+				threeFunction(KAGThreeScenes[storage])(ctx);
+			} catch (e) {
+				releaseThree();
+				throw new Exception(@"3D scene ${storage} can't be built: ${e.message}");
+			}
+		}
+		setStateOptions(elm);
+		if (vrm !== void) {
+			// the hair and skirt at rest in the first pose
+			step(0);
+			vrm.resetSpringBones();
+		}
+		// the first picture now: a layer shown for a transition has it at once
+		drawFrame(0);
+	}
+
+	function addLights(ambient, key) {
+		var amb = new Threepp.HemisphereLight(0xffffff, 0x9088c0, ambient);
+		scene.add(amb);
+		lights.add(amb);
+		var dir = new Threepp.DirectionalLight(0xffffff, key);
+		dir.setPosition(1.5, 3, 4);
+		scene.add(dir);
+		lights.add(dir);
+	}
+
+	function flipSetOptions(elm) {
+		if (elm === void) return;
+		if (elm["3donce"] !== void) {
+			// it starts with the next frame (and ends there when it can't): 3donce goes after the
+			// tags that follow, a [waittrig name=3donce] among them, have run
+			once = elm["3donce"];
+			delete elm["3donce"];
+		}
+		setStateOptions(elm);
+	}
+
+	function setStateOptions(elm) {
+		for (var i = stateOptions.count - 1; i >= 0; i--) {
+			var key = stateOptions[i];
+			options[key] = elm[key] if (elm[key] !== void);
+		}
+		speed = options["3dspeed"] !== void ? +options["3dspeed"] : 1.0;
+		speed = 0 if speed < 0;
+		// the turn as given (where 3dturn has turned it to, until it's given again)
+		if (elm["3dangle"] !== void || frames == 0) {
+			angle = options["3dangle"] !== void ? +options["3dangle"] : 0.0;
+		}
+		turn = options["3dturn"] !== void ? +options["3dturn"] : 0.0;
+		if (scene === void) return; // kept for a save all the same
+		var spec = options["3dmotion"] !== void ? (string)options["3dmotion"] : "";
+		if (spec != motionSpec || motionSpec === void) setMotion(spec);
+		placeCamera();
+		if (vrm !== void) {
+			setLip(options["3dlip"]);
+			if (options["3dblink"] !== void && !+options["3dblink"]) blinkNext = blinkAt = void;
+		}
+	}
+
+	// the motion that goes on: a VRM animation, or one of a glTF model's clips
+	function setMotion(spec) {
+		motionSpec = spec;
+		if (vrm !== void) {
+			var anim;
+			if (spec != "") {
+				var fn = system.findFile(spec, "vrma");
+				anim = fn != "" ? system.animation(fn) : void;
+				if (anim === void) logOnce("motion " + spec, @"no VRM animation ${spec}");
+			}
+			if (anim !== motionAnim) {
+				fadeFrom();
+				motionAnim = anim;
+				motionTime = 0.0;
+			}
+		} else if (model !== void) {
+			playClip(spec, true);
+		}
+	}
+
+	// the pose playing fades out into the animation that starts
+	function fadeFrom() {
+		if (oncePlaying && onceAnim !== void) {
+			fromAnim = onceAnim;
+			fromTime = onceAnim.getDuration() - onceLeft;
+		} else {
+			fromAnim = motionAnim;
+			fromTime = motionTime;
+		}
+		fadeLeft = fromAnim !== void && frames > 0 ? motionFade : 0;
+	}
+
+	// a glTF model's clip by number or name: its index, -1 when it has none
+	function clipIndex(spec) {
+		if (model === void) return -1;
+		var n = model.getAnimationCount();
+		if (spec === void || (string)spec == "") return n > 0 ? 0 : -1;
+		if (/^[0-9]+$/.test((string)spec)) return +spec < n ? +spec : -1;
+		for (var i = 0; i < n; i++) if (model.getAnimationName(i) == (string)spec) return i;
+		return -1;
+	}
+
+	// plays a glTF clip (looping, or once); true when it has it
+	function playClip(spec, loop) {
+		var i = clipIndex(spec);
+		if (animator === void || i < 0) {
+			if (spec !== void && (string)spec != "") logOnce("clip " + spec, @"no animation ${spec}");
+			return false;
+		}
+		animator.stopAll();
+		action = animator.clipAction(model, i);
+		action.setLoop(loop ? Threepp.Loop_Repeat : Threepp.Loop_Once, loop ? -1 : 1);
+		action.reset();
+		action.play();
+		if (!loop) {
+			onceLeft = model.getAnimationDuration(i);
+		}
+		return true;
+	}
+
+	// the camera: where 3dcamera says, looking at 3dtarget; else framing the model (3dframe:
+	// "<bottom>,<top>" in metres, a VRM's from its feet to above its head by default), from in
+	// front, with a field of view of 3dfov degrees (30)
+	function placeCamera() {
+		var fov = options["3dfov"] !== void ? +options["3dfov"] : 30;
+		var pos = threeNumbers(options["3dcamera"], 3);
+		var target = threeNumbers(options["3dtarget"], 3);
+		if (kind == "scene" && pos === void && target === void && options["3dfov"] === void) return;
+		camera.fov = fov;
+		camera.aspect = (real)canvasWidth / canvasHeight;
+		if (pos === void) {
+			var frame = threeNumbers(options["3dframe"], 2);
+			if (frame === void) frame = defaultFrame();
+			var mid = (frame[0] + frame[1]) / 2;
+			var half = (frame[1] - frame[0]) / 2;
+			half = 0.05 if half < 0.05;
+			var dist = half / Math.tan(fov * Math.PI / 360);
+			pos = [ 0, mid, dist ];
+			target = [ 0, mid, 0 ] if target === void;
+		}
+		target = [ 0, pos[1], 0 ] if target === void;
+		camera.setPosition(pos[0], pos[1], pos[2]);
+		camera.lookAt(target[0], target[1], target[2]);
+		camera.updateProjectionMatrix();
+		if (vrm !== void && vrm.hasLookAt()) {
+			if (options["3dlook"] === void || +options["3dlook"]) vrm.setLookAtTarget(pos[0], pos[1], pos[2]);
+			else vrm.clearLookAtTarget();
+		}
+	}
+
+	// the part of the model shown, bottom to top (metres): a VRM's feet to 0.3 above its head
+	// bone, where a VRoid's head ends; else two metres from the ground
+	function defaultFrame() {
+		if (vrm !== void) {
+			try {
+				var head = vrm.getBoneNode("head");
+				if (head !== void) {
+					vrm.getScene().updateMatrixWorld(true);
+					var p = head.getWorldPosition();
+					return [ -0.05, p.y + 0.3 ];
+				}
+			} catch {}
+		}
+		return [ 0, 2 ];
+	}
+
+	// the SE buffer (its number) whose sound opens the mouth, or none ("")
+	function setLip(v) {
+		var b;
+		if (v !== void && (string)v != "") {
+			var n = (int)+v;
+			if (typeof window.se != "undefined" && n >= 0 && n < window.se.count) {
+				b = window.se[n];
+			} else {
+				logOnce("lip " + v, @"no sound buffer ${v} for 3dlip");
+			}
+			if (b !== void && typeof b.getSoundLevel == "undefined") {
+				logOnce("lip", "this engine can't read a sound's level (WaveSoundBuffer.getSoundLevel) for 3dlip");
+				b = void;
+			}
+		}
+		// the level is read from the buffer's visualization data, on before the sound plays
+		b.useVisBuffer = true if (b !== void);
+		lipBuffer = b;
+		if (b === void) voice = 0.0;
+	}
+
+	// sets a VRM's expression (by its name, or a VRM 1.0 preset's)
+	function setExpression(name, w) {
+		var n = expressions.find(name);
+		if (n === void) {
+			logOnce("expression " + name, @"no expression ${name}");
+			return;
+		}
+		vrm.setExpression(n, w);
+	}
+
+	/**
+	 * Moves the model or scene on by dt ms
+	 */
+	function step(dt) {
+		var sec = dt / 1000.0 * speed;
+		time += sec;
+		angle += turn * sec;
+		holder.setRotation(0, angle * Math.PI / 180, 0) if holder !== void;
+
+		// a motion played once: it starts, or it didn't start (3donce at once)
+		if (once !== void) {
+			var spec = (string)once;
+			once = void;
+			if (startOnce(spec)) {
+				oncePlaying = true;
+			} else {
+				onceEnded();
+			}
+		} else if (oncePlaying) {
+			onceLeft -= sec;
+			if (onceLeft <= 0) {
+				onceLeft = 0;
+				if (vrm !== void) {
+					// it fades out into the motion that goes on
+					fadeFrom();
+					onceAnim = void;
+				}
+				oncePlaying = false;
+				if (model !== void) playClip(motionSpec, true);
+				onceEnded();
+			}
+		}
+
+		if (vrm !== void) {
+			stepVRM(dt, sec);
+		} else if (animator !== void) {
+			animator.update(sec);
+		} else if (ctx !== void) {
+			ctx.time = time;
+			var f = threeFunction(ctx.update);
+			f(ctx, sec) if f !== void;
+		}
+	}
+
+	// starts a motion played once: true when it has one
+	function startOnce(spec) {
+		if (vrm !== void) {
+			var fn = system.findFile(spec, "vrma");
+			var anim = fn != "" ? system.animation(fn) : void;
+			if (anim === void) {
+				logOnce("motion " + spec, @"no VRM animation ${spec}");
+				return false;
+			}
+			fadeFrom();
+			onceAnim = anim;
+			onceLeft = anim.getDuration();
+			return onceLeft > 0;
+		}
+		if (model !== void) {
+			return playClip(spec, false);
+		}
+		var f = ctx !== void ? threeFunction(ctx.once) : void;
+		if (f !== void) {
+			var t = f(ctx, spec);
+			onceLeft = t !== void ? +t : 0;
+			return onceLeft > 0;
+		}
+		return false;
+	}
+
+	function stepVRM(dt, sec) {
+		// the pose: the motion that goes on, or the one played once; the one before fading out
+		if (motionAnim !== void) {
+			var d = motionAnim.getDuration();
+			motionTime += sec;
+			motionTime %= d if d > 0;
+		}
+		var anim = oncePlaying ? onceAnim : motionAnim;
+		var at = oncePlaying ? onceAnim.getDuration() - onceLeft : motionTime;
+		if (fadeLeft > 0 && fromAnim !== void) {
+			fromTime += sec;
+			var fd = fromAnim.getDuration();
+			fromTime %= fd if fd > 0 && fromAnim === motionAnim;
+			vrm.applyAnimation(fromAnim, fromTime);
+			fadeLeft -= dt;
+			var k = 1.0 - (fadeLeft > 0 ? fadeLeft / motionFade : 0.0);
+			if (anim !== void) vrm.applyAnimationBlend(anim, at, k);
+			else vrm.blendToRest(k);
+		} else if (anim !== void) {
+			vrm.applyAnimation(anim, at);
+		}
+
+		// the expressions given, a blink, and the mouth
+		var want = threeWeights(options["3dexpression"]);
+		var keys = [];
+		keys.assign(shown);
+		for (var i = 0; i < keys.count; i += 2) {
+			if (want[keys[i]] === void) setExpression(keys[i], 0);
+		}
+		(Dictionary.assign incontextof shown)(want);
+		keys.assign(want);
+		for (var i = 0; i < keys.count; i += 2) setExpression(keys[i], keys[i + 1]);
+
+		var now = time * 1000;
+		if (options["3dblink"] === void || +options["3dblink"]) {
+			blinkNext = now + 1500 + Math.random() * 3500 if blinkNext === void;
+			if (blinkAt === void && now >= blinkNext) blinkAt = now;
+			var b = 0.0;
+			if (blinkAt !== void) {
+				var u = (now - blinkAt) / blinkTime;
+				if (u >= 1) {
+					blinkAt = void;
+					blinkNext = now + 2000 + Math.random() * 4000;
+				} else {
+					b = u < 0.5 ? u * 2 : (1 - u) * 2;
+				}
+			}
+			if (want.blink === void && expressions.find("blink") !== void) vrm.setExpression(expressions.find("blink"), b);
+		}
+
+		if (lipBuffer !== void && isvalid lipBuffer) {
+			var level = 0.0;
+			if (lipBuffer.status == "play") {
+				try {
+					var ahead = (int)(lipBuffer.frequency * frameInterval / 2000);
+					level = lipBuffer.getSoundLevel(ahead).rms;
+				} catch {}
+			}
+			var target = threeLipLevel > 0 ? level / threeLipLevel : 0.0;
+			target = 1.0 if target > 1.0;
+			voice = mouthSmooth <= 0 || dt >= mouthSmooth ? target : voice + (target - voice) * dt / mouthSmooth;
+			var aa = expressions.find("aa");
+			if (aa !== void && want.aa === void) vrm.setExpression(aa, voice);
+		}
+
+		// the rig, the expressions, the eyes and the spring bones
+		vrm.update(sec > 0.1 ? 0.1 : sec);
+	}
+
+	function drawFrame(dt) {
+		try {
+			step(dt);
+			system.render(this, renderer, scene, camera);
+		} catch (e) {
+			dm(@"3D ${file} stopped: ${e.message}");
+			finish();
+			return false;
+		}
+		frames++;
+		showFrame();
+		return true;
+	}
+
+	function flipUpdate(tick) {
+		if (unavailable) {
+			if (once !== void) {
+				once = void;
+				onceEnded();
+			}
+			return;
+		}
+		if (scene === void || !isvalid scene || !system.available) {
+			scene = void;
+			finish();
+			return;
+		}
+		lastTick = tick - frameInterval if (lastTick === void);
+		var dt = tick - lastTick;
+		if (dt < frameInterval) return;
+		lastTick = tick;
+		dt = 100 if (dt > 100);   // after a pause, from where it was
+		drawFrame(dt);
+	}
+
+	function flipStore(dic) {
+		// a motion playing once isn't kept
+		if (dic === void || file == "") return;
+		dic.file    = file;
+		dic.width   = canvasWidth;
+		dic.height  = canvasHeight;
+		dic.options = %[];
+		(Dictionary.assign incontextof dic.options)(options);
+	}
+
+	function flipRestore(dic) {
+		if (dic === void || dic.file == "") return; // flipUpdate ends it
+		var elm = %[];
+		(Dictionary.assign incontextof elm)(dic.options) if (dic.options !== void);
+		elm["3dwidth"]  = dic.width;
+		elm["3dheight"] = dic.height;
+		flipStart(dic.file, elm);
+	}
+}
+
+// Registration
+GenericFlip.Entry(
+	%[
+		"type"     => "3d",                           // Registration tag ([newlay 3d=...])
+		"class"    => ThreeFlip,                      // Controller class
+		"trigger"  => "3ddone",                       // Trigger sent when every 3D flip has ended
+		"ext"      => [ "vrm", "glb", "gltf" ],       // Extensions
+		"checker"  => function(storage) {             // scenes built in script, by name
+			return storage !== void && (string)storage != "" && global.KAGThreeScenes[(string)storage] !== void;
+		},
+		"options"  => [ "3dwidth", "3dheight", "3dmotion", "3donce", "3dexpression", "3dblink", "3dlook",
+						"3dlip", "3dangle", "3dturn", "3dspeed", "3dcamera", "3dtarget", "3dfov", "3dframe" ],
+		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
+		"keepOnRedraw" => true,                       // Plays on through a World layer's redraw
+		]);

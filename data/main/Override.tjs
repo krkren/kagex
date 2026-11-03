@@ -1,4 +1,6 @@
 ﻿KAGLoadScript("MyHistoryLayer.tjs");
+// the layer demo's 3D scene built in script (KAGThreeScene, GFX_Three.tjs)
+KAGLoadScript("Scenes3D.tjs") if typeof global.KAGThreeScene != "undefined";
 
 /**
  * Determination of whether the system menu is currently running

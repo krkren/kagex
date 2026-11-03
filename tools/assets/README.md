@@ -63,6 +63,17 @@ The sample's images are generated here rather than edited by hand.
   160 words a minute, and ffmpeg (`ESPEAK_NG` names espeak-ng when it isn't on the PATH; 1.52.0
   made the committed line, the same bytes each time); kagex-lipsync then makes its lip track
   (`kagex-lipsync --cli make hiyori000001.ogg`).
+- `make_vrm.py` builds the Animated Character demo's 3D character, Vee, as a VRM 1.0 avatar
+  (`data/fgimage/vee.vrm`): a girl in a lavender dress with twin tails, every part a surface of
+  revolution, an ellipsoid or a capsule in NumPy, skinned to a VRM humanoid skeleton, coloured by
+  MToon materials with the theme's navy outline, her face shapes on her head that her expressions
+  move (VRM's presets, the mouths aa ... oh, blink, and blush of her own), her twin tails on
+  spring bones. `motions` writes her VRM animations (`vee_<motion>.vrma`: idle and think loop,
+  wave, nod, bow and cheer play once), `prop` the layer demo's glTF star (`star3d.glb`, with its
+  spin and hop animations), and `speech` her voice line (`data/voice/vee000001.ogg`) with eSpeak
+  NG, as `make_hiyori.py` does Hiyori's; kagex-lipsync makes its lip track. glTF's colour factors
+  are linear, but krkrthreepp's MToon shader draws them as given, so they're written as they
+  should look.
 - `make_sounds.py` makes the Character demo's positional sound effects in `data/sound`: a
   two-note chime (`se_chime.ogg`, played at the far left and far right of the stage) and
   footsteps that loop (`se_steps.ogg`, following Ai as she walks), drawn in NumPy with fixed
@@ -89,6 +100,8 @@ python3 tools/assets/make_pip.py         # Pip's layers and voice lines; or: art
 python3 tools/assets/make_hiyori.py model --accept-license   # Hiyori's model (Live2D's licence)
 python3 tools/assets/make_hiyori.py speech  # her voice line (needs espeak-ng and ffmpeg)
 python3 tools/assets/make_sounds.py      # the Character demo's sound effects (needs ffmpeg)
+python3 tools/assets/make_vrm.py         # Vee's VRM avatar, her VRM animations and the glTF star;
+                                         # or: model motions prop; speech (espeak-ng, ffmpeg)
 python3 tools/assets/psdwrite.py <structure.txt> [out.psd]   # a layer structure as a PSD
 ```
 

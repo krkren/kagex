@@ -46,8 +46,7 @@ lipflip=4 なら、声なしで口を四回動かします。
 *live2d|Live2D
 [if exp="!KAGLive2DCanDraw('hiyori')"]
 このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
-[demodone name=anim]
-[jump storage=s0001.ks]
+[jump target=*vrm]
 [endif]
 [hiyori standard center]
 こちらはひより、Live2D のモデルです。株式会社 Live2D のサンプルキャラクターで、Cubism Editor で作られ、krkrlive2d プラグインが描いています。このコンテンツは、株式会社 Live2D が著作権を保有するサンプルデータを使用しています。
@@ -78,5 +77,32 @@ m03 は来るファイルの名前で決めています。motions/Hiyori_m03.mot
 [hiyori standard]
 モーションは頭や体や腕を動かし、髪やスカートはモデル自身の物理演算で動きます。
 [hiyori normal hide]
+*vrm|VRM
+[if exp="!KAGVRMCanDraw('vee')"]
+このビルドでは 3D モデルを描けません。krkrthreepp プラグインと OpenGL ES が必要です。くわしくは doc/world.txt の「VRM Characters」にあります。
+[demodone name=anim]
+[jump storage=s0001.ks]
+[endif]
+[vee standard center]
+こちらはヴィー、VRM のアバターです。VRoid Studio が書き出すのと同じ形式の 3D モデルで、このサンプルのためにスクリプトが簡単な形から組み立て、krkrthreepp プラグインが描いています。
+[vee smile voice=1]
+【vee】こんにちは！ヴィーです。3D モデルだから、向きを変えたり、手を振ったり、跳びはねたりできます。話すときは、母音ごとに口の形も変わるんですよ！
+口は、声から kagex-lipsync が作ったリップトラックに従います。母音ごとに、アバター自身の aa、ih、ou、ee、oh の表情が使われます。
+[vee laugh]
+顔はアバターの表情の重みの組み合わせです。laugh は happy をいっぱいに、smile はそれより少なめにしたものです。
+[vee xsad]
+happy、sad、angry、relaxed、surprised のようなよく使う表情は VRM が名前を決めているので、同じ顔がそれを持つどのアバターにも使えます。
+[vee blush]
+アバターは自分だけの表情も持てます。blush はヴィーのものです。
+[vee normal wave motionwait]
+wave は VRM アニメーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとはポーズのアニメーションに戻ります。
+[vee think]
+ポーズはループする VRM アニメーションです。think は、次のポーズが来るまで手をあごに当てたままにします。
+[vee standard surprised nod motionwait]
+アニメーションは次のアニメーションへフェードするので、nod はポーズのとちゅうの姿勢からそのまま始まります。
+[vee laugh cheer motionwait]
+動くとツインテールが揺れます。VRM のスプリングボーンです。
+[vee smile bow motionwait]
+[vee normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]

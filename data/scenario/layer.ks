@@ -210,6 +210,44 @@ And it is a layer like any other: it moves, zooms and turns.
 This build doesn't play Live2D models. That takes the krkrlive2d plugin, built with Live2D's Cubism SDK, and a model: "Live2D Characters" in doc/world.txt says how to add them.
 [l][r]
 [endif]
+
+*label19|3D Models and Scenes
+
+; 3D on KAG layers: the 3d flip type (GFX_Three.tjs; "Optional parameters for 3d" in
+; doc/kagex.txt), drawn by the krkrthreepp plugin. The stage is a scene built in script
+; (data/main/Scenes3D.tjs); the star and Vee are the sample's own models (tools/assets/make_vrm.py)
+[cm]
+[if exp="KAGThreeCanDraw()"]
+[image layer=1 page=fore flip=stage3d visible=true left=960 top=400 dafx=center dafy=center]
+A layer can show a 3D scene. This one is built in script, with shapes, materials and lights, and its camera goes round them.
+[l][r]
+
+[layopt layer=1 3donce=jump]
+3donce plays something once: the scene's script makes the knot jump.
+[l][r]
+
+[freeimage layer=1]
+[image layer=1 page=fore flip=star3d.glb 3dwidth=600 3dheight=600 3dframe="-0.7,0.7" visible=true left=960 top=440 dafx=center dafy=center]
+A glTF model plays its own animations: spin goes on, and 3donce=hop makes it jump.
+[layopt layer=1 3donce=hop]
+[l][r]
+
+[freeimage layer=1]
+[image layer=2 page=fore flip=vee.vrm 3dmotion=vee_idle 3dframe="-0.03,1.47" 3dwidth=520 3dheight=860 visible=true left=960 top=470 dafx=center dafy=center]
+And a VRM avatar stands, blinks and plays VRM animations: 3dmotion goes on, 3donce=vee_wave waves once.
+[layopt layer=2 3donce=vee_wave 3dexpression=happy]
+[l][r]
+
+[layopt layer=2 3dexpression="" 3dturn=90]
+3dturn turns a model, and the picture is a layer like any other: it moves, zooms and turns.
+[layopt layer=2 zoom=80 rotate=8 time=800]
+[l][r]
+
+[freeimage layer=2]
+[else]
+This build doesn't draw 3D. That takes the krkrthreepp plugin and OpenGL ES: "Optional parameters for 3d" in doc/kagex.txt says more.
+[l][r]
+[endif]
 [layopt layer=0 visible=true]
 
 [demodone name=layer]

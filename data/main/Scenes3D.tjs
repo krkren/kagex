@@ -1,0 +1,81 @@
+/**
+ * The sample's 3D scene built in script, which the layer demo (layer.ks) plays on a KAG layer:
+ * [image layer=1 flip=stage3d]. KAGThreeScene (GFX_Three.tjs) registers a scene by its name; the
+ * 3d flip calls its builder with s.scene and s.camera to fill, and s.update moves it on each
+ * frame. The Threepp classes are krkrthreepp's (threepp, a C++ port of three.js), whose manual is
+ * manual.tjs in the plugin's source.
+ *
+ * Its lights are those the 3d flip gives a glTF model (a hemisphere light and a directional one,
+ * no shadows), as the demo shows the star beside it: threepp keeps one set of light values for
+ * every lit material of a kind, so two scenes with other lights on the screen at once crash
+ * the engine (UPSTREAM.md; doc/kagex.txt, "Optional parameters for 3d").
+ */
+
+KAGThreeScene("stage3d", function(s) {
+	s.camera.fov = 38;
+	s.camera.updateProjectionMatrix();
+
+	// a lavender disc to stand on
+	var floor = new Threepp.Mesh(new Threepp.CylinderGeometry(2.6, 2.6, 0.12, 64), stage3dMaterial(0xa690ff, 0.1, 0.8));
+	floor.setPosition(0, -0.06, 0);
+	s.scene.add(floor);
+	var rim = new Threepp.Mesh(new Threepp.TorusGeometry(2.6, 0.05, 12, 96), stage3dMaterial(0x5025ff, 0.4, 0.3));
+	rim.rotateX(Math.PI / 2);
+	s.scene.add(rim);
+
+	// a knot turning in the middle, and three balls going round it
+	s.knot = new Threepp.Mesh(new Threepp.TorusKnotGeometry(0.55, 0.18, 160, 24), stage3dMaterial(0x5025ff, 0.35, 0.25));
+	s.knot.setPosition(0, 1.25, 0);
+	s.scene.add(s.knot);
+	s.balls = [];
+	var colours = [ 0xffffff, 0xa690ff, 0x010062 ];
+	for (var i = 0; i < 3; i++) {
+		var ball = new Threepp.Mesh(new Threepp.SphereGeometry(0.22, 32, 16), stage3dMaterial(colours[i], 0.2, 0.4));
+		s.scene.add(ball);
+		s.balls.add(ball);
+	}
+
+	// light from the sky and the ground, and a sun
+	s.scene.add(new Threepp.HemisphereLight(0xffffff, 0x8070c0, 1.1));
+	var sun = new Threepp.DirectionalLight(0xffffff, 2.2);
+	sun.setPosition(3, 6, 4);
+	s.scene.add(sun);
+
+	s.jump = 0;    // seconds of the knot's jump left (3donce=jump)
+
+	// the camera goes round, the knot turns, the balls circle it
+	s.update = function(s, dt) {
+		var t = s.time;
+		var a = t * 0.25;
+		s.camera.setPosition(Math.sin(a) * 6.2, 2.4, Math.cos(a) * 6.2);
+		s.camera.lookAt(0, 0.9, 0);
+		var y = 1.25;
+		if (s.jump > 0) {
+			s.jump -= dt;
+			var u = 1 - (s.jump > 0 ? s.jump : 0) / 1.2;
+			y += Math.sin(Math.PI * u) * 0.8;
+		}
+		s.knot.setPosition(0, y, 0);
+		s.knot.setRotation(t * 0.6, t * 0.9, 0);
+		for (var i = 0; i < s.balls.count; i++) {
+			var b = t * 1.1 + i * Math.PI * 2 / 3;
+			s.balls[i].setPosition(Math.cos(b) * 1.7, 0.6 + Math.sin(t * 2 + i) * 0.25, Math.sin(b) * 1.7);
+		}
+	};
+
+	// 3donce=jump: the knot jumps (1.2 seconds); 3donce goes when it lands
+	s.once = function(s, name) {
+		if (name != "jump") return 0;
+		s.jump = 1.2;
+		return 1.2;
+	};
+});
+
+// a material with some shine
+function stage3dMaterial(colour, metalness, roughness) {
+	var m = new Threepp.MeshStandardMaterial();
+	m.color = colour;
+	m.metalness = metalness;
+	m.roughness = roughness;
+	return m;
+}

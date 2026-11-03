@@ -51,8 +51,7 @@ That wave is an animation: waving, in data/main/charanim.csv, steps through the 
 ; doc/world.txt.
 [if exp="!KAGLive2DCanDraw('hiyori')"]
 This build doesn't play Live2D models. That takes the krkrlive2d plugin, built with Live2D's Cubism SDK, and a model: "Live2D Characters" in doc/world.txt says how to add them.
-[demodone name=anim]
-[jump storage=s0001.ks]
+[jump target=*vrm]
 [endif]
 [hiyori standard center]
 This is Hiyori, a Live2D model: Live2D Inc.'s sample character, made in Cubism Editor and drawn by the krkrlive2d plugin. This content uses sample data owned and copyrighted by Live2D Inc.
@@ -83,5 +82,36 @@ A pose is the motions that go on: standard takes her Idle group's, one after ano
 [hiyori standard]
 Her motions move her head, body and arms, and her hair and skirt move by the model's own physics.
 [hiyori normal hide]
+*vrm|VRM
+; A VRM character: Vee, the sample's own avatar, built from shapes by tools/assets/make_vrm.py
+; (data/fgimage/vee.vrm, her VRM animations vee_*.vrma) and drawn by the krkrthreepp plugin
+; (KAGEnvCharacterVRM.tjs); her voice line is eSpeak NG's (make_vrm.py speech). A build without
+; the plugin says so instead. See "VRM Characters" in doc/world.txt.
+[if exp="!KAGVRMCanDraw('vee')"]
+This build doesn't draw 3D models. That takes the krkrthreepp plugin and OpenGL ES: "VRM Characters" in doc/world.txt says more.
+[demodone name=anim]
+[jump storage=s0001.ks]
+[endif]
+[vee standard center]
+This is Vee, a VRM avatar: a 3D model in the format VRoid Studio exports, built for this sample from simple shapes by a script, and drawn by the krkrthreepp plugin.
+[vee smile voice=1]
+【vee】Hi! I'm Vee. I'm a 3D model, so I can turn, wave and cheer. And when I talk, my mouth makes the shape of every vowel, too!
+Her mouth follows the lip track kagex-lipsync made from her voice: each vowel sets the avatar's own expression for it, aa, ih, ou, ee or oh.
+[vee laugh]
+Her faces are weights for the avatar's expressions: laugh is all of happy, and smile less of it.
+[vee xsad]
+VRM names the common ones, such as happy, sad, angry, relaxed and surprised, so a face works for any avatar that has them.
+[vee blush]
+And an avatar can have its own: blush is one of Vee's.
+[vee normal wave motionwait]
+wave plays a VRM animation once, and motionwait waits for it to end; then her pose's animation goes on.
+[vee think]
+A pose is a VRM animation that loops: think keeps her hand at her chin until another pose comes.
+[vee standard surprised nod motionwait]
+One animation fades into the next, so nod starts from wherever the pose left her.
+[vee laugh cheer motionwait]
+Her twin tails swing as she moves: VRM's spring bones.
+[vee smile bow motionwait]
+[vee normal hide]
 [demodone name=anim]
 [jump storage=s0001.ks]

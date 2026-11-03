@@ -994,5 +994,9 @@ if (Storages.isExistentStorage("charinit.csv")) {
 	KAGLoadScript("KAGEnvCharacterEx.tjs");
 }
 
-// Live2D characters (doc/world.txt, "Live2D Characters"): an envinit.tjs entry with "live2d"
+// Characters played by a model that moves by itself: Live2D characters (doc/world.txt, "Live2D
+// Characters"), an envinit.tjs entry with "live2d", and VRM characters ("VRM Characters"), one
+// with "vrm"
+KAGLoadScript("KAGEnvCharacterModel.tjs");
 KAGLoadScript("KAGEnvCharacterLive2D.tjs");
+KAGLoadScript("KAGEnvCharacterVRM.tjs");

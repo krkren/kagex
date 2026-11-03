@@ -2073,9 +2073,12 @@ class KAGEnvironment extends KAGEnvTrans {
 				if (init.initName !== void) {
 					initName = init.initName;
 				}
-				// a Live2D model (KAGEnvCharacterLive2D.tjs), or as the World makes characters
+				// a Live2D model (KAGEnvCharacterLive2D.tjs), a VRM avatar (KAGEnvCharacterVRM.tjs), or
+				// as the World makes characters
 				if (init.live2d !== void && typeof global.KAGEnvCharacterLive2D != "undefined") {
 					ch = new global.KAGEnvCharacterLive2D(this, name, initName, init);
+				} else if (init.vrm !== void && typeof global.KAGEnvCharacterVRM != "undefined") {
+					ch = new global.KAGEnvCharacterVRM(this, name, initName, init);
 				} else {
 					ch = _getCharacter(name, initName, init);
 				}

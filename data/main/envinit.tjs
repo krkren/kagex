@@ -777,6 +777,69 @@
 
 			],
 
+		// A VRM character (KAGEnvCharacterVRM.tjs): Vee, the sample's own avatar, built from shapes by
+		// tools/assets/make_vrm.py (fgimage/vee.vrm, her VRM animations fgimage/vee_*.vrma). The
+		// krkrthreepp plugin draws her; a build without it says so in anim.ks.
+
+		"vee" => %[
+
+			"nameAlias" => %[ "en" => "Vee", "ja" => "ヴィー" ],
+
+			"yoffset" => 190, // the centre of her picture, below the centre of the screen
+
+			"voiceFile" => "vee%s%06d",
+
+			"voiceName" => "voice0",
+
+			"vrm" => %[
+
+				"model" => "vee",
+
+				"height" => 1340,          // the picture's height on the screen at 100%
+
+				"aspect" => 0.62,          // its width for its height
+
+				"frame" => [-0.03, 1.47],  // what the picture shows of her (metres, from the ground)
+
+				// a pose is a VRM animation that goes on (looping)
+
+				"poses" => %[ "standard" => "vee_idle", "think" => "vee_think" ],
+
+				"defaultPose" => "standard",
+
+				// motions: VRM animations played once, then the pose's again
+
+				"motions" => %[ "wave" => "vee_wave", "nod" => "vee_nod", "bow" => "vee_bow", "cheer" => "vee_cheer" ],
+
+				// faces: weights for her expressions (VRM's presets, and blush of her own); her
+				// eyes blink and her mouth follows her voice over them
+
+				"faces" => %[
+
+					"normal"    => %[],
+
+					"smile"     => %[ "happy" => 0.45 ],
+
+					"laugh"     => %[ "happy" => 1 ],
+
+					"relaxed"   => %[ "relaxed" => 1 ],
+
+					"blush"     => %[ "relaxed" => 0.5, "blush" => 1 ],
+
+					"sad"       => %[ "sad" => 1 ],
+
+					"angry"     => %[ "angry" => 1 ],
+
+					"surprised" => %[ "surprised" => 1 ],
+
+					],
+
+				"defaultFace" => "normal",
+
+				],
+
+			],
+
 		],
 
 
