@@ -1,0 +1,51 @@
+// Force-included (-include) into threepp's sources where it is built into the engine (every
+// plugin is static on the web, Android and iOS): threepp's ImageLoader.cpp compiles stb_image,
+// and so does krkrlive2d's driver (LAppModelOGL.cpp), so with both plugins in one binary their
+// stbi_* functions were duplicate symbols (the web build's link stopped at them). This renames
+// threepp's copy; the driver keeps the plain names. Made from stb_image.h's STBIDEF functions
+// (threepp 870d620); krkrthreepp-kit.cmake applies it.
+#pragma once
+#define stbi_convert_iphone_png_to_rgb threepp_stbi_convert_iphone_png_to_rgb
+#define stbi_convert_iphone_png_to_rgb_thread threepp_stbi_convert_iphone_png_to_rgb_thread
+#define stbi_convert_wchar_to_utf8 threepp_stbi_convert_wchar_to_utf8
+#define stbi_failure_reason threepp_stbi_failure_reason
+#define stbi_hdr_to_ldr_gamma threepp_stbi_hdr_to_ldr_gamma
+#define stbi_hdr_to_ldr_scale threepp_stbi_hdr_to_ldr_scale
+#define stbi_image_free threepp_stbi_image_free
+#define stbi_info threepp_stbi_info
+#define stbi_info_from_callbacks threepp_stbi_info_from_callbacks
+#define stbi_info_from_file threepp_stbi_info_from_file
+#define stbi_info_from_memory threepp_stbi_info_from_memory
+#define stbi_is_16_bit threepp_stbi_is_16_bit
+#define stbi_is_16_bit_from_callbacks threepp_stbi_is_16_bit_from_callbacks
+#define stbi_is_16_bit_from_file threepp_stbi_is_16_bit_from_file
+#define stbi_is_16_bit_from_memory threepp_stbi_is_16_bit_from_memory
+#define stbi_is_hdr threepp_stbi_is_hdr
+#define stbi_is_hdr_from_callbacks threepp_stbi_is_hdr_from_callbacks
+#define stbi_is_hdr_from_file threepp_stbi_is_hdr_from_file
+#define stbi_is_hdr_from_memory threepp_stbi_is_hdr_from_memory
+#define stbi_ldr_to_hdr_gamma threepp_stbi_ldr_to_hdr_gamma
+#define stbi_ldr_to_hdr_scale threepp_stbi_ldr_to_hdr_scale
+#define stbi_load threepp_stbi_load
+#define stbi_load_16 threepp_stbi_load_16
+#define stbi_load_16_from_callbacks threepp_stbi_load_16_from_callbacks
+#define stbi_load_16_from_memory threepp_stbi_load_16_from_memory
+#define stbi_load_from_callbacks threepp_stbi_load_from_callbacks
+#define stbi_load_from_file threepp_stbi_load_from_file
+#define stbi_load_from_file_16 threepp_stbi_load_from_file_16
+#define stbi_load_from_memory threepp_stbi_load_from_memory
+#define stbi_load_gif_from_memory threepp_stbi_load_gif_from_memory
+#define stbi_loadf threepp_stbi_loadf
+#define stbi_loadf_from_callbacks threepp_stbi_loadf_from_callbacks
+#define stbi_loadf_from_file threepp_stbi_loadf_from_file
+#define stbi_loadf_from_memory threepp_stbi_loadf_from_memory
+#define stbi_set_flip_vertically_on_load threepp_stbi_set_flip_vertically_on_load
+#define stbi_set_flip_vertically_on_load_thread threepp_stbi_set_flip_vertically_on_load_thread
+#define stbi_set_unpremultiply_on_load threepp_stbi_set_unpremultiply_on_load
+#define stbi_set_unpremultiply_on_load_thread threepp_stbi_set_unpremultiply_on_load_thread
+#define stbi_zlib_decode_buffer threepp_stbi_zlib_decode_buffer
+#define stbi_zlib_decode_malloc threepp_stbi_zlib_decode_malloc
+#define stbi_zlib_decode_malloc_guesssize threepp_stbi_zlib_decode_malloc_guesssize
+#define stbi_zlib_decode_malloc_guesssize_headerflag threepp_stbi_zlib_decode_malloc_guesssize_headerflag
+#define stbi_zlib_decode_noheader_buffer threepp_stbi_zlib_decode_noheader_buffer
+#define stbi_zlib_decode_noheader_malloc threepp_stbi_zlib_decode_noheader_malloc

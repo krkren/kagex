@@ -12,6 +12,9 @@
 #   LoadGlad.cpp into its sources, with the GLES guards the other platforms build it with. The
 #   glad functions themselves are the engine's (it has its own glad, as on Android and iOS,
 #   where threepp's archive is linked as needed and its gles2.c isn't pulled in).
+# - threepp's ImageLoader.cpp compiles stb_image, and so does krkrlive2d's driver (the web
+#   engine has both; so do live2d.yml's Android and iOS builds): duplicate stbi_* symbols, the
+#   web link's next stop. threepp's copy is renamed (threepp-stb-names.h, force-included).
 if(TARGET krkrthreepp)
   get_target_property(_kagex_3d_type krkrthreepp TYPE)
   if(_kagex_3d_type STREQUAL "STATIC_LIBRARY")
@@ -20,6 +23,12 @@ if(TARGET krkrthreepp)
   endif()
 endif()
 if(TARGET threepp)
+  get_target_property(_kagex_threepp_type threepp TYPE)
+  if(_kagex_threepp_type STREQUAL "STATIC_LIBRARY")
+    target_compile_options(threepp PRIVATE
+      "SHELL:-include \"${CMAKE_CURRENT_LIST_DIR}/threepp-stb-names.h\"")
+    message(STATUS "kagex: threepp's stb_image renamed (krkrlive2d's driver has one too)")
+  endif()
   if(ANDROID)
     foreach(_kagex_prop LINK_LIBRARIES INTERFACE_LINK_LIBRARIES)
       get_target_property(_kagex_libs threepp ${_kagex_prop})
