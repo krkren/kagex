@@ -9,6 +9,19 @@
 # Android and iOS jobs also kagex-release's engine packages for those (kagex-engine-android, a
 # Gradle project with the engine prebuilt; kagex-engine-ios, unsigned device and Simulator apps).
 # A pushed commit message with "[platforms: linux web]" builds only those.
+#
+# A job whose engine an earlier release built already doesn't compile it (since 0.13.5):
+# platform-engine.py works out a key of what goes into the engine (the pinned commits, the
+# config without its version, the files the build reads, this workflow) and looks for a release
+# whose note (kagex-engine-build.json, "platforms") has it; then the job takes that release's
+# engine package (kagex_engine_<platform>.zip, the engine without the game) and adds this
+# commit's game the way the kit does after its build: the Linux kit's stage and package, the web
+# kit's staging, Gradle on the Android package's project (the debug APK for the smoke test and
+# the release-debug one), the game and version put into the iOS Simulator app and the macOS app.
+# The packages and their smoke tests are the same either way. Each job uploads its key
+# (kagex-engine-key-<platform>), which the release's publish writes into the note. "[rebuild]" in
+# a pushed message (or the rebuild input) builds every engine; "[reuse: <tag>]" (or reuse_from,
+# never in a release) takes that release's engine packages whatever their keys, to test this.
 name: Platform builds
 
 on:
@@ -19,6 +32,13 @@ on:
       platforms:
         description: "Platforms to build"
         default: "linux web android ios macos"
+      rebuild:
+        description: "Build every engine, even when a release has it"
+        type: boolean
+        default: false
+      reuse_from:
+        description: "Test the reuse steps with this release's engine packages, whatever their keys"
+        default: ""
   workflow_call:
     inputs:
       ref:
@@ -28,6 +48,9 @@ on:
       platforms:
         type: string
         default: "linux web android ios macos"
+      rebuild:
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -56,21 +79,35 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       list: ${{ steps.pick.outputs.list }}
+      rebuild: ${{ steps.pick.outputs.rebuild }}
+      reuse_from: ${{ steps.pick.outputs.reuse_from }}
     steps:
       - id: pick
         env:
           INPUT: ${{ inputs.platforms }}
           CALLED: ${{ inputs.ref }}
           MESSAGE: ${{ github.event.head_commit.message }}
+          REBUILD_INPUT: ${{ inputs.rebuild }}
+          REUSE_INPUT: ${{ inputs.reuse_from }}
         run: |
           list="linux web android ios macos"
           [ -n "$INPUT" ] && list="$INPUT"
+          rebuild=false
+          [ "$REBUILD_INPUT" = "true" ] && rebuild=true
+          reuse="$REUSE_INPUT"
           # a called run gets the caller's push event: its message is the release branch's
           m=""
-          [ -z "$CALLED" ] && m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
+          if [ -z "$CALLED" ]; then
+            m=$(printf '%s' "$MESSAGE" | grep -oE '\[platforms: [a-z ]+\]' | head -1 | sed -E 's/\[platforms: (.*)\]/\1/')
+            printf '%s' "$MESSAGE" | grep -qF '[rebuild]' && rebuild=true
+            r=$(printf '%s' "$MESSAGE" | grep -oE '\[reuse: [0-9A-Za-z._-]+\]' | head -1 | sed -E 's/\[reuse: (.*)\]/\1/')
+            [ -n "$r" ] && reuse="$r"
+          fi
           [ -n "$m" ] && list="$m"
           echo "list= $list " >> "$GITHUB_OUTPUT"
-          echo "building: $list"
+          echo "rebuild=$rebuild" >> "$GITHUB_OUTPUT"
+          echo "reuse_from=$reuse" >> "$GITHUB_OUTPUT"
+          echo "building: $list (rebuild every engine: $rebuild${reuse:+; the engines of release $reuse})"
 
   # The sample's scenarios compiled (compile-scenarios.sh), for every platform job to put into the
   # project before it packages it: the web, Android and iOS packages can't compile them as they
@@ -121,15 +158,46 @@ jobs:
           path: ${{ runner.temp }}/scenarios
       - name: Put the compiled scenarios into the project
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: An earlier release's build of this engine
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ needs.select.outputs.rebuild }}
+          REUSE_FROM: ${{ needs.select.outputs.reuse_from }}
+          ENGINE_KEY_DIR: ${{ runner.temp }}/engine-key
+          ENGINE_DIR: ${{ runner.temp }}/engine
+        run: |
+          mkdir -p results
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py find steam "$GITHUB_OUTPUT" | tee results/engine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-key-steam
+          path: ${{ runner.temp }}/engine-key/steam.key
+          if-no-files-found: error
+      # the kit's stage reads krkrz_dev's core folder and the kit's tools: cloned either way
       - name: Clone the engine and krkrz_linux
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_linux "$KRKRZ_LINUX_SHA"
       - name: Build the Steam Linux Runtime (sniper) image
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone -q https://github.com/wamsoft/steamdev.git steamdev
           git -C steamdev checkout -q "$STEAMDEV_SHA"
           kirikiri/kagex/.github/platforms/run-logged.sh image bash steamdev/deckbuild/deckbuild.sh image
       - name: Build and package
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_linux all
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
+        run: |
+          if [ -n "$REUSE" ]; then
+            # the engine package is the kit's install folder (symlinks followed): the kit's stage
+            # puts it, the .cf/.desktop/icon and the game into the package, as after its build
+            install="$PROJECT_DIR/build/linux/install"
+            rm -rf "$install" && mkdir -p "$install"
+            unzip -q "$RUNNER_TEMP/engine/kagex_engine_steam.zip" -d "$install"
+            rm -f "$install/engine.json"
+            kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_linux stage package
+          else
+            kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_linux all
+          fi
       - name: Every plugin loads
         working-directory: kirikiri/kagex/build/linux/package/krkrz
         run: |
@@ -192,6 +260,23 @@ jobs:
           path: ${{ runner.temp }}/scenarios
       - name: Put the compiled scenarios into the project
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: An earlier release's build of this engine
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ needs.select.outputs.rebuild }}
+          REUSE_FROM: ${{ needs.select.outputs.reuse_from }}
+          ENGINE_KEY_DIR: ${{ runner.temp }}/engine-key
+          ENGINE_DIR: ${{ runner.temp }}/engine
+        run: |
+          mkdir -p results
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py find web "$GITHUB_OUTPUT" | tee results/engine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-key-web
+          path: ${{ runner.temp }}/engine-key/web.key
+          if-no-files-found: error
+      # the kit's staging and its patch, and krkrz_dev's resource folder: needed either way
       - name: Clone the engine and krkrz_web
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_web "$KRKRZ_WEB_SHA"
       - name: Patch the web kit (the demo ships as one data.xp3)
@@ -200,6 +285,7 @@ jobs:
         # the patch path is absolute: git -C resolves its file argument from the kit dir
         run: git -C kirikiri/krkrz_web apply "$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/web/kit-web-xp3.patch"
       - name: Set up emsdk and vcpkg
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone -q https://github.com/emscripten-core/emsdk.git "$EMSDK"
           kirikiri/kagex/.github/platforms/run-logged.sh emsdk bash -c "cd '$EMSDK' && ./emsdk install latest && ./emsdk activate latest"
@@ -207,6 +293,7 @@ jobs:
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
       - name: The Cubism Core and the Live2D sources
+        if: steps.engine.outputs.reuse == ''
         env:
           SDK_TOKEN: ${{ secrets.CUBISM_SDK_TOKEN }}
         run: |
@@ -231,18 +318,52 @@ jobs:
           echo "LIVE2DLIB_FOLDER=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/driver" >> "$GITHUB_ENV"
           echo "LIVE2D_DRIVER_SOURCE=$GITHUB_WORKSPACE/kirikiri/kagex/tools/live2d/build/src/live2d" >> "$GITHUB_ENV"
           rm -rf "$RUNNER_TEMP/cubism-sdk"   # the private zips, after their extracts above
+      # a reused engine has the plugin already: the sample's site needs only the Web Core, which
+      # web-static-host.py puts beside the page (no engine package carries it)
+      - name: The Cubism Core for the site
+        if: steps.engine.outputs.reuse != ''
+        env:
+          SDK_TOKEN: ${{ secrets.CUBISM_SDK_TOKEN }}
+        run: |
+          [ -n "$SDK_TOKEN" ] || { echo "::error title=No Cubism SDK::The CUBISM_SDK_TOKEN secret isn't set"; exit 1; }
+          git clone -q --depth 1 "https://x-access-token:${SDK_TOKEN}@github.com/krkren/cubism-sdk" "$RUNNER_TEMP/cubism-sdk"
+          chmod -R u+w "$RUNNER_TEMP/cubism-sdk/.git" && rm -rf "$RUNNER_TEMP/cubism-sdk/.git"
+          python3 - "$RUNNER_TEMP/cubism-sdk/CubismSdkForWeb-5-r.5.zip" <<'PY' | tee results/live2d.log
+          import sys
+          sys.path.insert(0, "kirikiri/kagex/tools/live2d")
+          import build
+          sys.exit(build.web_setup("kirikiri/kagex/tools/live2d/build", None, sys.argv[1]))
+          PY
+          rm -rf "$RUNNER_TEMP/cubism-sdk"   # the private zips, after the extract above
       - name: Hiyori's model, as the other jobs' does
         run: kirikiri/kagex/.github/platforms/run-logged.sh hiyori python3 -B kirikiri/kagex/tools/assets/make_hiyori.py model --accept-license
       - name: kagex's plugins in the shared binary
+        if: steps.engine.outputs.reuse == ''
         run: python3 kirikiri/kagex/.github/platforms/web-plugins.py kirikiri/krkrz_web/CMakeLists.txt | tee results/web-plugins.txt
       - name: Build the shared binary
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
+        run: |
+          if [ -n "$REUSE" ]; then
+            # the engine package's shared binary where the kit's build leaves it, for stage_web.py;
+            # its page, as kagex's staging left it, stands in for krkrz.html (staging below and
+            # web-static-host.py set it up again for this build)
+            out=kirikiri/krkrz_web/build/wasm32-emscripten/Release/krkrz
+            mkdir -p "$out" "$RUNNER_TEMP/engine/web"
+            unzip -q -o "$RUNNER_TEMP/engine/kagex_engine_web.zip" krkrz.js krkrz.wasm krkrz.data index.html -d "$RUNNER_TEMP/engine/web"
+            cp "$RUNNER_TEMP/engine/web/krkrz.js" "$RUNNER_TEMP/engine/web/krkrz.wasm" "$RUNNER_TEMP/engine/web/krkrz.data" "$out/"
+            cp "$RUNNER_TEMP/engine/web/index.html" "$out/krkrz.html"
+            ls -l "$out" | tee results/build.log
+          else
+            kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_web prebuild build
+          fi
       - name: Stage the site
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh stage python3 kirikiri/krkrz_web/tools/stage_web.py "$PROJECT_DIR"
           site="$PROJECT_DIR/build/web/site"
           # GitHub Pages can't send the COOP/COEP headers that SharedArrayBuffer needs:
-          # coi-serviceworker adds them in the browser (as krkrz_web's stage_docs.py does)
+          # coi-serviceworker adds them in the browser (as krkrz_web's stage_docs.py does); a
+          # reused engine's page has it already
           cp kirikiri/krkrz_web/tools/coi-serviceworker.js "$site/"
           python3 - "$site/index.html" <<'PY'
           import sys
@@ -250,7 +371,8 @@ jobs:
           from stage_docs import inject_coi
           p = sys.argv[1]
           html = open(p, encoding="utf-8").read()
-          open(p, "w", encoding="utf-8").write(inject_coi(html, "coi-serviceworker.js"))
+          if 'src="coi-serviceworker.js"' not in html:
+              open(p, "w", encoding="utf-8").write(inject_coi(html, "coi-serviceworker.js"))
           PY
           # the file list where a static host serves it, coi's reload after its worker is ready,
           # and the home-screen manifest and icons
@@ -309,13 +431,59 @@ jobs:
           path: ${{ runner.temp }}/scenarios
       - name: Put the compiled scenarios into the project
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: An earlier release's build of this engine
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ needs.select.outputs.rebuild }}
+          REUSE_FROM: ${{ needs.select.outputs.reuse_from }}
+          ENGINE_KEY_DIR: ${{ runner.temp }}/engine-key
+          ENGINE_DIR: ${{ runner.temp }}/engine
+        run: |
+          mkdir -p results
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py find android "$GITHUB_OUTPUT" | tee results/engine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-key-android
+          path: ${{ runner.temp }}/engine-key/android.key
+          if-no-files-found: error
       - name: Clone the engine and krkrz_android
+        if: steps.engine.outputs.reuse == ''
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+      # the engine package is the kit's Gradle project with the engine prebuilt (as kagex-release
+      # packages a game with it): only the SDK's platform and build tools, no NDK, CMake or vcpkg
+      - name: The reused engine's Gradle project
+        if: steps.engine.outputs.reuse != ''
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+          proj="$RUNNER_TEMP/android"
+          rm -rf "$proj" "$RUNNER_TEMP/android-engine" && mkdir -p "$RUNNER_TEMP/android-engine"
+          unzip -q "$RUNNER_TEMP/engine/kagex_engine_android.zip" 'project/*' -d "$RUNNER_TEMP/android-engine"
+          mv "$RUNNER_TEMP/android-engine/project" "$proj"
+          chmod +x "$proj/gradlew"
+          echo "sdk.dir=$sdk" > "$proj/local.properties"
+          # the game's app-config.json, but the engine's own assets from the package (krkrz_dev's
+          # resource folder in the kit's build, which isn't cloned here)
+          python3 - "$PROJECT_DIR/app-config.json" "$proj/engine-assets" "$RUNNER_TEMP/app-config.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              cfg = json.load(f)
+          first = cfg["assetPack"]["sources"][0]
+          assert first["from"].endswith("krkrz_dev/src/core/resource"), first
+          first["from"] = sys.argv[2]
+          with open(sys.argv[3], "w", encoding="utf-8") as f:
+              json.dump(cfg, f, indent=2)
+          PY
+          echo "ANDROID_PROJECT=$proj" >> "$GITHUB_ENV"
+          echo "APP_CONFIG_FILE=$RUNNER_TEMP/app-config.json" >> "$GITHUB_ENV"
       - name: Set up the Android SDK, vcpkg and SDL3
+        if: steps.engine.outputs.reuse == ''
         run: |
           ndk=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/app-config.json'))['ndkVersion'])")
           sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
@@ -344,7 +512,14 @@ jobs:
           mkdir -p kirikiri/krkrz_android/app/libs
           (cd kirikiri/krkrz_android && bash install-sdl-aar.sh) > results/sdl-aar.log 2>&1
       - name: Build the debug APK
-        run: kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
+        run: |
+          if [ -n "$REUSE" ]; then
+            (cd "$ANDROID_PROJECT" && "$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh" build ./gradlew --no-daemon :app:assembleDebug)
+          else
+            kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
+          fi
       - name: List the APK
         run: |
           find "$PROJECT_DIR/build/android" -name '*.apk' -exec ls -l {} \; | tee results/apk.txt
@@ -374,11 +549,17 @@ jobs:
       # The smoke test needs the debug build (only it has the REPL); the package is the
       # optimized release build, signed with the same debug key (the kit's release-debug)
       - name: Build the release APK
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
           # Gradle downloads lint's own dependencies here; a download cut off midway once
           # failed this step, so it gets three tries
           for try in 1 2 3; do
-            kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug && break
+            if [ -n "$REUSE" ]; then
+              (cd "$ANDROID_PROJECT" && "$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh" release ./gradlew --no-daemon :app:assembleReleaseDebugSigned) && break
+            else
+              kirikiri/kagex/.github/platforms/run-logged.sh release make -C kirikiri/krkrz_android release-debug && break
+            fi
             [ "$try" = 3 ] && exit 1
             sleep 30
           done
@@ -390,11 +571,19 @@ jobs:
           if-no-files-found: error
       # kagex-release's Android engine: this Gradle project with the engine just built, prebuilt
       - name: Engine package for kagex-release
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
           apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
           version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
-          python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$apk" kagex_engine_android.zip \
-            --version "$version" --app-config "$PROJECT_DIR/app-config.json" | tee results/engine-package.txt
+          if [ -n "$REUSE" ]; then
+            # the same engine: the reused package, for this release
+            cp "$RUNNER_TEMP/engine/kagex_engine_android.zip" kagex_engine_android.zip
+            python3 kirikiri/kagex/.github/platforms/platform-engine.py version kagex_engine_android.zip "$version" | tee results/engine-package.txt
+          else
+            python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$apk" kagex_engine_android.zip \
+              --version "$version" --app-config "$PROJECT_DIR/app-config.json" | tee results/engine-package.txt
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-engine-android
@@ -433,19 +622,58 @@ jobs:
           path: ${{ runner.temp }}/scenarios
       - name: Put the compiled scenarios into the project
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: An earlier release's build of this engine
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ needs.select.outputs.rebuild }}
+          REUSE_FROM: ${{ needs.select.outputs.reuse_from }}
+          ENGINE_KEY_DIR: ${{ runner.temp }}/engine-key
+          ENGINE_DIR: ${{ runner.temp }}/engine
+        run: |
+          mkdir -p results
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py find ios "$GITHUB_OUTPUT" | tee results/engine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-key-ios
+          path: ${{ runner.temp }}/engine-key/ios.key
+          if-no-files-found: error
       - name: Clone the engine and krkrz_ios
+        if: steps.engine.outputs.reuse == ''
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_ios "$KRKRZ_IOS_SHA"
       - name: Set up vcpkg
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
           xcodebuild -version | tee results/xcode.txt
       - name: Build for the Simulator
+        env:
+          REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
-          # every plugin is static on iOS: scnfile's Monocypher is renamed beside xp3crypt's
-          echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_ios/CMakeLists.txt
-          kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+          if [ -n "$REUSE" ]; then
+            # the engine package's Simulator app (the kit's, without the game), the game put in as
+            # ios-config.json's assetPack puts it, this release's version, signed ad hoc again as
+            # the build signs it
+            app="$PROJECT_DIR/build/ios/reused/Debug-iphonesimulator/krkrz.app"
+            rm -rf "$RUNNER_TEMP/ios-engine" "$PROJECT_DIR/build/ios/reused"
+            mkdir -p "$RUNNER_TEMP/ios-engine" "$(dirname "$app")"
+            unzip -q "$RUNNER_TEMP/engine/kagex_engine_ios.zip" 'simulator/*' -d "$RUNNER_TEMP/ios-engine"
+            ditto "$RUNNER_TEMP/ios-engine/simulator/krkrz.app" "$app"
+            rsync -a --exclude '*.bak' --exclude '*.psd' "$PROJECT_DIR/data/" "$app/data/"
+            rsync -a "$PROJECT_DIR/template/system/" "$app/data/system/"
+            conf() { python3 -c "import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])" "$PROJECT_DIR/ios-config.json" "$1"; }
+            plutil -replace CFBundleShortVersionString -string "$(conf version)" "$app/Info.plist"
+            plutil -replace CFBundleVersion -string "$(conf build)" "$app/Info.plist"
+            codesign --force --sign - "$app"
+            codesign --verify "$app"
+            { plutil -p "$app/Info.plist"; find "$app" -maxdepth 1 | sort; } | tee results/build.log
+          else
+            # every plugin is static on iOS: scnfile's Monocypher is renamed beside xp3crypt's
+            echo "include(\"$PROJECT_DIR/.github/platforms/monocypher-kit.cmake\")" >> kirikiri/krkrz_ios/CMakeLists.txt
+            kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_ios build
+          fi
       - name: Pack the app
         run: |
           app=$(find "$PROJECT_DIR/build/ios" -name '*.app' -path '*iphonesimulator*' | head -1)
@@ -475,7 +703,14 @@ jobs:
           exit $s
       # kagex-release's iOS engine: an unsigned Release build for devices (the developer's
       # certificate signs it) and the Simulator app, without the game
+      - name: Engine package for kagex-release, reused
+        if: steps.engine.outputs.reuse != ''
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
+          cp "$RUNNER_TEMP/engine/kagex_engine_ios.zip" kagex_engine_ios.zip
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py version kagex_engine_ios.zip "$version" | tee results/engine-package.txt
       - name: Build for devices, unsigned
+        if: steps.engine.outputs.reuse == ''
         run: |
           kirikiri/kagex/.github/platforms/run-logged.sh device-configure make -C kirikiri/krkrz_ios dist-configure
           kirikiri/kagex/.github/platforms/run-logged.sh device-build xcodebuild -project "$PROJECT_DIR/build/ios/dist/krkrz_ios.xcodeproj" \
@@ -524,9 +759,27 @@ jobs:
           path: ${{ runner.temp }}/scenarios
       - name: Put the compiled scenarios into the project
         run: tar xzf "$RUNNER_TEMP/scenarios/scenarios.tgz" -C kirikiri/kagex && ls kirikiri/kagex/data/scenario/*.scn*
+      - name: An earlier release's build of this engine
+        id: engine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REBUILD: ${{ needs.select.outputs.rebuild }}
+          REUSE_FROM: ${{ needs.select.outputs.reuse_from }}
+          ENGINE_KEY_DIR: ${{ runner.temp }}/engine-key
+          ENGINE_DIR: ${{ runner.temp }}/engine
+        run: |
+          mkdir -p results
+          python3 kirikiri/kagex/.github/platforms/platform-engine.py find macos "$GITHUB_OUTPUT" | tee results/engine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-key-macos
+          path: ${{ runner.temp }}/engine-key/macos.key
+          if-no-files-found: error
       - name: Clone the engine
+        if: steps.engine.outputs.reuse == ''
         run: kirikiri/kagex/.github/platforms/setup.sh
       - name: Set up vcpkg and ninja
+        if: steps.engine.outputs.reuse == ''
         run: |
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
@@ -534,6 +787,7 @@ jobs:
           command -v ninja || brew install ninja
           { sw_vers; xcodebuild -version; cmake --version | head -1; } | tee results/toolchain.txt
       - name: Configure
+        if: steps.engine.outputs.reuse == ''
         working-directory: kirikiri/krkrz_dev
         # xp3crypt built into the engine, scnfile a plugin beside it. The plugin folders' tp_stub,
         # ncbind and simplebinder are krkrz_dev's: the first plugin's CMakeLists caches them
@@ -545,19 +799,30 @@ jobs:
             "-DTVP_PLUGIN_FOLDERS=$KRKRZ_BASE/xp3crypt/plugins;$KRKRZ_BASE/scnfile/plugins" "-DTVP_PLUGINS=xp3crypt;scnfile" -DTVP_PLUGINS_STATIC=xp3crypt \
             "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder"
       - name: Build the engine and its plugins
+        if: steps.engine.outputs.reuse == ''
         working-directory: kirikiri/krkrz_dev
         run: $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh build cmake --build build/arm64-osx --config Release -- -k 0
       - name: Install
+        if: steps.engine.outputs.reuse == ''
         working-directory: kirikiri/krkrz_dev
         run: |
           $GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh install cmake --install build/arm64-osx --config Release --prefix "$GITHUB_WORKSPACE/stage"
           find "$GITHUB_WORKSPACE/stage" -maxdepth 4 | sort | tee "$GITHUB_WORKSPACE/results/install.txt"
+      # the engine package is the app as installed, without signature, data or .cf (and the
+      # licenses beside it): the next step makes it this release's app, as after a build
+      - name: Install, reused
+        if: steps.engine.outputs.reuse != ''
+        run: |
+          rm -rf stage && mkdir -p stage
+          unzip -q "$RUNNER_TEMP/engine/kagex_engine_macos.zip" -d stage
+          rm -f stage/engine.json
+          find stage -maxdepth 4 | sort | tee results/install.txt
       - name: Put the game in the app
         run: |
           built=$(find stage -maxdepth 3 -name '*.app' | head -1)
           [ -n "$built" ] || { echo "::error::no .app in the install"; exit 1; }
           app=stage/KAGEX.app
-          mv "$built" "$app"
+          [ "$built" = "$app" ] || mv "$built" "$app"
           res="$app/Contents/Resources"
           mkdir -p "$res"
           rsync -a --exclude '*.bak' --exclude '*.psd' "$PROJECT_DIR/data/" "$res/data/"
