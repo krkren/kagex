@@ -4,7 +4,13 @@ project with the engine prebuilt, so a game is packaged with a JDK and the Andro
 NDK, CMake or vcpkg).
 
   android-engine.py <krkrz_android checkout, after a build> <its release APK> <out.zip>
-                    --version 0.3.0 [--licenses-from <a package with licenses/>]
+                    --version 0.3.0 [--licenses-from <a package with licenses/>] [--debug]
+
+With --debug and the kit's debug APK it makes kagex_engine_android_debug.zip: the same project
+with the Debug engine (unoptimized, and the only one with the REPL, which the kit compiles into
+Debug builds only). The platform builds that reuse an earlier release's engine build their debug
+APK from it, so their smoke test still drives the game through the REPL; kagex-release doesn't
+use it.
 
   engine.json
   license.txt, licenses/
@@ -115,6 +121,8 @@ def main():
     ap.add_argument("--version", required=True)
     ap.add_argument("--licenses-from")
     ap.add_argument("--app-config", help="the app-config.json the APK was built with (default: <kit>/app-config.json)")
+    ap.add_argument("--debug", action="store_true",
+                    help="the APK is the kit's debug build: engine.json says debug, and its engine must have the REPL")
     ap.add_argument("--with-cubism-core", action="store_true",
                     help="a package for your own game's builds may hold Live2D's Cubism Core (the Live2D plugin)")
     a = ap.parse_args()
@@ -162,8 +170,14 @@ def main():
                     continue
                 add("project/engine-assets/" + rel, apk.read(i))
                 assets += 1
-    if not any(n.endswith("/libkrkrz.so") for n in files):
+    engines = [n for n in files if n.endswith("/libkrkrz.so")]
+    if not engines:
         sys.exit("%s has no libkrkrz.so" % a.apk)
+    # the REPL's socket channel reads this variable (KrkrzActivity sets it in debuggable apps)
+    no_repl = [n for n in engines if b"KRKRZ_REPL_SOCKET" not in files[n][0]]
+    if a.debug and no_repl:
+        sys.exit("--debug: %s ha%s no REPL: is %s the kit's debug APK?"
+                 % (", ".join(sorted(no_repl)), "s" if len(no_repl) == 1 else "ve", a.apk))
 
     # the settings the engine was built with; kagex-release writes the game's over them
     cfg = json.loads(Path(a.app_config or kit / "app-config.json").read_text(encoding="utf-8"))
@@ -177,7 +191,7 @@ def main():
                 if (n == "license.txt" or n.startswith("licenses/")) and not n.endswith("/"):
                     add(n, z.read(n))
 
-    manifest = {"format": 1, "platform": "android", "version": a.version, "debug": False,
+    manifest = {"format": 1, "platform": "android", "version": a.version, "debug": a.debug,
                 "aar": sorted(from_aars)}
     refuse_cubism_core(files, a.with_cubism_core)
     with zipfile.ZipFile(a.out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:

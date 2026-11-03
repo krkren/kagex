@@ -455,7 +455,9 @@ jobs:
           distribution: temurin
           java-version: "17"
       # the engine package is the kit's Gradle project with the engine prebuilt (as kagex-release
-      # packages a game with it): only the SDK's platform and build tools, no NDK, CMake or vcpkg
+      # packages a game with it): only the SDK's platform and build tools, no NDK, CMake or vcpkg.
+      # Its engine is the release build's, which has no REPL (the kit compiles it into Debug
+      # builds only): the debug APK gets the debug package's engine (app/src/main/jniLibs)
       - name: The reused engine's Gradle project
         if: steps.engine.outputs.reuse != ''
         run: |
@@ -463,9 +465,15 @@ jobs:
           yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           kirikiri/kagex/.github/platforms/run-logged.sh sdk "$sdk/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
           proj="$RUNNER_TEMP/android"
-          rm -rf "$proj" "$RUNNER_TEMP/android-engine" && mkdir -p "$RUNNER_TEMP/android-engine"
+          rm -rf "$proj" "$RUNNER_TEMP/android-engine" "$RUNNER_TEMP/android-engine-debug" "$RUNNER_TEMP/jnilibs" && mkdir -p "$RUNNER_TEMP/android-engine" "$RUNNER_TEMP/jnilibs"
           unzip -q "$RUNNER_TEMP/engine/kagex_engine_android.zip" 'project/*' -d "$RUNNER_TEMP/android-engine"
           mv "$RUNNER_TEMP/android-engine/project" "$proj"
+          mv "$proj/app/src/main/jniLibs" "$RUNNER_TEMP/jnilibs/release"
+          unzip -q "$RUNNER_TEMP/engine/kagex_engine_android_debug.zip" 'project/app/src/main/jniLibs/*' -d "$RUNNER_TEMP/android-engine-debug"
+          mv "$RUNNER_TEMP/android-engine-debug/project/app/src/main/jniLibs" "$RUNNER_TEMP/jnilibs/debug"
+          for so in "$RUNNER_TEMP"/jnilibs/debug/*/libkrkrz.so; do
+            grep -q KRKRZ_REPL_SOCKET "$so" || { echo "::error::$so, the debug engine package's engine, has no REPL"; exit 1; }
+          done
           chmod +x "$proj/gradlew"
           echo "sdk.dir=$sdk" > "$proj/local.properties"
           # the game's app-config.json, but the engine's own assets from the package (krkrz_dev's
@@ -516,6 +524,7 @@ jobs:
           REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
           if [ -n "$REUSE" ]; then
+            rm -rf "$ANDROID_PROJECT/app/src/main/jniLibs" && cp -R "$RUNNER_TEMP/jnilibs/debug" "$ANDROID_PROJECT/app/src/main/jniLibs"
             (cd "$ANDROID_PROJECT" && "$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh" build ./gradlew --no-daemon :app:assembleDebug)
           else
             kirikiri/kagex/.github/platforms/run-logged.sh build make -C kirikiri/krkrz_android build
@@ -554,6 +563,9 @@ jobs:
         run: |
           # Gradle downloads lint's own dependencies here; a download cut off midway once
           # failed this step, so it gets three tries
+          if [ -n "$REUSE" ]; then
+            rm -rf "$ANDROID_PROJECT/app/src/main/jniLibs" && cp -R "$RUNNER_TEMP/jnilibs/release" "$ANDROID_PROJECT/app/src/main/jniLibs"
+          fi
           for try in 1 2 3; do
             if [ -n "$REUSE" ]; then
               (cd "$ANDROID_PROJECT" && "$GITHUB_WORKSPACE/kirikiri/kagex/.github/platforms/run-logged.sh" release ./gradlew --no-daemon :app:assembleReleaseDebugSigned) && break
@@ -569,25 +581,38 @@ jobs:
           name: kagex-android
           path: kirikiri/kagex/build/android/app/outputs/apk/releaseDebugSigned/*.apk
           if-no-files-found: error
-      # kagex-release's Android engine: this Gradle project with the engine just built, prebuilt
+      # kagex-release's Android engine: this Gradle project with the engine just built, prebuilt;
+      # and the same with the debug APK's engine, which a later release's reuse builds its debug
+      # APK from (it has the REPL the smoke test drives)
       - name: Engine package for kagex-release
         env:
           REUSE: ${{ steps.engine.outputs.reuse }}
         run: |
           apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/releaseDebugSigned" -name '*.apk' | head -1)
+          debug_apk=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)
           version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
           if [ -n "$REUSE" ]; then
-            # the same engine: the reused package, for this release
-            cp "$RUNNER_TEMP/engine/kagex_engine_android.zip" kagex_engine_android.zip
-            python3 kirikiri/kagex/.github/platforms/platform-engine.py version kagex_engine_android.zip "$version" | tee results/engine-package.txt
+            # the same engine: the reused packages, for this release
+            for z in kagex_engine_android.zip kagex_engine_android_debug.zip; do
+              cp "$RUNNER_TEMP/engine/$z" "$z"
+              python3 kirikiri/kagex/.github/platforms/platform-engine.py version "$z" "$version" | tee -a results/engine-package.txt
+            done
           else
             python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$apk" kagex_engine_android.zip \
               --version "$version" --app-config "$PROJECT_DIR/app-config.json" | tee results/engine-package.txt
+            python3 -I kirikiri/kagex/tools/release/scripts/android-engine.py kirikiri/krkrz_android "$debug_apk" kagex_engine_android_debug.zip \
+              --version "$version" --app-config "$PROJECT_DIR/app-config.json" --debug | tee -a results/engine-package.txt
           fi
       - uses: actions/upload-artifact@v4
         with:
           name: kagex-engine-android
           path: kagex_engine_android.zip
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kagex-engine-android-debug
+          path: kagex_engine_android_debug.zip
           compression-level: 0
           if-no-files-found: error
       - name: Publish results branch

@@ -10,18 +10,23 @@ so a later release finds the same engine by it. A release without the key is nev
                                              environment), the configs without their version and
                                              comments, and the files the build reads
   platform-engine.py find <platform> <out>   the key, then the newest release whose note has that
-                                             key and the engine package; writes key=..., reuse=<tag>
+                                             key and the engine packages; writes key=..., reuse=<tag>
                                              (empty: build) to <out> ($GITHUB_OUTPUT), the key to
                                              $ENGINE_KEY_DIR/<platform>.key, and downloads the
-                                             package to $ENGINE_DIR/kagex_engine_<platform>.zip.
+                                             packages to $ENGINE_DIR (kagex_engine_<platform>.zip,
+                                             and Android's kagex_engine_android_debug.zip).
                                              REBUILD=true skips the search; REUSE_FROM=<tag> (not
-                                             in a release run) takes that release's package
+                                             in a release run) takes that release's packages
                                              whatever its key, to test the reuse steps
   platform-engine.py version <zip> <version> rewrites a reused package's engine.json for this
                                              release (Android and iOS: their engine packages are
                                              the jobs' own)
 
 platform: steam (the linux job), web, android, ios, macos. Run from the repository's root.
+
+Android takes the debug engine package too: the smoke test drives the game through the REPL, which
+the kit compiles into Debug builds only, so the debug APK is built from the debug package's engine
+and the release APK from the release package's.
 """
 import hashlib
 import json
@@ -57,6 +62,7 @@ PLATFORMS = {
     "android": {
         "pins": ["KRKRZ_ANDROID_SHA"],
         "configs": {"app-config.json": ["versionCode", "versionName"]},
+        "debug": True,
         "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/krkreffekseer-odr.cpp",
                                  "tools/release/scripts/android-engine.py"],
     },
@@ -119,6 +125,14 @@ def key_lines(platform):
     return lines
 
 
+def packages(platform):
+    """The engine packages a reuse takes"""
+    names = ["kagex_engine_%s.zip" % platform]
+    if PLATFORMS[platform].get("debug"):
+        names.append("kagex_engine_%s_debug.zip" % platform)
+    return names
+
+
 def key(platform):
     return hashlib.sha256("\n".join(key_lines(platform)).encode("utf-8")).hexdigest()
 
@@ -137,7 +151,7 @@ def gh_asset(repo, asset_id, dest):
 def find(platform, out_path):
     repo = os.environ.get("REPO") or os.environ.get("GITHUB_REPOSITORY") or die("REPO isn't set")
     k = key(platform)
-    package = "kagex_engine_%s.zip" % platform
+    wanted = packages(platform)
     key_dir = os.environ.get("ENGINE_KEY_DIR", "engine-key")
     os.makedirs(key_dir, exist_ok=True)
     with open(os.path.join(key_dir, platform + ".key"), "w") as f:
@@ -146,7 +160,7 @@ def find(platform, out_path):
     for line in key_lines(platform):
         print("  " + line)
     tag = ""
-    asset = None
+    found = []
     forced = os.environ.get("REUSE_FROM", "").strip()
     in_release = os.environ.get("GITHUB_WORKFLOW", "") == "Release packages"
     if forced and in_release:
@@ -163,12 +177,13 @@ def find(platform, out_path):
             if forced:
                 if r["tag_name"] != forced:
                     continue
-                if package not in assets:
-                    die("release %s has no %s" % (forced, package))
-                tag, asset = forced, assets[package]
-                print("REUSE_FROM: %s's %s, whatever its key (a test of the reuse steps)" % (forced, package))
+                missing = [p for p in wanted if p not in assets]
+                if missing:
+                    die("release %s has no %s" % (forced, ", ".join(missing)))
+                tag, found = forced, [assets[p] for p in wanted]
+                print("REUSE_FROM: %s's %s, whatever its key (a test of the reuse steps)" % (forced, ", ".join(wanted)))
                 break
-            if NOTE not in assets or package not in assets:
+            if NOTE not in assets or any(p not in assets for p in wanted):
                 continue
             note_path = os.path.join(key_dir, "note.json")
             gh_asset(repo, assets[NOTE]["id"], note_path)
@@ -181,15 +196,16 @@ def find(platform, out_path):
                 if os.path.exists(note_path):
                     os.remove(note_path)
             if (note.get("platforms") or {}).get(platform) == k:
-                tag, asset = r["tag_name"], assets[package]
+                tag, found = r["tag_name"], [assets[p] for p in wanted]
                 break
         if forced and not tag:
             die("there's no release %s" % forced)
     if tag:
         engine_dir = os.environ.get("ENGINE_DIR", "engine")
         os.makedirs(engine_dir, exist_ok=True)
-        gh_asset(repo, asset["id"], os.path.join(engine_dir, package))
-        print("reusing %s of release %s: the engine isn't built" % (package, tag))
+        for asset in found:
+            gh_asset(repo, asset["id"], os.path.join(engine_dir, asset["name"]))
+        print("reusing %s of release %s: the engine isn't built" % (", ".join(wanted), tag))
     else:
         print("no release has this engine: it's built")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
