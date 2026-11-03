@@ -1482,7 +1482,8 @@ def three_flip_steps(eng):
     eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"vee.vrm", visible:"true", left:"100", top:"100",'
             ' "3dwidth" => "400", "3dheight" => "640", "3dmotion" => "vee_idle", "3dframe" => "-0.03,1.47",'
             ' "3dexpression" => "happy:1"]); return 1;')
-    time.sleep(1.0)
+    # ten frames: the iOS Simulator draws 6 a second
+    eng.wait("ten frames of the avatar", kf + ' !== void && ' + kf + '.frames >= 10', timeout=15)
     r = str(eng.tjs(lay + count + 'return [l.flipType, n, f.canvasWidth, f.canvasHeight, f.frames, f.kind, l.type == ltAlpha ? 1 : 0,'
                     ' f.vrm.getExpression("happy"), f.motionAnim !== void ? f.motionAnim.getDuration() : 0].join(",");')).split(",")
     print("     a VRM avatar on a KAG layer: %s %s, %s of its samples drawn in %sx%s, %s frames, happy %s, its motion %s s"
@@ -1534,7 +1535,7 @@ def three_flip_steps(eng):
     # the glTF star: its first clip (spin) goes on; hop once; a clip it doesn't have
     eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"star3d.glb", visible:"true",'
             ' "3dwidth" => "300", "3dheight" => "300", "3dframe" => "-0.7,0.7"]); return 1;')
-    time.sleep(1.0)
+    eng.wait("frames of the star", kf + ' !== void && ' + kf + '.frames >= 5', timeout=15)
     r = str(eng.tjs(lay + count + 'return [f.kind, n, f.frames, f.action !== void ? 1 : 0, f.model.getAnimationCount(),'
                     ' f.model.getAnimationName(0)].join(",");')).split(",")
     print("     a glTF model: %s, %s samples drawn, %s frames, a clip playing %s, clips %s (%s first)" % tuple(r), flush=True)
@@ -1551,7 +1552,7 @@ def three_flip_steps(eng):
     # the scene built in script (Scenes3D.tjs: stage3d)
     if eng.tjs('return KAGThreeScenes["stage3d"] !== void ? 1 : 0;') == 1:
         eng.tjs('kag.tagHandlers.image(%[layer:"1", page:"fore", flip:"stage3d", visible:"true", "3dwidth" => "480", "3dheight" => "270"]); return 1;')
-        time.sleep(1.0)
+        eng.wait("ten frames of the scene", kf + ' !== void && ' + kf + '.frames >= 10', timeout=15)
         r = str(eng.tjs(lay + count + 'return [f.kind, n, f.frames, f.ctx.knot !== void ? 1 : 0, "%.2f".sprintf(f.time)].join(",");')).split(",")
         print("     a scene built in script: %s, %s samples drawn, %s frames, %s s played" % (r[0], r[1], r[2], r[4]), flush=True)
         if r[0] != "scene" or int(r[1]) < 50 or int(r[2]) < 10 or r[3] != "1":
