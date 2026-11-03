@@ -584,10 +584,13 @@ jobs:
           $ep macos "$(ls platforms/kagex-macos/*.zip)" engines/kagex_engine_macos.zip --version "$RELEASE_TAG" --licenses-from "$lic"
           (cd platforms/kagex-web && zip -q -r ../../web.zip .)
           $ep web web.zip engines/kagex_engine_web.zip --version "$RELEASE_TAG" --licenses-from "$lic"
-          cp platforms/kagex-engine-android/kagex_engine_android.zip platforms/kagex-engine-ios/kagex_engine_ios.zip engines/
+          # Android's debug package: the debug APK's engine (with the REPL), which a later release's
+          # Android build reuses for its smoke test (platforms.yml); kagex-release doesn't use it
+          cp platforms/kagex-engine-android/kagex_engine_android.zip platforms/kagex-engine-android-debug/kagex_engine_android_debug.zip \
+             platforms/kagex-engine-ios/kagex_engine_ios.zip engines/
           # the Android and iOS packages get the engine's licenses from the Linux package
           mkdir lic && (cd lic && unzip -q "../$lic" license.txt 'licenses/*')
-          for z in kagex_engine_android.zip kagex_engine_ios.zip; do (cd lic && zip -q -r "../engines/$z" license.txt licenses); done
+          for z in kagex_engine_android.zip kagex_engine_android_debug.zip kagex_engine_ios.zip; do (cd lic && zip -q -r "../engines/$z" license.txt licenses); done
           ls -l engines | tee results/engines.txt
       - uses: actions/setup-java@v4
         with:
@@ -954,8 +957,8 @@ jobs:
           PY
           cat dist/kagex-engine-build.json
           python3 -c "import json, sys; p = json.load(open(sys.argv[1]))['platforms']; sys.exit(0 if sorted(p) == ['android', 'ios', 'macos', 'steam', 'web'] else 'the note lacks a platform key: %s' % sorted(p))" dist/kagex-engine-build.json
-          # 9 packages, 9 engine packages, the two tools for 3 systems and that note
-          [ "$(ls dist/* | wc -l)" = 25 ] || { echo "expected 25 files"; exit 1; }
+          # 9 packages, 10 engine packages, the two tools for 3 systems and that note
+          [ "$(ls dist/* | wc -l)" = 26 ] || { echo "expected 26 files"; exit 1; }
           sha256sum dist/*
           if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
             echo "tag $RELEASE_TAG already exists"; exit 1
