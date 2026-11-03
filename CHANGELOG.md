@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **A window no longer keeps resizing itself** (issue #29): in a window, the window flipped between the game's size and the game plus the menu bar's strip, every few hundred milliseconds, for as long as the game ran. `KAGWindow.setZoom` let the engine size the window to the game alone, then added the strip: two resizes, each reported later through `onResize`, which called `setZoom` again with the same zoom. When the zoom doesn't change, `setZoom` now sizes the window once, strip included, and only when it isn't that size already. The smoke test checks that nothing calls `setZoom` while a window sits still (here it ran about 80 times a second).
+
 ## 0.13.3
 
 ### Changed

@@ -767,6 +767,18 @@ def interface_steps(eng, step):
             print("     window %dx%d, the game %dx%d under a %d px strip" % tuple(size), flush=True)
             if not sized:
                 raise SmokeError("the window isn't the game plus the strip: %s" % size)
+            # and it stays that size: setZoom sized the window to the game alone, then added the
+            # strip, and each resize came back through onResize, which called setZoom again, for
+            # ever (issue 29: about 80 calls a second here)
+            time.sleep(1)
+            eng.tjs("global.__smokeZooms = 0; kag.__smokeSetZoom = kag.setZoom; kag.setZoom = function(n, d, r = true)"
+                    " { global.__smokeZooms++; __smokeSetZoom(n, d, r); } incontextof kag; return 1;")
+            time.sleep(1.5)
+            zooms = eng.tjs("var n = __smokeZooms; kag.setZoom = kag.__smokeSetZoom; delete kag.__smokeSetZoom;"
+                            " return n;")
+            if zooms >= 5:
+                raise SmokeError("the window keeps being sized again with nothing happening: setZoom ran %s times"
+                                 " in 1.5 s (onResize and setZoom in a loop)" % zooms)
             # F10: the first menu, from the keyboard; Esc closes it
             eng.key("VK_F10")
             eng.wait("the first menu", 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex >= 0'
