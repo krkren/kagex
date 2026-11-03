@@ -1382,16 +1382,29 @@ def vrm_steps(eng):
             '   var k = []; k.assign(c.mouth); for (var i = 0; i < k.count; i += 2) {'
             '    var w = c.vrm.getExpression(c.expressions.find(k[i]));'
             '    s.mouth[k[i]] = w if s.mouth[k[i]] === void || w > s.mouth[k[i]]; } }'
-            ' }, ""); __smokeVRMTimer.interval = 20; __smokeVRMTimer.enabled = true;'
-            ' var c = world_object.env.characters["vee"]; c.setFace("laugh", %[]);'
+            ' }, ""); __smokeVRMTimer.interval = 20; __smokeVRMTimer.enabled = true; return 1;')
+    # a blink first (the iOS Simulator draws 3 to 6 frames a second), then the laugh, which is
+    # all of happy and fades blinking out
+    blinked = True
+    try:
+        eng.wait("Vee to blink, with her eyes open between", 'global.__smokeVRM.blinkMax >= 0.8 && global.__smokeVRM.blinkMin <= 0.05',
+                 timeout=15)
+    except SmokeError:
+        blinked = False
+    eng.tjs('var c = world_object.env.characters["vee"]; c.setFace("laugh", %[]);'
             ' global.__smokeVRMMid = c.currentFaceValues(c.faceStart + vrmFaceFade / 2).happy; return 1;')
-    time.sleep(1.5)
+    try:
+        ch = 'world_object.env.characters["vee"]'
+        eng.wait("the laugh to fade in", ch + '.weights.happy > 0.99 && ' + ch + '.vrm.getExpression("happy") > 0.99',
+                 timeout=15)
+    except SmokeError:
+        pass  # the check below says what it was
     r = str(eng.tjs(vee + 'var s = global.__smokeVRM;'
                     ' return [s.blinkMin, s.blinkMax, global.__smokeVRMMid, c.weights.happy, c.vrm.getExpression("happy"), c.face].join(",");')).split(",")
     print("     blinking: blink from %s up to %s; laugh: happy %s halfway through its fade, then %s (the avatar's %s)"
           % (r[0], r[1], r[2], r[3], r[4]), flush=True)
     # (laugh is all of happy, which fades blinking out: the blink was seen before it)
-    if float(r[1]) < 0.8 or float(r[0]) > 0.05:
+    if not blinked or float(r[1]) < 0.8 or float(r[0]) > 0.05:
         raise SmokeError("Vee didn't blink, or her eyes didn't open between blinks: %s" % r)
     if not 0.3 < float(r[2]) < 0.7 or abs(float(r[3]) - 1.0) > 0.01 or abs(float(r[4]) - 1.0) > 0.01 or r[5] != "laugh":
         raise SmokeError("Vee's laugh face didn't fade in and reach her avatar: %s" % r)
