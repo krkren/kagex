@@ -1496,7 +1496,8 @@ def three_flip_steps(eng):
     eng.wait("the idle motion again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=10)
     eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "no_such_motion"]); return 1;')
     eng.wait("3donce for a motion it doesn't have", kf + '.onceDone == 2', timeout=5)
-    if float(eng.tjs(lay + 'return f.vrm.getExpression("happy");')) != 0.0:
+    # as a string: the Android, iOS and web REPLs print a real with a comment ("+0.0 /* +0.0 */")
+    if float(eng.tjs(lay + 'return "%f".sprintf(f.vrm.getExpression("happy"));')) != 0.0:
         raise SmokeError('3dexpression="" didn\'t take happy off the avatar')
     print("     3donce: vee_wave played once, the idle motion went on, a missing one ended at once", flush=True)
     # lip-sync to SE buffer 0

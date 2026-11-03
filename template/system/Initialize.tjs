@@ -687,14 +687,21 @@ KAGLinkPlugin("plugin/json.dll") if typeof Scripts.evalJSON == "undefined";
 // plugins on the way out: that throws, and the engine catches it, but in the Linux kit build
 // (made for the Steam Linux Runtime) each plugin carries its own copy of the C++ unwinder, and
 // unwinding through the plugin's frame aborted the process: every exit dumped core. Unlinked
-// while Scripts is still there, it throws nothing. Called before the framework's exits and when
-// the game window goes (KAGWindow.finalize)
+// while Scripts is still there, it throws nothing. krkrthreepp (3D, GFX_Three.tjs) is the same:
+// its V2Unlink runs a TJS expression (taking its web API off WebServer), which throws once the
+// script engine is gone, and its own catch aborted the Linux kit build's exit just the same.
+// Unlinked from here it throws nothing; the engine keeps a plugin whose objects are still alive
+// linked, and KAGWindow.finalize calls this after the window's KAG plugins (KAGThree, the World's
+// VRM characters) have released theirs. Called before the framework's exits and when the game
+// window goes (KAGWindow.finalize)
 function KAGUnlinkPluginsBeforeExit() {
 	if (typeof System.platformTag == "undefined" || System.platformTag != "linux") return;
 	var list = Plugins.getList();
 	for (var i = 0; i < list.count; i++) {
 		var n = list[i].toLowerCase();
-		if (n == "json.dll" || n == "libjson.so") { try { Plugins.unlink(list[i]); } catch (e) {} }
+		if (n == "json.dll" || n == "libjson.so" || n == "krkrthreepp.dll" || n == "libkrkrthreepp.so") {
+			try { Plugins.unlink(list[i]); } catch (e) {}
+		}
 	}
 }
 // SCNFile: compiled scenarios as .scn (PSB) files, from https://github.com/krkren/scnfile.
