@@ -12,7 +12,10 @@
 #   the engine) + data/, template/, doc/, "KAGEX Initial Setup.txt" and krkrz.cf (the
 #   engine's options: the Linux/macOS save folder) from the kagex commit. An earlier release's
 #   build of the engine is reused when its note (kagex-engine-build.json, added to a release) says
-#   krkrz_dev and the plugins built into it are the same commits this run would build.
+#   krkrz_dev and the plugins built into it are the same commits this run would build. The note
+#   also keeps each platform build's key (platforms.yml, .github/platforms/platform-engine.py), so
+#   their engines are reused the same way; the repository variable KAGEX_PLATFORM_REBUILD=true
+#   builds them all.
 name: Release packages
 
 on:
@@ -54,6 +57,7 @@ jobs:
     uses: ./.github/workflows/platforms.yml
     with:
       ref: ${{ needs.release-commit.outputs.sha }}
+      rebuild: ${{ vars.KAGEX_PLATFORM_REBUILD == 'true' }}
     secrets: inherit
     permissions:
       contents: write
@@ -935,9 +939,21 @@ jobs:
         run: |
           ls -l dist
           # the engine these release's packages hold, by commit: a later release of kagex reuses
-          # their build instead of compiling it when these three still match (.github/release-build)
-          printf '{\n  "format": 1,\n  "engine": "%s",\n  "xp3crypt": "%s",\n  "scnfile": "%s"\n}\n' \
-            "$ENGINE_SHA" "$XP3CRYPT_SHA" "$SCNFILE_SHA" > dist/kagex-engine-build.json
+          # their build instead of compiling it when these three still match (.github/release-build);
+          # and each platform build's key (kagex-engine-key-<platform>), which the platform jobs of a
+          # later release look for (platforms.yml, .github/platforms/platform-engine.py)
+          python3 - > dist/kagex-engine-build.json <<'PY'
+          import glob, json, os
+          platforms = {}
+          for f in sorted(glob.glob("platforms/kagex-engine-key-*/*.key")):
+              with open(f) as k:
+                  platforms[os.path.basename(f)[:-len(".key")]] = k.read().strip()
+          note = {"format": 1, "engine": os.environ["ENGINE_SHA"], "xp3crypt": os.environ["XP3CRYPT_SHA"],
+                  "scnfile": os.environ["SCNFILE_SHA"], "platforms": platforms}
+          print(json.dumps(note, indent=2))
+          PY
+          cat dist/kagex-engine-build.json
+          python3 -c "import json, sys; p = json.load(open(sys.argv[1]))['platforms']; sys.exit(0 if sorted(p) == ['android', 'ios', 'macos', 'steam', 'web'] else 'the note lacks a platform key: %s' % sorted(p))" dist/kagex-engine-build.json
           # 9 packages, 9 engine packages, the two tools for 3 systems and that note
           [ "$(ls dist/* | wc -l)" = 25 ] || { echo "expected 25 files"; exit 1; }
           sha256sum dist/*
