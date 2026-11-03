@@ -62,7 +62,7 @@ PLATFORMS = {
     "android": {
         "pins": ["KRKRZ_ANDROID_SHA"],
         "configs": {"app-config.json": ["versionCode", "versionName"]},
-        "debug": True,
+        "debug": False,  # TEST ONLY: 0.13.3 has no debug package; the job makes one from its run's debug APK
         "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/krkreffekseer-odr.cpp",
                                  "tools/release/scripts/android-engine.py"],
     },

@@ -447,6 +447,32 @@ jobs:
           name: kagex-engine-key-android
           path: ${{ runner.temp }}/engine-key/android.key
           if-no-files-found: error
+      - name: TEST ONLY - a debug engine package from 0.13.3's debug APK
+        if: steps.engine.outputs.reuse != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 41515757348 --repo "$GITHUB_REPOSITORY" -n kagex-android-debug -D "$RUNNER_TEMP/dbgapk"
+          python3 - "$RUNNER_TEMP/engine/kagex_engine_android.zip" "$(ls "$RUNNER_TEMP"/dbgapk/*.apk | head -1)" "$RUNNER_TEMP/engine/kagex_engine_android_debug.zip" <<'PY'
+          import json, sys, zipfile
+          rel, apk, out = sys.argv[1:]
+          with zipfile.ZipFile(rel) as zr, zipfile.ZipFile(apk) as za, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zo:
+              aar = set(json.loads(zr.read("engine.json")).get("aar", []))
+              for i in zr.infolist():
+                  if i.filename.startswith("project/app/src/main/jniLibs/"):
+                      continue
+                  data = zr.read(i)
+                  if i.filename == "engine.json":
+                      m = json.loads(data)
+                      m["debug"] = True
+                      data = (json.dumps(m, indent=2) + "\n").encode()
+                  zo.writestr(i, data)
+              for i in za.infolist():
+                  n = i.filename
+                  if n.startswith("lib/") and n.endswith(".so") and n.split("/")[-1] not in aar:
+                      zo.writestr("project/app/src/main/jniLibs/%s/%s" % (n.split("/")[1], n.split("/")[-1]), za.read(i))
+          PY
+          unzip -l "$RUNNER_TEMP/engine/kagex_engine_android_debug.zip" | grep -E 'jniLibs|engine.json'
       - name: Clone the engine and krkrz_android
         if: steps.engine.outputs.reuse == ''
         run: kirikiri/kagex/.github/platforms/setup.sh krkrz_android "$KRKRZ_ANDROID_SHA"
