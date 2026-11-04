@@ -1,0 +1,203 @@
+// Animated TV static: the static flip type (doc/kagex.txt, "Optional parameters for static";
+// doc/world.txt, static). A broken screen, a bad signal or a memory breaking up, over the scene
+// at the layer's opacity and blend mode:
+//   [image layer=1 page=fore flip=static visible=true opacity=96]  on a KAG layer
+//   [newlay name=tv static=tv opacity=96]                          on a World layer
+// (not "noise": that's the still noise= every World image already takes)
+// Each frame a picture of noise a grain smaller than the layer is drawn (layerExImage's
+// generateWhiteNoise, or noise for colour) and stretched to the layer's size, so it costs a few
+// milliseconds even on the web build; a band rolling down (staticbar) and scanlines (staticlines)
+// go over it. The static never ends by itself: a save keeps its options.
+class StaticFlip extends GenericFlip, Layer
+{
+	var FLIP  = global.GenericFlip;
+	var SUPER = global.Layer;
+	var grain;                  // the small picture of noise, stretched to this one
+	var tile;                   // without a noise generator: noise drawn once, shown at random places
+	var lines;                  // the scanlines, drawn again when the size or strength changes
+	var linesKey = "";
+	var file = "";
+	var options = %[];          // the options in effect (flipStore keeps them)
+	var stateOptions = [ "staticgrain", "staticcolor", "staticfps", "staticbar", "staticlines" ];
+	var canvasWidth;
+	var canvasHeight;
+	var lastTick;
+	var frames = 0;             // frames drawn
+	var barPos = 0.0;           // where the band is: 0 to 1, top to bottom (it starts above)
+	var barPeriod = 2500;       // ms the band takes from top to bottom
+
+	function StaticFlip(win) {
+		FLIP.GenericFlip(win);
+		SUPER.Layer(win, win.primaryLayer);
+		name = "StaticFlip";
+		grain = new global.Layer(win, win.primaryLayer);
+	}
+
+	function finalize() {
+		invalidate grain;
+		if (tile !== void) invalidate tile;
+		if (lines !== void) invalidate lines;
+		SUPER.finalize(...);
+		FLIP.finalize();
+	}
+
+	property grainSize { getter {
+		var g = options.staticgrain !== void ? (int)+options.staticgrain : 3;
+		return g < 1 ? 1 : g;
+	} }
+	property frameInterval { getter {
+		var fps = options.staticfps !== void ? +options.staticfps : 30;
+		fps = 1 if fps < 1;
+		fps = 60 if fps > 60;
+		return 1000 / fps;
+	} }
+	function strength(key) {
+		var v = options[key] !== void ? (int)+options[key] : 0;
+		return v < 0 ? 0 : v > 255 ? 255 : v;
+	}
+
+	function showFrame() {
+		for (var i = flipLayers.count - 1; i >= 0; i--) flipLayers[i].assignImagesForMovie(this);
+	}
+
+	function flipStart(storage, elm) {
+		elm = %[] if (elm === void);
+		file = storage;
+		name = "Static:" + storage;
+		(Dictionary.clear incontextof options)();
+		var prim = window.primaryLayer;
+		var w = elm.staticwidth  !== void ? (int)+elm.staticwidth  : prim.width;
+		var h = elm.staticheight !== void ? (int)+elm.staticheight : prim.height;
+		w = 1 if w < 1;
+		h = 1 if h < 1;
+		canvasWidth = w;
+		canvasHeight = h;
+		setImageSize(w, h);
+		setSizeToImageSize();
+		lastTick = void;
+		frames = 0;
+		barPos = Math.random();
+		setStateOptions(elm);
+		// the first picture now: a layer shown for a transition has it at once
+		drawFrame(0);
+	}
+
+	function flipSetOptions(elm) {
+		if (elm === void) return;
+		setStateOptions(elm);
+	}
+
+	function setStateOptions(elm) {
+		for (var i = stateOptions.count - 1; i >= 0; i--) {
+			var key = stateOptions[i];
+			options[key] = elm[key] if (elm[key] !== void);
+		}
+	}
+
+	// the small picture: noise in every pixel
+	function makeNoise(gw, gh) {
+		if (grain.imageWidth != gw || grain.imageHeight != gh) grain.setImageSize(gw, gh);
+		var colour = options.staticcolor !== void && +options.staticcolor;
+		if (colour && typeof grain.noise != "undefined") {
+			grain.fillRect(0, 0, gw, gh, 0xff808080);
+			grain.noise(255);
+		} else if (typeof grain.generateWhiteNoise != "undefined") {
+			grain.generateWhiteNoise();
+		} else {
+			// no generator (layerExImage): a 96 px tile of noise, drawn once as a 2x2 of itself, of
+			// which each cell shows a window at a random place
+			var n = 96;
+			if (tile === void) {
+				tile = new global.Layer(window, window.primaryLayer);
+				tile.setImageSize(n * 2, n * 2);
+				for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+					var v = (int)(Math.random() * 256);
+					tile.setMainPixel(x, y, 0xff000000 | (v << 16) | (v << 8) | v);
+				}
+				tile.copyRect(n, 0, tile, 0, 0, n, n);
+				tile.copyRect(0, n, tile, 0, 0, n * 2, n);
+			}
+			for (var y = 0; y < gh; y += n) for (var x = 0; x < gw; x += n)
+				grain.copyRect(x, y, tile, (int)(Math.random() * n), (int)(Math.random() * n), n, n);
+		}
+	}
+
+	// the scanlines: every other grain row darkened, as an overlay of black with alpha
+	function drawLines(w, h, g, strength) {
+		var key = [w, h, g, strength].join(",");
+		if (key != linesKey) {
+			linesKey = key;
+			if (lines === void) lines = new global.Layer(window, window.primaryLayer);
+			lines.setImageSize(w, h);
+			lines.fillRect(0, 0, w, h, 0);
+			var step = g < 2 ? 2 : g * 2, thick = g < 2 ? 1 : g;
+			for (var y = 0; y < h; y += step) lines.fillRect(0, y, w, thick, strength << 24);
+		}
+		operateRect(0, 0, lines, 0, 0, w, h, omAlpha, 255);
+	}
+
+	function drawFrame(dt) {
+		var w = canvasWidth, h = canvasHeight, g = grainSize;
+		var gw = (w + g - 1) \ g, gh = (h + g - 1) \ g;
+		makeNoise(gw, gh);
+		stretchCopy(0, 0, w, h, grain, 0, 0, gw, gh, stNearest);
+		// opaque (the layer's opacity and mode blend it), before anything is drawn over it
+		face = dfMask;
+		fillRect(0, 0, w, h, 255);
+		face = dfAlpha;
+		var bar = strength("staticbar");
+		if (bar > 0) {
+			// a brighter band, a sixth of the height, rolling down
+			var bh = h \ 6;
+			barPos += dt / barPeriod;
+			barPos -= (int)barPos;
+			var top = (int)(barPos * (h + bh)) - bh, bottom = top + bh;
+			top = 0 if top < 0;
+			bottom = h if bottom > h;
+			colorRect(0, top, w, bottom - top, 0xffffff, bar) if (bottom > top);
+		}
+		var lin = strength("staticlines");
+		drawLines(w, h, g, lin) if (lin > 0);
+		frames++;
+		showFrame();
+	}
+
+	function flipUpdate(tick) {
+		var interval = frameInterval;
+		lastTick = tick - interval if (lastTick === void);
+		var dt = tick - lastTick;
+		if (dt < interval) return;
+		lastTick = tick;
+		dt = 100 if (dt > 100);   // after a pause, from where it was
+		drawFrame(dt);
+	}
+
+	function flipStore(dic) {
+		if (dic === void) return;
+		dic.file    = file;
+		dic.width   = canvasWidth;
+		dic.height  = canvasHeight;
+		dic.options = %[];
+		(Dictionary.assign incontextof dic.options)(options);
+	}
+
+	function flipRestore(dic) {
+		if (dic === void) return;
+		var elm = %[];
+		(Dictionary.assign incontextof elm)(dic.options) if (dic.options !== void);
+		elm.staticwidth  = dic.width;
+		elm.staticheight = dic.height;
+		flipStart(dic.file !== void ? dic.file : "static", elm);
+	}
+}
+
+GenericFlip.Entry(
+	%[
+		"type"     => "static",                       // Registration tag ([newlay static=...])
+		"class"    => StaticFlip,                      // Controller class
+		"trigger"  => "staticstop",                   // Trigger sent when every flip of it has ended
+		"checker"  => function(storage) { return typeof storage == "String" && storage.toLowerCase() == "static"; },
+		"options"  => [ "staticwidth", "staticheight", "staticgrain", "staticcolor", "staticfps", "staticbar", "staticlines" ],
+		"dtstore"  => true,                           // Restore flag (for KAGEnvLayer)
+		"keepOnRedraw" => true,                       // Moves on through a World layer's redraw
+		]);

@@ -120,8 +120,11 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   Identity `-` signs a device build ad hoc, to check the package.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
-`appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
-licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
+`appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. Android,
+iOS and the web get the same options, but `orgname` and `appname`, at the top of the `config.cf` they
+read from their resources (the APK's assets, the app, the site's `resource/`), ahead of the engine
+package's own; on the web an option the game sets is taken off the page's command line, which
+the engine would read first. The licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
 starts this computer's build for a few seconds (headless where it can, through the engine's REPL;
 a signed build refuses the REPL, so its test run reads the log for the "signatures verified" line)
 and reports script errors; its log is `<output>/test-run.log`.
@@ -347,7 +350,8 @@ still show in the bytecode, so this keeps out casual reading, not a determined p
   followed that way: such a script stays as it is. Windows' engine keeps them.
 - A script that doesn't compile stays as it is, and so does one too large for the bytecode's
   16-bit indexes (a function of more than 32767 code words, or more than 32767 different
-  strings); the build lists each one and why. The engine's output is
+  strings), and one with a `(const)` array or dictionary, which the bytecode has no form for (it
+  would read as null); the build lists each one and why. The engine's output is
   `<output>/compile-scripts.log`.
 
 ### Engine packages

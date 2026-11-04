@@ -1,4 +1,139 @@
 /**
+ * Pitch and pan for a World sound (KAGEnvBgm, KAGEnvSE; doc/world.txt): pitch= in % of the
+ * recorded speed (100: as recorded; the engine's frequency changes speed and pitch together, as
+ * a tape does), pan= from -100 (left) to 100 (right), each moving there over time= ms, or at
+ * once while skipping. A play tag starts its sound at the pitch and pan it gives (100 and 0
+ * unless it gives them). The targets are what a save keeps; KAGEnvForParse (the compiler's
+ * World) only sets them, as the tags' commands do
+ */
+class KAGEnvSoundShift {
+	var pitch = 100;        // the targets
+	var pan = 0;
+	var nowPitch = 100;     // what the buffer has now (a change moves from these)
+	var nowPan = 0;
+	var change;             // a change to make at the next update: %[ time ]
+	var ramp;               // a change moving: %[ start, time, fromPitch, toPitch, fromPan, toPan ]
+	var timer;
+	var buffer;             // the buffer it was applied to
+	var baseFrequency;      // that buffer's frequency at 100%
+	var panScale = 1000;    // its pan's units for 1%: the engine's are 1/1000 of a %, SESoundBuffer's are %
+	var placed;             // function: whether the buffer is placed in 3D (its pan is then the place's)
+
+	function KAGEnvSoundShift(placed) {
+		this.placed = placed;
+	}
+	function finalize() {
+		if (timer !== void) invalidate timer;
+	}
+
+	/** pitch= and pan= of a tag: a change for the next update; true when it had either */
+	function set(elm) {
+		if (elm === void || (elm.pitch === void && elm.pan === void)) return false;
+		pitch = clampPitch(elm.pitch) if (elm.pitch !== void);
+		pan   = clampPan(elm.pan)     if (elm.pan   !== void);
+		change = %[ time: elm.time !== void ? +elm.time : 0 ];
+		return true;
+	}
+	/** a play tag: its sound starts at the pitch and pan it gives, or as recorded and centred */
+	function reset(elm) {
+		pitch = elm !== void && elm.pitch !== void ? clampPitch(elm.pitch) : 100;
+		pan   = elm !== void && elm.pan   !== void ? clampPan(elm.pan)     : 0;
+		change = void;
+	}
+	/** as a save had them */
+	function restore(f) {
+		pitch = f.pitch !== void ? clampPitch(f.pitch) : 100;
+		pan   = f.pan   !== void ? clampPan(f.pan)     : 0;
+		change = void;
+	}
+	function store(f) {
+		f.pitch = pitch if pitch != 100;
+		f.pan   = pan   if pan   != 0;
+	}
+	function clampPitch(v) {
+		v = +v;
+		return v < 1 ? 1 : v > 400 ? 400 : v;
+	}
+	function clampPan(v) {
+		v = +v;
+		return v < -100 ? -100 : v > 100 ? 100 : v;
+	}
+
+	/** a sound started on buf (its frequency is the file's again): the targets, at once */
+	function started(buf) {
+		stopRamp();
+		change = void;
+		if (buf === void || !isvalid buf) return;
+		attach(buf);
+		nowPitch = pitch;
+		nowPan = pan;
+		apply();
+	}
+	/** a change set since the last update: over its time, or at once while skipping */
+	function update(buf, skipMode) {
+		if (change === void) return;
+		var time = skipMode == SKIP_NONE ? change.time : 0;
+		change = void;
+		if (buf === void || !isvalid buf) return;
+		if (buf !== buffer) {
+			// one the World didn't start (KAG's own tags): from as it plays now
+			attach(buf);
+			nowPitch = 100;
+			nowPan = buf.pan / panScale;
+		}
+		stopRamp();
+		if (time > 0 && (nowPitch != pitch || nowPan != pan)) {
+			ramp = %[ start:System.getTickCount(), time:time, fromPitch:nowPitch, toPitch:pitch, fromPan:nowPan, toPan:pan ];
+			if (timer === void) {
+				timer = new Timer(onTimer, "");
+				timer.interval = 30;
+			}
+			timer.enabled = true;
+		} else {
+			nowPitch = pitch;
+			nowPan = pan;
+			apply();
+		}
+	}
+	function attach(buf) {
+		buffer = buf;
+		baseFrequency = buf.frequency;
+		panScale = buf instanceof "SESoundBuffer" ? 1 : 1000;
+	}
+	/** whether a change is still moving */
+	property moving { getter { return ramp !== void; } }
+	function stopRamp() {
+		ramp = void;
+		timer.enabled = false if (timer !== void);
+	}
+	function onTimer() {
+		if (ramp === void) return stopRamp();
+		var t = (System.getTickCount() - ramp.start) / ramp.time;
+		t = 1 if t > 1;
+		nowPitch = ramp.fromPitch + (ramp.toPitch - ramp.fromPitch) * t;
+		nowPan   = ramp.fromPan   + (ramp.toPan   - ramp.fromPan)   * t;
+		apply();
+		stopRamp() if (t >= 1);
+	}
+	function apply() {
+		if (buffer === void || !isvalid buffer) return;
+		try {
+			if (baseFrequency > 0) buffer.frequency = (int)(baseFrequency * nowPitch / 100);
+			buffer.pan = (int)(nowPan * panScale) if (placed === void || !placed());
+		} catch (e) {
+			dm("World sound: pitch and pan: " + e.message);
+		}
+	}
+	/** the sound stopped: centred again for whoever plays on the buffer next (the next file puts its frequency back) */
+	function stopped() {
+		stopRamp();
+		if (buffer !== void && isvalid buffer && buffer.status != "play" && (placed === void || !placed())) {
+			try { buffer.pan = 0; } catch {}
+		}
+	}
+};
+
+/**
  * Ambient BGM Object
  */
 class KAGEnvBgm extends KAGEnvBase {
@@ -10,13 +145,16 @@ class KAGEnvBgm extends KAGEnvBase {
 	 */
 	function KAGEnvBgm(env) {
 		super.KAGEnvBase(env, "bgm");
+		shift = new KAGEnvSoundShift();
 	}
 
 
 
 	function finalize() {
+		invalidate shift;
 		super.finalize();
 	}
+	var shift; // pitch and pan (KAGEnvSoundShift)
 
 
 
@@ -53,6 +191,7 @@ class KAGEnvBgm extends KAGEnvBase {
 		f.loop = loop if loop !== void && loop != true;
 		f.paused = paused if paused !== void && paused != false;
 		f.volume = volume if volume !== void && volume != 100;
+		shift.store(f) if filename !== void;
 	}
 
 	function onRestore(f) {
@@ -63,6 +202,7 @@ class KAGEnvBgm extends KAGEnvBase {
 			paused = f.paused !== void ? f.paused : false;
 			if (f.filename != "") {
 				setPlay(f.filename, %[loop:f.loop]);
+				shift.restore(f);
 				if (f.volume !== void) {
 					fade.volume = volume = f.volume;
 				}
@@ -91,6 +231,7 @@ class KAGEnvBgm extends KAGEnvBase {
 				fade = %[];
 				fade.volume = volume = 100;
 			}
+			shift.reset(elm); // as recorded and centred, unless the tag says
 			// Playback read flag
 			if (elm.noflag === void) {
 				env.setSFlag("bgm_" + (param.toUpperCase()));
@@ -153,6 +294,15 @@ class KAGEnvBgm extends KAGEnvBase {
 		fade.time   = elm.time;
     }
 
+	/**
+	 * Pitch (%) and pan (-100 to 100), over time=
+	 */
+	function setShift(param, elm) {
+		// with a play in the same tag, the track starts there (setPlay reads them); like
+		// fade=, it leaves a tag named after a sound to play it ([bgm01 pitch=50])
+		if (elm.play === void && elm.storage === void) shift.set(elm);
+	}
+
     var bgmcommands = %[
 	tagname : null, 
 	taglist : null, 
@@ -162,6 +312,8 @@ class KAGEnvBgm extends KAGEnvBase {
     pause : setPause incontextof this,
 	resume : setResume incontextof this,
     fade : setFade incontextof this,
+    pitch : setShift incontextof this,
+    pan : setShift incontextof this,
     noxchg : null,
     loop : null,
     time : null,
@@ -251,10 +403,16 @@ class KAGEnvBgm extends KAGEnvBase {
 						bgm.play(%[ storage:filename, loop:play.loop, paused:play.paused, start:play.start]);
 					}
 				}
+				// the new track at its pitch and pan (the buffer's frequency is the file's again)
+				shift.started(bgm.currentBuffer) if (bgm.playingStorage == filename);
+			} else {
+				// the track goes on: from where it is to the pitch and pan the tag gave, over its time
+				shift.change = %[ time:+play.time ];
 			}
 			env.onBGMStart();
 			play = void;
 		}
+		shift.update(bgm.currentBuffer, skipMode);
 		if (pause !== void) {
 			if (pause > 1) {
 				bgm.fadePause(%[ time: +pause ]);

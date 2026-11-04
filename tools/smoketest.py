@@ -2712,6 +2712,105 @@ def sample_steps(eng):
         if not (left < -0.5 and right > 0.5 and abs(mid) < 0.01) or got[3] != "off":
             raise SmokeError("the sounds aren't where they were put: %s" % got)
 
+    @step("World sound: pitch= and pan= move the music and a sound over time=, a play starts as recorded, a save keeps them")
+    def _():
+        if eng.tjs('return typeof global.KAGEnvSoundShift != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates pitch and pan)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        bgm = 'var b = kag.bgm.currentBuffer, w = world_object.env.bgm; '
+        base = eng.tjs('world_object.onUnknown("bgm", %[tagname:"bgm", storage:"bgm01", loop:"true"]);'
+                       ' return kag.bgm.currentBuffer.frequency;')
+        try:
+            eng.tjs('world_object.onUnknown("bgm", %[tagname:"bgm", pitch:"50", pan:"-80", time:"1500"]); return 1;')
+            mid = [int(v) for v in str(eng.tjs(bgm + 'return [b.frequency, w.shift.moving ? 1 : 0].join(",");')).split(",")]
+            eng.wait("the change to end", "!world_object.env.bgm.shift.moving", timeout=10)
+            end = str(eng.tjs(bgm + 'var d = %[]; w.onStore(d); return [b.frequency, b.pan, d.pitch, d.pan].join(",");'))
+            print("     the music at %s Hz, then %s Hz (%s), then %s" % (base, mid[0], "moving" if mid[1] else "already there", end), flush=True)
+            want = "%d,-80000,50,-80" % (base // 2)
+            if end != want or (mid[1] and not (base // 2 < mid[0] <= base)):
+                raise SmokeError("pitch=50 pan=-80 time=1500 didn't take the music to %s: %s, %s" % (want, mid, end))
+            # the same track played again: as recorded and centred, at once
+            again = str(eng.tjs('world_object.onUnknown("bgm", %[tagname:"bgm", storage:"bgm01", loop:"true"]); ' + bgm
+                                + 'var d = %[]; w.onStore(d); return [b.frequency, b.pan, d.pitch === void ? 1 : 0].join(",");'))
+            if again != "%d,0,1" % base:
+                raise SmokeError("playing the music again didn't put it back as recorded: %s" % again)
+            # a sound starts at the pitch and pan its play tag gives, and is centred when it stops
+            se = str(eng.tjs('var e = world_object.env, i = e.getSeId(void); global.__smokeShiftSe = i;'
+                             ' world_object.onUnknown("se", %[tagname:"se", buf:"" + i, storage:"se_steps", loop:"true"]);'
+                             ' var b = kag.se[i], f0 = b.frequency;'
+                             ' world_object.onUnknown("se", %[tagname:"se", buf:"" + i, storage:"se_steps", loop:"true", pitch:"150", pan:"60"]);'
+                             ' var d = %[]; e.ses[i].onStore(d); var r = [f0, b.frequency, b.pan, d.pitch, d.pan];'
+                             ' world_object.onUnknown("se", %[tagname:"se", buf:"" + i, stop:"0"]); r.add(b.pan); return r.join(",");')).split(",")
+            print("     a sound at %s Hz, with pitch=150 pan=60 at %s Hz and pan %s (saved %s, %s), centred when it stops: %s" % tuple(se), flush=True)
+            if int(se[1]) != int(int(se[0]) * 1.5) or se[2:] != ["60", "150", "60", "0"]:
+                raise SmokeError("the sound didn't start at pitch=150 pan=60: %s" % se)
+            # a sound named by name= (as the demos stop their footsteps), panned, then stopped: the
+            # name only says which sound (up to 0.14.0 the SE also took it for a file to play)
+            named = str(eng.tjs('var e = world_object.env, i = e.getSeId(void), r = [];'
+                                ' world_object.onUnknown("se", %[tagname:"se", buf:"" + i, storage:"se_steps", loop:"true"]);'
+                                ' world_object.onUnknown("se", %[tagname:"se", name:"se_steps", pan:"-100"]);'
+                                ' r.add(kag.se[i].status); r.add(e.ses[i].filename); r.add(kag.se[i].pan);'
+                                ' world_object.onUnknown("se", %[tagname:"se", name:"se_steps", stop:"0"]);'
+                                ' r.add(kag.se[i].status); r.add(e.ses[i].filename === void ? "-" : e.ses[i].filename); return r.join(",");'))
+            if named != "play,se_steps,-100,stop,-":
+                raise SmokeError("[se name=se_steps pan=-100] and [se name=se_steps stop=0] didn't pan and stop that sound: %s" % named)
+        finally:
+            eng.tjs('world_object.onUnknown("bgm", %[tagname:"bgm", stop:"0"]); return 1;')
+
+    @step("TV static: the static flip draws new static every frame, on a KAG layer and a World layer, and a save keeps it")
+    def _():
+        if eng.tjs('return typeof global.StaticFlip != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the static flip)", flush=True)
+            return
+        # the flip's own picture (a KAG layer's pixels read its source): samples' mean, how many
+        # changed since the last look, whether all are opaque, and whether any is coloured
+        look = ('var p = [], o = 1, s = 0, c = 0; for (var y = 4; y < f.imageHeight; y += 37) for (var x = 3; x < f.imageWidth; x += 41)'
+                ' { var v = f.getMainPixel(x, y); p.add(v); s += v & 0xff; if (f.getMaskPixel(x, y) != 255) o = 0;'
+                ' if (((v >> 16) & 0xff) != (v & 0xff)) c++; }'
+                ' var last = global.__smokeNoise, d = 0; if (last !== void) for (var i = 0; i < p.count; i++) if (p[i] != last[i]) d++;'
+                ' global.__smokeNoise = p; return [f.frames, p.count, s \\ p.count, d, o, c].join(",");')
+        kag_flip = 'var l = kag.fore.layers[0], f = l.flip; '
+        eng.tjs('global.__smokeNoise = void; kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"static", visible:"true",'
+                ' staticbar:"60", staticlines:"80"]); return 1;')
+        first = [int(v) for v in str(eng.tjs(kag_flip + 'if (l.flipType != "static" || f === void) return "0,0,0,0,0,0"; ' + look)).split(",")]
+        time.sleep(0.6)
+        later = [int(v) for v in str(eng.tjs(kag_flip + look)).split(",")]
+        print("     on a KAG layer: %d frames in 0.6 s, mean %d, %d of %d samples changed, opaque %d"
+              % (later[0] - first[0], later[2], later[3], later[1], later[4]), flush=True)
+        if first[0] < 1 or later[0] - first[0] < 3 or later[3] < later[1] // 2 or later[4] != 1 or not 30 < later[2] < 225:
+            raise SmokeError("[image flip=static] isn't drawing new opaque static every frame: %s, %s" % (first, later))
+        # colour and a coarser grain through [layopt]; kept through a store and a restore
+        colour = eng.tjs(kag_flip + 'return typeof f.grain.noise != "undefined" ? 1 : 0;') == 1
+        eng.tjs('kag.tagHandlers.layopt(%[layer:"0", page:"fore", staticcolor:"true", staticgrain:"8"]); return 1;')
+        time.sleep(0.3)
+        r = [int(v) for v in str(eng.tjs(kag_flip + look)).split(",")]
+        grain = eng.tjs(kag_flip + 'return f.grain.imageWidth;')
+        if (colour and r[5] < r[1] // 2) or grain != (eng.tjs("return kag.fore.layers[0].flip.canvasWidth;") + 7) // 8:
+            raise SmokeError("staticcolor and staticgrain=8 didn't reach the flip: %s, grain %s wide" % (r, grain))
+        eng.tjs(kag_flip + 'global.__smokeFlipStore = %[]; l.storeFlip(__smokeFlipStore); kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]);'
+                ' l.restoreFlip(__smokeFlipStore); l.visible = true; return 1;')
+        time.sleep(0.3)
+        r = str(eng.tjs(kag_flip + 'return [l.flipType, f.options.staticbar, f.options.staticgrain, f.options.staticcolor, f.frames > 1 ? 1 : 0].join(",");'))
+        if r != "static,60,8,true,1":
+            raise SmokeError("the static flip wasn't restored as it was stored: %s" % r)
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+        # on a World layer: newlay noise=, flipupdate, and a redraw that keeps the same flip going
+        wl = 'world_object.env.layers["smokestatic"]'
+        env = 'var e = world_object.env, t = ' + wl + '.targetLayer, f = t.flip; '
+        eng.tjs('world_object.env.unknown("newlay", %[name:"smokestatic", "static" => "tv", staticgrain:"4", opacity:"128", show:"true"]); return 1;')
+        eng.wait("the World layer's static", wl + ' !== void && ' + wl + '.targetLayer !== void && ' + wl + '.targetLayer.flip !== void && '
+                 + wl + '.targetLayer.flip.frames > 3', timeout=10)
+        eng.tjs(env + 'global.__smokeFlipObj = f; e.unknown("smokestatic", %[flipupdate:"true", staticfps:"10"]);'
+                ' e.unknown("smokestatic", %[grayscale:"true"]); return 1;')
+        time.sleep(0.5)
+        r = str(eng.tjs(env + 'return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
+                        ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0].join(",");'))
+        print("     on a World layer: %s" % r, flush=True)
+        eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
+        if r != "static,1,10,4,1":
+            raise SmokeError("[newlay static=tv] didn't play on as asked through flipupdate and a redraw: %s" % r)
+
     @step("back to the title through the Yes/No prompt")
     def _():
         eng.tjs("kag.goToStartWithAsk(); return 1;")
