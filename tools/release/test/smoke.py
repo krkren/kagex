@@ -15,7 +15,8 @@
   Linux): a file named in Japanese packed, the game's startup.tjs run, and with 0.9.4 engines or
   newer an image with an upper-case extension loaded. Then the media: WAV, FLAC (with loop
   points) and images converted, files the scripts name kept and then rewritten, the conversion cache, and on
-  Linux the converted build in the engine (a button's hover image found, the button highlighted).
+  Linux the converted build in the engine (a button's hover image found, the button highlighted,
+  a rule transition's rule loaded: rules stay PNG).
   Then compiled scripts: a small game of its own whose scripts check, when it runs, the
   constants beyond 32 bits, expression scripts, UTF-16LE and Shift_JIS scripts; and a patch of
   compiled scripts holds only the one that changed.
@@ -472,6 +473,11 @@ def web_tests(exe, proj, args):
     s["platforms"]["web"]["url"] = "https://studio.example/game"
     s["platforms"]["web"]["description"] = "A test & a <preview>"
     builds = {}
+    # the game's own engine options (krkrz.cf) reach the web engine: one the page's command line
+    # set too (a memory pool: the command line comes first) and one of the game's own
+    cf = proj / "krkrz.cf"
+    cf_saved = cf.read_bytes() if cf.exists() else None
+    cf.write_bytes((cf_saved or b"") + b"\nsoundpoolsize=97\nkagexreleasetest=web\n")
     for mode in ("files", "xp3"):
         s["platforms"]["web"]["data"] = mode
         rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
@@ -487,7 +493,13 @@ def web_tests(exe, proj, args):
         html = (site / "index.html").read_text(encoding="utf-8")
         js = (site / "krkrz.js").read_text(encoding="utf-8", errors="replace")
         data_size = (site / "krkrz.data").stat().st_size
-        step("web (%s): engine options" % mode, "-appname=kagex-sample" in cfg and "-debugwin=no" in cfg and "-bitmappoolsize=" in cfg, cfg.replace("\n", " | ")[-300:])
+        step("web (%s): engine options" % mode, "-appname=kagex-sample" in cfg and "-debugwin=no" in cfg and "-bitmappoolsize=" in cfg
+             and "-soundpoolsize=" not in cfg, cfg.replace("\n", " | ")[-300:])
+        rcf = (site / "resource" / "config.cf").read_text(encoding="utf-8") if (site / "resource" / "config.cf").exists() else ""
+        lines = [l for l in rcf.splitlines() if l.strip() and not l.startswith(";")]
+        step("web (%s): the game's engine options in resource/config.cf, ahead of the engine's" % mode,
+             lines[:3] == ["soundpoolsize=97", "kagexreleasetest=web", "debugwin=no"] and any(l.startswith("padinterval=") for l in lines)
+             and "config.cf" in json.loads((site / "resource.list").read_text()), " | ".join(lines))
         step("web (%s): title, manifest and icons" % mode, "<title>KAGEX Sample</title>" in html and "window.coi=" in html and "manifest.webmanifest" in html
              and json.loads((site / "manifest.webmanifest").read_text())["name"] == "KAGEX Sample" and (site / "icon-512.png").exists())
         build = json.loads((site / "kagex-build.json").read_text())["build"] if (site / "kagex-build.json").exists() else ""
@@ -532,6 +544,9 @@ def web_tests(exe, proj, args):
             time.sleep(5)
             errors = [l for l in eng.lines if "Script exception raised" in l or "! trace :" in l]
             step("web (%s): the game starts in the browser" % mode, res.get("ok") and not errors, str(res.get("result")) + " " + "; ".join(errors[:3]))
+            opts = eng.tjs('return System.getArgument("-soundpoolsize") + "," + System.getArgument("-kagexreleasetest")'
+                           ' + "," + System.getArgument("-debugwin");')
+            step("web (%s): the engine has the game's options" % mode, opts == "97,web,no", str(opts))
             if args.out:
                 eng.snapshot(str(Path(args.out) / ("web-%s.png" % mode)))
         except Exception as e:
@@ -543,6 +558,10 @@ def web_tests(exe, proj, args):
             if eng:
                 eng.stop()
             httpd.shutdown()
+    if cf_saved is None:
+        cf.unlink()
+    else:
+        cf.write_bytes(cf_saved)
     if args.browser and builds.get("files"):
         web_prefetch_race(exe, proj, args)
     step("web: another build, another id (players' pages and caches update)", builds.get("files") and builds.get("xp3") and builds["files"] != builds["xp3"],
@@ -676,6 +695,12 @@ def android_tests(exe, proj, args):
                      "%s; %s" % (info and info.compress_type, libs))
             else:
                 step("android (%s): the data folder and the engine" % fmt, prefix + "assets/data/startup.tjs" in names and len(libs) == 2, "; ".join(libs))
+            # the game's engine options go ahead of the engine's in the config.cf it reads
+            # from its assets (the sample's krkrz.cf has only names, so: debugwin=no)
+            cf = z.read(prefix + "assets/config.cf").decode("utf-8", "replace") if prefix + "assets/config.cf" in names else ""
+            lines = [l for l in cf.splitlines() if l.strip() and not l.startswith(";")]
+            step("android (%s): the game's engine options in assets/config.cf" % fmt, lines[:1] == ["debugwin=no"]
+                 and not any(l.startswith(("orgname=", "appname=")) for l in lines), " | ".join(lines))
         if fmt == "apk":
             tools = sorted(Path(sdk, "build-tools").glob("*"))
             aapt2 = next((t / "aapt2" for t in reversed(tools) if (t / "aapt2").exists()), None)
@@ -722,6 +747,10 @@ def ios_tests(exe, proj, args):
         step("ios (%s): Info.plist" % target, info.get("CFBundleIdentifier") == "com.example.kagexsample" and info.get("CFBundleShortVersionString") == version
              and info.get("CFBundleDisplayName") == s["identity"]["shortName"], str({k: info.get(k) for k in ("CFBundleIdentifier", "CFBundleDisplayName", "CFBundleVersion")}))
         step("ios (%s): data.xp3 and the icon" % target, (app / "data.xp3").exists() and (app / "Assets.car").exists() and "CFBundleIcons" in info)
+        cf = (app / "config.cf").read_text(encoding="utf-8", errors="replace") if (app / "config.cf").exists() else ""
+        lines = [l for l in cf.splitlines() if l.strip() and not l.startswith(";")]
+        step("ios (%s): the game's engine options in config.cf" % target, lines[:1] == ["debugwin=no"]
+             and not any(l.startswith(("orgname=", "appname=")) for l in lines), " | ".join(lines))
         v = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], capture_output=True, text=True)
         step("ios (%s): the signature verifies" % target, v.returncode == 0, v.stderr.strip()[:300])
         if target == "device":
@@ -860,6 +889,20 @@ def converted_game_tests(game, args):
         after = eng.tjs(look % "")
         hover = "changed" if before != after else "unchanged"
         step("converted game: hovering a button highlights it", hover == "changed", str(hover))
+        # the rule images stay PNG (the engine loads no TLG as a rule: up to 0.14.0 a TLG build's
+        # rule transitions failed with "Cannot load rule graphics" and became crossfades)
+        rules = eng.tjs("""
+            var rules = [ "rule_shatter", "wipe_brush" ], r = [];
+            for (var i = 0; i < rules.count; i++) {
+                var a = new Layer(kag, kag.primaryLayer), b = new Layer(kag, kag.primaryLayer), res = "ok";
+                a.setImageSize(64, 64); b.setImageSize(64, 64); a.visible = true;
+                try { a.beginTransition("universal", false, b, %[rule:rules[i], vague:64, time:100]); } catch (e) { res = e.message; }
+                try { a.stopTransition(); } catch (e) {}
+                invalidate a; invalidate b;
+                r.add(rules[i] + ": " + res);
+            }
+            return r.join(", ");""")
+        step("converted game: a rule transition loads its rule", rules == "rule_shatter: ok, wipe_brush: ok", str(rules))
         # Effekseer effects name their textures (effect/Texture/*.png) inside the effect file,
         # which can't be rewritten, so those keep their format; and where this engine draws
         # effects, one plays
@@ -930,6 +973,8 @@ def media_tests(exe, proj, args):
     step("media: a file the scripts name is kept", have("sound/kr_ref.wav") and not have("sound/kr_ref.opus"))
     step("media: files a name pattern covers are kept", have("voice/tv001.wav") and have("voice/tv002.wav"))
     step("media: images to TLG", have("image/title.tlg") and not have("image/title.png") and have("fgimage/ch_0_0_1.tlg"))
+    step("media: rule images stay PNG (the engine loads no TLG as a rule)", have("rule/rule_shatter.png") and have("rule/wipe_brush.png")
+         and not have("rule/rule_shatter.tlg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
     step("media: the framework's images too", have("system/LineBreak.tlg") or have("system/linebreak.tlg") or any((data / "system").glob("*.tlg")))
     step("media: textures an Effekseer effect names are kept", have("effect/Texture/glow.png") and not have("effect/Texture/glow.tlg")
          and r.get("media", {}).get("keptForEffects", 0) >= 6, "kept for effects: %s" % r.get("media", {}).get("keptForEffects"))
@@ -961,8 +1006,8 @@ def media_tests(exe, proj, args):
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
     r = build()
     step("media: build with JPEG for opaque images", r["ok"], r.get("error", ""))
-    step("media: rule images stay lossless", have("bgimage/bg01_01.jpg") and have("rule/rule_shatter.tlg")
-         and not have("rule/rule_shatter.jpg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
+    step("media: rule images stay PNG", have("bgimage/bg01_01.jpg") and have("rule/rule_shatter.png")
+         and not have("rule/rule_shatter.jpg") and not have("rule/rule_shatter.tlg"), ", ".join(sorted(p.name for p in (data / "rule").glob("*"))) if (data / "rule").is_dir() else "no rule/")
 
 
 SLOT_MARKER = b"KSCN-KEY-SLOT-v1"
@@ -1946,6 +1991,11 @@ try {
 	Scripts.execStorage("main/sjis.tjs");
 	check("Shift_JIS", s1, 4278190080);
 	check("Shift_JIS string", s2.length, 4);
+	var t = Scripts.evalStorage("main/table.tjs");
+	check("a (const) dictionary script", t === null || typeof t != "Object" ? "null" : t.faces[1] + " " + t.size, "Roboto 36");
+	Scripts.execStorage("main/constfunc.tjs");
+	var cl = constList();
+	check("(const) in a function", cl === null ? "null" : cl.count, 3);
 } catch (e) {
 	r.add("exception\tFAIL\t" + e.message);
 }
@@ -1977,6 +2027,9 @@ global.c16 = 4294967297;
     "main/data.tjs": '%[\n\t"c" => 0xff000000,\n]; // the end\n',
     "main/func.tjs": "function (a) { return a * 2; }\n",
     "main/fold.tjs": 'global.f1 = 0xff << 24;\nglobal.f3 = @"${0x100000000}";\n',
+    # (const) objects: bytecode has no form for them (the engine writes null), so these stay source
+    "main/table.tjs": '(const) %[ "faces" => (const) [ "Yu Gothic", "Roboto" ], "size" => 36 ]\n',
+    "main/constfunc.tjs": "function constList() { return (const) [ 1, 2, 3 ]; }\n",
 }
 
 
@@ -2015,15 +2068,18 @@ def script_tests(exe, tmp, args):
         shutil.copyfile(proj / "release" / "compile-scripts.log", Path(args.out) / "compile-scripts.log")
     # where the engine cuts constants to 32 bits (Linux, macOS), folded ones stay source
     kept = {k["name"] for k in sc.get("kept", [])}
-    want_kept = {"main/fold.tjs"} if sc.get("truncates") else set()
-    step("scripts: compiled, and kept as source only where needed", sc.get("compiled") == 8 - len(want_kept) and kept == want_kept,
+    want_kept = {"main/table.tjs", "main/constfunc.tjs"} | ({"main/fold.tjs"} if sc.get("truncates") else set())
+    step("scripts: compiled, and kept as source only where needed", sc.get("compiled") == 10 - len(want_kept) and kept == want_kept,
          json.dumps(sc))
+    step("scripts: (const) objects keep their script as source",
+         all("(const)" in k.get("why", "") for k in sc.get("kept", []) if k["name"] in ("main/table.tjs", "main/constfunc.tjs")),
+         json.dumps(sc.get("kept")))
     step("scripts: the expression scripts", sc.get("expressions", 0) >= 2, "%s as expressions" % sc.get("expressions"))
     base = proj / "release" / ("scripts-1.0.0-" + host)
     data = base / "Scripts Game.app" / "Contents" / "Resources" / "data" if host == "macos" else base / "data"
     names = sorted(str(p.relative_to(data)).replace("\\", "/") for p in data.rglob("*.tjs"))
     bytecode = [n for n in names if (data / n).read_bytes()[:8] == b"TJS2100\0"]
-    step("scripts: the packaged scripts are bytecode", set(names) - set(bytecode) == want_kept and len(names) == 8, ", ".join(bytecode))
+    step("scripts: the packaged scripts are bytecode", set(names) - set(bytecode) == want_kept and len(names) == 10, ", ".join(bytecode))
     if host == "macos":
         game = base / "Scripts Game.app" / "Contents" / "MacOS" / "krkrz"
     else:
@@ -2041,7 +2097,7 @@ def script_tests(exe, tmp, args):
     raw = (save / "check.txt").read_bytes() if (save / "check.txt").exists() else b""
     lines = [l for l in raw.decode("utf-16", errors="replace").splitlines() if l]
     bad = [l for l in lines if "\tok\t" not in l]
-    step("scripts: the compiled game's checks", len(lines) == 23 and not bad, "; ".join(bad) or "%d checks" % len(lines))
+    step("scripts: the compiled game's checks", len(lines) == 25 and not bad, "; ".join(bad) or "%d checks" % len(lines))
 
     # a patch of compiled scripts: compiling again gives the same bytes, so only the script that
     # changed is in it

@@ -4203,7 +4203,9 @@ class KAGWindow extends Window
 
 	// Exception conversion table for shortcut ⇒ VK_*
 
-	var shortcutTextToVirtualKeyString = (const)%[
+	// (not (const): compiled to bytecode, a constant dictionary reads as null)
+
+	var shortcutTextToVirtualKeyString = %[
 
 		"DEL"=>"DELETE",
 

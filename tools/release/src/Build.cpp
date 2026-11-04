@@ -70,9 +70,16 @@ void mustMkdirs(const fs::path& p)
 
 void mustRemove(const fs::path& p)
 {
+	// a few tries over about 3 s before giving up: on Windows a virus scan can hold a file just
+	// written (a 2 GB APK) for a moment, and the work folder couldn't be removed once
 	std::error_code ec;
-	fs::remove_all(p, ec);
-	if (ec) throw Failure{ "Can't remove " + krt::fromPath(p) + " (is it open somewhere?): " + ec.message() };
+	for (int attempt = 0; attempt < 6; attempt++) {
+		if (attempt) std::this_thread::sleep_for(std::chrono::milliseconds(250 * attempt));
+		ec.clear();
+		fs::remove_all(p, ec);
+		if (!ec) return;
+	}
+	throw Failure{ "Can't remove " + krt::fromPath(p) + " (is it open somewhere?): " + ec.message() };
 }
 
 void copyFile(const fs::path& from, const fs::path& to)
@@ -116,6 +123,36 @@ uint64_t treeSize(const fs::path& p)
 	for (fs::recursive_directory_iterator it(p, ec), end; it != end; it.increment(ec))
 		if (!ec && it->is_regular_file(ec)) n += it->file_size(ec);
 	return n;
+}
+
+// The newest file with this extension in an "outputs" folder under Gradle's build folder.
+// Folder by folder, skipping what can't be read: a recursive_directory_iterator ends at its first
+// error, and on Windows Gradle's intermediates go past 260 characters (a project in a long
+// Downloads path), so "Gradle made no .apk" came after a build that had made one
+fs::path newestGradleOutput(const fs::path& build, const std::string& ext)
+{
+	fs::path found;
+	fs::file_time_type newest{};
+	std::vector<std::pair<fs::path, bool>> dirs{ { build, false } };   // a folder, and whether it's in outputs
+	while (!dirs.empty()) {
+		const auto [dir, inOutputs] = dirs.back();
+		dirs.pop_back();
+		std::error_code ec;
+		fs::directory_iterator it(dir, ec), end;
+		for (; !ec && it != end; it.increment(ec)) {
+			std::error_code e2;
+			const std::string name = krt::fromPath(it->path().filename());
+			if (it->is_directory(e2)) {
+				// what Gradle compiles goes there, deepest of all: no package is in it
+				if (name == "intermediates" || name == "tmp" || name == ".cxx" || name == "generated") continue;
+				dirs.push_back({ it->path(), inOutputs || name == "outputs" });
+			} else if (inOutputs && it->is_regular_file(e2) && lower(krt::fromPath(it->path().extension())) == ext) {
+				const auto t = it->last_write_time(e2);
+				if (!e2 && (found.empty() || t > newest)) { found = it->path(); newest = t; }
+			}
+		}
+	}
+	return found;
 }
 
 std::string xmlEscape(const std::string& s)
@@ -189,30 +226,90 @@ std::string utf16leToUtf8(const std::string& in)
 
 } // namespace
 
+namespace {
+
+// A config's lines with options ("name=value", or a bare name), trimmed as the engine reads them
+// (ConfigLine.h: a UTF-8 BOM, spaces and line ends off; empty lines and ";" comments skipped)
+std::vector<std::string> configLines(const std::string& text)
+{
+	std::vector<std::string> out;
+	size_t pos = 0;
+	while (pos < text.size()) {
+		size_t end = text.find('\n', pos);
+		if (end == std::string::npos) end = text.size();
+		std::string line = text.substr(pos, end - pos);
+		pos = end + 1;
+		if (line.size() >= 3 && line.compare(0, 3, "\xEF\xBB\xBF") == 0) line.erase(0, 3);
+		const std::string t = krt::trim(line);
+		if (t.empty() || t[0] == ';') continue;
+		out.push_back(t);
+	}
+	return out;
+}
+
+std::string optionName(const std::string& line)
+{
+	return lower(krt::trim(line.substr(0, line.find('='))));
+}
+
+// The developer's own options from krkrz.cf, without the ones a build writes itself
+std::vector<std::string> developerOptions(const Project& p)
+{
+	std::vector<std::string> out;
+	std::string text;
+	if (!krt::readFile(p.root / "krkrz.cf", text)) return out;
+	for (const auto& t : configLines(text)) {
+		const std::string key = optionName(t);
+		if (key == "orgname" || key == "appname" || key == "debugwin") continue;
+		out.push_back(t);
+	}
+	return out;
+}
+
+} // namespace
+
+std::set<std::string> configOptionNames(const std::string& config)
+{
+	std::set<std::string> names;
+	for (const auto& t : configLines(config)) names.insert(optionName(t));
+	return names;
+}
+
 std::string engineConfig(const Json& s, const Project& p)
 {
 	std::string out = "; " + str(s, "identity.title") + " " + str(s, "identity.version") +
 	                  ": engine options (each line is a command-line option without its \"-\")\n";
 	// the developer's own options from krkrz.cf, without the ones written below
-	std::string text;
-	if (krt::readFile(p.root / "krkrz.cf", text)) {
-		size_t pos = 0;
-		while (pos < text.size()) {
-			size_t end = text.find('\n', pos);
-			if (end == std::string::npos) end = text.size();
-			std::string line = text.substr(pos, end - pos);
-			pos = end + 1;
-			if (!line.empty() && line.back() == '\r') line.pop_back();
-			const std::string t = krt::trim(line);
-			if (t.empty() || t[0] == ';') continue;
-			const std::string key = lower(krt::trim(t.substr(0, t.find('='))));
-			if (key == "orgname" || key == "appname" || key == "debugwin") continue;
-			out += t + "\n";
-		}
-	}
+	for (const auto& t : developerOptions(p)) out += t + "\n";
 	out += "orgname=" + str(s, "identity.orgName") + "\n";
 	out += "appname=" + str(s, "identity.appName") + "\n";
 	if (!flag(s, "engine.debug")) out += "debugwin=no\n";
+	return out;
+}
+
+std::string resourceConfig(const Json& s, const Project& p, const std::string& packaged)
+{
+	// The engine takes the first line of a name (TVPGetCommandLine), so the game's go first.
+	// orgname and appname stay as the engine has them: on iOS they'd name the save folder, and
+	// move the saves of a game's earlier builds (the web's are on its command line already)
+	std::string game;
+	for (const auto& t : developerOptions(p)) game += t + "\n";
+	if (!flag(s, "engine.debug")) game += "debugwin=no\n";
+	const std::set<std::string> set = configOptionNames(game);
+	std::string out = "; " + str(s, "identity.title") + " " + str(s, "identity.version") +
+	                  ": the game's engine options (krkrz.cf), ahead of the engine's own\n" + game;
+	// the package's lines (its comments too), but for the options the game sets
+	size_t pos = 0;
+	while (pos < packaged.size()) {
+		size_t end = packaged.find('\n', pos);
+		if (end == std::string::npos) end = packaged.size();
+		std::string line = packaged.substr(pos, end - pos);
+		pos = end + 1;
+		if (!line.empty() && line.back() == '\r') line.pop_back();
+		const std::vector<std::string> opt = configLines(line);
+		if (!opt.empty() && set.count(optionName(opt[0]))) continue;
+		out += line + "\n";
+	}
 	return out;
 }
 
@@ -692,6 +789,17 @@ private:
 	// What compiled scenarios need from a platform's engine: the scnfile plugin, to read .scn
 	// files, with the game's key written into its slot when they're encrypted. root: the
 	// platform's own copy of the engine
+	// The game's engine options into the config.cf an engine reads from its resources (Android,
+	// iOS, the web): the package's own file, with the game's lines ahead of it
+	void resourceConfigInto(const fs::path& file)
+	{
+		std::string packaged;
+		krt::readFile(file, packaged);
+		std::error_code ec;
+		fs::remove(file, ec);   // a copy, but never write through to what it was copied from
+		writeText(file, resourceConfig(s_, p_, packaged));
+	}
+
 	void scenesInto(const std::string& id, const fs::path& root)
 	{
 		if (!scenesPsb_) return;
@@ -1505,6 +1613,7 @@ private:
 		if (!fs::is_directory(engine / "project", ec)) throw Failure{ "The Android engine package has no Gradle project" };
 		copyTree(engine / "project", proj);
 		makeExecutable(proj / "gradlew");
+		resourceConfigInto(proj / "engine-assets" / "config.cf");   // the APK's assets (resource://)
 		if (encryptedXp3For("android")) archiveKeyInto("android", proj);   // key the engine .so before Gradle packages it
 		scenesInto("android", proj);
 
@@ -1611,14 +1720,7 @@ private:
 		if (!r.ok()) throw Failure{ std::string(r.timedOut ? "Gradle took over an hour" : "Gradle failed") + " (see android-build.log)" };
 
 		const std::string ext = aab ? ".aab" : ".apk";
-		fs::path found;
-		fs::file_time_type newest{};
-		for (fs::recursive_directory_iterator it(proj / "build", ec), end; it != end; it.increment(ec)) {
-			if (ec || !it->is_regular_file(ec) || lower(krt::fromPath(it->path().extension())) != ext) continue;
-			if (krt::fromPath(it->path()).find("outputs") == std::string::npos) continue;
-			const auto t = it->last_write_time(ec);
-			if (found.empty() || t > newest) { found = it->path(); newest = t; }
-		}
+		const fs::path found = newestGradleOutput(proj / "build", ext);
 		if (found.empty()) throw Failure{ "Gradle made no " + ext + " (see android-build.log)" };
 		package = out_ / krt::toPath(exe + "-" + version + ext);
 		copyFile(found, package);
@@ -1655,6 +1757,7 @@ private:
 		const fs::path app = dir / "Payload" / krt::toPath(exe + ".app");
 		copyTree(src, app);
 		for (const char* gone : { "data", "data.xp3", "_CodeSignature", "embedded.mobileprovision" }) fs::remove_all(app / gone, ec);
+		resourceConfigInto(app / "config.cf");   // the app's resources (signed with it below)
 		scenesInto("ios", app);
 
 		// Info.plist (Xcode writes it binary: edited as XML, written back binary)
@@ -1783,6 +1886,17 @@ private:
 		}
 		gamePluginsInto("web", dir);
 		scenesInto("web", dir);
+		// the game's engine options: resource/config.cf, which the page lists in resource.list
+		resourceConfigInto(dir / "resource" / "config.cf");
+		{
+			std::string text, err;
+			Json list;
+			if (krt::readFile(dir / "resource.list", text) && Json::parse(text, list, &err) && list.isArr()) {
+				bool listed = false;
+				for (size_t i = 0; i < list.size(); i++) if (list[i].asStr() == "config.cf") listed = true;
+				if (!listed) { list.push(Json("config.cf")); writeText(dir / "resource.list", list.dump() + "\n"); }
+			}
+		}
 		std::string js;
 		if (!krt::readFile(dir / "krkrz.js", js)) throw Failure{ "The web engine has no krkrz.js" };
 		// krkrz.data is the engine's preloaded /data.xp3 (the files packager's metadata in
@@ -1800,6 +1914,8 @@ private:
 		std::string config;
 		krt::readFile(dir / "webconfig.js", config);
 		std::string args = "-orgname=" + str(s_, "identity.orgName") + " -appname=" + str(s_, "identity.appName");
+		std::set<std::string> gameOptions;
+		for (const auto& t : developerOptions(p_)) gameOptions.insert(optionName(t));
 		{
 			// the engine's other options (memory pools) stay
 			std::smatch m;
@@ -1813,6 +1929,9 @@ private:
 					const std::string a = rest.substr(pos, end - pos);
 					pos = end + 1;
 					if (a.empty() || a.rfind("-orgname=", 0) == 0 || a.rfind("-appname=", 0) == 0 || a.rfind("-debugwin=", 0) == 0) continue;
+					// the engine takes the command line before config.cf: one the game's
+					// krkrz.cf sets (a memory pool, say) goes, so the game's own applies
+					if (gameOptions.count(lower(a.substr(1, a.find('=') == std::string::npos ? std::string::npos : a.find('=') - 1)))) continue;
 					args += " " + a;
 				}
 			}

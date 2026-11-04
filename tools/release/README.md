@@ -120,8 +120,11 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   Identity `-` signs a device build ad hoc, to check the package.
 
 The `.cf` next to the engine carries the developer's own `krkrz.cf` options plus `orgname` and
-`appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. The
-licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
+`appname` (the save folder on Linux and macOS) and, for the release engine, `debugwin=no`. Android,
+iOS and the web get the same options, but `orgname` and `appname`, at the top of the `config.cf` they
+read from their resources (the APK's assets, the app, the site's `resource/`), ahead of the engine
+package's own; on the web an option the game sets is taken off the page's command line, which
+the engine would read first. The licenses (`license.txt`, `licenses/`) go along. `SHA256SUMS` lists the packages, and the test run
 starts this computer's build for a few seconds (headless where it can, through the engine's REPL;
 a signed build refuses the REPL, so its test run reads the log for the "signatures verified" line)
 and reports script errors; its log is `<output>/test-run.log`.
@@ -257,7 +260,9 @@ Before packing, lossless media in the staged data are converted (the sources are
   `data/system` is told to use Vorbis or update it.
 - **Images**: PNG, BMP and TLG become TLG6 (or TLG5, PNG, JPEG) when opaque, TLG6 (or TLG5, PNG,
   or a JPEG plus a lossless `<name>_m.png` mask) when transparent. The mask of a main/mask pair
-  (`<name>_m.*`) and the transitions' rule images (`data/rule`) only go to lossless formats.
+  (`<name>_m.*`) only goes to lossless formats, and the transitions' rule images (`data/rule`)
+  become PNG whatever the setting (unless images are kept): the engine loads no TLG as a rule, so
+  up to 0.14.0 a TLG or JPEG build turned every rule transition into a crossfade.
   The framework finds a button's converted hover, pressed and focus images from KAGEX 0.3.1 on;
   a game with an older `data/system` is told to convert images to PNG, keep them, or update it.
   A script of your own that looks for an image by adding an extension to its name
@@ -345,7 +350,8 @@ still show in the bytecode, so this keeps out casual reading, not a determined p
   followed that way: such a script stays as it is. Windows' engine keeps them.
 - A script that doesn't compile stays as it is, and so does one too large for the bytecode's
   16-bit indexes (a function of more than 32767 code words, or more than 32767 different
-  strings); the build lists each one and why. The engine's output is
+  strings), and one with a `(const)` array or dictionary, which the bytecode has no form for (it
+  would read as null); the build lists each one and why. The engine's output is
   `<output>/compile-scripts.log`.
 
 ### Engine packages

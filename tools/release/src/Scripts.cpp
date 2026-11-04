@@ -371,6 +371,12 @@ Scan scan(const std::string& text, bool sjis)
 		else if (t.text == ";" && depth == 0) ++out.statements;
 	}
 
+	// (const) [ ... ] and (const) %[ ... ]: constant objects
+	for (size_t i = 0; i + 2 < list.size(); ++i)
+		if (list[i].kind == Token::Punct && list[i].text == "(" && list[i + 1].kind == Token::Ident && list[i + 1].text == "const" &&
+		    list[i + 2].kind == Token::Punct && list[i + 2].text == ")")
+			out.constObjects = true;
+
 	// literals the compiler folds into one constant (left to right, and pair by pair)
 	static const std::set<std::string> folding = { "+", "-", "*", "<<" };
 	for (size_t i = 0; i < list.size(); ++i) {
@@ -875,6 +881,10 @@ bool compileScripts(const Json& s, const Project& p, const fs::path& stage, cons
 			const std::string line = errorLine(id);
 			keep("it doesn't compile (" + (o == outcomes.end() || o->second.error.empty() ? std::string("no result") : o->second.error) +
 			     (line.empty() ? "" : " at line " + line) + ")");
+			continue;
+		}
+		if (it.scan.constObjects) {
+			keep("it has (const) arrays or dictionaries, which the engine's bytecode has no form for (it would read them as null)");
 			continue;
 		}
 		tjs::Bytecode code;

@@ -347,12 +347,15 @@ void convert(Job& j, const fs::path& dir, const Json& s)
 	if (!im::load(j.source, img, err, &li)) { j.error = err; return; }
 	const bool alpha = im::hasTransparency(img);
 	std::string target = alpha ? str(s, "media.images.alpha") : str(s, "media.images.opaque");
-	// masks of main/mask pairs and rule images stay lossless: a rule's values are each pixel's
-	// timing (universal, imagewipe) or its timing, speed and direction (3duniversal), which
-	// JPEG's artifacts would scatter
-	if ((j.mask || j.rule) && (target == "jpeg" || target == "jpeg-mask")) target = "tlg6";
-	if (target == "keep") { j.skipped = true; return; }
+	// masks of main/mask pairs stay lossless
+	if (j.mask && (target == "jpeg" || target == "jpeg-mask")) target = "tlg6";
 	const im::Format have = li.format;
+	// rule images become PNG whatever the setting: a rule's values are each pixel's timing
+	// (universal, imagewipe) or its timing, speed and direction (3duniversal), which JPEG's
+	// artifacts would scatter, and the engine loads no TLG as a rule ("Cannot load rule
+	// graphics", though the same file loads as a picture), so a TLG rule becomes PNG too
+	if (j.rule && (target != "keep" || have == im::Format::Tlg5 || have == im::Format::Tlg6)) target = "png";
+	if (target == "keep") { j.skipped = true; return; }
 	if ((target == "tlg6" && have == im::Format::Tlg6) || (target == "tlg5" && have == im::Format::Tlg5) || (target == "png" && have == im::Format::Png)) {
 		j.skipped = true;
 		return;
@@ -590,7 +593,7 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 			j.rule = sl != std::string::npos && lower(f.name.substr(0, sl)) == "rule";
 			j.params = "image|opaque=" + str(s, "media.images.opaque") + "|alpha=" + str(s, "media.images.alpha") +
 			           "|q=" + std::to_string(at(s, "media.images.jpegQuality").asInt(90)) + "|mask=" + (j.mask ? "1" : "0") +
-			           (j.rule ? "|rule=1" : "");
+			           (j.rule ? "|rule=png" : "");
 		} else {
 			continue;
 		}
