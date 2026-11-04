@@ -429,6 +429,15 @@ jobs:
       KRKRZ_BASE: ${{ github.workspace }}/kirikiri
       PROJECT_DIR: ${{ github.workspace }}/kirikiri/kagex
     steps:
+      - name: Room on the disk
+        # the Cubism SDK, an engine with Live2D and 3D (threepp), its debug and release builds and
+        # a game built from them filled the runner's disk ("No space left on device" in the debug
+        # APK's build): the runner's toolchains this job doesn't use go first
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift \
+            /usr/local/julia* /usr/local/share/powershell
+          df -h / | tail -1
       - uses: actions/checkout@v4
         with:
           path: kirikiri/kagex
