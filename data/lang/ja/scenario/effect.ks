@@ -40,13 +40,14 @@ efkstop を指定すると、エフェクトはパーティクルを出すのを
 [dellay name=burst]
 *static
 ; TV static and a tape running down: a World layer with static= draws static over the scene at the
-; layer's opacity (template/system/GFX_Static.tjs), and pitch= and pan= change the World's music and
-; sounds over time= (KAGEnvBGM.tjs). See static, and the BGM and SE Object Functions, in doc/world.txt.
+; layer's opacity, and at level=message over the message window too (template/system/GFX_Static.tjs);
+; pitch= and pan= change the World's music and sounds over time= (KAGEnvBGM.tjs). See static, level,
+; and the BGM and SE Object Functions, in doc/world.txt.
 [ai standard center]
 【ai】今度は、わざと調子の悪くなるエフェクトだよ。
-[newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 show]
+[newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 level=message show]
 [tv opacity=120 time=800]
-画面が砂嵐に乱れます。World レイヤに置いた static フリップを、レイヤの不透明度で場面に重ねて描いています。
+画面が砂嵐に乱れます。level=message の World レイヤに置いた static フリップを、レイヤの不透明度で場面とこのウィンドウに重ねて描いています。
 [bgm pitch=35 time=2500]
 【ai】音楽も……テープが伸びたみたいに、ゆっくりになってく！
 pitch= は音の速さと高さをいっしょに変えます。ここでは二秒半かけて音楽を 35% まで落としています。

@@ -40,13 +40,14 @@ With efkstop, an effect stops making particles and fades out.
 [dellay name=burst]
 *static
 ; TV static and a tape running down: a World layer with static= draws static over the scene at the
-; layer's opacity (template/system/GFX_Static.tjs), and pitch= and pan= change the World's music and
-; sounds over time= (KAGEnvBGM.tjs). See static, and the BGM and SE Object Functions, in doc/world.txt.
+; layer's opacity, and at level=message over the message window too (template/system/GFX_Static.tjs);
+; pitch= and pan= change the World's music and sounds over time= (KAGEnvBGM.tjs). See static, level,
+; and the BGM and SE Object Functions, in doc/world.txt.
 [ai standard center]
 【ai】Now for an effect that goes wrong on purpose.
-[newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 show]
+[newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 level=message show]
 [tv opacity=120 time=800]
-The picture breaks up into TV static: a static flip on a World layer, drawn over the scene at the layer's opacity.
+The picture breaks up into TV static: a static flip on a World layer at level=message, drawn over the scene and this window at the layer's opacity.
 [bgm pitch=35 time=2500]
 【ai】And the music... it's slowing down, like a tape running out!
 pitch= changes a sound's speed and pitch together: here the music goes down to 35% over two and a half seconds.

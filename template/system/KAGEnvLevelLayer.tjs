@@ -1,3 +1,9 @@
+// level=message: the level over the game's message window (message0, absolute 1000000) and its
+// choices, and under the other message layers (where the sample draws its save, load and config
+// screens: message1, 1001000), the backlog (4000000) and the prompts; a level stacks at
+// (level + 1) * 100000 + 200 and up (doc/world.txt, "Display Level Specification")
+var KAGEnvMessageLevel = 9;
+
 /**
  * For KAG foreground layer level control
  */
@@ -138,7 +144,7 @@ class KAGEnvLevelLayer {
      * Specify level
      */
 	function setLevel(cmd, elm) {
-		level = +cmd;
+		level = cmd == "message" ? KAGEnvMessageLevel : +cmd;
     } 
 
     function onStore(f) {
