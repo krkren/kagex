@@ -257,7 +257,9 @@ Before packing, lossless media in the staged data are converted (the sources are
   `data/system` is told to use Vorbis or update it.
 - **Images**: PNG, BMP and TLG become TLG6 (or TLG5, PNG, JPEG) when opaque, TLG6 (or TLG5, PNG,
   or a JPEG plus a lossless `<name>_m.png` mask) when transparent. The mask of a main/mask pair
-  (`<name>_m.*`) and the transitions' rule images (`data/rule`) only go to lossless formats.
+  (`<name>_m.*`) only goes to lossless formats, and the transitions' rule images (`data/rule`)
+  become PNG whatever the setting (unless images are kept): the engine loads no TLG as a rule, so
+  up to 0.14.0 a TLG or JPEG build turned every rule transition into a crossfade.
   The framework finds a button's converted hover, pressed and focus images from KAGEX 0.3.1 on;
   a game with an older `data/system` is told to convert images to PNG, keep them, or update it.
   A script of your own that looks for an image by adding an extension to its name

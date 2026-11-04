@@ -12,6 +12,7 @@
 #pragma once
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -36,5 +37,13 @@ Json build(const Json& settings, const Project& project, const BuildOptions& opt
 
 /// The .cf next to the executable: the project's krkrz.cf without the names, then the names
 std::string engineConfig(const Json& settings, const Project& project);
+
+/// The config.cf an Android, iOS or web engine reads from its resources (the APK's assets, the
+/// app, the site's resource/): the project's krkrz.cf options (without orgname and appname) and
+/// debugwin=no ahead of the engine package's own lines, of which those the game sets are left out
+std::string resourceConfig(const Json& settings, const Project& project, const std::string& packaged);
+
+/// The option names (lower case) a config's "name=value" lines set
+std::set<std::string> configOptionNames(const std::string& config);
 
 } // namespace kr

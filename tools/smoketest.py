@@ -747,6 +747,13 @@ def interface_steps(eng, step):
         eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
         if eng.tjs("return KAGMenuBarAvailable(kag) ? 1 : 0;") != 1:
             raise SmokeError("the menu bar can't be shown (KAGMenuBarAvailable: Window.setViewport, the stand-in menu)")
+        # captions lose their accelerators: "(&F)", a bare "&F" ("$1ile" up to 0.14.0) and "&&"
+        labels = str(eng.tjs(
+            'var r = []; with (KAGMenuItemText(%[caption:"&File\\tCtrl+F"])) r.add(.label + "|" + .shortcut);'
+            ' r.add(KAGMenuItemText(%[caption:"Save(&S)"]).label); r.add(KAGMenuItemText(%[caption:"Q&&A"]).label);'
+            ' return r.join("/");'))
+        if labels != "File|Ctrl+F/Save/Q&A":
+            raise SmokeError("menu captions come out as %s, not File|Ctrl+F/Save/Q&A" % labels)
         full = eng.tjs("return kag.fullScreened ? 1 : 0;") == 1
         try:
             if full:
@@ -2421,6 +2428,17 @@ def sample_steps(eng):
                           ' if (v != "linked") a.add(k); }, a); return a.join(" ");')
         if missing:
             raise SmokeError("these transitions' plugin isn't loaded: " + missing)
+
+    @step("a movie named without its extension is found as .webm, the format the engine plays")
+    def _():
+        found = str(eng.tjs('if (!Storages.isExistentStorage("test.webm")) return "none";'
+                            ' return [GenericFlip.GetType("test.webm"), GenericFlip.GetType("test"),'
+                            ' Storages.extractStorageName(getExistFileNameAutoExtFill("test", GenericFlip.GetEntry("movie", "ext")*))].join(",");'))
+        if found == "none":
+            print("     (skipped: no video/test.webm here)", flush=True)
+            return
+        if found != "movie,movie,test.webm":
+            raise SmokeError("test.webm and test are taken as %s, not movie,movie,test.webm" % found)
 
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
