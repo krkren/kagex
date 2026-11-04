@@ -10,7 +10,7 @@
 # Gradle project with the engine prebuilt; kagex-engine-ios, unsigned device and Simulator apps).
 # A pushed commit message with "[platforms: linux web]" builds only those.
 #
-# A job whose engine an earlier release built already doesn't compile it (since 0.13.5):
+# A job whose engine an earlier release built already doesn't compile it (since 0.14.0):
 # platform-engine.py works out a key of what goes into the engine (the pinned commits, the
 # config without its version, the files the build reads, this workflow) and looks for a release
 # whose note (kagex-engine-build.json, "platforms") has it; then the job takes that release's
