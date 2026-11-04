@@ -840,6 +840,16 @@ Attributes
 
 		by itself ([freeimage] takes it away), and a save keeps its options.
 
+		To cover the message window too, put the layer above it: index=1000500 lies between
+
+		the game's message window (message0, absolute 1000000) and message1 (1001000, where
+
+		the sample draws its save, load and config screens), as World layers' level=message
+
+		does. A layer showing static lets the pointer through (hitThreshold 256, put back when
+
+		it stops), so the window's buttons still work under it.
+
 
 
 		staticwidth   Picture width. Default: the screen's.

@@ -2794,22 +2794,28 @@ def sample_steps(eng):
         r = str(eng.tjs(kag_flip + 'return [l.flipType, f.options.staticbar, f.options.staticgrain, f.options.staticcolor, f.frames > 1 ? 1 : 0].join(",");'))
         if r != "static,60,8,true,1":
             raise SmokeError("the static flip wasn't restored as it was stored: %s" % r)
-        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
-        # on a World layer: newlay noise=, flipupdate, and a redraw that keeps the same flip going
+        hit = str(eng.tjs('var l = kag.fore.layers[0], r = [l.hitThreshold]; kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]);'
+                          ' r.add(l.hitThreshold); return r.join(",");'))
+        if hit.split(",")[0] != "256" or hit.split(",")[1] == "256":
+            raise SmokeError("a layer showing static should let the pointer through and get its own hitThreshold back: %s" % hit)
+        # on a World layer over the message window (level=message): newlay static=, flipupdate,
+        # and a redraw that keeps the same flip going
         wl = 'world_object.env.layers["smokestatic"]'
         env = 'var e = world_object.env, t = ' + wl + '.targetLayer, f = t.flip; '
-        eng.tjs('world_object.env.unknown("newlay", %[name:"smokestatic", "static" => "tv", staticgrain:"4", opacity:"128", show:"true"]); return 1;')
+        eng.tjs('world_object.env.unknown("newlay", %[name:"smokestatic", "static" => "tv", staticgrain:"4", opacity:"128", level:"message", show:"true"]); return 1;')
         eng.wait("the World layer's static", wl + ' !== void && ' + wl + '.targetLayer !== void && ' + wl + '.targetLayer.flip !== void && '
                  + wl + '.targetLayer.flip.frames > 3', timeout=10)
         eng.tjs(env + 'global.__smokeFlipObj = f; e.unknown("smokestatic", %[flipupdate:"true", staticfps:"10"]);'
                 ' e.unknown("smokestatic", %[grayscale:"true"]); return 1;')
         time.sleep(0.5)
-        r = str(eng.tjs(env + 'return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
-                        ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0].join(",");'))
+        r = str(eng.tjs(env + 'var m = kag.fore.messages; return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
+                        ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0,'
+                        ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0].join(",");'))
         print("     on a World layer: %s" % r, flush=True)
         eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
-        if r != "static,1,10,4,1":
-            raise SmokeError("[newlay static=tv] didn't play on as asked through flipupdate and a redraw: %s" % r)
+        if r != "static,1,10,4,1,1":
+            raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
+                             " over the message window and letting the pointer through: %s" % r)
 
     @step("back to the title through the Yes/No prompt")
     def _():

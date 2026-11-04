@@ -843,6 +843,11 @@ A group of commands that can be used commonly for Stage, Event, Character, and L
     front   Sets the stacking order of the character standing sprite to the top within the same level.
     back    Sets the stacking order of the character standing sprite to the bottom within the same level.
     level   Specifies the display level.
+            level=message puts a layer over the game's message window (message0) and its
+            choices, under the other message layers (the sample draws its save, load and
+            config screens on message1), the backlog and the prompts: TV static over the
+            whole screen, say ([newlay name=tv static=tv level=message]). It's level 9
+            (KAGEnvMessageLevel, KAGEnvLevelLayer.tjs); levels 0 to 8 are under the window.
 
 
 
@@ -1869,8 +1874,9 @@ or written by a script as make_vrm.py does.
                 plays until the layer goes, and a save keeps its options. Options are given with
                 `static`, or later with `flipupdate`: [tv flipupdate staticbar=80]. (noise= is
                 still the still noise every image takes; in TJS `static` is a reserved word,
-                so a script reads the attribute as elm["static"].)
-                    [newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 show]
+                so a script reads the attribute as elm["static"].) With level=message it covers
+                the message window too; the pointer goes through it to the window's buttons.
+                    [newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 level=message show]
                     [tv opacity=120 time=800]
     staticwidth   Picture width. Default: the screen's.
     staticheight  Picture height. Default: the screen's.

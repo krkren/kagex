@@ -60,6 +60,22 @@ class StaticFlip extends GenericFlip, Layer
 		for (var i = flipLayers.count - 1; i >= 0; i--) flipLayers[i].assignImagesForMovie(this);
 	}
 
+	// Static is never what a click is for: a layer showing it over the message window (World
+	// level=message, a KAG layer's index=) lets the pointer through to the window's buttons. A KAG
+	// layer takes the mouse at hitThreshold 64; it gets that back when the static stops
+	function flipEntry(lay) {
+		FLIP.flipEntry(lay);
+		if (typeof lay.staticHitThreshold == "undefined") lay.staticHitThreshold = lay.hitThreshold;
+		lay.hitThreshold = 256;
+	}
+	function flipLeave(lay) {
+		FLIP.flipLeave(lay);
+		if (isvalid lay && typeof lay.staticHitThreshold != "undefined") {
+			lay.hitThreshold = lay.staticHitThreshold;
+			delete lay.staticHitThreshold;
+		}
+	}
+
 	function flipStart(storage, elm) {
 		elm = %[] if (elm === void);
 		file = storage;
