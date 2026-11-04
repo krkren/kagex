@@ -76,6 +76,9 @@ struct Scan {
 	/// literal op literal (+ - * <<) beyond 32 bits, or a literal beyond 32 bits in an embeddable
 	/// string: the compiler folds it into one constant, which no marker can follow
 	bool wideFold = false;
+	/// "(const)" before an array or dictionary literal: the compiler makes it one constant object,
+	/// which the bytecode has no form for (it writes null, and the script reads null)
+	bool constObjects = false;
 };
 
 /// text as UTF-8 or Shift_JIS bytes (sjis: skip double-byte characters' second bytes)

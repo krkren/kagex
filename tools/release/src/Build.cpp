@@ -70,9 +70,16 @@ void mustMkdirs(const fs::path& p)
 
 void mustRemove(const fs::path& p)
 {
+	// a few tries over about 3 s before giving up: on Windows a virus scan can hold a file just
+	// written (a 2 GB APK) for a moment, and the work folder couldn't be removed once
 	std::error_code ec;
-	fs::remove_all(p, ec);
-	if (ec) throw Failure{ "Can't remove " + krt::fromPath(p) + " (is it open somewhere?): " + ec.message() };
+	for (int attempt = 0; attempt < 6; attempt++) {
+		if (attempt) std::this_thread::sleep_for(std::chrono::milliseconds(250 * attempt));
+		ec.clear();
+		fs::remove_all(p, ec);
+		if (!ec) return;
+	}
+	throw Failure{ "Can't remove " + krt::fromPath(p) + " (is it open somewhere?): " + ec.message() };
 }
 
 void copyFile(const fs::path& from, const fs::path& to)
@@ -116,6 +123,36 @@ uint64_t treeSize(const fs::path& p)
 	for (fs::recursive_directory_iterator it(p, ec), end; it != end; it.increment(ec))
 		if (!ec && it->is_regular_file(ec)) n += it->file_size(ec);
 	return n;
+}
+
+// The newest file with this extension in an "outputs" folder under Gradle's build folder.
+// Folder by folder, skipping what can't be read: a recursive_directory_iterator ends at its first
+// error, and on Windows Gradle's intermediates go past 260 characters (a project in a long
+// Downloads path), so "Gradle made no .apk" came after a build that had made one
+fs::path newestGradleOutput(const fs::path& build, const std::string& ext)
+{
+	fs::path found;
+	fs::file_time_type newest{};
+	std::vector<std::pair<fs::path, bool>> dirs{ { build, false } };   // a folder, and whether it's in outputs
+	while (!dirs.empty()) {
+		const auto [dir, inOutputs] = dirs.back();
+		dirs.pop_back();
+		std::error_code ec;
+		fs::directory_iterator it(dir, ec), end;
+		for (; !ec && it != end; it.increment(ec)) {
+			std::error_code e2;
+			const std::string name = krt::fromPath(it->path().filename());
+			if (it->is_directory(e2)) {
+				// what Gradle compiles goes there, deepest of all: no package is in it
+				if (name == "intermediates" || name == "tmp" || name == ".cxx" || name == "generated") continue;
+				dirs.push_back({ it->path(), inOutputs || name == "outputs" });
+			} else if (inOutputs && it->is_regular_file(e2) && lower(krt::fromPath(it->path().extension())) == ext) {
+				const auto t = it->last_write_time(e2);
+				if (!e2 && (found.empty() || t > newest)) { found = it->path(); newest = t; }
+			}
+		}
+	}
+	return found;
 }
 
 std::string xmlEscape(const std::string& s)
@@ -1683,14 +1720,7 @@ private:
 		if (!r.ok()) throw Failure{ std::string(r.timedOut ? "Gradle took over an hour" : "Gradle failed") + " (see android-build.log)" };
 
 		const std::string ext = aab ? ".aab" : ".apk";
-		fs::path found;
-		fs::file_time_type newest{};
-		for (fs::recursive_directory_iterator it(proj / "build", ec), end; it != end; it.increment(ec)) {
-			if (ec || !it->is_regular_file(ec) || lower(krt::fromPath(it->path().extension())) != ext) continue;
-			if (krt::fromPath(it->path()).find("outputs") == std::string::npos) continue;
-			const auto t = it->last_write_time(ec);
-			if (found.empty() || t > newest) { found = it->path(); newest = t; }
-		}
+		const fs::path found = newestGradleOutput(proj / "build", ext);
 		if (found.empty()) throw Failure{ "Gradle made no " + ext + " (see android-build.log)" };
 		package = out_ / krt::toPath(exe + "-" + version + ext);
 		copyFile(found, package);
