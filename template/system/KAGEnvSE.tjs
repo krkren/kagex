@@ -10,6 +10,7 @@ class KAGEnvSE extends KAGEnvBase {
 		super.KAGEnvBase(env, "se" + id);
 		this.id = id;
 		count = 0;
+		shift = new KAGEnvSoundShift(isPlaced);
 	}
 	
 	var id;
@@ -24,6 +25,7 @@ class KAGEnvSE extends KAGEnvBase {
 	// it as it moves while the sound plays on). KAGEnvironment.se3DPosition places it
 	var place;
 	var followTimer; // moves the sound with its character
+	var shift;       // pitch and pan (KAGEnvSoundShift, KAGEnvBGM.tjs)
 	
 	var play;
 	var stop;
@@ -37,11 +39,13 @@ class KAGEnvSE extends KAGEnvBase {
 		f.loop      = loop   if loop !== void && loop != false;
 		f.volume    = volume if volume !== void && volume != 100;
 		f.place     = place  if place !== void && filename !== void && loop;
+		shift.store(f) if filename !== void && loop;
 		//f.count     = count  if count != 0;
 	}
 
 	function finalize() {
 		invalidate followTimer if followTimer !== void;
+		invalidate shift;
 		super.finalize(...);
 	}
 
@@ -54,6 +58,7 @@ class KAGEnvSE extends KAGEnvBase {
 			if (f.filename != "" && f.loop) {
 				setPlay(f.filename, %[loop:f.loop]);
 				place = f.place;
+				shift.restore(f);
 				if (f.volume !== void) {
 					fade = %[] if (fade === void);
 					fade.volume = volume = f.volume;
@@ -69,6 +74,7 @@ class KAGEnvSE extends KAGEnvBase {
 		filename = void;
 		loop = false;
 		stopFollowing();
+		shift.stopped();
 	}
 
 	// --------------------------------------------------------------------
@@ -91,6 +97,7 @@ class KAGEnvSE extends KAGEnvBase {
 					fade = %[];
 					fade.volume = volume = 100;
 				}
+				shift.reset(elm); // as recorded and centred, unless the tag says
 			} else {
 				stop = 0 if (loop);
 				play = void;
@@ -128,6 +135,21 @@ class KAGEnvSE extends KAGEnvBase {
 		fade.time   = elm.time;
     }
 
+	/**
+	 * Pitch (%) and pan (-100 to 100), over time=
+	 */
+	function setShift(param, elm) {
+		// with a play in the same tag, the sound starts there (setPlay reads them); like
+		// fade=, it leaves a tag named after a sound to play it ([bgm01 pitch=50])
+		if (elm.play === void && elm.storage === void) shift.set(elm);
+	}
+
+	// whether the buffer is placed on the stage (3D): its pan is the place's then
+	function isPlaced() {
+		var se = env.getSEOBJ(id);
+		return se !== void && typeof se.use3D != "undefined" && se.use3D;
+	}
+
     var secommands = %[
     tagname : null, 
     taglist : null, 
@@ -139,11 +161,14 @@ class KAGEnvSE extends KAGEnvBase {
     play : setPlay incontextof this,
     stop : setStop incontextof this,
     fade : setFade incontextof this,
+    pitch : setShift incontextof this,
+    pan : setShift incontextof this,
     loop : null,
     time : null,
     start : null,
     canskip : null,
     buf : null,
+    name : null,  // [se name=...]: which sound (KAGEnvironment.getSeIdFromName), not one to play
     filename : null,
     nosync : null,
 	sync : null,
@@ -226,6 +251,7 @@ class KAGEnvSE extends KAGEnvBase {
 				} else {
 					se.play(%[ storage:filename, loop:play.loop, start:play.start]);
 				}
+				shift.started(se); // its pitch and pan (the buffer's frequency is the file's again)
 				fading = 2; // Treated as waiting for stop during sync
 				filename = origName;
 				loop = play.loop;
@@ -234,6 +260,7 @@ class KAGEnvSE extends KAGEnvBase {
 			}
 			play = void;
 		}
+		shift.update(se, skipMode);
 		if (stop !== void) {
 			if (skipMode == SKIP_NONE && stop > 0) {
 				se.fadeOut(%[time:stop]);

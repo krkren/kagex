@@ -482,6 +482,8 @@ Attributes
 
 				3d: .vrm .glb .gltf (3D models), or a scene built in script by its name
 
+				static: the name static (TV static; another name with fliptype=static)
+
     movie   Equivalent to flip specification + fliptype:movie  * For compatibility
 
     fire    Equivalent to flip specification + fliptype:fire   * For compatibility
@@ -811,6 +813,76 @@ Attributes
 		The layer demo (layer.ks) shows a scene built in script, the glTF star and Vee, the
 
 		sample's VRM avatar (tools/assets/make_vrm.py), on layers.
+
+	Optional parameters for static (TV static, template/system/GFX_Static.tjs)
+
+
+
+		Moving static for a broken screen, a bad signal or a memory breaking up:
+
+
+
+		[image layer=1 page=fore flip=static visible=true opacity=96]. Each frame a picture of
+
+
+
+		noise a grain smaller than the layer is drawn and stretched to the layer's size, so it
+
+
+
+		costs a few milliseconds, the web build's too. The picture is opaque: the layer's
+
+
+
+		opacity and blend mode (mode=, [layopt type=]) lay it over the scene. It never ends
+
+
+
+		by itself ([freeimage] takes it away), and a save keeps its options.
+
+
+
+		staticwidth   Picture width. Default: the screen's.
+
+
+
+		staticheight  Picture height. Default: the screen's.
+
+
+
+		staticgrain   The size of a grain, in pixels. Default 3.
+
+
+
+		staticcolor   true: coloured static (with the layerExImage plugin; grey without it).
+
+
+
+		staticfps     New pictures a second (1 to 60). Default 30.
+
+
+
+		staticbar     A brighter band rolling down the picture, a bad signal's: 0 (none, the
+
+
+
+		              default) to 255.
+
+
+
+		staticlines   Scanlines, every other grain row darkened: 0 (none, the default) to 255.
+
+
+
+		staticwidth and staticheight count when the flip starts; the others can be changed while
+
+
+
+		it plays ([layopt layer=1 staticbar=80]). The Effects demo (effect.ks) shows it on a World
+
+
+
+		layer ([newlay name=tv static=tv], doc/world.txt).
 
 
 

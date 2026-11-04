@@ -1863,6 +1863,24 @@ or written by a script as make_vrm.py does.
     3dspeed     Playback speed (1.0: as made).
     3dwidth and 3dheight count when it starts. doc/kagex.txt has the details ("Optional
     parameters for 3d", for KAG layers: [image flip=vee.vrm]), and what not to do with lights.
+    static      TV static (template/system/GFX_Static.tjs): new static every frame, a grain
+                smaller than the screen and stretched to it, opaque, laid over the scene at the
+                layer's opacity and blend mode. The value is a name of your choosing; the static
+                plays until the layer goes, and a save keeps its options. Options are given with
+                `static`, or later with `flipupdate`: [tv flipupdate staticbar=80]. (noise= is
+                still the still noise every image takes; in TJS `static` is a reserved word,
+                so a script reads the attribute as elm["static"].)
+                    [newlay name=tv static=tv staticbar=40 staticlines=90 opacity=0 show]
+                    [tv opacity=120 time=800]
+    staticwidth   Picture width. Default: the screen's.
+    staticheight  Picture height. Default: the screen's.
+    staticgrain   The size of a grain, in pixels. Default 3.
+    staticcolor   true: coloured static (with the layerExImage plugin; grey without it).
+    staticfps     New pictures a second (1 to 60). Default 30.
+    staticbar     A brighter band rolling down, a bad signal's: 0 (none, the default) to 255.
+    staticlines   Scanlines: 0 (none, the default) to 255.
+    staticwidth and staticheight count when it starts. doc/kagex.txt has the details ("Optional
+    parameters for static", for KAG layers: [image flip=static]).
 
 
 
@@ -1919,6 +1937,15 @@ Inherits functions of layers.
     fade            BGM volume control. Becomes the specified volume.
         Auxiliary Parameter
         time Time taken for fade.
+    pitch           Speed and pitch together, in % of the recording (100: as recorded,
+                    1 to 400), as a tape slowing down or speeding up.
+    pan             Left or right: -100 (left) to 100 (right), 0 in the middle.
+        Auxiliary Parameter
+        time Time taken to get there (at once while skipping).
+    A play starts the music at the pitch and pan its tag gives, as recorded and in the middle
+    otherwise. A save keeps them. A tape running out, and back:
+        [bgm pitch=35 time=2500]
+        [bgm pitch=100 time=800]
 
 
 
@@ -1942,6 +1969,16 @@ Inherits functions of layers.
         Auxiliary Parameter
         buf     Processing target buffer specification.
         time Time taken for fade.
+    pitch   Speed and pitch together, in % of the recording (100: as recorded, 1 to 400).
+    pan     Left or right: -100 (left) to 100 (right), 0 in the middle. A placed sound
+            (below) takes its pan from its place, and pan= leaves it alone.
+        Auxiliary Parameters
+        buf     Processing target buffer specification.
+        time    Time taken to get there (at once while skipping).
+    A play starts the sound at the pitch and pan its tag gives, as recorded and in the middle
+    otherwise; a looping sound keeps them in save data. Footsteps crossing from left to right:
+        [se storage=se_steps loop=1 pan=-100]
+        [se name=se_steps pan=100 time=3000]
     Placing the sound on the stage (positional sound), with play or a storage name:
         pos     A position of envinit.tjs's positions (pos=farleft): the sound is where a
                 character there would be, across the stage and at its level.

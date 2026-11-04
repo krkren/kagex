@@ -1110,6 +1110,8 @@ KAGLoadScript("GFX_Live2D.tjs")   if (KAGConfigEnabled("gfxLive2DEnabled",   tru
 
 KAGLoadScript("GFX_Three.tjs")    if (KAGConfigEnabled("gfxThreeEnabled",    true));
 
+KAGLoadScript("GFX_Static.tjs")   if (KAGConfigEnabled("gfxStaticEnabled",   true));
+
 
 
 KAGLoadScript("MessageLayer.tjs");

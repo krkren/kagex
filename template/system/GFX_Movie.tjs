@@ -104,7 +104,7 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		file = filename;
 
-		var fn = getExistFileNameAutoExtFill(file, "mpg", "mpv", "mpeg", "wmv");
+		var fn = getExistFileNameAutoExtFill(file, "webm", "mpg", "mpv", "mpeg", "wmv");
 
 		open(fn);
 
@@ -248,7 +248,7 @@ GenericFlip.Entry(
 
 		"trigger"  => "lmstop",            // Trigger name sent on stop
 
-		"ext"      => [ "mpeg", "mpg", "mpv", "wmv" ], // Determination process (extension string or array)
+		"ext"      => [ "webm", "mpeg", "mpg", "mpv", "wmv" ], // Determination process (extension string or array)
 
 //		"checker"  => void,                // Determination process (function)
 
