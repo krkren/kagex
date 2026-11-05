@@ -45,6 +45,10 @@ The extNagano plugin adds twelve more transitions.
 [if exp="KAGPluginTransitions.book != 'linked'"]
 This build doesn't have it, so they all run as crossfades here.
 [endif]
+; book and multiripple are drawn by kagex itself (ScriptTransitions.tjs): the plugin's page
+; stopped three quarters of the way, and its ripples brought the old picture back.
+; 3duniversal's pieces fly only with a speed: accel1 (or speed1) for the old picture's pieces,
+; accel2 (speed2) for the new one's (with none at all, the plugin fades the new picture out).
 [EV file=event1 trans=book time=1500 dir=1]book: a page turns
 [EV hide trans=flutter time=1500]flutter: the picture peels away like paper
 [EV file=event1 trans=blurfade time=1500 blur1=48 blur2=48]blurfade: a crossfade through a blur
@@ -60,7 +64,7 @@ This build doesn't have it, so they all run as crossfades here.
 [EV file=event1 trans=spin time=1500]spin: the picture turns like the side of a box
 [EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple: ripples spread from five points
 [EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe: a wipe led by a picture, here a brush stroke
-[EV hide trans=3duniversal time=2000 rule=rule_shatter]3duniversal: a rule picture sends pieces flying, here shards
+[EV hide trans=3duniversal time=2000 rule=rule_shatter accel1=0.4]3duniversal: a rule picture sends pieces flying, here shards
 [EV file=event1 trans=honeyturn time=1500 size=80]honeyturn: hexagons flip over one by one
 [EV hide trans=swirl]morphing: triangles warp the picture, here into a swirl (envinit.tjs)
 

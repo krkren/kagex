@@ -18,6 +18,7 @@ class KAGLoudnessTable
 	var gains = %[];  // key (lower case) -> dB
 	var cache = %[];  // storage name -> dB
 	var count = 0;
+	var lastQuery;    // [ url, dB ] the engine asked for last
 
 	function KAGLoudnessTable(file = "loudness.csv") { load(file); }
 
@@ -98,6 +99,10 @@ function KAGLoudnessNumber(s)
 var KAGLoudness = new KAGLoudnessTable();
 if (typeof WaveSoundBuffer.setGainQueryCallback != "undefined") {
 	WaveSoundBuffer.setGainQueryCallback(function(url) {
-		try { return +KAGLoudness.gainOf(url); } catch (e) { return 0.0; }
+		try {
+			var g = +KAGLoudness.gainOf(url);
+			KAGLoudness.lastQuery = [ (string)url, g ]; // what the engine asked last (for tests)
+			return g;
+		} catch (e) { return 0.0; }
 	} incontextof global);
 }

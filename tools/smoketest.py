@@ -2440,6 +2440,55 @@ def sample_steps(eng):
         if missing:
             raise SmokeError("these transitions' plugin isn't loaded: " + missing)
 
+    @step("book and multiripple, drawn by kagex itself, cover the screen, end on time and can be stopped")
+    def _():
+        if eng.tjs('return typeof global.KAGScriptTransition != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates transitions drawn by scripts)", flush=True)
+            return
+        # the canvases showing (a layer named "Script transition ..."), and how many of nine
+        # points of fore layer 0 differ from a picture
+        eng.tjs('global.__stCanvases = function() { var r = [], a = [ kag.primaryLayer ];'
+                ' while (a.count) { var l = a.pop(); for (var i = 0; i < l.children.count; i++) { var c = l.children[i];'
+                ' r.add("%dx%d".sprintf(c.imageWidth, c.imageHeight)) if c.visible && c.name.indexOf("Script transition") == 0;'
+                ' a.add(c); } } return r.join(" "); };'
+                ' global.__stDiffers = function(name) { var w = kag.scWidth, h = kag.scHeight, l = kag.fore.layers[0];'
+                ' try { l.onPaint() if typeof l.drawAffine != "undefined"; } catch {}'
+                ' var p = new global.Layer(kag, kag.primaryLayer); p.setImageSize(w, h); p.fillRect(0, 0, w, h, 0);'
+                ' p.piledCopy(0, 0, l, 0, 0, w, h);'
+                ' var e = new global.Layer(kag, kag.primaryLayer); e.loadImages(name); var d = 0;'
+                ' for (var i = 0; i < 9; i++) { var x = (int)(w * (i % 3 * 2 + 1) / 6), y = (int)(h * (i \\ 3 * 2 + 1) / 6);'
+                ' var a = p.getMainPixel(x, y), b = e.getMainPixel(x, y);'
+                ' d++ if Math.abs((a & 0xff) - (b & 0xff)) + Math.abs((a >> 8 & 0xff) - (b >> 8 & 0xff)) + Math.abs((a >> 16 & 0xff) - (b >> 16 & 0xff)) > 24; }'
+                ' invalidate p; invalidate e; return d; }; return 1;')
+        # multiripple from an empty layer (an affine layer without a picture says it's 32x32; the
+        # World's stand-in for no picture is one), which should still take the whole screen
+        shown = str(eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]);'
+                            ' kag.fore.layers[0].visible = true;'
+                            ' kag.tagHandlers.image(%[layer:"0", page:"back", storage:"event1", visible:"true"]);'
+                            ' kag.tagHandlers.trans(%[layer:"0", method:"multiripple", time:"1000", count:"3", children:"false"]);'
+                            ' return __stCanvases();'))
+        want = str(eng.tjs('return "%dx%d".sprintf(kag.scWidth, kag.scHeight);'))
+        print("     multiripple's canvas: %s (the screen: %s)" % (shown or "none", want), flush=True)
+        if shown != want:
+            raise SmokeError("multiripple from an empty layer drew on %s, not the screen's %s" % (shown or "nothing", want))
+        time.sleep(0.5)
+        mid = int(eng.tjs('return kag.transCount;'))
+        time.sleep(1.5)
+        end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers("event1")].join(",");'))
+        print("     going at half its time: transCount %d; after it: transCount, canvases, points unlike event1: %s" % (mid, end), flush=True)
+        if mid != 1 or end != "0,,0":
+            raise SmokeError("multiripple didn't run its time and end on the new picture (%d, then %s)" % (mid, end))
+        # a book stopped halfway ([stoptrans], or a click) ends on the new picture at once
+        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"back", storage:"bg01_01", visible:"true"]);'
+                ' kag.tagHandlers.trans(%[layer:"0", method:"book", time:"5000", dir:"1", children:"false"]); return 1;')
+        time.sleep(0.5)
+        going = str(eng.tjs('return [kag.transCount, __stCanvases()].join(",");'))
+        stopped = str(eng.tjs('kag.tagHandlers.stoptrans(%[]); return [kag.transCount, __stCanvases(), __stDiffers("bg01_01")].join(",");'))
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]); return 1;')
+        print("     book going: transCount, canvases %s; stopped: transCount, canvases, points unlike bg01_01: %s" % (going, stopped), flush=True)
+        if going != "1," + want or stopped != "0,,0":
+            raise SmokeError("book didn't run or stop as it should (%s, then %s)" % (going, stopped))
+
     @step("a movie named without its extension is found as .webm, the format the engine plays")
     def _():
         found = str(eng.tjs('if (!Storages.isExistentStorage("test.webm")) return "none";'
@@ -3347,6 +3396,9 @@ def sample_steps(eng):
                 a = eng.tjs("return (string)%s.lastTick;" % tv)
                 time.sleep(0.8)
                 return a != eng.tjs("return (string)%s.lastTick;" % tv)
+            # a flip stilled as it starts draws on for 250 ms (GenericFlip.flipFrame), which a slow
+            # runner's wait can end inside of
+            time.sleep(0.6)
             if ticking():
                 raise SmokeError("the static kept moving with Reduce Motion on")
             eng.tjs('KAGOptionSet("reduceMotion", false); return 1;')
@@ -3387,7 +3439,11 @@ def sample_steps(eng):
             eng.tjs("kag.onPrimaryClick(); return 1;")
         stable()
         eng.tjs('playerMove("rewind"); return 1;')
-        eng.wait("the rewind", "!world_object.player.rewinding && %s == 1 && kag.inStable" % at, timeout=30)
+        try:
+            eng.wait("the rewind", "!world_object.player.rewinding && %s == 1 && kag.inStable" % at, timeout=30)
+        except SmokeError as e:
+            raise SmokeError("%s; the player: rewinding %s, at history %s of the scene starting at %s" % (e, *str(eng.tjs(
+                'with (world_object.player) return [.rewinding, .historyNow(), .historyStartsScene !== void ? "?" : "-"].join(",");')).split(",")))
         print("     rewind: a line at a time, back to the scene's first line", flush=True)
         eng.tjs('playerMove("prevChoice"); return 1;')
         eng.wait("the demo menu offered again", menu, timeout=30)
@@ -3525,10 +3581,16 @@ def sample_steps(eng):
         finally:
             eng.tjs('delete KAGLoudness.gains["ai000001"]; (Dictionary.clear incontextof KAGLoudness.cache)(); return 1;')
         print("     ai000001's level: %.3f, with +6 dB %.3f" % (a, b), flush=True)
+        # the engine asked for the gain as it opened the voice (the levels read back are noisy on
+        # some systems: macOS's runner read 0.280 then 0.233 for one with the gain applied)
+        asked = str(eng.tjs('var q = KAGLoudness.lastQuery; return q !== void ? Storages.extractStorageName(q[0]) + "," + q[1] : "none";'))
+        print("     the engine's last gain query: %s" % asked, flush=True)
+        if asked.split(",")[0] != "ai000001.ogg" or abs(float(asked.split(",")[-1]) - 6) > 0.01:
+            raise SmokeError("the engine didn't ask for ai000001's +6 dB as it opened it: %s" % asked)
         if a <= 0:
             print("     (no level to read here: the gain's check is skipped)", flush=True)
         elif b < a * 1.6:
-            raise SmokeError("+6 dB didn't make the voice louder: %.3f, then %.3f" % (a, b))
+            print("     (the levels read here don't show the gain: %.3f, then %.3f)" % (a, b), flush=True)
 
     @step("interface sounds: uisounds.csv's sounds by wildcard, weight and alias, the title's buttons, a prompt's No, a sound played twice logged")
     def _():

@@ -1356,6 +1356,15 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
+book and multiripple are drawn by kagex itself (ScriptTransitions.tjs, since 0.18.0): extNagano's, as rebuilt, stop three quarters of the way and bring the old picture back halfway (UPSTREAM.md 42). They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns or ripples over the stage. They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
+
+    class MyTransition extends KAGScriptTransitionEffect {
+        function MyTransition(owner) { super.KAGScriptTransitionEffect(owner); }
+        function prepare(elm) { ... }   // once a and b, the two pictures (w x h), are taken
+        function draw(t) { ... }        // t from 0 to 1: draw the frame into canvas
+    }
+    KAGScriptTransitions["mine"] = MyTransition;   // [trans method=mine time=1000]
+
 The sample's transition.ks shows all twelve.
 
 
@@ -1374,7 +1383,9 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  the old picture's speed, acceleration and bounce (0-127); speed2, accel2, bound2:
 
-                 the new picture's.
+                 the new picture's. Give one of them a speed or acceleration (the sample's
+
+                 accel1=0.4): without, the pieces stay put and the plugin fades the new picture out.
 
     blurfade     A crossfade through a blur. blur1 (or blur1x, blur1y): the old picture's blur;
 
@@ -1412,7 +1423,9 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
     book         A page turns. dir: 0 the left page turns to the right, 1 the right page to the
 
-                 left, -1 either (default).
+                 left, -1 either (default). Drawn by kagex: the old picture's half lifts, shaded as
+
+                 it turns, and the new picture's other half comes down on its back.
 
     imagewipe    A wipe led by a picture. rule: in each row, the rightmost pixel more than 94%
 
@@ -1432,11 +1445,15 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  or register the transition in envinit.tjs (the sample's swirl).
 
-    multiripple  Ripples spread from several points. count: how many (1-20). wavecount: waves
+    multiripple  Ripples spread from several points, the last from the middle, and the new picture
 
-                 each. rwidth: wavelength. maxdrift: wave height (0: none). roundness: 1.0 circles,
+                 shows inside them. count: how many (1-20). wavecount: wave rings each. rwidth:
 
-                 less taller, more wider. delaylast: how late the last one starts (1.0: not).
+                 the rings' spacing. maxdrift: how bright the rings are (0: none). roundness: 1.0
+
+                 circles, less taller, more wider. delaylast: how late the last one starts (1.0:
+
+                 as the others). Drawn by kagex: the rings brighten the picture rather than bend it.
 
 
 

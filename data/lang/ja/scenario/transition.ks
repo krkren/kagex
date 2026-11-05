@@ -60,7 +60,7 @@ extNagano プラグインでトランジションがさらに12種類増えま�
 [EV file=event1 trans=spin time=1500]spin：箱の側面のように絵が回る
 [EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple：五か所から波紋が広がる
 [EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe：画像に沿ったワイプ（ここでは筆のストローク）
-[EV hide trans=3duniversal time=2000 rule=rule_shatter]3duniversal：ルール画像で破片が飛び散る（ここではガラス片）
+[EV hide trans=3duniversal time=2000 rule=rule_shatter accel1=0.4]3duniversal：ルール画像で破片が飛び散る（ここではガラス片）
 [EV file=event1 trans=honeyturn time=1500 size=80]honeyturn：六角形がひとつずつ裏返る
 [EV hide trans=swirl]morphing：三角形で絵をゆがめる（ここでは渦巻き、envinit.tjs）
 

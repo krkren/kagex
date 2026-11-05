@@ -138,7 +138,21 @@ class KAGLayer extends Layer
 			elm.delayA = elm.delaya if elm.delayA === void;
 		}
 		method = KAGTransitionMethod(method); // a crossfade when its plugin isn't loaded
+		// book and multiripple are drawn by scripts (ScriptTransitions.tjs: extNagano's don't do
+		// what they say, UPSTREAM.md 42)
+		if (method != "crossfade" && typeof global.KAGScriptTransition != "undefined" && KAGScriptTransition.handles(method, this, src)) {
+			new KAGScriptTransition(this, method, withchildren, src, elm);
+			return;
+		}
 		super.beginTransition(method, withchildren, src, elm);
+	}
+
+	var scriptTransition; // a transition drawn by a script (KAGScriptTransition) while it runs
+
+	function stopTransition()
+	{
+		if (scriptTransition !== void) { scriptTransition.finish(); return; }
+		super.stopTransition(...);
 	}
 	
 	function setOptions(elm)
