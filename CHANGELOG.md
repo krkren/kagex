@@ -1,14 +1,15 @@
 # Changelog
 
-## Unreleased
-
-### Added
-
-- **Movies fill the screen**: `[movie]` zooms a movie of another size so it fills the screen, keeping its shape (`fit=false` shows it at its own size), and `[image movie=... fit=true]` does the same on any layer. The smaller version that the web and phones play (`<name>_sd`) had shown at its own size, in the middle of a black screen; it also uses the full movie's subtitles now when it has none of its own.
+## 0.17.2
 
 ### Changed
 
 - **A new opening for the sample**: the logo plays an opening movie of the sample's own, drawn by `tools/assets/make_opening.py`: the K badge and the wordmark, the street with Ai coming in, three pictures from the demos and the evening title, over the start of "Daily Life" (`bgm01`), which it unlocks in the music room. It's an ordinary WebM without alpha (1920x1080, 3.4 MB, with a 960x540 version for the web and phones) with English and Japanese subtitles, and Replay's Movies tab shows a picture of it. The test movie it replaced stays in the layer demo, whose alpha movie it is.
+
+### Fixed
+
+- **Movies fill the screen**: the smaller version of a movie that the web and phones play (`<name>_sd`) showed at its own size, in the middle of a black screen. `[movie]` now zooms a movie of another size so it fills the screen, keeping its shape (`fit=false` shows it at its own size), and `[image movie=... fit=true]` does the same on any layer. The smaller version also uses the full movie's subtitles when it has none of its own.
+- The smoke test's movie checks accept a movie that shows no picture on the web, where the browser's player can't open a movie inside `data.xp3` (`TODO.md`, "Movies on the web").
 
 ## 0.17.1
 
