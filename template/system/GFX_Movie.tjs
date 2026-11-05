@@ -41,6 +41,10 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	var subtitles;   //< its KAGSubtitles, while it has cues
 
+	var fit = false; //< fit=true: each layer showing it zoomed to fill the screen ([movie]'s smaller version)
+
+	var fitWidth = 0, fitHeight = 0; //< the frame size it was fitted to
+
 
 
 	function MovieControlLayer(window) {
@@ -103,9 +107,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	 */
 
-	function start(filename, loop=false, alpha=0, subtitle=void, once=false) {
+	function start(filename, loop=false, alpha=0, subtitle=void, once=false, fit=false) {
 
 		this.alpha = alpha;
+
+		this.fit = fit;
+
+		fitWidth = fitHeight = 0;
 
 		this.subtitle = subtitle;
 
@@ -255,6 +263,36 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		flipAssign(targetLayer);
 
+		if (fit && (targetLayer.width != fitWidth || targetLayer.height != fitHeight)) fitScreen();
+
+	}
+
+
+
+	// fit: zoom the layers showing it (affine layers) so the frame fills the screen, keeping its shape
+
+	function fitScreen() {
+
+		fitWidth = targetLayer.width;
+
+		fitHeight = targetLayer.height;
+
+		if (fitWidth <= 0 || fitHeight <= 0) return;
+
+		var prim = targetLayer.window.primaryLayer;
+
+		var zx = prim.width * 100.0 / fitWidth, zy = prim.height * 100.0 / fitHeight;
+
+		var z = zx < zy ? zx : zy;
+
+		for (var i = flipLayers.count-1; i >= 0; i--) {
+
+			var l = flipLayers[i];
+
+			if (typeof l.zoom != "undefined") l.zoom = z;
+
+		}
+
 	}
 
 
@@ -346,19 +384,23 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 			;.subtitle = subtitle;
 
+			;.fit   = fit;
+
 		}
 
 	}
 
 	function flipRestore(dic) {
 
-		start(dic.file, dic.loop, dic.alpha, dic.subtitle, dic.once);
+		start(dic.file, dic.loop, dic.alpha, dic.subtitle, dic.once, dic.fit);
 
 	}
 
 	function flipStart(storage, elm) {
 
-		start(storage, elm.loop, elm.alpha, elm.subtitle, elm.once !== void && elm.once != "false" && +elm.once != 0);
+		start(storage, elm.loop, elm.alpha, elm.subtitle, elm.once !== void && elm.once != "false" && +elm.once != 0,
+
+			elm.fit !== void && elm.fit != "false" && +elm.fit != 0);
 
 	}
 
@@ -382,7 +424,7 @@ GenericFlip.Entry(
 
 //		"checker"  => void,                // Determination process (function)
 
-		"options"  => [ "loop", "alpha", "subtitle", "once" ], // Option values to use (for KAGEnvLayer)
+		"options"  => [ "loop", "alpha", "subtitle", "once", "fit" ], // Option values to use (for KAGEnvLayer)
 
 		"autoflag" => "movie",             // Auto flag tag name (for KAGEnvLayer)
 

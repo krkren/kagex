@@ -16,8 +16,10 @@
 [allimage delete]
 [endtrans trans=normal time=1000]
 [endskip]
-; a short opening ([movie], Movies.tjs): a click skips it once it has been seen, and its subtitles
-; are test.vtt (the Japanese in data/lang/ja)
-[movie storage=test alpha=2 color=0x000000]
+; the opening ([movie], Movies.tjs; tools/assets/make_opening.py draws it, over the start of
+; bgm01, which it unlocks in the music room): a click skips it once it has been seen, its subtitles
+; are opening.vtt (the Japanese in data/lang/ja), and the web and phones play opening_sd, zoomed to
+; fill the screen
+[movie storage=opening song=bgm01 color=0x000000]
 
 @return

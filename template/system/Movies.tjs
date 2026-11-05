@@ -9,12 +9,14 @@
  * when Config says so; skip mode stops before an unseen one and passes a seen one when Config
  * says so. song= unlocks that music in the music room (sf["bgm_<NAME>"]); color= fills the
  * screen behind it. A movie with a smaller version, <name>_sd, plays that when Config's Movie
- * Quality says so, or on its own on the web, Android and iOS (kag.movieQuality "auto").
+ * Quality says so, or on its own on the web, Android and iOS (kag.movieQuality "auto"). It's
+ * zoomed to fill the screen, keeping its shape (fit=false: shown at its own size).
  *
  * Subtitles: a movie on a layer with subtitle=true ([movie] has it) shows the cues of
  * <name>.vtt (WebVTT; a language's own in data/lang/<code>/ stands in for it) at the bottom of
  * the screen in the message text's look, timed from the movie, and tells screen readers each
- * one; subtitle=<file> names another file. Config can turn them off.
+ * one; subtitle=<file> names another file. <name>_sd uses <name>.vtt when it has none of its own.
+ * Config can turn them off.
  */
 
 // ---- subtitles --------------------------------------------------------------------------
@@ -125,8 +127,13 @@ function KAGSubtitleFile(movie, option)
 {
 	if (option === void || option == "" || option == "false" || option == "0") return;
 	if (option != "true" && option != "1") return option;
-	var name = Storages.chopStorageExt(Storages.extractStorageName(movie)) + ".vtt";
-	return Storages.isExistentStorage(name) ? name : void;
+	var base = Storages.chopStorageExt(Storages.extractStorageName(movie));
+	if (Storages.isExistentStorage(base + ".vtt")) return base + ".vtt";
+	// a smaller version (<name>_sd) has the full one's cues
+	if (base.length > 3 && base.substring(base.length - 3).toLowerCase() == "_sd") {
+		base = base.substring(0, base.length - 3);
+		if (Storages.isExistentStorage(base + ".vtt")) return base + ".vtt";
+	}
 }
 
 // ---- [movie] ----------------------------------------------------------------------------
@@ -183,7 +190,7 @@ function KAGMovieTag(elm)
 	var prim = kag.primaryLayer;
 	kag.tagHandlers.image(%[ layer:n, page:"fore", movie:KAGMovieFile(name), alpha:elm.alpha !== void ? elm.alpha : "0",
 		visible:"true", index:"1500000", dafx:"center", dafy:"center", left:"" + (prim.width >> 1), top:"" + (prim.height >> 1),
-		subtitle:elm.subtitle !== void ? elm.subtitle : "true", once:"true" ]);
+		subtitle:elm.subtitle !== void ? elm.subtitle : "true", once:"true", fit:elm.fit !== void ? elm.fit : "true" ]);
 	var canskip = seen || elm.skip == "always";
 	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount(), order:order ];
 	// a movie that never shows a frame (no decoder for it here) ends after 3 s
