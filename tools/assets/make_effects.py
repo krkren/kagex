@@ -6,7 +6,11 @@ The effects are white or lightly tinted textures coloured by the effects' own co
 drawn additively. Sizes are in Effekseer units: the game shows them at efkmag pixels per unit
 (50 unless efkmag says), so 10 units are about half the screen's height.
 
-usage: python3 tools/assets/make_effects.py [textures] [effects]   (both when none is named)
+usage: python3 tools/assets/make_effects.py [textures] [effects] [stills]   (all when none is named)
+
+stills: the pictures that stand in for the looping effects under Config's Reduce Motion
+(effect.ks's still=, since 0.18.0): <effect>_still.png in data/effect, put together from the
+textures (so make those first), each the size of its layer's canvas in the Effects demo.
 """
 import math, os, sys
 import numpy as np
@@ -369,13 +373,67 @@ def make_effects():
         print(name + ".efk", len(data), "bytes")
 
 
+# --------------------------------------------------------------------------------------------
+# stills for Reduce Motion
+# --------------------------------------------------------------------------------------------
+
+def texture(name, color, size, angle=0.0):
+    """a texture tinted by color (r, g, b, a 0-255), scaled to size px wide, turned by angle"""
+    t = Image.open(os.path.join(TEXTURE, name)).convert("RGBA")
+    a = np.asarray(t).astype(float) / 255
+    a[..., :3] *= np.array(color[:3]) / 255
+    a[..., 3] *= color[3] / 255
+    t = Image.fromarray((a * 255 + 0.5).astype(np.uint8), "RGBA")
+    t = t.resize((max(1, int(size)), max(1, int(size * t.height / t.width))), Image.LANCZOS)
+    return t.rotate(angle, resample=Image.BICUBIC, expand=True) if angle else t
+
+
+def put(canvas, t, x, y):
+    canvas.alpha_composite(t, (int(x - t.width / 2), int(y - t.height / 2)))
+
+
+def still(name, img):
+    path = os.path.join(EFFECT, name + "_still.png")
+    img.save(path, optimize=True)
+    print(name + "_still.png", img.size)
+
+
+def make_stills():
+    rng = np.random.default_rng(1807)
+    # sparkle: 900x900, motes and sparks within about 300 px of the middle
+    c = Image.new("RGBA", (900, 900))
+    for _ in range(10):
+        r, a = rng.uniform(0, 300), rng.uniform(0, 2 * math.pi)
+        put(c, texture("glow.png", (190, 160, 255, 140), rng.uniform(90, 170)), 450 + r * math.cos(a), 450 + r * math.sin(a))
+    for _ in range(22):
+        r, a = rng.uniform(0, 300), rng.uniform(0, 2 * math.pi)
+        put(c, texture("spark.png", (230, 210, 255, 255), rng.uniform(40, 110), rng.uniform(0, 90)), 450 + r * math.cos(a), 450 + r * math.sin(a))
+    still("sparkle", c)
+    # petals: the whole screen, petals tumbling down it
+    c = Image.new("RGBA", (1920, 1080))
+    for _ in range(46):
+        put(c, texture("petal.png", (255, 215, 235, 200), rng.uniform(40, 80), rng.uniform(0, 360)), rng.uniform(0, 1920), rng.uniform(0, 1080))
+    still("petals", c)
+    # the magic circle: 760x560, the circle seen from above at a slant
+    c = Image.new("RGBA", (760, 560))
+    ring = texture("circle.png", (170, 140, 255, 230), 680)
+    ring = ring.resize((680, 250), Image.LANCZOS)
+    put(c, texture("glow.png", (140, 110, 255, 120), 520).resize((620, 230), Image.LANCZOS), 380, 360)
+    put(c, ring, 380, 360)
+    for _ in range(8):
+        put(c, texture("spark.png", (220, 200, 255, 220), rng.uniform(30, 60)), rng.uniform(120, 640), rng.uniform(140, 330))
+    still("magiccircle", c)
+
+
 def main():
-    groups = sys.argv[1:] or ["textures", "effects"]
+    groups = sys.argv[1:] or ["textures", "effects", "stills"]
     if "textures" in groups:
         for t in TEXTURES:
             t()
     if "effects" in groups:
         make_effects()
+    if "stills" in groups:
+        make_stills()
 
 
 if __name__ == "__main__":

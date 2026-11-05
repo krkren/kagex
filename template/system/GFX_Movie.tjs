@@ -219,6 +219,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	
 
+	// Reduce Motion: a looping movie (a background, not [movie]'s) pauses on its frame
+	function flipCanStill() { return loop && !once; }
+	function flipStill(on) {
+		FLIP.flipStill(on);
+		try { if (on) pause(); else play(); } catch {}
+	}
+
 	// Movie update processing
 
 	function onFrameUpdate() {

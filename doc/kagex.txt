@@ -3272,6 +3272,33 @@ frames fill the screen; [freeimage] puts the zoom back.
 
 
 
+● Reduce Motion
+
+Config's Reduce Motion (the reduceMotion option, since 0.18.0; KAGReduceMotion() says whether it's
+on) stops demanding animation, for slow machines, batteries and phones, and for players bothered
+by motion:
+
+    Effekseer effects    one played once ends at once (its efkdone goes, so a script waiting
+                         goes on); a looping one shows nothing
+    movies on layers     a looping one ([image movie=... loop]) pauses on its frame; one played
+                         once, as [movie] plays them, plays as before
+    alpha movies         a looping one stops on its frame
+    the TV static        stops on its frame
+    Live2D and 3D layers stop as they show, once a motion played once has ended
+
+Turned on while they play, they stop where they are; turned off, they move on. An [image] or a
+World layer can name a picture to show in place of its animation while Reduce Motion is on:
+
+    [image layer=1 flip=sparkle.efk still=sparkle_still]
+    [newlay name=petals efk=petals still=petals_still show]
+
+The picture is loaded instead of starting the animation, as an image of its own size; it stays
+until the layer is drawn again. The sample's Effects demo has stills for its petals, sparkles
+and magic circle (tools/assets/make_effects.py stills), and Config's last page has the switch.
+Transitions and actions are Screen Effects' (noeffect), not this option's.
+
+
+
 ● System Property Extensions
 
 

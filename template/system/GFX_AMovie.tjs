@@ -116,6 +116,9 @@ class AMovieControlLayer extends GenericFlip, AlphaMovie
 
 	// For update processing
 
+	// Reduce Motion: a looping alpha movie stops on its frame (one played once plays to its end)
+	function flipCanStill() { return loop; }
+
 	function flipUpdate(tick) {
 
 		var cur = checkFrameUpdate(tick);

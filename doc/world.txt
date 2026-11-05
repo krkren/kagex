@@ -2022,6 +2022,8 @@ or written by a script as make_vrm.py does.
     efkinput    Dynamic inputs: index:value[,index:value...].
     efktrigger  Sends triggers (index[,index...]) to the effect, once.
     efkstop     Stops making particles; the effect ends once the last one is gone.
+    still       A picture shown in place of the effect while Config's Reduce Motion is on
+                (since 0.18.0; any flip type takes it: doc/kagex.txt, "Reduce Motion").
     loop        Plays the effect again each time it ends (until efkstop).
     efkmag, efkwidth, efkheight and efkframe count when the effect starts.
     When every effect has ended, the trigger efkdone is sent ([waittrig name=efkdone]).

@@ -3291,6 +3291,45 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
+    def _():
+        if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates Reduce Motion)", flush=True)
+            return
+        eng.tjs('tf.smokeRM = KAGOptionGet("reduceMotion"); KAGOptionSet("reduceMotion", true); return 1;')
+        try:
+            env = "world_object.env"
+            if eng.tjs("return typeof global.KAGEffekseerOf != \"undefined\" && KAGEffekseerOf(kag).available ? 1 : 0;") == 1:
+                eng.tjs('kag.process("effect.ks", "*start"); return 1;')
+                eng.wait("the petals' still in place of the effect", '%s.layers["petals"] !== void && %s.layers["petals"].targetLayer !== void'
+                         ' && %s.layers["petals"].targetLayer.flip === void && (int)%s.layers["petals"].targetLayer.width == 1920' % (env, env, env, env), timeout=30)
+                print("     the petals: a still picture, 1920x1080, no effect playing", flush=True)
+            else:
+                print("     (no Effekseer here: the stills' check is skipped)", flush=True)
+            eng.tjs('kag.process("effect.ks", "*static"); return 1;')
+            tv = '%s.layers["tv"].targetLayer.flip' % env
+            eng.wait("Ai's first line", "kag.inStable", timeout=30)
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            eng.wait("the static", '%s.layers["tv"] !== void && %s.layers["tv"].targetLayer !== void && %s !== void && %s.lastTick !== void' % (env, env, tv, tv), timeout=30)
+            def ticking():
+                a = eng.tjs("return (string)%s.lastTick;" % tv)
+                time.sleep(0.8)
+                return a != eng.tjs("return (string)%s.lastTick;" % tv)
+            if ticking():
+                raise SmokeError("the static kept moving with Reduce Motion on")
+            eng.tjs('KAGOptionSet("reduceMotion", false); return 1;')
+            if not ticking():
+                raise SmokeError("the static didn't move again when Reduce Motion went off")
+            eng.tjs('KAGOptionSet("reduceMotion", true); return 1;')
+            time.sleep(0.4)
+            if ticking():
+                raise SmokeError("the static didn't stop when Reduce Motion came on")
+            print("     the static: still, moving when the option went off, still again when it came on", flush=True)
+        finally:
+            eng.tjs('KAGOptionSet("reduceMotion", tf.smokeRM); return 1;')
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

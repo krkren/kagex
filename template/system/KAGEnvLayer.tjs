@@ -208,6 +208,11 @@ class KAGEnvLayer extends KAGEnvImage {
 
 			}
 
+			// still=<picture>: what the layer shows in place of its flip under Reduce Motion (since
+			// 0.18.0; kept in flipInfo with the rest)
+
+			lc.still = null if (lc.still === void);
+
 		} else {
 
 			var dummy = function {};
@@ -1070,6 +1075,9 @@ class KAGEnvLayer extends KAGEnvImage {
 
 					layer.startFlip(imageData.storage, imageData, flipType);
 
+					// a still picture stood in for the flip (Reduce Motion): its size, as an image's
+					if (layer.flip === void) { _width = layer.width; _height = layer.height; }
+
 					_width  = imageData.width  if (imageData.width  !== void);
 
 					_height = imageData.height if (imageData.height !== void);
@@ -1123,6 +1131,9 @@ class KAGEnvLayer extends KAGEnvImage {
 					} else {
 
 						layer.startFlip(flipFile, flipInfo, flipType);
+
+						// a still picture stood in for the flip (Reduce Motion): its size, as an image's
+						if (layer.flip === void) { _width = layer.width; _height = layer.height; }
 
 					}
 

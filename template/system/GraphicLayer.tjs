@@ -1026,11 +1026,33 @@ class GenericFlip {
 
 
 
+	// Reduce Motion (since 0.18.0, Config; KAGReduceMotion in Options.tjs): a flip that can be still
+	// (flipCanStill) stops after the frame it shows (flipStill(true)), unless it's busy with
+	// something a script may wait for (flipStillBusy: a motion played once)
+
+	var motionStill = false, motionStillSince;
+
+	function flipCanStill() { return false; }
+
+	function flipStillBusy() { return false; }
+
+	function flipStill(on) { motionStill = on; motionStillSince = void; }
+
+
+
 	// Call every frame
 
 	function flipFrame(now) {
 
 		var r = flipping;
+
+		if (r && motionStill && !flipStillBusy()) {
+
+			motionStillSince = now if motionStillSince === void;
+
+			if (now - motionStillSince > 250) return r; // still: the frame it showed stays
+
+		}
 
 		if (r)  flipUpdate(now);
 
@@ -1095,6 +1117,18 @@ class GenericFlip {
 	}
 
 }
+
+// whether a flip starting now stays still (Reduce Motion)
+
+function KAGFlipShouldStill(flip)
+
+{
+
+	return flip !== void && typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion() && flip.flipCanStill();
+
+}
+
+
 
 // static methods
 
@@ -1654,6 +1688,18 @@ class GraphicLayerEx extends GraphicLayer {
 
 	function startFlip(storage, elm, type) {
 
+		// Reduce Motion: a picture given as still= stands in for the flip (since 0.18.0)
+
+		if (elm !== void && elm.still !== void && elm.still != "" && typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion()) {
+
+			flipType = flip = void;
+
+			loadImages(%[ storage:elm.still ]);
+
+			return;
+
+		}
+
 		flipType = type;
 
 		flipType = elm.fliptype if (flipType == "");
@@ -1675,6 +1721,8 @@ class GraphicLayerEx extends GraphicLayer {
 		flip.flipEntry(this);
 
 		flip.flipStart(storage, elm);
+
+		flip.flipStill(true) if (KAGFlipShouldStill(flip));
 
 	}
 
@@ -1753,6 +1801,8 @@ class GraphicLayerEx extends GraphicLayer {
 			flip.flipEntry(this);
 
 			flip.flipRestore(dic.flipInfo) if (!found);
+
+			flip.flipStill(true) if (!found && KAGFlipShouldStill(flip));
 
 		} else flipType = void;
 

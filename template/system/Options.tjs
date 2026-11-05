@@ -143,6 +143,35 @@ KAGDefineOption(%[ name:"afterskip", label:"Skipping After a Choice", kind:"togg
 KAGDefineOption(%[ name:"enterSkip", label:"Skip Read Text on Reaching It", kind:"toggle", prop:"enterSkipOnReadedLabel", initial:false,
 	values:[ ["On", true], ["Off", false] ] ]);
 
+// Reduce Motion (since 0.18.0): effects, looping movies, the static, Live2D and 3D layers stop on
+// the frame they show (an effect played once ends, a looping one shows nothing), and a layer whose
+// [image]/[newlay] names still=<picture> shows that instead of its animation (GraphicLayer.tjs)
+function KAGReduceMotion()
+{
+	var on = KAGOptionGet("reduceMotion");
+	return on !== void && !!on;
+}
+
+// every flip running now: still, or moving again
+function KAGApplyReduceMotion(on)
+{
+	if (typeof global.kag != "Object" || kag === void || typeof kag.genericFlipsInstances == "undefined") return;
+	var types = [];
+	types.assign(kag.genericFlipsInstances);
+	for (var i = 0; i < types.count; i += 2) {
+		var list = types[i + 1];
+		if (list === void) continue;
+		for (var j = 0; j < list.count; j++) {
+			var f = list[j];
+			if (f !== void && isvalid f && f.flipCanStill()) f.flipStill(on);
+		}
+	}
+}
+
+KAGDefineOption(%[ name:"reduceMotion", label:"Reduce Motion", kind:"toggle", save:true, initial:false,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGOptionHook.add(function(name, v) { if (name == "reduceMotion") KAGApplyReduceMotion(v !== void && !!v); } incontextof global);
+
 // ---------------------------------------------------------------------------------------
 // Rows on a screen: a column of options laid out on a message layer, a row each (KAGOptionStyle)
 // with its title above and its buttons or slider under it. The titles and the buttons' labels
