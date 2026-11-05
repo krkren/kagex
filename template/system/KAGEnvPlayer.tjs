@@ -1175,6 +1175,7 @@ class KAGEnvPlayer
 			// the scene by its own label ("" finds the first one)
 			curSceneName = curStorage + scenario.label;
 		}
+		checkSceneSkipStop();
 	}
 
 	/**
@@ -1816,6 +1817,130 @@ class KAGEnvPlayer
 		if (later) goToHistoryLater(pos);
 		else goToHistory(pos);
 		return true;
+	}
+
+	// ---- moving through the story by scenes and choices (since 0.18.0) ---------------------
+
+	// the index in histories of the block holding history position pos
+	function historyBlockIndex(pos) {
+		for (var i = 0; i < histories.count; i++) {
+			var h = histories[i];
+			if (h.startNo + h.num > pos) return pos >= h.startNo ? i : -1;
+		}
+		return -1;
+	}
+
+	// the history position of the message on screen (at a choice, the one with it)
+	function historyNow() {
+		return historyMessageStart(getHistoryCount() - 1);
+	}
+
+	/**
+	 * The start of the scene on screen, or, when the screen is at that start already, of the
+	 * scene before it: where "previous scene" goes
+	 * @return a history position, or void
+	 */
+	function getPrevScenePoint() {
+		if (!working) return;
+		var now = historyNow();
+		if (now < 0) return;
+		var i = historyBlockIndex(now);
+		if (i < 0) return;
+		for (var pass = 0; pass < 2; pass++) {
+			var name = histories[i].scene;
+			while (i > 0 && histories[i - 1].scene == name) i--;
+			// (a choice block's own position offers the choice again)
+			var start = histories[i].startNo;
+			if (start < now) return start;
+			if (i == 0) return;
+			i--; // the scene before
+		}
+	}
+
+	/**
+	 * The last choice before the one on screen: where "previous choice" goes (going to a choice
+	 * block's position offers the choice again, goToHistory)
+	 */
+	function getPrevChoicePoint() {
+		if (!working) return;
+		var now = historyNow();
+		for (var i = historyBlockIndex(now); i >= 0; i--) {
+			var h = histories[i];
+			if (h.text !== void && h.startNo < now) return h.startNo;
+		}
+	}
+
+	property canPrevScene { getter() { return getPrevScenePoint() !== void; } }
+	property canPrevChoice { getter() { return getPrevChoicePoint() !== void; } }
+
+	function prevScene(later = true) {
+		var pos = getPrevScenePoint();
+		if (pos === void) return false;
+		if (later) goToHistoryLater(pos); else goToHistory(pos);
+		return true;
+	}
+
+	function prevChoice(later = true) {
+		var pos = getPrevChoicePoint();
+		if (pos === void) return false;
+		if (later) goToHistoryLater(pos); else goToHistory(pos);
+		return true;
+	}
+
+	/**
+	 * Skips on to the start of the next scene: skip mode until a new scene begins (loadScene),
+	 * or a choice or unread text stops it, as skipping does
+	 */
+	var skipToScene;
+	function nextScene() {
+		if (!working) return false;
+		skipToScene = curSceneName;
+		kag.skipToStop(); // unread text stops it unless Config's skip says all
+		return true;
+	}
+	function checkSceneSkipStop() {
+		if (skipToScene === void || curSceneName == skipToScene) return;
+		skipToScene = void;
+		kag.cancelSkip() if kag.skipMode != SKIP_NONE;
+	}
+
+	/**
+	 * Rewinds: goes back a message at a time, each one shown for a moment, until the start of
+	 * the scene or the message a choice came with; a click stops it
+	 */
+	var rewindTimer, rewindTo;
+	property rewinding { getter() { return rewindTimer !== void && rewindTimer.enabled; } }
+	function rewind() {
+		if (!working) return false;
+		var c = getPrevChoicePoint(), sc = getPrevScenePoint(), now = historyNow();
+		// the nearer of the two, but not the scene before when this one began a moment ago
+		var to = c;
+		to = sc if (sc !== void && (to === void || sc > to));
+		if (to === void || to >= now) return false;
+		rewindTo = to;
+		if (rewindTimer === void) {
+			rewindTimer = new Timer(onRewindTimer, "");
+			rewindTimer.interval = 160;
+		}
+		rewindTimer.enabled = true;
+		kag.clickInterceptor = stopRewind;
+		return true;
+	}
+	function stopRewind() {
+		if (!rewinding) return false;
+		rewindTimer.enabled = false;
+		kag.clickInterceptor = void if kag.clickInterceptor === stopRewind;
+		return true;
+	}
+	function onRewindTimer() {
+		if (!working || laterPos !== void) return;
+		var pos = getRollbackPoint();
+		if (pos === void || pos <= rewindTo) {
+			stopRewind();
+			if (historyNow() != rewindTo) goToHistory(rewindTo);
+			return;
+		}
+		goToHistory(pos);
 	}
 
 	/**

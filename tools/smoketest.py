@@ -3330,6 +3330,56 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("moving through the story: the scene's start, a rewind, the last choice again, the next scene, and the offer to skip a scene read before")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.playerMove != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a sample from before the scene moves)", flush=True)
+            return
+        menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
+        at = "world_object.player.historyNow()"
+        def stable():
+            eng.wait("a line", "kag.inStable && kag.currentDialog === void", timeout=60)
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'world_object.player.curStorage == "char.ks" && kag.inStable', timeout=30)
+        for i in range(4):
+            stable()
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        stable()
+        eng.tjs('playerMove("prevScene"); return 1;')
+        eng.wait("the scene's first line", "%s == 1 && kag.inStable" % at, timeout=30)
+        print("     previous scene: back at the scene's first line", flush=True)
+        for i in range(3):
+            stable()
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        stable()
+        eng.tjs('playerMove("rewind"); return 1;')
+        eng.wait("the rewind", "!world_object.player.rewinding && %s == 1 && kag.inStable" % at, timeout=30)
+        print("     rewind: a line at a time, back to the scene's first line", flush=True)
+        eng.tjs('playerMove("prevChoice"); return 1;')
+        eng.wait("the demo menu offered again", menu, timeout=30)
+        print("     previous choice: the demo menu again", flush=True)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'world_object.player.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs("tf.smokeAllSkip = kag.allskip; kag.allskip = true; playerMove(\"nextScene\"); return 1;")
+        try:
+            eng.wait("the next scene", 'world_object.player.curSceneName != "char.ks*start" && kag.skipMode == 0 && kag.inStable', timeout=60)
+        finally:
+            eng.tjs("kag.allskip = tf.smokeAllSkip; return 1;")
+        print("     next scene: %s" % eng.tjs("return world_object.player.curSceneName;"), flush=True)
+        # the scene just read: going to it again with Config's "Ask" offers to skip it
+        eng.tjs('tf.smokeEnterSkip = KAGOptionGet("enterSkip"); KAGOptionSet("enterSkip", "ask"); kag.process("char.ks", "*start"); return 1;')
+        try:
+            eng.wait("the offer to skip what was read", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=20)
+            eng.tjs("kag.currentDialog.onButtonClick(0); return 1;")  # Yes
+            eng.wait("skipping", "kag.skipMode != 0 || world_object.player.curSceneName != \"char.ks*start\"", timeout=10)
+            print("     a read scene: the offer to skip it, and Yes skips", flush=True)
+        finally:
+            eng.tjs('kag.cancelSkip(); KAGOptionSet("enterSkip", tf.smokeEnterSkip); return 1;')
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

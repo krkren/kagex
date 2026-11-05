@@ -140,8 +140,8 @@ KAGDefineOption(%[ name:"afterauto", label:"Auto Mode After a Choice", kind:"tog
 	values:[ ["Keep", true], ["Stop", false] ] ]);
 KAGDefineOption(%[ name:"afterskip", label:"Skipping After a Choice", kind:"toggle", prop:"afterskip", initial:false,
 	values:[ ["Keep", true], ["Stop", false] ] ]);
-KAGDefineOption(%[ name:"enterSkip", label:"Skip Read Text on Reaching It", kind:"toggle", prop:"enterSkipOnReadedLabel", initial:false,
-	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"enterSkip", label:"Skip Read Text on Reaching It", kind:"choice", prop:"enterSkipOnReadedLabel", initial:false,
+	values:[ ["Off", false], ["Ask", "ask"], ["Skip", true] ] ]);
 
 // Reduce Motion (since 0.18.0): effects, looping movies, the static, Live2D and 3D layers stop on
 // the frame they show (an effect played once ends, a looping one shows nothing), and a layer whose

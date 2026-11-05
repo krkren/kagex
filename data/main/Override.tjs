@@ -102,6 +102,38 @@ function rollBack()
 }
 
 /**
+ * The scene player's moves (since 0.18.0; compiled scenes only, as BACK): the start of the scene
+ * (or the one before), a rewind to it or the last choice, the last choice again, the next scene
+ */
+function playerOf()
+{
+    return typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.working ? world_object.player : void;
+}
+function canPlayerMove(move)
+{
+    var p = playerOf();
+    if (p === void) return false;
+    switch (move) {
+    case "prevScene":  return p.canPrevScene;
+    case "rewind":     return p.canPrevScene || p.canPrevChoice;
+    case "prevChoice": return p.canPrevChoice;
+    case "nextScene":  return true;
+    }
+    return false;
+}
+function playerMove(move)
+{
+    var p = playerOf();
+    if (p === void || !canPlayerMove(move)) return;
+    switch (move) {
+    case "prevScene":  p.prevScene(true); break;
+    case "rewind":     p.rewind(); break;
+    case "prevChoice": p.prevChoice(true); break;
+    case "nextScene":  p.nextScene(); break;
+    }
+}
+
+/**
  * Change Mode
  * Called from MainWindow when system state changes
  * @param kag KAG window
@@ -127,6 +159,9 @@ function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, 
     setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
     setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
     setButtonEnabled(kag, "msg_back", !modal && kag.inStable && canRollBack());
+    var moves = [ "prevScene", "rewind", "prevChoice", "nextScene" ];
+    for (var i = 0; i < moves.count; i++)
+        setButtonEnabled(kag, "msg_" + moves[i].toLowerCase(), !modal && (kag.inStable || moves[i] == "nextScene") && !skipMode && canPlayerMove(moves[i]));
 
     // Sync config menu
     if (typeof kag.configMenuItem != "undefined") {

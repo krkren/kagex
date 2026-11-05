@@ -1255,9 +1255,28 @@ class KAGWindow extends Window
 
 	function checkSkipOnReadedLabel() {
 
-		if (enterSkipOnReadedLabel && !skipMode && getCurrentRead()) {
+		// true, false or "ask" (since 0.18.0): never tested as a boolean, as a string would be
+		var ask = typeof enterSkipOnReadedLabel == "String" && enterSkipOnReadedLabel == "ask";
+		var on = ask || (typeof enterSkipOnReadedLabel != "String" && enterSkipOnReadedLabel);
+		if (on && !skipMode && getCurrentRead()) {
 
-			if (!callHook("enterSkipOnReadedLabel")) skipToStop(false, false);
+			if (callHook("enterSkipOnReadedLabel")) return;
+
+			// "ask": offered with a Yes/No, once a label
+
+			if (ask) {
+
+				if (currentDialog !== void) return;
+
+				askYesNo("You've read this part. Skip to what you haven't read?", "Skip",
+
+					function() { skipToStop(false, false) if !skipMode; } incontextof this);
+
+			} else {
+
+				skipToStop(false, false);
+
+			}
 
 		}
 
@@ -13225,9 +13244,14 @@ class KAGWindow extends Window
 
 	//------------------------------------------------------------- Click --
 
+	// a function a click goes to first, which says whether it took the click (the scene player's
+	// rewind stops on one; since 0.18.0)
+	var clickInterceptor;
+
 	function onPrimaryClick(force = false)
 	{
         // Called from primary layer when "Click Action" is not filtered
+		if (!force && clickInterceptor !== void && clickInterceptor()) return;
 		clickCount++ if (!force);
 		if(!force && showDramaticHidden()) return; // dramatic mode: a click shows the window first
 		if(force || !callHook(leftClickHook))

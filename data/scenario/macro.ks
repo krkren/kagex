@@ -38,6 +38,14 @@
 
 [else]
 
+[sysbutton name=msg_prevscene  x=352 y=18 exp="playerMove('prevScene')"]
+
+[sysbutton name=msg_rewind     x=402 y=18 exp="playerMove('rewind')"]
+
+[sysbutton name=msg_prevchoice x=452 y=18 exp="playerMove('prevChoice')"]
+
+[sysbutton name=msg_nextscene  x=502 y=18 exp="playerMove('nextScene')" nostable]
+
 [sysbutton name=msg_qsave  x=580 y=18 exp="quicksaveAction()"]
 [sysbutton name=msg_qload  x=712 y=18 exp="quickloadAction()"]
 [sysbutton name=msg_save   x=844 y=18 exp="startSave()"]

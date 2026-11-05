@@ -432,6 +432,39 @@ def ic_back(c, cx, cy, s, col):
     c.polygon([(ex - s * 0.2, ey - s * 0.04), (ex + s * 0.2, ey - s * 0.04), (ex, ey + s * 0.24)], col)
 
 
+def tri(c, cx, cy, s, col, left):
+    """a triangle pointing left or right, s high"""
+    d = -1 if left else 1
+    c.polygon([(cx - d * s * 0.3, cy - s * 0.5), (cx + d * s * 0.36, cy), (cx - d * s * 0.3, cy + s * 0.5)], col)
+
+
+def ic_rewind(c, cx, cy, s, col):
+    """two triangles pointing back: rewind to the scene's start or the last choice"""
+    tri(c, cx - s * 0.3, cy, s * 0.8, col, True)
+    tri(c, cx + s * 0.3, cy, s * 0.8, col, True)
+
+
+def ic_prevscene(c, cx, cy, s, col):
+    """a bar and a triangle pointing back: the start of the scene before"""
+    c.rrect((cx - s * 0.5, cy - s * 0.42, cx - s * 0.3, cy + s * 0.42), s * 0.04, fill=col)
+    tri(c, cx + s * 0.12, cy, s * 0.84, col, True)
+
+
+def ic_nextscene(c, cx, cy, s, col):
+    """a triangle pointing on and a bar: skip to the next scene"""
+    tri(c, cx - s * 0.12, cy, s * 0.84, col, False)
+    c.rrect((cx + s * 0.3, cy - s * 0.42, cx + s * 0.5, cy + s * 0.42), s * 0.04, fill=col)
+
+
+def ic_prevchoice(c, cx, cy, s, col):
+    """a branch (a choice) with a triangle pointing back: the last choice again"""
+    tri(c, cx - s * 0.3, cy, s * 0.7, col, True)
+    x0, y0 = cx + s * 0.05, cy
+    c.stroke([(x0, y0), (cx + s * 0.5, cy - s * 0.38)], s * 0.12, col)
+    c.stroke([(x0, y0), (cx + s * 0.5, cy + s * 0.38)], s * 0.12, col)
+    c.ellipse((x0 - s * 0.1, y0 - s * 0.1, x0 + s * 0.1, y0 + s * 0.1), fill=col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -577,6 +610,11 @@ def make_message():
         for st in ("normal", "over"):
             button(124, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
                 out("msg_%s_%s.png" % (name, st)))
+    # the scene player's moves (since 0.18.0): icons only, so no language needs its own
+    for name, icon in (("rewind", ic_rewind), ("prevscene", ic_prevscene), ("prevchoice", ic_prevchoice),
+                       ("nextscene", ic_nextscene)):
+        for st in ("normal", "over"):
+            button(42, 42, "", st, r=10, bw=3, icon=icon, icon_size=20).save(out("msg_%s_%s.png" % (name, st), False))
     for name in ("auto", "skip"):  # latched while auto mode / skipping is on
         button(124, 42, L(name.upper()), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
                icon_size=8).save(out("msg_%s_on.png" % name))
