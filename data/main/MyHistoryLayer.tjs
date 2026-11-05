@@ -39,6 +39,15 @@ class HistoryLayer extends Layer
     var jumpInfo = []; // What each line's mark runs (Ring buffer, like actionInfo)
     var jumpHover = void; // The jumpInfo index whose mark is under the mouse
 
+    // Since 0.18.0 (compiled scenes): each message's speaker's face left of its marks, a picture
+    // of the scene at a message while the pointer rests on its going-back mark, buttons to the
+    // previous and next scene or choice, and dragging the log to scroll it (touch screens)
+    var faceSize = 60;
+    var previewLayer = void;
+    var previewPos = void;
+    var prevSceneButton = void;
+    var nextSceneButton = void;
+    var dragY = void, dragStart = 0, dragging = false, pressX, pressY;
     var topPageButton  = void;
     var prevPageButton = void;
     var nextPageButton = void;
@@ -336,10 +345,20 @@ class HistoryLayer extends Layer
         closeButton.hint      = "Close Message History";
 */
 
+        prevSceneButton = new LButtonLayer(window, this);
+        prevSceneButton.left = 1766;
+        prevSceneButton.top  = 174;
+        prevSceneButton.loadButtons("log_prevscene_normal", "log_prevscene_over");
+        prevSceneButton.visible = true;
+        nextSceneButton = new LButtonLayer(window, this);
+        nextSceneButton.left = 1766;
+        nextSceneButton.top  = 851;
+        nextSceneButton.loadButtons("log_nextscene_normal", "log_nextscene_over");
+        nextSceneButton.visible = true;
         scrollSlider.left     = 1802; // centred under the buttons; its track is drawn in log_base
-        scrollSlider.top      = 178;
+        scrollSlider.top      = 236;
         scrollSlider.width    =  43;
-        scrollSlider.height   = 727;
+        scrollSlider.height   = 611;
         scrollSlider.loadTabs("log_bar_normal", "log_bar_over");
         scrollSlider.visible = true;
         scrollSlider.bgOpacity = 0;
@@ -483,6 +502,106 @@ class HistoryLayer extends Layer
 		redrawJumpLine(old);
 		redrawJumpLine(i);
 		cursor = i !== void ? window.cursorPointed : window.cursorDefault;
+		showPreview(i !== void ? jumpPosOf(i) : void);
+	}
+
+	// ---- faces, the preview and the scene buttons (since 0.18.0) ----
+
+	property player
+	{
+		getter() { return typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.working ? world_object.player : void; }
+	}
+	// the history position the jump mark with jumpInfo index i goes to
+	function jumpPosOf(i)
+	{
+		if(i === void || jumpInfo[i] === void) return void;
+		var m = /jumpFromHistory\((\d+)\)/.exec((string)jumpInfo[i]);
+		return m.count > 1 ? +m[1] : void;
+	}
+	// the speaker's face of display line n's message, left of its marks
+	function drawFaceIcon(n)
+	{
+		if(everypage || verticalView || jumpMark === void || n < 0 || player === void) return;
+		var pos = jumpPosOf(jumpIndex(n + dispStart));
+		if(pos === void) return;
+		var icon;
+		try { icon = player.historyFaceIcon(pos, faceSize); } catch(e) { dm("backlog face: " + e.message); }
+		if(icon === void) return;
+		var x = jumpMarkLeft - 8 - faceSize, y = n*lineHeight + controlHeight + marginT;
+		operateRect(x, y, icon, 0, 0, faceSize, faceSize);
+	}
+	// the scene as it was at history position pos, top right, while its mark is pointed at
+	function showPreview(pos)
+	{
+		if(pos === previewPos) return;
+		previewPos = pos;
+		if(pos === void || player === void)
+		{
+			previewLayer.visible = false if previewLayer !== void;
+			return;
+		}
+		var w = 512, h = 288, b = 4;
+		if(previewLayer === void)
+		{
+			previewLayer = new global.Layer(window, this);
+			previewLayer.setImageSize(w + b*2, h + b*2);
+			previewLayer.setSizeToImageSize();
+			previewLayer.type = ltOpaque; // the shrunk picture's alpha means nothing
+			previewLayer.hitType = htMask;
+			previewLayer.hitThreshold = 256;
+			previewLayer.absolute = 1000000;
+		}
+		var shot = new global.Layer(window, this);
+		var ok = false;
+		try { ok = player.historySnapshot(pos, shot); } catch(e) { dm("backlog preview: " + e.message); }
+		with(previewLayer)
+		{
+			.fillRect(0, 0, .imageWidth, .imageHeight, 0xff5025ff);
+			.fillRect(b, b, w, h, 0xff000000);
+			if(ok && shot.imageWidth > 0)
+			{
+				// its colours only, opaque: a snapshot's alpha means nothing (piledCopy), and
+				// blending by it speckled the picture (as the Replay tiles copy theirs)
+				var black = new global.Layer(window, this);
+				black.setImageSize(shot.imageWidth, shot.imageHeight);
+				black.fillRect(0, 0, black.imageWidth, black.imageHeight, 0xff000000);
+				black.holdAlpha = true;
+				black.operateRect(0, 0, shot, 0, 0, shot.imageWidth, shot.imageHeight, omOpaque);
+				KAGShrinkCopy(previewLayer, b, b, w, h, black, 0, 0, black.imageWidth, black.imageHeight);
+				invalidate black;
+			}
+			.setPos(width - marginR - .width - 16, controlHeight + marginT);
+			.visible = ok;
+		}
+		invalidate shot;
+	}
+	// to the previous (dir -1) or the next (1) line whose message starts a scene or is a choice
+	function sceneScroll(dir)
+	{
+		if(everypage || verticalView || player === void || !canScroll) return;
+		var max = dataLines - dispLines;
+		for(var n = dispStart + dir; n >= 0 && n <= dataLines - 1; n += dir)
+		{
+			var pos = jumpPosOf(jumpIndex(n));
+			if(pos === void || !player.historyStartsScene(pos)) continue;
+			if(n > max) n = max;
+			if(n == dispStart) continue;
+			scrollTo(n);
+			return;
+		}
+		scrollTo(dir < 0 ? 0 : max);
+	}
+	function scrollTo(n)
+	{
+		var max = dataLines - dispLines;
+		n = max if n > max;
+		n = 0 if n < 0;
+		if(n == dispStart) return;
+		clearActionHighlights();
+		clearBack();
+		dispStart = n;
+		for(var i = 0 ; i < dispLines; i++) drawLine(i);
+		updateButtonState();
 	}
 
 	function getActionInfo(n)
@@ -867,6 +986,8 @@ class HistoryLayer extends Layer
         
         drawActionMark(n,over);
         drawJumpMark(n);
+        drawFaceIcon(n);
+        drawFaceIcon(n - 1); // its face reaches into this line
     }
 
 	function drawPage()
@@ -1186,6 +1307,10 @@ class HistoryLayer extends Layer
 			nextPage();
 		else if(sender == closeButton)
 			hide();
+		else if(sender == prevSceneButton)
+			sceneScroll(-1);
+		else if(sender == nextSceneButton)
+			sceneScroll(1);
 
 	}
 
@@ -1213,26 +1338,43 @@ class HistoryLayer extends Layer
 
 	function onMouseDown(x, y, button)
 	{
-		var jump = button == mbLeft ? getJumpFromPos(x, y) : void;
 		if(button == mbRight) hide();
-		else if(jump !== void)
-		{
-			Scripts.eval(jumpInfo[jump]);
-		}
 		else if(button == mbLeft)
 		{
-			var n = getActionInfoFromPos(x,y);
-			if(n !== void)
-			{
-				Scripts.eval(n.action);
-			}
+			// a mark acts when the button is let go without the log being dragged
+			dragY = y, dragStart = dispStart, dragging = false, pressX = x, pressY = y;
 		}
 		super.onMouseDown(...);
+	}
+	function onMouseUp(x, y, button, shift)
+	{
+		if(button == mbLeft && dragY !== void)
+		{
+			var dragged = dragging;
+			dragY = void, dragging = false;
+			if(!dragged)
+			{
+				var jump = getJumpFromPos(pressX, pressY);
+				if(jump !== void) Scripts.eval(jumpInfo[jump]);
+				else
+				{
+					var n = getActionInfoFromPos(pressX, pressY);
+					if(n !== void) Scripts.eval(n.action);
+				}
+			}
+		}
+		super.onMouseUp(...);
 	}
 
 
 	function onMouseMove(x, y, shift)
 	{
+		// dragging the log scrolls it, a line for each line's height moved
+		if(dragY !== void && (shift & ssLeft) && canScroll && !everypage && !verticalView)
+		{
+			if(!dragging && Math.abs(y - dragY) > lineHeight \ 2) dragging = true;
+			if(dragging) scrollTo(dragStart + (dragY - y) \ lineHeight);
+		}
 		setJumpHover(getJumpFromPos(x, y));
 		var n = getActionInfoFromPos(x,y);
 		n = (n === void) ? 0 : n.id;
@@ -1248,6 +1390,7 @@ class HistoryLayer extends Layer
 
 	function onMouseLeave()
 	{
+		dragY = void, dragging = false;
 		setJumpHover(void);
 		clearActionHighlights();
 		super.onMouseLeave(...);

@@ -883,8 +883,9 @@ def make_history():
     c.pattern((0, 0, 1920, 1080), 36, 2.2, rgba(WHITE, 16))
     # the rail for the page buttons and the scroll bar (MyHistoryLayer.tjs: x 1766-1881)
     c.rrect((1750, 42, 1898, 1037), 20, fill=rgba(WHITE, 26))
-    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 178-905
-    c.rrect((1817, 198, 1830, 885), 6, fill=rgba(WHITE, 70))
+    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 236-847 (since 0.18.0 the
+    # scene buttons sit above and below it)
+    c.rrect((1817, 256, 1830, 827), 6, fill=rgba(WHITE, 70))
     c.save(out("log_base.png", False))
 
     for name, up, double in (("first", True, True), ("uppage", True, False), ("downpage", False, False),
@@ -895,6 +896,17 @@ def make_history():
             b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
             b.rrect((3, 3, 112, 51), 9, fill=fill)
             chevron(b, 57.5, 27, 30, rgba(fg), up, double)
+            b.save(out("log_%s_%s.png" % (name, st), False))
+    # to the previous and the next scene or choice (since 0.18.0): a chevron and a bar
+    for name, up in (("prevscene", True), ("nextscene", False)):
+        for st in ("normal", "over"):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(115, 58)
+            b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
+            b.rrect((3, 3, 112, 51), 9, fill=fill)
+            chevron(b, 57.5, 31 if up else 23, 24, rgba(fg), up)
+            bar_y = 12 if up else 38
+            b.rrect((37, bar_y, 78, bar_y + 5), 2, fill=rgba(fg))
             b.save(out("log_%s_%s.png" % (name, st), False))
     for st, fill, border in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
         t = Canvas(43, 48)

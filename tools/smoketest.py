@@ -3380,6 +3380,57 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the backlog: the speakers' faces, a picture of the scene at a message's mark, the scene buttons, dragging to scroll")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof kag.historyLayer.sceneScroll != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a sample from before these backlog touches)", flush=True)
+            return
+        menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'world_object.player.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs("tf.smokeAllSkip = kag.allskip; kag.allskip = true; world_object.player.nextScene(); return 1;")
+        try:
+            eng.wait("the voices scene", 'world_object.player.curSceneName != "char.ks*start" && kag.skipMode == 0 && kag.inStable', timeout=60)
+        finally:
+            eng.tjs("kag.allskip = tf.smokeAllSkip; return 1;")
+        for i in range(4):
+            eng.wait("a line", "kag.inStable", timeout=30)
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("a line", "kag.inStable", timeout=30)
+        eng.tjs("kag.onShowHistoryMenuItemClick(); return 1;")
+        eng.wait("the backlog", "kag.historyShowing", timeout=10)
+        h = "kag.historyLayer"
+        faces = eng.tjs('var h = %s, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
+                        ' for (var y = h.controlHeight + h.marginT; y < h.height - 60; y += 6) for (var x = x0; x < x0 + h.faceSize; x += 6)'
+                        ' a++ if h.getMaskPixel(x, y) > 0 && (h.getMainPixel(x, y) & 0xffffff) != 0; return a;' % h)
+        if faces < 100:
+            raise SmokeError("the backlog shows no faces left of the speakers' lines (%s samples)" % faces)
+        xy = eng.tjs('var h = %s; for (var n = 0; n < h.dispLines; n++) { var i = h.jumpIndex(n + h.dispStart);'
+                     ' if (h.jumpInfo[i] !== void) return "%%d,%%d".sprintf(h.jumpMarkLeft + 10, n * h.lineHeight + h.controlHeight + h.marginT + 10); } return "";' % h)
+        if xy == "":
+            raise SmokeError("the backlog has no going-back marks")
+        x, y = xy.split(",")
+        eng.tjs("%s.onMouseMove(%s, %s, 0); return 1;" % (h, x, y))
+        prev = str(eng.tjs('var p = %s.previewLayer; if (p === void || !p.visible) return "none"; var a = 0, n = 0;'
+                           ' for (var y = 20; y < p.height - 20; y += 16) for (var x = 20; x < p.width - 20; x += 16) { n++; a++ if (p.getMainPixel(x, y) & 0xffffff) != 0; }'
+                           ' return "%%d/%%d".sprintf(a, n);' % h))
+        print("     faces: %s samples; the preview: %s of its samples not black" % (faces, prev), flush=True)
+        if prev == "none" or prev.startswith("0/"):
+            raise SmokeError("resting on a mark showed no picture of the scene: %s" % prev)
+        eng.tjs("%s.onMouseLeave(); return 1;" % h)
+        moves = str(eng.tjs('var h = %s; h.scrollTo(h.dataLines); var a = h.dispStart; h.sceneScroll(-1); var b = h.dispStart;'
+                            ' h.onMouseDown(800, 500, mbLeft, 0); h.onMouseMove(800, 500 + h.lineHeight * 3, ssLeft); h.onMouseUp(800, 500 + h.lineHeight * 3, mbLeft, 0);'
+                            ' return [a, b, h.dispStart].join(",");' % h)).split(",")
+        print("     the last line at %s, the scene before at %s, dragged down three lines: %s" % tuple(moves), flush=True)
+        if not (int(moves[1]) < int(moves[0])) or int(moves[2]) != max(0, int(moves[1]) - 3):
+            raise SmokeError("the scene button or dragging didn't move the backlog: %s" % moves)
+        eng.tjs("kag.hideHistory(); return 1;")
+        eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

@@ -1870,6 +1870,66 @@ class KAGEnvPlayer
 		}
 	}
 
+	// whether history position pos is a choice or the first text of a scene (the backlog's scene
+	// buttons stop there)
+	function historyStartsScene(pos) {
+		var i = historyBlockIndex(pos);
+		if (i < 0) return false;
+		var h = histories[i];
+		if (h.text !== void) return true;
+		if (pos != h.startNo) return false;
+		return i == 0 || histories[i - 1].scene != h.scene;
+	}
+
+	// The World as it was at history position pos, drawn into layer (the screen's size), as the
+	// Replay tiles' snapshots: the World only, not KAG's own layers
+	function historySnapshot(pos, layer) {
+		var o = historyState(pos);
+		return o !== void ? getSnapshot(layer, o) : false;
+	}
+
+	// the World's state at history position pos, a dictionary (a text's state can be the number
+	// of an earlier text of its scene with the same state, or a compiled octet)
+	function historyState(pos) {
+		var d = getHistoryData(pos), i = historyBlockIndex(pos);
+		if (d === void || i < 0) return;
+		var o = d.state, guard = 0;
+		while (typeof o == "Integer" && guard++ < 16) {
+			var t = getTextData(histories[i].scene, o);
+			o = t !== void ? t.state : void;
+		}
+		if (typeof o == "Octet") o = (typeof global.SCNFile != "undefined" ? new SCNFile(o) : new PSBFile(o)).root;
+		return typeof o == "Object" && o !== void ? o : void;
+	}
+
+	/**
+	 * The face of the speaker at history position pos, as the face window drew it then (envinit's
+	 * faceCrop), in a layer size px square; void when there's none (narration, a character not
+	 * on stage, no face window). Kept by speaker and face, so each is drawn once
+	 */
+	var faceIcons = %[];
+	function historyFaceIcon(pos, size) {
+		var d = getHistoryData(pos);
+		if (d === void || d.name === void || d.name == "") return;
+		var o = historyState(pos);
+		if (o === void) return;
+		parseEnv.onRestore(o,,,false);
+		var ch = parseEnv.characters[d.name];
+		if (ch === void || !ch.isShowFace()) return;
+		var key = [d.name, ch.pose, ch.dress, ch.face, size].join("/");
+		var icon = faceIcons[key];
+		if (icon !== void) return icon ? icon : void;
+		icon = new global.Layer(kag, kag.temporaryLayer);
+		icon.setImageSize(size, size);
+		icon.setSizeToImageSize();
+		icon.fillRect(0, 0, size, size, 0);
+		var ok = false;
+		try { ok = ch.drawFace(icon); } catch (e) { dm("face icon: " + key + ": " + e.message); }
+		if (!ok) { invalidate icon; faceIcons[key] = false; return; }
+		faceIcons[key] = icon;
+		return icon;
+	}
+
 	property canPrevScene { getter() { return getPrevScenePoint() !== void; } }
 	property canPrevChoice { getter() { return getPrevChoicePoint() !== void; } }
 
