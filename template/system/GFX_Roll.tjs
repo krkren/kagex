@@ -17,10 +17,12 @@
 // A save keeps how far it got.
 //   rolltime   ms the roll takes, or "bgm": the rest of the track playing (as its end may be
 //              trimmed: rolloffset ms more or less)
-//   rollfrom, rollto   labels in the music's loop file (<file>.sli: Label { Position=<sample>;
-//              Name=credits; }): the roll waits for the music to reach rollfrom (else it starts
-//              at once) and ends as it reaches rollto (else at the track's end), for a song with
-//              an intro or a reprise (since 0.18.0)
+//   rollfrom, rollto   places in the music playing, each a time in ms from the track's start or
+//              a label of its loop file (<file>.sli: Label { Position=<sample>; Name=credits; }):
+//              the roll waits for the music to reach rollfrom (else it starts at once) and ends
+//              as it reaches rollto (else at the track's end), for a song with an intro or a
+//              reprise (since 0.18.0). Labels in music can hang the engine (UPSTREAM.md 44):
+//              the sample gives times
 //   rollx      the text's centre (the layer's middle)
 //   rollsize   the names' size (32); headings are 1.3 times
 class RollFlip extends GenericFlip, Layer
@@ -151,7 +153,7 @@ class RollFlip extends GenericFlip, Layer
 	var startDelay = 0; // ms until the music reaches rollfrom (rollDuration)
 
 	// the roll's length: rolltime ms, or the rest of the music playing (bgm), or the music from
-	// label rollfrom to label rollto (and startDelay, how long until it reaches rollfrom)
+	// rollfrom to rollto (and startDelay, how long until it reaches rollfrom)
 	function rollDuration() {
 		var t = options.rolltime, d = 30000;
 		startDelay = 0;
@@ -167,25 +169,34 @@ class RollFlip extends GenericFlip, Layer
 	}
 
 	// [ ms until rollfrom, ms from rollfrom to rollto ] in buffer b's music, or void when it has
-	// neither label (a label it lacks is logged, and the start or the end of the track used)
+	// neither (a label it lacks is logged, and the start or the end of the track used)
 	function labelSpan(b) {
 		var labels, freq;
-		try { labels = b.labels; freq = +b.frequency; } catch (e) { return; }
-		if (labels === void || freq <= 0) return;
+		try { freq = +b.frequency; } catch (e) { return; }
+		try { labels = b.labels; } catch (e) {}
+		if (freq <= 0) return;
 		var pos = b.status == "play" ? +b.samplePosition : 0;
 		var end = b.totalTime > 0 ? b.totalTime * freq / 1000 : pos;
-		var from = pos, to = end, found = false;
-		if (options.rollfrom !== void) {
-			var l = labels[options.rollfrom];
-			if (l !== void) from = +l.samplePosition, found = true; else dm("roll: the music has no label " + options.rollfrom);
-		}
-		if (options.rollto !== void) {
-			var l = labels[options.rollto];
-			if (l !== void) to = +l.samplePosition, found = true; else dm("roll: the music has no label " + options.rollto);
-		}
-		if (!found) return;
+		var from = markOf(options.rollfrom, labels, freq), to = markOf(options.rollto, labels, freq);
+		if (from === void && to === void) return;
+		from = pos if from === void;
+		to = end if to === void;
 		var delay = (from - pos) * 1000 / freq;
 		return [ delay > 0 ? (int)delay : 0, (int)((to - (from > pos ? from : pos)) * 1000 / freq) ];
+	}
+
+	// a place in the music in samples: a time in ms (digits read as decimal: TJS takes a leading
+	// 0 as octal) or a label of the loop file, or void
+	function markOf(spec, labels, freq) {
+		if (spec === void) return;
+		var s = (string)spec;
+		if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
+			while (s.length > 1 && s.charAt(0) == "0" && s.charAt(1) != ".") s = s.substring(1);
+			return +s * freq / 1000;
+		}
+		var l = labels !== void ? labels[s] : void;
+		if (l !== void) return +l.samplePosition;
+		dm("roll: the music has no label " + s);
 	}
 
 	// the lines in view, at elapsed: the list goes from just under the layer to just over it

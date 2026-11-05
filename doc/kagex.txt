@@ -936,9 +936,11 @@ Attributes
 
 		rolloffset    ms more (or less, negative) than that, for a track whose end is quiet.
 
-		rollfrom, rollto   Labels in the loop file of the music playing (<file>.sli, Label
+		rollfrom, rollto   Places in the music playing: a time in ms from the track's start
 
-		              { Position=<sample>; Name=credits; }): the roll waits for the music to reach
+		              (rollfrom=6000), or a label of its loop file (<file>.sli, Label
+
+		              { Position=<sample>; Name=credits; }). The roll waits for the music to reach
 
 		              rollfrom and ends as it reaches rollto, for a song with an intro or a
 
@@ -946,7 +948,9 @@ Attributes
 
 		              ends with the track; a label the file lacks is logged. They win over
 
-		              rolltime, which stays the length when the music has neither.
+		              rolltime, which stays the length when the music has neither. Prefer times:
+
+		              music with labels can hang the engine now and then (UPSTREAM.md 44).
 
 		rollx         The text's centre. Default: the layer's middle.
 
@@ -954,9 +958,9 @@ Attributes
 
 		The sample's Credits demo (credits.ks) rolls the sample's credits to its music, from
 
-		bgm01's label credits, after the opening bars, to creditsend, where its closing chords
+		6 s into bgm01, after the opening bars, to 84.55 s, where its closing chords begin
 
-		begin (data/bgm/bgm01.ogg.sli), and fades the chords out after.
+		(rollfrom=6000 rollto=84550), and fades the chords out after.
 
 
 

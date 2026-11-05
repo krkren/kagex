@@ -2445,26 +2445,29 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.KAGScriptTransition != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates transitions drawn by scripts)", flush=True)
             return
-        # the canvases showing (a layer named "Script transition ..."), and how many of nine
-        # points of fore layer 0 differ from a picture
+        # the canvases showing (a layer named "Script transition ..."), nine points of a layer's
+        # picture as shown, and how many of them differ from such a sample (layer 0 may still be
+        # placed or zoomed by an earlier step, so the back page's own picture is the reference)
         eng.tjs('global.__stCanvases = function() { var r = [], a = [ kag.primaryLayer ];'
                 ' while (a.count) { var l = a.pop(); for (var i = 0; i < l.children.count; i++) { var c = l.children[i];'
                 ' r.add("%dx%d".sprintf(c.imageWidth, c.imageHeight)) if c.visible && c.name.indexOf("Script transition") == 0;'
                 ' a.add(c); } } return r.join(" "); };'
-                ' global.__stDiffers = function(name) { var w = kag.scWidth, h = kag.scHeight, l = kag.fore.layers[0];'
+                ' global.__stSample = function(l) { var w = kag.scWidth, h = kag.scHeight, v = l.visible; l.visible = true;'
                 ' try { l.onPaint() if typeof l.drawAffine != "undefined"; } catch {}'
                 ' var p = new global.Layer(kag, kag.primaryLayer); p.setImageSize(w, h); p.fillRect(0, 0, w, h, 0);'
-                ' p.piledCopy(0, 0, l, 0, 0, w, h);'
-                ' var e = new global.Layer(kag, kag.primaryLayer); e.loadImages(name); var d = 0;'
-                ' for (var i = 0; i < 9; i++) { var x = (int)(w * (i % 3 * 2 + 1) / 6), y = (int)(h * (i \\ 3 * 2 + 1) / 6);'
-                ' var a = p.getMainPixel(x, y), b = e.getMainPixel(x, y);'
+                ' p.piledCopy(0, 0, l, 0, 0, w, h); l.visible = v; var r = [];'
+                ' for (var i = 0; i < 9; i++) r.add(p.getMainPixel((int)(w * (i % 3 * 2 + 1) / 6), (int)(h * (i \\ 3 * 2 + 1) / 6)));'
+                ' invalidate p; return r; };'
+                ' global.__stDiffers = function(want) { var got = __stSample(kag.fore.layers[0]), d = 0;'
+                ' for (var i = 0; i < 9; i++) { var a = got[i], b = want[i];'
                 ' d++ if Math.abs((a & 0xff) - (b & 0xff)) + Math.abs((a >> 8 & 0xff) - (b >> 8 & 0xff)) + Math.abs((a >> 16 & 0xff) - (b >> 16 & 0xff)) > 24; }'
-                ' invalidate p; invalidate e; return d; }; return 1;')
+                ' return d; }; return 1;')
         # multiripple from an empty layer (an affine layer without a picture says it's 32x32; the
         # World's stand-in for no picture is one), which should still take the whole screen
         shown = str(eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]);'
                             ' kag.fore.layers[0].visible = true;'
                             ' kag.tagHandlers.image(%[layer:"0", page:"back", storage:"event1", visible:"true"]);'
+                            ' tf.stWant = __stSample(kag.back.layers[0]);'
                             ' kag.tagHandlers.trans(%[layer:"0", method:"multiripple", time:"1000", count:"3", children:"false"]);'
                             ' return __stCanvases();'))
         want = str(eng.tjs('return "%dx%d".sprintf(kag.scWidth, kag.scHeight);'))
@@ -2474,18 +2477,19 @@ def sample_steps(eng):
         time.sleep(0.5)
         mid = int(eng.tjs('return kag.transCount;'))
         time.sleep(1.5)
-        end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers("event1")].join(",");'))
-        print("     going at half its time: transCount %d; after it: transCount, canvases, points unlike event1: %s" % (mid, end), flush=True)
+        end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
+        print("     going at half its time: transCount %d; after it: transCount, canvases, points unlike the back page's: %s" % (mid, end), flush=True)
         if mid != 1 or end != "0,,0":
             raise SmokeError("multiripple didn't run its time and end on the new picture (%d, then %s)" % (mid, end))
         # a book stopped halfway ([stoptrans], or a click) ends on the new picture at once
         eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"back", storage:"bg01_01", visible:"true"]);'
+                ' tf.stWant = __stSample(kag.back.layers[0]);'
                 ' kag.tagHandlers.trans(%[layer:"0", method:"book", time:"5000", dir:"1", children:"false"]); return 1;')
         time.sleep(0.5)
         going = str(eng.tjs('return [kag.transCount, __stCanvases()].join(",");'))
-        stopped = str(eng.tjs('kag.tagHandlers.stoptrans(%[]); return [kag.transCount, __stCanvases(), __stDiffers("bg01_01")].join(",");'))
+        stopped = str(eng.tjs('kag.tagHandlers.stoptrans(%[]); return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
         eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]); return 1;')
-        print("     book going: transCount, canvases %s; stopped: transCount, canvases, points unlike bg01_01: %s" % (going, stopped), flush=True)
+        print("     book going: transCount, canvases %s; stopped: transCount, canvases, points unlike the back page's: %s" % (going, stopped), flush=True)
         if going != "1," + want or stopped != "0,,0":
             raise SmokeError("book didn't run or stop as it should (%s, then %s)" % (going, stopped))
 
@@ -3089,7 +3093,7 @@ def sample_steps(eng):
             if found != "Pip":
                 raise SmokeError("[vo pip000003] didn't make Pip the speaker of the compiled line: %s" % found)
 
-    @step("the credits roll over the music between two of its labels, keep their place in a save, and send rollend when seen to the end")
+    @step("the credits roll over the music between two places in it, keep their place in a save, and send rollend when seen to the end")
     def _():
         if eng.tjs('return typeof global.RollFlip != "undefined" && Storages.isExistentStorage("credits.ks") ? 1 : 0;') != 1:
             print("     (skipped: this build predates the credits roll)", flush=True)
@@ -3103,13 +3107,14 @@ def sample_steps(eng):
         v = info.split(",")
         if int(v[2]) < 30000 or v[3] != "1":
             raise SmokeError("the roll isn't timed to the music playing (rolltime=bgm) or isn't moving: %s" % info)
-        # since 0.18.0 from bgm01's label credits (6 s in) to creditsend (84.55 s): bgm01.ogg.sli
-        span = str(eng.tjs('var f = kag.fore.layers[0].flip, b = kag.bgm.currentBuffer; var l = b !== void ? b.labels : void;'
-                           ' return [typeof f.startDelay != "undefined" ? 1 : 0, l !== void && l["credits"] !== void ? 1 : 0, f.duration].join(",");')).split(",")
+        # since 0.18.0 from 6 s into bgm01 to 84.55 s (rollfrom=6000 rollto=84550; up to 0.18.0's
+        # first runs labels in bgm01.ogg.sli, which can hang the engine: UPSTREAM.md 44)
+        span = str(eng.tjs('var f = kag.fore.layers[0].flip;'
+                           ' return [typeof f.startDelay != "undefined" ? 1 : 0, f.options.rollfrom !== void ? 1 : 0, f.duration].join(",");')).split(",")
         if span[0] == "1" and span[1] == "1":
-            print("     from bgm01's label credits to creditsend: %s ms" % span[2], flush=True)
+            print("     from rollfrom to rollto (6 s to 84.55 s into bgm01): %s ms" % span[2], flush=True)
             if not 77500 <= int(span[2]) <= 79500:
-                raise SmokeError("the roll doesn't last from the music's label credits to creditsend (78.55 s): %s ms" % span[2])
+                raise SmokeError("the roll doesn't last from rollfrom to rollto (78.55 s): %s ms" % span[2])
         kept = str(eng.tjs('var l = kag.fore.layers[0], f = l.flip; f.elapsed = 12345; var d = %[]; l.storeFlip(d);'
                            ' l.restoreFlip(d); return [l.flip.elapsed >= 12345 ? 1 : 0, KAGRollSeen("credits") ? 1 : 0].join(",");'))
         if kept != "1,0":
