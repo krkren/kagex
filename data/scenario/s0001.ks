@@ -16,6 +16,7 @@
 
 [seladd text="World Extension: Animated Character" storage=anim.ks]
 
+[seladd text="Credits" storage=credits.ks]
 [select]
 
 [jump target=*start]

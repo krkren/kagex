@@ -2822,6 +2822,299 @@ def sample_steps(eng):
             raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
                              " over the message window and letting the pointer through: %s" % r)
 
+    @step("Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back")
+    def _():
+        if eng.tjs('return typeof global.KAGOptionPage != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the options table)", flush=True)
+            return
+        eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
+        eng.wait("config.ks", 'kag.conductor.curStorage == "config.ks" && kag.inStable', timeout=20)
+        for page in (2, 3):
+            eng.tjs("setConfigPage(%d); return 1;" % page)
+            eng.wait("page %d" % page, "tf.configPage == %d && kag.inStable && typeof kag.current.optionControls == \"Object\"" % page, timeout=20)
+            n = str(eng.tjs('var a = []; a.assign(kag.current.optionControls); return [a.count \\ 2, kag.current.numLinks].join(",");'))
+            print("     page %d: %s options, %s controls" % (page, n.split(",")[0], n.split(",")[1]), flush=True)
+            if int(n.split(",")[0]) < 8:
+                raise SmokeError("Config's page %d has too few option rows: %s" % (page, n))
+        got = str(eng.tjs('KAGOptionPick("readColor", 1); KAGOptionPick("readMark", 0); var r = [kag.readTextColor, kag.readMark];'
+                          ' var b = kag.current.names.option_readColor_1; r.add(b !== void ? b.getMainPixel(b.width \\ 2, 4) : "none");'
+                          ' KAGResetOptions(); KAGOptionRefresh(kag.current); r.add(kag.readTextColor); r.add(kag.readMark); return r.join(",");'))
+        print("     read colour and mark picked, then Default: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] == "-1" or v[1] != "1" or v[3] != "-1" or v[4] != "0":
+            raise SmokeError("a pick didn't set the option, or Default didn't put it back: %s" % got)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=20)
+
+    @step("reading settings: window opacity, text that fades in, dramatic mode, the pause after a voice, Don't ask again")
+    def _():
+        if eng.tjs('return typeof kag.applyWindowOpacity != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the reading settings)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        m = "kag.fore.messages[0]"
+        op = str(eng.tjs('var m = %s, r = [m.followOpacity ? 1 : 0, m.getMaskPixel(m.width \\ 2, 200)]; KAGOptionSet("windowOpacity", 100);'
+                         ' r.add(m.shownFrameOpacity); r.add(m.getMaskPixel(m.width \\ 2, 200)); KAGOptionSet("windowOpacity", 255);'
+                         ' r.add(m.getMaskPixel(m.width \\ 2, 200)); return r.join(",");' % m)).split(",")
+        print("     the window's frame: alpha %s, at opacity 100 %s, back %s" % (op[1], op[3], op[4]), flush=True)
+        if op[0] != "1" or op[2] != "100" or not int(op[3]) < int(op[1]) or op[4] != op[1]:
+            raise SmokeError("the message window doesn't follow the window opacity: %s" % op)
+        fade = str(eng.tjs('KAGOptionSet("textFade", 400); var m = %s; return [m.hasChFadeLayer ? 1 : 0, m.chFadeTime].join(",");' % m))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        time.sleep(0.2)
+        layers = eng.tjs("return %s.chFadeLayers.count;" % m)
+        off = str(eng.tjs('KAGOptionSet("textFade", 0); var m = %s; return [m.hasChFadeLayer ? 1 : 0, m.chFadeLayers.count].join(",");' % m))
+        print("     text fade 400 ms: %s, %s layers taking turns, off: %s" % (fade, layers, off), flush=True)
+        if fade != "1,400" or int(layers) < 2 or off != "0,0":
+            raise SmokeError("text that fades in over 400 ms didn't take turns on its fade layers: %s, %s, %s" % (fade, layers, off))
+        # dramatic mode: a voiced line with the window hidden, a click shows it
+        eng.tjs('KAGOptionSet("dramaticMode", "always"); kag.noteVoicedLine(true); return 1;')
+        hidden = str(eng.tjs('return [kag.dramaticHidden ? 1 : 0, %s.visible ? 1 : 0].join(",");' % m))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        shown = str(eng.tjs('var r = [kag.dramaticHidden ? 1 : 0, %s.visible ? 1 : 0]; KAGOptionSet("dramaticMode", "never"); return r.join(",");' % m))
+        if hidden != "1,0" or shown != "0,1":
+            raise SmokeError("dramatic mode didn't hide the window for a voiced line and show it on a click: %s, %s" % (hidden, shown))
+        # auto mode goes on autoVoiceWait ms after the voices end
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        after = str(eng.tjs('kag.autoVoiceWait = 400; var e = world_object.env; e.stopAllVoice(); e.playVoice("ai", "ai000001", true);'
+                            ' e.stopAllVoice(); return [e.playVoiceCount, e.voiceAfterTimer !== void && e.voiceAfterTimer.enabled ? 1 : 0].join(",");'))
+        time.sleep(0.6)
+        later = eng.tjs("var t = world_object.env.voiceAfterTimer; kag.autoVoiceWait = 0; return t !== void && t.enabled ? 1 : 0;")
+        if after != "0,1" or later != 0:
+            raise SmokeError("the pause after a voice didn't wait its 400 ms: %s, then %s" % (after, later))
+        # Don't ask again: checked and answered Yes, the prompt answers Yes by itself; Ask Again brings it back
+        eng.tjs('global.__smokeYes = 0; askYesNo("Load?", "Confirmation", function { global.__smokeYes++; }); return 1;')
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        box = str(eng.tjs('var d = kag.currentDialog; var r = [d.names.skip !== void ? 1 : 0]; d.processLink(2); r.add(d.skipChecked ? 1 : 0);'
+                          ' d.processLink(0); return r.join(",");'))
+        again = str(eng.tjs('askYesNo("Load?", "Confirmation", function { global.__smokeYes++; });'
+                            ' var r = [__smokeYes, kag.currentDialog === void ? 1 : 0]; KAGOptionPick("askAgain", 0);'
+                            ' r.add(typeof sf.yesnoSkip == "Object" && sf.yesnoSkip !== void ? 1 : 0); return r.join(",");'))
+        if box != "1,1" or again != "2,1,0":
+            raise SmokeError("Don't ask again didn't turn the prompt off, or Ask Again didn't bring it back: %s, %s" % (box, again))
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("the name box: a long name squeezed into it, crossfades between speakers, fades away, follows the window's opacity")
+    def _():
+        if eng.tjs('return typeof kag.fore.messages[0].nameLayer.fitMode != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates names that fit their box)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        n = "kag.fore.messages[0].nameLayer"
+        got = str(eng.tjs('var n = %s; n.processName("Ai, Who Has an Unusually Long Name Today");'
+                          ' return [n.fitMode, n.squeezeLayer !== void ? 1 : 0, n.visible ? 1 : 0].join(",");' % n))
+        if got != "squeeze,1,1":
+            raise SmokeError("a long name wasn't squeezed into the name box (namefit=squeeze): %s" % got)
+        eng.tjs('var n = %s; n.processName("Pip"); global.__smokeCross = n.crossLayer !== void && n.crossLayer.visible ? 1 : 0; return 1;' % n)
+        time.sleep(0.5)
+        cross = str(eng.tjs('var n = %s; return [__smokeCross, n.crossLayer.visible ? 1 : 0].join(",");' % n))
+        eng.tjs('%s.processName(""); return 1;' % n)
+        time.sleep(0.5)
+        gone = str(eng.tjs('var n = %s; return [n.visible ? 1 : 0, n.fade].join(",");' % n))
+        if cross != "1,0" or gone != "0,255":
+            raise SmokeError("the name box didn't crossfade to the next speaker and fade away: %s, %s" % (cross, gone))
+        # through the message layer, which records the name with its page: the opacity change
+        # draws the page again, name and all
+        frame = str(eng.tjs('var m = kag.fore.messages[0], n = m.nameLayer; m.processName("Pip"); var a = n.getMaskPixel(20, 20);'
+                            ' KAGOptionSet("windowOpacity", 100); var b = n.getMaskPixel(20, 20); KAGOptionSet("windowOpacity", 255);'
+                            ' m.processName(""); return [a, b].join(",");')).split(",")
+        if not int(frame[1]) < int(frame[0]):
+            raise SmokeError("the name box's frame didn't follow the window opacity: %s" % frame)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("indicators: a compiled scene's title and the music's title show in the corners, auto mode's mark, the voice bar, [chapter stay=true] kept in saves")
+    def _():
+        if eng.tjs('return typeof kag.indicators == "Object" && kag.indicators !== void ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the indicators)", flush=True)
+            return
+        # (the music may play on from an earlier step: lastBgm forgotten, it shows as new)
+        eng.tjs('KAGResetOptions(["chapterTitles", "nowPlaying", "modeMark", "voiceBar"]); kag.indicators.lastScene = void; kag.indicators.lastBgm = void;'
+                ' kag.process("char.ks", "*start"); return 1;')
+        eng.wait("the scene's title and the music's", 'kag.indicators.chapter == "Start" && kag.indicators.chapterLayer.visible'
+                 ' && kag.indicators.playingLayer !== void && kag.indicators.playingLayer.visible', timeout=20)
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        mode = str(eng.tjs('kag.enterAutoMode(); return 1;'))
+        time.sleep(0.3)
+        mode = str(eng.tjs('var i = kag.indicators, r = [i.modeShown, i.modeLayer.visible ? 1 : 0]; kag.cancelAutoMode(); return r.join(",");'))
+        if mode != "AUTO,1":
+            raise SmokeError("auto mode's mark didn't show: %s" % mode)
+        play = eng.tjs('world_object.env.playVoice("ai", "ai000001", true); return world_object.env.characters.ai.soundBuffer.status == "play" ? 1 : 0;')
+        if play == 1:
+            eng.wait("the voice bar", "kag.indicators.voiceLayer !== void && kag.indicators.voiceLayer.visible", timeout=5)
+        eng.tjs("world_object.env.stopAllVoice(); return 1;")
+        kept = str(eng.tjs('KAGChapterTag(%[title:"Chapter One", stay:"true"]); var d = %[]; kag.indicators.onStore(d, void);'
+                           ' kag.indicators.onRestore(%[], true, void); var gone = kag.indicators.chapterLayer.visible ? 0 : 1;'
+                           ' kag.indicators.onRestore(d, true, void); var i = kag.indicators;'
+                           ' var r = [gone, i.chapter, i.chapterLayer.visible ? 1 : 0]; KAGChapterTag(%[]); return r.join(",");'))
+        if kept != "1,Chapter One,1":
+            raise SmokeError("a chapter title with stay=true wasn't kept in the save data: %s" % kept)
+
+    @step("naming the hero: the name screen refuses and trims names, the name shows in the text and the name box, and Search finds it")
+    def _():
+        if eng.tjs('return typeof kag.setHeroName != "undefined" && Storages.isExistentStorage("namescreen.ks") ? 1 : 0;') != 1:
+            print("     (skipped: this build predates naming the hero)", flush=True)
+            return
+        eng.tjs('sf.heroNamed = false; kag.process("title.ks", "*gamestart"); return 1;')
+        eng.wait("the name screen", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable'
+                 ' && kag.current.names["tf.heroGiven"] !== void', timeout=30)
+        eng.tjs('kag.current.names["tf.heroGiven"].text = "Stupid Bob"; nameOK(); return 1;')
+        eng.wait("the reason", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable && tf.nameError != ""', timeout=20)
+        eng.tjs('kag.current.names["tf.heroGiven"].text = "  Alex "; kag.current.names["tf.heroFamily"].text = ""; nameOK(); return 1;')
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=30)
+        named = str(eng.tjs('return [sf.heroName, sf.heroFamily, f.name, world_object.env.isDefaultName() ? 1 : 0].join(",");'))
+        if named != "Alex,%s,Alex,0" % eng.tjs("return kag.defaultFamily;"):
+            raise SmokeError("the name screen didn't trim the name and keep the default family name: %s" % named)
+        # the hero speaks in the Character demo's Voices scene: the name box says the name, and
+        # Ai's line has it ([emb]); the backlog keeps it
+        eng.tjs('kag.process("char.ks", "*voices"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        for i in range(24):
+            if eng.tjs('return kag.fore.messages[0].nameLayer.lastName == "Alex" ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.3)
+            eng.wait("the next stop", "kag.inStable", timeout=20)
+        if eng.tjs('return kag.fore.messages[0].nameLayer.lastName == "Alex" ? 1 : 0;') != 1:
+            raise SmokeError("the hero's line didn't show the name Alex in the name box")
+        if eng.compiled:
+            found = str(eng.tjs('var r = world_object.player.searchTexts("Alex", false); return r.count;'))
+            print("     Search finds Alex in %s lines" % found, flush=True)
+            if int(found) < 1:
+                raise SmokeError("Search doesn't find the hero's name in Ai's line ([emb])")
+            log = eng.tjs('world_object.player.rebuildBacklog(); var h = kag.historyLayer, s = "";'
+                          ' for (var i = 0; i < h.dataLines; i++) s += h.getLine(i) + "\\n"; return s.indexOf("Alex") >= 0 ? 1 : 0;')
+            if log != 1:
+                raise SmokeError("the backlog written again from the history lost the hero's name ([emb])")
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("writers' shorthands: a code sets a pose and a face, and presets move a character back or forward at once")
+    def _():
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        if eng.tjs('var ai = world_object.env.getCharacter("ai"); return ai !== void && typeof ai.doShorthand != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the shorthands)", flush=True)
+            return
+        got = str(eng.tjs('var e = world_object.env, ai = e.getCharacter("ai"), r = [];'
+                          ' e.unknown("ai", %[tagname:"ai", "103" => "true"]); r.add(ai.face);'
+                          ' e.unknown("ai", %[tagname:"ai", "101" => "true"]); r.add(ai.face);'
+                          ' e.unknown("ai", %[tagname:"ai", "far" => "true"]); r.add(ai.level);'
+                          ' e.unknown("ai", %[tagname:"ai", "near" => "true"]); r.add(ai.level); return r.join(",");'))
+        if got != "sad,happy,0,2":
+            raise SmokeError("[ai 103], [ai 101], [ai far] and [ai near] didn't set face sad, happy, level 0 and 2: %s" % got)
+
+    @step("[vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too")
+    def _():
+        if eng.tjs('return typeof world_object.env.voiceSpeaker != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates [vo])", flush=True)
+            return
+        who = str(eng.tjs('var e = world_object.env; return [e.voiceSpeaker("pip000003"), e.voiceSpeaker("ai000001.ogg"),'
+                          ' e.voiceSpeaker("nobody0001") === void ? "-" : "?"].join(",");'))
+        if who != "pip,ai,-":
+            raise SmokeError("the speakers of pip000003, ai000001.ogg and nobody0001 aren't pip, ai and no one: %s" % who)
+        if eng.compiled:
+            found = str(eng.tjs('var r = world_object.player.searchTexts("Whoa", false); return r.count > 0 ? r[0].name : "none";'))
+            if found != "Pip":
+                raise SmokeError("[vo pip000003] didn't make Pip the speaker of the compiled line: %s" % found)
+
+    @step("the credits roll over the rest of the music, keep their place in a save, and send rollend when seen to the end")
+    def _():
+        if eng.tjs('return typeof global.RollFlip != "undefined" && Storages.isExistentStorage("credits.ks") ? 1 : 0;') != 1:
+            print("     (skipped: this build predates the credits roll)", flush=True)
+            return
+        eng.tjs('sf["roll:credits"] = void; kag.process("credits.ks", "*start"); return 1;')
+        eng.wait("the roll", 'kag.fore.layers[0].flipType == "roll" && kag.fore.layers[0].flip.items.count > 5', timeout=20)
+        info = str(eng.tjs('var f = kag.fore.layers[0].flip; return [f.items.count, f.total, f.duration, f.elapsed > 0 ? 1 : 0].join(",");'))
+        print("     %s lines and pictures, %s px, over %s ms" % tuple(info.split(",")[:3]), flush=True)
+        v = info.split(",")
+        if int(v[2]) < 30000 or v[3] != "1":
+            raise SmokeError("the roll isn't timed to the music playing (rolltime=bgm) or isn't moving: %s" % info)
+        kept = str(eng.tjs('var l = kag.fore.layers[0], f = l.flip; f.elapsed = 12345; var d = %[]; l.storeFlip(d);'
+                           ' l.restoreFlip(d); return [l.flip.elapsed >= 12345 ? 1 : 0, KAGRollSeen("credits") ? 1 : 0].join(",");'))
+        if kept != "1,0":
+            raise SmokeError("a save didn't keep how far the roll had got, or it was seen already: %s" % kept)
+        eng.tjs('var f = kag.fore.layers[0].flip; f.elapsed = f.duration - 100; return 1;')
+        eng.wait("the demo menu after the roll", 'kag.conductor.curStorage == "s0001.ks" && KAGRollSeen("credits")', timeout=20)
+
+    @step("[movie]: the opening was noted as seen, its subtitles come from test.vtt, a seen movie skips with a click, and Replay's Movies tab plays it")
+    def _():
+        if eng.tjs('return typeof global.KAGMovieTag != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates [movie])", flush=True)
+            return
+        cues = str(eng.tjs('var c = KAGParseVTT("test.vtt"); return [c.count, c.count > 0 ? c[0].from : -1, c.count > 0 ? c[0].to : -1].join(",");'))
+        if cues != "2,200,2400":
+            raise SmokeError("test.vtt's cues weren't read as two, the first from 200 to 2400 ms: %s" % cues)
+        seen = eng.tjs('return KAGMovieSeen("test") ? 1 : 0;')
+        print("     the opening seen at start: %s" % seen, flush=True)
+        eng.tjs('tf.replayTab = void; sf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
+        tab = eng.tjs('return replayTabs.find("Movies");')
+        if tab < 0:
+            raise SmokeError("Replay has no Movies tab")
+        eng.tjs('sf["movie:test"] = true; setReplayPage(%d, 0); return 1;' % tab)
+        if eng.tjs("return tf.replaylist[0] !== void && tf.replaylist[0].movie == \"test\" ? 1 : 0;") != 1:
+            raise SmokeError("the Movies tab's first tile isn't the test movie, or it's locked though seen")
+        eng.tjs("replayTile(0); return 1;")
+        eng.wait("the movie", 'KAGMoviePlaying !== void', timeout=20)
+        sub = str(eng.tjs('var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
+                          ' return [l.flipType, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
+        if sub != "movie,2":
+            raise SmokeError("[movie] didn't play on a layer with its subtitles: %s" % sub)
+        time.sleep(0.6)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
+    def _():
+        if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this sample predates the Extras touches)", flush=True)
+            return
+        eng.tjs('sf.clear = true; sf.bgm_BGM01 = true; sf.titleMusic = void; sf.titlePicture = void;'
+                ' kag.process("title.ks", "*titleloop"); return 1;')
+        eng.wait("the title with its picture's arrows", 'kag.conductor.curStorage == "title.ks" && kag.inStable'
+                 ' && kag.fore.messages[0].names.title_next !== void', timeout=30)
+        eng.tjs('nextTitlePicture(1); kag.process("title.ks", "*titleloop"); return 1;')
+        eng.wait("the evening title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && sf.titlePicture == "title_evening"', timeout=30)
+        # the music room: a track, kept on the title
+        eng.tjs('sf.extramode = 3; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("musicmode.ks", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable', timeout=20)
+        eng.tjs("playBgm(0); setTitleMusic(true); return 1;")
+        playing = True
+        try:
+            eng.wait("the track to play", "roomMusicPlaying()", timeout=10)
+        except SmokeError:
+            playing = False
+            print("     (the music doesn't play here: the checks of the music playing on are skipped)", flush=True)
+        if playing:
+            lit = eng.tjs('var b = kag.fore.messages[0].names.track01; return b.getMainPixel(100, 23) != 0xffffff ? 1 : 0;')
+            if lit != 1:
+                raise SmokeError("the track playing isn't lit in the music room")
+        # the CG screen: the track plays on, with its Stop button; the counts
+        eng.tjs('kag.process("cgmode.ks"); return 1;')
+        eng.wait("cgmode.ks", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=20)
+        got = str(eng.tjs('var c = cgCounts(); return [roomMusicPlaying() ? 1 : 0, kag.fore.messages[0].names.gallery_stop !== void ? 1 : 0,'
+                          ' c.all[1], c.page0 !== void ? c.page0[1] : -1].join(",");'))
+        print("     CG screen (playing, Stop button, pictures, on page 1): %s" % got, flush=True)
+        if got.split(",")[2] in ("0", "-1") or (playing and not got.startswith("1,1,")):
+            raise SmokeError("the CG screen doesn't play the room's track on with a Stop button, or counts nothing: %s" % got)
+        # Extras opens on the tab last used
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        if playing and eng.tjs("return roomMusicPlaying() ? 1 : 0;") != 1:
+            raise SmokeError("the track kept as the title's music stopped when Extras was left")
+        eng.tjs('kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("Extras on the CG tab, as left", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=20)
+        eng.tjs('galleryStop(); setTitleMusic(false); kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && !roomMusicPlaying()', timeout=30)
+        eng.tjs('sf.titlePicture = void; kag.process("title.ks", "*titleloop"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("quick saves go round their bookmarks, and quick load asks, then loads the newest")
     def _():
         if eng.tjs('return typeof kag.quickSave != "undefined" ? 1 : 0;') != 1:
@@ -2953,7 +3246,7 @@ def sample_steps(eng):
     for screen, mode in (("cgmode.ks", 1), ("replay.ks", 2), ("musicmode.ks", 3)):
         @step("Extras: " + screen + " opens and returns to the title")
         def _(screen=screen, mode=mode):
-            eng.tjs('tf.extramode = %d; kag.process("title.ks", "*extra"); return 1;' % mode)
+            eng.tjs('sf.extramode = %d; kag.process("title.ks", "*extra"); return 1;' % mode)
             eng.wait(screen, 'kag.conductor.curStorage == "%s" && kag.inStable' % screen, timeout=20)
             if screen != "musicmode.ks":
                 # The demos unlock the first CG and Replay entry, whose tile shows a picture;
@@ -2972,7 +3265,7 @@ def sample_steps(eng):
         if not eng.compiled or eng.tjs('return typeof global.replayTile != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: no compiled scenes, or a framework from before scene replays)", flush=True)
             return
-        eng.tjs('tf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
+        eng.tjs('sf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
         eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
         # the Layers tab: a tile for each scene of layer.ks, which the demos have read
         titles = str(eng.tjs('var t = replayTabs.find("Layers"); setReplayPage(t, 0); var r = [];'
@@ -3002,7 +3295,7 @@ def sample_steps(eng):
         if not eng.compiled or eng.tjs('return typeof global.searchInit != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: no compiled scenes, or a framework from before Search)", flush=True)
             return
-        eng.tjs('tf.searchText = ""; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.tjs('tf.searchText = ""; sf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
         eng.wait("searchmode.ks", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable', timeout=20)
         # typed into the field: the characters as the engine hands typed text to the focused
         # layer (onKeyPress; injected keys make none), then Return ([edit enter=])
@@ -3043,7 +3336,7 @@ def sample_steps(eng):
             return
         # a character put back from a saved state (a seek's end, a load, going back) has to start
         # its blinking and lip-sync again (KAGEnvCharacterEx.onRestore, restoreEyeLip)
-        eng.tjs('tf.searchText = "blink"; tf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
+        eng.tjs('tf.searchText = "blink"; sf.extramode = 4; kag.process("title.ks", "*extra"); return 1;')
         eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
                  timeout=20)
         k = eng.tjs('for (var i = 0; i < searchFound.count; i++) if (searchFound[i].storage == "anim.ks") return i;'

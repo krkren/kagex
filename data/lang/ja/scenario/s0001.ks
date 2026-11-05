@@ -16,6 +16,7 @@
 
 [seladd text="ワールド拡張：アニメキャラクタ" storage=anim.ks]
 
+[seladd text="クレジット" storage=credits.ks]
 [select]
 
 [jump target=*start]

@@ -1125,6 +1125,8 @@ KAGLoadScript("GFX_Three.tjs")    if (KAGConfigEnabled("gfxThreeEnabled",    tru
 
 KAGLoadScript("GFX_Static.tjs")   if (KAGConfigEnabled("gfxStaticEnabled",   true));
 
+KAGLoadScript("GFX_Roll.tjs")     if (KAGConfigEnabled("gfxRollEnabled",     true));
+
 
 
 KAGLoadScript("MessageLayer.tjs");
@@ -1142,6 +1144,8 @@ KAGLoadScript("DefaultMover.tjs");
 KAGLoadScript("Action.tjs");
 
 KAGLoadScript("MainWindow.tjs");
+
+KAGLoadScript("Options.tjs"); // the player's settings, for Config screens (since 0.17.0)
 
 
 
@@ -1246,6 +1250,27 @@ if (typeof global.KAGWorldPlugin != 'undefined') {
 	}
 
 }
+
+
+
+// On-screen indicators: the chapter's title, now playing, auto and skip, the voice left (since 0.17.0)
+
+KAGLoadScript("Indicators.tjs");
+
+KAGIndicatorsOf(kag);
+
+kag.tagHandlers.chapter = KAGChapterTag;
+
+
+// Movies as commercial games play them, and subtitles ([movie], since 0.17.0)
+
+KAGLoadScript("Movies.tjs");
+
+kag.tagHandlers.movie = KAGMovieTag;
+
+kag.tagHandlers.moviedone = KAGMovieDoneTag;
+
+kag.rightClickHook.add(KAGMovieRightClick);
 
 
 

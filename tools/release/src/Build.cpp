@@ -1604,6 +1604,33 @@ private:
 		return o;
 	}
 
+	// The game's additions to the app's AndroidManifest.xml: the query that lets it see the
+	// system's text-to-speech engines (ttsQuery: apps for Android 11 and later see none without
+	// it), then platforms.android.manifestAdditions inside <manifest> and applicationAdditions
+	// inside <application>. The kit's build.gradle makes its manifest from this file
+	void androidManifestInto(const fs::path& file)
+	{
+		const std::string base = "platforms.android.";
+		std::string text;
+		if (!krt::readFile(file, text)) throw Failure{ "The Android engine package's project has no app/src/main/AndroidManifest.xml" };
+		std::string inManifest = str(s_, base + "manifestAdditions"), inApp = str(s_, base + "applicationAdditions");
+		const char* tts = "android.intent.action.TTS_SERVICE";
+		if (flag(s_, base + "ttsQuery") && text.find(tts) == std::string::npos && inManifest.find(tts) == std::string::npos)
+			inManifest = std::string("<queries>\n    <intent>\n        <action android:name=\"") + tts + "\" />\n    </intent>\n</queries>\n" + inManifest;
+		if (inManifest.empty() && inApp.empty()) return;
+		if (!inManifest.empty()) {
+			const size_t at = text.find("\n<application");
+			if (at == std::string::npos) throw Failure{ "The Android engine package's AndroidManifest.xml has no <application>" };
+			text.insert(at + 1, "<!-- kagex-release: platforms.android (ttsQuery, manifestAdditions) -->\n" + inManifest + "\n\n");
+		}
+		if (!inApp.empty()) {
+			const size_t at = text.rfind("</application>");
+			if (at == std::string::npos) throw Failure{ "The Android engine package's AndroidManifest.xml has no </application>" };
+			text.insert(at, "<!-- kagex-release: platforms.android.applicationAdditions -->\n" + inApp + "\n");
+		}
+		writeText(file, text);   // the project is a copy (copyTree), not links to the package
+	}
+
 	void buildAndroid(const fs::path& engine, krt::Progress& pr, fs::path& package)
 	{
 		const std::string base = "platforms.android.";
@@ -1614,6 +1641,7 @@ private:
 		copyTree(engine / "project", proj);
 		makeExecutable(proj / "gradlew");
 		resourceConfigInto(proj / "engine-assets" / "config.cf");   // the APK's assets (resource://)
+		androidManifestInto(proj / "app" / "src" / "main" / "AndroidManifest.xml");
 		if (encryptedXp3For("android")) archiveKeyInto("android", proj);   // key the engine .so before Gradle packages it
 		scenesInto("android", proj);
 

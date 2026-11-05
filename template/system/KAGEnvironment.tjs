@@ -92,6 +92,7 @@ class KAGEnvironment extends KAGEnvTrans {
 	var playVoiceCount;
 	
 	function onStartVoice(name) {
+		voiceAfterTimer.enabled = false if voiceAfterTimer !== void;
 		playVoiceCount++;
 		if (playVoiceCount == 1) { // the first voice playing (it was == 0, so the BGM never went down)
 			env.setBGMDown(true);
@@ -105,7 +106,22 @@ class KAGEnvironment extends KAGEnvTrans {
 			playVoiceCount = 0;
 			env.setBGMDown(false);
 			trigger("env_voice");
+			// auto mode goes on kag.autoVoiceWait ms after the voices end (world.checkVoiceWait)
+			var wait = typeof kag.autoVoiceWait != "undefined" ? +kag.autoVoiceWait : 0;
+			if (wait > 0) {
+				if (voiceAfterTimer === void) {
+					voiceAfterTimer = new Timer(onVoiceAfter, "");
+				}
+				voiceAfterTimer.interval = wait;
+				voiceAfterTimer.enabled = true;
+			} else trigger("env_voice_after");
 		}
+	}
+
+	var voiceAfterTimer;
+	function onVoiceAfter() {
+		voiceAfterTimer.enabled = false;
+		trigger("env_voice_after");
 	}
 
 	function setBGMDown(mode) {
@@ -608,6 +624,7 @@ class KAGEnvironment extends KAGEnvTrans {
      * Finalizer
      */
     function finalize() {
+		invalidate voiceAfterTimer if voiceAfterTimer !== void;
 		initEnv();
 		invalidate characters;
 		invalidate characterList;
@@ -2047,6 +2064,64 @@ class KAGEnvironment extends KAGEnvTrans {
 	 * lacks. A name starting with & is an expression
 	 * @param lang the language (void: the source language)
 	 */
+	/**
+	 * The character a voice file belongs to, from the characters' voiceFile patterns (since
+	 * 0.17.0: [vo]): "ai%s%06d.ogg" is ai's, so "ai000003" (with or without its extension) is
+	 * ai's line. Of two that fit, the one whose pattern has more letters of its own; void for none
+	 */
+	var voiceFilePatterns;
+	function voiceSpeaker(file) {
+		if (voiceFilePatterns === void) {
+			voiceFilePatterns = [];
+			var list = [];
+			list.assign(characterInits);
+			for (var i = 0; i < list.count; i += 2) {
+				var init = list[i + 1], vf = init !== void ? init.voiceFile : void;
+				if (typeof vf != "String" || vf == "") continue;
+				var pat = Storages.chopStorageExt(vf), re = "", fixed = 0;
+				for (var j = 0; j < pat.length; j++) {
+					var c = pat.charAt(j);
+					if (c == "%") {
+						var k = j + 1;
+						while (k < pat.length && /[0-9.\-]/.test(pat.charAt(k))) k++;
+						var conv = k < pat.length ? pat.charAt(k) : "";
+						re += conv == "d" ? "[0-9]+" : ".*?";
+						j = k;
+					} else {
+						re += /[A-Za-z0-9_]/.test(c) ? c : "\\" + c;
+						fixed++;
+					}
+				}
+				voiceFilePatterns.add(%[ name:list[i], re:new RegExp("^" + re + "$", "i"), fixed:fixed ]);
+			}
+		}
+		var name = Storages.chopStorageExt(Storages.extractStorageName(file)), best;
+		for (var i = 0; i < voiceFilePatterns.count; i++) {
+			var p = voiceFilePatterns[i];
+			if (p.re.test(name) && (best === void || p.fixed > best.fixed)) best = p;
+		}
+		return best !== void ? best.name : void;
+	}
+
+	// [vo ai000003] or [vo file="ai000003,pip000004"]: the files in order, the tag's own words
+	// (in whatever order the tag holds them) when it has no file=
+	function voiceFilesOf(elm) {
+		var files = [];
+		if (elm.file !== void) {
+			var parts = ((string)elm.file).split(",");
+			for (var i = 0; i < parts.count; i++) files.add(parts[i].trim()) if parts[i].trim() != "";
+			return files;
+		}
+		var keys = [];
+		keys.assign(elm);
+		for (var i = 0; i < keys.count; i += 2) {
+			var k = keys[i];
+			if (k == "tagname" || k.charAt(0) == "*" || k.charAt(0) == "_" || k == "cond") continue;
+			files.add(k);
+		}
+		return files;
+	}
+
 	function nameAliasOf(ch, lang) {
 		var alias = ch.init.nameAlias;
 		if (typeof alias == "Object" && alias !== null) {
@@ -2369,6 +2444,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 		// Register voice in history
 		if (!skipNoDisp) {
+			var voiced = false; // dramatic mode (kag.noteVoicedLine)
 			if (kag.historyWriteEnabled && nextVoiceList.count > 0) {
 				kag.historyLayer.setNewAction(kag.getVoicePlayingScript(nextVoiceList));
 			}
@@ -2393,12 +2469,15 @@ class KAGEnvironment extends KAGEnvTrans {
 						if (info !== void) {
 							var voice = info.voice;
 							voice += info.ext if (voice != "");
-							playVoice(info.name, voice, true, info) if (!info.noplay);
+							// a voice started (the count of voices playing goes up only once the
+							// buffer says it plays)
+							if (!info.noplay && playVoice(info.name, voice, true, info) > 0) voiced = true;
 						}
 					}
 				}
 				nextVoiceList.clear();
 			}
+			kag.noteVoicedLine(voiced) if typeof kag.noteVoicedLine != "undefined";
 			talkWaitOrigin = System.getTickCount();
 			talkWaitCount = 0;
 		} else {

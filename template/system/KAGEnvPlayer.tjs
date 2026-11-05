@@ -307,6 +307,8 @@ class StorageData {
 					ret.title = scene.title;
 					ret.titles = scnTitles(scene);
 				}
+				// the [emb]s that came after this text ([emb] in a line: SceneParser)
+				if (ret !== void && scene.embAfter !== void) ret.embAfter = scene.embAfter[(string)idx];
 				return ret;
 			}
 		}
@@ -1368,7 +1370,22 @@ class KAGEnvPlayer
 			invalidate storageCache if storageCache !== void;
 			storageCache = new StorageData(storage);
 		}
-		return changeAlias(scnTextIn(storageCache.getText(label, idx, title), lang));
+		var ret = changeAlias(scnTextIn(storageCache.getText(label, idx, title), lang));
+		// for the history (title): the text with its [emb]s worked out, as it was shown
+		if (title && ret !== void && ret.embAfter !== void) ret.text += embText(ret.embAfter);
+		return ret;
+	}
+
+	// the text of [emb]s (expressions), worked out now
+	function embText(exps) {
+		var s = "";
+		for (var i = 0; i < exps.count; i++) {
+			try {
+				var v = Scripts.eval(exps[i]);
+				s += (string)v if v !== void;
+			} catch (e) {}
+		}
+		return s;
 	}
 
 	// History data list
@@ -2471,7 +2488,8 @@ class KAGEnvPlayer
 					// the line and the name as shown, in the language shown; a line is found by
 					// what it says in the language it's written in too (doc/scn.txt, "Languages")
 					var t = changeAlias(scnTextIn(raw)), s = raw.langs !== void ? changeAlias(scnTextIn(raw, raw.codes[0])) : t;
-					var shown = plainText(t.text), source = plainText(s.text);
+					var emb = scene.embAfter !== void && scene.embAfter[(string)(i + 1)] !== void ? embText(scene.embAfter[(string)(i + 1)]) : "";
+					var shown = plainText(t.text) + emb, source = plainText(s.text) + emb;
 					var name = t.disp != "" ? t.disp : t.name, sourceName = s.disp != "" ? s.disp : s.name;
 					if (shown.toLowerCase().indexOf(key) < 0 && ((string)name).toLowerCase().indexOf(key) < 0 &&
 						source.toLowerCase().indexOf(key) < 0 && ((string)sourceName).toLowerCase().indexOf(key) < 0) continue;
@@ -2832,6 +2850,7 @@ class KAGEnvPlayer
 			// Text
 			curState = curTextId = obj;
 			curRead = getReaded(curTextId);
+			kag.setUserSpeed(); // the text's read state: read-text speed, colour and click mark
 			if (seeking && curSceneName.toLowerCase() == seekScene && curTextId >= seekText) finishSeek();
 			addHistory(curTextId);
 			{

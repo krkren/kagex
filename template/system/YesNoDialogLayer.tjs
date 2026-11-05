@@ -197,7 +197,7 @@ function wrapYesNoText(layer, text, width)
 
  */
 
-function chooseYesNoFrame(layer, text)
+function chooseYesNoFrame(layer, text, spare = 0)
 
 {
 
@@ -211,11 +211,11 @@ function chooseYesNoFrame(layer, text)
 
         lines = wrapYesNoText(layer, text, frame.textWidth);
 
-        if (lines.count <= frame.lines) break;
+        if (lines.count <= frame.lines - spare) break;
 
     }
 
-    return %[ frame:frame, lines:lines ];
+    return %[ frame:frame, lines:lines, spare:spare ];
 
 }
 
@@ -233,7 +233,9 @@ function drawYesNoText(layer, ox, oy, choice)
 
     var lh = layer.font.getTextHeight("Ag") + yesnoLineGap;
 
-    var y = oy + ((frame.textTop + frame.textBottom - (lh * lines.count - yesnoLineGap)) >> 1);
+    var bottom = frame.textBottom - (choice.spare ? yesnoCheckHeight + 8 : 0); // the check box under it
+
+    var y = oy + ((frame.textTop + bottom - (lh * lines.count - yesnoLineGap)) >> 1);
 
     for (var i = 0; i < lines.count; i++) {
 
@@ -973,9 +975,13 @@ class YesNoDialogLayer extends DialogLayer
 
     var doneFunc;
 
-    
+    var skipKey;          // the prompt can be turned off ("Don't ask again", yesnoSkippable)
 
-    function YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc) {
+    var skipChecked = false;
+
+    function YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc, skipKey) {
+
+        this.skipKey = skipKey;
 
         super.DialogLayer(kag, kag.primaryLayer, "YesNoDialog");
 
@@ -989,7 +995,7 @@ class YesNoDialogLayer extends DialogLayer
 
         this.doneFunc = doneFunc;
 
-        var choice = chooseYesNoFrame(this, text);
+        var choice = chooseYesNoFrame(this, text, skipKey !== void ? 1 : 0);
 
         this.baseStorage = choice.frame.storage;
 
@@ -1020,6 +1026,22 @@ class YesNoDialogLayer extends DialogLayer
         drawYesNoLabel(names.no,  tr("No"));
 
         a11yText = text, a11yLabels = [ tr("Yes"), tr("No") ];
+
+        if (skipKey !== void) {
+
+            // under the message, inside the text area (chooseYesNoFrame kept a line for it)
+
+            var label = tr("Don't ask again");
+
+            addButton(%[ name:"skip", x:frame.centerX - (yesnoCheckWidth >> 1), y:frame.textBottom - yesnoCheckHeight,
+
+                normal:"dialog_check_normal", over:"dialog_check_over", on:"dialog_check_over" ]);
+
+            drawYesNoCheck(names.skip, label, false);
+
+            a11yLabels.add(label);
+
+        }
 
     }
 
@@ -1095,6 +1117,20 @@ class YesNoDialogLayer extends DialogLayer
 
     function processLink(num) {
 
+        if (num == 2 && skipKey !== void) { // the check box: on or off, not an answer
+
+            skipChecked = !skipChecked;
+
+            drawYesNoCheck(names.skip, tr("Don't ask again"), skipChecked);
+
+            a11yLabels[2] = tr("Don't ask again") + (skipChecked ? " (" + tr("On") + ")" : "");
+
+            pushYesNoA11y(this);
+
+            return;
+
+        }
+
         if (answered) return; // one answer per prompt (a double click, or Esc after a click)
 
         answered = true;
@@ -1104,6 +1140,14 @@ class YesNoDialogLayer extends DialogLayer
         if (num == 0) {
 
             result = true;
+
+            if (skipChecked && skipKey !== void) {
+
+                sf.yesnoSkip = %[] if typeof sf.yesnoSkip != "Object" || sf.yesnoSkip === void;
+
+                sf.yesnoSkip[skipKey] = true;
+
+            }
 
             if (yesFunc !== void) {
 
@@ -1144,6 +1188,46 @@ class YesNoDialogLayer extends DialogLayer
 // as it is, word-wrapped (a long one gets the wide frame). Either is then shown in the language
 
 // of the game (tr: the language table's strings, keyed by the English shown here)
+
+// The prompts a player can turn off with "Don't ask again" (keyed by the English shown, as
+
+// yesnoMap gives it): turned off, the prompt answers Yes at once. The choices are kept in
+
+// sf.yesnoSkip; clearing it asks again (Options.tjs, "Prompts")
+
+var yesnoSkippable = %[
+
+    "Overwrite this save?" => true, "Load this save?" => true, "Quick load?" => true,
+
+    "Return to the title screen?" => true
+
+    ];
+
+var yesnoCheckWidth = 360, yesnoCheckHeight = 44; // dialog_check_normal/over: a box at the left, the label after it
+
+// Draws the check box's label into each state of its button, and its tick when on
+
+function drawYesNoCheck(button, text, on)
+
+{
+
+    button.loadButtons("dialog_check_normal", "dialog_check_over", "dialog_check_over");
+
+    setYesNoFont(button, yesnoLabelSize - 4);
+
+    var w = button.width, h = button.height;
+
+    var y = (h - button.font.getTextHeight(text)) >> 1;
+
+    for (var st = 0; st < 3; st++) {
+
+        drawYesNoString(button, w * st + h + 8, y, text, 0xffffff, yesnoTextBase);
+
+        if (on) button.fillRect(w * st + 12, 12, h - 24, h - 24, 0xff5025ff);
+
+    }
+
+}
 
 var yesnoMap = %[
 
@@ -1245,6 +1329,18 @@ function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, don
 
     if (text.substring(0, 6) == "error:") text = text.substring(6); // KAGEnvPlayer's error prompts
 
+    var skipKey = yesnoSkippable[text] ? text : void;
+
+    if (skipKey !== void && typeof sf.yesnoSkip == "Object" && sf.yesnoSkip !== void && sf.yesnoSkip[skipKey]) {
+
+        if (yesFunc !== void) yesFunc(param); // turned off by the player ("Don't ask again"): Yes
+
+        if (doneFunc !== void) doneFunc(param);
+
+        return;
+
+    }
+
     text = tr(text); // in the language shown (Language.tjs)
 
     if (kag.isMoviePlaying() && yesNoCanUseFrameWindow()) {
@@ -1289,7 +1385,7 @@ function askYesNo(message, caption = "Confirmation", yesFunc, noFunc, param, don
 
     } else {
 
-        var dialog = new YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc);
+        var dialog = new YesNoDialogLayer(text, yesFunc, noFunc, param, doneFunc, skipKey);
 
         dialog.open();
 

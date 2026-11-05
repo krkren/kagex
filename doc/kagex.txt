@@ -502,6 +502,10 @@ Attributes
 
         	    2: Alpha video. Left half of screen is RGB, right half is Alpha.
 
+	    subtitle  true: the cues of <movie name>.vtt at the bottom of the screen; a file: that
+
+	              one's (since 0.17.0; "Movies" below)
+
 
 
 	Optional parameters for fire
@@ -893,6 +897,44 @@ Attributes
 
 
 		layer ([newlay name=tv static=tv], doc/world.txt).
+
+
+
+	Optional parameters for roll (a credits roll, template/system/GFX_Roll.tjs)
+
+		A staff list in a text file scrolls up over the layer, taking a time of its own or the
+
+		rest of the music playing (since 0.17.0):
+
+		[image layer=1 page=fore flip=credits fliptype=roll rolltime=bgm visible=true]. The
+
+		file (credits.txt; a language's own in data/lang/<code>/ stands in for it) holds a line
+
+		for each name, and these: "# Heading" (a heading, larger), an empty line (a gap),
+
+		"@size 30" (the lines' size from there on), "@gap 120" (a gap of so many pixels), and
+
+		"@image event1 1300 480" (a picture scrolling with the text: its left at 1300 and 480
+
+		wide; without them, centred, taking its own room). Each frame only the lines in view
+
+		are drawn, so a long list costs no memory. The trigger rollend goes when the last line
+
+		has gone, and sf["roll:<file>"] (KAGRollSeen(name)) says it was seen to the end, so a
+
+		scenario can let a click skip it only then:
+
+		[waittrig name=rollend canskip=&sf['roll:credits']]. A save keeps how far it got.
+
+		rolltime      ms the roll takes, or bgm: the rest of the music playing. Default 30000.
+
+		rolloffset    ms more (or less, negative) than that, for a track whose end is quiet.
+
+		rollx         The text's centre. Default: the layer's middle.
+
+		rollsize      The names' size. Default 32; headings are 1.3 times.
+
+		The sample's Credits demo (credits.ks) rolls the sample's credits to its music.
 
 
 
@@ -1652,6 +1694,12 @@ Attributes
     nameframe    Image drawn behind the name. The name window takes the image's size
 
                  and is hidden while no name is shown. "" for none (the default).
+
+    namefit      squeeze or shrink: a name too wide for the box is drawn narrower, or
+
+                 smaller (since 0.17.0; "The Name Box" below, with namemargin, namefade
+
+                 and followopacity)
 
 
 
@@ -3067,6 +3115,147 @@ The web build's saves go to /persist/<orgname>/<appname>/, which the browser kee
 IndexedDB): SDL's user:// there is in the page's memory, and everything saved in it went when
 the page did (UPSTREAM.md). Save names are joined to the save folder with kag.saveDataFile(name),
 which doesn't double the folder's slash.
+
+
+
+● Options and the Config Screen
+
+Since 0.17.0 the player's settings are declared once, in a table (template/system/Options.tjs),
+and a Config screen lays its rows out from it: a game adds a setting without placing buttons
+by hand, and Default and saving follow from the table. A game declares its own in AfterInit.tjs:
+
+    KAGDefineOption(%[ name:"shake", label:"Screen Shake", kind:"toggle", save:true, initial:true,
+        values:[ ["On", true], ["Off", false] ] ]);
+
+  name      What scripts call it: KAGOptionGet("shake"), KAGOptionSet("shake", false).
+  label     Its row's title, in English; it shows through tr() in the language being played.
+  kind      toggle (two buttons), choice (two to four), slider, button (one button that runs
+            action), note (lines of text).
+  prop      A property of kag the option reads and sets (kag.windowOpacity ...); or getValue
+            and setValue, functions; or save:true, which keeps it in scflags["option:<name>"].
+  apply     A method of kag called after a change (applyWindowOpacity).
+  values    [ [label, value] ... ] for a toggle or a choice.
+  min, max, step, ends   A slider's range and the words at its two ends.
+  initial   The value Default and the first start give it.
+  button, action, enabled   A button's label, what it does, whether it can be pressed now.
+  lines, rows   A note's lines, and the rows an option takes (1).
+
+  KAGOptionGet(name), KAGOptionSet(name, value)   Read and change one (the second runs apply
+                         and the functions in KAGOptionHook, with name and value).
+  KAGResetOptions(names) Puts them back to initial (all of them without names).
+  KAGOptionPage(layer, [ [x, top, names] ... ])   Draws columns of rows on a message layer
+                         whose frame is the screen, and puts its buttons and sliders there:
+                         call it from a .ks screen, where [locate]/[button] would go.
+  KAGOptionRefresh(layer)   Shows the values again (after Default, or a key that changed one).
+  KAGOptionStyle         The rows' size, fonts and the buttons' images (config_choice<w>_normal
+                         and _over, the slider's slidebar, slidebar_over and config_track).
+
+The framework's own options: voiceCut, voiceFadeTime, voicePlacement, voiceSpeed,
+autoVoiceWait, dramaticMode, continueOn, quickSaves (a note), askAgain (a button),
+hideCursorIdle, readSpeed, autoSpeed, autoCharWait, textFade, readColor, readMark,
+windowOpacity, afterauto, afterskip, enterSkip; Indicators.tjs adds chapterTitles, nowPlaying,
+modeMark and voiceBar, Movies.tjs subtitles, movieSkipping, movieRightClick and movieQuality.
+The sample's Config has four pages (config.ks *options, configPages in Override.tjs): the first
+as before, then Voices and Saves, Reading, and Screen and Extras.
+
+● Reading Settings
+
+These are kag's properties, kept in the system variables (scflags), with their options:
+
+  windowOpacity        The message window's frame opacity, 0 to 255; a name box with
+                       followopacity (below) follows it.
+  readTextColor        A colour for text already read (-1: as written). Text the scenario
+                       colours itself keeps its colour.
+  readMark             Read text's click glyphs are LineBreak_read and PageBreak_read (the
+                       framework's are grey).
+  textFadeTime         Each character fades in over so many ms (0: none), on up to eight
+                       layers at once, so text drawn quickly still fades.
+  userChAutoSpeed      The text speed in auto mode (void: as when reading).
+  autoModeCharWait     Auto mode waits so many ms more for each character of the page.
+  autoVoiceWait        Auto mode waits so many ms more after a voice ends, before it goes on
+                       (the World's trigger env_voice_after, which auto mode waits for).
+  dramaticMode         "never", "auto" or "always": a voiced line hides the message window
+                       while its voice plays (in auto mode, or always), so the whole scene shows;
+                       a click, skipping or a menu shows it again.
+  hideCursorIdle       The pointer hides after idleCursorTime ms (3000) without moving, on the
+                       desktops.
+  The read-text speed is the readSpeed option (kag.chSpeeds.read; 0 to 10, 0 at once).
+
+"Don't ask again": the Yes/No prompts named in yesnoSkippable (YesNoDialogLayer.tjs: overwriting
+and loading a save, a quick load, returning to the title) show a check box; a Yes with it ticked
+answers that prompt Yes from then on (sf.yesnoSkip). The askAgain option clears them.
+
+● The Name Box
+
+[position] takes these for its name window (since 0.17.0), besides nameleft and the rest:
+
+    namefit       squeeze: a name too wide for the box is drawn narrower to fit; shrink: in a
+                  smaller size. Without it a long name runs past the frame.
+    namemargin    Room in pixels left clear at each side of the box (namefit), 0 by default.
+    namefade      A new name crossfades over so many ms, and the box fades in and out.
+    followopacity true: the name box's frame follows the message window's opacity
+                  (kag.windowOpacity, the Reading page's slider).
+
+The sample's [initscene] sets namefit=squeeze namemargin=14 namefade=150 followopacity=true.
+
+● On-screen Indicators
+
+The game window's indicators (template/system/Indicators.tjs, kag.indicators) are drawn in the
+Yes/No prompts' look, over the game and under the backlog, and Config turns each off:
+
+    [chapter title="Chapter 1" stay=false time=3000]
+
+shows a chapter's title in the top left corner for time ms, or, with stay=true, until the next
+[chapter]; [chapter] alone takes it away. The chapter on show is kept with the save points, so
+a load, going back and compiled scenes show it as it was. kag.indicators.chapterFromScenes
+(the sample's AfterInit.tjs sets it) shows a compiled scene's title as the scene starts.
+
+When the music changes, its title shows for three seconds in the top right corner: titles come
+from titleList (musiclist.csv: the file's name without its extension, then the title; #
+comments), and a track without one shows nothing. A mark shows while auto mode or skip mode is
+on, and a bar under the message window tells how much of the voice is left.
+
+● The Hero's Name
+
+The player can name the hero (since 0.17.0):
+
+  kag.setHeroName(given, family)  Takes them (trimmed; empty: the defaults) and returns "", or
+                                  why they were refused, through tr().
+  kag.heroName(), kag.heroFamily()  The names, or Config.tjs's defaultName and defaultFamily.
+  kag.heroNameMax                 Characters at most in each (12).
+  kag.heroNameRefused             Words a name may not hold, in lower case.
+  kag.heroNameCheck               A function(given, family) that returns a reason to refuse.
+
+The names are kept with the game (kag.flags.name and family), so each playthrough has its own.
+A character whose nameAlias is "&kag.heroName()" shows the name, and [emb exp="kag.heroName()"]
+puts it in a line; compiled scenes, the backlog and Search show the name as it was then. The
+sample asks the first time START is chosen (namescreen.ks), and Config's last page has Change.
+
+● Movies
+
+    [movie storage=opening alpha=2 song=bgm02 color=0x000000 skip=seen layer=]
+
+plays a movie as commercial games do (since 0.17.0, template/system/Movies.tjs): over everything
+but the prompts, centred on a KAG layer (the last one, or layer=), and waits for it to end.
+
+    storage   The movie, without its extension (.webm on the SDL engine).
+    alpha     As [image movie=]: 0 opaque, 1 alpha below, 2 alpha to the right.
+    color     A colour that fills the screen behind it.
+    song      Music it plays, unlocked in the music room (sf["bgm_<NAME>"]; several with commas).
+    skip      seen (the default): a click skips it only once it has been seen; always: any time.
+    subtitle  false: no subtitles; a file: those instead of <name>.vtt.
+
+It's noted as seen (sf["movie:<name>"], KAGMovieSeen(name)) when it ends or is skipped. Skip
+mode stops before a movie not seen yet, and passes a seen one where Config says so
+(movieSkipping); the right button skips a seen one where it says so (movieRightClick). A
+movie with a smaller version, <name>_sd, plays that when Movie Quality says Smaller, and by
+itself on the web, Android and iOS (Auto). A movie that shows no picture in three seconds (no
+decoder for it here) ends, so the game goes on.
+
+Subtitles: a movie on a layer whose [image] has subtitle=true ([movie] gives it that) shows the
+cues of <name>.vtt (WebVTT: times and lines; a language's own in data/lang/<code>/ stands in for
+it) at the bottom of the screen, timed from the movie, and screen readers get each one.
+Config's Subtitles turns them off.
 
 
 

@@ -65,14 +65,7 @@ LABELS = {
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
-        # config, the second page
-        "When You Click": "クリックしたとき", "Fade": "フェード", "Keep": "そのまま",
-        "Fade Length": "フェードの長さ", "Short": "短い", "Long": "長い", "Voice Position": "ボイスの位置",
-        "With Speaker": "立ち位置から", "Centred": "中央", "Carry On at Start": "起動時に続きから",
-        "On": "オン", "Off": "オフ", "Quick Saves": "クイックセーブ",
-        "Q.SAVE or Shift+S: a quick save": "Qセーブ / Shift+S：クイックセーブ",
-        "Q.LOAD or Shift+L: the newest one": "Qロード / Shift+L：最新のものをロード",
-        "The last three are kept.": "最新の 3 つまで残ります。",
+        "Your Name": "名前",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
@@ -80,7 +73,7 @@ LABELS = {
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
-        "Repeat All": "全曲リピート",
+        "Repeat All": "全曲リピート", "Keep on Title": "タイトルでも流す",
     },
 }
 
@@ -498,6 +491,48 @@ def make_title():
             button(400, 68, L(label), st, size=30, weight="Black", r=12, shadow=8, tracking=4).save(
                 out("%s_%s.png" % (name, st)))
 
+    make_title_evening(bg, ch)
+    # the arrows that pick the title's picture once there's more than one (title.ks)
+    for st in ("normal", "over"):
+        for name, left in (("prev", True), ("next", False)):
+            fill, border, fg, sh = STYLE[st]
+            b = Canvas(72, 72)
+            b.panel((0, 0, 66, 66), r=12, fill=fill, border=border, bw=4, shadow=6, shadow_color=sh)
+            d = -1 if left else 1
+            b.stroke([(33 - d * 6, 21), (33 + d * 6, 33), (33 - d * 6, 45)], 4.5, rgba(fg))
+            b.save(out("title_%s_%s.png" % (name, st), False))
+
+
+def make_title_evening(bg, ch):
+    """the second title picture, which finishing every demo unlocks (sf.clear): the same street
+    at sunset, with stars coming out"""
+    a = np.asarray(bg.convert("RGB")).astype(np.float32) / 255
+    h, w = a.shape[:2]
+    y = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+    lum = (a @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
+    sky = np.array([0.42, 0.30, 0.78], np.float32) * (1 - y) + np.array([1.0, 0.60, 0.42], np.float32) * y
+    graded = np.clip((a * 0.35 + lum * 0.65) * sky * 1.12, 0, 1)
+    under = Image.fromarray((graded * 255 + 0.5).astype(np.uint8), "RGB").convert("RGBA")
+    # a few stars over the street's far end, where the sky shows
+    star = Image.open(os.path.join(REPO, "data", "fgimage", "star.png")).convert("RGBA")
+    for sx, sy, size, alpha in ((1010, 70, 54, 230), (1130, 170, 34, 200), (880, 210, 26, 170),
+                                (1720, 90, 40, 210), (1580, 40, 24, 160), (1820, 260, 30, 180)):
+        s = star.resize((size, size), Image.LANCZOS)
+        s.putalpha(s.getchannel("A").point(lambda v, k=alpha: v * k // 255))
+        under.alpha_composite(s, (sx - size // 2, sy - size // 2))
+    # Ai in the evening light
+    c_arr = np.asarray(ch).astype(np.float32)
+    c_arr[..., :3] *= np.array([1.0, 0.86, 0.80], np.float32)
+    under.alpha_composite(Image.fromarray(np.clip(c_arr + 0.5, 0, 255).astype(np.uint8), "RGBA"), (1200, 60))
+    c = Canvas(1920, 1080)
+    c.gradient((0, 0, 1240, 1080), rgba(DEEP, 215), rgba(DEEP, 0), horizontal=True, ease=True)
+    c.pattern((0, 0, 1240, 1080), 36, 2.2, rgba(LAV, 60), fade=True)
+    wordmark(c, 150, 330, 190)
+    c.text((160, 430), "Sample", font("Black", 66), rgba(WHITE), anchor="ls", stroke=5,
+           stroke_fill=rgba(VIOLET), tracking=2)
+    c.text((440, 428), "for Kirikiri Z · SDL3", font("Bold", 30), rgba(LAV_SOFT), anchor="ls")
+    c.save(out("title_evening.png", False), opaque=True, under=under)
+
 
 def make_logo():
     c = Canvas(1920, 1080)
@@ -561,10 +596,17 @@ def make_message():
             frames.paste(break_glyph(direction, e), 43 * i, 0)
         frames.save(out(os.path.join(SYSTEM, name + "_a.png"), False))
         break_glyph(direction, 1.0).save(out(os.path.join(SYSTEM, name + ".png"), False))
+        # the same for text read before (kag.readMark; MessageLayer.readGlyph): lavender
+        frames = Canvas(43 * 16, 43)
+        for i in range(16):
+            frames.paste(break_glyph(direction, math.sin(i / 15 * math.pi / 2), read=True), 43 * i, 0)
+        frames.save(out(os.path.join(SYSTEM, name + "_read_a.png"), False))
+        break_glyph(direction, 1.0, read=True).save(out(os.path.join(SYSTEM, name + "_read.png"), False))
 
 
-def break_glyph(direction, e):
-    """a white triangle with a violet outline, fading in and moving 5 px as e goes 0 -> 1"""
+def break_glyph(direction, e, read=False):
+    """a white triangle with a violet outline, fading in and moving 5 px as e goes 0 -> 1
+    (lavender for text read before)"""
     c = Canvas(43, 43)
     a = int(255 * (0.3 + 0.7 * e))
     m = 5 * e
@@ -573,7 +615,7 @@ def break_glyph(direction, e):
     else:
         pts = [(13 + m, 8.5), (13 + m, 33.5), (29 + m, 21)]
     c.stroke(pts, 6, rgba(VIOLET, a), closed=True)
-    c.polygon(pts, rgba(WHITE, a))
+    c.polygon(pts, rgba(LAV if read else WHITE, a))
     return c
 
 
@@ -635,44 +677,35 @@ def make_config():
                         ("config_controls", "Controls")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
-    make_config2()
+    make_config_pages()
 
 
-# the second page (config.ks *page2; its tabs are the save screens' page1 and page2): voices on
-# the left, saves on the right, three rows each
-def make_config2():
+# the pages of options (config.ks *options: pages 2 to 4): two empty panels of six rows; the
+# rows' titles, buttons' labels and dividers are drawn at run time from the options table
+# (template/system/Options.tjs), on blank buttons and the slider's track
+def make_config_pages():
     c = Canvas(1920, 1080)
     screen_bg(c)
     header(c, L("Config"))
-    rows = 3
-    bottom = CFG_TOP + CFG_ROW * rows
-    columns = ((CFG_L, ["When You Click", "Fade Length", "Voice Position"]),
-               (CFG_R, ["Carry On at Start", "Quick Saves", None]))
-    for x0, labels in columns:
-        c.panel((x0, CFG_TOP, x0 + CFG_W, bottom))
-        for i, label in enumerate(labels):
-            top = CFG_TOP + CFG_ROW * i
-            if label is None:
-                continue
-            if i:
-                c.rrect((x0 + 24, top - 1, x0 + CFG_W - 24, top + 1), 1, fill=rgba(WHITE, 120))
-            outlined(c, (x0 + 32, top + 8), L(label), 33)
-    # the fade's slider, as page 1's (config.ks: its tab's centre travels from x 417 to 803)
-    sx, cy = CFG_L + 112, CFG_TOP + CFG_ROW + 90
-    outlined(c, (sx - 12, cy), L("Short"), 26, anchor="rm", stroke=2.5)
-    outlined(c, (sx + 416 + 12, cy), L("Long"), 26, anchor="lm", stroke=2.5)
-    c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
-    # how quick saves work, under their row's title
-    for i, line in enumerate(("Q.SAVE or Shift+S: a quick save", "Q.LOAD or Shift+L: the newest one",
-                              "The last three are kept.")):
-        outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW + 72 + 44 * i), L(line), 26, stroke=2.5)
-    c.save(out("config2_base.png"), opaque=True)
-
-    for name, label, w in (("vstop", "Stop", 180), ("vfade", "Fade", 180), ("vkeep", "Keep", 180),
-                           ("vplaced", "With Speaker", 240), ("vcentred", "Centred", 240),
-                           ("carryon", "On", 240), ("carryoff", "Off", 240)):
+    for x0 in (CFG_L, CFG_R):
+        c.panel((x0, CFG_TOP, x0 + CFG_W, CFG_TOP + CFG_ROW * 6))
+    c.save(out("config_pages_base.png"), opaque=True)
+    # the hero's name (namescreen.ks): one wide panel; its titles, fields and buttons are drawn
+    # at run time (Override.tjs, nameInit)
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Your Name"))
+    c.panel((CFG_L, CFG_TOP, CFG_R + CFG_W, CFG_TOP + CFG_ROW * 3))
+    c.save(out("name_base.png"), opaque=True)
+    if LANG != "en":
+        return
+    for w in (240, 180, 130):
         for st in ("normal", "over"):
-            button(w, 60, L(label), st, size=28).save(out("config_%s_%s.png" % (name, st)))
+            button(w, 60, "", st).save(out("config_choice%d_%s.png" % (w, st), False))
+    # the slider's track (Options.tjs draws it under a slider), as page 1's
+    t = Canvas(416, 20)
+    t.rrect((6, 3, 410, 17), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
+    t.save(out("config_track.png", False))
 
 
 def nav_button(label, st, w=180):
@@ -799,6 +832,10 @@ def make_extras():
         for st in ("normal", "over"):
             button(210, 60, L(label), st, size=26, icon=icon, icon_size=24).save(
                 out("musicmode_%s_%s.png" % (name, st)))
+    # a switch: the track playing stays as the title's music (Override.tjs, setTitleMusic)
+    for st in ("normal", "over"):
+        button(446, 60, L("Keep on Title"), st, size=26, icon=ic_note, icon_size=24).save(
+            out("musicmode_title_%s.png" % st))
 
 
 # --- the message history ---------------------------------------------------------------
@@ -958,6 +995,14 @@ def make_dialog():
     c = Canvas(128, 128)
     c.panel((0, 0, 116, 116), r=14, shadow=12)
     c.save(os.path.join(SYSTEM, "dialog_panel.png"))
+
+    # the Yes/No prompt's "Don't ask again" box (drawYesNoCheck draws its label and its tick)
+    for st, border in (("normal", VIOLET), ("over", NAVY)):
+        c = Canvas(360, 44)
+        if st == "over":
+            c.rrect((0, 0, 44, 44), 10, fill=rgba(WHITE, 110))
+        c.rrect((4, 4, 40, 40), 8, fill=rgba(WHITE), outline=rgba(border), width=4)
+        c.save(os.path.join(SYSTEM, "dialog_check_%s.png" % st))
 
 
 # --- the star in the World demo --------------------------------------------------------

@@ -16,6 +16,7 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 
 【ai】規定の書式で自動的に名前表示・テキスト表示・キー入力待ちが行われます
 【ai/？？？】表示名を変更する場合はスラッシュにつづけて表示名を記載すればＯＫです
+【ai/今日はとても長い名前を名乗っているあい】枠に入りきらない長い名前は、縮めて収めます（[[position namefit=squeeze]）。
 【ai】ボイス番号が指定されているとテキストにあわせてボイスが再生されます。
 【ai】自動再生時の処理待ちも自動的に調整されます。次のテキストでボイスがなります
 
@@ -103,6 +104,17 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai angry]
 表情変更（怒）
 
+[ai 103]
+書き手の短縮記法：[[ai 103] はポーズ 1・表情 03（悲しみ）（envinit.tjs の "shorthands"）
+
+[ai far]
+プリセット：[[ai far] で奥へ、ほかのキャラの後ろに
+
+[ai near]
+[[ai near] で手前へ、前に出します
+
+[ai centerlevel happy]
+
 [ai posright time=500]
 時間指定あり場所移動（→右）
 
@@ -140,14 +152,18 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 
 [ai voice=1]
 【ai】中三マキロン地獄
-[pip xsurprised voice=3]
-【pip】わっ！ 今のは何？
+; [vo]: a voice file from the recording script, whose speaker the game works out (Pip's: pip%s%06d)
+[pip xsurprised]
+[vo pip000003]
+わっ！ 今のは何？
 話している途中でクリックすると、声はぷつりと止まらずにフェードアウトします（設定の 2 ページ目）
 
 [pip neutral voice=4 vol=35]
 【pip】（ひそひそ）いつもこうなの？
 小さな声のセリフ、ささやき：[[pip voice=4 vol=35]
 [pip hide]
+【ai】あ、あなたが[emb exp="kag.heroName()"]さんね。よろしく！
+【hero】こちらこそ、よろしく。
 
 *label6|キャラアクション
 

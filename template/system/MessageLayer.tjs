@@ -1516,6 +1516,14 @@ class NameLayer extends RelativeLayer
 
 	function finalize() {
 
+		try {
+
+			window.stopAction(crossLayer) if crossLayer !== void;
+
+			window.stopAction(this);
+
+		} catch {}
+
 		super.finalize(...);
 
 	}
@@ -1557,8 +1565,34 @@ class NameLayer extends RelativeLayer
 	var valign = -1;
 
 	// Image drawn behind the name ([position nameframe=...]); the layer takes its size
-
 	var frameGraphic = "";
+	// A name too wide for the box ([position namefit=]): "squeeze" draws it narrower, "shrink" in
+	// a smaller size, "" lets it run past the box; namemargin keeps that much clear at each side
+	var fitMode = "";
+	var margin = 0;
+	// The box fades in and out, and crossfades to the next speaker, over fadeTime ms
+	// ([position namefade=]; at once while skipping)
+	var fadeTime = 0;
+	var lastName = "";  // the name on show (redraw)
+	var crossLayer;     // the name before, fading out over the new one
+	var squeezeLayer;   // a name drawn at full width, to squeeze into the box
+	// opacity: the message layer's (subLayersReOpacity), times the fade's
+	var _baseOpacity = 255, _fade = 255;
+	property opacity {
+		getter { return _baseOpacity; }
+		setter(v) { _baseOpacity = v; super.opacity = v * _fade \ 255; }
+	}
+	property fade {
+		getter { return _fade; }
+		setter(v) { _fade = v; super.opacity = _baseOpacity * v \ 255; }
+	}
+	function fading() {
+		return fadeTime > 0 && window.skipMode == SKIP_NONE && !window.skipNoDisp;
+	}
+	// The name drawn again (the window opacity changed)
+	function redraw() {
+		if (visible && lastName != "") drawName(lastName);
+	}
 
 
 
@@ -1585,45 +1619,101 @@ class NameLayer extends RelativeLayer
 	 */
 
 	function processNameText(text) {
-
+		var was = visible ? lastName : "";
 		if (text != "") {
-
-			if (frameGraphic != "") loadImages(frameGraphic);
-
-			else                    fillRect(0, 0, width, height, 0);
-
-			var x = 0, y = 0;
-
-			if (align >= 0) {
-
-				var w = font.getTextWidth(text);
-
-				x = width - w;
-
-				x \= 2 if (align == 0);
-
-			}
-
-			if (valign >= 0) {
-
-				var h = font.getTextHeight(text);
-
-				y = height - h;
-
-				y \= 2 if (valign == 0);
-
-			}
-
-			draw(x, y, text);
-
+			if (fading() && was != "" && was != text) crossFrom(); // the name before fades out over this one
+			drawName(text);
+			var appearing = !visible;
 			visible = true;
+			if (appearing && fading()) fadeTo(0, 255);
+		} else hideName();
+		lastName = text;
+	}
 
-		} else {
-
-			visible = false;
-
+	function drawName(text) {
+		if (frameGraphic != "") {
+			loadImages(frameGraphic);
+			// as transparent as the player's window opacity, where the window follows it
+			var op = owner.followOpacity && typeof window.windowOpacity != "undefined" ? window.windowOpacity : 255;
+			if (op < 255) {
+				face = dfAlpha;
+				colorRect(0, 0, imageWidth, imageHeight, 0, op - 255);
+				face = dfAuto;
+			}
 		}
+		else fillRect(0, 0, width, height, 0);
+		var room = width - margin * 2;
+		var w = font.getTextWidth(text), h = font.getTextHeight(text);
+		var size = font.height, squeezed = false;
+		if (w > room && fitMode == "shrink") {
+			while (w > room && font.height > 8) { font.height--; w = font.getTextWidth(text); }
+			h = font.getTextHeight(text);
+		} else if (w > room && fitMode == "squeeze") squeezed = true;
+		var dw = squeezed ? room : w;
+		var x = margin, y = 0;
+		if (align >= 0) {
+			x = margin + room - dw;
+			x = margin + (room - dw) \ 2 if (align == 0);
+		}
+		if (valign >= 0) {
+			y = height - h;
+			y \= 2 if (valign == 0);
+		}
+		if (squeezed) drawSqueezed(x, y, text, w, h, dw);
+		else draw(x, y, text);
+		font.height = size;
+	}
 
+	// a name wider than the box, drawn at its own width on a layer of its own, then narrowed into the box
+	function drawSqueezed(x, y, text, w, h, dw) {
+		var pad = 16; // edges and shadows reach past the text
+		if (squeezeLayer === void) {
+			squeezeLayer = new global.Layer(window, this);
+			squeezeLayer.visible = false;
+		}
+		with (squeezeLayer) {
+			.setImageSize(w + pad * 2, height);
+			.face = dfAuto;
+			.fillRect(0, 0, .imageWidth, .imageHeight, 0);
+			.font.face = font.face, .font.height = font.height, .font.bold = font.bold, .font.italic = font.italic;
+		}
+		with (owner) .drawTextToLayer(squeezeLayer, pad, y, text, .chColor);
+		var hold = holdAlpha;
+		holdAlpha = true;
+		var scale = dw / w;
+		operateStretch(x - (int)(pad * scale), 0, dw + (int)(pad * 2 * scale), height, squeezeLayer, 0, 0, squeezeLayer.imageWidth, height, omAuto, 255, stLinear);
+		holdAlpha = hold;
+	}
+
+	// the name before, over this one, fading out
+	function crossFrom() {
+		if (crossLayer === void) {
+			crossLayer = new global.Layer(window, this);
+			crossLayer.hitThreshold = 256;
+		}
+		with (crossLayer) {
+			.assignImages(this);
+			.setSizeToImageSize();
+			.setPos(0, 0);
+			.opacity = 255;
+			.visible = true;
+		}
+		window.beginAction(crossLayer, %[ opacity:%[ handler:MoveAction, start:255, value:0, time:fadeTime ] ],
+			function { crossLayer.visible = false if crossLayer !== void && isvalid crossLayer; } incontextof this);
+	}
+
+	function fadeTo(from, to, done) {
+		window.beginAction(this, %[ fade:%[ handler:MoveAction, start:from, value:to, time:fadeTime ] ], done);
+	}
+
+	function hideName() {
+		if (visible && fading()) {
+			fadeTo(255, 0, function { visible = false; fade = 255; } incontextof this);
+			return;
+		}
+		window.stopAction(this) if fadeTime > 0;
+		fade = 255;
+		visible = false;
 	}
 
 
@@ -1661,17 +1751,15 @@ class NameLayer extends RelativeLayer
 	}
 
 	function store() {
-
 		var dic = super.store();
-
 		dic.align  = align;
-
 		dic.valign = valign;
-
 		dic.frameGraphic = frameGraphic;
-
+		dic.fitMode = fitMode;
+		dic.margin = margin;
+		dic.fadeTime = fadeTime;
+		dic.lastName = lastName;
 		return dic;
-
 	}
 
 	function restore(dic) {
@@ -1681,6 +1769,11 @@ class NameLayer extends RelativeLayer
 		valign = dic.valign if (dic.valign !== void);
 
 		frameGraphic = dic.frameGraphic !== void ? dic.frameGraphic : ""; // saves from before nameframe have none
+		fitMode = dic.fitMode !== void ? dic.fitMode : "";
+		margin = dic.margin !== void ? +dic.margin : 0;
+		fadeTime = dic.fadeTime !== void ? +dic.fadeTime : 0;
+		lastName = dic.lastName !== void ? dic.lastName : "";
+		fade = 255;
 
 		return super.restore(dic);
 
@@ -2165,6 +2258,7 @@ class MessageLayer extends AnimKAGLayerTransMove
     /*CS*/var frameColor = 0x000000; // Frame color
 
 	/*CS*/var frameOpacity = 128; // Frame opacity
+	var followOpacity = false; // the frame goes as transparent as the player's window opacity says ([position followopacity=true], kag.windowOpacity)
 
 	/*CS*/var marginL = 8; // Left margin
 
@@ -2299,6 +2393,15 @@ class MessageLayer extends AnimKAGLayerTransMove
 	/*CS*/var defaultChColor = 0xffffff; // Default text color
 
 	/*C*/var chColor; // Text color
+	// the colour text is drawn in: chColor, or the player's colour for text read before
+	// (kag.readTextColor, -1: none) where the scenario hasn't set a colour of its own
+	property shownChColor {
+		getter {
+			var rc = typeof window.readTextColor != "undefined" ? window.readTextColor : -1;
+			if (rc < 0 || chColor != defaultChColor || !window.currentTextRead) return chColor;
+			return rc;
+		}
+	}
 
 	/*C*/var defaultAntialiased = true; // Whether to apply anti-aliasing by default
 
@@ -3034,6 +3137,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 	function setCompLayer(lay) { comp = lay; }
+	// the frame's opacity as drawn: frameOpacity, times the player's window opacity when the
+	// layer follows it (kag.windowOpacity, 0-255; Options.tjs)
+	property shownFrameOpacity {
+		getter {
+			if (!followOpacity || typeof window.windowOpacity == "undefined") return frameOpacity;
+			return frameOpacity * window.windowOpacity \ 255;
+		}
+	}
 
 
 
@@ -3046,6 +3157,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		{
 
 			window.updateBeforeCh = 1;
+			var frameOpacity = shownFrameOpacity; // the player's window opacity too (followOpacity)
 
 			if(frameGraphic == "")
 
@@ -3237,6 +3349,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		frameOpacity = +elm.opacity if elm.opacity !== void;
 
+		followOpacity = +elm.followopacity if elm.followopacity !== void;
+		// a window that follows the opacity keeps what each page draws, so a change shows at once
+		// (KAGWindow.applyWindowOpacity: redrawTextIn)
+		redrawTextEnabled = true if followOpacity && !redrawTextEnabled;
+
 		imageModified = true; // To force clear the message layer
 
 		marginL = +elm.marginl if elm.marginl !== void;
@@ -3280,6 +3397,12 @@ class MessageLayer extends AnimKAGLayerTransMove
 			nameLayer.valign   = +elm.namevalign if elm.namevalign  !== void;
 
 			nameLayer.frameGraphic = elm.nameframe if elm.nameframe !== void;
+
+			nameLayer.fitMode  = elm.namefit if elm.namefit !== void;
+
+			nameLayer.margin   = +elm.namemargin if elm.namemargin !== void;
+
+			nameLayer.fadeTime = +elm.namefade if elm.namefade !== void;
 
         } else {
 
@@ -4913,112 +5036,92 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-	// Compatibility for character display fading
-
-	// * Setting this in MessageLayer_config is problematic; set it individually in AfterInit instead.
-
+	// Characters that fade in (kag.textFadeTime, the player's; or hasChFadeLayer set by a game,
+	// which fades each over the text's own speed): each character is drawn on a layer of its own
+	// over the line layer, which fades in and is then drawn into the line layer. Since 0.17.0 a
+	// few such layers take turns (chFadeLayers), so a fade longer than the time between two
+	// characters goes on while the next ones start; chFadeLayer is the one in use
+	var chFadeLayers = [];
+	var chFadeIndex = 0;
+	var chFadeTime = 0; // each character's fade, in ms (0: the text's own speed)
+	var chFadeByPlayer = false; // turned on by the player's text fade (kag.textFadeTime)
+	var chFadeMax = 8;  // layers at most (the oldest is drawn in when they're all fading)
 	property hasChFadeLayer {
-
 		getter { return chFadeLayer !== void; }
-
 		setter(v) {
-
 			if        ( v && chFadeLayer === void) {
-
-				chFadeLayer = new global.KAGLayer(window, lineLayer);
-
-				with (chFadeLayer) {
-
-					.hitType = htMask;
-
-					.hitThreshold = 256; // Fully transparent to mouse
-
-					.type = layerType;
-
-					.name = name + ":Char Fade";
-
-					.setPos(0, 0);
-
-					.visible = true;
-
-				}
-
+				chFadeLayer = newChFadeLayer();
+				chFadeLayers = [ chFadeLayer ];
+				chFadeIndex = 0;
 				resetChFadeLayer();
-
 			} else if (!v && chFadeLayer !== void) {
-
-				invalidate chFadeLayer;
-
+				stopChFade();
+				for (var i = 0; i < chFadeLayers.count; i++) invalidate chFadeLayers[i];
+				chFadeLayers = [];
 				chFadeLayer = void;
-
 			}
-
 		}
-
 	}
-
-	var _chFadeLayerAction;
-
-	function startChFade(time) {
-
+	function newChFadeLayer() {
+		var lay = new global.KAGLayer(window, lineLayer);
+		with (lay) {
+			.hitType = htMask;
+			.hitThreshold = 256; // Fully transparent to mouse
+			.type = layerType;
+			.name = name + ":Char Fade";
+			.setPos(0, 0);
+			.visible = true;
+		}
+		return lay;
+	}
+	// the layer the next character goes on: the next of the turns, drawn in first if it's still
+	// fading; a new one while there are fewer than the fade needs
+	function nextChFadeLayer(time, steptime) {
 		if (!hasChFadeLayer) return;
-
-		var act = _chFadeLayerAction;
-
-		if (act === void)
-
-			act = _chFadeLayerAction = %[ opacity:%[ handler:MoveAction, start:0, value:255, time:0 ] ];
-
-		with (act)         .opacity.time = time;
-
-		with (chFadeLayer) .opacity      = 0;
-
+		var need = steptime > 0 ? (time + steptime - 1) \ steptime + 1 : 1;
+		need = chFadeMax if need > chFadeMax;
+		chFadeIndex = (chFadeIndex + 1) % chFadeLayers.count;
+		if (chFadeIndex == 0 && chFadeLayers.count < need) {
+			chFadeIndex = chFadeLayers.count;
+			chFadeLayers.add(newChFadeLayer());
+			chFadeLayer = chFadeLayers[chFadeIndex];
+			resetChFadeLayer();
+			return;
+		}
+		chFadeLayer = chFadeLayers[chFadeIndex];
+		window.stopAction(chFadeLayer); // still fading: drawn in now
+	}
+	function startChFade(time) {
+		if (!hasChFadeLayer) return;
+		var act = %[ opacity:%[ handler:MoveAction, start:0, value:255, time:time ] ];
+		with (chFadeLayer) .opacity = 0;
 		window.beginAction(chFadeLayer, act, fixChFadeLayer);
-
 	}
-
-	function stopChFade() { window.stopAction(chFadeLayer) if (hasChFadeLayer); }
-
-	function fixChFadeLayer() {
-
-		if (hasChFadeLayer) with (chFadeLayer) {
-
-			lineLayer.operateRect(0, 0, chFadeLayer, 0, 0, .imageWidth, .imageHeight);
-
+	function stopChFade() {
+		for (var i = 0; i < chFadeLayers.count; i++) window.stopAction(chFadeLayers[i]);
+	}
+	function fixChFadeLayer(lay = chFadeLayer) {
+		if (lay !== void && isvalid lay) with (lay) {
+			lineLayer.operateRect(0, 0, lay, 0, 0, .imageWidth, .imageHeight);
 			.fillRect(0, 0, .imageWidth, .imageHeight, 0);
-
+			.opacity = 255;
 		}
-
 	}
-
 	function resetChFadeLayer(init) {
-
-		if (hasChFadeLayer) with (chFadeLayer) {
-
-			if (init) stopChFade();
-
-			var ll = lineLayer, lf = ll.font;
-
+		if (!hasChFadeLayer) return;
+		if (init) stopChFade();
+		var ll = lineLayer, lf = ll.font;
+		for (var i = 0; i < chFadeLayers.count; i++) with (chFadeLayers[i]) {
 			.setImageSize(ll.imageWidth, ll.imageHeight);
-
 			.setSizeToImageSize();
-
 			with (.font) {
-
 				.angle  = lf.angle;
-
 				.bold   = lf.bold;
-
 				.face   = lf.face;
-
 				.height = lf.height;
-
 				.italic = lf.italic;
-
 			}
-
 		}
-
 	}
 
 
@@ -5027,7 +5130,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	{
 
-		stopChFade();
+		if (steptime > 0 && hasChFadeLayer) nextChFadeLayer(chFadeTime > 0 ? chFadeTime : steptime, steptime);
+		else stopChFade();
 
 		storeRedrawTextState("processCh", ch, 0);
 
@@ -5143,6 +5247,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
+		var chColor = shownChColor; // read text in the player's colour
 		if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
 
 		else {
@@ -5211,7 +5316,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		ll.visible = true;
 
-		startChFade(steptime) if (steptime > 0);
+		startChFade(chFadeTime > 0 ? chFadeTime : steptime) if (steptime > 0);
 
 
 
@@ -9241,13 +9346,24 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
+	// text read before shows a mark of its own at the click wait (kag.readMark), where the glyph
+	// has one: <glyph>_read (an image, with its .asd for an animated one)
+	var readGlyphNames = %[];
+	function readGlyph(storage) {
+		if (typeof window.readMark == "undefined" || !window.readMark || !window.currentTextRead) return storage;
+		var r = storage + "_read";
+		if (readGlyphNames[r] === void) readGlyphNames[r] = getExistImageName(r) !== void;
+		return readGlyphNames[r] ? r : storage;
+	}
+
+
 	function showLineBreakGlyph(glyphobj)
 
 	{
 
         // Show line break glyph
 
-        showBreakGlyph(glyphobj, lineBreakGlyph, lineBreakGlyphKey, lineBreakBaseLine);
+        showBreakGlyph(glyphobj, readGlyph(lineBreakGlyph), lineBreakGlyphKey, lineBreakBaseLine);
 
 	}
 
@@ -9259,7 +9375,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// Show page break glyph
 
-		showBreakGlyph(glyphobj, pageBreakGlyph, pageBreakGlyphKey, pageBreakBaseLine);
+		showBreakGlyph(glyphobj, readGlyph(pageBreakGlyph), pageBreakGlyphKey, pageBreakBaseLine);
 
 	}
 
@@ -9635,6 +9751,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		frameOpacity = src.frameOpacity;
 
+		followOpacity = src.followOpacity;
+
 		marginL = src.marginL;
 
 		marginT = src.marginT;
@@ -9821,6 +9939,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 				.frameGraphic = src.nameLayer.frameGraphic;
 
+				.fitMode = src.nameLayer.fitMode;
+
+				.margin = src.nameLayer.margin;
+
+				.fadeTime = src.nameLayer.fadeTime;
+
+				.lastName = src.nameLayer.lastName;
+
 			}
 
         } else {
@@ -9987,6 +10113,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		dic.frameOpacity = frameOpacity;
 
+		dic.followOpacity = followOpacity;
+
 		dic.marginL = marginL;
 
 		dic.marginT = marginT;
@@ -10102,6 +10230,8 @@ class MessageLayer extends AnimKAGLayerTransMove
         frameColor = dic.frameColor if dic.frameColor !== void;
 
 		frameOpacity = dic.frameOpacity if dic.frameOpacity !== void;
+
+		followOpacity = dic.followOpacity if dic.followOpacity !== void;
 
 		marginL = dic.marginL if dic.marginL !== void;
 

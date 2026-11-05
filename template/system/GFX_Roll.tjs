@@ -1,0 +1,229 @@
+// A credits roll: the roll flip type (since 0.17.0; doc/kagex.txt, "Optional parameters for roll";
+// doc/world.txt, roll). A staff list in a text file scrolls up over the layer, over a time of
+// its own or the rest of the music playing:
+//   [image layer=1 page=fore flip=credits fliptype=roll rolltime=bgm visible=true]  a KAG layer
+//   [newlay name=credits roll=credits rolltime=bgm show]                          a World layer
+// The file (credits.txt; a language's own in data/lang/<code>/ stands in for it) holds a line
+// for each name, and these:
+//   # Heading              a heading, larger
+//   (an empty line)        a gap
+//   @size 30               the size of the lines after it
+//   @gap 120               a gap of so many pixels
+//   @image event1 1300 480 a picture beside the text, its left at 1300 and 480 wide, scrolling
+//                          with it (no x: centred, taking its own room)
+// Each frame only the lines in view are drawn, so a long list costs no memory. The trigger
+// rollend goes when the last line has gone, and sf["roll:<file>"] says the roll was seen (a
+// scenario lets a click skip it only then: [waittrig name=rollend canskip=&sf['roll:credits']]).
+// A save keeps how far it got.
+//   rolltime   ms the roll takes, or "bgm": the rest of the track playing (as its end may be
+//              trimmed: rolloffset ms more or less)
+//   rollx      the text's centre (the layer's middle)
+//   rollsize   the names' size (32); headings are 1.3 times
+class RollFlip extends GenericFlip, Layer
+{
+	var FLIP  = global.GenericFlip;
+	var SUPER = global.Layer;
+	var file = "";
+	var options = %[];
+	var stateOptions = [ "rolltime", "rolloffset", "rollx", "rollsize" ];
+	var items = [];            // %[ kind:"text"|"heading"|"image", text, size, y, h, image, x, w ]
+	var total = 0;             // the list's height
+	var duration = 30000;
+	var elapsed = 0;
+	var lastTick;
+	var finished = false;
+	var images = %[];          // name -> a hidden layer holding the picture
+	var canvasWidth, canvasHeight;
+
+	function RollFlip(win) {
+		FLIP.GenericFlip(win);
+		SUPER.Layer(win, win.primaryLayer);
+		name = "RollFlip";
+		visible = false;
+	}
+
+	function finalize() {
+		var names = [];
+		names.assign(images);
+		for (var i = 1; i < names.count; i += 2) invalidate names[i] if names[i] !== void;
+		SUPER.finalize(...);
+		FLIP.finalize();
+	}
+
+	function showFrame() {
+		for (var i = flipLayers.count - 1; i >= 0; i--) flipLayers[i].assignImagesForMovie(this);
+	}
+
+	function storageOf(name) {
+		if (Storages.isExistentStorage(name)) return name;
+		if (Storages.isExistentStorage(name + ".txt")) return name + ".txt";
+		throw new Exception("roll: no file " + name + " (or " + name + ".txt)");
+	}
+
+	// the list, laid out from the top
+	function load(storage) {
+		if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		var lines = [].load(storageOf(storage));
+		items = [];
+		var size = options.rollsize !== void ? +options.rollsize : 32, y = 0;
+		for (var i = 0; i < lines.count; i++) {
+			var l = ((string)lines[i]).trim();
+			if (l == "") { y += size; continue; }
+			if (l.charAt(0) == "@") {
+				var f = l.substr(1).split(" ", , true);
+				switch (f[0]) {
+				case "size": size = +f[1] if f.count > 1; break;
+				case "gap":  y += +f[1] if f.count > 1; break;
+				case "image":
+					if (f.count < 2) break;
+					var img = imageOf(f[1]);
+					if (img === void) break;
+					var w = f.count > 3 ? +f[3] : img.imageWidth, h = img.imageHeight * w \ img.imageWidth;
+					if (f.count > 2) items.add(%[ kind:"image", image:img, x:+f[2], y:y, w:w, h:h ]); // beside the text
+					else {
+						items.add(%[ kind:"image", image:img, x:-1, y:y, w:w, h:h ]);
+						y += h + size;
+					}
+					break;
+				}
+				continue;
+			}
+			var heading = l.charAt(0) == "#";
+			var text = heading ? l.substr(1).trim() : l;
+			var s = heading ? (int)(size * 1.3) : size;
+			items.add(%[ kind:heading ? "heading" : "text", text:text, size:s, y:y, h:s * 3 \ 2 ]);
+			y += s * 3 \ 2;
+		}
+		total = y;
+	}
+
+	function imageOf(name) {
+		if (images[name] !== void) return images[name];
+		var lay = new global.Layer(window, window.primaryLayer);
+		lay.visible = false;
+		try {
+			lay.loadImages(name);
+		} catch (e) {
+			dm("roll: " + name + ": " + e.message);
+			invalidate lay;
+			return;
+		}
+		images[name] = lay;
+		return lay;
+	}
+
+	function flipStart(storage, elm) {
+		elm = %[] if (elm === void);
+		file = storage;
+		name = "Roll:" + storage;
+		(Dictionary.clear incontextof options)();
+		setStateOptions(elm);
+		var prim = window.primaryLayer;
+		canvasWidth = prim.width;
+		canvasHeight = prim.height;
+		setImageSize(canvasWidth, canvasHeight);
+		setSizeToImageSize();
+		load(storage);
+		duration = rollDuration();
+		elapsed = elm.rollelapsed !== void ? +elm.rollelapsed : 0;
+		finished = false;
+		lastTick = void;
+		drawFrame();
+	}
+
+	function setStateOptions(elm) {
+		for (var i = stateOptions.count - 1; i >= 0; i--) {
+			var key = stateOptions[i];
+			options[key] = elm[key] if (elm[key] !== void);
+		}
+	}
+
+	function flipSetOptions(elm) {
+		if (elm === void) return;
+		setStateOptions(elm);
+		duration = rollDuration() if elm.rolltime !== void || elm.rolloffset !== void;
+	}
+
+	// the roll's length: rolltime ms, or the rest of the music playing (bgm)
+	function rollDuration() {
+		var t = options.rolltime, d = 30000;
+		if (t == "bgm") {
+			var b = window.bgm !== void ? window.bgm.currentBuffer : void;
+			if (b !== void && b.totalTime > 0) d = b.totalTime - (b.status == "play" ? b.position : 0);
+		} else if (t !== void) d = +t;
+		if (options.rolloffset !== void) d += +options.rolloffset;
+		return d < 1000 ? 1000 : d;
+	}
+
+	// the lines in view, at elapsed: the list goes from just under the layer to just over it
+	function drawFrame() {
+		var w = canvasWidth, h = canvasHeight;
+		face = dfAuto;
+		fillRect(0, 0, w, h, 0);
+		var t = elapsed / duration;
+		t = 1 if t > 1;
+		var top = h - (int)((h + total) * t); // where the list's top is
+		var cx = options.rollx !== void ? +options.rollx : w \ 2;
+		for (var i = 0; i < items.count; i++) {
+			var it = items[i], y = top + it.y;
+			if (y > h || y + it.h < 0) continue;
+			if (it.kind == "image") {
+				var x = it.x >= 0 ? it.x : cx - (it.w >> 1);
+				operateStretch(x, y, it.w, it.h, it.image, 0, 0, it.image.imageWidth, it.image.imageHeight, omAuto, 255, stLinear);
+				continue;
+			}
+			setYesNoFont(this, it.size);
+			var tw = measureYesNoText(this, it.text);
+			drawYesNoString(this, cx - (tw >> 1), y, it.text, it.kind == "heading" ? 0xd6ccff : 0xffffff, yesnoTextBase);
+		}
+		showFrame();
+	}
+
+	function flipUpdate(tick) {
+		if (finished) return;
+		lastTick = tick if (lastTick === void);
+		var dt = tick - lastTick;
+		if (dt < 33) return;
+		lastTick = tick;
+		dt = 100 if (dt > 100); // after a pause, from where it was
+		elapsed += dt;
+		drawFrame();
+		if (elapsed >= duration) {
+			finished = true;
+			sf["roll:" + Storages.chopStorageExt(file)] = true;
+			window.trigger("rollend");
+		}
+	}
+
+	function flipStore(dic) {
+		if (dic === void) return;
+		dic.file = file;
+		dic.options = %[];
+		(Dictionary.assign incontextof dic.options)(options);
+		dic.elapsed = elapsed;
+	}
+
+	function flipRestore(dic) {
+		if (dic === void) return;
+		var elm = %[];
+		(Dictionary.assign incontextof elm)(dic.options) if (dic.options !== void);
+		elm.rollelapsed = dic.elapsed;
+		flipStart(dic.file, elm);
+	}
+}
+
+// Whether a roll was seen to its end (a click may skip it then)
+function KAGRollSeen(name)
+{
+	return !!sf["roll:" + Storages.chopStorageExt(name)];
+}
+
+GenericFlip.Entry(
+	%[
+		"type"     => "roll",                         // Registration tag ([newlay roll=...]; fliptype=roll)
+		"class"    => RollFlip,
+		"trigger"  => "rollstop",
+		"options"  => [ "rolltime", "rolloffset", "rollx", "rollsize" ],
+		"dtstore"  => true,
+		"keepOnRedraw" => true,
+		]);

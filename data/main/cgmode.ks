@@ -79,6 +79,12 @@
 [button name="cg15" normal="cgmode_thum_normal" exp="tf.cgnum=15" target=*cgview]
 
 [eval exp='setCgmodePageButton()']
+; the music room's track, playing on, with its Stop button (Override.tjs)
+[if exp="roomMusicPlaying()"]
+[locate x=654 y=950]
+[button name="gallery_stop" normal="musicmode_stop_normal" over="musicmode_stop_over" exp="galleryStop()" target=*loop]
+[endif]
+[eval exp='galleryPlayer()']
 [trans method=crossfade time=500]
 [wt]
 [current layer=message0 page=fore]

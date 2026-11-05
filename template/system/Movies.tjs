@@ -1,0 +1,249 @@
+/**
+ * Movies as commercial games play them, and subtitles (since 0.17.0; doc/kagex.txt, "Movies").
+ *
+ *   [movie storage=opening alpha=2 song=bgm02 color=0x000000 skip=seen]
+ *
+ * plays a movie over everything but the prompts, on a KAG layer (the last one, or layer=), and
+ * waits for its end. It's noted as seen (sf["movie:<name>"]) when it ends or is skipped; a
+ * click skips it only once it has been seen (skip=always: any time), and the right button too
+ * when Config says so; skip mode stops before an unseen one and passes a seen one when Config
+ * says so. song= unlocks that music in the music room (sf["bgm_<NAME>"]); color= fills the
+ * screen behind it. A movie with a smaller version, <name>_sd, plays that when Config's Movie
+ * Quality says so, or on its own on the web, Android and iOS (kag.movieQuality "auto").
+ *
+ * Subtitles: a movie on a layer with subtitle=true ([movie] has it) shows the cues of
+ * <name>.vtt (WebVTT; a language's own in data/lang/<code>/ stands in for it) at the bottom of
+ * the screen in the message text's look, timed from the movie, and tells screen readers each
+ * one; subtitle=<file> names another file. Config can turn them off.
+ */
+
+// ---- subtitles --------------------------------------------------------------------------
+class KAGSubtitles
+{
+	var window, movie, cues = [], layer, timer, shown = -1;
+
+	function KAGSubtitles(win, movie, storage) {
+		window = win;
+		this.movie = movie;
+		cues = KAGParseVTT(storage);
+		timer = new Timer(onTimer, "");
+		timer.interval = 50;
+		timer.enabled = cues.count > 0;
+	}
+
+	function finalize() {
+		invalidate timer;
+		invalidate layer if layer !== void;
+	}
+
+	function stop() {
+		timer.enabled = false;
+		layer.visible = false if layer !== void;
+		shown = -1;
+	}
+
+	function onTimer() {
+		if (!isvalid movie) return stop();
+		var on = KAGOptionGet("subtitles");
+		var t = movie.position, cue = -1;
+		if (on === void || on) for (var i = 0; i < cues.count; i++) if (t >= cues[i].from && t < cues[i].to) { cue = i; break; }
+		if (cue == shown) return;
+		shown = cue;
+		if (cue < 0) {
+			layer.visible = false if layer !== void;
+			return;
+		}
+		draw(cues[cue].text);
+		KAGA11y.announce(cues[cue].text) if typeof global.KAGA11y != "undefined";
+	}
+
+	function draw(text) {
+		if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		if (layer === void) {
+			layer = new global.Layer(window, window.primaryLayer);
+			layer.hitType = htProvince;
+			layer.hitThreshold = 256;
+			layer.absolute = 1500001; // over the movie ([movie]'s layer)
+		}
+		var lines = text.split("\n"), size = 40, lh = size + 14;
+		setYesNoFont(layer, size);
+		var w = 0;
+		for (var i = 0; i < lines.count; i++) { var tw = measureYesNoText(layer, lines[i]); w = tw if tw > w; }
+		var pw = w + 64, ph = lh * lines.count + 24;
+		layer.setImageSize(pw, ph);
+		layer.setSizeToImageSize();
+		layer.fillRect(0, 0, pw, ph, 0x80000000);
+		for (var i = 0; i < lines.count; i++) {
+			var tw = measureYesNoText(layer, lines[i]);
+			drawYesNoString(layer, (pw - tw) >> 1, 12 + lh * i, lines[i], 0xffffff, yesnoTextBase);
+		}
+		var prim = window.primaryLayer;
+		layer.setPos((prim.width - pw) >> 1, prim.height - ph - 48);
+		layer.visible = true;
+	}
+}
+
+// The cues of a WebVTT file: [ %[ from, to (ms), text ] ]
+function KAGParseVTT(storage)
+{
+	var cues = [];
+	if (storage === void || !Storages.isExistentStorage(storage)) return cues;
+	var lines = [].load(storage);
+	var time = /^\s*((?:[0-9]+:)?[0-9]+:[0-9]+[.,][0-9]+)\s*-->\s*((?:[0-9]+:)?[0-9]+:[0-9]+[.,][0-9]+)/;
+	for (var i = 0; i < lines.count; i++) {
+		var m = time.exec(lines[i]);
+		if (m.count == 0) continue;
+		var text = [];
+		for (i++; i < lines.count && ((string)lines[i]).trim() != ""; i++) text.add(((string)lines[i]).replace(/<[^>]*>/g, ""));
+		cues.add(%[ from:KAGVTTTime(m[1]), to:KAGVTTTime(m[2]), text:text.join("\n") ]);
+	}
+	return cues;
+}
+
+// 00:01.500 (or 1:00:01,500) in ms, read digit by digit: the engine takes a number with a leading
+// 0 as octal, so +"02.400" was 2.5
+function KAGVTTTime(s)
+{
+	var t = 0.0, part = 0.0, scale = 0.0;
+	s = ((string)s).replace(/,/g, ".");
+	for (var i = 0; i < s.length; i++) {
+		var c = s.charAt(i);
+		if (c == ":") { t = t * 60 + part; part = 0.0; scale = 0.0; }
+		else if (c == ".") scale = 1.0;
+		else if (c >= "0" && c <= "9") {
+			var d = #c - #"0";
+			if (scale > 0) { scale /= 10; part += d * scale; }
+			else part = part * 10 + d;
+		}
+	}
+	t = t * 60 + part;
+	return (int)(t * 1000 + 0.5);
+}
+
+// the cue file for a movie: subtitle=<file>, or <name>.vtt beside it
+function KAGSubtitleFile(movie, option)
+{
+	if (option === void || option == "" || option == "false" || option == "0") return;
+	if (option != "true" && option != "1") return option;
+	var name = Storages.chopStorageExt(Storages.extractStorageName(movie)) + ".vtt";
+	return Storages.isExistentStorage(name) ? name : void;
+}
+
+// ---- [movie] ----------------------------------------------------------------------------
+var KAGMoviePlaying;   // %[ key, layer, seen, back, watchdog ] while [movie] plays
+
+// The file to play: <name>_sd for a smaller one, where kag.movieQuality asks for it
+function KAGMovieFile(name)
+{
+	var q = KAGOptionGet("movieQuality");
+	q = "auto" if q === void;
+	var small = q == "small";
+	if (q == "auto") {
+		var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+		small = tag == "web" || tag == "android" || tag == "ios";
+	}
+	if (small) {
+		var sd = Storages.chopStorageExt(name) + "_sd";
+		if (getExistFileNameAutoExtFill(sd, "webm", "mpg", "mpeg", "wmv") != "") return sd;
+	}
+	return name;
+}
+
+function KAGMovieTag(elm)
+{
+	var name = Storages.chopStorageExt(elm.storage), key = "movie:" + name.toLowerCase();
+	var seen = !!sf[key] || !!tf.allseen;
+	if (kag.skipMode != SKIP_NONE) {
+		var pass = KAGOptionGet("movieSkipping");
+		if (seen && (pass === void || pass)) {
+			KAGMovieSongs(elm);
+			return 0; // passed while skipping
+		}
+		if (!seen) kag.cancelSkip(); // an unseen movie stops skip mode
+	}
+	KAGMovieSongs(elm);
+	var n = elm.layer !== void ? (string)elm.layer : (string)(kag.fore.layers.count - 1);
+	var back;
+	if (elm.color !== void) {
+		back = new global.Layer(kag, kag.primaryLayer);
+		back.setImageSize(kag.primaryLayer.width, kag.primaryLayer.height);
+		back.setSizeToImageSize();
+		back.fillRect(0, 0, back.width, back.height, 0xff000000 | +elm.color);
+		back.absolute = 1499999;
+		back.hitThreshold = 256;
+		back.visible = true;
+	}
+	var prim = kag.primaryLayer;
+	kag.tagHandlers.image(%[ layer:n, page:"fore", movie:KAGMovieFile(name), alpha:elm.alpha !== void ? elm.alpha : "0",
+		visible:"true", index:"1500000", dafx:"center", dafy:"center", left:"" + (prim.width >> 1), top:"" + (prim.height >> 1),
+		subtitle:elm.subtitle !== void ? elm.subtitle : "true" ]);
+	var canskip = seen || elm.skip == "always";
+	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount() ];
+	// a movie that never shows a frame (no decoder for it here) ends after 3 s
+	var w = new Timer(KAGMovieWatchdog, "");
+	w.interval = 500;
+	w.enabled = true;
+	KAGMoviePlaying.watchdog = w;
+	kag.insertTag("moviedone", %[ layer:n, key:key ]);
+	return kag.tagHandlers.waittrig(%[ name:"lmstop", canskip:canskip ? "true" : "false" ]);
+}
+
+function KAGMovieSongs(elm)
+{
+	if (elm.song !== void) {
+		var songs = ((string)elm.song).split(",");
+		for (var i = 0; i < songs.count; i++) sf["bgm_" + songs[i].trim().toUpperCase()] = true;
+	}
+}
+
+function KAGMovieWatchdog()
+{
+	var p = KAGMoviePlaying;
+	if (p === void) return;
+	var lay = kag.fore.layers[+p.layer], f = lay !== void ? lay.flip : void;
+	var frames = f !== void && typeof f.frames != "undefined" ? f.frames : 1;
+	if (frames == 0 && System.getTickCount() - p.started > 3000) {
+		dm("movie: " + p.key + ": no picture after 3 s, so it ends");
+		p.watchdog.enabled = false;
+		kag.trigger("lmstop");
+	}
+}
+
+function KAGMovieDoneTag(elm)
+{
+	var p = KAGMoviePlaying;
+	KAGMoviePlaying = void;
+	sf[elm.key] = true;
+	if (p !== void) {
+		invalidate p.watchdog if p.watchdog !== void;
+		invalidate p.back if p.back !== void;
+	}
+	kag.tagHandlers.freeimage(%[ layer:elm.layer, page:"fore" ]);
+	return 0;
+}
+
+// the right button skips a seen movie, where Config says so
+function KAGMovieRightClick()
+{
+	var p = KAGMoviePlaying;
+	if (p === void || !p.seen) return false;
+	var on = KAGOptionGet("movieRightClick");
+	if (on !== void && !on) return false;
+	kag.trigger("lmstop");
+	return true;
+}
+
+// Whether a movie was seen ([movie] noted it)
+function KAGMovieSeen(name)
+{
+	return !!sf["movie:" + Storages.chopStorageExt(name).toLowerCase()];
+}
+
+KAGDefineOption(%[ name:"subtitles", label:"Subtitles", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"movieSkipping", label:"Skipping Passes Seen Movies", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"movieRightClick", label:"Right Click Skips Seen Movies", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"movieQuality", label:"Movie Quality", kind:"choice", save:true, initial:"auto",
+	values:[ ["Auto", "auto"], ["Smaller", "small"], ["Full", "full"] ] ]);

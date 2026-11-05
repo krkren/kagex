@@ -1,6 +1,9 @@
 ﻿%[
 
 	"autoLabelSync" => true, // Save point at sync position
+	// Writers' shorthands (since 0.17.0): [ai 102] is pose 1 and face 02, through each
+	// character's "poseCodes" and "faceCodes" (KAGEnvCharacter.doShorthand)
+	"shorthands" => [ %[ "pattern" => "^([0-9])([0-9][0-9][a-z]?)$", "pose" => "$1", "face" => "$2" ] ],
 	// Voices from where the speakers stand (since 0.16.0): a character on the left is heard a
 	// little from the left, one further back further away, through the engine's 3D sound as
 	// sounds placed with [se char=] are; the player can centre them again (Config)
@@ -149,6 +152,14 @@
 		"centerlevel"   => %[ "level" => int 1 ],
 
 		"frontlevel" => %[ "level" => int 2 ],
+
+		// Presets that do more at once (since 0.17.0): further back and behind the others, or
+
+		// nearer and in front of them
+
+		"far"  => %[ "level" => int 0, "back"  => true ],
+
+		"near" => %[ "level" => int 2, "front" => true ],
 
 		],
 
@@ -679,6 +690,12 @@
 
 			"defaultPose" => "standard",
 
+			// the shorthands' numbers ("shorthands" above): pose 1, faces 01 to 03
+
+			"poseCodes" => %[ "1" => "standard" ],
+
+			"faceCodes" => %[ "01" => "happy", "02" => "angry", "03" => "sad" ],
+
 			"voiceFile" => "ai%s%06d.ogg",
 
 			"voiceName" => "voice0"
@@ -692,6 +709,15 @@
 		// charinit.csv and fgimage/pip (tools/assets/make_pip.py), so it has no "poses" here.
 
 		// Its eyes blink, and its mouth follows its voice.
+
+		// the hero, whom the player names (namescreen.ks): only a name, shown by an expression
+		// ("&" first: KAGEnvironment.nameAliasOf), the given name the player chose
+
+		"hero" => %[
+
+			"nameAlias" => "&kag.heroName()"
+
+			],
 
 		"pip" => %[
 

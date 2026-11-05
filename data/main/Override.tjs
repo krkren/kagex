@@ -635,41 +635,116 @@ function setConfigPage(page)
 }
 
 /**
- * What a click past a voiced line does to its voice: "stop" it at once, "fade" it out
- * (kag.voiceFadeTime, the slider), or "keep" it playing until the next voice, which fades it
- * (kag.voicecut and kag.voiceFadeOn)
+ * Config's pages after the first: the options of each column, a row each (an option with
+ * rows:2 takes two), laid out from the options table (template/system/Options.tjs)
  */
-function setVoiceCutButton(work=void)
+var configPages = [
+    void, void,
+    [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
+      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
+    [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
+    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
+      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality" ] ]
+    ];
+
+// ---------------------------------------------------------
+// The hero's name (namescreen.ks; the framework's kag.setHeroName). The player's choice is kept
+// in sf (heroName, heroFamily, heroNamed) and put into f at each new game (heroFromSf)
+// ---------------------------------------------------------
+var nameTrigger;
+
+// the fields' values as the screen opens: the name now (the default's in the language shown)
+function nameStart()
 {
-    if (work !== void) {
-        kag.voicecut    = work != "keep";
-        kag.voiceFadeOn = work != "stop";
+    tf.heroGiven  = sf.heroNamed ? kag.heroName()   : tr(kag.defaultName);
+    tf.heroFamily = sf.heroNamed ? kag.heroFamily() : tr(kag.defaultFamily);
+    tf.heroGiven  = sf.heroName   if sf.heroNamed && sf.heroName   !== void && sf.heroName   != kag.defaultName;
+    tf.heroFamily = sf.heroFamily if sf.heroNamed && sf.heroFamily !== void && sf.heroFamily != kag.defaultFamily;
+    tf.nameError = "";
+}
+
+// the rows' titles, the fields' backgrounds and a refused name's reason, on the screen's layer
+function nameInit()
+{
+    var lay = kag.current;
+    if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+    var f = lay.font, face = f.face, height = f.height, bold = f.bold;
+    setYesNoFont(lay, 33);
+    drawYesNoString(lay, 322, 214, tr("Given Name"), 0xffffff, yesnoTextBase);
+    drawYesNoString(lay, 1022, 214, tr("Family Name"), 0xffffff, yesnoTextBase);
+    lay.fillRect(322, 266, 616, 60, 0xffffffff);
+    lay.fillRect(1022, 266, 576, 60, 0xffffffff);
+    setYesNoFont(lay, 26);
+    drawYesNoString(lay, 322, 360, tr("Leave a name empty to use the default."), 0xffffff, yesnoTextBase);
+    if (tf.nameError != "") drawYesNoString(lay, 322, 460, tf.nameError, 0xffe060, yesnoTextBase);
+    f.face = face, f.height = height, f.bold = bold;
+}
+
+function nameButtons()
+{
+    var names = kag.current.names;
+    drawButtonLabel(names.name_default, tr("Default"), [ 0x5025ff, 0xffffff, 0xffffff ], 28);
+    drawButtonLabel(names.name_ok, tr("OK"), [ 0x5025ff, 0xffffff, 0xffffff ], 28);
+}
+
+function nameFocus()
+{
+    var e = kag.current.names["tf.heroGiven"];
+    e.focus() if e !== void;
+}
+
+function nameAgain(label)
+{
+    tf.nameLabel = label;
+    if (nameTrigger === void) nameTrigger = new AsyncTrigger(function { kag.process("namescreen.ks", tf.nameLabel); }, "");
+    nameTrigger.trigger();
+}
+
+function nameDefault()
+{
+    kag.current.commit();
+    tf.heroGiven = tr(kag.defaultName), tf.heroFamily = tr(kag.defaultFamily), tf.nameError = "";
+    nameAgain("*screen");
+}
+
+// OK (or Return in a field): the name, or why it can't be used
+function nameOK()
+{
+    kag.current.commit();
+    var g = tf.heroGiven !== void ? ((string)tf.heroGiven).trim() : "", fa = tf.heroFamily !== void ? ((string)tf.heroFamily).trim() : "";
+    g  = "" if g  == tr(kag.defaultName);   // the default as shown is the default
+    fa = "" if fa == tr(kag.defaultFamily);
+    var why = kag.setHeroName(g, fa);
+    if (why != "") {
+        tf.nameError = why;
+        nameAgain("*screen");
+        return;
     }
-    var cur = !kag.voicecut ? "keep" : kag.voiceFadeOn ? "fade" : "stop";
-    setButtonOver("config_vstop", cur == "stop");
-    setButtonOver("config_vfade", cur == "fade");
-    setButtonOver("config_vkeep", cur == "keep");
+    sf.heroName = kag.flags.name, sf.heroFamily = kag.flags.family, sf.heroNamed = true;
+    tf.nameError = "";
+    nameAgain("*done");
 }
 
-/**
- * Voices from where the speakers stand (envinit.tjs's voice3d), or from the middle
- */
-function setVoicePlacementButton(work=void)
+// a new game: the player's name for the hero
+function heroFromSf()
 {
-    kag.voicePlacement = work if work !== void;
-    setButtonOver("config_vplaced",   kag.voicePlacement);
-    setButtonOver("config_vcentred", !kag.voicePlacement);
+    if (sf.heroNamed) kag.flags.name = sf.heroName, kag.flags.family = sf.heroFamily;
 }
 
-/**
- * Whether the title offers to carry on where the game left off (offerContinue); off, the
- * game doesn't keep the place either
- */
-function setCarryOnButton(work=void)
+// Config: the name screen, and back to this page
+function nameFromConfig()
 {
-    kag.continueOn = work if work !== void;
-    setButtonOver("config_carryon",   kag.continueOn);
-    setButtonOver("config_carryoff", !kag.continueOn);
+    nameStart();
+    kag.process("namescreen.ks", "*fromConfig");
+}
+
+KAGDefineOption(%[ name:"heroName", label:"Your Name", kind:"button", button:"Change", action:function { nameFromConfig(); } ]);
+
+function configOptionsPage()
+{
+    var page = configPages[tf.configPage];
+    KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
 }
 
 /**
@@ -686,14 +761,8 @@ function gotoTitle()
  */
 function configInit()
 {
-    setButtonOver("page1", tf.configPage != 2);
-    setButtonOver("page2", tf.configPage == 2);
-    if (tf.configPage == 2) {
-        setVoiceCutButton();
-        setVoicePlacementButton();
-        setCarryOnButton();
-        return;
-    }
+    for (var i = 1; i < configPages.count; i++) setButtonOver("page" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
+    if (tf.configPage > 1) return; // the options draw themselves (Options.tjs)
     setScreenButton();
     setNoEffectButton();
     setSkipButton();
@@ -752,7 +821,7 @@ function cgInit()
     tf.cgmodelist = cgParser.parseStorage("cglist.csv");
     invalidate cgParser;
 
-    tf.extramode = 1;
+    sf.extramode = 1;
     tf.cgpagenum = 6;
     tf.cgbtnnum  = 16;
     tf.cgmodepage = 0 if tf.cgmodepage === void;
@@ -883,6 +952,61 @@ function setCgmodePageButton(work=void)
             button.visible = true;
         }
     }
+
+    // how many of each page's pictures were found, on its button, and of all of them under the
+    // thumbnails
+    var counts = cgCounts();
+    for (var i=0; i<tf.cgpagenum; i++) {
+        var button = kag.current.names["cgmode_page" + i], c = counts["page" + i];
+        if (button !== void && c !== void) {
+            var text = "%d/%d".sprintf(c[0], c[1]);
+            button.holdAlpha = true;
+            button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+            button.font.height = 22;
+            button.font.bold = true;
+            var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
+            for (var st = 0; st < 3; st++) {
+                var color = st == 0 && i != tf.cgmodepage ? 0x8a74ff : 0xffffff;
+                button.drawText(button.width * st + button.width - w - 18, (button.height - h) \ 2, text, color, 255, true);
+            }
+            button.holdAlpha = false;
+        }
+    }
+    drawScreenText(1654, 966, tr("Found: %d/%d").sprintf(counts.all[0], counts.all[1]), "right");
+}
+
+/**
+ * The CG pictures found: %[ page: [ found, all ] ..., all: [ found, all ] ], each difference
+ * counting as a picture
+ */
+function cgCounts()
+{
+    var counts = %[], all = [ 0, 0 ];
+    for (var i = 0; i < tf.cgmodelist.count; i++) {
+        var info = tf.cgmodelist[i], c = counts[info.page];
+        if (c === void) c = counts[info.page] = [ 0, 0 ];
+        for (var j = 0; j < info.cglist.count; j++) {
+            if (info.cglist[j] === void || info.cglist[j] == "") continue;
+            c[1]++, all[1]++;
+            if (isCgSeenOne(i, j)) c[0]++, all[0]++;
+        }
+    }
+    counts.all = all;
+    return counts;
+}
+
+/**
+ * Text drawn on the screen (the current message layer, whose frame is the screen), in the
+ * dialogs' look: white with a navy outline; align "right" puts its end at x
+ */
+function drawScreenText(x, y, text, align = "left", size = 28)
+{
+    if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+    var layer = kag.current, f = layer.font, face = f.face, height = f.height, bold = f.bold;
+    setYesNoFont(layer, size);
+    if (align == "right") x -= measureYesNoText(layer, text);
+    drawYesNoString(layer, x, y, text, 0xffffff, yesnoTextBase);
+    f.face = face, f.height = height, f.bold = bold;
 }
 
 /**
@@ -968,7 +1092,7 @@ function replayInit()
     var list = replayParser.parseStorage("replaylist.csv");
     invalidate replayParser;
 
-    tf.extramode = 2;
+    sf.extramode = 2;
     tf.recollect = 0;
     tf.cgbtnnum  = 16;
     tf.replayTab = 0 if tf.replayTab === void;
@@ -988,6 +1112,11 @@ function replayInit()
             tab = replayTabs.count;
             replayTabs.add(info.page);
             replayTiles.add([]);
+        }
+        if (info.scene.substring(0, 6) == "movie:") {
+            // a movie, playable once seen ([movie], Movies.tjs)
+            replayTiles[tab].add(%[movie:info.scene.substring(6), alpha:info.target != "" ? info.target : "0", thum:info.thum, title:info.title]);
+            continue;
         }
         var storage = info.scene + ".ks";
         var compiled = typeof global.scnFindCompiled != "undefined" && scnFindCompiled(storage) !== void &&
@@ -1030,6 +1159,7 @@ function replayInit()
 function replayUnlocked(info)
 {
     if (tf.allseen) return true;
+    if (info.movie !== void) return KAGMovieSeen(info.movie);
     if (info.compiled) {
         var r = kag.sflags.envPlayerSceneReaded;
         return r !== void && r[info.scene] !== void && +r[info.scene] > 0;
@@ -1105,7 +1235,7 @@ function drawReplayTile(button, info)
     if (info.thum != "") {
         setCGImage(button, info.thum);
     } else {
-        var thumb = info.compiled ? replaySnapshot(info, pw, ph) : void;
+        var thumb = info.compiled && info.movie === void ? replaySnapshot(info, pw, ph) : void;
         if (thumb !== void) {
             var hold = button.holdAlpha;
             button.holdAlpha = true;
@@ -1192,6 +1322,11 @@ function replayTile(index)
 {
     var info = tf.replaylist[index];
     if (info === void) return;
+    if (info.movie !== void) {
+        tf.movieName = info.movie, tf.movieAlpha = info.alpha;
+        kag.process("moviemode.ks");
+        return;
+    }
     tf.recollect = 1;
     kag.process('loadinit.ks', '', true, true);
     var elm = %[storage:info.storage, target:info.label != "" ? "*" + info.label : "", doneStorage:"replay.ks", doneTarget:""];
@@ -1222,7 +1357,7 @@ function searchAvailable()
 
 function searchInit()
 {
-    tf.extramode = 4;
+    sf.extramode = 4;
     tf.recollect = 0;
     tf.searchText = "" if tf.searchText === void;
     tf.searchPage = 0 if tf.searchPage === void;
@@ -1407,21 +1542,55 @@ class MusicListParser extends CSVParser {
 // --------------------------------------------------------
 
 /**
+ * The music room's tracks (musiclist.csv), read once
+ */
+function musicList()
+{
+    if (tf.musicmodelist === void) {
+        var musicParser = new MusicListParser();
+        tf.musicmodelist = musicParser.parseStorage("musiclist.csv");
+        invalidate musicParser;
+    }
+    return tf.musicmodelist;
+}
+
+/**
+ * The music room's number of a sound file (any extension, any folder), or -1
+ */
+function musicIndexOf(storage)
+{
+    var list = musicList(), name = Storages.chopStorageExt(Storages.extractStorageName(storage)).toLowerCase();
+    for (var i = 0; i < list.count; i++) if (list[i].filename.toLowerCase() == name) return i;
+    return -1;
+}
+
+/**
+ * Whether a track the music room started is playing (it plays on through the CG and Replay
+ * screens, and on the title when it's kept there)
+ */
+function roomMusicPlaying()
+{
+    return tf.musicplaying && tf.playbgmnum !== void && kag.bgm.inPlaying &&
+        musicIndexOf(kag.bgm.playingStorage) == tf.playbgmnum;
+}
+
+/**
  * Music Mode Initialization
  */
 function musicInit()
 {
-    var musicParser = new MusicListParser();
-    tf.musicmodelist = musicParser.parseStorage("musiclist.csv");
-    invalidate musicParser;
+    var playing = roomMusicPlaying();
+    musicList();
 
-    tf.extramode = 3;
+    sf.extramode = 3;
     tf.musicbtnnum  = 12;
-    tf.playbgmnum   = void;
     tf.beforemusic  = void;
-    tf.musicrepeat  = true;
-    tf.musicplaying = false;
-    
+    tf.musicrepeat  = true if tf.musicrepeat === void;
+    if (!playing) {
+        tf.playbgmnum   = void;
+        tf.musicplaying = false;
+    }
+
     // Check flag for already played
     tf.bgmplayflag = [];
     for (var i=0;i<tf.musicmodelist.count;i++) {
@@ -1432,6 +1601,8 @@ function musicInit()
             tf.playbgmnum = i;
         }
     }
+    // the track playing goes on to the next when it ends, as the room left it
+    if (playing) kag.setBgmStop(%[ exp:'playNext();']);
 }
 
 /**
@@ -1441,6 +1612,95 @@ function musicEnd()
 {
     kag.bgm.setLoop(true);
     kag.clearBgmStop();
+}
+
+/**
+ * Leaving Extras for the title (title.ks *backtotitle): the music room's track stops, unless it's
+ * kept as the title's music
+ */
+function extrasLeave()
+{
+    if (!roomMusicPlaying()) return;
+    kag.clearBgmStop();
+    if (keepTitleMusic()) kag.bgm.setLoop(true);
+    else stopBgm();
+}
+
+// ---- the title's music: a track from the music room, kept there ([Keep on Title]) ----
+
+function keepTitleMusic()
+{
+    return sf.titleMusic !== void && sf.titleMusic != "";
+}
+
+/**
+ * Keep the track chosen in the music room as the title's music (on), or not
+ */
+function setTitleMusic(on)
+{
+    if (on && tf.playbgmnum !== void) sf.titleMusic = musicList()[tf.playbgmnum].filename;
+    else sf.titleMusic = void;
+    setButtonOver("musicmode_title", keepTitleMusic());
+}
+
+/**
+ * The title starts (title.ks *dispstart): its kept music, carrying on if it's playing, or none
+ */
+function titleMusicStart()
+{
+    var i = keepTitleMusic() ? musicIndexOf(sf.titleMusic) : -1;
+    if (i < 0 || !(tf.allseen || sf["bgm_" + musicList()[i].filename.toUpperCase()])) {
+        tf.musicplaying = false;
+        kag.tagHandlers.stopbgm(%[]);
+        return;
+    }
+    kag.clearBgmStop();
+    if (!kag.bgm.inPlaying || musicIndexOf(kag.bgm.playingStorage) != i)
+        kag.bgm.play(%[ storage:musicList()[i].filename, loop:true ]);
+    kag.bgm.setLoop(true);
+    tf.musicplaying = true;
+    tf.playbgmnum = i;
+}
+
+/**
+ * The music room's player on the CG and Replay screens (cgmode.ks, replay.ks): the title of the
+ * track playing beside its Stop button
+ */
+function galleryPlayer()
+{
+    if (!roomMusicPlaying()) return;
+    var info = musicList()[tf.playbgmnum];
+    var title = info.title !== void && info.title != "" ? tr(info.title) : info.filename;
+    drawScreenText(884, 966, "♪ " + title);
+}
+
+function galleryStop()
+{
+    stopBgm();
+}
+
+// ---- the title's pictures: the evening one once every demo is done (sf.clear) ----
+
+function titlePictures()
+{
+    var list = [ "title" ];
+    list.add("title_evening") if sf.clear || tf.allseen;
+    return list;
+}
+
+/**
+ * The picture the title shows (title.ks): the one picked with its arrows, if it's unlocked
+ */
+function titlePicture()
+{
+    var list = titlePictures(), i = sf.titlePicture !== void ? list.find(sf.titlePicture) : -1;
+    return list[i < 0 ? 0 : i];
+}
+
+function nextTitlePicture(step)
+{
+    var list = titlePictures(), i = list.find(titlePicture());
+    sf.titlePicture = list[(i + step + list.count) % list.count];
 }
 
 /**
@@ -1468,11 +1728,9 @@ function setMusicmodePageButton()
                 target.visible = true;
                 if (tf.bgmplayflag[i]) {
                     target.enabled = true;
-                    if (i == tf.beforemusic) {
-                        setButtonOver(name, false);
-                    } else if (i == tf.playbgmnum) {
-                        setButtonOver(name, tf.musicplaying);
-                    }
+                    // the track playing lit (comparing with tf.beforemusic, void at first, took
+                    // void as track 1, which then never lit)
+                    setButtonOver(name, tf.musicplaying && tf.playbgmnum !== void && i == tf.playbgmnum);
                 } else {
                     target.enabled = false;
                 }
@@ -1497,6 +1755,7 @@ function updateBgm()
         kag.bgm.exchange(%[ storage:tf.musicmodelist[tf.playbgmnum].filename, time:1000]);
         kag.bgm.setLoop(tf.musicrepeat);
         kag.setBgmStop(%[ exp:'playNext();']);
+        sf.titleMusic = tf.musicmodelist[tf.playbgmnum].filename if keepTitleMusic();
     } else {
         kag.clearBgmStop();
         kag.bgm.fadeOut(%[ time:1000]);

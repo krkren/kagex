@@ -1003,6 +1003,33 @@ class KAGWindow extends Window
 
     /*C*/var voicePlacement = true;
 
+    // The player's reading settings (since 0.17.0; Options.tjs lists them for a Config screen,
+    // and they're kept in scflags):
+
+    /*C*/var windowOpacity = 255;     // message windows with [position followopacity=true] at this opacity (0-255)
+
+    /*C*/var readTextColor = -1;      // text read before in this colour (-1: as written)
+
+    /*C*/var textFadeTime = 0;        // each character fades in over this many ms (0: none)
+
+    /*C*/var autoVoiceWait = 0;       // auto mode waits this many ms after a voice ends
+
+    /*C*/var dramaticMode = "never";  // voiced lines with the message window hidden: "never", "auto" (in auto mode) or "always"
+
+    /*C*/var hideCursorIdle = false;  // the pointer goes when it's been still idleCursorTime ms (desktops)
+
+    var idleCursorTime = 3000;
+
+    /*C*/var userChAutoSpeed = -1;    // text speed in auto mode, as userChSpeed (-1: the same as otherwise)
+
+    /*C*/var autoModeCharWait = 0;    // auto mode waits this many ms more for each character the page showed
+
+    /*C*/var readMark = false;        // text read before gets its own click-wait mark (<glyph>_read, where there is one)
+
+    var currentTextRead = false;      // whether the text on show was read before (setUserSpeed)
+
+    var autoCharCount = 0;            // characters shown since the last click wait (autoModeCharWait)
+
     // Duck BGM when voice is playing
 
     /*C*/var bgmdown = false;
@@ -1196,6 +1223,7 @@ class KAGWindow extends Window
 		setter(v) {
 
 			_skipMode = v;
+			showDramaticHidden() if (v != SKIP_NONE && dramaticHidden); // skipping: the window back (dramatic mode)
 
 			if (v == SKIP_NONE && skipNoDisp) {
 
@@ -4145,6 +4173,7 @@ class KAGWindow extends Window
 	}
 
 	function onMouseMove(x, y) {
+		idleCursorMoved = System.getTickCount(); // hideCursorIdle
 
 		if (pseudoFullScreened && y == 0 && menuBarEnable && menuBarState) trackPseudoMenu();
 
@@ -5904,6 +5933,26 @@ class KAGWindow extends Window
 
         voicePlacement = scflags.voicePlacement if scflags.voicePlacement !== void;
 
+        windowOpacity = scflags.windowOpacity if scflags.windowOpacity !== void;
+
+        readTextColor = scflags.readTextColor if scflags.readTextColor !== void;
+
+        textFadeTime = scflags.textFadeTime if scflags.textFadeTime !== void;
+
+        autoVoiceWait = scflags.autoVoiceWait if scflags.autoVoiceWait !== void;
+
+        dramaticMode = scflags.dramaticMode if scflags.dramaticMode !== void;
+
+        hideCursorIdle = scflags.hideCursorIdle if scflags.hideCursorIdle !== void;
+
+        userChAutoSpeed = scflags.userChAutoSpeed if scflags.userChAutoSpeed !== void;
+
+        autoModeCharWait = scflags.autoModeCharWait if scflags.autoModeCharWait !== void;
+
+        readMark = scflags.readMark if scflags.readMark !== void;
+
+        applyReadingSettings();
+
         bgmdown = scflags.bgmdown if scflags.bgmdown !== void;
 
         bgmdownlevel = scflags.bgmdownlevel if scflags.bgmdownlevel !== void;
@@ -6282,6 +6331,24 @@ class KAGWindow extends Window
         scflags.voiceFadeTime = voiceFadeTime;
 
         scflags.voicePlacement = voicePlacement;
+
+        scflags.windowOpacity = windowOpacity;
+
+        scflags.readTextColor = readTextColor;
+
+        scflags.textFadeTime = textFadeTime;
+
+        scflags.autoVoiceWait = autoVoiceWait;
+
+        scflags.dramaticMode = dramaticMode;
+
+        scflags.hideCursorIdle = hideCursorIdle;
+
+        scflags.userChAutoSpeed = userChAutoSpeed;
+
+        scflags.autoModeCharWait = autoModeCharWait;
+
+        scflags.readMark = readMark;
 
         scflags.bgmdown = bgmdown;
 
@@ -6680,6 +6747,7 @@ class KAGWindow extends Window
 		// If backlay is true, load things that should be loaded to the fore screen into the back screen
 
 		resetWordWrap(); // a restored position may be on the line the word wrap was in
+		showDramaticHidden(); // the window back before the restored state (dramatic mode)
 
 
 
@@ -8889,6 +8957,12 @@ class KAGWindow extends Window
 
 
 	function goToStart()
+	{
+		showDramaticHidden();
+		internalGoToStart();
+	}
+
+	function internalGoToStart()
 
 	{
 
@@ -10778,6 +10852,7 @@ class KAGWindow extends Window
 
 	function callExtraConductor(storage, label, onreturn)
 	{
+		showDramaticHidden(); // a screen over the game: the window back first (dramatic mode)
 		isLeavePeriodEvent = true; // Fire movie period event upon return
 
 		// Call subroutine using extraConductor
@@ -11040,6 +11115,7 @@ class KAGWindow extends Window
 			}
 			reorderLayers(false, true);
 			if(setdefaultfont) setMessageLayerUserFont();
+			applyTextFade(); // the player's text fade (Options.tjs)
 		}
 		numMessageLayers = num;
 	}
@@ -11242,6 +11318,9 @@ class KAGWindow extends Window
 	 */
     function setCurrentMessageLayerVisible(visible, time) {
 		
+		// a window the player (or dramatic mode, for a voiced line) hid stays hidden while the
+		// text goes on drawing into it: the ch and dispname handlers would show it again
+		if (visible && fore.messages[currentNum].invisibleByUser) return false;
 		if (fore.messages[currentNum].visible != visible) {
 			var fadeTime = (time !== void ? +time : messageFadeTime) * effectspeed;
 			if (fadeTime > 0) {
@@ -12625,9 +12704,12 @@ class KAGWindow extends Window
 		// Set user-selected character display speed
 		// Assumes userChSpeed is already set to new value.
 		// Or called to change speed based on read/unread status of label area.
+		currentTextRead = !!getCurrentRead(); // read text's colour and click mark (Options.tjs)
 		if(chUserMode)
 		{
-			if(getCurrentRead())
+			if(autoMode && userChAutoSpeed != -1)
+				chSpeed = userChAutoSpeed; // Auto mode's own speed
+			else if(currentTextRead)
 				chSpeed = userCh2ndSpeed==-1?userChSpeed:userCh2ndSpeed; // Already read
 			else
 				chSpeed = userChSpeed; // Unread
@@ -12734,6 +12816,7 @@ class KAGWindow extends Window
 			}
 			autoMode = false;
 			setMenuAccessibleAll();
+			setUserSpeed(); // the speed outside auto mode (userChAutoSpeed)
 		}
 	}
 
@@ -12756,6 +12839,7 @@ class KAGWindow extends Window
 			}
 		}
 		autoMode = true;
+		setUserSpeed(); // auto mode's own text speed (userChAutoSpeed)
     }
         
 	//--------------------------------------------------------- Wait Related --
@@ -13143,6 +13227,7 @@ class KAGWindow extends Window
 	{
         // Called from primary layer when "Click Action" is not filtered
 		clickCount++ if (!force);
+		if(!force && showDramaticHidden()) return; // dramatic mode: a click shows the window first
 		if(force || !callHook(leftClickHook))
 		{
 			if(messageLayerHiding)
@@ -13950,6 +14035,142 @@ class KAGWindow extends Window
 		return loadBookMarkWithAsk(n);
 	}
 
+	//------------------------------------------------------- The hero's name --
+	// The player names the hero (since 0.17.0): flags.name and flags.family, which [emb] and a
+	// character's nameAlias of "&kag.heroName()" show; while they're the defaults (defaultName,
+	// defaultFamily) the voices that say the name play (isDefaultName, KAGEnvCharacter.getVoice)
+	var heroNameRefused = []; // words a name may not hold (lower case), the game's
+	var heroNameCheck;        // a function(given, family) returning a reason to refuse, or void
+	var heroNameMax = 12;     // characters at most in each
+
+	// The hero's given name (through tr() while it's the default), or the family name
+	function heroName() { return flags.name !== void && flags.name != "" ? flags.name : tr(defaultName); }
+	function heroFamily() { return flags.family !== void && flags.family != "" ? flags.family : tr(defaultFamily); }
+
+	// Names the hero: "" when done, or why not (in the language shown). An empty name is the default
+	function setHeroName(given, family)
+	{
+		given = ((string)given).trim(), family = ((string)family).trim();
+		if (given.length > heroNameMax || family.length > heroNameMax) return tr("That name is too long");
+		var both = (given + " " + family).toLowerCase();
+		for (var i = 0; i < heroNameRefused.count; i++)
+			if (heroNameRefused[i] != "" && both.indexOf(heroNameRefused[i]) >= 0) return tr("That name can't be used");
+		if (heroNameCheck !== void) {
+			var why = heroNameCheck(given, family);
+			if (typeof why == "String" && why != "") return why;
+		}
+		flags.name   = given  != "" ? given  : defaultName;
+		flags.family = family != "" ? family : defaultFamily;
+		return "";
+	}
+
+	//----------------------------------------------------- Reading settings --
+	// The player's reading settings (the variables with windowOpacity; Options.tjs offers them
+	// on a Config screen): applied to the message layers when they change and at start
+
+	function applyReadingSettings()
+	{
+		applyWindowOpacity();
+		applyTextFade();
+		startIdleCursor();
+	}
+
+	// message windows that follow the player's opacity ([position followopacity=true]) draw
+	// their frame again: at once where the page can be drawn again (its text units, with more
+	// than one language), otherwise at the next page
+	function applyWindowOpacity()
+	{
+		for (var p = 0; p < 2; p++) {
+			var msgs = (p ? back : fore).messages;
+			for (var i = 0; i < msgs.count; i++) {
+				var m = msgs[i];
+				if (!m.followOpacity) continue;
+				// the page drawn again over the new frame, from what it recorded (a window that
+				// follows the opacity records it: MessageLayer.setPosition); a page not recorded
+				// gets the new frame at its next clear
+				if (m.redrawTextEnabled && m.numLinks == 0 && m.redrawTextStates.count > 0) {
+					m.imageModified = true; // the replay's clear draws the frame only when it changed
+					m.redrawTextIn(global.KAGLanguage !== void ? KAGLanguage.current : void);
+				}
+				else if (!m.visible) m.redrawFrame(true);
+				else m.imageModified = true;
+				if (m.nameLayer !== void) m.nameLayer.redraw(); // its frame follows too
+			}
+		}
+		callHook(windowOpacityHook, windowOpacity);
+	}
+	var windowOpacityHook = []; // called with the opacity when it changes (the name box follows it)
+
+	// characters fade in over textFadeTime ms on every message layer (MessageLayer.chFadeTime)
+	function applyTextFade()
+	{
+		for (var p = 0; p < 2; p++) {
+			var msgs = (p ? back : fore).messages;
+			for (var i = 0; i < msgs.count; i++) {
+				var m = msgs[i];
+				if (textFadeTime > 0) {
+					m.chFadeTime = textFadeTime;
+					m.hasChFadeLayer = true;
+					m.chFadeByPlayer = true;
+				} else if (m.chFadeByPlayer) {
+					m.chFadeTime = 0;
+					m.hasChFadeLayer = false;
+					m.chFadeByPlayer = false;
+				}
+			}
+		}
+	}
+
+	// Dramatic mode: a voiced line plays with the message window hidden, so the whole scene
+	// shows (dramaticMode "auto": in auto mode, "always"); the window comes back with the next
+	// line that isn't, or on a click (KAGEnvironment's name handler calls this for every line)
+	var dramaticHidden = false;
+	function noteVoicedLine(voiced)
+	{
+		var on = voiced && skipMode == SKIP_NONE && !skipNoDisp && conductor === mainConductor &&
+			(dramaticMode == "always" || (dramaticMode == "auto" && autoMode));
+		if (on) {
+			if (!dramaticHidden && !messageLayerHiding) {
+				setMessageLayerHiddenState(true);
+				dramaticHidden = true;
+			}
+		} else showDramaticHidden();
+	}
+	function showDramaticHidden()
+	{
+		if (!dramaticHidden) return false;
+		dramaticHidden = false;
+		setMessageLayerHiddenState(false);
+		return true;
+	}
+
+	// The pointer goes when it's been still idleCursorTime ms (hideCursorIdle; the engine shows
+	// it again when it moves)
+	var idleCursorTimer;
+	var idleCursorMoved;
+	function startIdleCursor()
+	{
+		if (!isMain) return;
+		if (!hideCursorIdle) {
+			idleCursorTimer.enabled = false if idleCursorTimer !== void;
+			return;
+		}
+		if (idleCursorTimer === void) {
+			idleCursorTimer = new Timer(onIdleCursorTimer, "");
+			idleCursorTimer.interval = 500;
+			add(idleCursorTimer);
+		}
+		idleCursorMoved = System.getTickCount();
+		idleCursorTimer.enabled = true;
+	}
+	function onIdleCursorTimer()
+	{
+		if (!hideCursorIdle || currentDialog !== void) return;
+		if (System.getTickCount() - idleCursorMoved >= idleCursorTime && mouseCursorState == mcsVisible) {
+			try { hideMouseCursor(); } catch (e) { idleCursorTimer.enabled = false; }
+		}
+	}
+
 	//--------------------------------------------------- Languages (Language.tjs) --
 
 	// F9 and the controller's L2: the game in its next language (KAGLanguageList)
@@ -14240,6 +14461,8 @@ class KAGWindow extends Window
 	}
 
 	function waitAuto(waittime, tag, voice=false) {
+		waittime += autoModeCharWait * autoCharCount; // longer after a longer line
+		autoCharCount = 0;
 		waittime *= actskipspeed;
 		if (waittime <= 0) {
 			waittime = 1;
@@ -14280,6 +14503,8 @@ class KAGWindow extends Window
 	}
 
 	function waitAutoClear(waittime, voice=false) {
+		waittime += autoModeCharWait * autoCharCount;
+		autoCharCount = 0;
 		waittime *= actskipspeed;
 		if (waittime <= 0) {
 			waittime = 1;
@@ -14344,6 +14569,7 @@ class KAGWindow extends Window
 		if(autoMode) {
 			return waitAuto(autoModeLineWait, "l", hasCurrentVoice && elm.voicewait);
 		}
+		autoCharCount = 0;
 
 		if(!current.nodeVisible && textWriteEnabled)
 		{
@@ -14388,6 +14614,7 @@ class KAGWindow extends Window
 		if(autoMode) {
 			return waitAuto(autoModePageWait, "p2", hasCurrentVoice);
 		}
+		autoCharCount = 0;
 
 		if(!current.nodeVisible && textWriteEnabled)
 		{
@@ -15705,6 +15932,14 @@ class KAGWindow extends Window
 			break;
 		}
 		if (!afterName && (lineMode <= LINEMODE_LINE || prevEmptyLine)) {
+			if (pendingVo !== void) {
+
+				addParseTag(cd, "dispname", %[name:pendingVo[0].name, voice:pendingVo]); // [vo]: its speaker
+
+				pendingVo = void;
+
+			} else
+
 			addParseTag(cd, "dispname");
 			afterName = true;
 			indentCharacter = void;
@@ -15981,10 +16216,52 @@ class KAGWindow extends Window
 		];
 	
 	var extractTags = %[
+
 	parse:parseParse incontextof this,
+
 	voice:parseVoice incontextof this,
+
 	nextvoice:parseNextVoice incontextof this,
+
+	vo:parseVo incontextof this,
+
 		];
+
+
+
+	// [vo ai000003]: voice files from the recording script, whose speakers the World works out
+
+	// from the characters' voiceFile patterns (KAGEnvironment.voiceSpeaker); the next line is
+
+	// theirs, as if it began with 【ai】 (several speak together; the first one's name shows)
+
+	var pendingVo;
+
+	function parseVo(cd, elm) {
+
+		if (typeof global.world_object == "undefined") return;
+
+		var env = world_object.env, files = env.voiceFilesOf(elm), list = [];
+
+		for (var i = 0; i < files.count; i++) {
+
+			var who = env.voiceSpeaker(files[i]);
+
+			if (who === void) {
+
+				dm("[vo] " + files[i] + ": no character's voiceFile fits it");
+
+				continue;
+
+			}
+
+			list.add(%[ name:who, voice:files[i] ]);
+
+		}
+
+		pendingVo = list.count > 0 ? list : void;
+
+	}
 	
     /*
      * Tag expansion process
@@ -16206,6 +16483,7 @@ class KAGWindow extends Window
 		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			if(currentWithBack) current.comp.processCh(text);
+			autoCharCount += text.length; // auto mode's wait grows with the line (autoModeCharWait)
 			repage = current.processCh(text, chUserMode ? acs : 0);
 			if(repage)
 			{

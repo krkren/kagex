@@ -38,7 +38,9 @@
 
 [clearlayers]
 
-[stopbgm]
+; the music room's track kept as the title's music, or none (Override.tjs)
+
+[eval exp="titleMusicStart()"]
 
 [stopvideo]
 
@@ -78,7 +80,7 @@
 
 [position page=back layer=message1 frame="" left=0 top=0 width=1920 height=1080 visible=false]
 
-[position page=back layer=message0 frame="title" opacity=255 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true]
+[position page=back layer=message0 frame="&titlePicture()" opacity=255 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true]
 
 [current page=back layer=message0]
 
@@ -118,6 +120,20 @@
 
 [button name="exit" exp='kag.close()']
 
+; the arrows that pick the title's picture, once a second one is unlocked
+
+[if exp="titlePictures().count > 1"]
+
+[locate x=1712 y=984]
+
+[button name="title_prev" exp="nextTitlePicture(-1)" target=*titleloop]
+
+[locate x=1800 y=984]
+
+[button name="title_next" exp="nextTitlePicture(1)" target=*titleloop]
+
+[endif]
+
 
 
 [trans method=crossfade time=300]
@@ -136,11 +152,11 @@
 
 *extra
 
-[jump storage="searchmode.ks" cond='tf.extramode == 4']
+[jump storage="searchmode.ks" cond='sf.extramode == 4']
 
-[jump storage="musicmode.ks" cond='tf.extramode == 3']
+[jump storage="musicmode.ks" cond='sf.extramode == 3']
 
-[jump storage="replay.ks"    cond='tf.extramode == 2']
+[jump storage="replay.ks"    cond='sf.extramode == 2']
 
 [jump storage="cgmode.ks"]
 
@@ -149,6 +165,10 @@
 *backtotitle
 
 [rclick enabled=false]
+
+; the music room's track stops, unless it's kept as the title's music
+
+[eval exp="extrasLeave()"]
 
 [stoprecollection]
 
@@ -165,5 +185,11 @@
 [trans method=crossfade time=500]
 
 [wt]
+
+; the hero's name: the player's from before, or the name screen the first time (namescreen.ks)
+
+[eval exp="heroFromSf()"]
+
+[jump storage=namescreen.ks target=*start cond="!sf.heroNamed"]
 
 [jump storage=s0001.ks]

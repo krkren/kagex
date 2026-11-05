@@ -6,6 +6,7 @@
 #   Thumbnail  an image for the tile; empty: the scene's World at its first line, or a play
 #              tile where the World shows nothing there
 #   Title      what the tile says (for *, in place of "Start"); empty: the scene's title
+#   A movie: Scenario movie:<name>, Label its alpha (0, 1 or 2: [movie]), playable once seen
 Characters,char,start,replay_char,Characters
 Characters,char,label6
 Characters,action,*,,Extended Action
@@ -14,3 +15,4 @@ Layers,layer,*,,Extended Layer
 World Layers,envlayer,*,,World Layers
 Transitions,transition,*,,Transitions
 Effects,effect,*,,Effekseer Effects
+Movies,movie:test,2,,Opening
