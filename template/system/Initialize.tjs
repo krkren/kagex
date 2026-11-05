@@ -1143,6 +1143,8 @@ KAGLoadScript("Action.tjs");
 
 KAGLoadScript("MainWindow.tjs");
 
+KAGLoadScript("Options.tjs"); // the player's settings, for Config screens (since 0.17.0)
+
 
 
 // Loading World extension features
@@ -1246,6 +1248,16 @@ if (typeof global.KAGWorldPlugin != 'undefined') {
 	}
 
 }
+
+
+
+// On-screen indicators: the chapter's title, now playing, auto and skip, the voice left (since 0.17.0)
+
+KAGLoadScript("Indicators.tjs");
+
+KAGIndicatorsOf(kag);
+
+kag.tagHandlers.chapter = KAGChapterTag;
 
 
 

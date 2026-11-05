@@ -635,41 +635,23 @@ function setConfigPage(page)
 }
 
 /**
- * What a click past a voiced line does to its voice: "stop" it at once, "fade" it out
- * (kag.voiceFadeTime, the slider), or "keep" it playing until the next voice, which fades it
- * (kag.voicecut and kag.voiceFadeOn)
+ * Config's pages after the first: the options of each column, a row each (an option with
+ * rows:2 takes two), laid out from the options table (template/system/Options.tjs)
  */
-function setVoiceCutButton(work=void)
-{
-    if (work !== void) {
-        kag.voicecut    = work != "keep";
-        kag.voiceFadeOn = work != "stop";
-    }
-    var cur = !kag.voicecut ? "keep" : kag.voiceFadeOn ? "fade" : "stop";
-    setButtonOver("config_vstop", cur == "stop");
-    setButtonOver("config_vfade", cur == "fade");
-    setButtonOver("config_vkeep", cur == "keep");
-}
+var configPages = [
+    void, void,
+    [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
+      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
+    [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
+    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
+      [ ] ]
+    ];
 
-/**
- * Voices from where the speakers stand (envinit.tjs's voice3d), or from the middle
- */
-function setVoicePlacementButton(work=void)
+function configOptionsPage()
 {
-    kag.voicePlacement = work if work !== void;
-    setButtonOver("config_vplaced",   kag.voicePlacement);
-    setButtonOver("config_vcentred", !kag.voicePlacement);
-}
-
-/**
- * Whether the title offers to carry on where the game left off (offerContinue); off, the
- * game doesn't keep the place either
- */
-function setCarryOnButton(work=void)
-{
-    kag.continueOn = work if work !== void;
-    setButtonOver("config_carryon",   kag.continueOn);
-    setButtonOver("config_carryoff", !kag.continueOn);
+    var page = configPages[tf.configPage];
+    KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
 }
 
 /**
@@ -686,14 +668,8 @@ function gotoTitle()
  */
 function configInit()
 {
-    setButtonOver("page1", tf.configPage != 2);
-    setButtonOver("page2", tf.configPage == 2);
-    if (tf.configPage == 2) {
-        setVoiceCutButton();
-        setVoicePlacementButton();
-        setCarryOnButton();
-        return;
-    }
+    for (var i = 1; i < configPages.count; i++) setButtonOver("page" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
+    if (tf.configPage > 1) return; // the options draw themselves (Options.tjs)
     setScreenButton();
     setNoEffectButton();
     setSkipButton();

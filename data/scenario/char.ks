@@ -16,6 +16,7 @@ Character appearance
 
 【ai】Name display, text display, and key input wait are automatically performed in the prescribed format.
 【ai/???】To change the display name, just write the display name after the slash.
+【ai/Ai, Who Has an Unusually Long Name Today】A name too long for its box is squeezed to fit ([position namefit=squeeze]).
 【ai】If a voice number is specified, the voice will be played along with the text.
 【ai】Processing wait during auto-play is also automatically adjusted. The voice will play in the next text.
 

@@ -65,14 +65,6 @@ LABELS = {
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
-        # config, the second page
-        "When You Click": "クリックしたとき", "Fade": "フェード", "Keep": "そのまま",
-        "Fade Length": "フェードの長さ", "Short": "短い", "Long": "長い", "Voice Position": "ボイスの位置",
-        "With Speaker": "立ち位置から", "Centred": "中央", "Carry On at Start": "起動時に続きから",
-        "On": "オン", "Off": "オフ", "Quick Saves": "クイックセーブ",
-        "Q.SAVE or Shift+S: a quick save": "Qセーブ / Shift+S：クイックセーブ",
-        "Q.LOAD or Shift+L: the newest one": "Qロード / Shift+L：最新のものをロード",
-        "The last three are kept.": "最新の 3 つまで残ります。",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
@@ -561,10 +553,17 @@ def make_message():
             frames.paste(break_glyph(direction, e), 43 * i, 0)
         frames.save(out(os.path.join(SYSTEM, name + "_a.png"), False))
         break_glyph(direction, 1.0).save(out(os.path.join(SYSTEM, name + ".png"), False))
+        # the same for text read before (kag.readMark; MessageLayer.readGlyph): lavender
+        frames = Canvas(43 * 16, 43)
+        for i in range(16):
+            frames.paste(break_glyph(direction, math.sin(i / 15 * math.pi / 2), read=True), 43 * i, 0)
+        frames.save(out(os.path.join(SYSTEM, name + "_read_a.png"), False))
+        break_glyph(direction, 1.0, read=True).save(out(os.path.join(SYSTEM, name + "_read.png"), False))
 
 
-def break_glyph(direction, e):
-    """a white triangle with a violet outline, fading in and moving 5 px as e goes 0 -> 1"""
+def break_glyph(direction, e, read=False):
+    """a white triangle with a violet outline, fading in and moving 5 px as e goes 0 -> 1
+    (lavender for text read before)"""
     c = Canvas(43, 43)
     a = int(255 * (0.3 + 0.7 * e))
     m = 5 * e
@@ -573,7 +572,7 @@ def break_glyph(direction, e):
     else:
         pts = [(13 + m, 8.5), (13 + m, 33.5), (29 + m, 21)]
     c.stroke(pts, 6, rgba(VIOLET, a), closed=True)
-    c.polygon(pts, rgba(WHITE, a))
+    c.polygon(pts, rgba(LAV if read else WHITE, a))
     return c
 
 
@@ -635,44 +634,28 @@ def make_config():
                         ("config_controls", "Controls")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
-    make_config2()
+    make_config_pages()
 
 
-# the second page (config.ks *page2; its tabs are the save screens' page1 and page2): voices on
-# the left, saves on the right, three rows each
-def make_config2():
+# the pages of options (config.ks *options: pages 2 to 4): two empty panels of six rows; the
+# rows' titles, buttons' labels and dividers are drawn at run time from the options table
+# (template/system/Options.tjs), on blank buttons and the slider's track
+def make_config_pages():
     c = Canvas(1920, 1080)
     screen_bg(c)
     header(c, L("Config"))
-    rows = 3
-    bottom = CFG_TOP + CFG_ROW * rows
-    columns = ((CFG_L, ["When You Click", "Fade Length", "Voice Position"]),
-               (CFG_R, ["Carry On at Start", "Quick Saves", None]))
-    for x0, labels in columns:
-        c.panel((x0, CFG_TOP, x0 + CFG_W, bottom))
-        for i, label in enumerate(labels):
-            top = CFG_TOP + CFG_ROW * i
-            if label is None:
-                continue
-            if i:
-                c.rrect((x0 + 24, top - 1, x0 + CFG_W - 24, top + 1), 1, fill=rgba(WHITE, 120))
-            outlined(c, (x0 + 32, top + 8), L(label), 33)
-    # the fade's slider, as page 1's (config.ks: its tab's centre travels from x 417 to 803)
-    sx, cy = CFG_L + 112, CFG_TOP + CFG_ROW + 90
-    outlined(c, (sx - 12, cy), L("Short"), 26, anchor="rm", stroke=2.5)
-    outlined(c, (sx + 416 + 12, cy), L("Long"), 26, anchor="lm", stroke=2.5)
-    c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
-    # how quick saves work, under their row's title
-    for i, line in enumerate(("Q.SAVE or Shift+S: a quick save", "Q.LOAD or Shift+L: the newest one",
-                              "The last three are kept.")):
-        outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW + 72 + 44 * i), L(line), 26, stroke=2.5)
-    c.save(out("config2_base.png"), opaque=True)
-
-    for name, label, w in (("vstop", "Stop", 180), ("vfade", "Fade", 180), ("vkeep", "Keep", 180),
-                           ("vplaced", "With Speaker", 240), ("vcentred", "Centred", 240),
-                           ("carryon", "On", 240), ("carryoff", "Off", 240)):
+    for x0 in (CFG_L, CFG_R):
+        c.panel((x0, CFG_TOP, x0 + CFG_W, CFG_TOP + CFG_ROW * 6))
+    c.save(out("config_pages_base.png"), opaque=True)
+    if LANG != "en":
+        return
+    for w in (240, 180, 130):
         for st in ("normal", "over"):
-            button(w, 60, L(label), st, size=28).save(out("config_%s_%s.png" % (name, st)))
+            button(w, 60, "", st).save(out("config_choice%d_%s.png" % (w, st), False))
+    # the slider's track (Options.tjs draws it under a slider), as page 1's
+    t = Canvas(416, 20)
+    t.rrect((6, 3, 410, 17), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
+    t.save(out("config_track.png", False))
 
 
 def nav_button(label, st, w=180):
@@ -958,6 +941,14 @@ def make_dialog():
     c = Canvas(128, 128)
     c.panel((0, 0, 116, 116), r=14, shadow=12)
     c.save(os.path.join(SYSTEM, "dialog_panel.png"))
+
+    # the Yes/No prompt's "Don't ask again" box (drawYesNoCheck draws its label and its tick)
+    for st, border in (("normal", VIOLET), ("over", NAVY)):
+        c = Canvas(360, 44)
+        if st == "over":
+            c.rrect((0, 0, 44, 44), 10, fill=rgba(WHITE, 110))
+        c.rrect((4, 4, 40, 40), 8, fill=rgba(WHITE), outline=rgba(border), width=4)
+        c.save(os.path.join(SYSTEM, "dialog_check_%s.png" % st))
 
 
 # --- the star in the World demo --------------------------------------------------------

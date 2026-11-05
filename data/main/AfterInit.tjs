@@ -58,3 +58,7 @@ kag.canRestore = function()
 {
     return origCanRestore() && !inSystemMenu(this);
 } incontextof kag;
+
+// On-screen indicators (Indicators.tjs): each compiled scene's title shows in a corner as it
+// starts, and the music's title (musiclist.csv) when it changes
+kag.indicators.chapterFromScenes = true;

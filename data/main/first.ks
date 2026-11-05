@@ -90,17 +90,9 @@ function initialEnvironment()
 
     kag.setVoiceOn('voice5', true);
 
-    // Config's second page
+    // Config's other pages: every option of the options table (template/system/Options.tjs)
 
-    kag.voicecut       = false; // a voice plays on until the next one, which fades it out
-
-    kag.voiceFadeOn    = true;
-
-    kag.voiceFadeTime  = 300;
-
-    kag.voicePlacement = true;
-
-    kag.continueOn     = true;
+    KAGResetOptions();
 
 }
 

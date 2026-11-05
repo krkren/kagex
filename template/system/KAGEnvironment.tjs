@@ -92,6 +92,7 @@ class KAGEnvironment extends KAGEnvTrans {
 	var playVoiceCount;
 	
 	function onStartVoice(name) {
+		voiceAfterTimer.enabled = false if voiceAfterTimer !== void;
 		playVoiceCount++;
 		if (playVoiceCount == 1) { // the first voice playing (it was == 0, so the BGM never went down)
 			env.setBGMDown(true);
@@ -105,7 +106,22 @@ class KAGEnvironment extends KAGEnvTrans {
 			playVoiceCount = 0;
 			env.setBGMDown(false);
 			trigger("env_voice");
+			// auto mode goes on kag.autoVoiceWait ms after the voices end (world.checkVoiceWait)
+			var wait = typeof kag.autoVoiceWait != "undefined" ? +kag.autoVoiceWait : 0;
+			if (wait > 0) {
+				if (voiceAfterTimer === void) {
+					voiceAfterTimer = new Timer(onVoiceAfter, "");
+				}
+				voiceAfterTimer.interval = wait;
+				voiceAfterTimer.enabled = true;
+			} else trigger("env_voice_after");
 		}
+	}
+
+	var voiceAfterTimer;
+	function onVoiceAfter() {
+		voiceAfterTimer.enabled = false;
+		trigger("env_voice_after");
 	}
 
 	function setBGMDown(mode) {
@@ -608,6 +624,7 @@ class KAGEnvironment extends KAGEnvTrans {
      * Finalizer
      */
     function finalize() {
+		invalidate voiceAfterTimer if voiceAfterTimer !== void;
 		initEnv();
 		invalidate characters;
 		invalidate characterList;
@@ -2369,6 +2386,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 		// Register voice in history
 		if (!skipNoDisp) {
+			var voiced = false; // dramatic mode (kag.noteVoicedLine)
 			if (kag.historyWriteEnabled && nextVoiceList.count > 0) {
 				kag.historyLayer.setNewAction(kag.getVoicePlayingScript(nextVoiceList));
 			}
@@ -2396,9 +2414,11 @@ class KAGEnvironment extends KAGEnvTrans {
 							playVoice(info.name, voice, true, info) if (!info.noplay);
 						}
 					}
+					voiced = playVoiceCount > 0;
 				}
 				nextVoiceList.clear();
 			}
+			kag.noteVoicedLine(voiced) if typeof kag.noteVoicedLine != "undefined";
 			talkWaitOrigin = System.getTickCount();
 			talkWaitCount = 0;
 		} else {

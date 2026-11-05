@@ -1,0 +1,311 @@
+/**
+ * The player's settings, declared once (since 0.17.0). Each option has a name, an English label
+ * (shown through tr()), a kind and how to read and change it; a Config screen lays its rows out
+ * from the table (KAGOptionColumn), Default puts them back (KAGResetOptions), and they're kept
+ * where the property they set is kept (scflags), or in scflags["option:<name>"] for an option of
+ * the game's own with save:true. A game adds options with KAGDefineOption in AfterInit.tjs.
+ *
+ *   name      what scripts call it
+ *   label     its row's title, in English (tr() shows it in the language of the game)
+ *   kind      "toggle" (two buttons), "choice" (two to four buttons), "slider", "button" (one
+ *             button that runs action), "note" (lines of text, rows: how many rows they take)
+ *   prop      a property of kag it reads and sets, or getValue/setValue functions
+ *   apply     a method of kag called after a change (applyWindowOpacity ...)
+ *   values    [ [label, value], ... ] for a toggle or a choice
+ *   min, max, step, ends   a slider's range and the words at its two ends
+ *   initial   the value Default and the first start give it
+ *   button, action, enabled   a button's label, what it does, and whether it can be pressed
+ *   lines     a note's lines (English, through tr())
+ *   rows      the rows it takes (1)
+ */
+var KAGOptions = %[];
+
+function KAGDefineOption(o)
+{
+	o.rows = 1 if o.rows === void;
+	// a function written in the table has no object of its own, so called as the option's member
+	// it would run with the option as this, where kag and every global are void: the global
+	// object instead (as KAGWindow.keyBindingFunction does)
+	var keys = [ "getValue", "setValue", "action", "enabled" ];
+	for (var i = 0; i < keys.count; i++) {
+		var f = o[keys[i]];
+		if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
+			Scripts.getObjectContext(f) === null) o[keys[i]] = f incontextof global;
+	}
+	KAGOptions[o.name] = o;
+	return o;
+}
+
+function KAGOptionGet(name)
+{
+	var o = KAGOptions[name];
+	if (o === void) return;
+	if (o.getValue !== void) return o.getValue();
+	if (o.prop !== void) return kag[o.prop];
+	if (o.save) return kag.scflags["option:" + name];
+}
+
+// apply: false while a slider is dragged (the option's apply runs when it's let go)
+function KAGOptionSet(name, v, apply = true)
+{
+	var o = KAGOptions[name];
+	if (o === void) return;
+	if (o.setValue !== void) o.setValue(v);
+	else if (o.prop !== void) kag[o.prop] = v;
+	if (o.save) kag.scflags["option:" + name] = v;
+	if (!apply) return;
+	if (o.apply !== void) kag[o.apply]();
+	for (var i = 0; i < KAGOptionHook.count; i++) KAGOptionHook[i](name, v);
+}
+var KAGOptionHook = []; // functions called with (name, value) after an option changes
+
+// Puts the options back as they were at the first start (names: the ones to reset, void: all)
+function KAGResetOptions(names)
+{
+	if (names === void) {
+		names = [];
+		names.assign(KAGOptions);
+		for (var i = names.count - 2; i >= 0; i -= 2) names.erase(i + 1);
+	}
+	for (var i = 0; i < names.count; i++) {
+		var o = KAGOptions[names[i]];
+		if (o !== void && o.initial !== void) KAGOptionSet(o.name, o.initial);
+	}
+}
+
+// The value index of a toggle or a choice (the nearest value, for numbers)
+function KAGOptionIndex(o, v)
+{
+	var best = 0, d;
+	for (var i = 0; i < o.values.count; i++) {
+		var w = o.values[i][1];
+		if (w === v || (typeof w == typeof v && w == v)) return i;
+		if ((typeof w == "Integer" || typeof w == "Real") && (typeof v == "Integer" || typeof v == "Real")) {
+			var e = Math.abs(w - v);
+			if (d === void || e < d) d = e, best = i;
+		}
+	}
+	return best;
+}
+
+// Text speed in ms a character for a slider from 0 to 10: 0 the slowest (chSpeeds.slow), 10 at once
+function KAGSpeedOfSlider(v) { return (10 - v) * (kag.chSpeeds.slow / 10); }
+function KAGSliderOfSpeed(s) { return 10 - s / (kag.chSpeeds.slow / 10); }
+
+// ---------------------------------------------------------------------------------------
+// The framework's own options
+// ---------------------------------------------------------------------------------------
+KAGDefineOption(%[ name:"voiceCut", label:"When You Click", kind:"choice", initial:"keep",
+	values:[ ["Stop", "stop"], ["Fade", "fade"], ["Keep", "keep"] ],
+	getValue:function { return !kag.voicecut ? "keep" : kag.voiceFadeOn ? "fade" : "stop"; },
+	setValue:function(v) { kag.voicecut = v != "keep"; kag.voiceFadeOn = v != "stop"; } ]);
+KAGDefineOption(%[ name:"voiceFadeTime", label:"Fade Length", kind:"slider", prop:"voiceFadeTime", initial:300,
+	min:100, max:1000, step:50, ends:[ "Short", "Long" ] ]);
+KAGDefineOption(%[ name:"voicePlacement", label:"Voice Position", kind:"toggle", prop:"voicePlacement", initial:true,
+	values:[ ["With Speaker", true], ["Centred", false] ] ]);
+KAGDefineOption(%[ name:"voiceSpeed", label:"Voice Speed", kind:"choice", prop:"voicespeed", initial:1.0,
+	values:[ ["Slower", 0.8], ["Normal", 1.0], ["Faster", 1.25], ["Fastest", 1.5] ] ]);
+KAGDefineOption(%[ name:"autoVoiceWait", label:"Pause After a Voice (Auto)", kind:"slider", prop:"autoVoiceWait", initial:0,
+	min:0, max:2000, step:100, ends:[ "None", "Long" ] ]);
+KAGDefineOption(%[ name:"dramaticMode", label:"Hide the Window for Voices", kind:"choice", prop:"dramaticMode", initial:"never",
+	values:[ ["Never", "never"], ["In Auto", "auto"], ["Always", "always"] ] ]);
+KAGDefineOption(%[ name:"continueOn", label:"Carry On at Start", kind:"toggle", prop:"continueOn", initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"quickSaves", label:"Quick Saves", kind:"note", rows:2,
+	lines:[ "Q.SAVE or Shift+S: a quick save", "Q.LOAD or Shift+L: the newest one", "The last three are kept." ] ]);
+KAGDefineOption(%[ name:"askAgain", label:"Prompts You Turned Off", kind:"button", button:"Ask Again",
+	action:function { sf.yesnoSkip = void; },
+	enabled:function { if (typeof sf.yesnoSkip != "Object" || sf.yesnoSkip === void) return false; var a = []; a.assign(sf.yesnoSkip); return a.count > 0; } ]);
+KAGDefineOption(%[ name:"hideCursorIdle", label:"Hide the Pointer When Still", kind:"toggle", prop:"hideCursorIdle", apply:"startIdleCursor", initial:false,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"readSpeed", label:"Read Text Speed", kind:"slider", initial:0,
+	min:0, max:10, step:1, ends:[ "Same", "Fast" ],
+	getValue:function { return kag.userCh2ndSpeed < 0 ? 0 : KAGSliderOfSpeed(kag.userCh2ndSpeed); },
+	setValue:function(v) { kag.userCh2ndSpeed = v <= 0 ? -1 : KAGSpeedOfSlider(v); kag.setUserSpeed(); } ]);
+KAGDefineOption(%[ name:"autoSpeed", label:"Text Speed in Auto Mode", kind:"slider", initial:0,
+	min:0, max:10, step:1, ends:[ "Same", "Fast" ],
+	getValue:function { return kag.userChAutoSpeed < 0 ? 0 : KAGSliderOfSpeed(kag.userChAutoSpeed); },
+	setValue:function(v) { kag.userChAutoSpeed = v <= 0 ? -1 : KAGSpeedOfSlider(v); kag.setUserSpeed(); } ]);
+KAGDefineOption(%[ name:"autoCharWait", label:"Auto Wait per Character", kind:"slider", prop:"autoModeCharWait", initial:0,
+	min:0, max:100, step:5, ends:[ "None", "Long" ] ]);
+KAGDefineOption(%[ name:"textFade", label:"Text Fades In", kind:"slider", prop:"textFadeTime", apply:"applyTextFade", initial:0,
+	min:0, max:800, step:50, ends:[ "Off", "Slow" ] ]);
+KAGDefineOption(%[ name:"readColor", label:"Colour of Read Text", kind:"choice", prop:"readTextColor", initial:-1,
+	values:[ ["As Written", -1], ["Grey", 0xb4b0c8], ["Blue", 0x9cd0ff] ] ]);
+KAGDefineOption(%[ name:"readMark", label:"Mark Read Text", kind:"toggle", prop:"readMark", initial:false,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"windowOpacity", label:"Window Opacity", kind:"slider", prop:"windowOpacity", apply:"applyWindowOpacity", initial:255,
+	min:0, max:255, step:5, ends:[ "Clear", "Solid" ] ]);
+KAGDefineOption(%[ name:"afterauto", label:"Auto Mode After a Choice", kind:"toggle", prop:"afterauto", initial:false,
+	values:[ ["Keep", true], ["Stop", false] ] ]);
+KAGDefineOption(%[ name:"afterskip", label:"Skipping After a Choice", kind:"toggle", prop:"afterskip", initial:false,
+	values:[ ["Keep", true], ["Stop", false] ] ]);
+KAGDefineOption(%[ name:"enterSkip", label:"Skip Read Text on Reaching It", kind:"toggle", prop:"enterSkipOnReadedLabel", initial:false,
+	values:[ ["On", true], ["Off", false] ] ]);
+
+// ---------------------------------------------------------------------------------------
+// Rows on a screen: a column of options laid out on a message layer, a row each (KAGOptionStyle)
+// with its title above and its buttons or slider under it. The titles and the buttons' labels
+// are drawn at run time, so a game adds a setting without images of its own: it needs the blank
+// buttons (<button.prefix><width>_normal/_over), the slider's tab and track.
+// ---------------------------------------------------------------------------------------
+var KAGOptionStyle = %[
+	row:130, width:640,
+	label:%[ x:32, y:8, size:33 ],
+	divider:%[ inset:24, color:0xffffff, opacity:120 ],
+	button:%[ prefix:"config_choice", widths:[ 240, 240, 180, 130 ], height:60, gap:16, x:32, y:60, size:28,
+		color:0x5025ff, overColor:0xffffff ],
+	slider:%[ normal:"slidebar", over:"slidebar_over", track:"config_track", x:112, y:60, width:416, height:60, endSize:26 ],
+	note:%[ x:32, y:72, gap:44, size:26 ]
+	];
+
+// The options a layer shows: %[ option name => %[ kind, buttons, slider ] ] (KAGOptionRefresh)
+function KAGOptionControls(layer)
+{
+	if (typeof layer.optionControls != "Object" || layer.optionControls === void) layer.optionControls = %[];
+	return layer.optionControls;
+}
+
+/**
+ * A screen of options: columns, each [ x, top, names ] (KAGOptionColumn), on layer, which forgets
+ * the rows of the page it showed before. The sample's Config pages 2 to 4 are this
+ */
+function KAGOptionPage(layer, columns)
+{
+	layer.optionControls = %[];
+	var f = layer.font, face = f.face, height = f.height, bold = f.bold;
+	for (var i = 0; i < columns.count; i++) KAGOptionColumn(layer, columns[i][0], columns[i][1], columns[i][2]);
+	f.face = face, f.height = height, f.bold = bold; // as the layer had it (setYesNoFont changed it)
+}
+
+/**
+ * Lays out a column of options on layer (a message layer whose frame is the screen), from x, top:
+ * names, a row each (void leaves a row empty; an option with rows:2 takes two). The layer is the
+ * current message layer for the buttons ([locate], [button], [slider])
+ */
+function KAGOptionColumn(layer, x, top, names)
+{
+	if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+	var st = KAGOptionStyle, y = top;
+	for (var i = 0; i < names.count; i++) {
+		var o = names[i] !== void ? KAGOptions[names[i]] : void;
+		if (i > 0) {
+			var d = st.divider;
+			layer.colorRect(x + d.inset, y - 1, st.width - d.inset * 2, 2, d.color, d.opacity);
+		}
+		if (o === void) { y += st.row; continue; }
+		setYesNoFont(layer, st.label.size);
+		drawYesNoString(layer, x + st.label.x, y + st.label.y, tr(o.label), 0xffffff, yesnoTextBase);
+		switch (o.kind) {
+		case "toggle":
+		case "choice":
+		case "button":
+			KAGOptionButtons(layer, o, x, y);
+			break;
+		case "slider":
+			KAGOptionSlider(layer, o, x, y);
+			break;
+		case "note":
+			setYesNoFont(layer, st.note.size);
+			for (var j = 0; j < o.lines.count; j++)
+				drawYesNoString(layer, x + st.note.x, y + st.note.y + st.note.gap * j, tr(o.lines[j]), 0xffffff, yesnoTextBase);
+			break;
+		}
+		y += st.row * o.rows;
+	}
+}
+
+function KAGOptionButtons(layer, o, x, y)
+{
+	var st = KAGOptionStyle.button;
+	var n = o.kind == "button" ? 1 : o.values.count;
+	var w = st.widths[n < st.widths.count ? n : st.widths.count - 1];
+	var c = %[ kind:o.kind, buttons:[], width:w ];
+	KAGOptionControls(layer)[o.name] = c;
+	for (var i = 0; i < n; i++) {
+		layer.locate(x + st.x + (w + st.gap) * i, y + st.y);
+		layer.addButton(%[ name:"option_" + o.name + "_" + i, normal:st.prefix + w + "_normal", over:st.prefix + w + "_over",
+			exp:"KAGOptionPick('" + o.name + "', " + i + ")" ]);
+		c.buttons.add(layer.names["option_" + o.name + "_" + i]);
+	}
+	KAGOptionDrawButtons(o, c);
+}
+
+// The buttons of an option as its value is: the chosen one lit
+function KAGOptionDrawButtons(o, c)
+{
+	var st = KAGOptionStyle.button;
+	var cur = o.kind == "button" ? -1 : KAGOptionIndex(o, KAGOptionGet(o.name));
+	for (var i = 0; i < c.buttons.count; i++) {
+		var b = c.buttons[i];
+		if (b === void || !isvalid b) continue;
+		var base = st.prefix + c.width;
+		var on = i == cur;
+		b.loadButtons(base + (on ? "_over" : "_normal"), base + "_over", base + "_over");
+		var text = tr(o.kind == "button" ? o.button : o.values[i][0]);
+		var bw = b.width, bh = b.height;
+		// smaller where the label is wider than its button (a long word, or a translation)
+		var size = st.size, tw;
+		do { setYesNoFont(b, size); tw = measureYesNoText(b, text); } while (tw > bw - 14 && --size > 14);
+		var th = b.font.getTextHeight(text);
+		var holdAlpha = b.holdAlpha;
+		b.holdAlpha = true;
+		for (var s = 0; s < 3; s++)
+			drawYesNoString(b, bw * s + ((bw - tw) >> 1), (bh - th) >> 1, text, on || s > 0 ? st.overColor : st.color, yesnoLabelBase);
+		b.holdAlpha = holdAlpha;
+		if (o.kind == "button") b.enabled = o.enabled === void || o.enabled();
+	}
+}
+
+function KAGOptionSlider(layer, o, x, y)
+{
+	var st = KAGOptionStyle.slider;
+	var sx = x + st.x, cy = y + st.y + (st.height >> 1);
+	var track = kag.temporaryLayer;
+	try {
+		track.loadImages(st.track);
+		layer.operateRect(sx, cy - (track.imageHeight >> 1), track, 0, 0, track.imageWidth, track.imageHeight);
+	} catch (e) {}
+	setYesNoFont(layer, st.endSize);
+	var lo = tr(o.ends[0]), hi = tr(o.ends[1]);
+	var th = layer.font.getTextHeight(lo);
+	drawYesNoString(layer, sx - 12 - measureYesNoText(layer, lo), cy - (th >> 1), lo, 0xffffff, yesnoTextBase);
+	drawYesNoString(layer, sx + st.width + 12, cy - (th >> 1), hi, 0xffffff, yesnoTextBase);
+	layer.locate(sx, y + st.y);
+	layer.addSlider(%[ name:"option_" + o.name, width:st.width, height:st.height, opacity:0, normal:st.normal, over:st.over,
+		min:o.min, max:o.max, step:o.step, position:KAGOptionGet(o.name),
+		onchangefunc:"KAGOptionSlide", onchangefuncdata:"'" + o.name + "'", nohilight:true ]);
+	KAGOptionControls(layer)[o.name] = %[ kind:"slider", slider:layer.names["option_" + o.name] ];
+}
+
+// a button of an option pressed: its value, or its action
+function KAGOptionPick(name, i)
+{
+	var o = KAGOptions[name];
+	if (o === void) return;
+	if (o.kind == "button") {
+		o.action() if o.action !== void;
+	} else KAGOptionSet(name, o.values[i][1]);
+	KAGOptionRefresh(kag.current);
+}
+
+// a slider moved
+function KAGOptionSlide(position, dragging, name)
+{
+	KAGOptionSet(name, position, !dragging);
+}
+
+// The rows on layer drawn again as the options are now (after a change, or Default)
+function KAGOptionRefresh(layer)
+{
+	if (layer === void || !isvalid layer || typeof layer.optionControls != "Object" || layer.optionControls === void) return;
+	var names = [];
+	names.assign(layer.optionControls);
+	for (var i = 0; i < names.count; i += 2) {
+		var o = KAGOptions[names[i]], c = names[i + 1];
+		if (o === void) continue;
+		if (c.kind == "slider") {
+			if (c.slider !== void && isvalid c.slider) c.slider.position = KAGOptionGet(o.name);
+		} else KAGOptionDrawButtons(o, c);
+	}
+}

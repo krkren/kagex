@@ -2822,6 +2822,133 @@ def sample_steps(eng):
             raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
                              " over the message window and letting the pointer through: %s" % r)
 
+    @step("Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back")
+    def _():
+        if eng.tjs('return typeof global.KAGOptionPage != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the options table)", flush=True)
+            return
+        eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
+        eng.wait("config.ks", 'kag.conductor.curStorage == "config.ks" && kag.inStable', timeout=20)
+        for page in (2, 3):
+            eng.tjs("setConfigPage(%d); return 1;" % page)
+            eng.wait("page %d" % page, "tf.configPage == %d && kag.inStable && typeof kag.current.optionControls == \"Object\"" % page, timeout=20)
+            n = str(eng.tjs('var a = []; a.assign(kag.current.optionControls); return [a.count \\ 2, kag.current.numLinks].join(",");'))
+            print("     page %d: %s options, %s controls" % (page, n.split(",")[0], n.split(",")[1]), flush=True)
+            if int(n.split(",")[0]) < 8:
+                raise SmokeError("Config's page %d has too few option rows: %s" % (page, n))
+        got = str(eng.tjs('KAGOptionPick("readColor", 1); KAGOptionPick("readMark", 0); var r = [kag.readTextColor, kag.readMark];'
+                          ' var b = kag.current.names.option_readColor_1; r.add(b !== void ? b.getMainPixel(b.width \\ 2, 4) : "none");'
+                          ' KAGResetOptions(); KAGOptionRefresh(kag.current); r.add(kag.readTextColor); r.add(kag.readMark); return r.join(",");'))
+        print("     read colour and mark picked, then Default: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] == "-1" or v[1] != "1" or v[3] != "-1" or v[4] != "0":
+            raise SmokeError("a pick didn't set the option, or Default didn't put it back: %s" % got)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=20)
+
+    @step("reading settings: window opacity, text that fades in, dramatic mode, the pause after a voice, Don't ask again")
+    def _():
+        if eng.tjs('return typeof kag.applyWindowOpacity != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the reading settings)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        m = "kag.fore.messages[0]"
+        op = str(eng.tjs('var m = %s, r = [m.followOpacity ? 1 : 0, m.getMaskPixel(m.width \\ 2, 200)]; KAGOptionSet("windowOpacity", 100);'
+                         ' r.add(m.shownFrameOpacity); r.add(m.getMaskPixel(m.width \\ 2, 200)); KAGOptionSet("windowOpacity", 255);'
+                         ' r.add(m.getMaskPixel(m.width \\ 2, 200)); return r.join(",");' % m)).split(",")
+        print("     the window's frame: alpha %s, at opacity 100 %s, back %s" % (op[1], op[3], op[4]), flush=True)
+        if op[0] != "1" or op[2] != "100" or not int(op[3]) < int(op[1]) or op[4] != op[1]:
+            raise SmokeError("the message window doesn't follow the window opacity: %s" % op)
+        fade = str(eng.tjs('KAGOptionSet("textFade", 400); var m = %s; return [m.hasChFadeLayer ? 1 : 0, m.chFadeTime].join(",");' % m))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        time.sleep(0.2)
+        layers = eng.tjs("return %s.chFadeLayers.count;" % m)
+        off = str(eng.tjs('KAGOptionSet("textFade", 0); var m = %s; return [m.hasChFadeLayer ? 1 : 0, m.chFadeLayers.count].join(",");' % m))
+        print("     text fade 400 ms: %s, %s layers taking turns, off: %s" % (fade, layers, off), flush=True)
+        if fade != "1,400" or int(layers) < 2 or off != "0,0":
+            raise SmokeError("text that fades in over 400 ms didn't take turns on its fade layers: %s, %s, %s" % (fade, layers, off))
+        # dramatic mode: a voiced line with the window hidden, a click shows it
+        eng.tjs('KAGOptionSet("dramaticMode", "always"); kag.noteVoicedLine(true); return 1;')
+        hidden = str(eng.tjs('return [kag.dramaticHidden ? 1 : 0, %s.visible ? 1 : 0].join(",");' % m))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        shown = str(eng.tjs('var r = [kag.dramaticHidden ? 1 : 0, %s.visible ? 1 : 0]; KAGOptionSet("dramaticMode", "never"); return r.join(",");' % m))
+        if hidden != "1,0" or shown != "0,1":
+            raise SmokeError("dramatic mode didn't hide the window for a voiced line and show it on a click: %s, %s" % (hidden, shown))
+        # auto mode goes on autoVoiceWait ms after the voices end
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        after = str(eng.tjs('kag.autoVoiceWait = 400; var e = world_object.env; e.stopAllVoice(); e.playVoice("ai", "ai000001", true);'
+                            ' e.stopAllVoice(); return [e.playVoiceCount, e.voiceAfterTimer !== void && e.voiceAfterTimer.enabled ? 1 : 0].join(",");'))
+        time.sleep(0.6)
+        later = eng.tjs("var t = world_object.env.voiceAfterTimer; kag.autoVoiceWait = 0; return t !== void && t.enabled ? 1 : 0;")
+        if after != "0,1" or later != 0:
+            raise SmokeError("the pause after a voice didn't wait its 400 ms: %s, then %s" % (after, later))
+        # Don't ask again: checked and answered Yes, the prompt answers Yes by itself; Ask Again brings it back
+        eng.tjs('global.__smokeYes = 0; askYesNo("Load?", "Confirmation", function { global.__smokeYes++; }); return 1;')
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        box = str(eng.tjs('var d = kag.currentDialog; var r = [d.names.skip !== void ? 1 : 0]; d.processLink(2); r.add(d.skipChecked ? 1 : 0);'
+                          ' d.processLink(0); return r.join(",");'))
+        again = str(eng.tjs('askYesNo("Load?", "Confirmation", function { global.__smokeYes++; });'
+                            ' var r = [__smokeYes, kag.currentDialog === void ? 1 : 0]; KAGOptionPick("askAgain", 0);'
+                            ' r.add(typeof sf.yesnoSkip == "Object" && sf.yesnoSkip !== void ? 1 : 0); return r.join(",");'))
+        if box != "1,1" or again != "2,1,0":
+            raise SmokeError("Don't ask again didn't turn the prompt off, or Ask Again didn't bring it back: %s, %s" % (box, again))
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("the name box: a long name squeezed into it, crossfades between speakers, fades away, follows the window's opacity")
+    def _():
+        if eng.tjs('return typeof kag.fore.messages[0].nameLayer.fitMode != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates names that fit their box)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        n = "kag.fore.messages[0].nameLayer"
+        got = str(eng.tjs('var n = %s; n.processName("Ai, Who Has an Unusually Long Name Today");'
+                          ' return [n.fitMode, n.squeezeLayer !== void ? 1 : 0, n.visible ? 1 : 0].join(",");' % n))
+        if got != "squeeze,1,1":
+            raise SmokeError("a long name wasn't squeezed into the name box (namefit=squeeze): %s" % got)
+        eng.tjs('var n = %s; n.processName("Pip"); global.__smokeCross = n.crossLayer !== void && n.crossLayer.visible ? 1 : 0; return 1;' % n)
+        time.sleep(0.5)
+        cross = str(eng.tjs('var n = %s; return [__smokeCross, n.crossLayer.visible ? 1 : 0].join(",");' % n))
+        eng.tjs('%s.processName(""); return 1;' % n)
+        time.sleep(0.5)
+        gone = str(eng.tjs('var n = %s; return [n.visible ? 1 : 0, n.fade].join(",");' % n))
+        if cross != "1,0" or gone != "0,255":
+            raise SmokeError("the name box didn't crossfade to the next speaker and fade away: %s, %s" % (cross, gone))
+        frame = str(eng.tjs('var n = %s; n.processName("Pip"); var a = n.getMaskPixel(20, 20); KAGOptionSet("windowOpacity", 100);'
+                            ' var b = n.getMaskPixel(20, 20); KAGOptionSet("windowOpacity", 255); n.processName(""); return [a, b].join(",");' % n)).split(",")
+        if not int(frame[1]) < int(frame[0]):
+            raise SmokeError("the name box's frame didn't follow the window opacity: %s" % frame)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("indicators: a compiled scene's title and the music's title show in the corners, auto mode's mark, the voice bar, [chapter stay=true] kept in saves")
+    def _():
+        if eng.tjs('return typeof kag.indicators == "Object" && kag.indicators !== void ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the indicators)", flush=True)
+            return
+        eng.tjs('KAGResetOptions(["chapterTitles", "nowPlaying", "modeMark", "voiceBar"]); kag.indicators.lastScene = void;'
+                ' kag.process("char.ks", "*start"); return 1;')
+        eng.wait("the scene's title and the music's", 'kag.indicators.chapter == "Start" && kag.indicators.chapterLayer.visible'
+                 ' && kag.indicators.playingLayer !== void && kag.indicators.playingLayer.visible', timeout=20)
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        mode = str(eng.tjs('kag.enterAutoMode(); return 1;'))
+        time.sleep(0.3)
+        mode = str(eng.tjs('var i = kag.indicators, r = [i.modeShown, i.modeLayer.visible ? 1 : 0]; kag.cancelAutoMode(); return r.join(",");'))
+        if mode != "AUTO,1":
+            raise SmokeError("auto mode's mark didn't show: %s" % mode)
+        play = eng.tjs('world_object.env.playVoice("ai", "ai000001", true); return world_object.env.characters.ai.soundBuffer.status == "play" ? 1 : 0;')
+        if play == 1:
+            eng.wait("the voice bar", "kag.indicators.voiceLayer !== void && kag.indicators.voiceLayer.visible", timeout=5)
+        eng.tjs("world_object.env.stopAllVoice(); return 1;")
+        kept = str(eng.tjs('KAGChapterTag(%[title:"Chapter One", stay:"true"]); var d = %[]; kag.indicators.onStore(d, void);'
+                           ' kag.indicators.onRestore(%[], true, void); var gone = kag.indicators.chapterLayer.visible ? 0 : 1;'
+                           ' kag.indicators.onRestore(d, true, void); var i = kag.indicators;'
+                           ' var r = [gone, i.chapter, i.chapterLayer.visible ? 1 : 0]; KAGChapterTag(%[]); return r.join(",");'))
+        if kept != "1,Chapter One,1":
+            raise SmokeError("a chapter title with stay=true wasn't kept in the save data: %s" % kept)
+
     @step("quick saves go round their bookmarks, and quick load asks, then loads the newest")
     def _():
         if eng.tjs('return typeof kag.quickSave != "undefined" ? 1 : 0;') != 1:

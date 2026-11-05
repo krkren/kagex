@@ -2832,6 +2832,7 @@ class KAGEnvPlayer
 			// Text
 			curState = curTextId = obj;
 			curRead = getReaded(curTextId);
+			kag.setUserSpeed(); // the text's read state: read-text speed, colour and click mark
 			if (seeking && curSceneName.toLowerCase() == seekScene && curTextId >= seekText) finishSeek();
 			addHistory(curTextId);
 			{

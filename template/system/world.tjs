@@ -692,7 +692,7 @@ class KAGWorldPlugin extends KAGPlugin
 	// If voice is playing, returns the voice wait trigger
 	function checkVoiceWait() {
 		if (env.playVoiceCount > 0) {
-			return "env_voice";
+			return "env_voice_after"; // kag.autoVoiceWait ms after the voices end (KAGEnvironment.onStopVoice)
 		}
 	}
 	

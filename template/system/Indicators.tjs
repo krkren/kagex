@@ -1,0 +1,279 @@
+/**
+ * On-screen indicators (since 0.17.0): the chapter's title in a corner, a "now playing" bar when
+ * the music changes, a mark while auto mode or skipping is on, and a bar on the message window
+ * for how much of the voice is left. A KAG plugin of the window (kag.indicators): the chapter on
+ * show is kept with the save points, so a load, going back and compiled scenes show it as it
+ * was. The player turns each off in Config (Options.tjs: chapterTitles, nowPlaying, modeMark,
+ * voiceBar); they're drawn in the Yes/No prompts' look (YesNoDialogLayer.tjs).
+ *
+ *   [chapter title="Chapter 1" stay=false time=3000]   the chapter's title, gone after time ms,
+ *                                                        or kept with stay=true; [chapter] clears it
+ *   chapterFromScenes   true: a compiled scene's title shows as it starts (the sample's)
+ *   titleList           the music's titles: a CSV of file name (no extension) and title, # comments
+ *                       (the sample's musiclist.csv); a track without a title shows nothing
+ */
+class KAGIndicatorLayer extends Layer
+{
+	var a11yHidden = true; // screen readers skip it
+	function KAGIndicatorLayer(win, par) { super.Layer(...); }
+	function finalize() { super.finalize(...); }
+}
+
+class KAGIndicators extends KAGPlugin
+{
+	var window;
+	var chapterLayer, playingLayer, modeLayer, voiceLayer;
+	var chapter = "";           // the chapter's title on show
+	var chapterStay = false;
+	var chapterTime = 3000;
+	var chapterShown;           // when it was shown (its fade)
+	var chapterFromScenes = false;
+	var lastScene;              // the compiled scene whose title showed last
+	var playingShown;
+	var lastBgm;
+	var quietUntil = 0;         // no "now playing" just after a load
+	var modeShown = "";
+	var titleList = "musiclist.csv";
+	var musicTitles;
+	var timer;
+	var absolute = 3000000;     // above the message layers (1000000 and up), under the backlog (4000000)
+
+	function KAGIndicators(win)
+	{
+		super.KAGPlugin();
+		window = win;
+		timer = new Timer(onTimer, "");
+		timer.interval = 50;
+		timer.enabled = true;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		var layers = [ chapterLayer, playingLayer, modeLayer, voiceLayer ];
+		for (var i = 0; i < layers.count; i++) invalidate layers[i] if layers[i] !== void && isvalid layers[i];
+		super.finalize(...);
+	}
+
+	function on(name) { var v = KAGOptionGet(name); return v === void || v; }
+
+	function newLayer(name)
+	{
+		if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		var lay = new KAGIndicatorLayer(window, window.primaryLayer);
+		lay.name = name;
+		lay.hitType = htProvince; // clicks go through
+		lay.hitThreshold = 256;
+		lay.absolute = absolute;
+		lay.visible = false;
+		return lay;
+	}
+
+	// a card in the prompts' look: a panel with text, w wide (0: the text's width)
+	function drawCard(lay, text, size)
+	{
+		setYesNoFont(lay, size);
+		var tw = measureYesNoText(lay, text), th = lay.font.getTextHeight(text);
+		var w = tw + 72, h = th + 44;
+		lay.setImageSize(w, h);
+		lay.setSizeToImageSize();
+		lay.fillRect(0, 0, w, h, 0);
+		drawYesNoPanel(lay, 0, 0, w, h);
+		drawYesNoString(lay, 32, 16, text, 0xffffff, yesnoTextBase);
+	}
+
+	// ---- the chapter's title ----
+	function showChapter(text, stay = false, time = void)
+	{
+		chapter = text, chapterStay = stay;
+		chapterTime = time !== void ? +time : 3000;
+		if (text == "" || !on("chapterTitles") || window.skipNoDisp) {
+			if (chapterLayer !== void) chapterLayer.visible = false;
+			return;
+		}
+		if (chapterLayer === void) chapterLayer = newLayer("chapter");
+		drawCard(chapterLayer, tr(text), 34);
+		chapterLayer.setPos(40, 36);
+		chapterLayer.opacity = 0;
+		chapterLayer.visible = true;
+		chapterShown = System.getTickCount();
+	}
+
+	// ---- now playing ----
+	function titleOf(storage)
+	{
+		if (musicTitles === void) {
+			musicTitles = %[];
+			try {
+				if (Storages.isExistentStorage(titleList)) {
+					var lines = [].load(titleList);
+					for (var i = 0; i < lines.count; i++) {
+						var l = lines[i];
+						if (l == "" || l.charAt(0) == "#") continue;
+						var f = l.split(",");
+						if (f.count >= 2 && f[1] != "") musicTitles[f[0].toLowerCase()] = f[1];
+					}
+				}
+			} catch (e) { dm("indicators: " + titleList + ": " + e.message); }
+		}
+		var name = Storages.chopStorageExt(Storages.extractStorageName(storage)).toLowerCase();
+		return musicTitles[name];
+	}
+
+	function showPlaying(storage)
+	{
+		var title = titleOf(storage);
+		if (title === void || !on("nowPlaying") || window.skipMode != SKIP_NONE || window.skipNoDisp) return;
+		if (playingLayer === void) playingLayer = newLayer("now playing");
+		drawCard(playingLayer, "♪ " + tr(title), 28);
+		playingLayer.setPos(window.primaryLayer.width - playingLayer.width - 40, 36);
+		playingLayer.opacity = 0;
+		playingLayer.visible = true;
+		playingShown = System.getTickCount();
+	}
+
+	// ---- auto mode and skipping ----
+	function updateMode()
+	{
+		var mode = !on("modeMark") ? "" : window.autoMode ? "AUTO" : window.skipMode >= SKIP_STOP && !window.skipNoDisp ? "SKIP" : "";
+		if (mode == modeShown) return;
+		modeShown = mode;
+		if (mode == "") {
+			if (modeLayer !== void) modeLayer.visible = false;
+			return;
+		}
+		if (modeLayer === void) modeLayer = newLayer("mode");
+		drawCard(modeLayer, tr(mode == "AUTO" ? "Auto" : "Skip"), 26);
+		modeLayer.setPos(window.primaryLayer.width - modeLayer.width - 40, window.primaryLayer.height - modeLayer.height - 40);
+		modeLayer.visible = true;
+	}
+
+	// ---- the voice left ----
+	function playingVoice()
+	{
+		if (typeof global.world_object == "undefined") return;
+		var env = world_object.env, list = env.characterList;
+		for (var i = 0; i < list.count; i++) {
+			var b = list[i].soundBuffer;
+			if (b !== void && b.status == "play" && !b.fading && b.totalTime > 0) return b;
+		}
+	}
+
+	function updateVoice()
+	{
+		var m = window.fore.messages[0], b = on("voiceBar") && m.visible && window.skipMode == SKIP_NONE ? playingVoice() : void;
+		if (b === void) {
+			if (voiceLayer !== void) voiceLayer.visible = false;
+			return;
+		}
+		var w = m.width - 160, h = 8;
+		if (voiceLayer === void) voiceLayer = newLayer("voice");
+		if (voiceLayer.imageWidth != w) {
+			voiceLayer.setImageSize(w, h);
+			voiceLayer.setSizeToImageSize();
+		}
+		var left = 1.0 - b.position / b.totalTime;
+		left = 0 if left < 0;
+		voiceLayer.fillRect(0, 0, w, h, 0x60ffffff);
+		voiceLayer.fillRect(0, 0, (int)(w * left), h, 0xff5025ff);
+		voiceLayer.setPos(m.left + 80, m.top + m.height - 34);
+		voiceLayer.visible = true;
+	}
+
+	function fadeLayer(lay, shown, stay, time)
+	{
+		if (lay === void || !lay.visible) return;
+		var t = System.getTickCount() - shown;
+		if (t < 300) lay.opacity = 255 * t \ 300;
+		else if (stay || t < time) lay.opacity = 255;
+		else if (t < time + 500) lay.opacity = 255 * (time + 500 - t) \ 500;
+		else lay.visible = false;
+	}
+
+	function hideAll()
+	{
+		var layers = [ chapterLayer, playingLayer, modeLayer, voiceLayer ];
+		for (var i = 0; i < layers.count; i++) layers[i].visible = false if layers[i] !== void;
+		modeShown = "";
+	}
+
+	function onTimer()
+	{
+		if (!isvalid window) return;
+		if (window.usingExtraConductor) { hideAll(); return; } // a screen over the game (save, load, config)
+		// a new compiled scene's title (chapterFromScenes)
+		if (chapterFromScenes && typeof global.world_object != "undefined" && world_object.playerWorking && !window.skipNoDisp) {
+			var p = world_object.player, scene = p.curSceneName;
+			if (scene !== void && scene != lastScene) {
+				lastScene = scene;
+				var title = p.title;
+				if (title !== void && title != "" && window.conductor === window.mainConductor) showChapter(title);
+			}
+		}
+		// the music
+		var bgm = window.bgm, cur = bgm !== void && bgm.playingStorage !== void ? bgm.playingStorage : "";
+		if (cur != lastBgm) {
+			lastBgm = cur;
+			if (cur != "" && System.getTickCount() >= quietUntil) showPlaying(cur);
+		}
+		fadeLayer(chapterLayer, chapterShown, chapterStay, chapterTime);
+		fadeLayer(playingLayer, playingShown, false, 3000);
+		updateMode();
+		updateVoice();
+	}
+
+	// ---- saves ----
+	function onStore(f, elm)
+	{
+		f.indicators = %[ chapter:chapter, stay:chapterStay ] if chapter != "";
+	}
+
+	function onRestore(f, clear, elm)
+	{
+		quietUntil = System.getTickCount() + 1500; // the music starting again isn't news
+		var d = f.indicators;
+		chapter = "", chapterStay = false;
+		if (chapterLayer !== void) chapterLayer.visible = false;
+		if (d !== void && d.stay) {
+			showChapter(d.chapter, true);
+			chapterShown = System.getTickCount() - 300; // at once
+		}
+		if (typeof global.world_object != "undefined" && world_object.playerWorking) lastScene = world_object.player.curSceneName;
+	}
+
+	// a screen over the game, or the game hidden: none of them
+	function onMessageHiddenStateChanged(hidden)
+	{
+		if (hidden) {
+			if (chapterLayer !== void) chapterLayer.visible = false;
+			if (voiceLayer !== void) voiceLayer.visible = false;
+		}
+	}
+}
+
+// The window's indicators, made with it (Initialize.tjs)
+function KAGIndicatorsOf(win)
+{
+	if (typeof win.indicators != "Object" || win.indicators === void) {
+		win.indicators = new KAGIndicators(win);
+		win.addPlugin(win.indicators);
+	}
+	return win.indicators;
+}
+
+// [chapter title="..." stay=true time=3000]: the chapter's title in a corner ([chapter] alone clears it)
+function KAGChapterTag(elm)
+{
+	var ind = KAGIndicatorsOf(kag);
+	ind.showChapter(elm.title !== void ? elm.title : "", elm.stay !== void && +elm.stay, elm.time);
+	return 0;
+}
+
+KAGDefineOption(%[ name:"chapterTitles", label:"Chapter Titles", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"nowPlaying", label:"Now Playing", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"modeMark", label:"Auto and Skip Mark", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
+KAGDefineOption(%[ name:"voiceBar", label:"Voice Bar", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]);
