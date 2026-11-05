@@ -167,7 +167,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		var fn = getExistFileNameAutoExtFill(file, "webm", "mpg", "mpv", "mpeg", "wmv");
 
-		open(fn);
+		// on the web a movie inside an archive is copied out first (KAGMovieOpenable, Utils.tjs)
+
+		var o = typeof global.KAGMovieOpenable != "undefined" ? KAGMovieOpenable(fn) : [ fn, void ];
+
+		try { open(o[0]); } catch (e) { KAGMovieOpened(o[1]) if o[1] !== void; throw e; }
+
+		KAGMovieOpened(o[1]) if o[1] !== void;
 
 		// Set volume if audio exists
 

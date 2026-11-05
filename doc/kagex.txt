@@ -3325,6 +3325,12 @@ it) at the bottom of the screen, timed from the movie, and screen readers get ea
 [image movie=] takes fit=true too: the layers showing the movie are zoomed (affine layers) so its
 frames fill the screen; [freeimage] puts the zoom back.
 
+On the web (since 0.18.0) a movie inside an archive fetched from the site (the sample's
+gamedata/data.xp3) is copied out of it into the page's memory before it opens
+(KAGMovieOpenable, Utils.tjs, for [movie], [image movie=] and KAG's [video]): the engine's player
+asked the server for it by a URL made from its archive path and got nothing (UPSTREAM.md 41), so
+no such movie played there. A loose movie (kagex-release's files mode) streams from the site.
+
 
 
 ● Loudness

@@ -533,6 +533,42 @@ function getExistImageName(storage)
  * come out otherwise for a rectangle that doesn't). Falls back to stretchCopy without the plugin
  */
 
+/**
+ * A movie's storage name the engine's player can open (since 0.18.0): [ the name, and a
+ * temporary file to delete once it's open, or void ]. On the web the player gives a web:// file
+ * to the browser's video player by its URL, and makes the URL from the name even for a file
+ * inside an archive: web://./data.xp3>video/opening.webm became gamedata/data.xp3>video/
+ * opening.webm, which the server doesn't have (UPSTREAM.md 41), so the movie never played. Such
+ * a file is copied out of its archive into a temporary file, which the player reads whole.
+ */
+function KAGMovieOpenable(storage)
+{
+	if (typeof System.platformTag == "undefined" || System.platformTag != "web") return [ storage, void ];
+	var placed;
+	try { placed = Storages.getPlacedPath(storage); } catch (e) { return [ storage, void ]; }
+	if (placed === void || placed == "" || placed.indexOf(">") < 0) return [ storage, void ];
+	var low = placed.toLowerCase();
+	if (low.indexOf("web://") != 0 && low.indexOf("webnc://") != 0) return [ storage, void ];
+	var temp;
+	try {
+		temp = kag.localStorageName(Storages.getTemporaryName()) + "_" + Storages.extractStorageName(placed);
+		Storages.copyFile(placed, temp);
+	} catch (e) {
+		dm("movie: can't copy " + placed + " out of its archive: " + e.message);
+		try { Storages.deleteFile(temp) if temp !== void; } catch {}
+		return [ storage, void ];
+	}
+	return [ temp, temp ];
+}
+
+// After the player opened it (KAGMovieOpenable's temporary file, or void)
+function KAGMovieOpened(temp)
+{
+	if (temp === void) return;
+	try { Storages.deleteFile(temp); } catch {}
+}
+
+
 function KAGShrinkCopy(dst, dx, dy, dw, dh, src, sx, sy, sw, sh, type = stLinear)
 
 {

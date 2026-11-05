@@ -386,11 +386,15 @@ class Movie extends VideoOverlay
 
 		var errmes, looped;
 
+		// on the web a movie inside an archive is copied out first (KAGMovieOpenable, Utils.tjs)
+
+		var o = typeof global.KAGMovieOpenable != "undefined" ? KAGMovieOpenable(storage) : [ storage, void ];
+
 		do {
 
 			try {
 
-				super.open(storage);
+				super.open(o[0]);
 
 				opened = true;
 
@@ -425,6 +429,8 @@ class Movie extends VideoOverlay
 			}
 
 		} while (looped);
+
+		KAGMovieOpened(o[1]) if o[1] !== void;
 
 		if (!opened) {
 

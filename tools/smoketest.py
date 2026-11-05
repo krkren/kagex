@@ -3101,6 +3101,12 @@ def sample_steps(eng):
         print("     the movie on the screen: %s of its samples not the black backdrop" % shown, flush=True)
         if shown == 0:
             raise SmokeError("the movie didn't show: the screen was the backdrop's colour all over")
+        # the web's player asked for a movie inside data.xp3 by URL and got nothing (UPSTREAM.md
+        # 41): since 0.18.0 the framework copies it out first, so the web must show it too
+        web_movies = eng.tjs('return typeof System.platformTag != "undefined" && System.platformTag == "web"'
+                             ' && typeof global.KAGMovieOpenable != "undefined" ? 1 : 0;') == 1
+        if shown == -1 and web_movies:
+            raise SmokeError("the opening ended without a picture on the web (KAGMovieOpenable)")
         time.sleep(0.6)
         eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
@@ -3115,7 +3121,7 @@ def sample_steps(eng):
                                  ' return [f.file, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
             if picked != "opening_sd,4":
                 raise SmokeError("Smaller didn't play opening_sd with opening.vtt's cues: %s" % picked)
-            # where it shows (the web's player can't open a movie inside data.xp3: it ends, no picture)
+            # where it shows (up to 0.17.2 the web's player couldn't open a movie inside data.xp3)
             eng.wait("the smaller movie's first frames, or its end", 'KAGMoviePlaying === void'
                      ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
             small = str(eng.tjs('if (KAGMoviePlaying === void) return "none"; var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
@@ -3124,6 +3130,8 @@ def sample_steps(eng):
             want = eng.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')
             if small != "none" and small != want:
                 raise SmokeError("the smaller movie didn't fill the screen: shown at %s, not %s" % (small, want))
+            if small == "none" and web_movies:
+                raise SmokeError("the smaller movie ended without a picture on the web (KAGMovieOpenable)")
             if small != "none":
                 time.sleep(0.4)
                 eng.tjs("kag.onPrimaryClick(); return 1;")
