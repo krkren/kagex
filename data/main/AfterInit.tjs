@@ -25,6 +25,11 @@ kag.bindKey(VK_F5, 0, toggleFullScreenByKey, "Full screen or window", true, fals
 kag.bindKey(VK_F6, 0, kag.skipToNextStopByKey, "Skip to the next choice or unread text");
 kag.bindKey(VK_F7, 0, kag.showHistoryByKey, "Message history");
 kag.bindKey(VK_F8, 0, kag.switchAutoModeByKey, "Auto mode on or off");
+// Quick save and quick load, as the message window's Q.SAVE and Q.LOAD do: the framework binds
+// Shift+S and Shift+L to kag.quickSave and kag.quickLoad, and the sample to its own
+// (Override.tjs), which load through loadinit.ks
+kag.bindKey(#'S', ssShift, quicksaveAction, "Quick save", false, false, function { return kag.quickSaveSlot >= 0; });
+kag.bindKey(#'L', ssShift, quickloadAction, "Quick load", false, false, function { return kag.quickSaveSlot >= 0; });
 
 // Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
 // screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1, R2, L2

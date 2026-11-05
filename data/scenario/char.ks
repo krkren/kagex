@@ -129,6 +129,26 @@ And at the far right
 Footsteps that go with Ai as she walks
 [se name=se_steps stop=300]
 
+*voices|Voices
+
+; Voices from where the speakers stand: with envinit.tjs's "voice3d", Ai on the left is heard
+; from the left and Pip on the right from the right (Config's second page centres them). A
+; voice cut by the next one fades out, and vol= makes one line quieter (doc/world.txt)
+[ai standard posleft opacity=255 zoom=100]
+[pip standard posright]
+Voices come from where the speakers stand
+
+[ai voice=1]
+【ai】Ninth-grade antiseptic hell!
+[pip xsurprised voice=3]
+【pip】Whoa! What was that?
+Click while someone is talking: the voice fades out instead of stopping (Config, second page)
+
+[pip neutral voice=4 vol=35]
+【pip】(whispering) Is she always like this?
+A quieter line, a whisper: [[pip voice=4 vol=35]
+[pip hide]
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

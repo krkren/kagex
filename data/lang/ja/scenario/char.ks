@@ -129,6 +129,26 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 歩くあいについていく足音
 [se name=se_steps stop=300]
 
+*voices|ボイス
+
+; Voices from where the speakers stand: with envinit.tjs's "voice3d", Ai on the left is heard
+; from the left and Pip on the right from the right (Config's second page centres them). A
+; voice cut by the next one fades out, and vol= makes one line quieter (doc/world.txt)
+[ai standard posleft opacity=255 zoom=100]
+[pip standard posright]
+声は話す人の立ち位置から聞こえます
+
+[ai voice=1]
+【ai】中三マキロン地獄
+[pip xsurprised voice=3]
+【pip】わっ！ 今のは何？
+話している途中でクリックすると、声はぷつりと止まらずにフェードアウトします（設定の 2 ページ目）
+
+[pip neutral voice=4 vol=35]
+【pip】（ひそひそ）いつもこうなの？
+小さな声のセリフ、ささやき：[[pip voice=4 vol=35]
+[pip hide]
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

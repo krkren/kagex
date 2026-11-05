@@ -517,6 +517,28 @@ function KAGWindow_config()
 
 
 
+// ◆ Carrying On and Quick Saves (since 0.16.0)
+
+// Quick saves (Shift+S, kag.quickSave) go round quickSaveSlots bookmarks from quickSaveSlot,
+
+// so the last few are kept, and Shift+L (kag.quickLoad) loads the newest. continueSlot keeps
+
+// the player's place as the game goes (at each scene's start, every continueEvery save points
+
+// and when the game quits) for the game to offer at its start (kag.hasContinue); -1: none.
+
+// They may be numbered from numBookMarks on, past the menus' bookmarks.
+
+;quickSaveSlot = 10;
+
+;quickSaveSlots = 3;
+
+;continueSlot = -1;
+
+;continueEvery = 5;
+
+
+
 //[end-window-additionals]
 
 

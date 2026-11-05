@@ -1273,7 +1273,10 @@ class KAGEnvPlayer
 	 * @param f Save variable
 	 */
 	function onStore(f) {
-		if (curSceneName !== void && curPoint !== void) {
+		// only while the game is in the compiled scene: a script KAG plays after it (the title,
+		// whose start anchor is saved here) kept the player's last scene, and going back to the
+		// title restored that scene's text over it (up to 0.15.0, from the second time on)
+		if (curSceneName !== void && curPoint !== void && kag.mainConductor.curStorage == curStorage) {
 			//dm("Saving:%s:%d".sprintf(curStorage, curPoint));
 			f.scenePlayer = %[scene:curSceneName, point:curPoint];
 			f.scenePlayer.hash = scnStorage.hash if scnStorage !== void && scnStorage.hash !== void;

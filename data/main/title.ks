@@ -126,6 +126,10 @@
 
 [current layer=message0 page=fore]
 
+; The first time in a run, offer to carry on where the game left off (Override.tjs)
+
+[eval exp="offerContinue()"]
+
 [s]
 
 

@@ -103,6 +103,17 @@ if (global.KAGSignatureAborted === true) return;
 
 
 
+// An uncaught error ends a release build: first keep what the player has, the system variables
+// (read marks, settings) and the place to carry on from (the continue save, MainWindow.tjs)
+function KAGSaveBeforeError()
+{
+	if (typeof global.kag != "Object" || global.kag === void || !(global.kag isvalid)) return;
+	try { kag.saveContinue(true); } catch (e) { dm("continue save: " + e.message); }
+	try { kag.saveSystemVariables(); } catch (e) { dm("system variables: " + e.message); }
+}
+
+
+
 if (!debugWindowEnabled) {
 
 	/*
@@ -120,6 +131,8 @@ if (!debugWindowEnabled) {
 		var event_disabled = System.eventDisabled;
 
 		System.eventDisabled = true;
+
+		KAGSaveBeforeError();
 
 		System.inform(e.message);
 

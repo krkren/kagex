@@ -1,6 +1,10 @@
 ﻿%[
 
 	"autoLabelSync" => true, // Save point at sync position
+	// Voices from where the speakers stand (since 0.16.0): a character on the left is heard a
+	// little from the left, one further back further away, through the engine's 3D sound as
+	// sounds placed with [se char=] are; the player can centre them again (Config)
+	"voice3d" => true,
 
 
 

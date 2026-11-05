@@ -911,7 +911,9 @@ class KAGWindow extends Window
 
 				voice += info.ext if (voice != "");
 
-				ret += "global.world_object.env.playVoice(\"" + info.name + "\",\"" + voice + "\");";
+				var shape = info.vol !== void || info.pan !== void ?
+					",false,%[vol:" + (info.vol !== void ? +info.vol : 100) + (info.pan !== void ? ",pan:" + +info.pan : "") + "]" : "";
+				ret += "global.world_object.env.playVoice(\"" + info.name + "\",\"" + voice + "\"" + shape + ");";
 
 			}
 
@@ -986,6 +988,20 @@ class KAGWindow extends Window
     // Timing to cut voice is upon page erasure
 
     /*C*/var voicecutpage = false;
+
+    // A cut voice (a click past its line, the next voice, voicecut) fades out over voiceFadeTime
+
+    // ms rather than stopping at once (KAGEnvCharacter.stopVoice; not while skipping or in auto
+
+    // mode); the player's choices, kept in scflags
+
+    /*C*/var voiceFadeOn = true;
+
+    /*C*/var voiceFadeTime = 300;
+
+    // Voices come from where their speakers stand, where envinit.tjs has "voice3d" => true
+
+    /*C*/var voicePlacement = true;
 
     // Duck BGM when voice is playing
 
@@ -1446,6 +1462,15 @@ class KAGWindow extends Window
 
 
 	var numBookMarks = 10; // Number of bookmark sub-menu items provided in the menu
+
+	// Bookmarks the game keeps for the player (since 0.16.0; Config.tjs): the place it carries on
+	// from (continueSlot, written as the game goes and when it quits) and the quick saves, which go
+	// round quickSaveSlots bookmarks from quickSaveSlot. -1: none. They may be numbered from
+	// numBookMarks on, past the menus' bookmarks
+	var continueSlot = -1;
+	var continueEvery = 5;   // save points between two continue saves (a new script saves at its first)
+	var quickSaveSlot = -1;
+	var quickSaveSlots = 3;
 
 	var showBookMarkDate = false; // Whether to display the date and time the bookmark was saved in the menu
 
@@ -2071,6 +2096,10 @@ class KAGWindow extends Window
 
 			saveDataLocation = System.exePath + saveDataLocation;
 
+		var logLocation = saveDataLocation;
+
+		persistentSaveLocation(); // the web build's saves go where the browser keeps them
+
 
 
         // Verify if saving is possible
@@ -2081,7 +2110,7 @@ class KAGWindow extends Window
 
 		// Set log output destination to saveDataLocation
 
-		if(ismain) Debug.logLocation = saveDataLocation;
+		if(ismain) Debug.logLocation = logLocation;
 
         
 
@@ -2454,6 +2483,8 @@ class KAGWindow extends Window
 		// Add default handlers
 
 		stableHandlers.add(defaultStableHandler);
+
+		stableHandlers.add(continueStableHandler); // a continue save that's due
 
 		// Languages (Language.tjs): this window draws itself again in another one
 		if (global.KAGLanguage !== void) {
@@ -2840,6 +2871,8 @@ class KAGWindow extends Window
 		callHook("onCloseHook") if(!askOnClose);
 
 		// Close window
+
+		if(isMain) saveContinueAtExit(); // the player's place, for the next start
 
 		saveSystemVariables();
 
@@ -5577,7 +5610,7 @@ class KAGWindow extends Window
 
 			var dummy = ["test"];
 
-			var fn = saveDataLocation + "/" + "savecheck";
+			var fn = saveDataFile("savecheck");
 
 			var saved = false;
 
@@ -5647,9 +5680,9 @@ class KAGWindow extends Window
 
 		{
 
-			var fn = saveDataLocation + "/" + dataName +
+			var fn = saveDataFile(dataName +
 
-				"sc.ksd";
+				"sc.ksd");
 
 			if(Storages.isExistentStorage(fn))
 
@@ -5671,9 +5704,9 @@ class KAGWindow extends Window
 
 
 
-			var fn = saveDataLocation + "/" + dataName +
+			var fn = saveDataFile(dataName +
 
-				"su.ksd";
+				"su.ksd");
 
 			if(Storages.isExistentStorage(fn))
 
@@ -5864,6 +5897,12 @@ class KAGWindow extends Window
         voicecut = scflags.voicecut if scflags.voicecut !== void;
 
         voicecutpage = scflags.voicecutpage if scflags.voicecutpage !== void;
+
+        voiceFadeOn = scflags.voiceFadeOn if scflags.voiceFadeOn !== void;
+
+        voiceFadeTime = scflags.voiceFadeTime if scflags.voiceFadeTime !== void;
+
+        voicePlacement = scflags.voicePlacement if scflags.voicePlacement !== void;
 
         bgmdown = scflags.bgmdown if scflags.bgmdown !== void;
 
@@ -6238,6 +6277,12 @@ class KAGWindow extends Window
 
         scflags.voicecutpage = voicecutpage;
 
+        scflags.voiceFadeOn = voiceFadeOn;
+
+        scflags.voiceFadeTime = voiceFadeTime;
+
+        scflags.voicePlacement = voicePlacement;
+
         scflags.bgmdown = bgmdown;
 
         scflags.bgmdownlevel = bgmdownlevel;
@@ -6280,11 +6325,11 @@ class KAGWindow extends Window
 
 			try {
 
-				var fn = saveDataLocation + "/" + dataName + "sc.ksd";
+				var fn = saveDataFile(dataName + "sc.ksd");
 
 				(Dictionary.saveStruct incontextof scflags)(fn, saveDataMode);
 
-				var fn = saveDataLocation + "/" + dataName + "su.ksd";
+				var fn = saveDataFile(dataName + "su.ksd");
 
 				(Dictionary.saveStruct incontextof sflags)(fn, saveDataMode);
 
@@ -6615,6 +6660,8 @@ class KAGWindow extends Window
 
 
 		internalStoreFlags(pcflags, loadFromLine);
+
+		noteContinuePoint(); // the continue save follows the save points
 
 	}
 
@@ -7653,7 +7700,7 @@ class KAGWindow extends Window
 
 @if (!OLDBOOKMARK)
 
-	function isExistentBookMark(num) { return (numBookMarks < 0 || num < numBookMarks) && (typeof bookMarkIndex[(int)num] == "Object"); } // Whether bookmark num exists
+	function isExistentBookMark(num) { return bookMarkInRange(num) && (typeof bookMarkIndex[(int)num] == "Object"); } // Whether bookmark num exists
 
 	function setBookMarkIndex(num, tag, value)  { bookMarkIndex[(int)num] = %[] if (bookMarkIndex[(int)num] === void); bookMarkIndex[(int)num][tag] = value; } // Set bookMarkIndex info
 
@@ -7665,7 +7712,7 @@ class KAGWindow extends Window
 
 @if (OLDBOOKMARK)
 
-	function isExistentBookMark(num) { return (numBookMarks < 0 || num < numBookMarks) ? (bookMarkDates[num] != "") : false; } // Whether bookmark num exists
+	function isExistentBookMark(num) { return bookMarkInRange(num) ? (bookMarkDates[num] != "") : false; } // Whether bookmark num exists
 
 	function setBookMarkIndex(num, tag, value) { try { this["bookMark"+tag+"s"][num] = value; } catch {} } // Set bookMarkIndex info
 
@@ -7705,7 +7752,7 @@ class KAGWindow extends Window
 
 	// Functions to get filenames for various bookmarks
 
-	function getBookMarkFileName(tag)                   { return saveDataLocation + "/" + dataName + tag; }
+	function getBookMarkFileName(tag)                   { return saveDataFile(dataName + tag); }
 
 	function getBookMarkFileNameAtNum(num)              { return getBookMarkFileName(/*"%04d".sprintf(*/num/*)*/) + (saveThumbnail?".png":".kdt"); }
 
@@ -8093,7 +8140,7 @@ class KAGWindow extends Window
 
 		// Read bookmark page name and date from dictionary array dic and set to bookMarkIndex
 
-		if(numBookMarks < 0 || num < numBookMarks)
+		if(bookMarkInRange(num))
 
 		{
 
@@ -8549,7 +8596,7 @@ class KAGWindow extends Window
 
 
 
-		var initialname = saveDataLocation + "/";
+		var initialname = saveDataFile("");
 
 		var through = false;
 
@@ -8573,7 +8620,7 @@ class KAGWindow extends Window
 
 			{
 
-				initialname = saveDataLocation + "/";
+				initialname = saveDataFile("");
 
 			}
 
@@ -8677,7 +8724,7 @@ class KAGWindow extends Window
 
 		if(lastSaveDataNameGlobal == "")
 
-			initialdir = saveDataLocation + "/";
+			initialdir = saveDataFile("");
 
 
 
@@ -13324,6 +13371,11 @@ class KAGWindow extends Window
 			function { return freeSaveDataMode; } incontextof this);
 		bindKey(#'L', void, function { menuItemClickByKey("restoreMenu"); } incontextof this, "Load", false, false,
 			function { return freeSaveDataMode; } incontextof this);
+		// Quick save and quick load, where the game has quick saves (quickSaveSlot)
+		bindKey(#'S', ssShift, function { quickSave(); } incontextof this, "Quick save", false, false,
+			function { return quickSaveSlot >= 0; } incontextof this);
+		bindKey(#'L', ssShift, function { quickLoad(); } incontextof this, "Quick load", false, false,
+			function { return quickSaveSlot >= 0; } incontextof this);
 		// The next language (Language.tjs)
 		bindKey(VK_F9, 0, switchLanguageByKey, "Show the game in its next language", false, false,
 			function { return languageAvailable; } incontextof this);
@@ -13715,6 +13767,187 @@ class KAGWindow extends Window
 	function switchAutoModeByKey()
 	{
 		menuItemClickByKey("autoModeMenuItem");
+	}
+
+	//----------------------------------------------- Continue and quick saves --
+	// The save folder and a file in it: saveDataLocation may end with "/" (System.dataPath
+	// does), and a doubled slash in a user:// name hands SDL's storage an absolute path, which
+	// it refuses (TODO.md)
+	function saveDataFile(name)
+	{
+		var d = saveDataLocation;
+		return d.charAt(d.length - 1) == "/" ? d + name : d + "/" + name;
+	}
+
+	// The web build's save folder (user://, System.dataPath) is SDL's, which keeps it in the
+	// page's memory: everything saved there went with the page (UPSTREAM.md). The engine keeps
+	// /persist in the browser's IndexedDB, so saves go to /persist/<orgname>/<appname>/ (one
+	// site can hold several games). Elsewhere, or where that can't be written, nothing changes
+	function persistentSaveLocation()
+	{
+		if (typeof System.platformTag == "undefined" || System.platformTag != "web") return;
+		if (saveDataLocation.indexOf("user://") != 0) return;
+		var names = [], v;
+		names.add((v = System.getArgument("-orgname")) !== void && v != "" ? v : "wamsoft");
+		names.add((v = System.getArgument("-appname")) !== void && v != "" ? v : "krkrz");
+		var place = "file://./persist";
+		for (var i = 0; i < names.count; i++) {
+			place += "/" + names[i];
+			try { Storages.createFolder(place); } catch (e) {}
+		}
+		place += "/";
+		try {
+			var probe = ["kagex"];
+			probe.save(place + "savecheck");
+		} catch (e) {
+			dm("Saves stay in " + saveDataLocation + ": " + e.message);
+			return;
+		}
+		dm("Saves go to " + place + " (the browser keeps them)");
+		saveDataLocation = place;
+	}
+
+	// Bookmark num is one the window keeps: the continue save or a quick save
+	function isSystemBookMark(num)
+	{
+		return (continueSlot >= 0 && num == continueSlot) ||
+			(quickSaveSlot >= 0 && num >= quickSaveSlot && num < quickSaveSlot + quickSaveSlots);
+	}
+
+	// Bookmark num can hold a save: the menus' bookmarks and the window's own
+	function bookMarkInRange(num)
+	{
+		return numBookMarks < 0 || num < numBookMarks || isSystemBookMark(num);
+	}
+
+	// The continue save: the player's place, kept as the game goes, so that the next start can
+	// carry on from it (the sample asks on its title screen). It's written at the first stable
+	// state (waiting for a click) after a save point of a new script or after continueEvery save
+	// points, and when the game quits; a phone or a browser may end the game without quitting.
+	// The player can turn it off (continueOn, kept in scflags)
+	var continuePoints = 0;    // save points since the last continue save
+	var continueStorage = "";  // its script
+	var continueWanted = false;
+	var continueTrigger;
+
+	property continueOn
+	{
+		getter { return continueSlot >= 0 && scflags.continueOff !== true; }
+		setter(v) { scflags.continueOff = !v; }
+	}
+
+	// Whether there's a place to carry on from
+	property hasContinue
+	{
+		getter { return continueOn && isExistentBookMark(continueSlot); }
+	}
+
+	function noteContinuePoint()
+	{
+		if (!continueOn || conductor !== mainConductor) return;
+		continuePoints++;
+		if (continuePoints >= continueEvery || conductor.curStorage != continueStorage) {
+			continueWanted = true;
+			if (inStable) continueStableHandler();
+		}
+	}
+
+	// stableHandlers: a continue save that's due is written once the tags in hand are done
+	function continueStableHandler()
+	{
+		if (!continueWanted) return;
+		if (continueTrigger === void) continueTrigger = new AsyncTrigger(saveContinueWhenStable, "");
+		continueTrigger.trigger();
+	}
+
+	function saveContinueWhenStable()
+	{
+		if (!continueWanted || !inStable || transCount > 0) return;
+		saveContinue();
+	}
+
+	// Writes the continue save now, when the game is somewhere a save can be made from
+	function saveContinue(atExit = false)
+	{
+		if (!continueOn || readOnlyMode) return false;
+		if (conductor !== mainConductor || usingExtraConductor || !canStore()) return false;
+		if (!atExit && (currentDialog !== void || skipMode >= SKIP_STOP)) return false;
+		continueWanted = false;
+		continuePoints = 0;
+		continueStorage = conductor.curStorage;
+		try {
+			return saveBookMark(continueSlot);
+		} catch (e) {
+			dm("Continue save failed: " + e.message);
+			return false;
+		}
+	}
+
+	function saveContinueAtExit()
+	{
+		if (continueWanted || continuePoints > 0) saveContinue(true);
+	}
+
+	// Quick saves go round quickSaveSlots bookmarks, so one wrong key can't overwrite the only
+	// one: the next is the bookmark after the newest (scflags.quickSaveLast), or an empty one
+	function nextQuickSaveSlot()
+	{
+		if (quickSaveSlot < 0 || quickSaveSlots < 1) return -1;
+		var last = newestQuickSave();
+		for (var i = 0; i < quickSaveSlots; i++) {
+			var n = quickSaveSlot + (last < 0 ? i : (last - quickSaveSlot + 1 + i) % quickSaveSlots);
+			if (!getBookMarkProtectedState(n)) return n;
+		}
+		return -1;
+	}
+
+	// The newest quick save's bookmark, or -1
+	function newestQuickSave()
+	{
+		if (quickSaveSlot < 0) return -1;
+		var last = scflags.quickSaveLast;
+		if (typeof last == "Integer" && last >= quickSaveSlot && last < quickSaveSlot + quickSaveSlots &&
+			isExistentBookMark(last)) return last;
+		for (var i = quickSaveSlots - 1; i >= 0; i--)
+			if (isExistentBookMark(quickSaveSlot + i)) return quickSaveSlot + i;
+		return -1;
+	}
+
+	// The quick saves, newest first
+	function quickSaves()
+	{
+		var list = [], newest = newestQuickSave();
+		if (newest < 0) return list;
+		for (var i = 0; i < quickSaveSlots; i++) {
+			var n = quickSaveSlot + (newest - quickSaveSlot - i + quickSaveSlots) % quickSaveSlots;
+			list.add(n) if (isExistentBookMark(n));
+		}
+		return list;
+	}
+
+	var quickSaveNotice = true; // a notice says a quick save was made
+	var quickSaveHook = [];     // called with the bookmark after a quick save
+
+	// Quick save: the place into the next quick save bookmark; its number, or -1
+	function quickSave()
+	{
+		if (!canStore() || conductor !== mainConductor) return -1;
+		var n = nextQuickSaveSlot();
+		if (n < 0 || !saveBookMark(n)) return -1;
+		scflags.quickSaveLast = n;
+		saveSystemVariables();
+		KAGA11y.announce(tr("Quick saved"));
+		showScreenshotNotice(tr("Quick saved")) if (quickSaveNotice);
+		callHook(quickSaveHook, n);
+		return n;
+	}
+
+	// Quick load: the newest quick save, after asking (loadBookMarkWithAsk); false without one
+	function quickLoad()
+	{
+		var n = newestQuickSave();
+		if (n < 0 || !canRestore()) return false;
+		return loadBookMarkWithAsk(n);
 	}
 
 	//--------------------------------------------------- Languages (Language.tjs) --
@@ -15334,7 +15567,21 @@ class KAGWindow extends Window
 		}
 		info.incVoice = elm.incvoice || elm.replace;
 		info.noplayvoice = elm.noplayvoice;
+		setVoiceShape(name, elm);
 		//dm("Voice set:%s:%s:%s".sprintf(name, info.voice, info.strVoice));
+	}
+
+	// The voice tag's vol= (in %) and pan= (-100 to 100, which puts the voice there rather than
+	// where the speaker stands): for the next line's voice only (setNextVoice clears them)
+	function setVoiceShape(name, elm) {
+		if (elm.vol === void && elm.pan === void) return;
+		var info = voiceMap[name];
+		if (info == void) {
+			info = %[];
+			voiceMap[name] = info;
+		}
+		info.vol = +elm.vol if elm.vol !== void;
+		info.pan = +elm.pan if elm.pan !== void;
 	}
 
 	/**
@@ -15379,7 +15626,14 @@ class KAGWindow extends Window
 		var voice = getVoice(name);
 		if (voice !== void) {
 			var info = voiceMap[name];
-			nextVoiceList.add(%[name:name, voice:voice, noplayvoice:info?info.noplayvoice:void]);
+			var v = %[name:name, voice:voice, noplayvoice:info?info.noplayvoice:void];
+			if (info != void) {
+				v.vol = info.vol if info.vol !== void;
+				v.pan = info.pan if info.pan !== void;
+				delete info.vol;
+				delete info.pan;
+			}
+			nextVoiceList.add(v);
 		}
 	}
 

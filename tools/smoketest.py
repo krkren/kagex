@@ -2623,6 +2623,11 @@ def sample_steps(eng):
 
     @step("save and load a bookmark")
     def _():
+        # the web build's saves go where the browser keeps them (/persist), not to SDL's user://
+        # in the page's memory, which went with the page
+        place = str(eng.tjs('return [typeof System.platformTag != "undefined" ? System.platformTag : "", kag.saveDataLocation].join(" ");'))
+        if place.startswith("web ") and "file://./persist/" not in place and eng.tjs('return typeof kag.saveDataFile != "undefined" ? 1 : 0;') == 1:
+            raise SmokeError("the web build saves to %s, which the browser doesn't keep" % place.split(" ", 1)[1])
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
         eng.wait("a stable point in layer.ks",
                  'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
@@ -2817,6 +2822,122 @@ def sample_steps(eng):
             raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
                              " over the message window and letting the pointer through: %s" % r)
 
+    @step("quick saves go round their bookmarks, and quick load asks, then loads the newest")
+    def _():
+        if eng.tjs('return typeof kag.quickSave != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates quick saves that go round)", flush=True)
+            return
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("a stable point in layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void', timeout=20)
+        line = eng.tjs("return kag.conductor.curLine;")
+        got = str(eng.tjs('var r = []; for (var i = 0; i < 4; i++) r.add(kag.quickSave());'
+                          ' return r.join(",") + "|" + kag.newestQuickSave() + "|" + kag.quickSaves().join(",");'))
+        print("     four quick saves went to %s; the newest %s, newest first %s" % tuple(got.split("|")), flush=True)
+        if got != "90,91,92,90|90|90,92,91":
+            raise SmokeError("the quick saves didn't go round bookmarks 90 to 92: %s" % got)
+        for n in (90, 91, 92):
+            eng.wait("quick save %d to be written" % n, "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(%d))" % n, timeout=10)
+        keys = str(eng.tjs('var s = kag.findKeyBinding(#\'S\', ssShift, false), l = kag.findKeyBinding(#\'L\', ssShift, false);'
+                           ' return [s !== void ? s.label : "-", l !== void ? l.label : "-"].join(",");'))
+        if keys != "Quick save,Quick load":
+            raise SmokeError("Shift+S and Shift+L aren't quick save and quick load: %s" % keys)
+        # Q.LOAD asks first (the focus starts on No), then loads the newest where it was saved;
+        # from the title, here
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.tjs("quickloadAction(); return 1;")
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        eng.key("VK_LEFT")
+        eng.key("VK_RETURN")
+        eng.wait("the quick save to load", 'kag.conductor.curStorage == "layer.ks" && kag.conductor.curLine == %d && kag.inStable' % line, timeout=30)
+
+    @step("the continue save: kept as the game goes, and the title offers to carry on from it")
+    def _():
+        if eng.tjs('return typeof kag.saveContinue != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the continue save)", flush=True)
+            return
+        eng.wait("a stable point in layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void', timeout=20)
+        if eng.tjs("return kag.saveContinue() ? 1 : 0;") != 1:
+            raise SmokeError("the continue save wasn't written at a stable point in a scene")
+        before = eng.tjs("return kag.readBookMark(kag.continueSlot).core.storeTime;")
+        time.sleep(0.05)
+        # a save point in a script the continue save isn't from: written at the next stable state
+        # (now: the game is waiting for a click)
+        eng.tjs('kag.continueStorage = ""; kag.noteContinuePoint(); return 1;')
+        eng.wait("the continue save to be written again", "!kag.continueWanted && kag.continuePoints == 0 && kag.inStable"
+                 " && kag.readBookMark(kag.continueSlot).core.storeTime != %s" % before, timeout=30)
+        line = eng.tjs("return kag.conductor.curLine;")
+        # turned off in Config, the title doesn't offer it; on, it does, and Yes loads it
+        eng.tjs("kag.continueOn = false; return 1;")
+        if eng.tjs("return kag.hasContinue ? 1 : 0;") != 0:
+            raise SmokeError("Config's switch off, there's still a place to carry on from")
+        eng.tjs("kag.continueOn = true; tf.continueAsked = false; kag.goToStart(); return 1;")
+        eng.wait("the title's offer", 'kag.conductor.curStorage == "title.ks" && typeof kag.currentDialog == "Object"'
+                 ' && kag.currentDialog !== void', timeout=30)
+        eng.key("VK_LEFT")  # the focus starts on No
+        eng.key("VK_RETURN")
+        eng.wait("the place to load", 'kag.conductor.curStorage == "layer.ks" && kag.conductor.curLine == %d && kag.inStable' % line,
+                 timeout=30)
+
+    @step("voices: a cut voice fades out on a track of its own, voices come from where their speakers stand, and vol= makes a line quieter")
+    def _():
+        if eng.tjs('return typeof world_object.env.voiceFadeTime != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates voices that fade)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*voices"); return 1;')
+        eng.wait("Ai and Pip on the stage", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void'
+                 ' && world_object.env.characters.pip !== void && world_object.env.characters.pip.isShowBU()', timeout=30)
+        ch = 'var e = world_object.env, ai = e.characters.ai, pip = e.characters.pip; '
+        # the line's own volume and pan, through the compiled scene ([pip voice=4 vol=35])
+        eng.tjs("kag.voicecut = false; kag.voiceFadeOn = true; kag.voiceFadeTime = 400; kag.voicePlacement = true; return 1;")
+        for i in range(12):
+            if eng.tjs(ch + 'var b = pip.soundBuffer; return b !== void && b.storage !== void && b.storage.indexOf("pip000004") == 0 ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.3)
+            eng.wait("the next stop", "kag.inStable", timeout=20)
+        whisper = str(eng.tjs(ch + 'var b = pip.soundBuffer; return b === void ? "none" : [b.storage, b.lineVolume].join(",");'))
+        if not whisper.startswith("pip000004") or not whisper.endswith(",35"):
+            raise SmokeError("the whispered line ([pip voice=4 vol=35]) didn't play at 35%%: %s" % whisper)
+        # a cut fades out on the voice's own track while the next starts at once on the other
+        play = str(eng.tjs(ch + 'e.stopAllVoice(); e.playVoice("ai", "ai000001", true); return ai.soundBuffer.status;'))
+        if play != "play":
+            print("     (the fade's checks skipped: the voice didn't start, %s)" % play, flush=True)
+        else:
+            cut = str(eng.tjs(ch + 'var old = ai.soundBuffer; e.stopAllVoice(true); e.playVoice("ai", "ai000001", true);'
+                              ' var f = ai.fadingVoice, b = ai.soundBuffer; return [f === old ? 1 : 0, f.status, f.fading ? 1 : 0,'
+                              ' f.canWait() ? 1 : 0, b !== old ? 1 : 0, b.status, e.playVoiceCount].join(",");'))
+            print("     cut: %s" % cut, flush=True)
+            if cut != "1,play,1,0,1,play,1":
+                raise SmokeError("the cut voice isn't fading on its own track while the next plays: %s" % cut)
+            fv = "world_object.env.characters.ai.fadingVoice"
+            eng.wait("the fade to end", '%s.status == "stop" && !%s.fading && %s.volume == 100000' % (fv, fv, fv), timeout=5)
+            eng.tjs(ch + 'e.stopAllVoice(); return 1;')
+            # Config's Stop: the cut is at once
+            now = str(eng.tjs(ch + 'e.playVoice("ai", "ai000001", true); kag.voiceFadeOn = false; e.stopAllVoice(true);'
+                              ' kag.voiceFadeOn = true; return [ai.soundBuffer.status, ai.fadingVoice.status].join(",");'))
+            if now != "stop,stop":
+                raise SmokeError("with fading off, a cut voice should stop at once: %s" % now)
+        # where the speakers stand: Ai on the left, Pip on the right; pan= and the switch centre them
+        if eng.tjs('return typeof kag.se[0].use3D != "undefined" && typeof global.SoundListener != "undefined" ? 1 : 0;') == 1:
+            got = str(eng.tjs(ch + 'var r = []; e.playVoice("ai", "ai000001", true); r.add(ai.soundBuffer.use3D ? "%.2f".sprintf(ai.soundBuffer.posX) : "off");'
+                              ' e.playVoice("pip", "pip000003", true); r.add(pip.soundBuffer.use3D ? "%.2f".sprintf(pip.soundBuffer.posX) : "off");'
+                              ' e.playVoice("pip", "pip000003", true, %[pan:-100, vol:50]); var b = pip.soundBuffer; r.add(b.use3D ? "3d" : b.pan); r.add(b.lineVolume);'
+                              ' kag.voicePlacement = false; e.playVoice("ai", "ai000001", true); r.add(ai.soundBuffer.use3D ? "3d" : ai.soundBuffer.pan);'
+                              ' kag.voicePlacement = true; e.stopAllVoice(); return r.join(",");'))
+            print("     Ai at x %s, Pip at x %s; pan=-100 vol=50: %s; centred: %s" % tuple(got.split(",")[:2] + [",".join(got.split(",")[2:4]), got.split(",")[4]]), flush=True)
+            v = got.split(",")
+            try:
+                left, right = float(v[0]), float(v[1])
+            except ValueError:
+                raise SmokeError("the voices aren't placed: %s" % got)
+            if not (left < -0.2 and right > 0.2) or v[2:] != ["-100000", "50", "0"]:
+                raise SmokeError("the voices aren't where their speakers stand, or pan= and the switch don't centre them: %s" % got)
+        else:
+            print("     (placement skipped: this engine has no 3D sound)", flush=True)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
     @step("back to the title through the Yes/No prompt")
     def _():
         eng.tjs("kag.goToStartWithAsk(); return 1;")
@@ -2824,7 +2945,10 @@ def sample_steps(eng):
                  timeout=10)
         eng.key("VK_LEFT")  # the focus starts on No
         eng.key("VK_RETURN")
-        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        # with its buttons: up to 0.15.0, from the second return on (after a compiled scene had
+        # played), the title's start anchor held that scene and its text came back instead
+        eng.wait("the title with its buttons", 'kag.conductor.curStorage == "title.ks" && kag.inStable'
+                 ' && kag.fore.messages[0].numLinks >= 5', timeout=30)
 
     for screen, mode in (("cgmode.ks", 1), ("replay.ks", 2), ("musicmode.ks", 3)):
         @step("Extras: " + screen + " opens and returns to the title")

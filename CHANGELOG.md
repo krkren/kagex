@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.16.0
+
+### Added
+
+- **Carry on where you left off**: the game keeps the player's place as it goes, in a bookmark of its own (the continue save): at the first wait for a click after a new script starts and every few save points (`continueEvery`, 5), and when the game quits, so a phone or a browser tab ending the game loses little. The sample's title asks once a run whether to carry on, showing the scene and the date, and Config's second page can turn it off. `continueSlot` in `Config.tjs` names the bookmark; `kag.hasContinue`, `kag.saveContinue()` and `kag.continueOn` are the framework's side (`doc/kagex.txt`, "Carrying On and Quick Saves").
+- **Quick saves that go round**: quick saves go round a few bookmarks (`quickSaveSlot`, `quickSaveSlots`: the sample keeps the last three), so one wrong key can't overwrite the only one, and quick load asks, then loads the newest. Shift+S and Shift+L quick save and quick load, and the sample's message window has Q.SAVE and Q.LOAD buttons (Q.LOAD greyed out until there's a quick save). `kag.quickSave()`, `kag.quickLoad()`, `kag.newestQuickSave()`, `kag.quickSaves()`, `kag.quickSaveHook`.
+- **Voices that fade out when cut**: a voice cut by the next one, by a click past its line (KAG's `voicecut`) or by a click during `[waitvoice]` fades out over a moment (`kag.voiceFadeTime`, 300 ms) instead of stopping in the middle of a syllable. It fades on a track of its own, so the speaker's next voice starts at once on the other, and the game doesn't wait for it: the voice's stop is told as the fade begins (waits end, the music comes back up). Skipping, auto mode and loading still stop voices at once. Config's second page offers Stop, Fade or Keep (a voice plays on until the next one) and the fade's length.
+- **Voices from where the speakers stand**: with `"voice3d" => true` in `envinit.tjs`, a character on the left is heard a little from the left and one further back further away, through the engine's 3D sound as placed sounds are since 0.12.0, and the voice follows the character as it moves; one off the stage or in the face window only is heard from the middle. Config's second page centres them all for players who prefer that.
+- **A line's own volume and pan**: `[ai voice=12 vol=35]` makes one line quieter, a whisper, and `pan=` (-100 to 100) puts its voice somewhere of its own; both last for that line only, carry into compiled scenes, and come back with the voice when it's replayed from the backlog (`doc/world.txt`, "Voice Specification").
+- The Character demo has a new scene, Voices: Ai on the left and Pip on the right speaking in turn, Pip's voice cutting in on Ai's, and a whisper. Config has a second page (its tabs are beside the title) with the voice and save settings above.
+
+### Fixed
+
+- **Going back to the title works every time**: from the second return to the title in a run on (after loading a save, or after playing a demo, going to the title and playing another), the title showed a black screen with the last scene's text and no buttons. The title's start anchor is saved as the title starts, and the compiled-scene player, which still held the scene it had played, saved that scene into it, so the next return restored the scene over the title. The player now saves only while the game is in its scene. The smoke test only checked which script was running, and now checks the title's buttons too.
+- **The web build keeps its saves**: everything a web game saved (bookmarks, read marks, settings, the language chosen) went when the page was closed or reloaded. The engine keeps `/persist` in the browser's IndexedDB, but its save folder (`user://`, SDL's) is in the page's memory (`UPSTREAM.md` 37). The framework now saves to `/persist/<orgname>/<appname>/` on the web (checked across a reload in Chromium).
+- **Saves are kept when the game stops on a script error**: a release build that hit an uncaught error showed it and ended, losing the read marks and settings since the last save of the system variables; it now saves those and the continue save first.
+- **The music goes down while a voice plays again where `bgmdown` is on**: the World counted playing voices from 1 but lowered the music at 0, so it never went down.
+- **A click during `[waitvoice]` waiting for every voice no longer stops on an error**: it named a function the World doesn't have.
+- **Save files are named with one slash**: the save folder ends with `/` (`System.dataPath`), and the framework added another; a doubled slash in a `user://` name can hand SDL's storage an absolute path, which it refuses.
+- A Yes/No prompt's message can have lines of its own (`\n`).
+
 ## 0.15.0
 
 ### Added

@@ -1,4 +1,6 @@
 ﻿*logo|
+; not a place to save or carry on from (the continue save, MainWindow.tjs)
+[disablestore]
 
 [cancelskip]
 [rclick enabled=false]

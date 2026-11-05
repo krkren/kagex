@@ -8,6 +8,8 @@ class VoiceTrack extends WaveSoundBuffer
 	var mode; // If true, performs label processing for the execution environment
 	var vocoder; // For changing voice speed
 	var storage; // File currently playing
+	var fading = false; // fading out after a cut (fadeOut): its stop was told already
+	var lineVolume = 100; // the line's own volume, in % (the voice tag's vol=)
 
 	function VoiceTrack(owner) {
 		this.owner = owner;
@@ -35,6 +37,8 @@ class VoiceTrack extends WaveSoundBuffer
 	}
 
 	function play(mode) {
+		fading = false;
+		volume = 100000; // a fade left it at 0
 		super.play(...);
 		onStartVoice();
 		if (mode) {
@@ -82,6 +86,11 @@ class VoiceTrack extends WaveSoundBuffer
 	function _onStatusChanged() {
 		var ps = prevstatus;
 		var cs = prevstatus = status;
+		if (ps == "play" && cs == "stop" && fading) {
+			fading = false; // its stop was told when the fade began
+			volume = 100000;
+			return;
+		}
 		if (ps == "play" && cs == "stop") {
 			if (mode) {
 				owner.onStopVoiceLabel();
@@ -105,7 +114,31 @@ class VoiceTrack extends WaveSoundBuffer
 	}
 
 	function canWait() {
-		return status == "play";
+		return status == "play" && !fading;
+	}
+
+	/**
+	 * Fades the voice out over time ms (WaveSoundBuffer.fade), as if it had stopped: its stop is
+	 * told at once (the waits end, the BGM comes back up, delayed tags at its end run), so the
+	 * game goes on while it fades. False when it isn't playing
+	 */
+	function fadeOut(time) {
+		if (status != "play" || fading) return false;
+		fading = true;
+		if (mode) owner.onStopVoiceLabel();
+		mode = false;
+		onStopVoice();
+		try {
+			fade(0, time);
+		} catch (e) {
+			dm("voice fade: " + e.message);
+			stop();
+		}
+		return true;
+	}
+
+	function onFadeCompleted() {
+		stop() if fading;
 	}
 };
 
@@ -401,6 +434,12 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
         }
         if (soundBuffer !== void) {
             invalidate soundBuffer;
+		}
+		if (fadingVoice !== void) {
+			invalidate fadingVoice;
+		}
+		if (voiceFollowTimer !== void) {
+			invalidate voiceFollowTimer;
 		}
 		if (backVoiceBuffer !== void) {
 			invalidate backVoiceBuffer;
@@ -1581,9 +1620,9 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	}
 	
 	/**
-	 * Voice playback
+	 * Voice playback. shape: the line's own %[ vol, pan ] (the voice tag's vol= and pan=), or void
 	 */
-	function playVoice(voicename=void, mode=true) {
+	function playVoice(voicename=void, mode=true, shape=void) {
 		if (voicename !== void && voicename != ""){
 			//dm("Playback processing:" + voicename);
 			voicename = getVoicename(voicename);
@@ -1593,6 +1632,8 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 				}
 				soundBuffer.speed = env.getVoiceSpeed();
 				soundBuffer.open(voicename);
+				soundBuffer.lineVolume = shape !== void && shape.vol !== void ? +shape.vol : 100;
+				placeVoice(soundBuffer, shape);
 				soundBuffer.play(mode);
 				resetVoiceVolume();
 			}
@@ -1600,13 +1641,87 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
     }
 
 	/**
-	 * Stop voice
+	 * Stop voice. fade: a cut (a click past the line, the next voice), which fades the voice out
+	 * over the player's time (KAGEnvironment.voiceFadeTime: none while skipping or in auto mode)
+	 * on its own track, so the next voice can start on the other one at once
 	 */
-    function stopVoice() {
+    function stopVoice(fade = false) {
+		var time = fade ? env.voiceFadeTime() : 0;
+		if (time > 0 && soundBuffer !== void && soundBuffer.status == "play" && !soundBuffer.fading) {
+			if (fadingVoice !== void) fadingVoice.stop(); // a third voice: the oldest goes at once
+			soundBuffer.fadeOut(time);
+			var t = fadingVoice;
+			fadingVoice = soundBuffer;
+			soundBuffer = t;
+			stopFollowingVoice();
+			return;
+		}
 		if (soundBuffer !== void) {
 			soundBuffer.stop();
         }
+		if (!fade && fadingVoice !== void) {
+			fadingVoice.stop();
+		}
+		stopFollowingVoice();
     }
+
+	// the cut of a click during [waitvoice] (fading, as the player chose)
+	function cutVoice() {
+		stopVoice(true);
+	}
+
+	// ------------------------------------------------------------------
+	// Voices from where the speaker stands: with envinit's voice3d and the player's switch on
+	// (KAGEnvironment.voice3DOn), a character on the stage is heard from its place, as a
+	// sound placed on it ([se char=]) is, and the voice follows it while it moves; one off the
+	// stage, or shown in the face window only, is heard from the middle. A line's pan= puts its
+	// voice there instead
+	// ------------------------------------------------------------------
+	var fadingVoice;      // the track fading out after a cut
+	var voiceFollowTimer;
+
+	function placeVoice(buf, shape) {
+		var has3D = typeof buf.use3D != "undefined" && typeof global.SoundListener != "undefined";
+		var pan = shape !== void && shape.pan !== void ? +shape.pan : void;
+		var xz;
+		if (has3D && pan === void && env.voice3DOn() && isShowBU()) xz = env.se3DPosition(%[ char:name ]);
+		try {
+			if (xz !== void) {
+				buf.use3D = true;
+				buf.minDistance = env.se3DMinDistance;
+				buf.maxDistance = env.se3DMaxDistance;
+				buf.set3DPosition(xz[0], 0, xz[1]);
+				startFollowingVoice();
+				return;
+			}
+			buf.use3D = false if has3D && buf.use3D;
+			pan = 0 if pan === void;
+			pan = pan < -100 ? -100 : pan > 100 ? 100 : pan;
+			buf.pan = (int)(pan * 1000);
+		} catch (e) {
+			dm(name + ": voice placement: " + e.message);
+		}
+		stopFollowingVoice();
+	}
+
+	function startFollowingVoice() {
+		if (voiceFollowTimer === void) {
+			voiceFollowTimer = new Timer(onFollowVoice, "");
+			voiceFollowTimer.interval = 50;
+		}
+		voiceFollowTimer.enabled = true;
+	}
+
+	function stopFollowingVoice() {
+		voiceFollowTimer.enabled = false if voiceFollowTimer !== void;
+	}
+
+	function onFollowVoice() {
+		var buf = soundBuffer;
+		if (buf === void || buf.status != "play" || !buf.use3D) return stopFollowingVoice();
+		var xz = isShowBU() ? env.se3DPosition(%[ char:name ]) : void;
+		if (xz !== void) buf.set3DPosition(xz[0], 0, xz[1]);
+	}
 
 	/**
 	 * Clear voice mode.
@@ -1638,7 +1753,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 					{
 						arg();
 					} incontextof this,
-					click_arg : stopVoice,
+					click_arg : cutVoice,
 					trigger => function(arg)
 					{
 						return arg;
@@ -1663,11 +1778,15 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	 * Readjust voice volume
 	 */
     function resetVoiceVolume() {
+		var per = init.voiceVolume;
+		var vol = env.getVoiceVolume(init.voiceName);
+		vol = (per !== void) ? (vol * +per / 100) : vol;
 		if (soundBuffer !== void) {
-			var per = init.voiceVolume;
-			var vol = env.getVoiceVolume(init.voiceName);
-			soundBuffer.volume2 = ((per !== void) ? (vol * +per / 100) : vol) * 1000;
+			soundBuffer.volume2 = (int)(vol * soundBuffer.lineVolume / 100 * 1000);
         }
+		if (fadingVoice !== void) {
+			fadingVoice.volume2 = (int)(vol * fadingVoice.lineVolume / 100 * 1000);
+		}
 	}
 
 	/**

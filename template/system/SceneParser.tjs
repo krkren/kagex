@@ -1647,6 +1647,8 @@ class SceneParser
 			if (e.voice !== void) {
 				setVoice(name, e.voice, e) if init.noVoice === void;
 				delete e.voice;
+			} else if ((e.vol !== void || e.pan !== void) && init.noVoice === void) {
+				setVoiceShape(name, e); // vol= and pan= for the next line's voice
 			}
 			if (e.nextvoice !== void) {
 				if (init.noVoice === void) {
@@ -1661,6 +1663,8 @@ class SceneParser
 				}
 				delete e.nextvoice;
 			}
+			delete e.vol;
+			delete e.pan;
 			if (Scripts.getObjectCount(e) <= 1) return;
 		}
 		env.unknown(name, e);
@@ -2221,6 +2225,19 @@ class SceneParser
 		}
 		info.incVoice = elm.incvoice || elm.replace;
 		info.noplayvoice = elm.noplayvoice;
+		setVoiceShape(name, elm);
+	}
+
+	// The voice tag's vol= (in %) and pan= (-100 to 100): for the next line's voice only
+	function setVoiceShape(name, elm) {
+		if (elm.vol === void && elm.pan === void) return;
+		var info = voiceMap[name];
+		if (info === void) {
+			info = %[];
+			voiceMap[name] = info;
+		}
+		info.vol = +elm.vol if elm.vol !== void;
+		info.pan = +elm.pan if elm.pan !== void;
 	}
 
 	function getVoice(name) {
@@ -2254,6 +2271,12 @@ class SceneParser
 			var info = voiceMap[name];
 			var v = %[ name:name, voice:voice ];
 			v.noplayvoice = info.noplayvoice if info !== void && info.noplayvoice !== void;
+			if (info !== void) {
+				v.vol = info.vol if info.vol !== void;
+				v.pan = info.pan if info.pan !== void;
+				delete info.vol;
+				delete info.pan;
+			}
 			nextVoiceList.add(v);
 		}
 	}
