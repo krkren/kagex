@@ -1441,7 +1441,9 @@ def vrm_steps(eng):
     eng.tjs(vee + 'c.playOnce("wave", %[]); return 1;')
     eng.wait("the wave", 'world_object.env.characters["vee"].oneShotPlaying', timeout=5)
     r = str(eng.tjs(vee + 'return [c.onceAnim !== void ? c.onceAnim.getDuration() : 0, c.fromAnim !== void ? 1 : 0].join(",");'))
-    eng.wait("the pose again", '!world_object.env.characters["vee"].oneShotPlaying', timeout=10)
+    # (her motions' clock moves at most 100 ms a frame, so a Simulator drawing a few frames a
+    # second takes several times the wave's 4 s: the release runs' Live2D iOS job ran out at 10)
+    eng.wait("the pose again", '!world_object.env.characters["vee"].oneShotPlaying', timeout=60)
     print("     wave: a VRM animation of %s s, faded in from the pose: %s" % tuple(r.split(",")), flush=True)
     if abs(float(r.split(",")[0]) - 2.6) > 0.05:
         raise SmokeError("wave didn't play vee_wave.vrma: %s" % r)
@@ -1514,7 +1516,7 @@ def three_flip_steps(eng):
         raise SmokeError("the 3d flip isn't playing vee_idle with happy set: %s" % r)
     eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "vee_wave", "3dexpression" => ""]); return 1;')
     eng.wait("vee_wave once", kf + '.oncePlaying', timeout=5)
-    eng.wait("the idle motion again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=10)
+    eng.wait("the idle motion again", '!' + kf + '.oncePlaying && ' + kf + '.onceDone == 1', timeout=60)
     eng.tjs('kag.tagHandlers.layopt(%[layer:"1", page:"fore", "3donce" => "no_such_motion"]); return 1;')
     eng.wait("3donce for a motion it doesn't have", kf + '.onceDone == 2', timeout=5)
     # as a string: the Android, iOS and web REPLs print a real with a comment ("+0.0 /* +0.0 */")
