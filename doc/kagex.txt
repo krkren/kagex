@@ -3000,6 +3000,8 @@ KAGEX Shortcut List (Basically the same as KAG)
 
  L Follow bookmark (Activate Load)
 
+ SHIFT+S / SHIFT+L  Quick save, quick load (● Carrying On and Quick Saves)
+
  R or SHIFT+Up Display message history
 
 
@@ -3017,6 +3019,54 @@ KAGEX Shortcut List (Basically the same as KAG)
  TAB        Move button focus
 
  Cursor     Move button focus
+
+
+
+● Carrying On and Quick Saves
+
+
+
+Since 0.16.0 the game window keeps two kinds of bookmark for the player, set in Config.tjs's
+window settings. Both may be numbered from numBookMarks on, past the menus' bookmarks:
+
+
+    ;quickSaveSlot = 90;   // the first quick save's bookmark (-1: none)
+    ;quickSaveSlots = 3;   // how many go round
+    ;continueSlot = 93;    // the place to carry on from (-1: none)
+    ;continueEvery = 5;    // save points between two continue saves
+
+
+Quick saves go round quickSaveSlots bookmarks, so one wrong key can't overwrite the only one:
+kag.quickSave() saves into the next (after the newest, scflags.quickSaveLast; a protected
+bookmark is passed over) and shows "Quick saved" for a moment, and kag.quickLoad() asks, then
+loads the newest. Shift+S and Shift+L do those where the game has quick saves; the sample binds
+them to its own (Q.SAVE and Q.LOAD on the message window, which load through loadinit.ks).
+
+  kag.quickSave()        The bookmark saved into, or -1 (nowhere to save from, or none free).
+  kag.quickLoad()        Asks, then loads the newest; false without one.
+  kag.newestQuickSave()  The newest quick save's bookmark, or -1.
+  kag.quickSaves()       The quick saves, newest first.
+  kag.quickSaveHook      Functions called with the bookmark after a quick save.
+
+The continue save keeps the player's place as the game goes, so that the game can offer to
+carry on from it at its next start, however it ended: it's written at the first stable state
+(waiting for a click) after a save point of a new script or after continueEvery save points, and
+when the game quits. Phones and browsers may end a game without it quitting, so the first two
+matter there. It's only written from the main conductor where a bookmark can be saved
+(kag.canStore(), not while skipping or with a dialog open). The sample's title asks once a run
+("Carry on where you left off?", with the scene and the date) and loads it on Yes.
+
+  kag.hasContinue        There's a place to carry on from.
+  kag.continueOn         The player's switch (scflags): off, nothing is written or offered.
+  kag.saveContinue()     Writes it now, where it can be; true when written.
+
+When an uncaught error ends a release build, the framework first saves the system variables
+(read marks, settings) and the continue save (KAGSaveBeforeError, Initialize.tjs).
+
+The web build's saves go to /persist/<orgname>/<appname>/, which the browser keeps (in
+IndexedDB): SDL's user:// there is in the page's memory, and everything saved in it went when
+the page did (UPSTREAM.md). Save names are joined to the save folder with kag.saveDataFile(name),
+which doesn't double the folder's slash.
 
 
 
@@ -3059,6 +3109,16 @@ voicecut    true: Clear all voices before playing the next voice
 voicecutpage    true: Apply voicecut effect after page end (before next effect)
 
         false: Apply voicecut effect before name display
+
+voiceFadeOn     true: a cut voice fades out over voiceFadeTime ms rather than stopping (since
+
+        0.16.0; world.txt, "Voices That Fade Out When Cut")
+
+voiceFadeTime   The fade's length, in ms (300)
+
+voicePlacement  true: voices come from where their speakers stand, where envinit.tjs has
+
+        "voice3d" (world.txt, "Voices From Where the Speaker Stands")
 
 bgmdown     true: Lower BGM volume when playing voice
 

@@ -126,13 +126,30 @@ function setYesNoFont(layer, size)
 
 /**
 
- * Word-wraps text to width (characters are broken only for a word wider than the line)
+ * Word-wraps text to width (characters are broken only for a word wider than the line); a
+ * new line ("\n") starts a line
 
  */
 
 function wrapYesNoText(layer, text, width)
 
 {
+
+    if (text.indexOf("\n") >= 0) { // lines of their own, each wrapped
+
+        var all = [], parts = text.split("\n");
+
+        for (var p = 0; p < parts.count; p++) {
+
+            var some = wrapYesNoText(layer, parts[p], width);
+
+            for (var j = 0; j < some.count; j++) all.add(some[j]);
+
+        }
+
+        return all;
+
+    }
 
     var lines = [], line = "";
 

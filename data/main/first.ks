@@ -90,6 +90,18 @@ function initialEnvironment()
 
     kag.setVoiceOn('voice5', true);
 
+    // Config's second page
+
+    kag.voicecut       = false; // a voice plays on until the next one, which fades it out
+
+    kag.voiceFadeOn    = true;
+
+    kag.voiceFadeTime  = 300;
+
+    kag.voicePlacement = true;
+
+    kag.continueOn     = true;
+
 }
 
 

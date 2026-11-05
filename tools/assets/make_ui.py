@@ -55,7 +55,7 @@ LABELS = {
         "START": "はじめから", "CONTINUE": "つづきから", "EXTRA": "おまけ", "CONFIG": "設定", "EXIT": "終了",
         # the message window's buttons
         "SAVE": "セーブ", "LOAD": "ロード", "BACK": "戻る", "SKIP": "スキップ", "AUTO": "オート", "LOG": "ログ",
-        "HIDE": "消す",
+        "HIDE": "消す", "Q.SAVE": "Qセーブ", "Q.LOAD": "Qロード",
         # config
         "Config": "設定", "Screen Mode": "画面モード", "Text Speed": "文字速度", "Auto Speed": "オート速度",
         "Effect Speed": "演出速度", "Skip Mode": "スキップ", "Language / 言語": "言語 / Language", "BGM Volume": "BGM 音量",
@@ -65,6 +65,14 @@ LABELS = {
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
+        # config, the second page
+        "When You Click": "クリックしたとき", "Fade": "フェード", "Keep": "そのまま",
+        "Fade Length": "フェードの長さ", "Short": "短い", "Long": "長い", "Voice Position": "ボイスの位置",
+        "With Speaker": "立ち位置から", "Centred": "中央", "Carry On at Start": "起動時に続きから",
+        "On": "オン", "Off": "オフ", "Quick Saves": "クイックセーブ",
+        "Q.SAVE or Shift+S: a quick save": "Qセーブ / Shift+S：クイックセーブ",
+        "Q.LOAD or Shift+L: the newest one": "Qロード / Shift+L：最新のものをロード",
+        "The last three are kept.": "最新の 3 つまで残ります。",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
@@ -513,7 +521,8 @@ def make_logo():
 
 
 # --- the message window ----------------------------------------------------------------
-MSG_BUTTONS = ["save", "load", "back", "skip", "auto", "log", "config", "exit", "hide"]
+MSG_BUTTONS = ["save", "load", "back", "skip", "auto", "log", "config", "exit", "hide", "qsave", "qload"]
+MSG_LABELS = {"qsave": "Q.SAVE", "qload": "Q.LOAD"}   # the others' are their names in capitals
 
 
 def make_message():
@@ -531,7 +540,7 @@ def make_message():
 
     for name in MSG_BUTTONS:
         for st in ("normal", "over"):
-            button(124, 42, L(name.upper()), st, size=19, r=10, bw=3, tracking=1.5).save(
+            button(124, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
                 out("msg_%s_%s.png" % (name, st)))
     for name in ("auto", "skip"):  # latched while auto mode / skipping is on
         button(124, 42, L(name.upper()), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
@@ -626,6 +635,44 @@ def make_config():
                         ("config_controls", "Controls")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
+    make_config2()
+
+
+# the second page (config.ks *page2; its tabs are the save screens' page1 and page2): voices on
+# the left, saves on the right, three rows each
+def make_config2():
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Config"))
+    rows = 3
+    bottom = CFG_TOP + CFG_ROW * rows
+    columns = ((CFG_L, ["When You Click", "Fade Length", "Voice Position"]),
+               (CFG_R, ["Carry On at Start", "Quick Saves", None]))
+    for x0, labels in columns:
+        c.panel((x0, CFG_TOP, x0 + CFG_W, bottom))
+        for i, label in enumerate(labels):
+            top = CFG_TOP + CFG_ROW * i
+            if label is None:
+                continue
+            if i:
+                c.rrect((x0 + 24, top - 1, x0 + CFG_W - 24, top + 1), 1, fill=rgba(WHITE, 120))
+            outlined(c, (x0 + 32, top + 8), L(label), 33)
+    # the fade's slider, as page 1's (config.ks: its tab's centre travels from x 417 to 803)
+    sx, cy = CFG_L + 112, CFG_TOP + CFG_ROW + 90
+    outlined(c, (sx - 12, cy), L("Short"), 26, anchor="rm", stroke=2.5)
+    outlined(c, (sx + 416 + 12, cy), L("Long"), 26, anchor="lm", stroke=2.5)
+    c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
+    # how quick saves work, under their row's title
+    for i, line in enumerate(("Q.SAVE or Shift+S: a quick save", "Q.LOAD or Shift+L: the newest one",
+                              "The last three are kept.")):
+        outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW + 72 + 44 * i), L(line), 26, stroke=2.5)
+    c.save(out("config2_base.png"), opaque=True)
+
+    for name, label, w in (("vstop", "Stop", 180), ("vfade", "Fade", 180), ("vkeep", "Keep", 180),
+                           ("vplaced", "With Speaker", 240), ("vcentred", "Centred", 240),
+                           ("carryon", "On", 240), ("carryoff", "Off", 240)):
+        for st in ("normal", "over"):
+            button(w, 60, L(label), st, size=28).save(out("config_%s_%s.png" % (name, st)))
 
 
 def nav_button(label, st, w=180):

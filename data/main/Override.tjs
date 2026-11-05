@@ -121,6 +121,8 @@ function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, 
     // Adjust message window buttons
     setButtonEnabled(kag, "msg_save", kag.storeMenu.enabled);
     setButtonEnabled(kag, "msg_load", kag.restoreMenu.enabled);
+    setButtonEnabled(kag, "msg_qsave", kag.storeMenu.enabled && kag.quickSaveSlot >= 0);
+    setButtonEnabled(kag, "msg_qload", kag.restoreMenu.enabled && kag.newestQuickSave() >= 0);
     setButtonEnabled(kag, "msg_log",  kag.showHistoryMenuItem.enabled);
     setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
     setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
@@ -335,25 +337,44 @@ function startConfig()
 }
 
 /**
- * Execute quick load
+ * Quick load (Q.LOAD, Shift+L): the newest quick save, after asking
  */
 function quickloadAction()
 {
-    var work = kag.numBookMarks - 1;
-    if (Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(work))) {
+    var work = kag.newestQuickSave();
+    if (work >= 0 && kag.canRestore()) {
         askYesNo("Quick Load?", "Confirmation", loadFunction, void, work);
     }
 }
 
 /**
- * Execute quick save
+ * Quick save (Q.SAVE, Shift+S): into the next of the quick saves, which go round
+ * (Config.tjs's quickSaveSlot and quickSaveSlots; kag.quickSave shows the notice)
  */
 function quicksaveAction(map=false)
 {
-    saveFunction(kag.numBookMarks - 1);
-    if (global.qsavenotify_object !== void) {
-        global.qsavenotify_object.start(map);
+    if (kag.quickSave() >= 0) {
+        if (global.qsavenotify_object !== void) {
+            global.qsavenotify_object.start(map);
+        }
+        kag.setMenuAccessibleAll(); // Q.LOAD has something to load now
     }
+}
+
+/**
+ * Carry on where you left off: the first time the title shows in a run, it asks whether to
+ * load the place the game kept (the continue save, Config.tjs's continueSlot), with that
+ * place's scene and date, unless Config turned it off
+ */
+function offerContinue()
+{
+    if (tf.continueAsked) return;
+    tf.continueAsked = true;
+    if (!kag.hasContinue || !kag.canRestore()) return;
+    var n = kag.continueSlot;
+    var date = kag.getBookMarkDate(n);
+    askYesNo(tr("Carry on where you left off?") + "\n" + tr(kag.getBookMarkPageName(n)) + (date !== void ? "  " + date : ""),
+        "Confirmation", loadFunction, void, n);
 }
 
 // The name is centred in the message window's name box (namebox.png, [initscene] in
@@ -604,6 +625,54 @@ function initial()
 }
 
 /**
+ * Config's pages: the settings on show (1 or 2), drawn again
+ */
+function setConfigPage(page)
+{
+    if (tf.configPage == page) return;
+    tf.configPage = page;
+    kag.process("", "*buttons");
+}
+
+/**
+ * What a click past a voiced line does to its voice: "stop" it at once, "fade" it out
+ * (kag.voiceFadeTime, the slider), or "keep" it playing until the next voice, which fades it
+ * (kag.voicecut and kag.voiceFadeOn)
+ */
+function setVoiceCutButton(work=void)
+{
+    if (work !== void) {
+        kag.voicecut    = work != "keep";
+        kag.voiceFadeOn = work != "stop";
+    }
+    var cur = !kag.voicecut ? "keep" : kag.voiceFadeOn ? "fade" : "stop";
+    setButtonOver("config_vstop", cur == "stop");
+    setButtonOver("config_vfade", cur == "fade");
+    setButtonOver("config_vkeep", cur == "keep");
+}
+
+/**
+ * Voices from where the speakers stand (envinit.tjs's voice3d), or from the middle
+ */
+function setVoicePlacementButton(work=void)
+{
+    kag.voicePlacement = work if work !== void;
+    setButtonOver("config_vplaced",   kag.voicePlacement);
+    setButtonOver("config_vcentred", !kag.voicePlacement);
+}
+
+/**
+ * Whether the title offers to carry on where the game left off (offerContinue); off, the
+ * game doesn't keep the place either
+ */
+function setCarryOnButton(work=void)
+{
+    kag.continueOn = work if work !== void;
+    setButtonOver("config_carryon",   kag.continueOn);
+    setButtonOver("config_carryoff", !kag.continueOn);
+}
+
+/**
  * Return to title
  */
 function gotoTitle()
@@ -617,6 +686,14 @@ function gotoTitle()
  */
 function configInit()
 {
+    setButtonOver("page1", tf.configPage != 2);
+    setButtonOver("page2", tf.configPage == 2);
+    if (tf.configPage == 2) {
+        setVoiceCutButton();
+        setVoicePlacementButton();
+        setCarryOnButton();
+        return;
+    }
     setScreenButton();
     setNoEffectButton();
     setSkipButton();

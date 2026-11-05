@@ -337,7 +337,7 @@ function KAGWindow_config()
 // If you do not manage bookmarks by menu (e.g., managing all bookmarks within 
 // the game screen), set numBookMarks to the required number and set 
 // restoreMenu.visible and storeMenu.visible to false.
-;numBookMarks = 91;
+;numBookMarks = 90;
 
 
 
@@ -421,6 +421,16 @@ function KAGWindow_config()
 // showing the window. The first launch is full-screen, whatever the display; after
 // that the player's last choice (the persisted scflags.fullScreen) is kept.
 ;getInitialFullScreenState = function() { return scflags.fullScreen !== void ? !!scflags.fullScreen : true; };
+
+// ◆ Carrying On and Quick Saves (since 0.16.0)
+// The save and load screens show bookmarks 0 to 89. Quick saves (Q.SAVE, Shift+S) go round
+// bookmarks 90 to 92, so the last three are kept, and Q.LOAD (Shift+L) loads the newest;
+// bookmark 93 keeps the player's place as the game goes (at each scene's start, every
+// continueEvery save points and when the game quits), which the title offers to carry on from.
+;quickSaveSlot = 90;
+;quickSaveSlots = 3;
+;continueSlot = 93;
+;continueEvery = 5;
 
 //[end-window-additionals]
 

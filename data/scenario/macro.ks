@@ -38,6 +38,8 @@
 
 [else]
 
+[sysbutton name=msg_qsave  x=580 y=18 exp="quicksaveAction()"]
+[sysbutton name=msg_qload  x=712 y=18 exp="quickloadAction()"]
 [sysbutton name=msg_save   x=844 y=18 exp="startSave()"]
 
 [sysbutton name=msg_load   x=976 y=18 exp="startLoad()"]

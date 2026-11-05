@@ -947,6 +947,16 @@ Basic Operation
 
 
 
+    vol         The next line's voice at this volume, in % (vol=35 for a whisper), for that line
+                only; with voice=, or on a tag of its own before the line (since 0.16.0).
+
+
+
+    pan         The next line's voice put here, from -100 (left) to 100 (right), for that line
+                only, rather than where its speaker stands (since 0.16.0).
+
+
+
 Example: Play by specifying voice number
 ------------------------------------
 [Tae voice=1000]
@@ -1002,6 +1012,14 @@ Example: Handling a case where voice is removed for one line (discard correspond
 
 
 
+Example: A whispered line, from the right
+------------------------------------
+[Tae voice=1001 vol=35 pan=60]
+【Tae】(whispering) Over here
+------------------------------------
+
+
+
 ・In the environment initialization process, voices for all characters are initialized to "None".
 ・The actual file name format for number specification is defined in `envinit.tjs`.
 
@@ -1022,6 +1040,42 @@ During Voice Playback
 　Remaining voice time at the moment the wait started (calculated from voice length) + specified time wait.
 
 Clicking cancels the wait and proceeds to the next conversation.
+
+
+
+※ Voices That Fade Out When Cut (since 0.16.0)
+
+
+
+A voice is cut when its line is clicked past (with KAG's voicecut), by the next voice, or by a
+click during [waitvoice]. It then fades out over kag.voiceFadeTime ms (300) instead of stopping
+in the middle of a syllable, on a track of its own, so the speaker's next voice starts at once on
+the other. The game doesn't wait for the fade: the voice's stop is told as the fade begins (the
+waits end, the BGM comes back up, the tags delayed to its end run). Skipping, auto mode and
+loading still stop voices at once, and so does kag.voiceFadeOn = false. Both are the player's
+(kept in the system variables); the sample's Config offers Stop (voicecut on, no fade), Fade
+(voicecut on) and Keep (voicecut off: a voice plays on until the next one, which fades it out),
+and the fade's length, on its second page.
+
+
+
+※ Voices From Where the Speaker Stands (since 0.16.0)
+
+
+
+With "voice3d" => true in envinit.tjs and the player's switch on (kag.voicePlacement), a
+character on the stage is heard from where it stands, through the engine's 3D sound as a sound
+placed with [se char=] is (● SE Object Functions, positional sound): one on the left a little from the left, one
+further back further away, and the voice follows the character while it moves. A character off
+the stage, or shown in the face window only, is heard from the middle, and so is every voice on
+an engine without 3D sound. A line's pan= puts its voice there instead. The Character demo
+(char.ks, "Voices") has Ai on the left and Pip on the right, and a whisper:
+
+
+    [ai posleft]
+    [pip posright]
+    [pip voice=4 vol=35]
+    【pip】(whispering) Is she always like this?
 
 
 
