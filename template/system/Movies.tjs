@@ -168,8 +168,12 @@ function KAGMovieTag(elm)
 	var order = kag.fore.layers[+n].absolute;
 	var back;
 	if (elm.color !== void) {
-		back = new global.Layer(kag, kag.primaryLayer);
-		back.setImageSize(kag.primaryLayer.width, kag.primaryLayer.height);
+		// beside the movie's layer, just under it: KAG's layers and the message windows are the base
+		// layer's children, and the primary layer's own children go over the whole of it (0.17.0
+		// made the backdrop one of those, so it covered the movie: a black screen)
+		var under = kag.fore.layers[+n].parent;
+		back = new global.Layer(kag, under);
+		back.setImageSize(under.width, under.height);
 		back.setSizeToImageSize();
 		back.fillRect(0, 0, back.width, back.height, 0xff000000 | +elm.color);
 		back.absolute = 1499999;

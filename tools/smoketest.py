@@ -3073,6 +3073,18 @@ def sample_steps(eng):
                           ' return [l.flipType, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
         if sub != "movie,2":
             raise SmokeError("[movie] didn't play on a layer with its subtitles: %s" % sub)
+        # the movie on the screen, not the backdrop (color=) over it: 0.17.0 made the backdrop a child
+        # of the primary layer, which covered the base layer the movie is on, so it was a black screen
+        eng.wait("the movie's first frames", 'KAGMoviePlaying === void || (kag.fore.layers[+KAGMoviePlaying.layer].flip !== void'
+                 ' && kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 3)', timeout=10)
+        shown = eng.tjs('if (KAGMoviePlaying === void) return -1; var w = new global.Layer(kag, kag.primaryLayer);'
+                        ' w.setImageSize(kag.primaryLayer.width, kag.primaryLayer.height);'
+                        ' w.piledCopy(0, 0, kag.primaryLayer, 0, 0, w.imageWidth, w.imageHeight); var n = 0;'
+                        ' for (var y = 60; y < w.imageHeight - 60; y += 40) for (var x = 60; x < w.imageWidth - 60; x += 40)'
+                        ' n++ if (w.getMainPixel(x, y) & 0xffffff) != 0; invalidate w; return n;')
+        print("     the movie on the screen: %s of its samples not the black backdrop" % shown, flush=True)
+        if shown == 0:
+            raise SmokeError("the movie didn't show: the screen was the backdrop's colour all over")
         time.sleep(0.6)
         eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
