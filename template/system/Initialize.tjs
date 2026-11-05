@@ -1125,6 +1125,8 @@ KAGLoadScript("GFX_Three.tjs")    if (KAGConfigEnabled("gfxThreeEnabled",    tru
 
 KAGLoadScript("GFX_Static.tjs")   if (KAGConfigEnabled("gfxStaticEnabled",   true));
 
+KAGLoadScript("GFX_Roll.tjs")     if (KAGConfigEnabled("gfxRollEnabled",     true));
+
 
 
 KAGLoadScript("MessageLayer.tjs");
@@ -1258,6 +1260,17 @@ KAGLoadScript("Indicators.tjs");
 KAGIndicatorsOf(kag);
 
 kag.tagHandlers.chapter = KAGChapterTag;
+
+
+// Movies as commercial games play them, and subtitles ([movie], since 0.17.0)
+
+KAGLoadScript("Movies.tjs");
+
+kag.tagHandlers.movie = KAGMovieTag;
+
+kag.tagHandlers.moviedone = KAGMovieDoneTag;
+
+kag.rightClickHook.add(KAGMovieRightClick);
 
 
 

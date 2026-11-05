@@ -645,7 +645,7 @@ var configPages = [
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
-      [ "heroName" ] ]
+      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality" ] ]
     ];
 
 // ---------------------------------------------------------
@@ -1058,6 +1058,11 @@ function replayInit()
             replayTabs.add(info.page);
             replayTiles.add([]);
         }
+        if (info.scene.substring(0, 6) == "movie:") {
+            // a movie, playable once seen ([movie], Movies.tjs)
+            replayTiles[tab].add(%[movie:info.scene.substring(6), alpha:info.target != "" ? info.target : "0", thum:info.thum, title:info.title]);
+            continue;
+        }
         var storage = info.scene + ".ks";
         var compiled = typeof global.scnFindCompiled != "undefined" && scnFindCompiled(storage) !== void &&
             typeof global.world_object != "undefined" && world_object.scenePlayEnabled;
@@ -1099,6 +1104,7 @@ function replayInit()
 function replayUnlocked(info)
 {
     if (tf.allseen) return true;
+    if (info.movie !== void) return KAGMovieSeen(info.movie);
     if (info.compiled) {
         var r = kag.sflags.envPlayerSceneReaded;
         return r !== void && r[info.scene] !== void && +r[info.scene] > 0;
@@ -1174,7 +1180,7 @@ function drawReplayTile(button, info)
     if (info.thum != "") {
         setCGImage(button, info.thum);
     } else {
-        var thumb = info.compiled ? replaySnapshot(info, pw, ph) : void;
+        var thumb = info.compiled && info.movie === void ? replaySnapshot(info, pw, ph) : void;
         if (thumb !== void) {
             var hold = button.holdAlpha;
             button.holdAlpha = true;
@@ -1261,6 +1267,11 @@ function replayTile(index)
 {
     var info = tf.replaylist[index];
     if (info === void) return;
+    if (info.movie !== void) {
+        tf.movieName = info.movie, tf.movieAlpha = info.alpha;
+        kag.process("moviemode.ks");
+        return;
+    }
     tf.recollect = 1;
     kag.process('loadinit.ks', '', true, true);
     var elm = %[storage:info.storage, target:info.label != "" ? "*" + info.label : "", doneStorage:"replay.ks", doneTarget:""];

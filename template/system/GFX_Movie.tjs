@@ -30,6 +30,12 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	var file;        //< Current file
 
+	var frames = 0;  //< frames shown since it started ([movie]'s watchdog)
+
+	var subtitle;    //< subtitle= (true: <name>.vtt beside it; Movies.tjs)
+
+	var subtitles;   //< its KAGSubtitles, while it has cues
+
 
 
 	function MovieControlLayer(window) {
@@ -88,9 +94,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	 */
 
-	function start(filename, loop=false, alpha=0) {
+	function start(filename, loop=false, alpha=0, subtitle=void) {
 
 		this.alpha = alpha;
+
+		this.subtitle = subtitle;
+
+		frames = 0;
 
 		// The [image] tag shows the layer before the first frame arrives; left at ltOpaque its empty
 
@@ -113,6 +123,14 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 		try { audioVolume = getAudioVolume(); } catch {}
 
 		play();
+
+		// its subtitles (Movies.tjs)
+
+		if (subtitles !== void) { invalidate subtitles; subtitles = void; }
+
+		var cueFile = typeof global.KAGSubtitleFile != "undefined" ? KAGSubtitleFile(filename, subtitle) : void;
+
+		if (cueFile !== void) try { subtitles = new KAGSubtitles(targetLayer.window, this, cueFile); } catch (e) { dm("subtitles: " + cueFile + ": " + e.message); }
 
 	}
 
@@ -138,6 +156,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		SUPER.stop();
 
+		if (subtitles !== void) { invalidate subtitles; subtitles = void; }
+
 		flipStop();
 
 	}
@@ -149,6 +169,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 	function onFrameUpdate() {
 
 		if (!isvalid this) return;
+
+		frames++;
 
 		//dm("Update:" + targetLayer.name);
 
@@ -216,19 +238,21 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 			;.alpha = alpha;
 
+			;.subtitle = subtitle;
+
 		}
 
 	}
 
 	function flipRestore(dic) {
 
-		start(dic.file, dic.loop, dic.alpha);
+		start(dic.file, dic.loop, dic.alpha, dic.subtitle);
 
 	}
 
 	function flipStart(storage, elm) {
 
-		start(storage, elm.loop, elm.alpha);
+		start(storage, elm.loop, elm.alpha, elm.subtitle);
 
 	}
 
@@ -252,7 +276,7 @@ GenericFlip.Entry(
 
 //		"checker"  => void,                // Determination process (function)
 
-		"options"  => [ "loop", "alpha" ], // Option values to use (for KAGEnvLayer)
+		"options"  => [ "loop", "alpha", "subtitle" ], // Option values to use (for KAGEnvLayer)
 
 		"autoflag" => "movie",             // Auto flag tag name (for KAGEnvLayer)
 

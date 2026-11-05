@@ -3018,6 +3018,55 @@ def sample_steps(eng):
             if found != "Pip":
                 raise SmokeError("[vo pip000003] didn't make Pip the speaker of the compiled line: %s" % found)
 
+    @step("the credits roll over the rest of the music, keep their place in a save, and send rollend when seen to the end")
+    def _():
+        if eng.tjs('return typeof global.RollFlip != "undefined" && Storages.isExistentStorage("credits.ks") ? 1 : 0;') != 1:
+            print("     (skipped: this build predates the credits roll)", flush=True)
+            return
+        eng.tjs('sf["roll:credits"] = void; kag.process("credits.ks", "*start"); return 1;')
+        eng.wait("the roll", 'kag.fore.layers[0].flipType == "roll" && kag.fore.layers[0].flip.items.count > 5', timeout=20)
+        info = str(eng.tjs('var f = kag.fore.layers[0].flip; return [f.items.count, f.total, f.duration, f.elapsed > 0 ? 1 : 0].join(",");'))
+        print("     %s lines and pictures, %s px, over %s ms" % tuple(info.split(",")[:3]), flush=True)
+        v = info.split(",")
+        if int(v[2]) < 30000 or v[3] != "1":
+            raise SmokeError("the roll isn't timed to the music playing (rolltime=bgm) or isn't moving: %s" % info)
+        kept = str(eng.tjs('var l = kag.fore.layers[0], f = l.flip; f.elapsed = 12345; var d = %[]; l.storeFlip(d);'
+                           ' l.restoreFlip(d); return [l.flip.elapsed >= 12345 ? 1 : 0, KAGRollSeen("credits") ? 1 : 0].join(",");'))
+        if kept != "1,0":
+            raise SmokeError("a save didn't keep how far the roll had got, or it was seen already: %s" % kept)
+        eng.tjs('var f = kag.fore.layers[0].flip; f.elapsed = f.duration - 100; return 1;')
+        eng.wait("the demo menu after the roll", 'kag.conductor.curStorage == "s0001.ks" && KAGRollSeen("credits")', timeout=20)
+
+    @step("[movie]: the opening was noted as seen, its subtitles come from test.vtt, a seen movie skips with a click, and Replay's Movies tab plays it")
+    def _():
+        if eng.tjs('return typeof global.KAGMovieTag != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates [movie])", flush=True)
+            return
+        cues = str(eng.tjs('var c = KAGParseVTT("test.vtt"); return [c.count, c.count > 0 ? c[0].from : -1, c.count > 0 ? c[0].to : -1].join(",");'))
+        if cues != "2,200,2400":
+            raise SmokeError("test.vtt's cues weren't read as two, the first from 200 to 2400 ms: %s" % cues)
+        seen = eng.tjs('return KAGMovieSeen("test") ? 1 : 0;')
+        print("     the opening seen at start: %s" % seen, flush=True)
+        eng.tjs('tf.replayTab = void; tf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
+        tab = eng.tjs('return replayTabs.find("Movies");')
+        if tab < 0:
+            raise SmokeError("Replay has no Movies tab")
+        eng.tjs('sf["movie:test"] = true; setReplayPage(%d, 0); return 1;' % tab)
+        if eng.tjs("return tf.replaylist[0] !== void && tf.replaylist[0].movie == \"test\" ? 1 : 0;") != 1:
+            raise SmokeError("the Movies tab's first tile isn't the test movie, or it's locked though seen")
+        eng.tjs("replayTile(0); return 1;")
+        eng.wait("the movie", 'KAGMoviePlaying !== void', timeout=20)
+        sub = str(eng.tjs('var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
+                          ' return [l.flipType, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
+        if sub != "movie,2":
+            raise SmokeError("[movie] didn't play on a layer with its subtitles: %s" % sub)
+        time.sleep(0.6)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("quick saves go round their bookmarks, and quick load asks, then loads the newest")
     def _():
         if eng.tjs('return typeof kag.quickSave != "undefined" ? 1 : 0;') != 1:
