@@ -9,6 +9,7 @@
 ### Fixed
 
 - **Movies fill the screen**: the smaller version of a movie that the web and phones play (`<name>_sd`) showed at its own size, in the middle of a black screen. `[movie]` now zooms a movie of another size so it fills the screen, keeping its shape (`fit=false` shows it at its own size), and `[image movie=... fit=true]` does the same on any layer. The smaller version also uses the full movie's subtitles when it has none of its own.
+- **A movie no longer hangs the game on a computer without a sound device**: there the engine can't start a movie's audio and holds a movie with sound at its first frame for ever (`UPSTREAM.md` 40), so the new opening, which has music, would have hung the game at the logo. `[movie]` now ends a movie whose picture stops for 3 seconds, as it already ended one that showed no picture.
 - The smoke test's movie checks accept a movie that shows no picture on the web, where the browser's player can't open a movie inside `data.xp3` (`TODO.md`, "Movies on the web").
 
 ## 0.17.1

@@ -193,7 +193,8 @@ function KAGMovieTag(elm)
 		subtitle:elm.subtitle !== void ? elm.subtitle : "true", once:"true", fit:elm.fit !== void ? elm.fit : "true" ]);
 	var canskip = seen || elm.skip == "always";
 	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount(), order:order ];
-	// a movie that never shows a frame (no decoder for it here) ends after 3 s
+	// a movie whose picture doesn't come or stops (no decoder for it here; no sound device for its
+	// audio, which holds the picture at its first frame) ends after 3 s
 	var w = new Timer(KAGMovieWatchdog, "");
 	w.interval = 500;
 	w.enabled = true;
@@ -215,12 +216,21 @@ function KAGMovieWatchdog()
 	var p = KAGMoviePlaying;
 	if (p === void) return;
 	var lay = kag.fore.layers[+p.layer], f = lay !== void ? lay.flip : void;
-	var frames = f !== void && typeof f.frames != "undefined" ? f.frames : 1;
-	if (frames == 0 && System.getTickCount() - p.started > 3000) {
-		dm("movie: " + p.key + ": no picture after 3 s, so it ends");
-		p.watchdog.enabled = false;
-		kag.trigger("lmstop");
+	if (f === void || typeof f.frames == "undefined") return;
+	var now = System.getTickCount(), pos = 0;
+	try { pos = f.position; } catch {}
+	// the picture moves on: a new frame or a new position
+	if (p.lastFrames === void || f.frames != p.lastFrames || pos != p.lastPosition) {
+		p.lastFrames = f.frames, p.lastPosition = pos, p.lastChange = now;
+		if (f.frames > 0) return;
 	}
+	var since = f.frames == 0 ? now - p.started : now - p.lastChange;
+	if (since <= 3000) return;
+	// the engine's player holds a movie with sound at its first frame when it has no audio
+	// device (miniaudio fails to start: UPSTREAM.md 40), and nothing else would end it
+	dm("movie: " + p.key + (f.frames == 0 ? ": no picture after 3 s" : ": its picture stopped at frame " + f.frames + " for 3 s") + ", so it ends");
+	p.watchdog.enabled = false;
+	kag.trigger("lmstop");
 }
 
 function KAGMovieDoneTag(elm)

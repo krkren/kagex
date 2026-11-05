@@ -3044,7 +3044,7 @@ def sample_steps(eng):
         eng.tjs('var f = kag.fore.layers[0].flip; f.elapsed = f.duration - 100; return 1;')
         eng.wait("the demo menu after the roll", 'kag.conductor.curStorage == "s0001.ks" && KAGRollSeen("credits")', timeout=20)
 
-    @step("[movie]: the opening was noted as seen, its subtitles come from opening.vtt, a seen movie skips with a click, Replay's Movies tab plays it, and its smaller version fills the screen")
+    @step("[movie]: the opening was noted as seen, its subtitles come from opening.vtt, a seen movie skips with a click, Replay's Movies tab plays it, its smaller version fills the screen, and a movie whose picture stops ends")
     def _():
         if eng.tjs('return typeof global.KAGMovieTag != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates [movie])", flush=True)
@@ -3117,6 +3117,23 @@ def sample_steps(eng):
                 raise SmokeError("the movie's layer kept its zoom (%s) after the movie" % zoom)
         finally:
             eng.tjs('KAGOptionSet("movieQuality", tf.smokeMovieQuality); return 1;')
+        # a movie whose picture stops ends 3 s later: without a sound device the engine holds a
+        # movie with sound at its first frame (UPSTREAM.md 40), and 0.17.2's first release run
+        # hung at the opening on the Windows runner; a pause stands in for that here
+        eng.tjs("replayTile(0); return 1;")
+        eng.wait("the movie's frames, or its end", 'KAGMoviePlaying !== void && kag.fore.layers[+KAGMoviePlaying.layer].flip !== void'
+                 ' && (kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 2 || System.getTickCount() - KAGMoviePlaying.started > 4000)'
+                 ' || KAGMoviePlaying === void && kag.conductor.curStorage == "replay.ks"', timeout=20)
+        if eng.tjs('return KAGMoviePlaying !== void && kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 2 ? 1 : 0;') == 1:
+            eng.tjs("kag.fore.layers[+KAGMoviePlaying.layer].flip.pause(); tf.smokePausedAt = System.getTickCount(); return 1;")
+            eng.wait("the stopped movie to end", 'KAGMoviePlaying === void', timeout=15)
+            took = eng.tjs("return System.getTickCount() - tf.smokePausedAt;")
+            print("     a movie whose picture stopped ended %s ms later" % took, flush=True)
+            if took < 2500:
+                raise SmokeError("a movie whose picture stopped ended too soon (%s ms)" % took)
+        else:
+            print("     (the movie shows no picture here: the check of a picture that stops is skipped)", flush=True)
+        eng.wait("Replay again", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
