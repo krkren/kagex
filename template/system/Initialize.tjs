@@ -1271,6 +1271,7 @@ kag.tagHandlers.movie = KAGMovieTag;
 kag.tagHandlers.moviedone = KAGMovieDoneTag;
 
 kag.rightClickHook.add(KAGMovieRightClick);
+kag.addPlugin(new KAGMovieOrderPlugin()); // a 0.17.0 save's movie layer back under the windows
 
 
 
