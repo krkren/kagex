@@ -29,8 +29,9 @@
  * where <screen> is the name of the scenario that made the button, without its extension
  * (title, config, save ...). An .enter sound within enterQuiet ms of another sound is left
  * out (a click redraws a screen under the pointer, a prompt moves the pointer to its button).
- * In debug mode two sounds started within doubleTime ms are logged with both call traces (or,
- * where the engine keeps none, the scenario line), as that's usually one sound played twice.
+ * In debug mode a sound started within doubleTime ms after the last one (counted from when that
+ * one's play returned) is logged with both call traces (or, where the engine keeps none, the
+ * scenario line), as that's usually one sound played twice.
  */
 class KAGInterfaceSoundTable
 {
@@ -147,6 +148,7 @@ class KAGInterfaceSoundTable
 		var tick = System.getTickCount();
 		if (tick - lastStart < enterQuiet && ((string)tag).substring(((string)tag).length - 6) == ".enter") return false;
 		lastStart = tick;
+		var noted = false;
 		if (kag.debugLevel >= tkdlSimple) {
 			var now = tick, trace = where();
 			if (last !== void && now - last.tick < doubleTime) {
@@ -155,6 +157,7 @@ class KAGInterfaceSoundTable
 					"\n  " + last.tag + ": " + last.trace + "\n  " + tag + ": " + trace);
 			}
 			last = %[ tag:tag, tick:now, trace:trace ];
+			noted = true;
 		}
 		var n = kag.numSysSEBuffers > 0 ? int(+s.buffer) : 0;
 		n = kag.numSysSEBuffers - 1 if n >= kag.numSysSEBuffers;
@@ -168,6 +171,10 @@ class KAGInterfaceSoundTable
 			if (!failed[s.file]) { failed[s.file] = true; dm("Interface sound " + s.file + " (" + tag + "): " + e.message); }
 			return false;
 		}
+		// the times count from the end of the play: opening a sound can take longer than
+		// doubleTime on a slow machine, and one sound played twice in a row would go unnoticed
+		lastStart = System.getTickCount();
+		last.tick = lastStart if noted;
 		return true;
 	}
 }

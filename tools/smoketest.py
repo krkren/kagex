@@ -2468,15 +2468,16 @@ def sample_steps(eng):
                             ' kag.fore.layers[0].visible = true;'
                             ' kag.tagHandlers.image(%[layer:"0", page:"back", storage:"event1", visible:"true"]);'
                             ' tf.stWant = __stSample(kag.back.layers[0]);'
-                            ' kag.tagHandlers.trans(%[layer:"0", method:"multiripple", time:"1000", count:"3", children:"false"]);'
+                            ' kag.tagHandlers.trans(%[layer:"0", method:"multiripple", time:"3000", count:"3", children:"false"]);'
                             ' return __stCanvases();'))
         want = str(eng.tjs('return "%dx%d".sprintf(kag.scWidth, kag.scHeight);'))
         print("     multiripple's canvas: %s (the screen: %s)" % (shown or "none", want), flush=True)
         if shown != want:
             raise SmokeError("multiripple from an empty layer drew on %s, not the screen's %s" % (shown or "nothing", want))
+        # 3 s, so a slow REPL (the macOS runner's) still finds it going, and its end waited for
         time.sleep(0.5)
         mid = int(eng.tjs('return kag.transCount;'))
-        time.sleep(1.5)
+        eng.wait("multiripple's end", "kag.transCount == 0", timeout=20)
         end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
         print("     going at half its time: transCount %d; after it: transCount, canvases, points unlike the back page's: %s" % (mid, end), flush=True)
         if mid != 1 or end != "0,,0":
