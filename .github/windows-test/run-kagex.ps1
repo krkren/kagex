@@ -331,7 +331,13 @@ Step 'logo -> title screen' {
     "$f; buttons: $(Invoke-Tjs '__ci_buttons()')"
 }
 Step 'title: START -> demo menu' {
-    $r = Click-Until 'start' 'the demo menu' $atMenu "kag.process('title.ks', '*gamestart')"
+    # since 0.17.0 the first START asks for the hero's name (namescreen.ks): OK takes the defaults
+    $atNameOrMenu = { param($s) ($s.storage -eq 'namescreen.ks' -and $s.stable -eq '1') -or (& $atMenu $s) }
+    $r = Click-Until 'start' 'the name screen or the demo menu' $atNameOrMenu "kag.process('title.ks', '*gamestart')"
+    if ((Get-State).storage -eq 'namescreen.ks') {
+        Start-Sleep -Milliseconds 500
+        $r += "; $(Shot 'name-screen'); " + (Click-Until 'name_ok' 'the demo menu' $atMenu 'nameOK()')
+    }
     Start-Sleep -Milliseconds 900
     "$r; $(Shot 'demo-menu'); $(Invoke-Tjs '__ci_selectCount()') choices"
 }
