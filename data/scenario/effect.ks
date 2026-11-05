@@ -10,11 +10,11 @@
 Effekseer effects need the krkreffekseer plugin and OpenGL ES, which this build doesn't have, so the demo skips them.
 [jump target=*static]
 [endif]
-[newlay name=petals efk=petals efkframe=600 show]
+[newlay name=petals efk=petals efkframe=600 still=petals_still show]
 Glowing petals drift over the road: an Effekseer effect on a World layer, drawn by the krkreffekseer plugin.
 [ai standard center]
 【ai】Petals... that glow?
-[newlay name=sparkle efk=sparkle efkwidth=900 efkheight=900 ypos=-150 show]
+[newlay name=sparkle efk=sparkle efkwidth=900 efkheight=900 ypos=-150 still=sparkle_still show]
 【ai】And sparkles, all around me!
 Each effect is a layer of its own: efk= names it, efkmag sizes it, and efkwidth and efkheight set the size of its canvas, which is placed like any layer.
 [petals flipupdate efkstop]
@@ -23,7 +23,7 @@ Each effect is a layer of its own: efk= names it, efkmag sizes it, and efkwidth 
 [newlay name=fw2 efk=fireworks efkx=560 efky=260 efkmag=40 level=0 show]
 【ai】Fireworks!
 Their rockets go up about once a second, for as long as the layer plays.
-[newlay name=circle efk=magiccircle efkwidth=760 efkheight=560 xpos=-560 ypos=40 show]
+[newlay name=circle efk=magiccircle efkwidth=760 efkheight=560 xpos=-560 ypos=40 still=magiccircle_still show]
 【ai】Hm? Something's glowing over there...
 [newlay name=burst efk=shockwave efky=-120 show]
 【ai】Whoa!

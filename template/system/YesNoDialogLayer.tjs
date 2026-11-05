@@ -1120,6 +1120,7 @@ class YesNoDialogLayer extends DialogLayer
         if (num == 2 && skipKey !== void) { // the check box: on or off, not an answer
 
             skipChecked = !skipChecked;
+            KAGInterfaceSound(soundScreen + ".skip.change"); // the table's (InterfaceSounds.tjs)
 
             drawYesNoCheck(names.skip, tr("Don't ask again"), skipChecked);
 

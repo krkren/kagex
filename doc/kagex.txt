@@ -936,11 +936,31 @@ Attributes
 
 		rolloffset    ms more (or less, negative) than that, for a track whose end is quiet.
 
+		rollfrom, rollto   Places in the music playing: a time in ms from the track's start
+
+		              (rollfrom=6000), or a label of its loop file (<file>.sli, Label
+
+		              { Position=<sample>; Name=credits; }). The roll waits for the music to reach
+
+		              rollfrom and ends as it reaches rollto, for a song with an intro or a
+
+		              reprise (since 0.18.0). Without rollfrom it starts at once, without rollto it
+
+		              ends with the track; a label the file lacks is logged. They win over
+
+		              rolltime, which stays the length when the music has neither. Prefer times:
+
+		              music with labels can hang the engine now and then (UPSTREAM.md 44).
+
 		rollx         The text's centre. Default: the layer's middle.
 
 		rollsize      The names' size. Default 32; headings are 1.3 times.
 
-		The sample's Credits demo (credits.ks) rolls the sample's credits to its music.
+		The sample's Credits demo (credits.ks) rolls the sample's credits to its music, from
+
+		6 s into bgm01, after the opening bars, to 84.55 s, where its closing chords begin
+
+		(rollfrom=6000 rollto=84550), and fades the chords out after.
 
 
 
@@ -1340,6 +1360,15 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
+book and multiripple are drawn by kagex itself (ScriptTransitions.tjs, since 0.18.0): extNagano's, as rebuilt, stop three quarters of the way and bring the old picture back halfway (UPSTREAM.md 42). They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns or ripples over the stage. They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
+
+    class MyTransition extends KAGScriptTransitionEffect {
+        function MyTransition(owner) { super.KAGScriptTransitionEffect(owner); }
+        function prepare(elm) { ... }   // once a and b, the two pictures (w x h), are taken
+        function draw(t) { ... }        // t from 0 to 1: draw the frame into canvas
+    }
+    KAGScriptTransitions["mine"] = MyTransition;   // [trans method=mine time=1000]
+
 The sample's transition.ks shows all twelve.
 
 
@@ -1358,7 +1387,9 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  the old picture's speed, acceleration and bounce (0-127); speed2, accel2, bound2:
 
-                 the new picture's.
+                 the new picture's. Give one of them a speed or acceleration (the sample's
+
+                 accel1=0.4): without, the pieces stay put and the plugin fades the new picture out.
 
     blurfade     A crossfade through a blur. blur1 (or blur1x, blur1y): the old picture's blur;
 
@@ -1396,7 +1427,9 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
     book         A page turns. dir: 0 the left page turns to the right, 1 the right page to the
 
-                 left, -1 either (default).
+                 left, -1 either (default). Drawn by kagex: the old picture's half lifts, shaded as
+
+                 it turns, and the new picture's other half comes down on its back.
 
     imagewipe    A wipe led by a picture. rule: in each row, the rightmost pixel more than 94%
 
@@ -1416,11 +1449,15 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  or register the transition in envinit.tjs (the sample's swirl).
 
-    multiripple  Ripples spread from several points. count: how many (1-20). wavecount: waves
+    multiripple  Ripples spread from several points, the last from the middle, and the new picture
 
-                 each. rwidth: wavelength. maxdrift: wave height (0: none). roundness: 1.0 circles,
+                 shows inside them. count: how many (1-20). wavecount: wave rings each. rwidth:
 
-                 less taller, more wider. delaylast: how late the last one starts (1.0: not).
+                 the rings' spacing. maxdrift: how bright the rings are (0: none). roundness: 1.0
+
+                 circles, less taller, more wider. delaylast: how late the last one starts (1.0:
+
+                 as the others). Drawn by kagex: the rings brighten the picture rather than bend it.
 
 
 
@@ -3135,6 +3172,7 @@ by hand, and Default and saving follow from the table. A game declares its own i
 
   name      What scripts call it: KAGOptionGet("shake"), KAGOptionSet("shake", false).
   label     Its row's title, in English; it shows through tr() in the language being played.
+            Or a dictionary by language code, for names (%[ "en" => "Ai", "ja" => ... ]).
   kind      toggle (two buttons), choice (two to four), slider, button (one button that runs
             action), note (lines of text).
   prop      A property of kag the option reads and sets (kag.windowOpacity ...); or getValue
@@ -3145,6 +3183,11 @@ by hand, and Default and saving follow from the table. A game declares its own i
   initial   The value Default and the first start give it.
   button, action, enabled   A button's label, what it does, whether it can be pressed now.
   lines, rows   A note's lines, and the rows an option takes (1).
+  preview   A slider's function(event, value), called as the slider is pointed at ("enter"),
+            moved while held ("drag"), let go or moved by a key ("change") and left ("leave"):
+            a volume's sample (since 0.18.0).
+  test      A function a Test button after the slider runs (the slider then starts at the
+            row's left, without words at its ends; since 0.18.0).
 
   KAGOptionGet(name), KAGOptionSet(name, value)   Read and change one (the second runs apply
                          and the functions in KAGOptionHook, with name and value).
@@ -3159,10 +3202,43 @@ by hand, and Default and saving follow from the table. A game declares its own i
 The framework's own options: voiceCut, voiceFadeTime, voicePlacement, voiceSpeed,
 autoVoiceWait, dramaticMode, continueOn, quickSaves (a note), askAgain (a button),
 hideCursorIdle, readSpeed, autoSpeed, autoCharWait, textFade, readColor, readMark,
-windowOpacity, afterauto, afterskip, enterSkip; Indicators.tjs adds chapterTitles, nowPlaying,
-modeMark and voiceBar, Movies.tjs subtitles, movieSkipping, movieRightClick and movieQuality.
-The sample's Config has four pages (config.ks *options, configPages in Override.tjs): the first
-as before, then Voices and Saves, Reading, and Screen and Extras.
+windowOpacity, afterauto, afterskip, enterSkip, reduceMotion, and since 0.18.0 the settings of a
+classic first Config page: bgmVolume, seVolume and voiceVolume (with samples, below), textSpeed,
+autoModeSpeed, noEffect and allSkip (these have no initial: a game's first start sets them), and
+volumeSamples; Indicators.tjs adds chapterTitles, nowPlaying, modeMark and voiceBar, Movies.tjs
+subtitles, movieSkipping, movieRightClick and movieQuality. The sample's Config has five pages
+(config.ks *options, configPages in Override.tjs): the first as before, then Voices and Saves,
+Reading, Screen and Extras, and each character's voice.
+
+Hearing a setting while changing it (since 0.18.0):
+
+  [slider previewfunc= previewfuncdata=]   A function (by name) called with (event, position,
+                         data) as the slider is pointed at, moved, let go and left (the events
+                         above); a screen drawn again moves its sliders without it
+                         (LinkSliderLayer.setPositionQuietly). An option's slider with preview
+                         gets it through KAGOptionPreview.
+  KAGVolumeSamples       What the volumes' previews play: pointing at the music's slider or
+                         moving it plays musicStorage, when the game plays no music, for
+                         musicTime ms (5000) after the last move, then fades it (stop(fade) ends
+                         it, as Config closes); letting go of the sound's plays soundStorage in
+                         SE buffer soundBuffer; letting go of the voices' plays a character's
+                         test line. A game sets musicStorage and soundStorage; the volumeSamples
+                         option turns them all off.
+  KAGDefineVoiceOptions(names)   For each character named, a slider "voice:<name>" for the
+                         volume of its voiceName (kag.getVoiceVolume) with its nameAlias as the
+                         label, a Test button and a test line as it's let go, and a toggle
+                         "voiceOn:<voiceName>" (kag.getVoiceOn); returns the sliders' names, for
+                         a page's column. Call it in AfterInit.tjs (the World is there by then).
+                         A character's test lines are envinit.tjs's "testVoices" => [ files ];
+                         KAGVoiceTest(name) plays one.
+
+Undo and Revert (since 0.18.0): KAGOptionUndo.begin() as a Config screen opens notes every
+option's value; each change after it through KAGOptionSet is a step (a slider's from where its
+drag began); undo() takes back the newest, revert() puts everything back as it was at begin(),
+end() as the screen closes. canUndo and changed say whether there's a step, and whether anything
+differs from the start. mark() makes the changes until groupEnd() one step (the sample's Default).
+Only options are covered: the sample's first page goes through them (its sliders call
+KAGOptionSlide, its switches KAGOptionSet), but the screen mode and the language aren't options.
 
 ● Reading Settings
 
@@ -3269,6 +3345,104 @@ it) at the bottom of the screen, timed from the movie, and screen readers get ea
 <name>_sd uses <name>.vtt when it has none of its own. Config's Subtitles turns them off.
 [image movie=] takes fit=true too: the layers showing the movie are zoomed (affine layers) so its
 frames fill the screen; [freeimage] puts the zoom back.
+
+On the web (since 0.18.0) a movie inside an archive fetched from the site (the sample's
+gamedata/data.xp3) is copied out of it into the page's memory before it opens
+(KAGMovieOpenable, Utils.tjs, for [movie], [image movie=] and KAG's [video]): the engine's player
+asked the server for it by a URL made from its archive path and got nothing (UPSTREAM.md 41), so
+no such movie played there. A loose movie (kagex-release's files mode) streams from the site.
+
+
+
+● Loudness
+
+A table evens out the sounds' levels without re-recording them (since 0.18.0,
+template/system/Loudness.tjs): loudness.csv has a gain in dB per kind of sound or per file, which
+the engine applies as each Ogg Vorbis or Opus file is decoded (WaveSoundBuffer.
+setGainQueryCallback), so a quiet voice can be raised past the volume's 100%:
+
+    bgm            -4      every file in a bgm folder
+    se             -2      in a sound (or se) folder
+    voice          +1      in a voice folder
+    voice:hiyori   +2.5    one speaker's voices (envinit.tjs's voiceFile patterns say whose)
+    pip000009      +5      one file, with or without its extension: it wins over its kind
+
+Lines starting with # are comments. KAGLoudness.set(key, dB) changes one while the game runs, for
+the files opened after it, and KAGLoudness.gainOf(storage) says what a file gets. WAV files get
+no gain. The sample's table (data/main/loudness.csv) brings its synthesized voices up to the
+others (measured with EBU R128) and puts the music 4 dB under the voices.
+
+
+
+● Interface Sounds
+
+Every button, page turn, slider, prompt, choice and menu item can play its sound from one table
+(since 0.18.0, template/system/InterfaceSounds.tjs), so changing the click for the whole game is
+one line. uisounds.csv names a sound for each tag, <screen>.<part>.<event>:
+
+    @click              ui_click     an alias: a file, and a system sound buffer if wanted
+    *.click             @click       every click no other line names
+    *.enter             ui_hover     the pointer, the keys or the pad reaching a button
+    *.return.click      ui_cancel    every screen's Return button
+    title.start.click   ui_ok
+    config.config_*.click  ui_toggle  Config's switches
+    dialog.open         none         a wildcard's sound taken back
+
+Lines starting with # are comments; the columns are separated by tabs or spaces. A sound is a file
+on the auto path (its extension may be left out), an @alias or none; a third column picks the
+system sound buffer (0, the first, by default; numSysSEBuffers in Config.tjs). A * matches any
+characters, dots too, and of the lines a tag matches the one with the most other characters wins
+(of two as long, the later). A button's own sound (clickse=, enterse=, changese=, [selopt]'s and
+the like) comes first: the table is asked only for parts without one. The tags:
+
+    <screen>.<name>.click, .enter     [button] (its name=, else its picture's), [link] (name=,
+                                      else link). <screen> is the scenario that made it, without
+                                      its extension: title, config, save ...
+    <screen>.<name>.change            a slider let go, a check box (their name=)
+    message.<name>.click, .enter      [sysbutton]s
+    dialog.open, dialog.<name>.click, .enter, dialog.skip.change
+                                      Yes/No prompts (yes, no, and the "Don't ask again" box),
+                                      About (close)
+    choice.open, .enter, .click, .close   [select]'s choices
+    backlog.open, .close, .prev.click, .next.click   the backlog
+    menu.open, .enter, .click, .cancel    the menu bar's menus (in a window)
+    controls.open, .close.click, .cancel  Help > Controls (an Elements screen's soundScreen)
+
+KAGInterfaceSounds.play(tag) plays one from a script (KAGInterfaceSound(tag) is the same, and does
+nothing in a framework without the table), soundOf(tag) says what it plays, set(tag, sound) and
+alias(name, sound) change the table while the game runs (buttons made before keep what they had).
+An .enter sound within enterQuiet (150) ms of another sound is left out: a click that redraws a
+screen under the pointer, or a prompt that moves the pointer to its button, would play one. In
+debug mode two sounds started within doubleTime (20) ms are logged, with where each came from:
+that's usually one sound played twice. The sample's table is data/main/uisounds.csv, with sounds
+from tools/assets/make_sounds.py.
+
+
+
+● Reduce Motion
+
+Config's Reduce Motion (the reduceMotion option, since 0.18.0; KAGReduceMotion() says whether it's
+on) stops demanding animation, for slow machines, batteries and phones, and for players bothered
+by motion:
+
+    Effekseer effects    one played once ends at once (its efkdone goes, so a script waiting
+                         goes on); a looping one shows nothing
+    movies on layers     a looping one ([image movie=... loop]) pauses on its frame; one played
+                         once, as [movie] plays them, plays as before
+    alpha movies         a looping one stops on its frame
+    the TV static        stops on its frame
+    Live2D and 3D layers stop as they show, once a motion played once has ended
+
+Turned on while they play, they stop where they are; turned off, they move on. An [image] or a
+World layer can name a picture to show in place of its animation while Reduce Motion is on:
+
+    [image layer=1 flip=sparkle.efk still=sparkle_still]
+    [newlay name=petals efk=petals still=petals_still show]
+
+The picture is loaded instead of starting the animation, as an image of its own size; it stays
+until the layer is drawn again. The sample's Effects demo has stills for its petals, sparkles
+and magic circle (tools/assets/make_effects.py stills), and Config's last page has the switch.
+Transitions and actions are Screen Effects' (noeffect), not this option's.
 
 
 

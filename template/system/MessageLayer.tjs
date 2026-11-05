@@ -492,11 +492,13 @@ class LinkCheckBoxLayer extends CheckBoxLayer
 
             Scripts.eval(("(" + change + ") = kag.inputTemp"));
 
-            if (changese !== void) {
+        }
 
-                Scripts.eval(changese);
+        // with onchangefunc= too (since 0.18.0)
 
-            }
+        if ((changefunc !== void || change !== void) && changese !== void) {
+
+            Scripts.eval(changese);
 
         }
 
@@ -722,6 +724,10 @@ class LinkSliderLayer extends SliderLayer
 
     var changese; // SE on change
 
+    var previewfunc, previewfuncdata; // previewfunc= (since 0.18.0): called while it's pointed at and moved
+
+    var quiet = false; // moved by setPositionQuietly: no sound, no preview
+
 
 
     function LinkSliderLayer(win, par)
@@ -775,6 +781,50 @@ class LinkSliderLayer extends SliderLayer
         change = src.change;
 
         changese = src.changese;
+
+        previewfunc = src.previewfunc;
+
+        previewfuncdata = src.previewfuncdata;
+
+	}
+
+
+
+	/**
+
+	 * The slider's preview (previewfunc=, a function's name, since 0.18.0): called with
+
+	 * (event, position, previewfuncdata), event being "enter" (pointed at), "drag" (moved while
+
+	 * held), "change" (let go, or moved by a key) and "leave", so a volume slider can play a sample
+
+	 */
+
+	// The slider moved to v as a screen is drawn again (Undo, an option's buttons): its change
+
+	// expression or function runs, its sound and preview don't
+
+	function setPositionQuietly(v)
+
+	{
+
+		quiet = true;
+
+		try { position = v; } catch (e) { quiet = false; throw e; }
+
+		quiet = false;
+
+	}
+
+
+
+	function preview(event)
+
+	{
+
+		if (previewfunc === void || parent.selProcessLock || quiet) return;
+
+		Scripts.eval(previewfunc)(event, position, previewfuncdata);
 
 	}
 
@@ -840,13 +890,17 @@ class LinkSliderLayer extends SliderLayer
 
             Scripts.eval(("(" + change + ") = kag.inputTemp"));
 
-            if (changese !== void && !dragging) {
+        }
 
-                Scripts.eval(changese);
+        // let go (with onchangefunc= too, since 0.18.0)
 
-            }
+        if ((changefunc !== void || change !== void) && changese !== void && !dragging && !quiet) {
+
+            Scripts.eval(changese);
 
         }
+
+        preview(dragging ? "drag" : "change");
 
     }
 
@@ -860,6 +914,8 @@ class LinkSliderLayer extends SliderLayer
 
         if(!parent.selProcessLock && onenter !== void) Scripts.eval(onenter);
 
+        preview("enter");
+
         super.onMouseEnter(...);
 
 	}
@@ -871,6 +927,8 @@ class LinkSliderLayer extends SliderLayer
 	{
 
 		if(!parent.selProcessLock && onleave !== void) Scripts.eval(onleave);
+
+		preview("leave");
 
 		super.onMouseLeave(...);
 
@@ -1786,6 +1844,31 @@ class NameLayer extends RelativeLayer
 class FaceLayer extends RelativeLayer
 
 {
+
+	var faceWidth, faceHeight; // the size [position facewidth= faceheight=] gave it (a crop fills that)
+
+	function assignImages(src, copyvisiblestate = false) {
+		super.assignImages(...);
+		if (src instanceof "FaceLayer") faceWidth = src.faceWidth, faceHeight = src.faceHeight;
+	}
+	// the other page's face layer, placed as this one ([position] sets up one page)
+	function copyPlace(src) {
+		noRelative = src.noRelative;
+		originMode = src.originMode;
+		setPos(src.left, src.top, src.width, src.height);
+		absolute = src.absolute;
+		faceWidth = src.faceWidth, faceHeight = src.faceHeight;
+	}
+	function store() {
+		var dic = super.store();
+		dic.faceWidth = faceWidth if faceWidth !== void;
+		dic.faceHeight = faceHeight if faceHeight !== void;
+		return dic;
+	}
+	function restore(dic) {
+		super.restore(dic);
+		faceWidth = dic.faceWidth, faceHeight = dic.faceHeight;
+	}
 
 	function finalize() {
 
@@ -3425,6 +3508,19 @@ class MessageLayer extends AnimKAGLayerTransMove
             faceLayer.width    = +elm.facewidth  if elm.facewidth  !== void;
 
             faceLayer.height   = +elm.faceheight if elm.faceheight !== void;
+
+            faceLayer.faceWidth  = +elm.facewidth  if elm.facewidth  !== void;
+
+            faceLayer.faceHeight = +elm.faceheight if elm.faceheight !== void;
+
+            // the other page's face layer in the same place: a face fades from one to the other
+            // (KAGWindow.drawFace), and there was none until a [backlay]
+            if (comp !== void) {
+                var had = comp.faceLayer !== void;
+                comp.initFaceLayer();
+                comp.faceLayer.copyPlace(faceLayer);
+                comp.faceLayer.visible = faceLayer.visible if !had;
+            }
 
             faceLayer.absolute = +elm.faceabsolute if elm.faceabsolute !== void;
 
@@ -6790,7 +6886,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-	function createSoundExpression(exp, storage, buf)
+	function createSoundExpression(exp, storage, buf, tag)
 
 	{
 
@@ -6800,7 +6896,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// This specification might change later.
 
-		if(storage == "") return exp;
+		// Without a sound of its own, tag's from the interface sound table (since 0.18.0,
+
+		// InterfaceSounds.tjs), if it names one
+
+		if(storage == "") return tag != "" && typeof global.KAGInterfaceSounds == "Object" ? KAGInterfaceSounds.expression(exp, tag) : exp;
 
 		if(buf === void) buf = 0;
 
@@ -6815,6 +6915,26 @@ class MessageLayer extends AnimKAGLayerTransMove
 			exp = seexp;
 
 		return exp;
+
+	}
+
+
+
+	/**
+
+	 * The interface sound table's tag for a part of this layer's screen (since 0.18.0):
+
+	 * <screen>.<name>.<event>, the screen being the scenario that's running (title, config ...)
+
+	 */
+
+	function soundTag(name, event)
+
+	{
+
+		if (typeof global.KAGInterfaceSounds != "Object") return "";
+
+		return KAGInterfaceSounds.screen() + "." + name + "." + event;
 
 	}
 
@@ -6836,7 +6956,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			target :	elm.target,
 
-			exp :		createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf),
+			exp :		createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, soundTag(elm.name != "" ? elm.name : "link", "click")),
 
 			countPage :	(elm.countpage === void) ? true : +elm.countpage,
 
@@ -6846,7 +6966,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			opacity :	(elm.opacity === void) ? defaultLinkOpacity : +elm.opacity,
 
-			onenter :	createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf),
+			onenter :	createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(elm.name != "" ? elm.name : "link", "enter")),
 
 			onleave :	createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf),
 
@@ -7072,7 +7192,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+		// the interface sound table's part: the button's name, else its picture's
+
+		var part = elm.name != "" ? elm.name : elm.graphic != "" ? elm.graphic : elm.normal != "" ? elm.normal.replace(/_normal$/, "") : "button";
+
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(part, "enter"));
 
 		object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 
@@ -7104,7 +7228,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			target :		elm.target,
 
-			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf),
+			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, soundTag(part, "click")),
 
 			countPage :		(elm.countpage === void) ? true : +elm.countpage,
 
@@ -7338,7 +7462,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.change = elm.onchange if elm.onchange !== void;
 
-        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf);
+        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf, soundTag(object.name, "change"));
 
         object.color = elm.bgcolor if elm.bgcolor !== void; // Note: NOT color
 
@@ -7472,9 +7596,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.linkNum = numLinks;
 
-		object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf);
+		object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf); // let go: the table's sound is .change
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(object.name, "enter"));
 
 		object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 
@@ -7512,7 +7636,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         }
 
-        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf);
+        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf, soundTag(object.name, "change"));
+
+        object.previewfunc = elm.previewfunc if elm.previewfunc !== void;
+
+        object.previewfuncdata = Scripts.eval(elm.previewfuncdata) if elm.previewfuncdata !== void;
 
 
 
@@ -7772,9 +7900,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
-        object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf);
+        // the interface sound table's message.<name>.click and .enter (since 0.18.0)
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+        var tag = typeof global.KAGInterfaceSounds == "Object" ? "message." + object.name + "." : "";
+
+        object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, tag != "" ? tag + "click" : "");
+
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, tag != "" ? tag + "enter" : "");
 
         object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 

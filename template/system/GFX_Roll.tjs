@@ -17,6 +17,12 @@
 // A save keeps how far it got.
 //   rolltime   ms the roll takes, or "bgm": the rest of the track playing (as its end may be
 //              trimmed: rolloffset ms more or less)
+//   rollfrom, rollto   places in the music playing, each a time in ms from the track's start or
+//              a label of its loop file (<file>.sli: Label { Position=<sample>; Name=credits; }):
+//              the roll waits for the music to reach rollfrom (else it starts at once) and ends
+//              as it reaches rollto (else at the track's end), for a song with an intro or a
+//              reprise (since 0.18.0). Labels in music can hang the engine (UPSTREAM.md 44):
+//              the sample gives times
 //   rollx      the text's centre (the layer's middle)
 //   rollsize   the names' size (32); headings are 1.3 times
 class RollFlip extends GenericFlip, Layer
@@ -25,7 +31,7 @@ class RollFlip extends GenericFlip, Layer
 	var SUPER = global.Layer;
 	var file = "";
 	var options = %[];
-	var stateOptions = [ "rolltime", "rolloffset", "rollx", "rollsize" ];
+	var stateOptions = [ "rolltime", "rolloffset", "rollx", "rollsize", "rollfrom", "rollto" ];
 	var items = [];            // %[ kind:"text"|"heading"|"image", text, size, y, h, image, x, w ]
 	var total = 0;             // the list's height
 	var duration = 30000;
@@ -125,7 +131,7 @@ class RollFlip extends GenericFlip, Layer
 		setSizeToImageSize();
 		load(storage);
 		duration = rollDuration();
-		elapsed = elm.rollelapsed !== void ? +elm.rollelapsed : 0;
+		elapsed = elm.rollelapsed !== void ? +elm.rollelapsed : -startDelay;
 		finished = false;
 		lastTick = void;
 		drawFrame();
@@ -141,18 +147,56 @@ class RollFlip extends GenericFlip, Layer
 	function flipSetOptions(elm) {
 		if (elm === void) return;
 		setStateOptions(elm);
-		duration = rollDuration() if elm.rolltime !== void || elm.rolloffset !== void;
+		duration = rollDuration() if elm.rolltime !== void || elm.rolloffset !== void || elm.rollfrom !== void || elm.rollto !== void;
 	}
 
-	// the roll's length: rolltime ms, or the rest of the music playing (bgm)
+	var startDelay = 0; // ms until the music reaches rollfrom (rollDuration)
+
+	// the roll's length: rolltime ms, or the rest of the music playing (bgm), or the music from
+	// rollfrom to rollto (and startDelay, how long until it reaches rollfrom)
 	function rollDuration() {
 		var t = options.rolltime, d = 30000;
-		if (t == "bgm") {
-			var b = window.bgm !== void ? window.bgm.currentBuffer : void;
+		startDelay = 0;
+		var b = window.bgm !== void ? window.bgm.currentBuffer : void;
+		var span = (options.rollfrom !== void || options.rollto !== void) && b !== void ? labelSpan(b) : void;
+		if (span !== void) {
+			startDelay = span[0], d = span[1];
+		} else if (t == "bgm") {
 			if (b !== void && b.totalTime > 0) d = b.totalTime - (b.status == "play" ? b.position : 0);
 		} else if (t !== void) d = +t;
 		if (options.rolloffset !== void) d += +options.rolloffset;
 		return d < 1000 ? 1000 : d;
+	}
+
+	// [ ms until rollfrom, ms from rollfrom to rollto ] in buffer b's music, or void when it has
+	// neither (a label it lacks is logged, and the start or the end of the track used)
+	function labelSpan(b) {
+		var labels, freq;
+		try { freq = +b.frequency; } catch (e) { return; }
+		try { labels = b.labels; } catch (e) {}
+		if (freq <= 0) return;
+		var pos = b.status == "play" ? +b.samplePosition : 0;
+		var end = b.totalTime > 0 ? b.totalTime * freq / 1000 : pos;
+		var from = markOf(options.rollfrom, labels, freq), to = markOf(options.rollto, labels, freq);
+		if (from === void && to === void) return;
+		from = pos if from === void;
+		to = end if to === void;
+		var delay = (from - pos) * 1000 / freq;
+		return [ delay > 0 ? (int)delay : 0, (int)((to - (from > pos ? from : pos)) * 1000 / freq) ];
+	}
+
+	// a place in the music in samples: a time in ms (digits read as decimal: TJS takes a leading
+	// 0 as octal) or a label of the loop file, or void
+	function markOf(spec, labels, freq) {
+		if (spec === void) return;
+		var s = (string)spec;
+		if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
+			while (s.length > 1 && s.charAt(0) == "0" && s.charAt(1) != ".") s = s.substring(1);
+			return +s * freq / 1000;
+		}
+		var l = labels !== void ? labels[s] : void;
+		if (l !== void) return +l.samplePosition;
+		dm("roll: the music has no label " + s);
 	}
 
 	// the lines in view, at elapsed: the list goes from just under the layer to just over it
@@ -162,6 +206,7 @@ class RollFlip extends GenericFlip, Layer
 		fillRect(0, 0, w, h, 0);
 		var t = elapsed / duration;
 		t = 1 if t > 1;
+		t = 0 if t < 0; // waiting for the music's rollfrom
 		var top = h - (int)((h + total) * t); // where the list's top is
 		var cx = options.rollx !== void ? +options.rollx : w \ 2;
 		for (var i = 0; i < items.count; i++) {
@@ -223,7 +268,7 @@ GenericFlip.Entry(
 		"type"     => "roll",                         // Registration tag ([newlay roll=...]; fliptype=roll)
 		"class"    => RollFlip,
 		"trigger"  => "rollstop",
-		"options"  => [ "rolltime", "rolloffset", "rollx", "rollsize" ],
+		"options"  => [ "rolltime", "rolloffset", "rollx", "rollsize", "rollfrom", "rollto" ],
 		"dtstore"  => true,
 		"keepOnRedraw" => true,
 		]);

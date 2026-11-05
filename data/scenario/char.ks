@@ -165,6 +165,95 @@ A quieter line, a whisper: [[pip voice=4 vol=35]
 【ai】Oh, and you must be [emb exp="kag.heroName()"]. Nice to meet you!
 【hero】Nice to meet you too.
 
+*faces|Faces
+
+; Faces by the message window (since 0.18.0): the speaker's face, cut from their sprite as it
+; looks now (envinit.tjs's faceCrop), crossfades to the next speaker's and goes for narration and
+; CGs; a speaker who isn't on stage shows a face only ([pip facewin]), [env facewindow=off]
+; turns them off for a scene, and Config turns them off for good
+[ai standard center]
+【ai】The speaker's face shows by the window, just as their sprite looks now.
+[ai angry]
+【ai】Even when I'm cross!
+[pip facewin]
+【pip】And I'm not even on stage. I'm calling from somewhere else!
+Narration has no face.
+[EV file=event1 fade]
+【ai】Over a CG, the face steps aside.
+[EV hide fade]
+[env facewindow=off]
+[ai happy]
+【ai】A scene can do without faces...
+[env facewindow=on]
+[pip hide]
+【ai】...and have them back.
+
+*layouts|Making Room
+
+; Layouts (since 0.18.0, envinit.tjs's "layouts"): [name join] brings a character on at the
+; right (join=left, join=middle) while the others slide over to stand evenly spaced, [name leave]
+; takes one off and the others close the gap, and [env makeroom=0] pushes them apart
+[ai center time=300]
+Ai stands alone.
+[pip standard neutral join]
+【pip】Room for one more?
+[newchar name=ai2 initname=ai]
+[ai2 join=middle]
+Another Ai cuts in, in the middle, and the others make room.
+[ai leave]
+The first Ai leaves, and the gap closes.
+[env makeroom=0]
+They step apart for something in the middle...
+[ai2 delete]
+[pip leave]
+...and everyone goes.
+
+*flashback|A Flashback
+
+; Keeping a scene (since 0.18.0): [env keep] puts the whole World away (stage, characters, layers,
+; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
+; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies)
+[bgm01]
+[ai standard happy center]
+[pip standard neutral posright]
+Ai and Pip on the street, as they are now.
+[env keep]
+[pip hide]
+[ai posleft sad]
+[env grayscale=true trans=normal]
+A memory, in grey: Ai, long ago, on her own.
+[env restore trans=normal]
+And back to now, just as it was, with the music still playing.
+[bgm stop=1500]
+[pip hide]
+[ai hide]
+
+*staging|Staging Kit
+
+; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for
+; inner thoughts and an eyecatch card, a word each (envinit.tjs's actions, macro.ks's macros)
+[ai standard happy center]
+Gestures, a word each: [ai nod][wact]nod, [ai nods][wact]nods, [ai headshake][wact]headshake, [ai sigh][wact]sigh, [ai laugh][wact]laugh.
+[ai shrug][wact]shrug, [ai lookaround][wact]lookaround, [ai wobble][wact]wobble, [ai slump][wact]slump, [ai startle][wact]startle.
+[ai tremble][wact]tremble, [ai bounce][wact]bounce, [ai leanin][wact]leanin, [ai stepback][wact]stepback, [ai sway][wact]sway.
+[ai stomp][wact]stomp, [ai pop][wact]pop, [ai tilt][wact]tilt, [ai giggle][wact]giggle, [ai faint][wact]faint.
+The screen: [quake][wact]quake, [thud][wact]thud, [rumble][wact]rumble.
+[closeup]
+[[closeup]: the camera closes in and the background blurs behind her.
+[closeupend]
+[dim]
+【ai】([[dim]: a veil for what she's only thinking...)
+[undim]
+[whiten]
+...or a white one ([[whiten]).
+[undim]
+[pip standard neutral posright trans=showslide]
+Pip slides in as it fades in (trans=showslide).
+[eyecatch]
+[pip hide]
+[ai hide]
+After an [[eyecatch], the next scene begins.
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

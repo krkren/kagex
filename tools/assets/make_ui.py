@@ -61,9 +61,11 @@ LABELS = {
         "Effect Speed": "演出速度", "Skip Mode": "スキップ", "Language / 言語": "言語 / Language", "BGM Volume": "BGM 音量",
         "SE Volume": "効果音 音量", "Voice Volume": "ボイス 音量", "Voice Settings": "ボイス設定",
         "Slow": "遅い", "Fast": "速い", "Min": "小", "Max": "大",
-        "Click a voice to mute or unmute it.": "ボイスをクリックすると消音／解除します。",
+        "Click a name to mute or unmute their voice.": "名前をクリックすると消音／解除します。",
+        "Each one's volume and a test: page 5.": "音量とテストは 5 ページ。",
+        "Ai": "あい", "Pip": "ピップ", "Hiyori": "ひより", "Vee": "ヴィー", "Undo": "前に戻す", "Revert": "すべて戻す",
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
-        "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
+        "All": "すべて", "Read Only": "既読のみ",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
         "Your Name": "名前",
         # save / load
@@ -432,6 +434,39 @@ def ic_back(c, cx, cy, s, col):
     c.polygon([(ex - s * 0.2, ey - s * 0.04), (ex + s * 0.2, ey - s * 0.04), (ex, ey + s * 0.24)], col)
 
 
+def tri(c, cx, cy, s, col, left):
+    """a triangle pointing left or right, s high"""
+    d = -1 if left else 1
+    c.polygon([(cx - d * s * 0.3, cy - s * 0.5), (cx + d * s * 0.36, cy), (cx - d * s * 0.3, cy + s * 0.5)], col)
+
+
+def ic_rewind(c, cx, cy, s, col):
+    """two triangles pointing back: rewind to the scene's start or the last choice"""
+    tri(c, cx - s * 0.3, cy, s * 0.8, col, True)
+    tri(c, cx + s * 0.3, cy, s * 0.8, col, True)
+
+
+def ic_prevscene(c, cx, cy, s, col):
+    """a bar and a triangle pointing back: the start of the scene before"""
+    c.rrect((cx - s * 0.5, cy - s * 0.42, cx - s * 0.3, cy + s * 0.42), s * 0.04, fill=col)
+    tri(c, cx + s * 0.12, cy, s * 0.84, col, True)
+
+
+def ic_nextscene(c, cx, cy, s, col):
+    """a triangle pointing on and a bar: skip to the next scene"""
+    tri(c, cx - s * 0.12, cy, s * 0.84, col, False)
+    c.rrect((cx + s * 0.3, cy - s * 0.42, cx + s * 0.5, cy + s * 0.42), s * 0.04, fill=col)
+
+
+def ic_prevchoice(c, cx, cy, s, col):
+    """a branch (a choice) with a triangle pointing back: the last choice again"""
+    tri(c, cx - s * 0.3, cy, s * 0.7, col, True)
+    x0, y0 = cx + s * 0.05, cy
+    c.stroke([(x0, y0), (cx + s * 0.5, cy - s * 0.38)], s * 0.12, col)
+    c.stroke([(x0, y0), (cx + s * 0.5, cy + s * 0.38)], s * 0.12, col)
+    c.ellipse((x0 - s * 0.1, y0 - s * 0.1, x0 + s * 0.1, y0 + s * 0.1), fill=col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -577,6 +612,11 @@ def make_message():
         for st in ("normal", "over"):
             button(124, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
                 out("msg_%s_%s.png" % (name, st)))
+    # the scene player's moves (since 0.18.0): icons only, so no language needs its own
+    for name, icon in (("rewind", ic_rewind), ("prevscene", ic_prevscene), ("prevchoice", ic_prevchoice),
+                       ("nextscene", ic_nextscene)):
+        for st in ("normal", "over"):
+            button(42, 42, "", st, r=10, bw=3, icon=icon, icon_size=20).save(out("msg_%s_%s.png" % (name, st), False))
     for name in ("auto", "skip"):  # latched while auto mode / skipping is on
         button(124, 42, L(name.upper()), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
                icon_size=8).save(out("msg_%s_on.png" % name))
@@ -648,7 +688,9 @@ def make_config():
                 outlined(c, (sx + 416 + 12, cy), L(hi), 26, anchor="lm", stroke=2.5)
                 # the slider's tab centre travels from sx + 15 to sx + 416 - 15 (SliderLayer)
                 c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
-    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 262), L("Click a voice to mute or unmute it."), 26,
+    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 220), L("Click a name to mute or unmute their voice."), 26,
+             stroke=2.5)
+    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 264), L("Each one's volume and a test: page 5."), 26,
              stroke=2.5)
     c.save(out("config_base.png"), opaque=True)
 
@@ -668,13 +710,14 @@ def make_config():
     for code, label in LANGUAGE_NAMES:
         for st in ("normal", "over"):
             button(240, 60, label, st, size=28).save(out("config_lang_%s_%s.png" % (code, st), False))
-    for i in range(6):
-        button(180, 60, L("Voice %d") % i, "over", size=26, icon=ic_dot, icon_size=14).save(
+    # the voices' switches, a character's each (envinit.tjs's voiceName voice0 to voice3)
+    for i, name in enumerate(("Ai", "Pip", "Hiyori", "Vee")):
+        button(180, 60, L(name), "over", size=26, icon=ic_dot, icon_size=14).save(
             out("config_voice%d_on.png" % i))
-        button(180, 60, L("Voice %d") % i, "muted", size=26, icon=ic_ring, icon_size=14).save(
+        button(180, 60, L(name), "muted", size=26, icon=ic_ring, icon_size=14).save(
             out("config_voice%d_off.png" % i))
     for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return"),
-                        ("config_controls", "Controls")):
+                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
     make_config_pages()
@@ -845,8 +888,9 @@ def make_history():
     c.pattern((0, 0, 1920, 1080), 36, 2.2, rgba(WHITE, 16))
     # the rail for the page buttons and the scroll bar (MyHistoryLayer.tjs: x 1766-1881)
     c.rrect((1750, 42, 1898, 1037), 20, fill=rgba(WHITE, 26))
-    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 178-905
-    c.rrect((1817, 198, 1830, 885), 6, fill=rgba(WHITE, 70))
+    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 236-847 (since 0.18.0 the
+    # scene buttons sit above and below it)
+    c.rrect((1817, 256, 1830, 827), 6, fill=rgba(WHITE, 70))
     c.save(out("log_base.png", False))
 
     for name, up, double in (("first", True, True), ("uppage", True, False), ("downpage", False, False),
@@ -857,6 +901,17 @@ def make_history():
             b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
             b.rrect((3, 3, 112, 51), 9, fill=fill)
             chevron(b, 57.5, 27, 30, rgba(fg), up, double)
+            b.save(out("log_%s_%s.png" % (name, st), False))
+    # to the previous and the next scene or choice (since 0.18.0): a chevron and a bar
+    for name, up in (("prevscene", True), ("nextscene", False)):
+        for st in ("normal", "over"):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(115, 58)
+            b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
+            b.rrect((3, 3, 112, 51), 9, fill=fill)
+            chevron(b, 57.5, 31 if up else 23, 24, rgba(fg), up)
+            bar_y = 12 if up else 38
+            b.rrect((37, bar_y, 78, bar_y + 5), 2, fill=rgba(fg))
             b.save(out("log_%s_%s.png" % (name, st), False))
     for st, fill, border in (("normal", WHITE, VIOLET), ("over", VIOLET, WHITE)):
         t = Canvas(43, 48)

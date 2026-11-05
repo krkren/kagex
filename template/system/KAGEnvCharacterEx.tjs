@@ -2370,12 +2370,20 @@ class KAGEnvCharacterEx extends KAGEnvCharacterEyeLip {
 		//dm("Expression draw:" + name + " face:" + face + " layer:" + layer.name + " level:" + faceLevelName);
 		if (facepose !== void && dress !== void && facediff !== void && face !== void) {
 			var standInfo = getStandInfo(facepose);
-			if (facelayer === void || facelayer.poseName != facepose || facelayer.level != faceLevelName) {
+			// envinit's faceCrop (since 0.18.0): that part of the canvas at its level fills the window
+			var crop = init.faceCrop;
+			var lv = faceLevelName;
+			if (crop !== void && crop.level !== void) {
+				// the crop names a level as envinit's levels do; a stand layer takes its index
+				lv = +crop.level;
+				for (var i = 0; i < env.levels.count; i++) if ((string)env.levels[i].name == (string)crop.level) { lv = i; break; }
+			}
+			if (facelayer === void || facelayer.poseName != facepose || facelayer.level != lv) {
 				invalidate facelayer if facelayer !== void;
-				facelayer = createStandLayer(facepose, faceLevelName, false);
+				facelayer = createStandLayer(facepose, lv, false);
 				facelayer.name += "_For Expression";
 			}
-			var info = getFaceArea(facelayer);
+			var info = crop !== void ? %[ left:0, top:0, width:1, height:1 ] : getFaceArea(facelayer);
 			if (info !== void) {
 				//dm("Face area:%d %d %d %d".sprintf(info.left, info.top, info.width, info.height));
 				var d;
@@ -2397,6 +2405,12 @@ class KAGEnvCharacterEx extends KAGEnvCharacterEyeLip {
 				facelayer.setEyeLevel(eyeLevel);
 				facelayer.setFace(face);
 				facelayer.updateImage();
+
+				if (crop !== void) {
+					KAGFaceCropInto(layer, facelayer, crop, facelayer.offsetX, facelayer.offsetY);
+					if (env.envinfo.faceApplyColor && !init.noColorFilter) applyColor(layer);
+					return true;
+				}
 
 				// faceLayer is RelativeLayer assumed
 				//dm("%s:Expression display %d %d %d".sprintf(name, standInfo.facexoff, standInfo.faceyoff, standInfo.facezoom));

@@ -203,6 +203,7 @@ class KAGControlsPanel extends KAGElementsScreen
 	function KAGControlsPanel(win)
 	{
 		super.KAGElementsScreen(win, "Controls panel");
+		soundScreen = "controls"; // controls.open, controls.close.click, controls.cancel
 	}
 
 	function onOpen()

@@ -1120,6 +1120,8 @@ class HistoryLayer extends Layer
 
 	{
 
+		KAGInterfaceSound("backlog.open"); // the interface sound table's (since 0.18.0)
+
 		// Full redraw and initial settings
 		makeButtons(); // Create buttons
 
@@ -1809,6 +1811,8 @@ class HistoryLayer extends Layer
 
 	{
 
+		KAGInterfaceSound("backlog.close"); // the interface sound table's (since 0.18.0)
+
 		window.hideHistory();
 
 	}
@@ -1818,6 +1822,12 @@ class HistoryLayer extends Layer
 	function onButtonClick(sender)
 
 	{
+
+		// the interface sound table's backlog.prev.click and backlog.next.click (closing: backlog.close)
+
+		if (sender == prevPageButton || sender == nextPageButton)
+
+			KAGInterfaceSound("backlog." + (sender == prevPageButton ? "prev" : "next") + ".click");
 
 		if(sender == prevPageButton)
 

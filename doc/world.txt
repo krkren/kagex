@@ -532,6 +532,15 @@ Compiled scenes do the same, and the scene compiler warns about a file no patter
                 All characters and layers are erased,
                 and the stage and events are set to a non-displayed state.
     nostopbgm   Continues BGM during init.
+    facewindow  off: no face window in this scene; on: back (since 0.18.0, ◇ Face Windows).
+    keep        Puts the whole scene away (since 0.18.0): =<name> keeps a named copy;
+                sound=true keeps the music and sounds too.
+    restore     Brings the last scene kept back as it was (=<name>: that copy), with the
+                music playing on unless it was kept with sound=true; trans= as for any env tag.
+    drop        =<name>: forgets that copy; alone: every one.
+    layout      Places the characters on the stage evenly, by the layout for their count
+                (since 0.18.0, ◇ Layouts).
+    makeroom    =<xpos>: pushes the characters apart there, room=<width> (◇ Layouts).
 
 
 
@@ -1132,6 +1141,91 @@ an engine without 3D sound. A line's pan= puts its voice there instead. The Char
     [pip posright]
     [pip voice=4 vol=35]
     【pip】(whispering) Is she always like this?
+
+
+
+◇ Face Windows
+
+
+
+The speaker's face shows by the message window (since 0.18.0 in the sample; the World could draw
+one before, but nothing cut it from a sprite). A message window gets a face box with [position
+faceleft= facetop= facewidth= faceheight=] (the sample's [initscene] in macro.ks), and envinit.tjs
+names the level faces come from with "faceLevelName" (void: no faces). Then, with no face command
+in the scenario:
+
+  - each line's speaker shows their face, as their sprite looks now (pose, outfit, expression
+    and, with "faceApplyColor" => true, the time of day's colour), crossfading from the last
+    speaker's over "faceFadeTime" ms;
+  - narration (no name) has none, and neither has a line over an event CG (envinit's
+    "faceOverEvent" => true keeps them);
+  - a character on the stage (shown, disp BOTH) or in the face window only ([name facewin]: a
+    voice on the phone, someone off stage) shows a face; one hidden doesn't;
+  - the face goes with the message window, which it's part of, and a save or Back brings it back.
+
+A character's "faceCrop" says which part of its sprite is its face:
+
+    "faceCrop" => %[ "level" => "0", "left" => 90, "top" => 70, "width" => 360, "height" => 360 ],
+
+level is one of envinit's level names; for a character from pictures left, top, width and height
+are in that level's picture (Ai's ch_0_*), for a character drawn from layers in its canvas at that
+level (Pip's pip_0.txt), and the part fills the face box, keeping its shape. Without faceCrop a
+picture character draws its own face picture at faceLevelName (its pose's msgImage, or the image
+pattern with LEVEL), and a layered one the face area its layers name (facezoom, facexoff and
+faceyoff in charinit.csv). A Live2D or VRM character has no face window.
+
+    [env facewindow=off]      no faces in this scene, until facewindow=on or the next [env init]
+                              (kept in saves and compiled scenes)
+
+Config's Face Window (the faceWindow option, Options.tjs) turns them off for good: off, the face
+goes at once; on, it comes with the next speaker. The sample keeps room for the face by giving the
+message window a wider left margin (faceWindowMargin() in Override.tjs), and the Character demo's
+"Faces" scene shows each case.
+
+
+
+◇ Keeping a Scene
+
+
+
+A scene can be put away and brought back exactly as it was (since 0.18.0), for a flashback, a
+phone screen or a dream:
+
+    [env keep]                    the stage and time, the characters (pose, outfit, face, place,
+                                  level), the layers, the camera and the colour corrections
+    ... the flashback ...
+    [env restore trans=normal]    all of it back, while the music and looping sounds play on
+
+[env keep=<name>] keeps a named copy, which [env restore=<name>] brings back as often as wanted
+until [env drop=<name>]; plain keep and restore are a stack (the last kept comes back first).
+With sound=true the copy has the music and sounds too, and restoring it plays them as they were.
+The copies are part of the World's state: saves, Back and compiled scenes keep them. The Character
+demo's "A Flashback" scene keeps the street, plays a memory in grey and comes back.
+
+
+
+◇ Layouts
+
+
+
+Characters can make room for each other (since 0.18.0). envinit.tjs's "layouts" says where one to
+four characters stand, left to right, and how long the others take to slide over:
+
+    "layouts" => %[ "places" => [ [0], [-420, 420], [-660, 0, 660], [-780, -260, 260, 780] ],
+                    "levels" => [ void, void, void, 0 ],   // optional: a level for each count
+                    "time" => 400, "accel" => 0 ],
+
+    [pip join]          Pip comes on at the right end (join=left: the left end; join=middle: the
+                        middle), at its place, and everyone already on the stage slides to theirs
+    [ai leave]          Ai leaves (as [ai hide]) and the others close the gap
+    [env layout]        everyone on the stage to the places for their count
+    [env makeroom=0]    those left of xpos 0 move left by half of room=, those right of it right
+                        (room: the layout's distance between two)
+
+time= on the tag overrides the layout's time. More than four spread over the four's width.
+Characters keep their order (by xpos). These are World tags, so compiled scenes, saves, Back and
+Replay get the places as any position. The Character demo's "Making Room" scene has Ai, Pip and a
+second Ai join, cut in and leave.
 
 
 
@@ -1928,6 +2022,8 @@ or written by a script as make_vrm.py does.
     efkinput    Dynamic inputs: index:value[,index:value...].
     efktrigger  Sends triggers (index[,index...]) to the effect, once.
     efkstop     Stops making particles; the effect ends once the last one is gone.
+    still       A picture shown in place of the effect while Config's Reduce Motion is on
+                (since 0.18.0; any flip type takes it: doc/kagex.txt, "Reduce Motion").
     loop        Plays the effect again each time it ends (until efkstop).
     efkmag, efkwidth, efkheight and efkframe count when the effect starts.
     When every effect has ended, the trigger efkdone is sent ([waittrig name=efkdone]).
@@ -2152,6 +2248,30 @@ f.family
 
 Coordinates, magnification, etc. of a layer can be changed over a specified time.
 This function is called an "Action".
+
+
+
+◇ The Sample's Staging Kit
+
+
+
+The sample (since 0.18.0) has a word for each of these, written on the actions below:
+
+    gestures, envinit.tjs's actions ([ai nod]): nod, nods, headshake, sigh, laugh, shrug,
+      lookaround, wobble, slump, startle, tremble, bounce, leanin, stepback, sway, stomp, pop,
+      tilt, giggle, faint (besides bow, shock, hop and shiver); each a relative action, so the
+      character ends where it began. [wact] waits for one to end.
+    screen shakes, camera actions run by macro.ks's [quake], [thud] and [rumble]
+      ([env actioncamera=quake])
+    [closeup] and [closeupend]: the camera closes in (zoom=140, x=, y=, time=) while the
+      background blurs (blur=8), and back
+    [dim], [whiten] and [undim]: a translucent black or white veil over the scene for inner
+      thoughts (a World layer named veil at level 5; opacity=)
+    [eyecatch]: a card between scenes (data/image/eyecatch.png, from tools/assets/make_opening.py)
+      for time= ms, which a click skips
+    trans=showslide (envinit.tjs's transitions): a character slides in as it fades in
+
+The Character demo's "Staging Kit" scene plays each with its name.
 
 
 

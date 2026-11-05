@@ -165,6 +165,95 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 【ai】あ、あなたが[emb exp="kag.heroName()"]さんね。よろしく！
 【hero】こちらこそ、よろしく。
 
+*faces|顔
+
+; Faces by the message window (since 0.18.0): the speaker's face, cut from their sprite as it
+; looks now (envinit.tjs's faceCrop), crossfades to the next speaker's and goes for narration and
+; CGs; a speaker who isn't on stage shows a face only ([pip facewin]), [env facewindow=off]
+; turns them off for a scene, and Config turns them off for good
+[ai standard center]
+【ai】話している人の顔が、立ち絵の今の姿のままウィンドウの横に出ます。
+[ai angry]
+【ai】怒っているときもね！
+[pip facewin]
+【pip】ぼくは舞台にもいないよ。よそから電話してるんだ！
+地の文には顔が出ません。
+[EV file=event1 fade]
+【ai】CGの上では、顔は引っ込みます。
+[EV hide fade]
+[env facewindow=off]
+[ai happy]
+【ai】顔なしのシーンにもできるし……
+[env facewindow=on]
+[pip hide]
+【ai】……また戻せるよ。
+
+*layouts|立ち位置の調整
+
+; Layouts (since 0.18.0, envinit.tjs's "layouts"): [name join] brings a character on at the
+; right (join=left, join=middle) while the others slide over to stand evenly spaced, [name leave]
+; takes one off and the others close the gap, and [env makeroom=0] pushes them apart
+[ai center time=300]
+あいがひとりで立っています。
+[pip standard neutral join]
+【pip】ぼくも入れて？
+[newchar name=ai2 initname=ai]
+[ai2 join=middle]
+もうひとりのあいが真ん中に割り込み、みんなが場所を空けます。
+[ai leave]
+最初のあいが去ると、すき間が詰まります。
+[env makeroom=0]
+真ん中に何かを置けるよう、ふたりが離れます……
+[ai2 delete]
+[pip leave]
+……そして、みんな退場。
+
+*flashback|回想
+
+; Keeping a scene (since 0.18.0): [env keep] puts the whole World away (stage, characters, layers,
+; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
+; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies)
+[bgm01]
+[ai standard happy center]
+[pip standard neutral posright]
+いつもの通りにいる、あいとピップ。
+[env keep]
+[pip hide]
+[ai posleft sad]
+[env grayscale=true trans=normal]
+灰色の思い出：ずっと前の、ひとりきりのあい。
+[env restore trans=normal]
+そして今へ。音楽は流れたまま、何もかも元どおり。
+[bgm stop=1500]
+[pip hide]
+[ai hide]
+
+*staging|演出キット
+
+; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for
+; inner thoughts and an eyecatch card, a word each (envinit.tjs's actions, macro.ks's macros)
+[ai standard happy center]
+ひとことで身ぶり： [ai nod][wact]nod、[ai nods][wact]nods, [ai headshake][wact]headshake, [ai sigh][wact]sigh, [ai laugh][wact]laugh.
+[ai shrug][wact]shrug, [ai lookaround][wact]lookaround, [ai wobble][wact]wobble, [ai slump][wact]slump, [ai startle][wact]startle.
+[ai tremble][wact]tremble, [ai bounce][wact]bounce, [ai leanin][wact]leanin, [ai stepback][wact]stepback, [ai sway][wact]sway.
+[ai stomp][wact]stomp, [ai pop][wact]pop, [ai tilt][wact]tilt, [ai giggle][wact]giggle, [ai faint][wact]faint.
+画面：[quake][wact]quake、[thud][wact]thud、[rumble][wact]rumble。
+[closeup]
+[[closeup]：カメラが寄って、背景がぼやけます。
+[closeupend]
+[dim]
+【ai】（[[dim]：心の中で思っていることには、暗いベールを……）
+[undim]
+[whiten]
+……白いベールも（[[whiten]）。
+[undim]
+[pip standard neutral posright trans=showslide]
+ピップがフェードしながらすべり込みます（trans=showslide）。
+[eyecatch]
+[pip hide]
+[ai hide]
+[[eyecatch]のあと、次の場面が始まります。
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

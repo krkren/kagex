@@ -4,7 +4,8 @@ drops the plugins that come from Wamsoft repositories which aren't public (krkrt
 wamsoft_work; kagex uses none of them), and adds the krkrz_dev plugins kagex uses that
 krkrz_web doesn't list: krkreffekseer (Effekseer effects, the efk flip type, with
 krkreffekseer-kit.cmake at the end), minizip (zip patches), clipfile (clip:// images) and
-krkrthreepp (3D: the 3d flip type and VRM characters); and
+krkrthreepp (3D: the 3d flip type and VRM characters), AlphaMovie (.amv movies with
+transparency, the amv flip type; since 0.18.0); and
 kagex's own xp3crypt (encrypted data.xp3) and scnfile (compiled scenarios), from
 $KRKRZ_BASE/xp3crypt and $KRKRZ_BASE/scnfile, with monocypher-kit.cmake at the end (both carry
 Monocypher).
@@ -30,7 +31,7 @@ for name in drop:
     if n == 0:
         # a rerun on a list that was already edited, or upstream moved it — nothing to drop
         print("%s: nothing to drop (already edited upstream?)" % name, file=sys.stderr)
-add = ["krkreffekseer", "minizip", "clipfile", "xp3crypt", "scnfile", "krkrlive2d", "krkrthreepp"]
+add = ["krkreffekseer", "minizip", "clipfile", "xp3crypt", "scnfile", "krkrlive2d", "krkrthreepp", "AlphaMovie"]
 start = s.index("LIST(APPEND TVP_PLUGINS_STATIC")
 close = re.compile(r"^[ \t]*\)", re.M).search(s, start)
 s = s[:close.start()] + "".join("  %s\n" % name for name in add if not re.search(r"^[ \t]*%s[ \t]*$" % name, s[start:close.start()], re.M)) + s[close.start():]

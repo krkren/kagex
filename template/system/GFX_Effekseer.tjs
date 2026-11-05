@@ -292,6 +292,17 @@ class EffekseerFlip extends GenericFlip, Layer
 		}
 	}
 
+	// Reduce Motion: an effect played once ends at once (its efkdone goes), a looping one shows
+	// nothing until it's let move again
+	function flipCanStill() { return true; }
+	function flipStill(on) {
+		FLIP.flipStill(on);
+		if (!on) return;
+		if (!loop) { finish(); return; }
+		fillRect(0, 0, width, height, 0);
+		flipAssign(this);
+	}
+
 	function flipUpdate(tick) {
 		if (player === void) {
 			finish();

@@ -178,6 +178,9 @@ class StaticFlip extends GenericFlip, Layer
 		showFrame();
 	}
 
+	// Reduce Motion: the static stops on the frame it shows
+	function flipCanStill() { return true; }
+
 	function flipUpdate(tick) {
 		var interval = frameInterval;
 		lastTick = tick - interval if (lastTick === void);

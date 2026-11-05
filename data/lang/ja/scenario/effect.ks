@@ -10,11 +10,11 @@
 Effekseer エフェクトには krkreffekseer プラグインと OpenGL ES が必要ですが、このビルドにはないのでそこは飛ばします。
 [jump target=*static]
 [endif]
-[newlay name=petals efk=petals efkframe=600 show]
+[newlay name=petals efk=petals efkframe=600 still=petals_still show]
 光る花びらが道に舞います。World レイヤに置いた Effekseer エフェクトを krkreffekseer プラグインが描いています。
 [ai standard center]
 【ai】花びら……光ってる？
-[newlay name=sparkle efk=sparkle efkwidth=900 efkheight=900 ypos=-150 show]
+[newlay name=sparkle efk=sparkle efkwidth=900 efkheight=900 ypos=-150 still=sparkle_still show]
 【ai】キラキラも、まわりじゅうに！
 エフェクトはそれぞれ独立したレイヤです。efk= で指定し、efkmag で大きさを決め、efkwidth と efkheight でキャンバスの大きさを決めます。配置はふつうのレイヤと同じです。
 [petals flipupdate efkstop]
@@ -23,7 +23,7 @@ Effekseer エフェクトには krkreffekseer プラグインと OpenGL ES が�
 [newlay name=fw2 efk=fireworks efkx=560 efky=260 efkmag=40 level=0 show]
 【ai】花火だ！
 レイヤが再生されているあいだ、だいたい一秒に一発ずつ打ち上がります。
-[newlay name=circle efk=magiccircle efkwidth=760 efkheight=560 xpos=-560 ypos=40 show]
+[newlay name=circle efk=magiccircle efkwidth=760 efkheight=560 xpos=-560 ypos=40 still=magiccircle_still show]
 【ai】ん？ あっちで何か光ってる……
 [newlay name=burst efk=shockwave efky=-120 show]
 【ai】わっ！

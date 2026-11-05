@@ -214,8 +214,19 @@
 
 
     // Level specification for face window. If not using face window, use void.
+    // (since 0.18.0 the sample's speakers show their faces by the message window: [initscene]'s
+    // face box, each character's faceCrop below, crossfading, lit as their sprites are)
 
-    "faceLevelName" => void,
+    "faceLevelName" => "0",
+
+    "faceFadeTime" => 200,
+
+    "faceApplyColor" => true,
+
+    // Layouts (since 0.18.0): where one to four characters stand ([name join], [name leave],
+    // [env layout], [env makeroom=]), and how long the others take to slide over
+
+    "layouts" => %[ "places" => [ [0], [-420, 420], [-660, 0, 660], [-780, -260, 260, 780] ], "time" => 400 ],
 
 //	"faceArea" => %[ name:"Face area layer", center:true/*Center flag*/, xoffset:0, yoffset:0, width:200, height:160 ],
 
@@ -280,6 +291,33 @@
 			],
 
 
+
+		// The staging kit's gestures (since 0.18.0): a word each, [ai nod]; relative actions, so a
+		// character ends where it was. The screen shakes go to the camera: [quake], [thud],
+		// [rumble] (macro.ks, [env actioncamera=quake])
+		"nod" => %[ "time" => 420, "top" => %[ handler:"TriangleAction", vibration:28, ontime:160, offtime:260 ] ], // a nod
+		"nods" => %[ "time" => 840, "top" => %[ handler:"TriangleAction", vibration:24, ontime:160, offtime:260 ] ], // two nods
+		"headshake" => %[ "time" => 900, "left" => %[ handler:"SinAction", vibration:20, cycle:300 ] ], // shaking the head
+		"sigh" => %[ "time" => 1400, "top" => %[ handler:"TriangleAction", vibration:22, ontime:500, offtime:900 ], "zoomy" => %[ handler:"TriangleAction", vibration:-2, ontime:500, offtime:900 ] ], // shoulders falling with a sigh
+		"laugh" => %[ "time" => 1000, "top" => %[ handler:"SinAction", vibration:9, cycle:180 ] ], // shaking with laughter
+		"shrug" => %[ "time" => 520, "top" => %[ handler:"TriangleAction", vibration:-18, ontime:200, offtime:320 ], "zoomx" => %[ handler:"TriangleAction", vibration:3, ontime:200, offtime:320 ] ], // a shrug
+		"lookaround" => %[ "time" => 1800, "left" => %[ handler:"SinAction", vibration:36, cycle:1800 ], "rotate" => %[ handler:"SinAction", vibration:2, cycle:1800 ] ], // looking around
+		"wobble" => %[ "time" => 1500, "rotate" => %[ handler:"SinAction", vibration:4, cycle:500 ] ], // wobbling
+		"slump" => %[ "time" => 1600, "top" => %[ handler:"TriangleAction", vibration:60, ontime:600, offtime:1000 ], "zoomy" => %[ handler:"TriangleAction", vibration:-3, ontime:600, offtime:1000 ] ], // slumping
+		"startle" => %[ "time" => 320, "top" => %[ handler:"TriangleAction", vibration:-70, ontime:110, offtime:210 ] ], // a start
+		"tremble" => %[ "time" => 1500, "left" => %[ handler:"RandomAction", vibration:5, waittime:30 ] ], // trembling
+		"bounce" => %[ "time" => 1200, "top" => %[ handler:"TriangleAction", vibration:-26, ontime:150, offtime:150 ] ], // bouncing
+		"leanin" => %[ "time" => 900, "zoom" => %[ handler:"TriangleAction", vibration:7, ontime:300, offtime:600 ] ], // leaning in
+		"stepback" => %[ "time" => 900, "zoom" => %[ handler:"TriangleAction", vibration:-7, ontime:300, offtime:600 ] ], // stepping back
+		"sway" => %[ "time" => 3000, "rotate" => %[ handler:"SinAction", vibration:3, cycle:1500 ] ], // swaying
+		"stomp" => %[ "time" => 520, "top" => %[ handler:"TriangleAction", vibration:16, ontime:60, offtime:200 ] ], // a stomp
+		"pop" => %[ "time" => 300, "zoom" => %[ handler:"TriangleAction", vibration:12, ontime:100, offtime:200 ] ], // popping up
+		"tilt" => %[ "time" => 1200, "rotate" => %[ handler:"TriangleAction", vibration:8, ontime:300, offtime:900 ] ], // tilting the head
+		"giggle" => %[ "time" => 800, "rotate" => %[ handler:"SinAction", vibration:2, cycle:200 ], "top" => %[ handler:"SinAction", vibration:4, cycle:200 ] ], // a giggle
+		"faint" => %[ "time" => 1200, "top" => %[ handler:"TriangleAction", vibration:90, ontime:400, offtime:800 ], "opacity" => %[ handler:"TriangleAction", vibration:-120, ontime:400, offtime:800 ] ], // nearly fainting
+		"quake" => %[ "time" => 700, "camerax" => %[ handler:"RandomAction", vibration:24, waittime:30 ], "cameray" => %[ handler:"RandomAction", vibration:18, waittime:30 ] ], // the screen shakes hard
+		"thud" => %[ "time" => 360, "cameray" => %[ handler:"TriangleAction", vibration:30, ontime:60, offtime:300 ] ], // the screen drops once
+		"rumble" => %[ "time" => 2000, "camerax" => %[ handler:"RandomAction", vibration:6, waittime:40 ], "cameray" => %[ handler:"RandomAction", vibration:4, waittime:40 ] ], // the screen rumbles
 
 		// New style action definition example
 
@@ -694,11 +732,18 @@
 
 			"poseCodes" => %[ "1" => "standard" ],
 
+			// the face window (since 0.18.0): this part of her level 0 sprite (540x1620)
+			"faceCrop" => %[ "level" => "0", "left" => 90, "top" => 70, "width" => 360, "height" => 360 ],
+
 			"faceCodes" => %[ "01" => "happy", "02" => "angry", "03" => "sad" ],
 
 			"voiceFile" => "ai%s%06d.ogg",
 
-			"voiceName" => "voice0"
+			"voiceName" => "voice0",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "ai000001" ]
 
 			],
 
@@ -725,9 +770,16 @@
 
 			"yoffset" => 0, // the centre of its canvas goes to the centre of the screen
 
+			// the face window: this part of its level 0 canvas (640x1168)
+			"faceCrop" => %[ "level" => "0", "left" => 70, "top" => 140, "width" => 500, "height" => 500 ],
+
 			"voiceFile" => "pip%s%06d",
 
-			"voiceName" => "voice0"
+			"voiceName" => "voice1",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "pip000001", "pip000003", "pip000005", "pip000009" ]
 
 			],
 
@@ -751,7 +803,11 @@
 
 			"voiceFile" => "hiyori%s%06d",
 
-			"voiceName" => "voice0",
+			"voiceName" => "voice2",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "hiyori000001" ],
 
 			"live2d" => %[
 
@@ -819,7 +875,11 @@
 
 			"voiceFile" => "vee%s%06d",
 
-			"voiceName" => "voice0",
+			"voiceName" => "voice3",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "vee000001" ],
 
 			"vrm" => %[
 

@@ -1,0 +1,9 @@
+# Loudness (template/system/Loudness.tjs; doc/kagex.txt, "Loudness"): an extra gain in dB as each
+# Ogg Vorbis or Opus file is decoded, for a kind of sound (voice, voice:<speaker>, bgm, se) or a
+# file (its name, which wins over its kind). The sample's sounds measured with EBU R128 (ffmpeg's
+# ebur128): the voices sit at about -16 LUFS, so Hiyori's and Vee's synthesized lines (-18) and
+# Pip's spoken one (-21) come up to them, and the music goes 4 dB under the voices
+bgm	-4
+voice:hiyori	+2.5
+voice:vee	+2.5
+pip000009	+5

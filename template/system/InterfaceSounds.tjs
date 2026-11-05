@@ -1,0 +1,203 @@
+/**
+ * The interface's sounds from one table (since 0.18.0; doc/kagex.txt, "Interface Sounds").
+ * uisounds.csv (optional) names a sound for each tag, a tag being <screen>.<part>.<event>:
+ *
+ *   @click            ui_click         an alias: the sound's file, and a system sound buffer
+ *   *.click           @click           every click a screen doesn't name otherwise
+ *   *.enter           ui_hover
+ *   title.exit.click  ui_cancel        the title's Exit button
+ *   config.*.change   ui_slide
+ *   dialog.open       ui_open          a Yes/No prompt opens
+ *   message.*.enter   none             nothing (a wildcard's sound taken back)
+ *
+ * The columns are separated by tabs or spaces, a # starts a comment line. A sound is a file
+ * found on the auto path (its extension may be left out), an @alias, or none. The third
+ * column, if any, is the system sound buffer to play it in (0, the first, by default: the
+ * framework's numSysSEBuffers). A * matches any characters, dots too; of the lines a tag
+ * matches, the one with the most other characters wins, and of two as long, the later one.
+ *
+ * The tags the framework asks for, when a button has no sound of its own (clickse= and the
+ * like):
+ *   <screen>.<name>.click, .enter     [button] (name=, else its picture's), [link] (name=, else link)
+ *   <screen>.<name>.change            a slider let go, a check box (their name=)
+ *   message.<name>.click, .enter      [sysbutton]s
+ *   dialog.open, dialog.<name>.click, .enter   prompts (yes, no; About's close), dialog.skip.change
+ *   choice.open, .enter, .click, .close        choices ([select], SelectLayer.tjs)
+ *   menu.open, .enter, .click, .cancel         the menu bar's menus
+ *   backlog.open, .close, .prev.click, .next.click   the backlog (HistoryLayer.tjs)
+ *   <elements screen>.open, .<id>.click, .cancel   Elements screens (controls: Help > Controls)
+ * where <screen> is the name of the scenario that made the button, without its extension
+ * (title, config, save ...). An .enter sound within enterQuiet ms of another sound is left
+ * out (a click redraws a screen under the pointer, a prompt moves the pointer to its button).
+ * In debug mode a sound started within doubleTime ms after the last one (counted from when that
+ * one's play returned) is logged with both call traces (or, where the engine keeps none, the
+ * scenario line), as that's usually one sound played twice.
+ */
+class KAGInterfaceSoundTable
+{
+	var lines = [];   // %[ pattern (RegExp, or void for a plain tag), tag, weight, sound, buffer ]
+	var aliases = %[];
+	var cache = %[];  // tag -> the line's sound and buffer, or false for none
+	var doubleTime = 20;
+	var last;         // the last sound started: %[ tag, tick, trace ]
+	var failed = %[]; // files that didn't play (logged once)
+	var log;          // an array, and every tag that plays a sound is added to it (for tests)
+	var doubled = 0;  // how many times two sounds started within doubleTime ms (in debug mode)
+	var enterQuiet = 150; // a .enter sound this soon after another sound is left out: a screen
+	                      // redrawn under the pointer, or a prompt giving its button the focus
+	var lastStart = 0;
+
+	function KAGInterfaceSoundTable(file = "uisounds.csv") { load(file); }
+
+	function load(file) {
+		if (!Storages.isExistentStorage(file)) return;
+		var text = [].load(file);
+		for (var i = 0; i < text.count; i++) {
+			var line = ((string)text[i]).trim();
+			if (line == "" || line.charAt(0) == "#") continue;
+			var cols = line.split("\t ", , true); // each character a separator, empty columns left out
+			if (cols.count < 2) { dm(file + ": " + line + ": no sound"); continue; }
+			var buffer = cols.count > 2 ? +cols[2] : void;
+			if (cols[0].charAt(0) == "@") alias(cols[0].substring(1), cols[1], buffer);
+			else set(cols[0], cols[1], buffer);
+		}
+	}
+
+	// an alias: "@name" in the sound column
+	function alias(name, sound, buffer) {
+		aliases[((string)name).toLowerCase()] = %[ sound:(string)sound, buffer:buffer ];
+		(Dictionary.clear incontextof cache)();
+	}
+
+	// a line of the table (a later line wins over one of the same weight)
+	function set(tag, sound, buffer) {
+		tag = ((string)tag).toLowerCase();
+		var e = %[ tag:tag, sound:(string)sound, buffer:buffer, weight:tag.length ];
+		if (tag.indexOf("*") >= 0) {
+			var parts = tag.split("*"), src = "";
+			for (var i = 0; i < parts.count; i++) {
+				src += ".*" if i > 0;
+				src += parts[i].replace(/[\\^$.|?+()\[\]{}]/g, function(m) { return "\\" + m[0]; });
+			}
+			e.pattern = new RegExp("^" + src + "$");
+			e.weight = tag.length - (parts.count - 1);
+		}
+		lines.add(e);
+		(Dictionary.clear incontextof cache)();
+	}
+
+	// what a tag plays: %[ file, buffer ], or void
+	function soundOf(tag) {
+		tag = ((string)tag).toLowerCase();
+		var s = cache[tag];
+		if (s !== void) return s === false ? void : s;
+		var best;
+		for (var i = 0; i < lines.count; i++) {
+			var e = lines[i];
+			if (e.pattern === void ? e.tag != tag : !e.pattern.test(tag)) continue;
+			best = e if best === void || e.weight >= best.weight;
+		}
+		if (best !== void) {
+			var sound = best.sound, buffer = best.buffer;
+			for (var n = 0; n < 8 && sound.charAt(0) == "@"; n++) {
+				var a = aliases[sound.substring(1).toLowerCase()];
+				if (a === void) { dm("uisounds.csv: no alias " + sound); sound = "none"; break; }
+				sound = a.sound;
+				buffer = a.buffer if buffer === void;
+			}
+			if (sound != "none" && sound != "" && sound.charAt(0) != "@")
+				s = %[ file:sound, buffer:buffer !== void ? buffer : 0 ];
+		}
+		cache[tag] = s !== void ? s : false;
+		return s;
+	}
+
+	function has(tag) { return soundOf(tag) !== void; }
+
+	// the name of the screen whose scenario is running: title, config, save ...
+	function screen() {
+		var s = "";
+		try { s = kag.conductor.curStorage; } catch {}
+		if (s == "") return "game";
+		return Storages.chopStorageExt(Storages.extractStorageName(s)).toLowerCase();
+	}
+
+	// an expression that plays tag's sound and then runs exp (exp as it is when tag has none)
+	function expression(exp, tag) {
+		if (tag == "" || !has(tag)) return exp;
+		var play = "KAGInterfaceSounds.play(\"" + ((string)tag).toLowerCase().escape() + "\")";
+		return exp != "" ? play + ",(" + exp + ")" : play;
+	}
+
+	// where a sound came from, for the debug log: the call trace (where the engine keeps one,
+	// in its debug mode), else the scenario's line and the dialog open
+	function where() {
+		var t = Scripts.getTraceString();
+		if (t != "") return t;
+		try {
+			with (kag.conductor) t = .curStorage + " line " + (.curLine + 1);
+			t += ", " + kag.currentDialog.name + " open" if typeof kag.currentDialog == "Object" && kag.currentDialog !== void;
+		} catch {}
+		return t;
+	}
+
+	// plays tag's sound (nothing when the table has none); true when it started one
+	function play(tag) {
+		var s = soundOf(tag);
+		if (s === void || typeof global.kag != "Object" || !isvalid kag) return false;
+		var tick = System.getTickCount();
+		if (tick - lastStart < enterQuiet && ((string)tag).substring(((string)tag).length - 6) == ".enter") return false;
+		lastStart = tick;
+		var noted = false;
+		if (kag.debugLevel >= tkdlSimple) {
+			var now = tick, trace = where();
+			if (last !== void && now - last.tick < doubleTime) {
+				doubled++;
+				dm("Two interface sounds within " + (now - last.tick) + " ms: " + last.tag + " and " + tag +
+					"\n  " + last.tag + ": " + last.trace + "\n  " + tag + ": " + trace);
+			}
+			last = %[ tag:tag, tick:now, trace:trace ];
+			noted = true;
+		}
+		var n = kag.numSysSEBuffers > 0 ? int(+s.buffer) : 0;
+		n = kag.numSysSEBuffers - 1 if n >= kag.numSysSEBuffers;
+		n = 0 if n < 0;
+		var buf = kag.se[kag.numSEBuffers + n];
+		if (buf === void) return false;
+		log.add(((string)tag).toLowerCase()) if log !== void;
+		try {
+			buf.play(%[ storage:s.file ]);
+		} catch (e) {
+			if (!failed[s.file]) { failed[s.file] = true; dm("Interface sound " + s.file + " (" + tag + "): " + e.message); }
+			return false;
+		}
+		// the times count from the end of the play: opening a sound can take longer than
+		// doubleTime on a slow machine, and one sound played twice in a row would go unnoticed
+		lastStart = System.getTickCount();
+		last.tick = lastStart if noted;
+		return true;
+	}
+}
+
+var KAGInterfaceSounds = new KAGInterfaceSoundTable();
+
+/**
+ * What the framework's createSoundExpression functions call: exp with a sound to play first,
+ * storage (a button's own clickse= and the like) in buffer buf, or tag's from the table
+ */
+function KAGSoundExpression(exp, storage, buf, tag)
+{
+	if (storage == "") {
+		if (tag != "" && typeof global.KAGInterfaceSounds == "Object") return KAGInterfaceSounds.expression(exp, tag);
+		return exp;
+	}
+	if (buf === void) buf = 0;
+	var seexp = "(kag.se[" + buf + "].play(%[storage:\"" + ((string)storage).escape() + "\"]))";
+	return exp != "" ? seexp + ",(" + exp + ")" : seexp;
+}
+
+// Plays tag's sound if the table is there (for code that runs before or without it)
+function KAGInterfaceSound(tag)
+{
+	return typeof global.KAGInterfaceSounds == "Object" ? KAGInterfaceSounds.play(tag) : false;
+}

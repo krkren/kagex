@@ -864,6 +864,10 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	waitvoice : null,
 	noplayvoice : null,
 	facewin : function(param, elm) { disp = FACE; redraw = true; } incontextof this,
+	// layouts (since 0.18.0, envinit's "layouts"): come on stage at the right (join=left, middle)
+	// while the others slide over to make room, or leave and let them close the gap
+	join : function(param, elm) { env.layoutJoin(this, param, elm); } incontextof this,
+	leave : function(param, elm) { disp = CLEAR; env.layoutPlace(elm, void, void, this); } incontextof this,
 	faceon : null,
 	faceoff : null,
 	loop : null,
@@ -1248,8 +1252,14 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 		//dm("Rendering facial expression:" + name + " face:" + face + " layer:" + layer.name + " level:" + faceLevelName);
 		if (poses !== void) {
 			imageFile = "";
-			if (_drawLayerPose(layer, faceLevelName, facepose, true) ||
-				(facepose != init.defaultPose && _drawLayerPose(layer, faceLevelName, init.defaultPose, true))) {
+			// envinit's faceCrop (since 0.18.0): the face is that part of the sprite at its level,
+			// drawn to fill the face window, rather than a picture of its own at faceLevelName
+			var crop = init.faceCrop;
+			var lv = crop !== void && crop.level !== void ? (string)crop.level : faceLevelName;
+			var target = crop !== void ? env.faceWorkLayer : layer;
+			if (_drawLayerPose(target, lv, facepose, true) ||
+				(facepose != init.defaultPose && _drawLayerPose(target, lv, init.defaultPose, true))) {
+				KAGFaceCropInto(layer, target, crop) if crop !== void;
 				if (env.envinfo.faceApplyColor && !init.noColorFilter) {
 					applyColor(layer);
 				}

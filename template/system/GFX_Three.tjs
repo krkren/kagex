@@ -961,6 +961,10 @@ class ThreeFlip extends GenericFlip, Layer
 		return true;
 	}
 
+	// Reduce Motion: the scene stops as it shows, after a motion played once ends
+	function flipCanStill() { return true; }
+	function flipStillBusy() { return once !== void || oncePlaying; }
+
 	function flipUpdate(tick) {
 		if (unavailable) {
 			if (once !== void) {

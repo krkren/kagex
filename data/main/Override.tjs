@@ -102,6 +102,38 @@ function rollBack()
 }
 
 /**
+ * The scene player's moves (since 0.18.0; compiled scenes only, as BACK): the start of the scene
+ * (or the one before), a rewind to it or the last choice, the last choice again, the next scene
+ */
+function playerOf()
+{
+    return typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.working ? world_object.player : void;
+}
+function canPlayerMove(move)
+{
+    var p = playerOf();
+    if (p === void) return false;
+    switch (move) {
+    case "prevScene":  return p.canPrevScene;
+    case "rewind":     return p.canPrevScene || p.canPrevChoice;
+    case "prevChoice": return p.canPrevChoice;
+    case "nextScene":  return true;
+    }
+    return false;
+}
+function playerMove(move)
+{
+    var p = playerOf();
+    if (p === void || !canPlayerMove(move)) return;
+    switch (move) {
+    case "prevScene":  p.prevScene(true); break;
+    case "rewind":     p.rewind(); break;
+    case "prevChoice": p.prevChoice(true); break;
+    case "nextScene":  p.nextScene(); break;
+    }
+}
+
+/**
  * Change Mode
  * Called from MainWindow when system state changes
  * @param kag KAG window
@@ -127,6 +159,9 @@ function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, 
     setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
     setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
     setButtonEnabled(kag, "msg_back", !modal && kag.inStable && canRollBack());
+    var moves = [ "prevScene", "rewind", "prevChoice", "nextScene" ];
+    for (var i = 0; i < moves.count; i++)
+        setButtonEnabled(kag, "msg_" + moves[i].toLowerCase(), !modal && (kag.inStable || moves[i] == "nextScene") && !skipMode && canPlayerMove(moves[i]));
 
     // Sync config menu
     if (typeof kag.configMenuItem != "undefined") {
@@ -547,7 +582,8 @@ function setScreenButton(work=void)
  */
 function setNoEffectButton(work=void) 
 {
-    kag.noeffect = work if work !== void;
+    KAGOptionSet("noEffect", work) if work !== void; // an option: Undo takes it back
+    configUndoButtons();
     setButtonOver("config_effecton", !kag.noeffect);
     setButtonOver("config_effectoff", kag.noeffect);
 }
@@ -557,7 +593,8 @@ function setNoEffectButton(work=void)
  */
 function setSkipButton(work=void)
 {
-    kag.allskip = work if work !== void;
+    KAGOptionSet("allSkip", work) if work !== void;
+    configUndoButtons();
     setButtonOver("config_skipall",    kag.allskip);
     setButtonOver("config_skipalrdy", !kag.allskip);
 }
@@ -570,7 +607,10 @@ function setSkipButton(work=void)
 function setVoiceOnButton(name, init=void)
 {
     if (!init) {
-        kag.setVoiceOn(name, !kag.getVoiceOn(name));
+        // an option (KAGDefineVoiceOptions, AfterInit.tjs), so Undo takes it back
+        if (KAGOptions["voiceOn:" + name] !== void) KAGOptionSet("voiceOn:" + name, !kag.getVoiceOn(name));
+        else kag.setVoiceOn(name, !kag.getVoiceOn(name));
+        configUndoButtons();
     }
     var btnname = "config_" + name;
     var button = kag.current.names[btnname];
@@ -619,9 +659,44 @@ function setLanguageButton(work=void)
 function initial()
 {
     askYesNo('Initialize', 'Confirmation', function() {
+        KAGOptionUndo.mark(); // one step for Undo
         initialEnvironment();
+        KAGOptionUndo.groupEnd();
         kag.process("", "*buttons");
     });
+}
+
+/**
+ * Undo and Revert (KAGOptionUndo, Options.tjs; begun as Config opens): the page drawn again as
+ * the settings are after it
+ */
+function configUndo()
+{
+    if (KAGOptionUndo.undo()) kag.process("", "*buttons");
+}
+
+function configRevert()
+{
+    if (KAGOptionUndo.revert()) kag.process("", "*buttons");
+}
+
+// Undo and Revert lit when there's something to take back
+function configUndoButtons()
+{
+    if (kag.current === void || !isvalid kag.current) return;
+    var names = kag.current.names;
+    if (names === void || names.config_undo === void) return;
+    var b = names.config_undo, r = names.config_revert;
+    b.enabled = KAGOptionUndo.canUndo, b.opacity = b.enabled ? 255 : 110;
+    if (r !== void) r.enabled = KAGOptionUndo.changed, r.opacity = r.enabled ? 255 : 110;
+}
+KAGOptionHook.add(function(name, v) { configUndoButtons(); } incontextof global);
+
+// Config closing: no more steps, and the music sample stops
+function configLeave()
+{
+    KAGOptionUndo.end();
+    KAGVolumeSamples.stop(300);
 }
 
 /**
@@ -644,9 +719,23 @@ var configPages = [
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
-    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
-      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality" ] ]
+    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
+      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
+    // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
+    [ [], [ "volumeSamples", "voiceNote" ] ]
     ];
+
+KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
+    lines:[ "A slider sets a character's volume;", "Test plays one of their lines.",
+            "The volumes on page 1 play a sample", "as you point at them and move them." ] ]);
+
+// The message window's left margin ([initscene] in macro.ks): room for the face window
+// (envinit's faceCrop), unless Config turned it off
+function faceWindowMargin()
+{
+    var on = KAGOptionGet("faceWindow");
+    return on !== void && !on ? 48 : 320;
+}
 
 // ---------------------------------------------------------
 // The hero's name (namescreen.ks; the framework's kag.setHeroName). The player's choice is kept
@@ -744,6 +833,7 @@ KAGDefineOption(%[ name:"heroName", label:"Your Name", kind:"button", button:"Ch
 function configOptionsPage()
 {
     var page = configPages[tf.configPage];
+    if (tf.configPage == 5) page[0] = configVoiceOptions;
     KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
 }
 
@@ -762,6 +852,7 @@ function gotoTitle()
 function configInit()
 {
     for (var i = 1; i < configPages.count; i++) setButtonOver("page" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
+    configUndoButtons();
     if (tf.configPage > 1) return; // the options draw themselves (Options.tjs)
     setScreenButton();
     setNoEffectButton();
@@ -770,8 +861,6 @@ function configInit()
     setVoiceOnButton("voice1", true);
     setVoiceOnButton("voice2", true);
     setVoiceOnButton("voice3", true);
-    setVoiceOnButton("voice4", true);
-    setVoiceOnButton("voice5", true);
     setLanguageButton();
 }
 
@@ -1041,6 +1130,269 @@ function isCgView()
 function cgView()
 {
     kag.current.loadImages(tf.cgviewlist2[tf.cgcnt++]);
+}
+
+// --------------------------------------------------------
+// The CG viewer (since 0.18.0): a CG and its variations full screen, zoomed with the wheel, the
+// bar's - and + buttons, the + and - keys or a pinch (about the point under the pointer), moved
+// by dragging, the arrow keys or the stick, stepped through with the bar's arrows, Page Up and
+// Down or a click (the last one closes it), closed with x, Esc or the right button. The bar
+// fades away when the pointer rests. cgmode.ks waits for the trigger cgviewer
+// --------------------------------------------------------
+var cgViewer;
+function cgViewerOpen()
+{
+    invalidate cgViewer if cgViewer !== void && isvalid cgViewer;
+    cgViewer = new CGViewer(kag, tf.cgviewlist2);
+}
+
+class CGViewer extends Layer
+{
+    var list, index = 0, pic;
+    var z = 1.0, cx = 0, cy = 0, fit = 1.0, maxZoom = 4.0;
+    var bar, buttons = [], hover = -1, barTimer, lastMove = 0, barAlpha = 255;
+    var down = false, downX, downY, downCx, downCy, dragged = false;
+    var pinchZ = void;
+    var closeTrigger, closed = false;
+    var wheelHook, pinchHook;
+    var fontFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+
+    function CGViewer(win, list)
+    {
+        super.Layer(win, win.primaryLayer);
+        this.list = [];
+        this.list.assign(list);
+        var prim = win.primaryLayer;
+        setImageSize(prim.width, prim.height);
+        setSizeToImageSize();
+        absolute = 1999000000; // over the screens, under the Yes/No prompts
+        hitType = htMask;
+        hitThreshold = 0;      // every click is the viewer's
+        focusable = true;
+        pic = new global.Layer(win, this);
+        bar = new global.Layer(win, this);
+        bar.setImageSize(744, 84);
+        bar.setSizeToImageSize();
+        bar.setPos((width - bar.width) \ 2, height - bar.height - 40);
+        bar.hitType = htMask;
+        bar.hitThreshold = 256; // the viewer works out the buttons itself
+        bar.visible = true;
+        // [ x, width, what it does ] along the bar
+        buttons = [ [12, 84, "zoomout"], [104, 84, "zoomin"], [236, 84, "prev"], [328, 180, "count"], [516, 84, "next"], [648, 84, "close"] ];
+        barTimer = new Timer(onBarTimer, "");
+        barTimer.interval = 100;
+        barTimer.enabled = true;
+        lastMove = System.getTickCount();
+        closeTrigger = new AsyncTrigger(onCloseLater, "");
+        wheelHook = onWheel;
+        pinchHook = onPinch;
+        win.addHook("onMouseWheelHook", wheelHook);
+        win.addHook("onTouchScalingHook", pinchHook);
+        visible = true;
+        focus();
+        if (this.list.count == 0) { close(); return; } // nothing seen yet
+        load();
+    }
+
+    function finalize()
+    {
+        window.removeHook("onMouseWheelHook", wheelHook);
+        window.removeHook("onTouchScalingHook", pinchHook);
+        invalidate barTimer;
+        invalidate closeTrigger;
+        invalidate pic;
+        invalidate bar;
+        super.finalize(...);
+    }
+
+    function load()
+    {
+        pic.loadImages(list[index]);
+        var fx = width / pic.imageWidth, fy = height / pic.imageHeight;
+        fit = fx < fy ? fx : fy;
+        z = 1.0;
+        cx = pic.imageWidth / 2, cy = pic.imageHeight / 2;
+        draw();
+        drawBar();
+    }
+
+    property scale { getter() { return fit * z; } }
+
+    // keeps the view on the picture (centred where it's smaller than the screen)
+    function clampView()
+    {
+        var s = scale, vw = width / s, vh = height / s, iw = pic.imageWidth, ih = pic.imageHeight;
+        if (vw >= iw) cx = iw / 2;
+        else cx = cx < vw / 2 ? vw / 2 : cx > iw - vw / 2 ? iw - vw / 2 : cx;
+        if (vh >= ih) cy = ih / 2;
+        else cy = cy < vh / 2 ? vh / 2 : cy > ih - vh / 2 ? ih - vh / 2 : cy;
+    }
+
+    function draw()
+    {
+        clampView();
+        fillRect(0, 0, width, height, 0xff000000);
+        var s = scale, vw = width / s, vh = height / s;
+        var sx = cx - vw / 2, sy = cy - vh / 2;
+        var x0 = sx < 0 ? 0 : sx, y0 = sy < 0 ? 0 : sy;
+        var x1 = sx + vw > pic.imageWidth ? pic.imageWidth : sx + vw, y1 = sy + vh > pic.imageHeight ? pic.imageHeight : sy + vh;
+        if (x1 > x0 && y1 > y0)
+            stretchCopy((int)((x0 - sx) * s), (int)((y0 - sy) * s), (int)((x1 - x0) * s + 0.5), (int)((y1 - y0) * s + 0.5),
+                pic, x0, y0, x1 - x0, y1 - y0, stLinear);
+        update();
+    }
+
+    function zoomTo(nz, px = width / 2, py = height / 2)
+    {
+        nz = nz < 1.0 ? 1.0 : nz > maxZoom ? maxZoom : nz;
+        var s0 = scale;
+        var ix = cx + (px - width / 2) / s0, iy = cy + (py - height / 2) / s0;
+        z = nz;
+        var s1 = scale;
+        cx = ix - (px - width / 2) / s1, cy = iy - (py - height / 2) / s1;
+        draw();
+        drawBar();
+    }
+
+    function pan(dx, dy) { cx -= dx / scale; cy -= dy / scale; draw(); }
+
+    function step(d)
+    {
+        var n = index + d;
+        if (n < 0) return;
+        if (n >= list.count) { close(); return; }
+        index = n;
+        load();
+    }
+
+    function close()
+    {
+        if (closed) return;
+        closed = true;
+        visible = false;
+        closeTrigger.trigger();
+    }
+    function onCloseLater()
+    {
+        window.trigger("cgviewer");
+        cgViewer = void if cgViewer === this;
+        invalidate this;
+    }
+
+    // ---- the bar ----
+    function drawBar()
+    {
+        var b = bar;
+        b.fillRect(0, 0, b.width, b.height, 0);
+        b.fillRect(0, 0, b.width, b.height, 0xff5025ff);
+        b.fillRect(4, 4, b.width - 8, b.height - 8, 0xe6a690ff);
+        b.font.face = fontFace;
+        b.font.bold = true;
+        b.font.height = 34;
+        var labels = %[ zoomout:"−", zoomin:"+", prev:"◀", next:"▶", close:"×", count:"%d / %d".sprintf(index + 1, list.count) ];
+        for (var i = 0; i < buttons.count; i++) {
+            var bt = buttons[i], name = bt[2], on = i == hover;
+            var dim = (name == "zoomout" && z <= 1.0) || (name == "zoomin" && z >= maxZoom) || (name == "prev" && index == 0);
+            if (name != "count") {
+                b.fillRect(bt[0], 10, bt[1], 64, on && !dim ? 0xffffffff : 0xff5025ff);
+            }
+            var text = labels[name], tw = b.font.getTextWidth(text);
+            var col = name == "count" ? 0xffffff : dim ? 0x9a86e8 : on ? 0x5025ff : 0xffffff;
+            b.drawText(bt[0] + (bt[1] - tw) \ 2, 10 + (64 - b.font.getTextHeight(text)) \ 2, text, col, 255, true);
+        }
+        b.opacity = barAlpha;
+    }
+    function buttonAt(x, y)
+    {
+        if (!bar.visible || barAlpha < 64) return -1;
+        x -= bar.left, y -= bar.top;
+        if (y < 10 || y >= 74) return -1;
+        for (var i = 0; i < buttons.count; i++)
+            if (buttons[i][2] != "count" && x >= buttons[i][0] && x < buttons[i][0] + buttons[i][1]) return i;
+        return -1;
+    }
+    function act(name)
+    {
+        KAGInterfaceSound("cgview." + name + ".click"); // uisounds.csv
+        switch (name) {
+        case "zoomout": zoomTo(z / 1.25); break;
+        case "zoomin":  zoomTo(z * 1.25); break;
+        case "prev":    step(-1); break;
+        case "next":    step(1); break;
+        case "close":   close(); break;
+        }
+    }
+    function wake()
+    {
+        lastMove = System.getTickCount();
+        if (barAlpha != 255) { barAlpha = 255; bar.opacity = 255; }
+    }
+    function onBarTimer()
+    {
+        if (closed || barAlpha == 0) return;
+        var idle = System.getTickCount() - lastMove;
+        if (idle < 2500) return;
+        barAlpha = idle > 3000 ? 0 : (int)(255 * (3000 - idle) / 500);
+        bar.opacity = barAlpha;
+    }
+
+    // ---- the pointer, the wheel, a pinch, the keys ----
+    function onMouseDown(x, y, button, shift)
+    {
+        wake();
+        if (button == mbRight) { close(); return; }
+        var i = buttonAt(x, y);
+        if (i >= 0) { act(buttons[i][2]); return; }
+        down = true, dragged = false, downX = x, downY = y, downCx = cx, downCy = cy;
+    }
+    function onMouseMove(x, y, shift)
+    {
+        wake();
+        if (down) {
+            if (!dragged && (Math.abs(x - downX) > 8 || Math.abs(y - downY) > 8)) dragged = true;
+            if (dragged) { cx = downCx - (x - downX) / scale; cy = downCy - (y - downY) / scale; draw(); }
+            return;
+        }
+        var i = buttonAt(x, y);
+        if (i != hover) { hover = i; drawBar(); }
+    }
+    function onMouseUp(x, y, button, shift)
+    {
+        if (!down) return;
+        down = false;
+        if (!dragged) step(1); // a click goes to the next variation; after the last, back to the CGs
+    }
+    function onWheel(shift, delta, x, y)
+    {
+        if (closed || !visible) return false;
+        wake();
+        zoomTo(z * Math.pow(1.15, delta / 120), x, y);
+        return true;
+    }
+    function onPinch(start, current, px, py, flag)
+    {
+        if (closed || !visible || start <= 0) return false;
+        pinchZ = z if pinchZ === void || (flag & 1);
+        zoomTo(pinchZ * current / start, px, py);
+        pinchZ = void if (flag & 2);
+        return true;
+    }
+    function onKeyDown(key, shift)
+    {
+        wake();
+        var d = 160;
+        switch (key) {
+        case VK_ESCAPE: case VK_BACK: close(); return;
+        case VK_PRIOR: step(-1); return;
+        case VK_NEXT: case VK_RETURN: case VK_SPACE: step(1); return;
+        case VK_ADD: case 0xBB: zoomTo(z * 1.25); return;  // + (and = beside it)
+        case VK_SUBTRACT: case 0xBD: zoomTo(z / 1.25); return;
+        case VK_LEFT:  if (z > 1.0) pan(d, 0); else step(-1); return;
+        case VK_RIGHT: if (z > 1.0) pan(-d, 0); else step(1); return;
+        case VK_UP:    pan(0, d); return;
+        case VK_DOWN:  pan(0, -d); return;
+        }
+    }
 }
 
 // --------------------------------------------------------
