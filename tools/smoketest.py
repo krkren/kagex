@@ -3054,6 +3054,11 @@ def sample_steps(eng):
             raise SmokeError("test.vtt's cues weren't read as two, the first from 200 to 2400 ms: %s" % cues)
         seen = eng.tjs('return KAGMovieSeen("test") ? 1 : 0;')
         print("     the opening seen at start: %s" % seen, flush=True)
+        # the movie's layer goes over everything while it plays, and back under the message window
+        # after (0.17.0 left it there, and the layer demo's Vee covered the text)
+        under = 'var l = kag.fore.layers[kag.fore.layers.count - 1]; return l.absolute < kag.fore.messages[0].absolute ? 1 : 0;'
+        if seen == 1 and eng.tjs(under) != 1:
+            raise SmokeError("after the opening movie its layer stayed over the message window")
         eng.tjs('tf.replayTab = void; sf.extramode = 2; kag.process("title.ks", "*extra"); return 1;')
         eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
         tab = eng.tjs('return replayTabs.find("Movies");')
@@ -3071,6 +3076,8 @@ def sample_steps(eng):
         time.sleep(0.6)
         eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
+        if eng.tjs(under) != 1:
+            raise SmokeError("after a movie from Replay its layer stayed over the message window")
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 

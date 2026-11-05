@@ -163,6 +163,9 @@ function KAGMovieTag(elm)
 	}
 	KAGMovieSongs(elm);
 	var n = elm.layer !== void ? (string)elm.layer : (string)(kag.fore.layers.count - 1);
+	// the layer goes over everything (index=1500000) while the movie plays, and back after it:
+	// left there, whatever the game showed on that layer later covered the message window
+	var order = kag.fore.layers[+n].absolute;
 	var back;
 	if (elm.color !== void) {
 		back = new global.Layer(kag, kag.primaryLayer);
@@ -178,13 +181,13 @@ function KAGMovieTag(elm)
 		visible:"true", index:"1500000", dafx:"center", dafy:"center", left:"" + (prim.width >> 1), top:"" + (prim.height >> 1),
 		subtitle:elm.subtitle !== void ? elm.subtitle : "true", once:"true" ]);
 	var canskip = seen || elm.skip == "always";
-	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount() ];
+	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount(), order:order ];
 	// a movie that never shows a frame (no decoder for it here) ends after 3 s
 	var w = new Timer(KAGMovieWatchdog, "");
 	w.interval = 500;
 	w.enabled = true;
 	KAGMoviePlaying.watchdog = w;
-	kag.insertTag("moviedone", %[ layer:n, key:key ]);
+	kag.insertTag("moviedone", %[ layer:n, key:key, order:order ]);
 	return kag.tagHandlers.waittrig(%[ name:"lmstop", canskip:canskip ? "true" : "false" ]);
 }
 
@@ -219,7 +222,36 @@ function KAGMovieDoneTag(elm)
 		invalidate p.back if p.back !== void;
 	}
 	kag.tagHandlers.freeimage(%[ layer:elm.layer, page:"fore" ]);
+	if (elm.order !== void) kag.fore.layers[+elm.layer].absolute = +elm.order; // where it was
 	return 0;
+}
+
+// 0.17.0 left a movie's layer over everything (index 1500000) after the movie, and saves keep a
+// layer's order: a layer found there after a load, with no movie playing, goes back to the top of
+// its level, as [layfront] puts one
+class KAGMovieOrderPlugin extends KAGPlugin
+{
+	function KAGMovieOrderPlugin() { super.KAGPlugin(); }
+	function finalize() { super.finalize(...); }
+	function onRestore(f, clear, elm) {
+		if (KAGMoviePlaying !== void) return;
+		KAGMovieFixOrder(kag.fore.layers);
+		KAGMovieFixOrder(kag.back.layers);
+	}
+}
+
+function KAGMovieFixOrder(layers)
+{
+	for (var i = 0; i < layers.count; i++) {
+		var l = layers[i];
+		if (l.absolute != 1500000) continue;
+		var top = (l.level + 1) * 100000;
+		for (var j = 0; j < layers.count; j++) {
+			var o = layers[j];
+			if (j != i && o.level == l.level && o.absolute >= top && o.absolute < 1000000) top = o.absolute + 100;
+		}
+		l.absolute = top;
+	}
 }
 
 // the right button skips a seen movie, where Config says so
