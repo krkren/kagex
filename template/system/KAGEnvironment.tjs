@@ -2469,10 +2469,11 @@ class KAGEnvironment extends KAGEnvTrans {
 						if (info !== void) {
 							var voice = info.voice;
 							voice += info.ext if (voice != "");
-							playVoice(info.name, voice, true, info) if (!info.noplay);
+							// a voice started (the count of voices playing goes up only once the
+							// buffer says it plays)
+							if (!info.noplay && playVoice(info.name, voice, true, info) > 0) voiced = true;
 						}
 					}
-					voiced = playVoiceCount > 0;
 				}
 				nextVoiceList.clear();
 			}

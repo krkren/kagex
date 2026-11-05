@@ -163,6 +163,9 @@ const PLATFORM_FIELDS = {
 		{ path: 'versionCode', label: 'Version code', type: 'number', min: 0, help: '0 = from the version (1.2.3 is 10203); each upload to Google Play needs a higher one' },
 		{ path: 'keystore', label: 'Keystore', type: 'file', help: 'Empty: a debug key (for testing). The passwords are asked for when building' },
 		{ path: 'keyAlias', label: 'Key alias', type: 'text', showIf: (p) => !!p.keystore },
+		{ path: 'ttsQuery', label: 'Text to speech', type: 'check', text: 'Let the game find the system\'s speech engines', help: 'A <queries> entry in the manifest: on Android 11 and later an app sees no text-to-speech engine without it' },
+		{ path: 'manifestAdditions', label: 'Manifest', type: 'xml', placeholder: '<uses-permission android:name="android.permission.INTERNET" />', help: 'XML added inside the app\'s <manifest>: permissions, features, queries' },
+		{ path: 'applicationAdditions', label: 'Application', type: 'xml', placeholder: '<meta-data android:name="..." android:value="..." />', help: 'XML added inside its <application>: meta-data, services, receivers' },
 	],
 	ios: [
 		{ path: 'target', label: 'Build for', type: 'select', options: [['device', 'iPhone and iPad (.ipa, signed)'], ['simulator', 'The iOS Simulator (unsigned)']] },
@@ -213,6 +216,12 @@ function input(f, path, value, onChange) {
 			const n = el('input', { type: 'number', value: value ?? 0, min: f.min, max: f.max,
 				oninput: (e) => { const v = parseInt(e.target.value, 10); if (!Number.isNaN(v)) onChange(v); } });
 			return el('div', { class: 'field' }, n);
+		}
+		case 'xml': {
+			const t = el('textarea', { rows: Math.max(3, (value || '').split('\n').length + 1), spellcheck: 'false', placeholder: f.placeholder || '',
+				oninput: (e) => onChange(e.target.value) });
+			t.value = value || '';
+			return t;
 		}
 		case 'lines': {
 			const t = el('textarea', { rows: Math.max(3, (value || []).length + 1), spellcheck: 'false',

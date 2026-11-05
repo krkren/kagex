@@ -1693,8 +1693,10 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 				placeVoice(soundBuffer, shape);
 				soundBuffer.play(mode);
 				resetVoiceVolume();
+				return 1; // a voice started (EyeLip's playVoice and dramatic mode go by it)
 			}
 		}
+		return 0;
     }
 
 	/**

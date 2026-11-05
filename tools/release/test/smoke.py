@@ -127,6 +127,22 @@ def cli_tests(exe, proj):
     step("check: reports a bad version and reserved names", code == 1 and "identity.version" in fields and "identity.appName" in fields, ", ".join(fields))
     bad_file.unlink()
 
+    # Android's manifest additions: elements that close as they open, and nothing of their own
+    # <manifest> or <application> (the tool adds them inside the engine's)
+    t = json.loads(json.dumps(s))
+    a = t["platforms"]["android"]
+    a["enabled"] = True
+    a["manifestAdditions"] = '<uses-permission android:name="android.permission.INTERNET">'
+    a["applicationAdditions"] = '<application><meta-data android:name="a" android:value="b" /></application>'
+    code, errs, warns = check_issues(exe, proj, t)
+    step("check: Android manifest additions left open, or with an <application> of their own",
+         "platforms.android.manifestAdditions" in errs and "platforms.android.applicationAdditions" in errs, str(errs))
+    a["manifestAdditions"] = '<uses-permission android:name="android.permission.INTERNET" />\n<!-- a <comment> -->'
+    a["applicationAdditions"] = '<meta-data android:name="a" android:value="x>y" />'
+    code, errs, warns = check_issues(exe, proj, t)
+    step("check: well-formed Android manifest additions pass",
+         "platforms.android.manifestAdditions" not in errs and "platforms.android.applicationAdditions" not in errs, str(errs))
+
     # a framework from before 0.3.0 (no .opus) and 0.3.1 (button images found as .png, .tlg5,
     # .tlg6 and .bmp only) is told to keep its sounds and images in formats it finds
     fw = proj / "template" / "system"
@@ -669,7 +685,9 @@ def android_tests(exe, proj, args):
         s["platforms"][p]["enabled"] = p == "android"
     s["output"]["check"] = False
     a = s["platforms"]["android"]
-    a.update({"format": "apk", "data": "xp3", "applicationId": "com.example.kagexsample", "versionCode": 0, "keystore": "", "keyAlias": ""})
+    a.update({"format": "apk", "data": "xp3", "applicationId": "com.example.kagexsample", "versionCode": 0, "keystore": "", "keyAlias": "",
+              "ttsQuery": True, "manifestAdditions": '<uses-permission android:name="android.permission.INTERNET" />',
+              "applicationAdditions": '<meta-data android:name="io.github.krkren.kagex.test" android:value="added" />'})
     version = s["identity"]["version"]
     for fmt, data in (("apk", "xp3"), ("aab", "folder")):
         a["format"], a["data"] = fmt, data
@@ -709,6 +727,12 @@ def android_tests(exe, proj, args):
                 step("android: package name, version and label", "name='com.example.kagexsample'" in badging and "versionCode='%d'" % (
                     int(version.split(".")[0]) * 10000 + int(version.split(".")[1]) * 100 + int((version.split(".") + ["0"])[2])) in badging
                      and "application-label:'KAGEX Sample'" in badging, badging.splitlines()[0] if badging else "no output")
+                # the manifest: the text-to-speech query and the game's additions
+                tree = subprocess.run([str(aapt2), "dump", "xmltree", "--file", "AndroidManifest.xml", str(pkg)],
+                                      capture_output=True, text=True).stdout
+                step("android: the manifest has the speech query and the game's additions",
+                     "android.intent.action.TTS_SERVICE" in tree and "android.permission.INTERNET" in tree
+                     and "io.github.krkren.kagex.test" in tree, "%d lines" % len(tree.splitlines()))
 
 
 def ios_tests(exe, proj, args):

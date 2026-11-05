@@ -111,7 +111,12 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   and the Android build tools. Without a keystore it is signed with a debug key, for testing;
   with one, the window asks for its passwords (the CLI reads `KAGEX_ANDROID_STORE_PASSWORD` and
   `KAGEX_ANDROID_KEY_PASSWORD`), which are never saved. Gradle's output goes to
-  `android-build.log`.
+  `android-build.log`. The app's `AndroidManifest.xml` gets a `<queries>` entry for the system's
+  text-to-speech engines (`ttsQuery`, on by default: on Android 11 and later an app sees none
+  without it), and the game's own additions: `manifestAdditions`, XML that goes inside
+  `<manifest>` (permissions, features, more queries), and `applicationAdditions`, inside
+  `<application>` (meta-data, services, receivers). `check` refuses XML that doesn't close as it
+  opens or brings a `<manifest>` or `<application>` of its own.
 - **iOS** (on a Mac with Xcode): the engine's app with the game's bundle ID, name, version
   (build number from the version unless set) and icon (an asset catalog compiled by `actool`),
   and `data.xp3` or `data/` in the bundle. For devices it is signed with your certificate
@@ -399,7 +404,7 @@ platform that lacks what draws them: the Live2D plugin in a desktop's folder
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
 | `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |
 | `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (store the files in `data.xp3` and the media archives under hashed names; desktop only) |
-| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore; iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
+| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore, the speech engines' query (`ttsQuery`) and the manifest's additions (`manifestAdditions`, `applicationAdditions`); iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
 `sf.software_version` and `sf.software_maker` in its `first.ks`, and `krkrz.cf`. Passwords

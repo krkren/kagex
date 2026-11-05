@@ -10,9 +10,15 @@
 
 
 
+; the music fades, unless it's the room's own track (playing on from the CG or Replay screen)
+
+[if exp="!roomMusicPlaying()"]
+
 [fadeoutbgm time=500]
 
 [wb]
+
+[endif]
 
 
 
@@ -78,6 +84,10 @@
 
 [button name="musicmode_allrepeat" exp='setRepeat(false)']
 
+[locate x=322 y=714]
+
+[button name="musicmode_title"     exp='setTitleMusic(!keepTitleMusic())']
+
 
 
 ; Music Buttons
@@ -133,6 +143,8 @@
 
 
 [eval exp='setRepeat()']
+
+[eval exp='setButtonOver("musicmode_title", keepTitleMusic())']
 
 [eval exp='setMusicmodePageButton()']
 

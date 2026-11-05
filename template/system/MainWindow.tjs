@@ -11318,6 +11318,9 @@ class KAGWindow extends Window
 	 */
     function setCurrentMessageLayerVisible(visible, time) {
 		
+		// a window the player (or dramatic mode, for a voiced line) hid stays hidden while the
+		// text goes on drawing into it: the ch and dispname handlers would show it again
+		if (visible && fore.messages[currentNum].invisibleByUser) return false;
 		if (fore.messages[currentNum].visible != visible) {
 			var fadeTime = (time !== void ? +time : messageFadeTime) * effectspeed;
 			if (fadeTime > 0) {
@@ -14082,13 +14085,16 @@ class KAGWindow extends Window
 			for (var i = 0; i < msgs.count; i++) {
 				var m = msgs[i];
 				if (!m.followOpacity) continue;
-				if (m.redrawTextEnabled && m.numLinks == 0 && hasTextUnits(m) && languageAvailable)
-					m.redrawTextIn(KAGLanguage.current);
-				else {
-					if (!m.visible) m.redrawFrame(true);
-					else m.imageModified = true;
-					if (m.nameLayer !== void) m.nameLayer.redraw(); // its frame follows too
+				// the page drawn again over the new frame, from what it recorded (a window that
+				// follows the opacity records it: MessageLayer.setPosition); a page not recorded
+				// gets the new frame at its next clear
+				if (m.redrawTextEnabled && m.numLinks == 0 && m.redrawTextStates.count > 0) {
+					m.imageModified = true; // the replay's clear draws the frame only when it changed
+					m.redrawTextIn(global.KAGLanguage !== void ? KAGLanguage.current : void);
 				}
+				else if (!m.visible) m.redrawFrame(true);
+				else m.imageModified = true;
+				if (m.nameLayer !== void) m.nameLayer.redraw(); // its frame follows too
 			}
 		}
 		callHook(windowOpacityHook, windowOpacity);

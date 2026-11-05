@@ -73,7 +73,7 @@ LABELS = {
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
-        "Repeat All": "全曲リピート",
+        "Repeat All": "全曲リピート", "Keep on Title": "タイトルでも流す",
     },
 }
 
@@ -491,6 +491,48 @@ def make_title():
             button(400, 68, L(label), st, size=30, weight="Black", r=12, shadow=8, tracking=4).save(
                 out("%s_%s.png" % (name, st)))
 
+    make_title_evening(bg, ch)
+    # the arrows that pick the title's picture once there's more than one (title.ks)
+    for st in ("normal", "over"):
+        for name, left in (("prev", True), ("next", False)):
+            fill, border, fg, sh = STYLE[st]
+            b = Canvas(72, 72)
+            b.panel((0, 0, 66, 66), r=12, fill=fill, border=border, bw=4, shadow=6, shadow_color=sh)
+            d = -1 if left else 1
+            b.stroke([(33 - d * 6, 21), (33 + d * 6, 33), (33 - d * 6, 45)], 4.5, rgba(fg))
+            b.save(out("title_%s_%s.png" % (name, st), False))
+
+
+def make_title_evening(bg, ch):
+    """the second title picture, which finishing every demo unlocks (sf.clear): the same street
+    at sunset, with stars coming out"""
+    a = np.asarray(bg.convert("RGB")).astype(np.float32) / 255
+    h, w = a.shape[:2]
+    y = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+    lum = (a @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
+    sky = np.array([0.42, 0.30, 0.78], np.float32) * (1 - y) + np.array([1.0, 0.60, 0.42], np.float32) * y
+    graded = np.clip((a * 0.35 + lum * 0.65) * sky * 1.12, 0, 1)
+    under = Image.fromarray((graded * 255 + 0.5).astype(np.uint8), "RGB").convert("RGBA")
+    # a few stars over the street's far end, where the sky shows
+    star = Image.open(os.path.join(REPO, "data", "fgimage", "star.png")).convert("RGBA")
+    for sx, sy, size, alpha in ((1010, 70, 54, 230), (1130, 170, 34, 200), (880, 210, 26, 170),
+                                (1720, 90, 40, 210), (1580, 40, 24, 160), (1820, 260, 30, 180)):
+        s = star.resize((size, size), Image.LANCZOS)
+        s.putalpha(s.getchannel("A").point(lambda v, k=alpha: v * k // 255))
+        under.alpha_composite(s, (sx - size // 2, sy - size // 2))
+    # Ai in the evening light
+    c_arr = np.asarray(ch).astype(np.float32)
+    c_arr[..., :3] *= np.array([1.0, 0.86, 0.80], np.float32)
+    under.alpha_composite(Image.fromarray(np.clip(c_arr + 0.5, 0, 255).astype(np.uint8), "RGBA"), (1200, 60))
+    c = Canvas(1920, 1080)
+    c.gradient((0, 0, 1240, 1080), rgba(DEEP, 215), rgba(DEEP, 0), horizontal=True, ease=True)
+    c.pattern((0, 0, 1240, 1080), 36, 2.2, rgba(LAV, 60), fade=True)
+    wordmark(c, 150, 330, 190)
+    c.text((160, 430), "Sample", font("Black", 66), rgba(WHITE), anchor="ls", stroke=5,
+           stroke_fill=rgba(VIOLET), tracking=2)
+    c.text((440, 428), "for Kirikiri Z · SDL3", font("Bold", 30), rgba(LAV_SOFT), anchor="ls")
+    c.save(out("title_evening.png", False), opaque=True, under=under)
+
 
 def make_logo():
     c = Canvas(1920, 1080)
@@ -790,6 +832,10 @@ def make_extras():
         for st in ("normal", "over"):
             button(210, 60, L(label), st, size=26, icon=icon, icon_size=24).save(
                 out("musicmode_%s_%s.png" % (name, st)))
+    # a switch: the track playing stays as the title's music (Override.tjs, setTitleMusic)
+    for st in ("normal", "over"):
+        button(446, 60, L("Keep on Title"), st, size=26, icon=ic_note, icon_size=24).save(
+            out("musicmode_title_%s.png" % st))
 
 
 # --- the message history ---------------------------------------------------------------

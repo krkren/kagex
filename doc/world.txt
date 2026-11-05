@@ -478,6 +478,48 @@ the parameter name specification can be omitted. The same applies to layers.
 
 
 
+◇ Writers' Shorthands (since 0.17.0)
+
+Writers often number poses and faces in their scripts. envinit.tjs's "shorthands" turn a word
+of a character's tag into a pose and a face:
+
+---------------------------------------------
+"shorthands" => [ %[ "pattern" => "^([0-9])([0-9][0-9][a-z]?)$", "pose" => "$1", "face" => "$2" ] ],
+...
+"ai" => %[ ...
+    "poseCodes" => %[ "1" => "standard" ],
+    "faceCodes" => %[ "01" => "happy", "02" => "angry", "03" => "sad" ],
+---------------------------------------------
+
+so [ai 102] is pose 1 (standard) and face 02 (angry). A word that is no attribute, pose, face or
+command of the character is matched against each pattern (a regular expression; a character's
+own "shorthands" come first); $1 to $9 take its groups, and the character's poseCodes and
+faceCodes turn the result into a pose's and a face's name (without them it's used as it is). A
+pose or face the character lacks is left out.
+
+Positions can do more than place a character: in envinit.tjs's "positions", "front" => true
+brings the character in front of the others at its level, and "back" => true puts it behind
+them. The sample's far and near ([ai far], [ai near]) change the level and the order at once.
+
+◇ Voice Files That Find Their Speaker (since 0.17.0)
+
+Voice scripts are often written from the recording script, by file name:
+
+---------------------------------------------
+[vo ai000003]
+I'll be right there.
+[vo file="ai000004,pip000005"]
+Together!
+---------------------------------------------
+
+[vo] plays those files on the next line, and works out whose they are from the characters'
+voiceFile patterns in envinit.tjs ("ai%s%06d.ogg" is ai's, so ai000003 is ai's line; of two
+patterns that fit, the one with more letters of its own): the line is theirs as if it began
+with 【ai】 (several speak together; the first one's name shows, and nameAlias names them).
+Compiled scenes do the same, and the scene compiler warns about a file no pattern fits.
+
+
+
 ● Environment Object Functions
 
 
@@ -1042,6 +1084,20 @@ During Voice Playback
 Clicking cancels the wait and proceeds to the next conversation.
 
 
+
+※ Takes That Say the Hero's Name
+
+A line that says the hero's name can be recorded twice: with the default name, and without the
+name. While the hero's names are still the defaults (kag.defaultName and defaultFamily: the
+player hasn't named the hero, ● The Hero's Name in kagex.txt), a numbered voice plays the take
+whose file name has an N where voiceFile's third %s is ("ai%s%06d%s.ogg": ai000012N.ogg), when
+there is one; once the player names the hero, the plain take (ai000012.ogg), which doesn't say
+it.
+
+※ Auto Mode After a Voice (since 0.17.0)
+
+In auto mode the World goes on kag.autoVoiceWait ms after the voices end (Config's "Pause After
+a Voice"; the trigger env_voice_after), so a reply doesn't come on the heels of the line.
 
 ※ Voices That Fade Out When Cut (since 0.16.0)
 

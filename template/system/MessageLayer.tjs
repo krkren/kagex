@@ -3350,6 +3350,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 		frameOpacity = +elm.opacity if elm.opacity !== void;
 
 		followOpacity = +elm.followopacity if elm.followopacity !== void;
+		// a window that follows the opacity keeps what each page draws, so a change shows at once
+		// (KAGWindow.applyWindowOpacity: redrawTextIn)
+		redrawTextEnabled = true if followOpacity && !redrawTextEnabled;
 
 		imageModified = true; // To force clear the message layer
 

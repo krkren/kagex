@@ -100,10 +100,23 @@ function KAGParseVTT(storage)
 	return cues;
 }
 
+// 00:01.500 (or 1:00:01,500) in ms, read digit by digit: the engine takes a number with a leading
+// 0 as octal, so +"02.400" was 2.5
 function KAGVTTTime(s)
 {
-	var parts = s.replace(/,/g, ".").split(":"), t = 0.0;
-	for (var i = 0; i < parts.count; i++) t = t * 60 + +parts[i];
+	var t = 0.0, part = 0.0, scale = 0.0;
+	s = ((string)s).replace(/,/g, ".");
+	for (var i = 0; i < s.length; i++) {
+		var c = s.charAt(i);
+		if (c == ":") { t = t * 60 + part; part = 0.0; scale = 0.0; }
+		else if (c == ".") scale = 1.0;
+		else if (c >= "0" && c <= "9") {
+			var d = #c - #"0";
+			if (scale > 0) { scale /= 10; part += d * scale; }
+			else part = part * 10 + d;
+		}
+	}
+	t = t * 60 + part;
 	return (int)(t * 1000 + 0.5);
 }
 

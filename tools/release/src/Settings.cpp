@@ -76,6 +76,51 @@ bool oneOf(const std::string& v, std::initializer_list<const char*> allowed)
 	return false;
 }
 
+// What's wrong with XML that goes into AndroidManifest.xml (platforms.android.manifestAdditions,
+// applicationAdditions), or "": elements that close as they open, no <manifest> or
+// <application> of its own. Not a full parser: Gradle's manifest merger has the last word
+std::string xmlFragmentProblem(const std::string& x)
+{
+	std::vector<std::string> open;
+	size_t i = 0;
+	while ((i = x.find('<', i)) != std::string::npos) {
+		if (x.compare(i, 4, "<!--") == 0) {
+			const size_t e = x.find("-->", i + 4);
+			if (e == std::string::npos) return "A comment isn't closed (-->)";
+			i = e + 3;
+			continue;
+		}
+		// the tag's end, past quoted attribute values
+		size_t e = i + 1;
+		char quote = 0;
+		for (; e < x.size(); ++e) {
+			if (quote) { if (x[e] == quote) quote = 0; }
+			else if (x[e] == '"' || x[e] == '\'') quote = x[e];
+			else if (x[e] == '>') break;
+		}
+		if (e >= x.size()) return "A tag isn't closed (>)";
+		std::string tag = x.substr(i + 1, e - i - 1);
+		i = e + 1;
+		if (!tag.empty() && (tag[0] == '?' || tag[0] == '!')) continue;
+		const bool closing = !tag.empty() && tag[0] == '/';
+		const bool selfClosing = !tag.empty() && tag.back() == '/';
+		std::string name = tag.substr(closing ? 1 : 0);
+		const size_t end = name.find_first_of(" \t\r\n/");
+		if (end != std::string::npos) name.resize(end);
+		if (name.empty()) return "A tag has no name";
+		if (name == "manifest" || name == "application")
+			return "Only what goes inside <" + name + ">: the tool adds it to the engine's own <" + name + ">";
+		if (closing) {
+			if (open.empty() || open.back() != name) return "</" + name + "> closes nothing that's open";
+			open.pop_back();
+		} else if (!selfClosing) {
+			open.push_back(name);
+		}
+	}
+	if (!open.empty()) return "<" + open.back() + "> isn't closed";
+	return {};
+}
+
 std::string relativeTo(const fs::path& p, const fs::path& base)
 {
 	if (p.empty()) return "";
@@ -195,6 +240,7 @@ Json defaultSettings(const Project& p)
 		{ "enabled", Json(false) }, { "format", Json("apk") }, { "data", Json("xp3") },
 		{ "applicationId", Json(bundle) }, { "versionCode", Json(0) },
 		{ "keystore", Json("") }, { "keyAlias", Json("") },
+		{ "ttsQuery", Json(true) }, { "manifestAdditions", Json("") }, { "applicationAdditions", Json("") },
 	}));
 	pl.set("ios", obj({
 		{ "enabled", Json(false) }, { "target", Json("device") }, { "data", Json("xp3") },
@@ -536,6 +582,10 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			if (ks.empty()) warn(base + "keystore", "No keystore: the package is signed with a debug key (fine for testing, not for Google Play)");
 			const long long vc = at(s, base + "versionCode").asInt();
 			if (vc < 0 || vc > 2100000000) error(base + "versionCode", "versionCode is 1 to 2100000000 (0 = from the version)");
+			for (const char* f : { "manifestAdditions", "applicationAdditions" }) {
+				const std::string problem = xmlFragmentProblem(str(s, base + f));
+				if (!problem.empty()) error(base + f, problem);
+			}
 		}
 		if (id == "ios") {
 			if (!std::regex_match(str(s, base + "bundleId"), bundleRe)) error(base + "bundleId", "The bundle ID looks like com.studio.game (letters, digits and '-')");
