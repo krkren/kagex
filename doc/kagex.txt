@@ -3135,6 +3135,7 @@ by hand, and Default and saving follow from the table. A game declares its own i
 
   name      What scripts call it: KAGOptionGet("shake"), KAGOptionSet("shake", false).
   label     Its row's title, in English; it shows through tr() in the language being played.
+            Or a dictionary by language code, for names (%[ "en" => "Ai", "ja" => ... ]).
   kind      toggle (two buttons), choice (two to four), slider, button (one button that runs
             action), note (lines of text).
   prop      A property of kag the option reads and sets (kag.windowOpacity ...); or getValue
@@ -3145,6 +3146,11 @@ by hand, and Default and saving follow from the table. A game declares its own i
   initial   The value Default and the first start give it.
   button, action, enabled   A button's label, what it does, whether it can be pressed now.
   lines, rows   A note's lines, and the rows an option takes (1).
+  preview   A slider's function(event, value), called as the slider is pointed at ("enter"),
+            moved while held ("drag"), let go or moved by a key ("change") and left ("leave"):
+            a volume's sample (since 0.18.0).
+  test      A function a Test button after the slider runs (the slider then starts at the
+            row's left, without words at its ends; since 0.18.0).
 
   KAGOptionGet(name), KAGOptionSet(name, value)   Read and change one (the second runs apply
                          and the functions in KAGOptionHook, with name and value).
@@ -3159,10 +3165,43 @@ by hand, and Default and saving follow from the table. A game declares its own i
 The framework's own options: voiceCut, voiceFadeTime, voicePlacement, voiceSpeed,
 autoVoiceWait, dramaticMode, continueOn, quickSaves (a note), askAgain (a button),
 hideCursorIdle, readSpeed, autoSpeed, autoCharWait, textFade, readColor, readMark,
-windowOpacity, afterauto, afterskip, enterSkip; Indicators.tjs adds chapterTitles, nowPlaying,
-modeMark and voiceBar, Movies.tjs subtitles, movieSkipping, movieRightClick and movieQuality.
-The sample's Config has four pages (config.ks *options, configPages in Override.tjs): the first
-as before, then Voices and Saves, Reading, and Screen and Extras.
+windowOpacity, afterauto, afterskip, enterSkip, reduceMotion, and since 0.18.0 the settings of a
+classic first Config page: bgmVolume, seVolume and voiceVolume (with samples, below), textSpeed,
+autoModeSpeed, noEffect and allSkip (these have no initial: a game's first start sets them), and
+volumeSamples; Indicators.tjs adds chapterTitles, nowPlaying, modeMark and voiceBar, Movies.tjs
+subtitles, movieSkipping, movieRightClick and movieQuality. The sample's Config has five pages
+(config.ks *options, configPages in Override.tjs): the first as before, then Voices and Saves,
+Reading, Screen and Extras, and each character's voice.
+
+Hearing a setting while changing it (since 0.18.0):
+
+  [slider previewfunc= previewfuncdata=]   A function (by name) called with (event, position,
+                         data) as the slider is pointed at, moved, let go and left (the events
+                         above); a screen drawn again moves its sliders without it
+                         (LinkSliderLayer.setPositionQuietly). An option's slider with preview
+                         gets it through KAGOptionPreview.
+  KAGVolumeSamples       What the volumes' previews play: pointing at the music's slider or
+                         moving it plays musicStorage, when the game plays no music, for
+                         musicTime ms (5000) after the last move, then fades it (stop(fade) ends
+                         it, as Config closes); letting go of the sound's plays soundStorage in
+                         SE buffer soundBuffer; letting go of the voices' plays a character's
+                         test line. A game sets musicStorage and soundStorage; the volumeSamples
+                         option turns them all off.
+  KAGDefineVoiceOptions(names)   For each character named, a slider "voice:<name>" for the
+                         volume of its voiceName (kag.getVoiceVolume) with its nameAlias as the
+                         label, a Test button and a test line as it's let go, and a toggle
+                         "voiceOn:<voiceName>" (kag.getVoiceOn); returns the sliders' names, for
+                         a page's column. Call it in AfterInit.tjs (the World is there by then).
+                         A character's test lines are envinit.tjs's "testVoices" => [ files ];
+                         KAGVoiceTest(name) plays one.
+
+Undo and Revert (since 0.18.0): KAGOptionUndo.begin() as a Config screen opens notes every
+option's value; each change after it through KAGOptionSet is a step (a slider's from where its
+drag began); undo() takes back the newest, revert() puts everything back as it was at begin(),
+end() as the screen closes. canUndo and changed say whether there's a step, and whether anything
+differs from the start. mark() makes the changes until groupEnd() one step (the sample's Default).
+Only options are covered: the sample's first page goes through them (its sliders call
+KAGOptionSlide, its switches KAGOptionSet), but the screen mode and the language aren't options.
 
 ● Reading Settings
 

@@ -6,6 +6,8 @@
 *startFromGame
 [rclick enabled=true jump=true storage="" target=*backtogame]
 [eval exp='tf.fromTitle = 0, tf.configPage = 1']
+; Undo and Revert take back what's changed from here (KAGOptionUndo, Options.tjs)
+[eval exp="KAGOptionUndo.begin()"]
 [history enabled=false]
 [jump target=*buttons]
 
@@ -13,6 +15,7 @@
 *startFromTitle
 [rclick enabled=true jump=true storage="" target=*backtotitle]
 [eval exp='tf.fromTitle = 1, tf.configPage = 1']
+[eval exp="KAGOptionUndo.begin()"]
 
 ; Back from the hero's name (namescreen.ks), on the page it was opened from
 *fromName
@@ -37,13 +40,16 @@
 [locate x=578 y=266]
 [button name="config_fullscreen" exp='setScreenButton(false)']
 
+; The settings are options (Options.tjs), so Undo and Revert take them back; the volumes'
+; sliders play a sample as they're pointed at and moved (KAGVolumeSamples)
+
 ; Text Speed
 [locate x=402 y=396]
-[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.textspeed nohilight]
+[slider name=textspeed width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 position="&KAGOptionGet('textSpeed')" onchangefunc=KAGOptionSlide onchangefuncdata="'textSpeed'" nohilight]
 
 ; Auto Speed
 [locate x=402 y=526]
-[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 value=kag.autospeed nohilight]
+[slider name=autospeed width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=10 position="&KAGOptionGet('autoModeSpeed')" onchangefunc=KAGOptionSlide onchangefuncdata="'autoModeSpeed'" nohilight]
 
 ; Screen Effects
 [locate x=322 y=656]
@@ -65,17 +71,17 @@
 
 ; BGM Volume
 [locate x=1102 y=266]
-[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.bgmvolume nohilight]
+[slider name=bgmvolume width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 position="&KAGOptionGet('bgmVolume')" onchangefunc=KAGOptionSlide onchangefuncdata="'bgmVolume'" previewfunc=KAGOptionPreview previewfuncdata="'bgmVolume'" nohilight]
 
 ; SE Volume
 [locate x=1102 y=396]
-[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.sevolume nohilight]
+[slider name=sevolume width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 position="&KAGOptionGet('seVolume')" onchangefunc=KAGOptionSlide onchangefuncdata="'seVolume'" previewfunc=KAGOptionPreview previewfuncdata="'seVolume'" nohilight]
 
 ; VOICE Volume
 [locate x=1102 y=526]
-[slider width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 value=kag.voicevolume nohilight]
+[slider name=voicevolume width=416 height=60 opacity=0 normal="slidebar" over="slidebar_over" min=0 max=100 position="&KAGOptionGet('voiceVolume')" onchangefunc=KAGOptionSlide onchangefuncdata="'voiceVolume'" previewfunc=KAGOptionPreview previewfuncdata="'voiceVolume'" nohilight]
 
-; Voice Buttons
+; Voice Buttons: a character's each (envinit.tjs's voiceName); page 5 has their volumes
 [locate x=1022 y=656]
 [button name="config_voice0" normal="config_voice0_on" exp="setVoiceOnButton('voice0')"]
 [locate x=1218 y=656]
@@ -84,10 +90,6 @@
 [button name="config_voice2" normal="config_voice2_on" exp="setVoiceOnButton('voice2')"]
 [locate x=1022 y=732]
 [button name="config_voice3" normal="config_voice3_on" exp="setVoiceOnButton('voice3')"]
-[locate x=1218 y=732]
-[button name="config_voice4" normal="config_voice4_on" exp="setVoiceOnButton('voice4')"]
-[locate x=1414 y=732]
-[button name="config_voice5" normal="config_voice5_on" exp="setVoiceOnButton('voice5')"]
 [jump target=*nav]
 
 *options
@@ -104,23 +106,28 @@
 [button name="page3" exp="setConfigPage(3)"]
 [locate x=798 y=78]
 [button name="page4" exp="setConfigPage(4)"]
+[locate x=860 y=78]
+[button name="page5" exp="setConfigPage(5)"]
 
-; Default, Title and Return, right-aligned in the header, and before them Controls, the list
-; of what each key and button does (Controls.tjs), where the engine can show it
-[if exp="tf.fromTitle"]
+; Under the panels: Controls, the list of what each key and button does (Controls.tjs), where
+; the engine can show it; Undo (the last change) and Revert (every change since the screen
+; opened)
 [if exp="KAGElementsScreenAvailable()"]
-[locate x=1070 y=78]
+[locate x=1070 y=1002]
 [button name="config_controls" exp="kag.showControls()"]
 [endif]
+[locate x=1260 y=1002]
+[button name="config_undo" exp="configUndo()"]
+[locate x=1450 y=1002]
+[button name="config_revert" exp="configRevert()"]
+
+; Default, Title and Return, right-aligned in the header
+[if exp="tf.fromTitle"]
 [locate x=1260 y=78]
 [button name="config_initial" exp="initial()"]
 [locate x=1450 y=78]
 [button name="config_title" target=*backtotitle]
 [else]
-[if exp="KAGElementsScreenAvailable()"]
-[locate x=880 y=78]
-[button name="config_controls" exp="kag.showControls()"]
-[endif]
 [locate x=1070 y=78]
 [button name="config_initial" exp="initial()"]
 [locate x=1260 y=78]
@@ -137,6 +144,7 @@
 
 *backtogame
 [rclick jump=false]
+[eval exp="configLeave()"]
 [stoptrans]
 [backlay]
 [position layer=message1 page=back visible=false frame="" left=0 top=0 width=8 height=8]
@@ -148,5 +156,6 @@
 
 *backtotitle
 [rclick enabled=false jump=false]
+[eval exp="configLeave()"]
 [current layer=message0]
 [jump storage="title.ks" target=*backtotitle]

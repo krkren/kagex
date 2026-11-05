@@ -724,6 +724,10 @@ class LinkSliderLayer extends SliderLayer
 
     var changese; // SE on change
 
+    var previewfunc, previewfuncdata; // previewfunc= (since 0.18.0): called while it's pointed at and moved
+
+    var quiet = false; // moved by setPositionQuietly: no sound, no preview
+
 
 
     function LinkSliderLayer(win, par)
@@ -777,6 +781,50 @@ class LinkSliderLayer extends SliderLayer
         change = src.change;
 
         changese = src.changese;
+
+        previewfunc = src.previewfunc;
+
+        previewfuncdata = src.previewfuncdata;
+
+	}
+
+
+
+	/**
+
+	 * The slider's preview (previewfunc=, a function's name, since 0.18.0): called with
+
+	 * (event, position, previewfuncdata), event being "enter" (pointed at), "drag" (moved while
+
+	 * held), "change" (let go, or moved by a key) and "leave", so a volume slider can play a sample
+
+	 */
+
+	// The slider moved to v as a screen is drawn again (Undo, an option's buttons): its change
+
+	// expression or function runs, its sound and preview don't
+
+	function setPositionQuietly(v)
+
+	{
+
+		quiet = true;
+
+		try { position = v; } catch (e) { quiet = false; throw e; }
+
+		quiet = false;
+
+	}
+
+
+
+	function preview(event)
+
+	{
+
+		if (previewfunc === void || parent.selProcessLock || quiet) return;
+
+		Scripts.eval(previewfunc)(event, position, previewfuncdata);
 
 	}
 
@@ -846,11 +894,13 @@ class LinkSliderLayer extends SliderLayer
 
         // let go (with onchangefunc= too, since 0.18.0)
 
-        if ((changefunc !== void || change !== void) && changese !== void && !dragging) {
+        if ((changefunc !== void || change !== void) && changese !== void && !dragging && !quiet) {
 
             Scripts.eval(changese);
 
         }
+
+        preview(dragging ? "drag" : "change");
 
     }
 
@@ -864,6 +914,8 @@ class LinkSliderLayer extends SliderLayer
 
         if(!parent.selProcessLock && onenter !== void) Scripts.eval(onenter);
 
+        preview("enter");
+
         super.onMouseEnter(...);
 
 	}
@@ -875,6 +927,8 @@ class LinkSliderLayer extends SliderLayer
 	{
 
 		if(!parent.selProcessLock && onleave !== void) Scripts.eval(onleave);
+
+		preview("leave");
 
 		super.onMouseLeave(...);
 
@@ -7583,6 +7637,10 @@ class MessageLayer extends AnimKAGLayerTransMove
         }
 
         object.changese = createSoundExpression(void, elm.changese, elm.changesebuf, soundTag(object.name, "change"));
+
+        object.previewfunc = elm.previewfunc if elm.previewfunc !== void;
+
+        object.previewfuncdata = Scripts.eval(elm.previewfuncdata) if elm.previewfuncdata !== void;
 
 
 

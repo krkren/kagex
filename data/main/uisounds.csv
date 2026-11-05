@@ -69,3 +69,9 @@ menu.cancel	none
 controls.open	@open
 controls.close.click	@back
 controls.cancel	@back
+
+# Config's volumes and Test buttons play a sample of their own (KAGVolumeSamples, Options.tjs)
+config.sevolume.change	none
+config.voicevolume.change	none
+config.option_voice:*.change	none
+config.option_*_test.click	none

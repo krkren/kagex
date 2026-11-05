@@ -40,6 +40,12 @@ kag.padKeyMap[VK_PAD9]  = VK_F2;
 kag.padKeyMap[VK_PAD5]  = VK_F3;
 kag.recreatePadKeyMap();
 
+// Config's page 5: each character's voice volume, with a Test button (Options.tjs; their test
+// lines are envinit.tjs's testVoices), and the samples page 1's volumes play as they're set
+var configVoiceOptions = KAGDefineVoiceOptions([ "ai", "pip", "hiyori", "vee" ]);
+KAGVolumeSamples.musicStorage = "bgm01"; // the opening's song, heard as the game starts
+KAGVolumeSamples.soundStorage = "se_chime";
+
 // Languages: F9 and the controller's L2 show the game in its next language (KAGLanguageList in
 // Config.tjs), as Config's Language buttons choose one. The framework draws the message window
 // and the choices again; the screen on show is drawn again here (redisplayScreen, Override.tjs)

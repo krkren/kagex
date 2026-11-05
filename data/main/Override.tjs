@@ -582,7 +582,8 @@ function setScreenButton(work=void)
  */
 function setNoEffectButton(work=void) 
 {
-    kag.noeffect = work if work !== void;
+    KAGOptionSet("noEffect", work) if work !== void; // an option: Undo takes it back
+    configUndoButtons();
     setButtonOver("config_effecton", !kag.noeffect);
     setButtonOver("config_effectoff", kag.noeffect);
 }
@@ -592,7 +593,8 @@ function setNoEffectButton(work=void)
  */
 function setSkipButton(work=void)
 {
-    kag.allskip = work if work !== void;
+    KAGOptionSet("allSkip", work) if work !== void;
+    configUndoButtons();
     setButtonOver("config_skipall",    kag.allskip);
     setButtonOver("config_skipalrdy", !kag.allskip);
 }
@@ -605,7 +607,10 @@ function setSkipButton(work=void)
 function setVoiceOnButton(name, init=void)
 {
     if (!init) {
-        kag.setVoiceOn(name, !kag.getVoiceOn(name));
+        // an option (KAGDefineVoiceOptions, AfterInit.tjs), so Undo takes it back
+        if (KAGOptions["voiceOn:" + name] !== void) KAGOptionSet("voiceOn:" + name, !kag.getVoiceOn(name));
+        else kag.setVoiceOn(name, !kag.getVoiceOn(name));
+        configUndoButtons();
     }
     var btnname = "config_" + name;
     var button = kag.current.names[btnname];
@@ -654,9 +659,44 @@ function setLanguageButton(work=void)
 function initial()
 {
     askYesNo('Initialize', 'Confirmation', function() {
+        KAGOptionUndo.mark(); // one step for Undo
         initialEnvironment();
+        KAGOptionUndo.groupEnd();
         kag.process("", "*buttons");
     });
+}
+
+/**
+ * Undo and Revert (KAGOptionUndo, Options.tjs; begun as Config opens): the page drawn again as
+ * the settings are after it
+ */
+function configUndo()
+{
+    if (KAGOptionUndo.undo()) kag.process("", "*buttons");
+}
+
+function configRevert()
+{
+    if (KAGOptionUndo.revert()) kag.process("", "*buttons");
+}
+
+// Undo and Revert lit when there's something to take back
+function configUndoButtons()
+{
+    if (kag.current === void || !isvalid kag.current) return;
+    var names = kag.current.names;
+    if (names === void || names.config_undo === void) return;
+    var b = names.config_undo, r = names.config_revert;
+    b.enabled = KAGOptionUndo.canUndo, b.opacity = b.enabled ? 255 : 110;
+    if (r !== void) r.enabled = KAGOptionUndo.changed, r.opacity = r.enabled ? 255 : 110;
+}
+KAGOptionHook.add(function(name, v) { configUndoButtons(); } incontextof global);
+
+// Config closing: no more steps, and the music sample stops
+function configLeave()
+{
+    KAGOptionUndo.end();
+    KAGVolumeSamples.stop(300);
 }
 
 /**
@@ -680,8 +720,14 @@ var configPages = [
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
-      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ]
+      [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
+    // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
+    [ [], [ "volumeSamples", "voiceNote" ] ]
     ];
+
+KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
+    lines:[ "A slider sets a character's volume;", "Test plays one of their lines.",
+            "The volumes on page 1 play a sample", "as you point at them and move them." ] ]);
 
 // The message window's left margin ([initscene] in macro.ks): room for the face window
 // (envinit's faceCrop), unless Config turned it off
@@ -787,6 +833,7 @@ KAGDefineOption(%[ name:"heroName", label:"Your Name", kind:"button", button:"Ch
 function configOptionsPage()
 {
     var page = configPages[tf.configPage];
+    if (tf.configPage == 5) page[0] = configVoiceOptions;
     KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
 }
 
@@ -805,6 +852,7 @@ function gotoTitle()
 function configInit()
 {
     for (var i = 1; i < configPages.count; i++) setButtonOver("page" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
+    configUndoButtons();
     if (tf.configPage > 1) return; // the options draw themselves (Options.tjs)
     setScreenButton();
     setNoEffectButton();
@@ -813,8 +861,6 @@ function configInit()
     setVoiceOnButton("voice1", true);
     setVoiceOnButton("voice2", true);
     setVoiceOnButton("voice3", true);
-    setVoiceOnButton("voice4", true);
-    setVoiceOnButton("voice5", true);
     setLanguageButton();
 }
 

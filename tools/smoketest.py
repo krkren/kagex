@@ -3540,6 +3540,53 @@ def sample_steps(eng):
         if d != "1,0":
             raise SmokeError("two sounds started at once weren't noted, or a hover right after a click played: %s" % d)
 
+    @step("Config: a volume plays a sample as it's set, each character's voice has a volume and a Test, Undo and Revert take changes back")
+    def _():
+        if eng.tjs('return typeof global.KAGOptionUndo == "Object" && typeof global.KAGVolumeSamples == "Object" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates Undo and the volume samples)", flush=True)
+            return
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        music = str(eng.tjs('return kag.bgm.currentStorage;'))
+        eng.tjs('KAGVolumeSamples.played.clear(); kag.process("config.ks", "*startFromTitle"); return 1;')
+        eng.wait("Config", 'kag.conductor.curStorage == "config.ks" && kag.inStable && kag.current.names.bgmvolume !== void', timeout=30)
+        start = str(eng.tjs('return [kag.bgmvolume, kag.sevolume, kag.allskip, KAGOptionUndo.recording, KAGOptionUndo.canUndo].join(",");'))
+        # the music's slider pointed at and dragged, then let go; the sound's let go; Skip Mode
+        eng.tjs('var n = kag.current.names, b = n.bgmvolume, e = n.sevolume; b.onMouseEnter(); b.onChange(30, true); b.onChange(25, true);'
+                ' b.onChange(25, false); b.onMouseLeave(); e.onChange(55, false); setSkipButton(!kag.allskip); return 1;')
+        got = str(eng.tjs('return [kag.bgmvolume, kag.sevolume, kag.allskip, KAGOptionUndo.steps.count, kag.bgm.currentStorage,'
+                          ' KAGVolumeSamples.played.join(" ")].join(",");')).split(",")
+        print("     at the start %s (volumes, skip mode, recording, can undo); after the changes %s" % (start, got), flush=True)
+        st = start.split(",")
+        if not (got[0] == "25" and got[1] == "55" and got[2] != st[2] and got[3] == "3" and st[3] == "1" and st[4] == "0"):
+            raise SmokeError("Config's changes weren't kept as three steps: %s, then %s" % (start, got))
+        if "sound:se_chime" not in got[5]:
+            raise SmokeError("letting go of the sound's slider played no sample: %s" % got[5])
+        if music == "" and not ("music:bgm01" in got[5] and got[4] == "bgm01"):
+            raise SmokeError("pointing at the music's slider with no music playing played no sample: %s" % got)
+        # Undo twice: the skip mode, then the sound; Revert: the music too
+        undone = str(eng.tjs('KAGOptionUndo.undo(); var a = [kag.allskip == (%s), kag.sevolume]; KAGOptionUndo.undo(); a.add(kag.sevolume);'
+                             ' KAGOptionUndo.revert(); a.add(kag.bgmvolume); a.add(KAGOptionUndo.canUndo); a.add(KAGOptionUndo.changed);'
+                             ' return a.join(",");' % ("true" if st[2] == "1" else "false")))
+        print("     Undo: skip mode back %s, the sound %s then %s; Revert: the music %s, can undo %s, changed %s"
+              % tuple(undone.split(",")), flush=True)
+        u = undone.split(",")
+        if not (u[0] == "1" and u[1] == "55" and u[2] == st[1] and u[3] == st[0] and u[4] == "0" and u[5] == "0"):
+            raise SmokeError("Undo and Revert didn't take the changes back: %s (at the start %s)" % (undone, start))
+        # page 5: a character's volume and Test
+        eng.tjs("setConfigPage(5); return 1;")
+        eng.wait("page 5", 'kag.inStable && kag.current.names["option_voice:pip_test"] !== void', timeout=20)
+        v = str(eng.tjs('KAGVolumeSamples.played.clear(); var s = kag.current.names["option_voice:pip"]; s.onChange(40, true); s.onChange(40, false);'
+                        ' var a = [kag.getVoiceVolume("voice1", true)]; KAGOptionTest("voice:ai"); a.add(KAGVolumeSamples.played.join(" "));'
+                        ' KAGOptionUndo.undo(); a.add(kag.getVoiceVolume("voice1", true)); return a.join(",");')).split(",")
+        print("     Pip's volume %s, then undone %s; the samples: %s" % (v[0], v[2], v[1]), flush=True)
+        if not (v[0] == "40" and v[2] == "100" and "voice:pip" in v[1] and "voice:ai000001" in v[1]):
+            raise SmokeError("a character's volume, its sample or its Test didn't work: %s" % v)
+        eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        left = str(eng.tjs('return [KAGOptionUndo.recording, KAGVolumeSamples.playing].join(",");'))
+        if left != "0,0":
+            raise SmokeError("leaving Config left Undo recording or the music sample playing: %s" % left)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

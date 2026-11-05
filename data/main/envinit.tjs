@@ -739,7 +739,11 @@
 
 			"voiceFile" => "ai%s%06d.ogg",
 
-			"voiceName" => "voice0"
+			"voiceName" => "voice0",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "ai000001" ]
 
 			],
 
@@ -771,7 +775,11 @@
 
 			"voiceFile" => "pip%s%06d",
 
-			"voiceName" => "voice0"
+			"voiceName" => "voice1",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "pip000001", "pip000003", "pip000005", "pip000009" ]
 
 			],
 
@@ -795,7 +803,11 @@
 
 			"voiceFile" => "hiyori%s%06d",
 
-			"voiceName" => "voice0",
+			"voiceName" => "voice2",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "hiyori000001" ],
 
 			"live2d" => %[
 
@@ -863,7 +875,11 @@
 
 			"voiceFile" => "vee%s%06d",
 
-			"voiceName" => "voice0",
+			"voiceName" => "voice3",
+
+			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
+
+			"testVoices" => [ "vee000001" ],
 
 			"vrm" => %[
 

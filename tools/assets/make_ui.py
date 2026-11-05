@@ -61,9 +61,11 @@ LABELS = {
         "Effect Speed": "演出速度", "Skip Mode": "スキップ", "Language / 言語": "言語 / Language", "BGM Volume": "BGM 音量",
         "SE Volume": "効果音 音量", "Voice Volume": "ボイス 音量", "Voice Settings": "ボイス設定",
         "Slow": "遅い", "Fast": "速い", "Min": "小", "Max": "大",
-        "Click a voice to mute or unmute it.": "ボイスをクリックすると消音／解除します。",
+        "Click a name to mute or unmute their voice.": "名前をクリックすると消音／解除します。",
+        "Each one's volume and a test: page 5.": "音量とテストは 5 ページ。",
+        "Ai": "あい", "Pip": "ピップ", "Hiyori": "ひより", "Vee": "ヴィー", "Undo": "前に戻す", "Revert": "すべて戻す",
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
-        "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
+        "All": "すべて", "Read Only": "既読のみ",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
         "Your Name": "名前",
         # save / load
@@ -686,7 +688,9 @@ def make_config():
                 outlined(c, (sx + 416 + 12, cy), L(hi), 26, anchor="lm", stroke=2.5)
                 # the slider's tab centre travels from sx + 15 to sx + 416 - 15 (SliderLayer)
                 c.rrect((sx + 6, cy - 7, sx + 410, cy + 7), 7, fill=rgba(WHITE), outline=rgba(VIOLET), width=3)
-    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 262), L("Click a voice to mute or unmute it."), 26,
+    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 220), L("Click a name to mute or unmute their voice."), 26,
+             stroke=2.5)
+    outlined(c, (CFG_R + 32, CFG_TOP + CFG_ROW * 3 + 264), L("Each one's volume and a test: page 5."), 26,
              stroke=2.5)
     c.save(out("config_base.png"), opaque=True)
 
@@ -706,13 +710,14 @@ def make_config():
     for code, label in LANGUAGE_NAMES:
         for st in ("normal", "over"):
             button(240, 60, label, st, size=28).save(out("config_lang_%s_%s.png" % (code, st), False))
-    for i in range(6):
-        button(180, 60, L("Voice %d") % i, "over", size=26, icon=ic_dot, icon_size=14).save(
+    # the voices' switches, a character's each (envinit.tjs's voiceName voice0 to voice3)
+    for i, name in enumerate(("Ai", "Pip", "Hiyori", "Vee")):
+        button(180, 60, L(name), "over", size=26, icon=ic_dot, icon_size=14).save(
             out("config_voice%d_on.png" % i))
-        button(180, 60, L("Voice %d") % i, "muted", size=26, icon=ic_ring, icon_size=14).save(
+        button(180, 60, L(name), "muted", size=26, icon=ic_ring, icon_size=14).save(
             out("config_voice%d_off.png" % i))
     for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return"),
-                        ("config_controls", "Controls")):
+                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
     make_config_pages()
