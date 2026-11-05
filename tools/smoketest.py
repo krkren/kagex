@@ -3028,6 +3028,8 @@ def sample_steps(eng):
             return
         eng.tjs('sf["roll:credits"] = void; kag.process("credits.ks", "*start"); return 1;')
         eng.wait("the roll", 'kag.fore.layers[0].flipType == "roll" && kag.fore.layers[0].flip.items.count > 5', timeout=20)
+        # its first frames can take a moment to come (the web build's did)
+        eng.wait("the roll to move", 'kag.fore.layers[0].flipType == "roll" && kag.fore.layers[0].flip.elapsed > 0', timeout=20)
         info = str(eng.tjs('var f = kag.fore.layers[0].flip; return [f.items.count, f.total, f.duration, f.elapsed > 0 ? 1 : 0].join(",");'))
         print("     %s lines and pictures, %s px, over %s ms" % tuple(info.split(",")[:3]), flush=True)
         v = info.split(",")
