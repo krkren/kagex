@@ -2564,6 +2564,14 @@ def sample_steps(eng):
         if (x or sc) and eng.opts.encryption == "required":
             raise SmokeError("; ".join(m for m in (x, sc) if m))
 
+    @step("AlphaMovie: the plugin behind the amv flip type (movies with transparency) is in the engine")
+    def _():
+        has = eng.tjs('if (typeof global.AlphaMovie == "undefined") { try { Plugins.link("plugin/AlphaMovie.dll"); } catch (e) {} }'
+                      ' return typeof global.AlphaMovie != "undefined" ? 1 : 0;')
+        print("     AlphaMovie: %s" % ("there" if has == 1 else "missing"), flush=True)
+        if has != 1 and getattr(eng.opts, "alphamovie", "optional") == "required":
+            raise SmokeError("the engine has no AlphaMovie plugin: .amv movies can't play")
+
     @step("zip patches: the ones in the save folder were mounted at start, and DLC mounts later")
     def _():
         if eng.tjs('return typeof global.KAGMountPatchZip != "undefined" ? 1 : 0;') != 1:
@@ -4229,6 +4237,9 @@ def main():
     ap.add_argument("--vector", choices=["required", "optional"], default="optional",
                     help="whether the build must draw SVG images (the layerExVector plugin): "
                     "required fails when it can't; optional reports it")
+    ap.add_argument("--alphamovie", choices=["required", "optional"], default="optional",
+                    help="whether the engine must have the AlphaMovie plugin (.amv movies, the amv flip type): "
+                    "required fails without it; optional reports it")
     ap.add_argument("--zip", choices=["required", "optional"], default="optional",
                     help="whether the build must mount zip patches (the minizip plugin): "
                     "required fails when it can't; optional reports it")
