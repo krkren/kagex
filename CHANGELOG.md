@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.0 (in progress)
+## 0.18.0
 
 ### Added
 
