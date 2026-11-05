@@ -188,6 +188,26 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [pip hide]
 【ai】……また戻せるよ。
 
+*layouts|立ち位置の調整
+
+; Layouts (since 0.18.0, envinit.tjs's "layouts"): [name join] brings a character on at the
+; right (join=left, join=middle) while the others slide over to stand evenly spaced, [name leave]
+; takes one off and the others close the gap, and [env makeroom=0] pushes them apart
+[ai center time=300]
+あいがひとりで立っています。
+[pip standard neutral join]
+【pip】ぼくも入れて？
+[newchar name=ai2 initname=ai]
+[ai2 join=middle]
+もうひとりのあいが真ん中に割り込み、みんなが場所を空けます。
+[ai leave]
+最初のあいが去ると、すき間が詰まります。
+[env makeroom=0]
+真ん中に何かを置けるよう、ふたりが離れます……
+[ai2 delete]
+[pip leave]
+……そして、みんな退場。
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

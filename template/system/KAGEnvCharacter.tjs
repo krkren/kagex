@@ -864,6 +864,10 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	waitvoice : null,
 	noplayvoice : null,
 	facewin : function(param, elm) { disp = FACE; redraw = true; } incontextof this,
+	// layouts (since 0.18.0, envinit's "layouts"): come on stage at the right (join=left, middle)
+	// while the others slide over to make room, or leave and let them close the gap
+	join : function(param, elm) { env.layoutJoin(this, param, elm); } incontextof this,
+	leave : function(param, elm) { disp = CLEAR; env.layoutPlace(elm, void, void, this); } incontextof this,
 	faceon : null,
 	faceoff : null,
 	loop : null,

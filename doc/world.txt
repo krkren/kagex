@@ -533,6 +533,9 @@ Compiled scenes do the same, and the scene compiler warns about a file no patter
                 and the stage and events are set to a non-displayed state.
     nostopbgm   Continues BGM during init.
     facewindow  off: no face window in this scene; on: back (since 0.18.0, ◇ Face Windows).
+    layout      Places the characters on the stage evenly, by the layout for their count
+                (since 0.18.0, ◇ Layouts).
+    makeroom    =<xpos>: pushes the characters apart there, room=<width> (◇ Layouts).
 
 
 
@@ -1173,6 +1176,31 @@ Config's Face Window (the faceWindow option, Options.tjs) turns them off for goo
 goes at once; on, it comes with the next speaker. The sample keeps room for the face by giving the
 message window a wider left margin (faceWindowMargin() in Override.tjs), and the Character demo's
 "Faces" scene shows each case.
+
+
+
+◇ Layouts
+
+
+
+Characters can make room for each other (since 0.18.0). envinit.tjs's "layouts" says where one to
+four characters stand, left to right, and how long the others take to slide over:
+
+    "layouts" => %[ "places" => [ [0], [-420, 420], [-660, 0, 660], [-780, -260, 260, 780] ],
+                    "levels" => [ void, void, void, 0 ],   // optional: a level for each count
+                    "time" => 400, "accel" => 0 ],
+
+    [pip join]          Pip comes on at the right end (join=left: the left end; join=middle: the
+                        middle), at its place, and everyone already on the stage slides to theirs
+    [ai leave]          Ai leaves (as [ai hide]) and the others close the gap
+    [env layout]        everyone on the stage to the places for their count
+    [env makeroom=0]    those left of xpos 0 move left by half of room=, those right of it right
+                        (room: the layout's distance between two)
+
+time= on the tag overrides the layout's time. More than four spread over the four's width.
+Characters keep their order (by xpos). These are World tags, so compiled scenes, saves, Back and
+Replay get the places as any position. The Character demo's "Making Room" scene has Ai, Pip and a
+second Ai join, cut in and leave.
 
 
 

@@ -188,6 +188,26 @@ Narration has no face.
 [pip hide]
 【ai】...and have them back.
 
+*layouts|Making Room
+
+; Layouts (since 0.18.0, envinit.tjs's "layouts"): [name join] brings a character on at the
+; right (join=left, join=middle) while the others slide over to stand evenly spaced, [name leave]
+; takes one off and the others close the gap, and [env makeroom=0] pushes them apart
+[ai center time=300]
+Ai stands alone.
+[pip standard neutral join]
+【pip】Room for one more?
+[newchar name=ai2 initname=ai]
+[ai2 join=middle]
+Another Ai cuts in, in the middle, and the others make room.
+[ai leave]
+The first Ai leaves, and the gap closes.
+[env makeroom=0]
+They step apart for something in the middle...
+[ai2 delete]
+[pip leave]
+...and everyone goes.
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

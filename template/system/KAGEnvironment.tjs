@@ -1830,6 +1830,8 @@ class KAGEnvironment extends KAGEnvTrans {
     stopallvoice : this.stopAllVoice incontextof this,
 	// ---------------------------------------------- Processing commands
 	grayscale : function(param, elm) { grayscale = param; } incontextof this,
+	layout : function(param, elm) { layoutPlace(elm); } incontextof this,
+	makeroom : function(param, elm) { layoutMakeRoom(+param, elm); } incontextof this,
 	facewindow : function(param, elm) { faceWindowOff = param == "off" || param == "false" || param == "0"; redrawCurrentFace(faceFadeTime); } incontextof this,
 	rgamma : function(param, elm) { rgamma = param; } incontextof this,
 	ggamma : function(param, elm) { ggamma = param; } incontextof this,
@@ -2517,6 +2519,91 @@ class KAGEnvironment extends KAGEnvTrans {
 	/**
 	 * Character expression redrawing
 	 */
+	// ---- layouts (since 0.18.0) ---------------------------------------------------------
+	// envinit's "layouts" => %[ "places" => [ [x], [x, x], [x, x, x], [x, x, x, x] ] (the xpos
+	// of one to four characters, left to right), "levels" => [ ... ] (a level for each count, or
+	// void), "time" => ms, "accel" => ... ]
+
+	// the shown characters, left to right
+	function layoutShown(except) {
+		var list = [];
+		for (var i = 0; i < characterList.count; i++) {
+			var ch = characterList[i];
+			if (ch === except || ch.deleteFlag || !ch.isShowBU()) continue;
+			list.add(ch);
+		}
+		list.sort(function(a, b) { return +a.xpos < +b.xpos; }, true);
+		return list;
+	}
+
+	// the xpos of n characters: the layout's row for n, or more spread over the last row's width
+	function layoutPlaces(n) {
+		var info = envinfo.layouts;
+		var rows = info !== void && info.places !== void ? info.places : [ [0], [-480, 480], [-720, 0, 720], [-840, -280, 280, 840] ];
+		if (n <= rows.count) return rows[n - 1];
+		var last = rows[rows.count - 1], from = +last[0], to = +last[last.count - 1], r = [];
+		for (var i = 0; i < n; i++) r.add((int)(from + (to - from) * i / (n - 1)));
+		return r;
+	}
+
+	/**
+	 * Places the shown characters (with joining among them at where: "left", "middle", or the
+	 * right end, and without leaving) on the layout's places for their count, sliding those who
+	 * move over its time; joining appears at its place
+	 */
+	function layoutPlace(elm, joining, where, leaving) {
+		var list = layoutShown(leaving);
+		if (joining !== void) {
+			list.remove(joining);
+			var at = where == "left" ? 0 : where == "middle" ? list.count \ 2 : list.count;
+			list.insert(at, joining);
+		}
+		var n = list.count;
+		if (n == 0) return;
+		var info = envinfo.layouts !== void ? envinfo.layouts : %[];
+		var xs = layoutPlaces(n);
+		var lv = info.levels !== void && n <= info.levels.count ? info.levels[n - 1] : void;
+		var time = elm !== void && elm.time !== void ? elm.time : info.time !== void ? info.time : 400;
+		for (var i = 0; i < n; i++) {
+			var ch = list[i], e = %[];
+			if (ch === joining) {
+				ch.setXPos((string)xs[i], %[ time:0 ]);
+				ch.setLevel((string)lv, %[]) if lv !== void;
+				continue;
+			}
+			if (+ch.xpos == +xs[i] && lv === void) continue;
+			e.xpos = (string)xs[i];
+			e.level = (string)lv if lv !== void;
+			e.time = (string)time;
+			e.accel = (string)info.accel if info.accel !== void;
+			ch.tagfunc(e, skipMode, skipNoDisp);
+		}
+	}
+
+	function layoutJoin(ch, where, elm) {
+		var shown = ch.isShowBU();
+		ch.disp = KAGEnvImage.SHOW;
+		layoutPlace(elm, shown ? void : ch, where, void);
+		if (shown) layoutPlace(elm); // already there: everyone evenly spaced again
+	}
+
+	/**
+	 * Pushes the shown characters apart around xpos x: those left of it go left by room/2, those
+	 * right of it right ([env makeroom=0 room=600]; room: the layout's spacing for two)
+	 */
+	function layoutMakeRoom(x, elm) {
+		var info = envinfo.layouts !== void ? envinfo.layouts : %[];
+		var two = layoutPlaces(2);
+		var room = elm.room !== void ? +elm.room : (+two[1] - +two[0]);
+		var time = elm.time !== void ? elm.time : info.time !== void ? info.time : 400;
+		var list = layoutShown();
+		for (var i = 0; i < list.count; i++) {
+			var ch = list[i];
+			var to = +ch.xpos < x ? +ch.xpos - room / 2 : +ch.xpos + room / 2;
+			ch.tagfunc(%[ xpos:(string)(int)to, time:(string)time ], skipMode, skipNoDisp);
+		}
+	}
+
 	/**
 	 * Whether the face window shows now (since 0.18.0): Config's Face Window (the faceWindow
 	 * option), [env facewindow=off] for the scene, and no event CG on the screen (envinfo's

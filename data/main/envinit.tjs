@@ -223,6 +223,11 @@
 
     "faceApplyColor" => true,
 
+    // Layouts (since 0.18.0): where one to four characters stand ([name join], [name leave],
+    // [env layout], [env makeroom=]), and how long the others take to slide over
+
+    "layouts" => %[ "places" => [ [0], [-420, 420], [-660, 0, 660], [-780, -260, 260, 780] ], "time" => 400 ],
+
 //	"faceArea" => %[ name:"Face area layer", center:true/*Center flag*/, xoffset:0, yoffset:0, width:200, height:160 ],
 
 //	"faceZoom" => 100,

@@ -5,6 +5,7 @@
 ### Added
 
 - **Faces by the message window that follow the speaker**: each line's speaker shows their face beside the text, cut from their sprite as it looks now (pose, outfit, expression, the time of day's colour), crossfading to the next speaker's; narration and lines over an event CG have none, a character who isn't on stage can speak as a face only (`[pip facewin]`), `[env facewindow=off]` turns them off for a scene, and Config's Face Window for good. A character's `faceCrop` in `envinit.tjs` says which part of its sprite is its face, for characters from pictures and from layers alike; the sample shows Ai's and Pip's, and the Character demo has a Faces scene (`doc/world.txt`, "Face Windows").
+- **Characters that make room for each other**: `[pip join]` brings a character on at the right (`join=left`, `join=middle`) while those already on the stage slide over so everyone stands evenly spaced, `[ai leave]` takes one off and the others close the gap, `[env layout]` spaces them again and `[env makeroom=0]` pushes them apart around a spot; the places for one to four characters, a level per count and the sliding time are `envinit.tjs`'s `"layouts"`. The Character demo has a Making Room scene (`doc/world.txt`, "Layouts").
 
 ## 0.17.2
 

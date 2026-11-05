@@ -3183,6 +3183,39 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("layouts: a character joining at the right and in the middle, one leaving, [env makeroom], everyone evenly spaced on the screen")
+    def _():
+        if eng.tjs('return typeof world_object.env.layoutPlace != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates layouts)", flush=True)
+            return
+        # the shown characters left to right, name@xpos, once each has slid to where the World says
+        state = ('(function() { var e = world_object.env, r = [], moving = 0;'
+                 ' for (var i = 0; i < e.characterList.count; i++) { var c = e.characterList[i]; if (!c.isShowBU()) continue;'
+                 ' r.add(%[ x:+c.xpos, s:c.name + "@" + c.xpos ]);'
+                 ' moving++ if c.targetLayer === void || (int)c.targetLayer.left != (int)c.xpos; }'
+                 ' r.sort(function(a, b) { return a.x < b.x; }, true); var t = []; for (var i = 0; i < r.count; i++) t.add(r[i].s);'
+                 ' return t.join(" ") + (moving ? " (moving)" : "") + (kag.inStable ? "" : " (busy)"); })()')
+        def line(what, want):
+            try:
+                eng.wait(what, '(string)%s == "%s"' % (state, want), timeout=20)
+            except SmokeError:
+                raise SmokeError("%s: the characters stand at %s, not %s" % (what, eng.tjs("return " + state + ";"), want))
+            print("     %s: %s" % (what, want), flush=True)
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*layouts"); return 1;')
+        line("Ai alone", "ai@0")
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[pip join]", "ai@-420 pip@420")
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[ai2 join=middle]", "ai@-660 ai2@0 pip@660")
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[ai leave]", "ai2@-420 pip@420")
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env makeroom=0]", "ai2@-840 pip@840")
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:
