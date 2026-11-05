@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.1
+
+### Fixed
+
+- **Android: the game no longer hangs after the opening movie**: Android's movie player hangs when a movie that has run to its end is stopped (`UPSTREAM.md` 38), so 0.17.0's `[movie]` stopped its movie 300 ms before the end, going by the movie's position. On a slow phone or emulator the position lags behind the decoder, which can reach the end first, and 0.17.0's sample could hang at start-up after the logo's opening. The movie is now also stopped by the time since it started, which a movie can't outrun (checked on the Android emulator: the opening stopped while it played, 4.97 s into its 5 s).
+- **Android: saving no longer crashes the game**: 0.17.0's fix for the shrinkCopy plugin reading past the picture it shrinks (a save's thumbnail) added a row under the copy it shrinks, but the plugin also reads the column right of the last one, which for the bottom right pixel lies past that row, and 0.17.0's Android game still crashed on a quick save. The copy has a column and two rows more now (`UPSTREAM.md` 39); a thumbnail's last column changes a little, since the plugin had blended it with the picture's other side.
+- The smoke test waits up to 60 s for Vee's one-shot motions, which a slow iOS Simulator took longer than 10 s to play.
+
 ## 0.17.0
 
 ### Added
@@ -20,7 +28,7 @@
 
 ### Fixed
 
-- **Saving no longer crashes the game now and then on Android**: the shrinkCopy plugin, which shrinks the screen to a save's thumbnail (and the sample's CG and Replay pictures to their tiles), read a row past the bottom of the picture for its last pixel, and where the picture's memory ended at a page the game crashed (seen in 0.17.0's release run, as the Android emulator's game saved; `UPSTREAM.md` 39). The framework shrinks from a copy with a column and two rows more now (`KAGShrinkCopy`).
+- **Saving no longer crashes the game now and then on Android**: the shrinkCopy plugin, which shrinks the screen to a save's thumbnail (and the sample's CG and Replay pictures to their tiles), read a row past the bottom of the picture for its last pixel, and where the picture's memory ended at a page the game crashed (seen in 0.17.0's release run, as the Android emulator's game saved; `UPSTREAM.md` 39). The framework shrinks from a copy with one more row now (`KAGShrinkCopy`); 0.17.1 finishes the fix.
 - **The music room lights the first track while it plays**: the track that had played before was compared with the one playing, and before any had played that was void, which TJS takes as track 1, so track 1 was never lit.
 
 ## 0.16.0
