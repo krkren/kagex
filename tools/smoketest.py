@@ -3032,7 +3032,7 @@ def sample_steps(eng):
             if found != "Pip":
                 raise SmokeError("[vo pip000003] didn't make Pip the speaker of the compiled line: %s" % found)
 
-    @step("the credits roll over the rest of the music, keep their place in a save, and send rollend when seen to the end")
+    @step("the credits roll over the music between two of its labels, keep their place in a save, and send rollend when seen to the end")
     def _():
         if eng.tjs('return typeof global.RollFlip != "undefined" && Storages.isExistentStorage("credits.ks") ? 1 : 0;') != 1:
             print("     (skipped: this build predates the credits roll)", flush=True)
@@ -3046,6 +3046,13 @@ def sample_steps(eng):
         v = info.split(",")
         if int(v[2]) < 30000 or v[3] != "1":
             raise SmokeError("the roll isn't timed to the music playing (rolltime=bgm) or isn't moving: %s" % info)
+        # since 0.18.0 from bgm01's label credits (6 s in) to creditsend (84.55 s): bgm01.ogg.sli
+        span = str(eng.tjs('var f = kag.fore.layers[0].flip, b = kag.bgm.currentBuffer; var l = b !== void ? b.labels : void;'
+                           ' return [typeof f.startDelay != "undefined" ? 1 : 0, l !== void && l["credits"] !== void ? 1 : 0, f.duration].join(",");')).split(",")
+        if span[0] == "1" and span[1] == "1":
+            print("     from bgm01's label credits to creditsend: %s ms" % span[2], flush=True)
+            if not 77500 <= int(span[2]) <= 79500:
+                raise SmokeError("the roll doesn't last from the music's label credits to creditsend (78.55 s): %s ms" % span[2])
         kept = str(eng.tjs('var l = kag.fore.layers[0], f = l.flip; f.elapsed = 12345; var d = %[]; l.storeFlip(d);'
                            ' l.restoreFlip(d); return [l.flip.elapsed >= 12345 ? 1 : 0, KAGRollSeen("credits") ? 1 : 0].join(",");'))
         if kept != "1,0":

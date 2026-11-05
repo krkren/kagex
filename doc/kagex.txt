@@ -936,11 +936,27 @@ Attributes
 
 		rolloffset    ms more (or less, negative) than that, for a track whose end is quiet.
 
+		rollfrom, rollto   Labels in the loop file of the music playing (<file>.sli, Label
+
+		              { Position=<sample>; Name=credits; }): the roll waits for the music to reach
+
+		              rollfrom and ends as it reaches rollto, for a song with an intro or a
+
+		              reprise (since 0.18.0). Without rollfrom it starts at once, without rollto it
+
+		              ends with the track; a label the file lacks is logged. They win over
+
+		              rolltime, which stays the length when the music has neither.
+
 		rollx         The text's centre. Default: the layer's middle.
 
 		rollsize      The names' size. Default 32; headings are 1.3 times.
 
-		The sample's Credits demo (credits.ks) rolls the sample's credits to its music.
+		The sample's Credits demo (credits.ks) rolls the sample's credits to its music, from
+
+		bgm01's label credits, after the opening bars, to creditsend, where its closing chords
+
+		begin (data/bgm/bgm01.ogg.sli), and fades the chords out after.
 
 
 
