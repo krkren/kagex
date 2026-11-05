@@ -143,6 +143,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		onceEarly = global.KAGMovieStopEarly;
 
+		onceStartTick = System.getTickCount();
+
 		if (once && onceEarly > 0) {
 
 			if (onceTimer === void) onceTimer = new Timer(onOnceTimer, "");
@@ -262,7 +264,7 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 	// event, which the engine posts from its update of the player
 
 	var once = false, ended = false, stopped = false, playedOut = false, onceTrigger, onceTimer;
-	var onceEarly = 0;
+	var onceEarly = 0, onceStartTick = 0;
 
 	function onPeriod(reason) {
 
@@ -290,7 +292,15 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		try { total = totalTime, pos = position; } catch {}
 
-		if (total <= 0 || pos < total - onceEarly) return;
+		// by its position or by the time since it started, whichever comes first: on a slow
+
+		// Android emulator the position lagged the decoder, which reached the end first, but a
+
+		// movie can't play faster than it runs
+
+		if (total <= 0) return;
+
+		if (pos < total - onceEarly && System.getTickCount() - onceStartTick < total - onceEarly) return;
 
 		ended = true;
 
