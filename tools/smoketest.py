@@ -3431,6 +3431,40 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the CG viewer: a CG full screen, zoomed by the wheel about the pointer and by a pinch, moved by dragging, the next one on a click, the bar fading at rest, Esc back to the CGs")
+    def _():
+        if eng.tjs('return typeof global.CGViewer != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this sample predates the CG viewer)", flush=True)
+            return
+        eng.tjs('kag.process("cgmode.ks"); return 1;')
+        eng.wait("the CG screen", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
+        # the screen's own way in: a CG's tile (tf.cgnum), then the viewer until it closes
+        eng.tjs('tf.cgnum = 0; kag.process("cgmode.ks", "*cgview"); return 1;')
+        eng.wait("the viewer, or the CGs again (none seen)", 'cgViewer !== void && cgViewer.visible || kag.inStable && cgViewer === void', timeout=20)
+        if eng.tjs("return cgViewer !== void ? 1 : 0;") == 1:
+            eng.tjs("cgViewer.onKeyDown(VK_ESCAPE, 0); return 1;")
+        eng.wait("the CGs again", 'cgViewer === void && kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=20)
+        # two pictures as one CG's variations
+        eng.tjs('tf.cgviewlist2 = ["event1", "bg01_01"]; cgViewerOpen(); return 1;')
+        eng.wait("the viewer", "cgViewer !== void && cgViewer.visible", timeout=10)
+        v = "cgViewer"
+        got = str(eng.tjs('var v = %s; v.onWheel(0, 360, 1400, 300); var a = [v.z, (int)v.cx, (int)v.cy];'
+                          ' v.onMouseDown(900, 500, mbLeft, 0); v.onMouseMove(1100, 600, ssLeft); v.onMouseUp(1100, 600, mbLeft, 0);'
+                          ' a.add((int)v.cx); a.add((int)v.cy); a.add(v.index);'
+                          ' v.zoomTo(1.0); v.onPinch(100, 100, 960, 540, 1); v.onPinch(100, 200, 960, 540, 2); a.add(v.z);'
+                          ' v.onMouseDown(900, 500, mbLeft, 0); v.onMouseUp(900, 500, mbLeft, 0); a.add(v.index); return a.join(",");' % v)).split(",")
+        print("     the wheel: zoom %s at %s,%s; a drag to %s,%s; a pinch to %s; a click to variation %s" % (
+            got[0][:5], got[1], got[2], got[3], got[4], got[6][:5], got[7]), flush=True)
+        if not (float(got[0]) > 1.2 and (got[1], got[2]) != ("960", "540") and (got[3], got[4]) != (got[1], got[2])
+                and got[5] == "0" and float(got[6]) > 1.5 and got[7] == "1"):
+            raise SmokeError("the CG viewer didn't zoom, move, pinch or step on: %s" % got)
+        eng.tjs("cgViewer.lastMove = System.getTickCount() - 5000; return 1;")
+        eng.wait("the bar to fade at rest", "cgViewer.barAlpha == 0", timeout=5)
+        eng.tjs("cgViewer.onKeyDown(VK_ESCAPE, 0); return 1;")
+        eng.wait("the viewer closed", "cgViewer === void", timeout=10)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

@@ -91,22 +91,10 @@
 [s]
 
 *cgview
+; the CG viewer (Override.tjs, CGViewer): zoom, pan and the variations, until it closes
 [eval exp='cgViewInit()']
-
-*cgviewloop
-[rclick enabled=true jump=true storage="" target=*loop]
-[if exp='isCgView()']
-[stoptrans]
-[backlay]
-[position page=back layer=message0 frame="" opacity=255 left=0 top=0 width=1920 height=1080 marginT=0 marginL=0 marginR=0 marginB=0 visible=true]
-[current page=back layer=message0]
-[eval exp='cgView()']
-[trans method=crossfade time=500]
-[wt]
-[current page=fore layer=message0]
-[click target=*cgviewloop]
-[s]
-[endif]
+[eval exp='cgViewerOpen()']
+[waittrig name=cgviewer]
 [jump target=*loop]
 
 *backtotitle

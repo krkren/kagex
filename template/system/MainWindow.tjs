@@ -14387,6 +14387,15 @@ class KAGWindow extends Window
 		super.onKeyUp(...);
 	}
 
+	// A pinch on a touch screen (since 0.18.0): the engine's onTouchScaling goes to the
+	// "onTouchScalingHook" hooks (startdistance, currentdistance, cx, cy, flag), the sample's CG
+	// viewer among them
+	function onTouchScaling(startdistance, currentdistance, cx, cy, flag)
+	{
+		if (callHook("onTouchScalingHook", startdistance, currentdistance, cx, cy, flag)) return;
+		super.onTouchScaling(...) if typeof super.onTouchScaling != "undefined";
+	}
+
 	function onMouseWheel(shift, delta, x, y)
 	{
 		// Wheel rotated
