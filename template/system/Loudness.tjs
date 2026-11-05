@@ -1,0 +1,103 @@
+/**
+ * Loudness correction (since 0.18.0; doc/kagex.txt, "Loudness"): an extra gain in dB, applied as
+ * each Ogg Vorbis or Opus file is decoded (the engine's WaveSoundBuffer.setGainQueryCallback), so
+ * the files stay as they are. loudness.csv (optional) has a line per kind of sound or file, its
+ * gain after a tab or spaces:
+ *
+ *   bgm            -4      every file in a bgm folder
+ *   se             -2      in a sound (or se) folder
+ *   voice          +1      in a voice folder
+ *   voice:hiyori   +2.5    one speaker's voices (envinit.tjs's voiceFile patterns say whose)
+ *   pip000009      +5      one file, with or without its extension: it wins over its kind
+ *
+ * KAGLoudness.set(key, dB) changes one while the game runs, for the files opened after it. WAV
+ * files and the other formats the engine decodes without that callback get no gain.
+ */
+class KAGLoudnessTable
+{
+	var gains = %[];  // key (lower case) -> dB
+	var cache = %[];  // storage name -> dB
+	var count = 0;
+
+	function KAGLoudnessTable(file = "loudness.csv") { load(file); }
+
+	function load(file) {
+		if (!Storages.isExistentStorage(file)) return;
+		var lines = [].load(file);
+		for (var i = 0; i < lines.count; i++) {
+			var line = ((string)lines[i]).trim();
+			if (line == "" || line.charAt(0) == "#") continue;
+			var m = /^(\S+)\s+([-+]?[0-9.]+)/.exec(line);
+			if (m.count < 3) { dm("loudness.csv: " + line + ": no gain"); continue; }
+			set(m[1], m[2]);
+		}
+	}
+
+	// v in dB; a string is read digit by digit (TJS takes "-04" as octal)
+	function set(key, v) {
+		var db = typeof v == "String" ? KAGLoudnessNumber(v) : +v;
+		gains[((string)key).toLowerCase()] = db;
+		count++;
+		(Dictionary.clear incontextof cache)();
+	}
+
+	// what folder a sound is in: voice, bgm or se
+	function kindOf(url) {
+		var placed;
+		try { placed = Storages.getPlacedPath(url); } catch (e) {}
+		placed = (string)url if placed === void || placed == "";
+		var path = Storages.extractStoragePath(placed).toLowerCase();
+		var m = /([^\/>]+)[\/>]$/.exec(path);
+		var folder = m.count > 1 ? m[1] : "";
+		switch (folder) {
+		case "voice": return "voice";
+		case "bgm": return "bgm";
+		case "sound": case "se": return "se";
+		}
+		return "";
+	}
+
+	function gainOf(url) {
+		var key = (string)url;
+		var g = cache[key];
+		if (g !== void) return g;
+		var name = Storages.extractStorageName(key).toLowerCase(), stem = Storages.chopStorageExt(name);
+		g = gains[name];
+		g = gains[stem] if g === void;
+		if (g === void) {
+			var kind = kindOf(url);
+			if (kind == "voice" && typeof global.world_object != "undefined" && world_object !== void &&
+				typeof world_object.env.voiceSpeaker != "undefined") {
+				var who = world_object.env.voiceSpeaker(stem);
+				g = gains["voice:" + ((string)who).toLowerCase()] if who !== void && who != "";
+			}
+			g = gains[kind] if g === void && kind != "";
+		}
+		g = 0.0 if g === void;
+		cache[key] = g;
+		return g;
+	}
+}
+
+// "+2.5", "-04" and the like as a number
+function KAGLoudnessNumber(s)
+{
+	s = ((string)s).trim();
+	var sign = 1, i = 0, v = 0.0, scale = 0.0;
+	if (s.charAt(0) == "-" || s.charAt(0) == "+") { sign = s.charAt(0) == "-" ? -1 : 1; i = 1; }
+	for (; i < s.length; i++) {
+		var c = s.charAt(i);
+		if (c == ".") { scale = 1.0; continue; }
+		if (c < "0" || c > "9") break;
+		var d = #c - #"0";
+		if (scale > 0) { scale /= 10; v += d * scale; } else v = v * 10 + d;
+	}
+	return sign * v;
+}
+
+var KAGLoudness = new KAGLoudnessTable();
+if (typeof WaveSoundBuffer.setGainQueryCallback != "undefined") {
+	WaveSoundBuffer.setGainQueryCallback(function(url) {
+		try { return +KAGLoudness.gainOf(url); } catch (e) { return 0.0; }
+	} incontextof global);
+}

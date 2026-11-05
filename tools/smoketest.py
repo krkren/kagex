@@ -3465,6 +3465,39 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("loudness: loudness.csv's gains by kind, speaker and file, and a gain heard as a voice is decoded")
+    def _():
+        if eng.tjs('return typeof global.KAGLoudness != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates loudness correction)", flush=True)
+            return
+        got = str(eng.tjs('var k = KAGLoudness; return [k.gainOf("bgm01.ogg"), k.gainOf("hiyori000001.ogg"), k.gainOf("pip000009.ogg"),'
+                          ' k.gainOf("pip000001.ogg"), k.kindOf("se_chime.ogg")].join(",");'))
+        print("     bgm01, hiyori000001, pip000009, pip000001, se_chime's kind: %s" % got, flush=True)
+        g = got.split(",")
+        if not (float(g[0]) == -4 and float(g[1]) == 2.5 and float(g[2]) == 5 and float(g[3]) == 0 and g[4] == "se"):
+            raise SmokeError("loudness.csv's gains weren't found by kind, speaker and file: %s" % got)
+        if eng.tjs('return typeof WaveSoundBuffer.setGainQueryCallback != "undefined" ? 1 : 0;') != 1:
+            print("     (this engine has no gain callback: the level check is skipped)", flush=True)
+            return
+        def level(gain):
+            eng.tjs('KAGLoudness.set("ai000001", %s); var b = new WaveSoundBuffer(kag); b.useVisBuffer = true; b.open("ai000001.ogg"); b.play();'
+                    ' global.__smokeLb = b; return 1;' % gain)
+            vals = []
+            for i in range(12):
+                time.sleep(0.1)
+                vals.append(float(eng.tjs('var l = global.__smokeLb.getSoundLevel(0); return "%f".sprintf(l !== void ? l.rms : -1);')))
+            eng.tjs("global.__smokeLb.stop(); invalidate global.__smokeLb; global.__smokeLb = void; return 1;")
+            return max(vals)
+        try:
+            a, b = level(0), level(6)
+        finally:
+            eng.tjs('delete KAGLoudness.gains["ai000001"]; (Dictionary.clear incontextof KAGLoudness.cache)(); return 1;')
+        print("     ai000001's level: %.3f, with +6 dB %.3f" % (a, b), flush=True)
+        if a <= 0:
+            print("     (no level to read here: the gain's check is skipped)", flush=True)
+        elif b < a * 1.6:
+            raise SmokeError("+6 dB didn't make the voice louder: %.3f, then %.3f" % (a, b))
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

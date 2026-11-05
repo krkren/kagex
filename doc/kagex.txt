@@ -3272,6 +3272,26 @@ frames fill the screen; [freeimage] puts the zoom back.
 
 
 
+● Loudness
+
+A table evens out the sounds' levels without re-recording them (since 0.18.0,
+template/system/Loudness.tjs): loudness.csv has a gain in dB per kind of sound or per file, which
+the engine applies as each Ogg Vorbis or Opus file is decoded (WaveSoundBuffer.
+setGainQueryCallback), so a quiet voice can be raised past the volume's 100%:
+
+    bgm            -4      every file in a bgm folder
+    se             -2      in a sound (or se) folder
+    voice          +1      in a voice folder
+    voice:hiyori   +2.5    one speaker's voices (envinit.tjs's voiceFile patterns say whose)
+    pip000009      +5      one file, with or without its extension: it wins over its kind
+
+Lines starting with # are comments. KAGLoudness.set(key, dB) changes one while the game runs, for
+the files opened after it, and KAGLoudness.gainOf(storage) says what a file gets. WAV files get
+no gain. The sample's table (data/main/loudness.csv) brings its synthesized voices up to the
+others (measured with EBU R128) and puts the music 4 dB under the voices.
+
+
+
 ● Reduce Motion
 
 Config's Reduce Motion (the reduceMotion option, since 0.18.0; KAGReduceMotion() says whether it's
