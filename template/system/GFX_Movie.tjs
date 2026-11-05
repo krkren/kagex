@@ -12,6 +12,11 @@ if (typeof global.Layer.copyBottomBlueToTopAlpha == "undefined") {
 
 }
 
+// ms before its end a movie played once (once=true, as [movie] plays) is stopped, while it plays;
+// 0: at its end. On Android a player that reached its end hung the game as it was stopped
+// (UPSTREAM.md 38), so there it's stopped just before
+var KAGMovieStopEarly = typeof System.platformTag != "undefined" && System.platformTag == "android" ? 300 : 0;
+
 class MovieControlLayer extends GenericFlip, VideoOverlay
 
 {
@@ -61,6 +66,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 	function finalize() {
 
 		if (onceTrigger !== void) { invalidate onceTrigger; onceTrigger = void; }
+
+		if (onceTimer !== void) { invalidate onceTimer; onceTimer = void; }
 
 		stop();
 
@@ -127,6 +134,24 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 		// hang the game, while one stopped as it plays is freed as a looping movie always was
 
 		this.loop = loop || once;
+
+		// and on Android it's stopped onceEarly ms before its end, while it plays: there a player
+
+		// that reached its end can't go back to its start either (MediaCodec: "Uninitialized
+
+		// state") and stopping it then hung the game just the same
+
+		onceEarly = global.KAGMovieStopEarly;
+
+		if (once && onceEarly > 0) {
+
+			if (onceTimer === void) onceTimer = new Timer(onOnceTimer, "");
+
+			onceTimer.interval = 50;
+
+			onceTimer.enabled = true;
+
+		}
 
 		file = filename;
 
@@ -236,7 +261,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	// event, which the engine posts from its update of the player
 
-	var once = false, ended = false, stopped = false, playedOut = false, onceTrigger;
+	var once = false, ended = false, stopped = false, playedOut = false, onceTrigger, onceTimer;
+	var onceEarly = 0;
 
 	function onPeriod(reason) {
 
@@ -253,6 +279,26 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 	function onOnceEnded() {
 
 		if (isvalid this) stop();
+
+	}
+
+	function onOnceTimer() {
+
+		if (!isvalid this || ended) { if (isvalid this) onceTimer.enabled = false; return; }
+
+		var total = 0, pos = 0;
+
+		try { total = totalTime, pos = position; } catch {}
+
+		if (total <= 0 || pos < total - onceEarly) return;
+
+		ended = true;
+
+		onceTimer.enabled = false;
+
+		if (onceTrigger === void) onceTrigger = new AsyncTrigger(onOnceEnded, "");
+
+		onceTrigger.trigger();
 
 	}
 
