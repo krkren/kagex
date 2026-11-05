@@ -436,6 +436,7 @@ class KAGMenuDropDown extends KAGElementsScreen
 	function KAGMenuDropDown(win, index, byKey)
 	{
 		super.KAGElementsScreen(win, "Menu");
+		soundScreen = "menu"; // the interface sound table's menu.open, .enter, .click, .cancel
 		bar = win.menuBarView;
 		topIndex = index;
 		this.byKey = byKey;
@@ -456,20 +457,31 @@ class KAGMenuDropDown extends KAGElementsScreen
 
 	function onOpen()
 	{
-		super.onOpen(...);
+		super.onOpen(...); // menu.open
 		window.menuDropDown = this;
-		switchTo(topIndex, byKey);
+		switchTo(topIndex, byKey, true);
 	}
+
+	// closed without a choice: menu.cancel
+	function close()
+	{
+		KAGInterfaceSound("menu.cancel") if opened && window.menuChosen === void;
+		super.close(...);
+	}
+
+	// the items' sounds come from activate and the focus (menu.click, menu.open, menu.enter)
+	function actionSound(id) {}
 
 	// ------------------------------------------------------------- the menus --
 
 	/**
 	 * Shows title index's menu (by the keyboard: with its first item chosen)
 	 */
-	function switchTo(index, keyboard)
+	function switchTo(index, keyboard, opening = false)
 	{
 		var t = bar.titles[index];
 		if (t === void || !t.menu) return close();
+		KAGInterfaceSound("menu.open") if !opening && index != topIndex;
 		topIndex = index;
 		bar.setOpen(index);
 		var z = window.zoomNumer / window.zoomDenom;
@@ -661,6 +673,7 @@ class KAGMenuDropDown extends KAGElementsScreen
 		if (name != "hover") return;
 		var at = entryOf(value);
 		if (at === void) return;
+		KAGInterfaceSound("menu.enter") if boxes[at[0]].focus != at[1];
 		boxes[at[0]].focus = at[1];
 		hoverTarget = at;
 		if (hoverTimer === void) {
@@ -708,9 +721,11 @@ class KAGMenuDropDown extends KAGElementsScreen
 				if (keyboard) { boxes.count = bi + 2; boxes[bi + 1].focus = firstEntry(boxes[bi + 1], 0, 1); rebuild(); }
 				return;
 			}
+			KAGInterfaceSound("menu.open");
 			return openSub(bi, ei, keyboard);
 		}
 		if (!e.enabled) return;
+		KAGInterfaceSound("menu.click");
 		window.menuChosen = e.item;
 		close();
 	}
@@ -760,6 +775,7 @@ class KAGMenuDropDown extends KAGElementsScreen
 
 	function moveFocus(bi, ei)
 	{
+		KAGInterfaceSound("menu.enter") if ei >= 0;
 		panel.focus(entryId(bi, ei)) if ei >= 0;
 	}
 

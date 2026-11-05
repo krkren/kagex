@@ -13601,6 +13601,7 @@ class KAGWindow extends Window
 		if (!t.menu) {
 			closeMenuDropDown();
 			if (currentDialog !== void) return;
+			KAGInterfaceSound("menu.click");
 			menuChosen = t.item;
 			runMenuChoiceLater();
 			return;

@@ -836,6 +836,7 @@ class HistoryLayer extends Layer
 
 	function dispInit()
 	{
+        KAGInterfaceSound("backlog.open");
         kag.hideMessageLayerByUser();
 
         // Redraw all and initial settings
@@ -1292,11 +1293,16 @@ class HistoryLayer extends Layer
 
 	function hide()
 	{
+		KAGInterfaceSound("backlog.close"); // the interface sound table's (since 0.18.0)
 		window.hideHistory();
 	}
 
 	function onButtonClick(sender)
 	{
+        // the interface sound table's backlog.<button>.click (the close button: backlog.close)
+        var part = sender == topPageButton ? "top" : sender == endPageButton ? "end" : sender == prevPageButton ? "prev" :
+            sender == nextPageButton ? "next" : sender == prevSceneButton ? "prevscene" : sender == nextSceneButton ? "nextscene" : "";
+        KAGInterfaceSound("backlog." + part + ".click") if part != "";
         if (sender == topPageButton) {
             topPage();
         } else if(sender == endPageButton) {

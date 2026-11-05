@@ -3292,6 +3292,51 @@ others (measured with EBU R128) and puts the music 4 dB under the voices.
 
 
 
+● Interface Sounds
+
+Every button, page turn, slider, prompt, choice and menu item can play its sound from one table
+(since 0.18.0, template/system/InterfaceSounds.tjs), so changing the click for the whole game is
+one line. uisounds.csv names a sound for each tag, <screen>.<part>.<event>:
+
+    @click              ui_click     an alias: a file, and a system sound buffer if wanted
+    *.click             @click       every click no other line names
+    *.enter             ui_hover     the pointer, the keys or the pad reaching a button
+    *.return.click      ui_cancel    every screen's Return button
+    title.start.click   ui_ok
+    config.config_*.click  ui_toggle  Config's switches
+    dialog.open         none         a wildcard's sound taken back
+
+Lines starting with # are comments; the columns are separated by tabs or spaces. A sound is a file
+on the auto path (its extension may be left out), an @alias or none; a third column picks the
+system sound buffer (0, the first, by default; numSysSEBuffers in Config.tjs). A * matches any
+characters, dots too, and of the lines a tag matches the one with the most other characters wins
+(of two as long, the later). A button's own sound (clickse=, enterse=, changese=, [selopt]'s and
+the like) comes first: the table is asked only for parts without one. The tags:
+
+    <screen>.<name>.click, .enter     [button] (its name=, else its picture's), [link] (name=,
+                                      else link). <screen> is the scenario that made it, without
+                                      its extension: title, config, save ...
+    <screen>.<name>.change            a slider let go, a check box (their name=)
+    message.<name>.click, .enter      [sysbutton]s
+    dialog.open, dialog.<name>.click, .enter, dialog.skip.change
+                                      Yes/No prompts (yes, no, and the "Don't ask again" box),
+                                      About (close)
+    choice.open, .enter, .click, .close   [select]'s choices
+    backlog.open, .close, .prev.click, .next.click   the backlog
+    menu.open, .enter, .click, .cancel    the menu bar's menus (in a window)
+    controls.open, .close.click, .cancel  Help > Controls (an Elements screen's soundScreen)
+
+KAGInterfaceSounds.play(tag) plays one from a script (KAGInterfaceSound(tag) is the same, and does
+nothing in a framework without the table), soundOf(tag) says what it plays, set(tag, sound) and
+alias(name, sound) change the table while the game runs (buttons made before keep what they had).
+An .enter sound within enterQuiet (150) ms of another sound is left out: a click that redraws a
+screen under the pointer, or a prompt that moves the pointer to its button, would play one. In
+debug mode two sounds started within doubleTime (20) ms are logged, with where each came from:
+that's usually one sound played twice. The sample's table is data/main/uisounds.csv, with sounds
+from tools/assets/make_sounds.py.
+
+
+
 ● Reduce Motion
 
 Config's Reduce Motion (the reduceMotion option, since 0.18.0; KAGReduceMotion() says whether it's

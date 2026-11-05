@@ -492,11 +492,13 @@ class LinkCheckBoxLayer extends CheckBoxLayer
 
             Scripts.eval(("(" + change + ") = kag.inputTemp"));
 
-            if (changese !== void) {
+        }
 
-                Scripts.eval(changese);
+        // with onchangefunc= too (since 0.18.0)
 
-            }
+        if ((changefunc !== void || change !== void) && changese !== void) {
+
+            Scripts.eval(changese);
 
         }
 
@@ -840,11 +842,13 @@ class LinkSliderLayer extends SliderLayer
 
             Scripts.eval(("(" + change + ") = kag.inputTemp"));
 
-            if (changese !== void && !dragging) {
+        }
 
-                Scripts.eval(changese);
+        // let go (with onchangefunc= too, since 0.18.0)
 
-            }
+        if ((changefunc !== void || change !== void) && changese !== void && !dragging) {
+
+            Scripts.eval(changese);
 
         }
 
@@ -6828,7 +6832,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-	function createSoundExpression(exp, storage, buf)
+	function createSoundExpression(exp, storage, buf, tag)
 
 	{
 
@@ -6838,7 +6842,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// This specification might change later.
 
-		if(storage == "") return exp;
+		// Without a sound of its own, tag's from the interface sound table (since 0.18.0,
+
+		// InterfaceSounds.tjs), if it names one
+
+		if(storage == "") return tag != "" && typeof global.KAGInterfaceSounds == "Object" ? KAGInterfaceSounds.expression(exp, tag) : exp;
 
 		if(buf === void) buf = 0;
 
@@ -6853,6 +6861,26 @@ class MessageLayer extends AnimKAGLayerTransMove
 			exp = seexp;
 
 		return exp;
+
+	}
+
+
+
+	/**
+
+	 * The interface sound table's tag for a part of this layer's screen (since 0.18.0):
+
+	 * <screen>.<name>.<event>, the screen being the scenario that's running (title, config ...)
+
+	 */
+
+	function soundTag(name, event)
+
+	{
+
+		if (typeof global.KAGInterfaceSounds != "Object") return "";
+
+		return KAGInterfaceSounds.screen() + "." + name + "." + event;
 
 	}
 
@@ -6874,7 +6902,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			target :	elm.target,
 
-			exp :		createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf),
+			exp :		createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, soundTag(elm.name != "" ? elm.name : "link", "click")),
 
 			countPage :	(elm.countpage === void) ? true : +elm.countpage,
 
@@ -6884,7 +6912,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			opacity :	(elm.opacity === void) ? defaultLinkOpacity : +elm.opacity,
 
-			onenter :	createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf),
+			onenter :	createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(elm.name != "" ? elm.name : "link", "enter")),
 
 			onleave :	createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf),
 
@@ -7110,7 +7138,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+		// the interface sound table's part: the button's name, else its picture's
+
+		var part = elm.name != "" ? elm.name : elm.graphic != "" ? elm.graphic : elm.normal != "" ? elm.normal.replace(/_normal$/, "") : "button";
+
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(part, "enter"));
 
 		object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 
@@ -7142,7 +7174,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			target :		elm.target,
 
-			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf),
+			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, soundTag(part, "click")),
 
 			countPage :		(elm.countpage === void) ? true : +elm.countpage,
 
@@ -7376,7 +7408,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.change = elm.onchange if elm.onchange !== void;
 
-        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf);
+        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf, soundTag(object.name, "change"));
 
         object.color = elm.bgcolor if elm.bgcolor !== void; // Note: NOT color
 
@@ -7510,9 +7542,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.linkNum = numLinks;
 
-		object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf);
+		object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf); // let go: the table's sound is .change
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundTag(object.name, "enter"));
 
 		object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 
@@ -7550,7 +7582,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         }
 
-        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf);
+        object.changese = createSoundExpression(void, elm.changese, elm.changesebuf, soundTag(object.name, "change"));
 
 
 
@@ -7810,9 +7842,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
-        object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf);
+        // the interface sound table's message.<name>.click and .enter (since 0.18.0)
 
-		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+        var tag = typeof global.KAGInterfaceSounds == "Object" ? "message." + object.name + "." : "";
+
+        object.onclick = createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, tag != "" ? tag + "click" : "");
+
+		object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, tag != "" ? tag + "enter" : "");
 
         object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
 

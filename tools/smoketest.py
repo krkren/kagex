@@ -787,6 +787,8 @@ def interface_steps(eng, step):
             if zooms >= 5:
                 raise SmokeError("the window keeps being sized again with nothing happening: setZoom ran %s times"
                                  " in 1.5 s (onResize and setZoom in a loop)" % zooms)
+            # the interface sound table's tags as the menus and the controls list go (since 0.18.0)
+            eng.tjs('KAGInterfaceSounds.log = [] if typeof global.KAGInterfaceSounds == "Object"; return 1;')
             # F10: the first menu, from the keyboard; Esc closes it
             eng.key("VK_F10")
             eng.wait("the first menu", 'kag.currentDialog instanceof "KAGMenuDropDown" && kag.menuBarView.openIndex >= 0'
@@ -829,6 +831,13 @@ def interface_steps(eng, step):
             eng.wait("the controls list", 'kag.currentDialog instanceof "KAGControlsPanel"', timeout=10)
             eng.key("VK_ESCAPE")
             eng.wait("the controls list to close", "kag.currentDialog === void", timeout=10)
+            sounds = str(eng.tjs('if (typeof global.KAGInterfaceSounds != "Object" || !KAGInterfaceSounds.has("menu.open")) return "";'
+                                 ' var r = KAGInterfaceSounds.log.join(","); KAGInterfaceSounds.log = void; return r;'))
+            if sounds != "":
+                print("     the sounds: %s" % sounds, flush=True)
+                for tag in ("menu.open", "menu.click", "controls.open", "controls.cancel"):
+                    if tag not in sounds.split(","):
+                        raise SmokeError("the menus and the controls list didn't play %s: %s" % (tag, sounds))
             # full screen: no bar, and the game fills the window again
             eng.tjs("kag.onFullScreenMenuItemClick(); return 1;")
             eng.wait("the bar to go", "!kag.menuBarShown && !kag.menuBarView.shown && kag.menuStripHeight == 0",
@@ -3497,6 +3506,39 @@ def sample_steps(eng):
             print("     (no level to read here: the gain's check is skipped)", flush=True)
         elif b < a * 1.6:
             raise SmokeError("+6 dB didn't make the voice louder: %.3f, then %.3f" % (a, b))
+
+    @step("interface sounds: uisounds.csv's sounds by wildcard, weight and alias, the title's buttons, a prompt's No, a sound played twice logged")
+    def _():
+        if eng.tjs('return typeof global.KAGInterfaceSounds == "Object" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the interface sound table)", flush=True)
+            return
+        tags = ["title.start.click", "config.config_title.click", "config.config_window.click", "dialog.open",
+                "save.page3.click", "message.msg_save.enter", "menu.cancel"]
+        got = str(eng.tjs('var tags = %s, r = []; for (var i = 0; i < tags.count; i++) { var s = KAGInterfaceSounds.soundOf(tags[i]);'
+                          ' r.add(s !== void ? s.file : "-"); } return r.join(",");' % ("[" + ", ".join('"%s"' % t for t in tags) + "]")))
+        print("     %s: %s" % (", ".join(tags), got), flush=True)
+        if got != "ui_ok,ui_click,ui_toggle,-,ui_page,ui_hover,-":
+            raise SmokeError("uisounds.csv's lines didn't give the sounds expected: %s" % got)
+        exps = str(eng.tjs('var l = kag.current, r = []; for (var i = 0; i < l.numLinks; i++) with (l.links[i])'
+                           ' r.add(.exp) if .object !== void && (.object.name == "start" || .object.name == "exit"); return r.join(" | ");'))
+        print("     the title's Start and Exit: %s" % exps, flush=True)
+        if 'KAGInterfaceSounds.play("title.start.click")' not in exps or 'KAGInterfaceSounds.play("title.exit.click"),(kag.close())' not in exps:
+            raise SmokeError("the title's buttons don't play the table's sounds: %s" % exps)
+        eng.tjs('KAGInterfaceSounds.log = []; global.__smokeAnswer = ""; askYesNo("Smoke test?", "Confirm",'
+                ' function() { global.__smokeAnswer = "yes"; }, function() { global.__smokeAnswer = "no"; }); return 1;')
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        eng.key("VK_ESCAPE")
+        eng.wait("the answer", '__smokeAnswer == "no"', timeout=10)
+        played = str(eng.tjs('var b = kag.sysse; return KAGInterfaceSounds.log.join(",") + ";" + b.status;'))
+        print("     the prompt answered No with Esc played %s" % played, flush=True)
+        if "dialog.no.click" not in played.split(";")[0].split(","):
+            raise SmokeError("No didn't play its sound: %s" % played)
+        d = str(eng.tjs('var t = KAGInterfaceSounds, lv = kag.debugLevel; kag.debugLevel = tkdlSimple; var n = t.doubled;'
+                        ' t.play("title.start.click"); t.play("title.start.click"); var e = t.play("title.start.enter") ? 1 : 0;'
+                        ' kag.debugLevel = lv; var r = t.doubled - n; t.log = void; return r + "," + e;'))
+        print("     a sound started twice in debug mode was noted %s time(s); a hover straight after played %s" % tuple(d.split(",")), flush=True)
+        if d != "1,0":
+            raise SmokeError("two sounds started at once weren't noted, or a hover right after a click played: %s" % d)
 
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():

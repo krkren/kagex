@@ -1266,6 +1266,7 @@ kag.tagHandlers.chapter = KAGChapterTag;
 
 KAGLoadScript("Movies.tjs");
 KAGLoadScript("Loudness.tjs"); // a gain per kind of sound or file, from loudness.csv (since 0.18.0)
+KAGLoadScript("InterfaceSounds.tjs"); // the interface's sounds from uisounds.csv (since 0.18.0)
 
 kag.tagHandlers.movie = KAGMovieTag;
 

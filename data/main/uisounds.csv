@@ -1,0 +1,71 @@
+# The interface's sounds (template/system/InterfaceSounds.tjs; doc/kagex.txt, "Interface Sounds"):
+# a tag (<screen>.<part>.<event>, * for any characters), its sound (a file in data/sound, an
+# @alias or none) and, if wanted, a system sound buffer. Of the lines a tag matches, the one with
+# the most other characters wins. The sounds are tools/assets/make_sounds.py's
+@hover	ui_hover
+@click	ui_click
+@ok	ui_ok
+@back	ui_cancel
+@page	ui_page
+@open	ui_open
+@slide	ui_slide
+@toggle	ui_toggle
+
+# every screen
+*.enter	@hover
+*.click	@click
+*.change	@slide
+*.return.click	@back
+*.page*.click	@page
+*.extra_*.click	@page
+
+# the title
+title.start.click	@ok
+title.title_*.click	@page
+
+# Config: its switches, its pages' rows, and the two that ask first
+config.config_*.click	@toggle
+config.config_title.click	@click
+config.config_initial.click	@click
+config.config_controls.click	@open
+config.option_*.click	@toggle
+config.option_askagain_*.click	@click
+
+# save and load
+load.load*.click	@ok
+namescreen.name_ok.click	@ok
+
+# Extras
+cgmode.cg*.click	@open
+cgmode.cgmode_page*.click	@page
+cgview.prev.click	@page
+cgview.next.click	@page
+cgview.close.click	@back
+replay.cg*.click	@ok
+replay.replay_*.click	@page
+searchmode.search_prev.click	@page
+searchmode.search_next.click	@page
+searchmode.row*.click	@ok
+
+# Yes/No prompts and About (they open from a button that clicked already)
+dialog.open	none
+dialog.yes.click	@ok
+dialog.no.click	@back
+dialog.close.click	@back
+dialog.skip.change	@toggle
+
+# choices
+choice.click	@ok
+
+# the backlog
+backlog.open	@open
+backlog.close	@back
+backlog.*.click	@page
+
+# the menu bar (in a window) and the controls list
+menu.open	@open
+menu.click	@click
+menu.cancel	none
+controls.open	@open
+controls.close.click	@back
+controls.cancel	@back

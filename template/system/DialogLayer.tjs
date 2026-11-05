@@ -327,6 +327,7 @@ class DialogLayer extends AnimKAGLayer
     var vertical = false;
 	var coverParent = true; // Flag for whether to cover the parent window
 	var isSetMode = false;  // Modal state flag
+	var soundScreen = "dialog"; // the interface sound table's screen: dialog.open, dialog.<button>.click
     
     /**
      * Constructor
@@ -368,6 +369,7 @@ class DialogLayer extends AnimKAGLayer
     function open() {
 		window.openDialog(this);
 		setClickHook(true);
+		KAGInterfaceSound(soundScreen + ".open") if typeof global.KAGInterfaceSound != "undefined";
     }
 
 	function setClickHook(en) {
@@ -497,10 +499,11 @@ class DialogLayer extends AnimKAGLayer
         (Dictionary.clear incontextof names)(); 
 	}
 
-	function createSoundExpression(exp, storage, buf)
+	function createSoundExpression(exp, storage, buf, tag)
 	{
 		// Create expression for playing sound
-		if(storage == "") return exp;
+		// (without one of its own, tag's from the interface sound table: InterfaceSounds.tjs)
+		if(storage == "") return tag != "" && typeof global.KAGInterfaceSounds == "Object" ? KAGInterfaceSounds.expression(exp, tag) : exp;
 		if(buf === void) buf = 0;
 		var seexp = "(kag.se["+buf+"].play(%[storage:\"" + storage.escape() +"\"]))";
 		if(exp != "")
@@ -550,7 +553,7 @@ class DialogLayer extends AnimKAGLayer
 		object.hint = elm.hint;
         object.visible = true;
 
-        object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf);
+        object.onenter = createSoundExpression(elm.onenter, elm.enterse, elm.entersebuf, soundScreen + "." + object.name + ".enter");
 		object.onleave = createSoundExpression(elm.onleave, elm.leavese, elm.leavesebuf);
         object.hitThreshold = (elm.recthit === void || +elm.recthit) ? 0 : 64;
         if (elm.enabled !== void) {
@@ -566,7 +569,7 @@ class DialogLayer extends AnimKAGLayer
 			graphickey :	elm.graphickey,
 			storage :		elm.storage,
 			target :		elm.target,
-			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf),
+			exp :			createSoundExpression(elm.exp, elm.clickse, elm.clicksebuf, soundScreen + "." + object.name + ".click"),
 			countPage :		(elm.countpage === void) ? true : +elm.countpage,
 			object :		object,
 			onenter :		object.onenter,

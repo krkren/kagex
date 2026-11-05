@@ -1272,11 +1272,13 @@ class SelectLayer {
 
         
 
-        select.onenter = MessageLayer.createSoundExpression(elm.onenter, enterse, entersebuf);
+        // without sounds of their own, the interface sound table's choice.enter and choice.click
+
+        select.onenter = MessageLayer.createSoundExpression(elm.onenter, enterse, entersebuf, "choice.enter");
 
         select.onleave = MessageLayer.createSoundExpression(elm.onleave, leavese, leavesebuf);
 
-        select.onclick = MessageLayer.createSoundExpression(elm.exp,     clickse, clicksebuf),
+        select.onclick = MessageLayer.createSoundExpression(elm.exp,     clickse, clicksebuf, "choice.click"),
 
         select.storage = elm.storage;
 
@@ -1438,7 +1440,7 @@ class SelectLayer {
 
 		setVisibleTime(true, fadeTime, doneActFadeIn);
 
-		playSE(opense, opensebuf);
+		playSE(opense, opensebuf, "choice.open");
 
 		// Screen readers: the text before the choices, then the choices. With a screen reader
 
@@ -1512,7 +1514,7 @@ class SelectLayer {
 
     function done() {
 
-		playSE(closese, closesebuf) if (visible);
+		playSE(closese, closesebuf, "choice.close") if (visible);
 
 		visible = false;
 
@@ -1530,9 +1532,11 @@ class SelectLayer {
 
 	 */
 
-	function playSE(se, buf) {
+	function playSE(se, buf, tag) {
 
-		kag.se[buf].play(%[storage:se]) if (se != "");
+		if (se != "") kag.se[buf].play(%[storage:se]);
+
+		else if (tag != "") KAGInterfaceSound(tag); // the interface sound table's (since 0.18.0)
 
 	}
 

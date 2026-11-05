@@ -1267,6 +1267,7 @@ class CGViewer extends Layer
     }
     function act(name)
     {
+        KAGInterfaceSound("cgview." + name + ".click"); // uisounds.csv
         switch (name) {
         case "zoomout": zoomTo(z / 1.25); break;
         case "zoomin":  zoomTo(z * 1.25); break;

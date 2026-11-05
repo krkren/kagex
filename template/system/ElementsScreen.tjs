@@ -43,6 +43,7 @@ class KAGElementsScreen extends Layer
 	var deferTrigger;
 	var a11yRole = "group";   // what a screen reader calls this layer: the screen's title
 	var a11yName = "";
+	var soundScreen = "";     // the interface sound table's screen: <screen>.open, .<id>.click, .cancel
 
 	function KAGElementsScreen(win, name = "Elements screen")
 	{
@@ -66,7 +67,7 @@ class KAGElementsScreen extends Layer
 		atlas.visible = false;
 		atlasName = "kagex_screen_" + (++global.KAGElementsScreenSerial);
 		panel = new global.ElementsPanel(this);
-		panel.onAction = onPanelAction;
+		panel.onAction = onPanelActionSounding;
 		panel.onClose = onPanelClose;
 		if (typeof global.drawYesNoPanel == "undefined") KAGLoadScript("YesNoDialog.tjs");
 	}
@@ -241,6 +242,17 @@ class KAGElementsScreen extends Layer
 	}
 
 	function onPanelAction(id, payload) {}
+
+	// the panel's actions, with the interface sound table's <screen>.<id>.click first (since 0.18.0)
+	function onPanelActionSounding(id, payload)
+	{
+		actionSound(id);
+		onPanelAction(id, payload);
+	}
+	function actionSound(id)
+	{
+		KAGInterfaceSound(soundScreen + "." + id + ".click") if soundScreen != "" && typeof id == "String";
+	}
 	function onPanelClose(action) { defer(close); }
 
 	// --------------------------------------------- KAGWindow.openDialog's contract --
@@ -255,6 +267,7 @@ class KAGElementsScreen extends Layer
 		opened = true;
 		focus();
 		showToScreenReaders(true);
+		KAGInterfaceSound(soundScreen + ".open") if soundScreen != "";
 	}
 
 	function close()
@@ -354,6 +367,7 @@ class KAGElementsScreen extends Layer
 	// Esc, B or a right-click
 	function cancel()
 	{
+		KAGInterfaceSound(soundScreen + ".cancel") if soundScreen != "";
 		onPanelClose("");
 	}
 
