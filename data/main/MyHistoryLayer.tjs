@@ -697,8 +697,11 @@ class HistoryLayer extends Layer
 					// (Margins are not considered in this case)
 					currentLine=
 						currentLine.substring(0, currentLine.length - ch.length);	//	Remove the added character
+					// a Latin word in Japanese text goes to the next line whole (HistoryLayer.tjs)
+					var carried = typeof global.KAGHistoryCarryWord != "undefined" ? KAGHistoryCarryWord(currentLine, ch, wwLeading) : [ currentLine, "" ];
+					currentLine = carried[0];
 					reline();
-					currentLine = ch == " " ? "" : ch; // English: drop the space a line wrapped at
+					currentLine = carried[1] + (ch == " " ? "" : ch); // English: drop the space a line wrapped at
 				}
 			}
 		}
