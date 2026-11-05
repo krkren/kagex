@@ -104,6 +104,17 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai angry]
 表情変更（怒）
 
+[ai 103]
+書き手の短縮記法：[[ai 103] はポーズ 1・表情 03（悲しみ）（envinit.tjs の "shorthands"）
+
+[ai far]
+プリセット：[[ai far] で奥へ、ほかのキャラの後ろに
+
+[ai near]
+[[ai near] で手前へ、前に出します
+
+[ai centerlevel happy]
+
 [ai posright time=500]
 時間指定あり場所移動（→右）
 
@@ -141,14 +152,18 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 
 [ai voice=1]
 【ai】中三マキロン地獄
-[pip xsurprised voice=3]
-【pip】わっ！ 今のは何？
+; [vo]: a voice file from the recording script, whose speaker the game works out (Pip's: pip%s%06d)
+[pip xsurprised]
+[vo pip000003]
+わっ！ 今のは何？
 話している途中でクリックすると、声はぷつりと止まらずにフェードアウトします（設定の 2 ページ目）
 
 [pip neutral voice=4 vol=35]
 【pip】（ひそひそ）いつもこうなの？
 小さな声のセリフ、ささやき：[[pip voice=4 vol=35]
 [pip hide]
+【ai】あ、あなたが[emb exp="kag.heroName()"]さんね。よろしく！
+【hero】こちらこそ、よろしく。
 
 *label6|キャラアクション
 

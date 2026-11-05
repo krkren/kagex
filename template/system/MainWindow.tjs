@@ -14032,6 +14032,35 @@ class KAGWindow extends Window
 		return loadBookMarkWithAsk(n);
 	}
 
+	//------------------------------------------------------- The hero's name --
+	// The player names the hero (since 0.17.0): flags.name and flags.family, which [emb] and a
+	// character's nameAlias of "&kag.heroName()" show; while they're the defaults (defaultName,
+	// defaultFamily) the voices that say the name play (isDefaultName, KAGEnvCharacter.getVoice)
+	var heroNameRefused = []; // words a name may not hold (lower case), the game's
+	var heroNameCheck;        // a function(given, family) returning a reason to refuse, or void
+	var heroNameMax = 12;     // characters at most in each
+
+	// The hero's given name (through tr() while it's the default), or the family name
+	function heroName() { return flags.name !== void && flags.name != "" ? flags.name : tr(defaultName); }
+	function heroFamily() { return flags.family !== void && flags.family != "" ? flags.family : tr(defaultFamily); }
+
+	// Names the hero: "" when done, or why not (in the language shown). An empty name is the default
+	function setHeroName(given, family)
+	{
+		given = ((string)given).trim(), family = ((string)family).trim();
+		if (given.length > heroNameMax || family.length > heroNameMax) return tr("That name is too long");
+		var both = (given + " " + family).toLowerCase();
+		for (var i = 0; i < heroNameRefused.count; i++)
+			if (heroNameRefused[i] != "" && both.indexOf(heroNameRefused[i]) >= 0) return tr("That name can't be used");
+		if (heroNameCheck !== void) {
+			var why = heroNameCheck(given, family);
+			if (typeof why == "String" && why != "") return why;
+		}
+		flags.name   = given  != "" ? given  : defaultName;
+		flags.family = family != "" ? family : defaultFamily;
+		return "";
+	}
+
 	//----------------------------------------------------- Reading settings --
 	// The player's reading settings (the variables with windowOpacity; Options.tjs offers them
 	// on a Config screen): applied to the message layers when they change and at start
@@ -15897,6 +15926,14 @@ class KAGWindow extends Window
 			break;
 		}
 		if (!afterName && (lineMode <= LINEMODE_LINE || prevEmptyLine)) {
+			if (pendingVo !== void) {
+
+				addParseTag(cd, "dispname", %[name:pendingVo[0].name, voice:pendingVo]); // [vo]: its speaker
+
+				pendingVo = void;
+
+			} else
+
 			addParseTag(cd, "dispname");
 			afterName = true;
 			indentCharacter = void;
@@ -16173,10 +16210,52 @@ class KAGWindow extends Window
 		];
 	
 	var extractTags = %[
+
 	parse:parseParse incontextof this,
+
 	voice:parseVoice incontextof this,
+
 	nextvoice:parseNextVoice incontextof this,
+
+	vo:parseVo incontextof this,
+
 		];
+
+
+
+	// [vo ai000003]: voice files from the recording script, whose speakers the World works out
+
+	// from the characters' voiceFile patterns (KAGEnvironment.voiceSpeaker); the next line is
+
+	// theirs, as if it began with 【ai】 (several speak together; the first one's name shows)
+
+	var pendingVo;
+
+	function parseVo(cd, elm) {
+
+		if (typeof global.world_object == "undefined") return;
+
+		var env = world_object.env, files = env.voiceFilesOf(elm), list = [];
+
+		for (var i = 0; i < files.count; i++) {
+
+			var who = env.voiceSpeaker(files[i]);
+
+			if (who === void) {
+
+				dm("[vo] " + files[i] + ": no character's voiceFile fits it");
+
+				continue;
+
+			}
+
+			list.add(%[ name:who, voice:files[i] ]);
+
+		}
+
+		pendingVo = list.count > 0 ? list : void;
+
+	}
 	
     /*
      * Tag expansion process

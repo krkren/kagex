@@ -2949,6 +2949,75 @@ def sample_steps(eng):
         if kept != "1,Chapter One,1":
             raise SmokeError("a chapter title with stay=true wasn't kept in the save data: %s" % kept)
 
+    @step("naming the hero: the name screen refuses and trims names, the name shows in the text and the name box, and Search finds it")
+    def _():
+        if eng.tjs('return typeof kag.setHeroName != "undefined" && Storages.isExistentStorage("namescreen.ks") ? 1 : 0;') != 1:
+            print("     (skipped: this build predates naming the hero)", flush=True)
+            return
+        eng.tjs('sf.heroNamed = false; kag.process("title.ks", "*gamestart"); return 1;')
+        eng.wait("the name screen", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable'
+                 ' && kag.current.names["tf.heroGiven"] !== void', timeout=30)
+        eng.tjs('kag.current.names["tf.heroGiven"].text = "Stupid Bob"; nameOK(); return 1;')
+        eng.wait("the reason", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable && tf.nameError != ""', timeout=20)
+        eng.tjs('kag.current.names["tf.heroGiven"].text = "  Alex "; kag.current.names["tf.heroFamily"].text = ""; nameOK(); return 1;')
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=30)
+        named = str(eng.tjs('return [sf.heroName, sf.heroFamily, f.name, world_object.env.isDefaultName() ? 1 : 0].join(",");'))
+        if named != "Alex,%s,Alex,0" % eng.tjs("return kag.defaultFamily;"):
+            raise SmokeError("the name screen didn't trim the name and keep the default family name: %s" % named)
+        # the hero speaks in the Character demo's Voices scene: the name box says the name, and
+        # Ai's line has it ([emb]); the backlog keeps it
+        eng.tjs('kag.process("char.ks", "*voices"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        for i in range(24):
+            if eng.tjs('return kag.fore.messages[0].nameLayer.lastName == "Alex" ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.3)
+            eng.wait("the next stop", "kag.inStable", timeout=20)
+        if eng.tjs('return kag.fore.messages[0].nameLayer.lastName == "Alex" ? 1 : 0;') != 1:
+            raise SmokeError("the hero's line didn't show the name Alex in the name box")
+        if eng.compiled:
+            found = str(eng.tjs('var r = world_object.player.searchTexts("Alex", false); return r.count;'))
+            print("     Search finds Alex in %s lines" % found, flush=True)
+            if int(found) < 1:
+                raise SmokeError("Search doesn't find the hero's name in Ai's line ([emb])")
+            log = eng.tjs('world_object.player.rebuildBacklog(); var h = kag.historyLayer, s = "";'
+                          ' for (var i = 0; i < h.dataLines; i++) s += h.getLine(i) + "\\n"; return s.indexOf("Alex") >= 0 ? 1 : 0;')
+            if log != 1:
+                raise SmokeError("the backlog written again from the history lost the hero's name ([emb])")
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("writers' shorthands: a code sets a pose and a face, and presets move a character back or forward at once")
+    def _():
+        if eng.tjs('return typeof world_object.env.characters.ai == "Object" && typeof world_object.env.characters.ai.doShorthand != "undefined" ? 1 : 0;') != 1:
+            eng.tjs('kag.process("char.ks", "*start"); return 1;')
+            eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+            if eng.tjs('return typeof world_object.env.characters.ai.doShorthand != "undefined" ? 1 : 0;') != 1:
+                print("     (skipped: this build's framework predates the shorthands)", flush=True)
+                return
+        got = str(eng.tjs('var e = world_object.env, ai = e.characters.ai, r = [];'
+                          ' e.unknown("ai", %[tagname:"ai", "103" => "true"]); r.add(ai.face);'
+                          ' e.unknown("ai", %[tagname:"ai", "101" => "true"]); r.add(ai.face);'
+                          ' e.unknown("ai", %[tagname:"ai", "far" => "true"]); r.add(ai.level);'
+                          ' e.unknown("ai", %[tagname:"ai", "near" => "true"]); r.add(ai.level); return r.join(",");'))
+        if got != "sad,happy,0,2":
+            raise SmokeError("[ai 103], [ai 101], [ai far] and [ai near] didn't set face sad, happy, level 0 and 2: %s" % got)
+
+    @step("[vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too")
+    def _():
+        if eng.tjs('return typeof world_object.env.voiceSpeaker != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates [vo])", flush=True)
+            return
+        who = str(eng.tjs('var e = world_object.env; return [e.voiceSpeaker("pip000003"), e.voiceSpeaker("ai000001.ogg"),'
+                          ' e.voiceSpeaker("nobody0001") === void ? "-" : "?"].join(",");'))
+        if who != "pip,ai,-":
+            raise SmokeError("the speakers of pip000003, ai000001.ogg and nobody0001 aren't pip, ai and no one: %s" % who)
+        if eng.compiled:
+            found = str(eng.tjs('var r = world_object.player.searchTexts("Whoa", false); return r.count > 0 ? r[0].name : "none";'))
+            if found != "Pip":
+                raise SmokeError("[vo pip000003] didn't make Pip the speaker of the compiled line: %s" % found)
+
     @step("quick saves go round their bookmarks, and quick load asks, then loads the newest")
     def _():
         if eng.tjs('return typeof kag.quickSave != "undefined" ? 1 : 0;') != 1:

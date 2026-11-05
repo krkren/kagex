@@ -1433,7 +1433,16 @@ class SceneParser
 			var step = [ "*emb", 0, "exp", elm.exp ];
 			if (elm.escape !== void) step.push("escape", elm.escape);
 			if (elm.__cond !== void) step.push("*cond", elm.__cond);
+			var ends = msg !== void && msg.visible ? scene.texts.count + 1 : void; // the text this one ends
 			emitStep(step);
+			if (ends !== void && ends == scene.texts.count && elm.__cond === void) {
+				// noted with the text it follows, so the backlog and Search show it as it was
+				// shown (KAGEnvPlayer.getTextData, searchTexts)
+				scene.embAfter = %[] if scene.embAfter === void;
+				var k = (string)ends;
+				scene.embAfter[k] = [] if scene.embAfter[k] === void;
+				scene.embAfter[k].add(elm.exp);
+			}
 			return;
 		}
 		if (elm.__cond !== void) {
@@ -1474,6 +1483,7 @@ class SceneParser
 		switch (name) {
 		case "voice": parseVoice(elm); return;
 		case "nextvoice": parseNextVoice(elm); return;
+		case "vo": parseVo(elm); return;
 		case "parse": parseParse(elm); return;
 		}
 		// ruby written as a tag: [漢字,かんじ]
@@ -2002,9 +2012,28 @@ class SceneParser
 			break;
 		}
 		if (!afterName && (lineMode <= LINEMODE_LINE || prevEmptyLine)) {
+			if (pendingVo !== void) {
+				textName(pendingVo[0].name, "", pendingVo); // [vo]: its speaker
+				pendingVo = void;
+			} else
 			textName();
 			afterName = true;
 		}
+	}
+
+	// [vo ai000003]: the next line is the speaker's whose voiceFile fits (KAG's parseVo)
+	var pendingVo;
+	function parseVo(elm) {
+		var files = env.voiceFilesOf(elm), list = [];
+		for (var i = 0; i < files.count; i++) {
+			var who = env.voiceSpeaker(files[i]);
+			if (who === void) {
+				warn("[vo] " + files[i] + ": no character's voiceFile fits it");
+				continue;
+			}
+			list.add(%[ name:who, voice:files[i] ]);
+		}
+		pendingVo = list.count > 0 ? list : void;
 	}
 
 	function parseCh(elm) {

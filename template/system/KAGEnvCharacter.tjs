@@ -719,7 +719,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 
 		if (info.level !== void) {
 			level = info.level;
-			if (elm.back !== void) toBack(); // [XXX] Because evaluation order is indefinite: front is unnecessary since it's always at the front when changing levels
+			if (elm.back !== void || info.back) toBack(); // [XXX] Because evaluation order is indefinite: front is unnecessary since it's always at the front when changing levels
 			if (disp == CLEAR && elm.hide === void) {
 				// Automatic display and state initialization
 				initFile(elm);
@@ -729,11 +729,61 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 			istrans = true;
 		}
 
+		// a preset that also brings the character to the front, or sends it behind the others at
+		// its level (since 0.17.0: "front" => true, "back" => true)
+		if (info.front) setFront();
+		else if (info.back && info.level === void) setBack();
+
 		if (info.trans !== void) {
 			setTrans(info.trans, elm);
 		} else if (istrans) {
 			setAutoTrans([env.envinfo.positionTrans], elm);
 		}
+	}
+
+	/**
+	 * Writers' shorthands (since 0.17.0): a word that a pattern turns into a pose and a face, from
+	 * the character's own "shorthands" and then envinit.tjs's (for every character):
+	 *   "shorthands" => [ %[ "pattern" => "^(\\d)(\\d\\d[a-z]?)$", "pose" => "$1", "face" => "$2" ] ]
+	 * $1 to $9 are the pattern's groups; the character's "poseCodes" and "faceCodes" turn what they
+	 * give into its names ("1" => "standard", "02" => "angry"). True when it set either
+	 */
+	var shorthandRes = %[]; // pattern -> RegExp
+	function doShorthand(cmd, elm) {
+		var lists = [ init.shorthands, env.envinfo !== void ? env.envinfo.shorthands : void ];
+		for (var l = 0; l < lists.count; l++) {
+			var list = lists[l];
+			if (list === void) continue;
+			for (var i = 0; i < list.count; i++) {
+				var e = list[i];
+				if (e === void || e.pattern === void) continue;
+				var re = shorthandRes[e.pattern];
+				if (re === void) re = shorthandRes[e.pattern] = new RegExp(e.pattern);
+				var m = re.exec(cmd);
+				if (m === void || m.count == 0) continue;
+				var poseName = shorthandPart(e.pose, m, init.poseCodes);
+				var faceName = shorthandPart(e.face, m, init.faceCodes);
+				var did = false;
+				if (poseName != "" && poses !== void && poses[poseName] !== void) {
+					setPose(poseName, elm);
+					did = true;
+				}
+				var info = poses !== void && pose !== void ? poses[pose] : void;
+				if (faceName != "" && info !== void && info.faces !== void && info.faces[faceName] !== void) {
+					setFace(faceName, elm);
+					did = true;
+				}
+				if (did) return true;
+			}
+		}
+		return false;
+	}
+	function shorthandPart(template, m, codes) {
+		if (typeof template != "String" || template == "") return "";
+		var s = template;
+		for (var g = 9; g >= 1; g--) s = s.replace(new RegExp("\\$" + g, "g"), g < m.count && m[g] !== void ? m[g] : "");
+		if (codes !== void && codes[s] !== void) s = codes[s];
+		return s;
 	}
 
 	/**
@@ -929,6 +979,11 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
         // Update
         if (!find) {
             find = setTrans(cmd, elm);
+        }
+
+        // A writer's shorthand: a word a pattern turns into a pose and a face
+        if (!find) {
+            find = doShorthand(cmd, elm);
         }
 
         return find;
@@ -1504,7 +1559,9 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
                 return void;
             }
 			var voiceBase = env.getVoiceBase();
-			// If named and not the default name, refer with a filename containing 'N'
+			// While the hero has the default name (kag.defaultName/defaultFamily: the player
+			// hasn't named them), the take with 'N' in its file name, which says the name, where
+			// there is one (voiceFile's third %s); once named, the plain take, which doesn't
 			if (env.isDefaultName()) {
 				var name = init.voiceFile.sprintf(voiceBase, voice, "N");
 				if (Storages.isExistentStorage(name)) {

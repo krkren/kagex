@@ -65,6 +65,7 @@ LABELS = {
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ", "Voice %d": "ボイス %d",
         "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
+        "Your Name": "名前",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
@@ -647,6 +648,13 @@ def make_config_pages():
     for x0 in (CFG_L, CFG_R):
         c.panel((x0, CFG_TOP, x0 + CFG_W, CFG_TOP + CFG_ROW * 6))
     c.save(out("config_pages_base.png"), opaque=True)
+    # the hero's name (namescreen.ks): one wide panel; its titles, fields and buttons are drawn
+    # at run time (Override.tjs, nameInit)
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Your Name"))
+    c.panel((CFG_L, CFG_TOP, CFG_R + CFG_W, CFG_TOP + CFG_ROW * 3))
+    c.save(out("name_base.png"), opaque=True)
     if LANG != "en":
         return
     for w in (240, 180, 130):

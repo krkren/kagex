@@ -14,6 +14,11 @@
 [rclick enabled=true jump=true storage="" target=*backtotitle]
 [eval exp='tf.fromTitle = 1, tf.configPage = 1']
 
+; Back from the hero's name (namescreen.ks), on the page it was opened from
+*fromName
+[rclick enabled=true jump=true storage="" target=*backtotitle cond="tf.fromTitle"]
+[rclick enabled=true jump=true storage="" target=*backtogame cond="!tf.fromTitle"]
+
 *buttons
 
 ; Load base image: the page shown (tf.configPage; its tabs are below). Pages 2 and on are the

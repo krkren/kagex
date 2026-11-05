@@ -645,8 +645,101 @@ var configPages = [
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
-      [ ] ]
+      [ "heroName" ] ]
     ];
+
+// ---------------------------------------------------------
+// The hero's name (namescreen.ks; the framework's kag.setHeroName). The player's choice is kept
+// in sf (heroName, heroFamily, heroNamed) and put into f at each new game (heroFromSf)
+// ---------------------------------------------------------
+var nameTrigger;
+
+// the fields' values as the screen opens: the name now (the default's in the language shown)
+function nameStart()
+{
+    tf.heroGiven  = sf.heroNamed ? kag.heroName()   : tr(kag.defaultName);
+    tf.heroFamily = sf.heroNamed ? kag.heroFamily() : tr(kag.defaultFamily);
+    tf.heroGiven  = sf.heroName   if sf.heroNamed && sf.heroName   !== void && sf.heroName   != kag.defaultName;
+    tf.heroFamily = sf.heroFamily if sf.heroNamed && sf.heroFamily !== void && sf.heroFamily != kag.defaultFamily;
+    tf.nameError = "";
+}
+
+// the rows' titles, the fields' backgrounds and a refused name's reason, on the screen's layer
+function nameInit()
+{
+    var lay = kag.current;
+    if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+    var f = lay.font, face = f.face, height = f.height, bold = f.bold;
+    setYesNoFont(lay, 33);
+    drawYesNoString(lay, 322, 214, tr("Given Name"), 0xffffff, yesnoTextBase);
+    drawYesNoString(lay, 1022, 214, tr("Family Name"), 0xffffff, yesnoTextBase);
+    lay.fillRect(322, 266, 616, 60, 0xffffffff);
+    lay.fillRect(1022, 266, 576, 60, 0xffffffff);
+    setYesNoFont(lay, 26);
+    drawYesNoString(lay, 322, 360, tr("Leave a name empty to use the default."), 0xffffff, yesnoTextBase);
+    if (tf.nameError != "") drawYesNoString(lay, 322, 460, tf.nameError, 0xffe060, yesnoTextBase);
+    f.face = face, f.height = height, f.bold = bold;
+}
+
+function nameButtons()
+{
+    var names = kag.current.names;
+    drawButtonLabel(names.name_default, tr("Default"), [ 0x5025ff, 0xffffff, 0xffffff ], 28);
+    drawButtonLabel(names.name_ok, tr("OK"), [ 0x5025ff, 0xffffff, 0xffffff ], 28);
+}
+
+function nameFocus()
+{
+    var e = kag.current.names["tf.heroGiven"];
+    e.focus() if e !== void;
+}
+
+function nameAgain(label)
+{
+    tf.nameLabel = label;
+    if (nameTrigger === void) nameTrigger = new AsyncTrigger(function { kag.process("namescreen.ks", tf.nameLabel); }, "");
+    nameTrigger.trigger();
+}
+
+function nameDefault()
+{
+    kag.current.commit();
+    tf.heroGiven = tr(kag.defaultName), tf.heroFamily = tr(kag.defaultFamily), tf.nameError = "";
+    nameAgain("*screen");
+}
+
+// OK (or Return in a field): the name, or why it can't be used
+function nameOK()
+{
+    kag.current.commit();
+    var g = tf.heroGiven !== void ? ((string)tf.heroGiven).trim() : "", fa = tf.heroFamily !== void ? ((string)tf.heroFamily).trim() : "";
+    g  = "" if g  == tr(kag.defaultName);   // the default as shown is the default
+    fa = "" if fa == tr(kag.defaultFamily);
+    var why = kag.setHeroName(g, fa);
+    if (why != "") {
+        tf.nameError = why;
+        nameAgain("*screen");
+        return;
+    }
+    sf.heroName = kag.flags.name, sf.heroFamily = kag.flags.family, sf.heroNamed = true;
+    tf.nameError = "";
+    nameAgain("*done");
+}
+
+// a new game: the player's name for the hero
+function heroFromSf()
+{
+    if (sf.heroNamed) kag.flags.name = sf.heroName, kag.flags.family = sf.heroFamily;
+}
+
+// Config: the name screen, and back to this page
+function nameFromConfig()
+{
+    nameStart();
+    kag.process("namescreen.ks", "*fromConfig");
+}
+
+KAGDefineOption(%[ name:"heroName", label:"Your Name", kind:"button", button:"Change", action:function { nameFromConfig(); } ]);
 
 function configOptionsPage()
 {

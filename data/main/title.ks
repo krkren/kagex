@@ -166,4 +166,10 @@
 
 [wt]
 
+; the hero's name: the player's from before, or the name screen the first time (namescreen.ks)
+
+[eval exp="heroFromSf()"]
+
+[jump storage=namescreen.ks target=*start cond="!sf.heroNamed"]
+
 [jump storage=s0001.ks]

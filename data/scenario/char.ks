@@ -16,7 +16,7 @@ Character appearance
 
 【ai】Name display, text display, and key input wait are automatically performed in the prescribed format.
 【ai/???】To change the display name, just write the display name after the slash.
-【ai/Ai, Who Has an Unusually Long Name Today】A name too long for its box is squeezed to fit ([position namefit=squeeze]).
+【ai/Ai, Who Has an Unusually Long Name Today】A name too long for its box is squeezed to fit ([[position namefit=squeeze]).
 【ai】If a voice number is specified, the voice will be played along with the text.
 【ai】Processing wait during auto-play is also automatically adjusted. The voice will play in the next text.
 
@@ -104,6 +104,17 @@ Expression change (Happy)
 [ai angry]
 Expression change (Angry)
 
+[ai 103]
+A writer's shorthand: [[ai 103] is pose 1 and face 03, sad (envinit.tjs's "shorthands")
+
+[ai far]
+A preset: [[ai far] sends Ai further back, behind the others
+
+[ai near]
+And [[ai near] brings her near, in front
+
+[ai centerlevel happy]
+
 [ai posright time=500]
 Movement with time specification (→Right) 
 
@@ -141,14 +152,18 @@ Voices come from where the speakers stand
 
 [ai voice=1]
 【ai】Ninth-grade antiseptic hell!
-[pip xsurprised voice=3]
-【pip】Whoa! What was that?
+; [vo]: a voice file from the recording script, whose speaker the game works out (Pip's: pip%s%06d)
+[pip xsurprised]
+[vo pip000003]
+Whoa! What was that?
 Click while someone is talking: the voice fades out instead of stopping (Config, second page)
 
 [pip neutral voice=4 vol=35]
 【pip】(whispering) Is she always like this?
 A quieter line, a whisper: [[pip voice=4 vol=35]
 [pip hide]
+【ai】Oh, and you must be [emb exp="kag.heroName()"]. Nice to meet you!
+【hero】Nice to meet you too.
 
 *label6|Character Action
 
