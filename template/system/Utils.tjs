@@ -524,12 +524,13 @@ function getExistImageName(storage)
 
 /**
  * dst.shrinkCopy (the shrinkCopy plugin's area average) from a copy of the source rectangle with
- * one more row under it, a copy of its last: the plugin weighs in the row below each output
- * pixel's block, and for the last one rounding can leave that weight above 0, so it read a row
- * past the source picture, which crashed the game where the picture's memory ended at a page
- * (Android's 0.17.0 release run, saving a bookmark's thumbnail; UPSTREAM.md 39). The copy starts
- * at 0, 0 as the source did (the plugin's edges come out otherwise for a rectangle that doesn't).
- * Falls back to stretchCopy without the plugin
+ * a column more on its right and two rows more under it, copies of its edges: the plugin weighs
+ * in the row below and the column right of each output pixel's block, and for the last ones
+ * rounding can leave those weights above 0, so it read past the source picture (for the bottom
+ * right one, the pixel after its last row), which crashed the game where the picture's memory
+ * ended at a page (Android's 0.17.0 release and Live2D runs, saving a thumbnail; UPSTREAM.md 39;
+ * one extra row wasn't enough). The copy starts at 0, 0 as the source did (the plugin's edges
+ * come out otherwise for a rectangle that doesn't). Falls back to stretchCopy without the plugin
  */
 
 function KAGShrinkCopy(dst, dx, dy, dw, dh, src, sx, sy, sw, sh, type = stLinear)
@@ -542,10 +543,12 @@ function KAGShrinkCopy(dst, dx, dy, dw, dh, src, sx, sy, sw, sh, type = stLinear
 
 	try {
 
-		pad.setImageSize(sw, sh + 1);
+		pad.setImageSize(sw + 1, sh + 2);
 		pad.face = dfAlpha;
 		pad.copyRect(0, 0, src, sx, sy, sw, sh);
-		pad.copyRect(0, sh, pad, 0, sh - 1, sw, 1); // the extra row repeats the last
+		pad.copyRect(sw, 0, pad, sw - 1, 0, 1, sh);     // the extra column repeats the last
+		pad.copyRect(0, sh, pad, 0, sh - 1, sw + 1, 1); // and the extra rows the last row
+		pad.copyRect(0, sh + 1, pad, 0, sh - 1, sw + 1, 1);
 		dst.shrinkCopy(dx, dy, dw, dh, pad, 0, 0, sw, sh, type);
 
 	} catch (e) {
