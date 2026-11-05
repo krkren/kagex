@@ -3044,15 +3044,15 @@ def sample_steps(eng):
         eng.tjs('var f = kag.fore.layers[0].flip; f.elapsed = f.duration - 100; return 1;')
         eng.wait("the demo menu after the roll", 'kag.conductor.curStorage == "s0001.ks" && KAGRollSeen("credits")', timeout=20)
 
-    @step("[movie]: the opening was noted as seen, its subtitles come from test.vtt, a seen movie skips with a click, and Replay's Movies tab plays it")
+    @step("[movie]: the opening was noted as seen, its subtitles come from opening.vtt, a seen movie skips with a click, Replay's Movies tab plays it, and its smaller version fills the screen")
     def _():
         if eng.tjs('return typeof global.KAGMovieTag != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates [movie])", flush=True)
             return
-        cues = str(eng.tjs('var c = KAGParseVTT("test.vtt"); return [c.count, c.count > 0 ? c[0].from : -1, c.count > 0 ? c[0].to : -1].join(",");'))
-        if cues != "2,200,2400":
-            raise SmokeError("test.vtt's cues weren't read as two, the first from 200 to 2400 ms: %s" % cues)
-        seen = eng.tjs('return KAGMovieSeen("test") ? 1 : 0;')
+        cues = str(eng.tjs('var c = KAGParseVTT("opening.vtt"); return [c.count, c.count > 0 ? c[0].from : -1, c.count > 0 ? c[0].to : -1].join(",");'))
+        if cues != "4,600,2900":
+            raise SmokeError("opening.vtt's cues weren't read as four, the first from 600 to 2900 ms: %s" % cues)
+        seen = eng.tjs('return KAGMovieSeen("opening") ? 1 : 0;')
         print("     the opening seen at start: %s" % seen, flush=True)
         # the movie's layer goes over everything while it plays, and back under the message window
         # after (0.17.0 left it there, and the layer demo's Vee covered the text)
@@ -3064,14 +3064,14 @@ def sample_steps(eng):
         tab = eng.tjs('return replayTabs.find("Movies");')
         if tab < 0:
             raise SmokeError("Replay has no Movies tab")
-        eng.tjs('sf["movie:test"] = true; setReplayPage(%d, 0); return 1;' % tab)
-        if eng.tjs("return tf.replaylist[0] !== void && tf.replaylist[0].movie == \"test\" ? 1 : 0;") != 1:
-            raise SmokeError("the Movies tab's first tile isn't the test movie, or it's locked though seen")
+        eng.tjs('sf["movie:opening"] = true; setReplayPage(%d, 0); return 1;' % tab)
+        if eng.tjs("return tf.replaylist[0] !== void && tf.replaylist[0].movie == \"opening\" ? 1 : 0;") != 1:
+            raise SmokeError("the Movies tab's first tile isn't the opening, or it's locked though seen")
         eng.tjs("replayTile(0); return 1;")
         eng.wait("the movie", 'KAGMoviePlaying !== void', timeout=20)
         sub = str(eng.tjs('var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
                           ' return [l.flipType, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
-        if sub != "movie,2":
+        if sub != "movie,4":
             raise SmokeError("[movie] didn't play on a layer with its subtitles: %s" % sub)
         # the movie on the screen, not the backdrop (color=) over it: 0.17.0 made the backdrop a child
         # of the primary layer, which covered the base layer the movie is on, so it was a black screen
@@ -3090,6 +3090,27 @@ def sample_steps(eng):
         eng.wait("Replay again (a seen movie skips with a click)", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
         if eng.tjs(under) != 1:
             raise SmokeError("after a movie from Replay its layer stayed over the message window")
+        # the smaller version (Movie Quality "Smaller"; the web and phones choose it themselves),
+        # zoomed to fill the screen, with the full movie's subtitles
+        eng.tjs('tf.smokeMovieQuality = KAGOptionGet("movieQuality"); KAGOptionSet("movieQuality", "small"); replayTile(0); return 1;')
+        try:
+            eng.wait("the smaller movie's first frames", 'KAGMoviePlaying !== void && kag.fore.layers[+KAGMoviePlaying.layer].flip !== void'
+                     ' && kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
+            small = str(eng.tjs('var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
+                                ' return [f.file, f.subtitles !== void ? f.subtitles.cues.count : 0,'
+                                ' (int)(l.zoom * f.targetLayer.width / 100 + 0.5), (int)(l.zoom * f.targetLayer.height / 100 + 0.5)].join(",");'))
+            print("     the smaller movie (file, cues, width and height shown): %s" % small, flush=True)
+            want = "opening_sd,4,%s" % eng.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')
+            if small != want:
+                raise SmokeError("the smaller movie didn't play filling the screen with opening.vtt's cues: %s, not %s" % (small, want))
+            time.sleep(0.4)
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            eng.wait("Replay again", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
+            zoom = eng.tjs('return (int)kag.fore.layers[kag.fore.layers.count - 1].zoom;')
+            if zoom != 100:
+                raise SmokeError("the movie's layer kept its zoom (%s) after the movie" % zoom)
+        finally:
+            eng.tjs('KAGOptionSet("movieQuality", tf.smokeMovieQuality); return 1;')
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 

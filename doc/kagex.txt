@@ -3239,7 +3239,7 @@ sample asks the first time START is chosen (namescreen.ks), and Config's last pa
 
 ● Movies
 
-    [movie storage=opening alpha=2 song=bgm02 color=0x000000 skip=seen layer=]
+    [movie storage=opening alpha=0 song=bgm01 color=0x000000 skip=seen fit=true layer=]
 
 plays a movie as commercial games do (since 0.17.0, template/system/Movies.tjs): over everything
 but the prompts, centred on a KAG layer (the last one, or layer=), and waits for it to end.
@@ -3250,18 +3250,23 @@ but the prompts, centred on a KAG layer (the last one, or layer=), and waits for
     song      Music it plays, unlocked in the music room (sf["bgm_<NAME>"]; several with commas).
     skip      seen (the default): a click skips it only once it has been seen; always: any time.
     subtitle  false: no subtitles; a file: those instead of <name>.vtt.
+    fit       true (the default): zoomed to fill the screen, keeping its shape; false: shown at
+              its own size (since 0.17.2).
 
 It's noted as seen (sf["movie:<name>"], KAGMovieSeen(name)) when it ends or is skipped. Skip
 mode stops before a movie not seen yet, and passes a seen one where Config says so
 (movieSkipping); the right button skips a seen one where it says so (movieRightClick). A
 movie with a smaller version, <name>_sd, plays that when Movie Quality says Smaller, and by
-itself on the web, Android and iOS (Auto). A movie that shows no picture in three seconds (no
+itself on the web, Android and iOS (Auto), zoomed to fill the screen like any movie of another
+size (the sample's opening_sd is 960x540, half the screen each way). A movie that shows no picture in three seconds (no
 decoder for it here) ends, so the game goes on.
 
 Subtitles: a movie on a layer whose [image] has subtitle=true ([movie] gives it that) shows the
 cues of <name>.vtt (WebVTT: times and lines; a language's own in data/lang/<code>/ stands in for
 it) at the bottom of the screen, timed from the movie, and screen readers get each one.
-Config's Subtitles turns them off.
+<name>_sd uses <name>.vtt when it has none of its own. Config's Subtitles turns them off.
+[image movie=] takes fit=true too: the layers showing the movie are zoomed (affine layers) so its
+frames fill the screen; [freeimage] puts the zoom back.
 
 
 
