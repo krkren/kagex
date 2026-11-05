@@ -644,9 +644,17 @@ var configPages = [
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
-    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar" ],
+    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality" ] ]
     ];
+
+// The message window's left margin ([initscene] in macro.ks): room for the face window
+// (envinit's faceCrop), unless Config turned it off
+function faceWindowMargin()
+{
+    var on = KAGOptionGet("faceWindow");
+    return on !== void && !on ? 48 : 320;
+}
 
 // ---------------------------------------------------------
 // The hero's name (namescreen.ks; the framework's kag.setHeroName). The player's choice is kept

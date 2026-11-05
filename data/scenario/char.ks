@@ -165,6 +165,29 @@ A quieter line, a whisper: [[pip voice=4 vol=35]
 【ai】Oh, and you must be [emb exp="kag.heroName()"]. Nice to meet you!
 【hero】Nice to meet you too.
 
+*faces|Faces
+
+; Faces by the message window (since 0.18.0): the speaker's face, cut from their sprite as it
+; looks now (envinit.tjs's faceCrop), crossfades to the next speaker's and goes for narration and
+; CGs; a speaker who isn't on stage shows a face only ([pip facewin]), [env facewindow=off]
+; turns them off for a scene, and Config turns them off for good
+[ai standard center]
+【ai】The speaker's face shows by the window, just as their sprite looks now.
+[ai angry]
+【ai】Even when I'm cross!
+[pip facewin]
+【pip】And I'm not even on stage. I'm calling from somewhere else!
+Narration has no face.
+[EV file=event1 fade]
+【ai】Over a CG, the face steps aside.
+[EV hide fade]
+[env facewindow=off]
+[ai happy]
+【ai】A scene can do without faces...
+[env facewindow=on]
+[pip hide]
+【ai】...and have them back.
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

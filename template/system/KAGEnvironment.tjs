@@ -48,6 +48,18 @@ class KAGEnvironment extends KAGEnvTrans {
 			return kag.temporaryLayer;
 		}
 	}
+
+	// a sprite drawn whole for its face to be cut from (faceCrop, KAGFaceCropInto)
+	var _faceWorkLayer;
+	property faceWorkLayer {
+		getter() {
+			if (_faceWorkLayer === void) {
+				_faceWorkLayer = new global.Layer(temporaryLayer.window, temporaryLayer);
+				_faceWorkLayer.name = "Face window: the sprite";
+			}
+			return _faceWorkLayer;
+		}
+	}
 	
 	property foreBase {
 		getter() {
@@ -329,6 +341,7 @@ class KAGEnvironment extends KAGEnvTrans {
     var showFaceMode;
     // Fade specification for expressions
     var faceFadeTime;
+	var faceWindowOff = false; //< [env facewindow=off]: no face window in this scene (World state)
 
     // Enable expression display simultaneously with standing sprites
     var bothFace;
@@ -625,6 +638,7 @@ class KAGEnvironment extends KAGEnvTrans {
      */
     function finalize() {
 		invalidate voiceAfterTimer if voiceAfterTimer !== void;
+		invalidate _faceWorkLayer if _faceWorkLayer !== void;
 		initEnv();
 		invalidate characters;
 		invalidate characterList;
@@ -837,6 +851,7 @@ class KAGEnvironment extends KAGEnvTrans {
 		f.cameraoyDefault = cameraoyDefault if cameraoyDefault != 0;
 
 		f.grayscale = _grayscale if _grayscale !== void;
+		f.faceWindowOff = true if faceWindowOff;
         f.rgamma    = _rgamma if _rgamma !== void;
         f.ggamma    = _ggamma if _ggamma !== void;
         f.bgamma    = _bgamma if _bgamma !== void;
@@ -918,6 +933,7 @@ class KAGEnvironment extends KAGEnvTrans {
 		}
         
 		_grayscale  = f.grayscale;
+		faceWindowOff = !!f.faceWindowOff;
 		_rgamma     = f.rgamma;
 		_ggamma     = f.ggamma;
 		_bgamma     = f.bgamma;
@@ -1148,6 +1164,8 @@ class KAGEnvironment extends KAGEnvTrans {
 		over.absolute = (8 + 1) * 100000 - 100;
 @endif
 		
+		faceWindowOff = false;
+
 		// Discard character info
 		var count = characterList.count;
 		for (var i=0;i<count;i++) {
@@ -1812,6 +1830,7 @@ class KAGEnvironment extends KAGEnvTrans {
     stopallvoice : this.stopAllVoice incontextof this,
 	// ---------------------------------------------- Processing commands
 	grayscale : function(param, elm) { grayscale = param; } incontextof this,
+	facewindow : function(param, elm) { faceWindowOff = param == "off" || param == "false" || param == "0"; redrawCurrentFace(faceFadeTime); } incontextof this,
 	rgamma : function(param, elm) { rgamma = param; } incontextof this,
 	ggamma : function(param, elm) { ggamma = param; } incontextof this,
 	bgamma : function(param, elm) { bgamma = param; } incontextof this,
@@ -2498,11 +2517,26 @@ class KAGEnvironment extends KAGEnvTrans {
 	/**
 	 * Character expression redrawing
 	 */
+	/**
+	 * Whether the face window shows now (since 0.18.0): Config's Face Window (the faceWindow
+	 * option), [env facewindow=off] for the scene, and no event CG on the screen (envinfo's
+	 * faceOverEvent: true keeps faces over CGs)
+	 */
+	function faceWindowShows() {
+		var on = typeof global.KAGOptionGet != "undefined" ? KAGOptionGet("faceWindow") : void;
+		if (on !== void && !on) return false;
+		if (faceWindowOff) return false;
+		if (!envinfo.faceOverEvent && event !== void && event.isShowBU()) return false;
+		return true;
+	}
+
 	function redrawFace(ch, checkClearName = true) {
 		var lvn = (ch !== void) ? ch.faceLevelName : faceLevelName;
 		if (lvn !== void) {
 			var img;
-			if (ch !== void && ch.isShowFace()) {
+			if (!faceWindowShows()) {
+				// none: cleared below
+			} else if (ch !== void && ch.isShowFace()) {
 				// If the character has an expression, pass the drawing function
 				img = ch.drawFace;
 			} else {
@@ -3604,6 +3638,51 @@ KAGEnvironment.XPOSITION    = 1;
 KAGEnvironment.LEVEL        = 2;
 KAGEnvironment.DISPPOSITION = 3;
 KAGEnvironment.YPOSITION    = 4;
+
+/**
+ * Draws the part of src that crop names (left, top, width and height in src's picture, ox, oy
+ * where src's pixels start in that space) into dst, filling dst's face size (FaceLayer's
+ * faceWidth and faceHeight, set by [position facewidth= faceheight=]; else its size) and keeping
+ * its shape, centred (since 0.18.0: envinit's faceCrop)
+ */
+function KAGFaceCropInto(dst, src, crop, ox = 0, oy = 0)
+{
+	var dw = typeof dst.faceWidth != "undefined" && dst.faceWidth > 0 ? dst.faceWidth : dst.width;
+	var dh = typeof dst.faceHeight != "undefined" && dst.faceHeight > 0 ? dst.faceHeight : dst.height;
+	dst.setImageSize(dw, dh);
+	dst.setSizeToImageSize();
+	dst.repos() if typeof dst.repos == "Object";
+	dst.fillRect(0, 0, dw, dh, 0);
+	var sx = +crop.left - ox, sy = +crop.top - oy, sw = +crop.width, sh = +crop.height;
+	if (sw <= 0 || sh <= 0) return false;
+	var z = dw / sw;
+	z = dh / sh if dh / sh < z;
+	var tx = (dw - sw * z) / 2, ty = (dh - sh * z) / 2;
+	// only the part of the crop the picture has
+	var x0 = sx < 0 ? 0 : sx, y0 = sy < 0 ? 0 : sy;
+	var x1 = sx + sw, y1 = sy + sh;
+	x1 = src.imageWidth if x1 > src.imageWidth;
+	y1 = src.imageHeight if y1 > src.imageHeight;
+	if (x1 <= x0 || y1 <= y0) return true;
+	var dx = (int)(tx + (x0 - sx) * z + 0.5), dy = (int)(ty + (y0 - sy) * z + 0.5);
+	var w = (int)((x1 - x0) * z + 0.5), h = (int)((y1 - y0) * z + 0.5);
+	if (z < 0.5) KAGShrinkCopy(dst, dx, dy, w, h, src, x0, y0, x1 - x0, y1 - y0);
+	else dst.stretchCopy(dx, dy, w, h, src, x0, y0, x1 - x0, y1 - y0, stCubic);
+	return true;
+}
+
+// Config's Face Window (since 0.18.0): turned off, the faces go at once; turned on, they come
+// with the next speaker
+KAGDefineOption(%[ name:"faceWindow", label:"Faces by the Window", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ] ]) if typeof global.KAGDefineOption != "undefined";
+if (typeof global.KAGOptionHook != "undefined") KAGOptionHook.add(function(name, v) {
+	if (name != "faceWindow" || v === void || v || typeof global.kag != "Object" || kag === void) return;
+	var pages = [ kag.fore, kag.back ];
+	for (var p = 0; p < pages.count; p++) for (var i = 0; i < pages[p].messages.count; i++) {
+		var l = pages[p].messages[i].faceLayer;
+		if (l !== void) { l.stopTransition() if typeof l.stopTransition != "undefined"; l.fillRect(0, 0, l.width, l.height, 0); }
+	}
+} incontextof global);
 
 KAGEnvImage.BOTH      = 1;
 KAGEnvImage.BU        = 2;

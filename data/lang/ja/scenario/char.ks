@@ -165,6 +165,29 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 【ai】あ、あなたが[emb exp="kag.heroName()"]さんね。よろしく！
 【hero】こちらこそ、よろしく。
 
+*faces|顔
+
+; Faces by the message window (since 0.18.0): the speaker's face, cut from their sprite as it
+; looks now (envinit.tjs's faceCrop), crossfades to the next speaker's and goes for narration and
+; CGs; a speaker who isn't on stage shows a face only ([pip facewin]), [env facewindow=off]
+; turns them off for a scene, and Config turns them off for good
+[ai standard center]
+【ai】話している人の顔が、立ち絵の今の姿のままウィンドウの横に出ます。
+[ai angry]
+【ai】怒っているときもね！
+[pip facewin]
+【pip】ぼくは舞台にもいないよ。よそから電話してるんだ！
+地の文には顔が出ません。
+[EV file=event1 fade]
+【ai】CGの上では、顔は引っ込みます。
+[EV hide fade]
+[env facewindow=off]
+[ai happy]
+【ai】顔なしのシーンにもできるし……
+[env facewindow=on]
+[pip hide]
+【ai】……また戻せるよ。
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

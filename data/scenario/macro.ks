@@ -18,7 +18,7 @@
 
 [rclick enabled=true jump=false]
 
-[position layer=message0 frame="messagewindow" opacity=255 left=60 top=714 width=1800 height=330 marginL=48 marginT=76 marginR=60 marginB=36 nameLeft=36 nameTop=-30 nameWidth=300 nameHeight=64 nameframe="namebox" namealign=0 namevalign=0 namefit=squeeze namemargin=14 namefade=150 followopacity=true visible=false]
+[position layer=message0 frame="messagewindow" opacity=255 left=60 top=714 width=1800 height=330 marginL=&faceWindowMargin() faceleft=40 facetop=56 facewidth=250 faceheight=250 marginT=76 marginR=60 marginB=36 nameLeft=36 nameTop=-30 nameWidth=300 nameHeight=64 nameframe="namebox" namealign=0 namevalign=0 namefit=squeeze namemargin=14 namefade=150 followopacity=true visible=false]
 
 [current layer=message0]
 

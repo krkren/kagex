@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0 (in progress)
+
+### Added
+
+- **Faces by the message window that follow the speaker**: each line's speaker shows their face beside the text, cut from their sprite as it looks now (pose, outfit, expression, the time of day's colour), crossfading to the next speaker's; narration and lines over an event CG have none, a character who isn't on stage can speak as a face only (`[pip facewin]`), `[env facewindow=off]` turns them off for a scene, and Config's Face Window for good. A character's `faceCrop` in `envinit.tjs` says which part of its sprite is its face, for characters from pictures and from layers alike; the sample shows Ai's and Pip's, and the Character demo has a Faces scene (`doc/world.txt`, "Face Windows").
+
 ## 0.17.2
 
 ### Changed

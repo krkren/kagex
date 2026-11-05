@@ -214,8 +214,14 @@
 
 
     // Level specification for face window. If not using face window, use void.
+    // (since 0.18.0 the sample's speakers show their faces by the message window: [initscene]'s
+    // face box, each character's faceCrop below, crossfading, lit as their sprites are)
 
-    "faceLevelName" => void,
+    "faceLevelName" => "0",
+
+    "faceFadeTime" => 200,
+
+    "faceApplyColor" => true,
 
 //	"faceArea" => %[ name:"Face area layer", center:true/*Center flag*/, xoffset:0, yoffset:0, width:200, height:160 ],
 
@@ -694,6 +700,9 @@
 
 			"poseCodes" => %[ "1" => "standard" ],
 
+			// the face window (since 0.18.0): this part of her level 0 sprite (540x1620)
+			"faceCrop" => %[ "level" => "0", "left" => 90, "top" => 70, "width" => 360, "height" => 360 ],
+
 			"faceCodes" => %[ "01" => "happy", "02" => "angry", "03" => "sad" ],
 
 			"voiceFile" => "ai%s%06d.ogg",
@@ -724,6 +733,9 @@
 			"nameAlias" => %[ "en" => "Pip", "ja" => "ピップ" ],
 
 			"yoffset" => 0, // the centre of its canvas goes to the centre of the screen
+
+			// the face window: this part of its level 0 canvas (640x1168)
+			"faceCrop" => %[ "level" => "0", "left" => 70, "top" => 140, "width" => 500, "height" => 500 ],
 
 			"voiceFile" => "pip%s%06d",
 

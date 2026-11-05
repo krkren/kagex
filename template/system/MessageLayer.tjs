@@ -1787,6 +1787,31 @@ class FaceLayer extends RelativeLayer
 
 {
 
+	var faceWidth, faceHeight; // the size [position facewidth= faceheight=] gave it (a crop fills that)
+
+	function assignImages(src, copyvisiblestate = false) {
+		super.assignImages(...);
+		if (src instanceof "FaceLayer") faceWidth = src.faceWidth, faceHeight = src.faceHeight;
+	}
+	// the other page's face layer, placed as this one ([position] sets up one page)
+	function copyPlace(src) {
+		noRelative = src.noRelative;
+		originMode = src.originMode;
+		setPos(src.left, src.top, src.width, src.height);
+		absolute = src.absolute;
+		faceWidth = src.faceWidth, faceHeight = src.faceHeight;
+	}
+	function store() {
+		var dic = super.store();
+		dic.faceWidth = faceWidth if faceWidth !== void;
+		dic.faceHeight = faceHeight if faceHeight !== void;
+		return dic;
+	}
+	function restore(dic) {
+		super.restore(dic);
+		faceWidth = dic.faceWidth, faceHeight = dic.faceHeight;
+	}
+
 	function finalize() {
 
 		super.finalize(...);
@@ -3425,6 +3450,19 @@ class MessageLayer extends AnimKAGLayerTransMove
             faceLayer.width    = +elm.facewidth  if elm.facewidth  !== void;
 
             faceLayer.height   = +elm.faceheight if elm.faceheight !== void;
+
+            faceLayer.faceWidth  = +elm.facewidth  if elm.facewidth  !== void;
+
+            faceLayer.faceHeight = +elm.faceheight if elm.faceheight !== void;
+
+            // the other page's face layer in the same place: a face fades from one to the other
+            // (KAGWindow.drawFace), and there was none until a [backlay]
+            if (comp !== void) {
+                var had = comp.faceLayer !== void;
+                comp.initFaceLayer();
+                comp.faceLayer.copyPlace(faceLayer);
+                comp.faceLayer.visible = faceLayer.visible if !had;
+            }
 
             faceLayer.absolute = +elm.faceabsolute if elm.faceabsolute !== void;
 

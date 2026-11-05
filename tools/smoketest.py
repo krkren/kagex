@@ -3137,6 +3137,52 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("face windows: the speaker's face cut from the sprite, a face-only speaker, none for narration, a CG or a scene that turns them off, Config's switch, a load")
+    def _():
+        if eng.tjs('return typeof global.KAGFaceCropInto != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates face windows)", flush=True)
+            return
+        # the face layer's opaque samples and the speaker, from one expression
+        state = ('(function() { var fl = kag.fore.messages[0].faceLayer, a = 0, e = world_object.env;'
+                 ' if (fl !== void && fl.visible) for (var y = 10; y < fl.height; y += 20) for (var x = 10; x < fl.width; x += 20) a++ if fl.getMaskPixel(x, y) > 0;'
+                 ' return [e.currentNameTarget !== void ? e.currentNameTarget.name : "-", a, kag.inStable ? 1 : 0].join(","); })()')
+        def line(what, who, face):
+            want = '(function() { var s = (string)%s; var p = s.split(","); return p[0] == "%s" && (%s) && p[2] == "1"; })()' % (
+                state, who, "+p[1] > 20" if face else "+p[1] == 0")
+            try:
+                eng.wait(what, want, timeout=20)
+            except SmokeError:
+                raise SmokeError("%s: not as expected (speaker, face samples, stable): %s" % (what, eng.tjs("return " + state + ";")))
+            print("     %s: %s" % (what, eng.tjs("return " + state + ";")), flush=True)
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks with its face window", 'kag.conductor.curStorage == "char.ks" && kag.fore.messages[0].faceLayer !== void'
+                 ' && kag.back.messages[0].faceLayer !== void', timeout=30)
+        eng.tjs('kag.process("char.ks", "*faces"); return 1;')
+        line("Ai speaks", "ai", True)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("Ai, cross", "ai", True)
+        eng.tjs("kag.saveBookMark(4); return 1;")
+        eng.wait("data4 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(4))", timeout=10)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("Pip, a face only (not on stage)", "pip", True)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("narration", "-", False)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("Ai over a CG", "ai", False)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env facewindow=off]", "ai", False)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env facewindow=on]", "ai", True)
+        # Config's switch: off takes the face away at once, on brings it with the next speaker
+        eng.tjs('tf.smokeFace = KAGOptionGet("faceWindow"); KAGOptionSet("faceWindow", false); return 1;')
+        line("Config's Face Window off", "ai", False)
+        eng.tjs('KAGOptionSet("faceWindow", tf.smokeFace); return 1;')
+        # a load: the face of the line loaded
+        eng.tjs("kag.loadBookMark(4); return 1;")
+        line("loaded at Ai's cross line", "ai", True)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:
