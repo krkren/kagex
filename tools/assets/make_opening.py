@@ -8,6 +8,10 @@ which logo.ks's [movie song=bgm01] unlocks in the music room. The words are in t
 (data/video/opening.vtt and data/lang/ja/opening.vtt), not in the picture.
 
 usage: python3 tools/assets/make_opening.py [--frames DIR]    (--frames: also keep every 30th frame)
+       python3 tools/assets/make_opening.py eyecatch          (only the eyecatch card)
+
+It also draws the staging kit's eyecatch card, data/image/eyecatch.png ([eyecatch] in macro.ks):
+Pip waving on the lavender screen, with the badge and a few stars.
 
 Needs NumPy, Pillow, ffmpeg (libvpx-vp9, libopus) and what make_ui.py needs (fontTools for its
 fonts). The title pictures it uses are make_ui.py's (title, evening title), so run that first.
@@ -194,6 +198,26 @@ def frame(p, t, stars):
     return out.convert("RGB")
 
 
+def make_eyecatch(p):
+    """the card [eyecatch] shows between scenes, 1920x1080"""
+    out = p["lavender"].copy()
+    figure = pip_waving()
+    figure = figure.resize((int(figure.width * 720 / figure.height), 720), Image.LANCZOS)
+    out.alpha_composite(figure, ((W - figure.width) // 2, (H - figure.height) // 2 + 40))
+    badge = scaled(p["badge"], 0.6)
+    out.alpha_composite(badge, (60, 40))
+    rng = np.random.default_rng(2207)
+    for _ in range(9):
+        size = float(rng.uniform(36, 72))
+        st = scaled(p["star"], size / p["star"].width)
+        x = float(rng.choice([rng.uniform(260, 640), rng.uniform(1280, 1820)]))
+        y = float(rng.uniform(120, 900))
+        out.alpha_composite(st, (int(x - st.width / 2), int(y - st.height / 2)))
+    path = os.path.join(DATA, "image", "eyecatch.png")
+    out.convert("RGB").save(path, optimize=True)
+    print("wrote", os.path.relpath(path, REPO))
+
+
 def encode(path, width, crf, keep=None):
     """the frames through ffmpeg, with the first SECONDS of bgm01 faded in and out"""
     music = os.path.join(DATA, "bgm", "bgm01.ogg")
@@ -218,6 +242,9 @@ def main():
     rng = np.random.default_rng(1707)
     stars = [(float(rng.random()), float(rng.random()), float(rng.uniform(30, 64)), float(rng.random())) for _ in range(16)]
     p = make_pieces()
+    make_eyecatch(p)
+    if "eyecatch" in sys.argv[1:]:
+        return
     video = os.path.join(DATA, "video")
     full = encode(os.path.join(video, "opening.webm"), W, 33)
     sd = encode(os.path.join(video, "opening_sd.webm"), W // 2, 36)

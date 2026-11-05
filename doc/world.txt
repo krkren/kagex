@@ -2249,6 +2249,30 @@ This function is called an "Action".
 
 
 
+◇ The Sample's Staging Kit
+
+
+
+The sample (since 0.18.0) has a word for each of these, written on the actions below:
+
+    gestures, envinit.tjs's actions ([ai nod]): nod, nods, headshake, sigh, laugh, shrug,
+      lookaround, wobble, slump, startle, tremble, bounce, leanin, stepback, sway, stomp, pop,
+      tilt, giggle, faint (besides bow, shock, hop and shiver); each a relative action, so the
+      character ends where it began. [wact] waits for one to end.
+    screen shakes, camera actions run by macro.ks's [quake], [thud] and [rumble]
+      ([env actioncamera=quake])
+    [closeup] and [closeupend]: the camera closes in (zoom=140, x=, y=, time=) while the
+      background blurs (blur=8), and back
+    [dim], [whiten] and [undim]: a translucent black or white veil over the scene for inner
+      thoughts (a World layer named veil at level 5; opacity=)
+    [eyecatch]: a card between scenes (data/image/eyecatch.png, from tools/assets/make_opening.py)
+      for time= ms, which a click skips
+    trans=showslide (envinit.tjs's transitions): a character slides in as it fades in
+
+The Character demo's "Staging Kit" scene plays each with its name.
+
+
+
 ◇ Automatic Action
 
 

@@ -80,4 +80,56 @@
 
 
 
+; The staging kit (since 0.18.0), a word each. The gestures are envinit.tjs's actions ([ai nod],
+
+; [ai headshake] ...); these are the rest:
+
+;   [quake] [thud] [rumble]   the screen shakes (camera actions in envinit.tjs)
+
+;   [closeup] [closeupend]    the camera closes in (zoom=, y=, x=, time=) and the background blurs
+
+;   [dim] [whiten] [undim]    a translucent veil over the scene for inner thoughts (opacity=)
+
+;   [eyecatch]                a card between scenes (time= ms; a click skips it)
+
+[macro name=quake][env actioncamera=quake][endmacro]
+
+[macro name=thud][env actioncamera=thud][endmacro]
+
+[macro name=rumble][env actioncamera=rumble][endmacro]
+
+[macro name=closeup]
+
+[bg blur=%blur|8]
+
+[env camerazoom=%zoom|140 camerax=%x|0 cameray=%y|60 time=%time|500]
+
+[endmacro]
+
+[macro name=closeupend]
+
+[bg resetcolor]
+
+[env resetcamera time=%time|500]
+
+[endmacro]
+
+[macro name=dim][newlay name=veil file=black level=5 opacity=%opacity|110 trans=normal][endmacro]
+
+[macro name=whiten][newlay name=veil file=white level=5 opacity=%opacity|140 trans=normal][endmacro]
+
+[macro name=undim][veil delete trans=normal][endmacro]
+
+[macro name=eyecatch]
+
+[newlay name=eyecatchcard file=eyecatch level=message trans=normal]
+
+[wait time=%time|2000 canskip=true]
+
+[eyecatchcard delete trans=normal]
+
+[endmacro]
+
+
+
 @return

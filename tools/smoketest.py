@@ -3251,6 +3251,46 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the staging kit: twenty gestures ending where they began, the screen shakes, a close-up, a dim and a white veil, an eyecatch card")
+    def _():
+        if eng.tjs('return typeof world_object.env.envinfo.actions.nod != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this sample predates the staging kit)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*staging"); return 1;')
+        ai = 'world_object.env.characters["ai"]'
+        eng.wait("Ai", '%s !== void && %s.targetLayer !== void && kag.inStable' % (ai, ai), timeout=60)
+        home = eng.tjs('var l = %s.targetLayer; return "%%d,%%d".sprintf(l.left, l.top);' % ai)
+        # click on until each part shows, in the scene's order
+        def until(what, expr, clicks=12):
+            for i in range(clicks):
+                eng.wait("the line", "kag.inStable", timeout=60)
+                if eng.tjs("return (%s) ? 1 : 0;" % expr) == 1:
+                    print("     %s" % what, flush=True)
+                    return
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+            raise SmokeError("%s didn't come in the Staging Kit scene" % what)
+        e = "world_object.env"
+        for row in range(4):
+            eng.wait("a row of gestures", "kag.inStable", timeout=60)
+            at = eng.tjs('var l = %s.targetLayer; return "%%d,%%d".sprintf(l.left, l.top);' % ai)
+            if at != home:
+                raise SmokeError("after row %d of gestures Ai stands at %s, not %s" % (row + 1, at, home))
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        until("the screen shakes, the camera back where it was", '+%s.cprops.camerax == 0 && +%s.cprops.cameray == 0' % (e, e))
+        until("[closeup]: the camera at 140% and the background blurred", '+%s.cprops.camerazoom == 140 && +%s.stage.blurx > 0' % (e, e))
+        until("[dim]: a black veil", '%s.layers["veil"] !== void && %s.layers["veil"].isShowBU() && +%s.cprops.camerazoom == 100' % (e, e, e))
+        until("[whiten]: a white veil", '%s.layers["veil"] !== void && %s.layers["veil"].isShowBU() && %s.layers["veil"].imageFile == "white"' % (e, e, e))
+        until("Pip slid in (showslide)", '%s.layers["veil"] === void && %s.characters["pip"] !== void && %s.characters["pip"].isShowBU()' % (e, e, e))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("the eyecatch card", '%s.layers["eyecatchcard"] !== void && %s.layers["eyecatchcard"].isShowBU()' % (e, e), timeout=30)
+        eng.tjs("kag.onPrimaryClick(); return 1;")  # a click skips it
+        eng.wait("the card gone, and the next scene", '%s.layers["eyecatchcard"] === void && kag.inStable' % e, timeout=30)
+        print("     [eyecatch]: the card came and a click took it away", flush=True)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

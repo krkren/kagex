@@ -228,6 +228,32 @@ And back to now, just as it was, with the music still playing.
 [pip hide]
 [ai hide]
 
+*staging|Staging Kit
+
+; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for
+; inner thoughts and an eyecatch card, a word each (envinit.tjs's actions, macro.ks's macros)
+[ai standard happy center]
+Gestures, a word each: [ai nod][wact]nod, [ai nods][wact]nods, [ai headshake][wact]headshake, [ai sigh][wact]sigh, [ai laugh][wact]laugh.
+[ai shrug][wact]shrug, [ai lookaround][wact]lookaround, [ai wobble][wact]wobble, [ai slump][wact]slump, [ai startle][wact]startle.
+[ai tremble][wact]tremble, [ai bounce][wact]bounce, [ai leanin][wact]leanin, [ai stepback][wact]stepback, [ai sway][wact]sway.
+[ai stomp][wact]stomp, [ai pop][wact]pop, [ai tilt][wact]tilt, [ai giggle][wact]giggle, [ai faint][wact]faint.
+The screen: [quake][wact]quake, [thud][wact]thud, [rumble][wact]rumble.
+[closeup]
+[[closeup]: the camera closes in and the background blurs behind her.
+[closeupend]
+[dim]
+【ai】([[dim]: a veil for what she's only thinking...)
+[undim]
+[whiten]
+...or a white one ([[whiten]).
+[undim]
+[pip standard neutral posright trans=showslide]
+Pip slides in as it fades in (trans=showslide).
+[eyecatch]
+[pip hide]
+[ai hide]
+After an [[eyecatch], the next scene begins.
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

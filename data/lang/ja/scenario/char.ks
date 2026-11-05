@@ -228,6 +228,32 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [pip hide]
 [ai hide]
 
+*staging|演出キット
+
+; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for
+; inner thoughts and an eyecatch card, a word each (envinit.tjs's actions, macro.ks's macros)
+[ai standard happy center]
+ひとことで身ぶり： [ai nod][wact]nod、[ai nods][wact]nods, [ai headshake][wact]headshake, [ai sigh][wact]sigh, [ai laugh][wact]laugh.
+[ai shrug][wact]shrug, [ai lookaround][wact]lookaround, [ai wobble][wact]wobble, [ai slump][wact]slump, [ai startle][wact]startle.
+[ai tremble][wact]tremble, [ai bounce][wact]bounce, [ai leanin][wact]leanin, [ai stepback][wact]stepback, [ai sway][wact]sway.
+[ai stomp][wact]stomp, [ai pop][wact]pop, [ai tilt][wact]tilt, [ai giggle][wact]giggle, [ai faint][wact]faint.
+画面：[quake][wact]quake、[thud][wact]thud、[rumble][wact]rumble。
+[closeup]
+[[closeup]：カメラが寄って、背景がぼやけます。
+[closeupend]
+[dim]
+【ai】（[[dim]：心の中で思っていることには、暗いベールを……）
+[undim]
+[whiten]
+……白いベールも（[[whiten]）。
+[undim]
+[pip standard neutral posright trans=showslide]
+ピップがフェードしながらすべり込みます（trans=showslide）。
+[eyecatch]
+[pip hide]
+[ai hide]
+[[eyecatch]のあと、次の場面が始まります。
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

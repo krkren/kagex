@@ -292,6 +292,33 @@
 
 
 
+		// The staging kit's gestures (since 0.18.0): a word each, [ai nod]; relative actions, so a
+		// character ends where it was. The screen shakes go to the camera: [quake], [thud],
+		// [rumble] (macro.ks, [env actioncamera=quake])
+		"nod" => %[ "time" => 420, "top" => %[ handler:"TriangleAction", vibration:28, ontime:160, offtime:260 ] ], // a nod
+		"nods" => %[ "time" => 840, "top" => %[ handler:"TriangleAction", vibration:24, ontime:160, offtime:260 ] ], // two nods
+		"headshake" => %[ "time" => 900, "left" => %[ handler:"SinAction", vibration:20, cycle:300 ] ], // shaking the head
+		"sigh" => %[ "time" => 1400, "top" => %[ handler:"TriangleAction", vibration:22, ontime:500, offtime:900 ], "zoomy" => %[ handler:"TriangleAction", vibration:-2, ontime:500, offtime:900 ] ], // shoulders falling with a sigh
+		"laugh" => %[ "time" => 1000, "top" => %[ handler:"SinAction", vibration:9, cycle:180 ] ], // shaking with laughter
+		"shrug" => %[ "time" => 520, "top" => %[ handler:"TriangleAction", vibration:-18, ontime:200, offtime:320 ], "zoomx" => %[ handler:"TriangleAction", vibration:3, ontime:200, offtime:320 ] ], // a shrug
+		"lookaround" => %[ "time" => 1800, "left" => %[ handler:"SinAction", vibration:36, cycle:1800 ], "rotate" => %[ handler:"SinAction", vibration:2, cycle:1800 ] ], // looking around
+		"wobble" => %[ "time" => 1500, "rotate" => %[ handler:"SinAction", vibration:4, cycle:500 ] ], // wobbling
+		"slump" => %[ "time" => 1600, "top" => %[ handler:"TriangleAction", vibration:60, ontime:600, offtime:1000 ], "zoomy" => %[ handler:"TriangleAction", vibration:-3, ontime:600, offtime:1000 ] ], // slumping
+		"startle" => %[ "time" => 320, "top" => %[ handler:"TriangleAction", vibration:-70, ontime:110, offtime:210 ] ], // a start
+		"tremble" => %[ "time" => 1500, "left" => %[ handler:"RandomAction", vibration:5, waittime:30 ] ], // trembling
+		"bounce" => %[ "time" => 1200, "top" => %[ handler:"TriangleAction", vibration:-26, ontime:150, offtime:150 ] ], // bouncing
+		"leanin" => %[ "time" => 900, "zoom" => %[ handler:"TriangleAction", vibration:7, ontime:300, offtime:600 ] ], // leaning in
+		"stepback" => %[ "time" => 900, "zoom" => %[ handler:"TriangleAction", vibration:-7, ontime:300, offtime:600 ] ], // stepping back
+		"sway" => %[ "time" => 3000, "rotate" => %[ handler:"SinAction", vibration:3, cycle:1500 ] ], // swaying
+		"stomp" => %[ "time" => 520, "top" => %[ handler:"TriangleAction", vibration:16, ontime:60, offtime:200 ] ], // a stomp
+		"pop" => %[ "time" => 300, "zoom" => %[ handler:"TriangleAction", vibration:12, ontime:100, offtime:200 ] ], // popping up
+		"tilt" => %[ "time" => 1200, "rotate" => %[ handler:"TriangleAction", vibration:8, ontime:300, offtime:900 ] ], // tilting the head
+		"giggle" => %[ "time" => 800, "rotate" => %[ handler:"SinAction", vibration:2, cycle:200 ], "top" => %[ handler:"SinAction", vibration:4, cycle:200 ] ], // a giggle
+		"faint" => %[ "time" => 1200, "top" => %[ handler:"TriangleAction", vibration:90, ontime:400, offtime:800 ], "opacity" => %[ handler:"TriangleAction", vibration:-120, ontime:400, offtime:800 ] ], // nearly fainting
+		"quake" => %[ "time" => 700, "camerax" => %[ handler:"RandomAction", vibration:24, waittime:30 ], "cameray" => %[ handler:"RandomAction", vibration:18, waittime:30 ] ], // the screen shakes hard
+		"thud" => %[ "time" => 360, "cameray" => %[ handler:"TriangleAction", vibration:30, ontime:60, offtime:300 ] ], // the screen drops once
+		"rumble" => %[ "time" => 2000, "camerax" => %[ handler:"RandomAction", vibration:6, waittime:40 ], "cameray" => %[ handler:"RandomAction", vibration:4, waittime:40 ] ], // the screen rumbles
+
 		// New style action definition example
 
 
