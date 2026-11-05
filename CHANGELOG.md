@@ -20,6 +20,7 @@
 
 ### Fixed
 
+- **Saving no longer crashes the game now and then on Android**: the shrinkCopy plugin, which shrinks the screen to a save's thumbnail (and the sample's CG and Replay pictures to their tiles), read a row past the bottom of the picture for its last pixel, and where the picture's memory ended at a page the game crashed (seen in 0.17.0's release run, as the Android emulator's game saved; `UPSTREAM.md` 39). The framework shrinks from a copy with one more row now (`KAGShrinkCopy`).
 - **The music room lights the first track while it plays**: the track that had played before was compared with the one playing, and before any had played that was void, which TJS takes as track 1, so track 1 was never lit.
 
 ## 0.16.0

@@ -8044,9 +8044,11 @@ class KAGWindow extends Window
 
 					} else {
 
-						var cp = (typeof tmp.shrinkCopy == "Object" && isShrink) ? tmp.shrinkCopy : tmp.stretchCopy;
+						// with a margin round the snapshot (Utils.tjs: the plugin read past its bottom)
 
-						cp(0, 0, dw, dh, snapshotLayer, 0, 0, sw, sh, stLinear);
+						if (isShrink) KAGShrinkCopy(tmp, 0, 0, dw, dh, snapshotLayer, 0, 0, sw, sh, stLinear);
+
+						else tmp.stretchCopy(0, 0, dw, dh, snapshotLayer, 0, 0, sw, sh, stLinear);
 
 					}
 

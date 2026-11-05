@@ -882,7 +882,7 @@ function setCGImage(target, filename)
     if (typeof layer2.shrinkCopy == "Object" && pw <= sw\2 && ph <= sh\2) {
         // Averages the pixels it shrinks (a 1920x1080 CG is about 9x the picture area);
         // a nearest-neighbour stretch made jagged thumbnails
-        layer2.shrinkCopy(0,0,pw,ph,layer,0,0,sw,sh,stLinear);
+        KAGShrinkCopy(layer2,0,0,pw,ph,layer,0,0,sw,sh,stLinear); // with a margin (Utils.tjs)
     } else {
         layer2.operateStretch(0,0,pw,ph,layer,0,0,sw,sh,omAuto,255,stLinear);
     }
@@ -1206,7 +1206,7 @@ function replaySnapshot(info, w, h)
                 thumb = new global.Layer(kag, kag.fore.base);
                 thumb.setImageSize(w, h);
                 thumb.fillRect(0, 0, w, h, 0xff000000);
-                if (typeof thumb.shrinkCopy == "Object") thumb.shrinkCopy(0, 0, w, h, shot, 0, 0, shot.imageWidth, shot.imageHeight, stLinear);
+                if (typeof thumb.shrinkCopy == "Object") KAGShrinkCopy(thumb, 0, 0, w, h, shot, 0, 0, shot.imageWidth, shot.imageHeight, stLinear);
                 else thumb.operateStretch(0, 0, w, h, shot, 0, 0, shot.imageWidth, shot.imageHeight, omAuto, 255, stLinear);
             }
             invalidate shot;
