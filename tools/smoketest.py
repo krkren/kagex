@@ -3094,17 +3094,23 @@ def sample_steps(eng):
         # zoomed to fill the screen, with the full movie's subtitles
         eng.tjs('tf.smokeMovieQuality = KAGOptionGet("movieQuality"); KAGOptionSet("movieQuality", "small"); replayTile(0); return 1;')
         try:
-            eng.wait("the smaller movie's first frames", 'KAGMoviePlaying !== void && kag.fore.layers[+KAGMoviePlaying.layer].flip !== void'
-                     ' && kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
-            small = str(eng.tjs('var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
-                                ' return [f.file, f.subtitles !== void ? f.subtitles.cues.count : 0,'
-                                ' (int)(l.zoom * f.targetLayer.width / 100 + 0.5), (int)(l.zoom * f.targetLayer.height / 100 + 0.5)].join(",");'))
-            print("     the smaller movie (file, cues, width and height shown): %s" % small, flush=True)
-            want = "opening_sd,4,%s" % eng.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')
-            if small != want:
-                raise SmokeError("the smaller movie didn't play filling the screen with opening.vtt's cues: %s, not %s" % (small, want))
-            time.sleep(0.4)
-            eng.tjs("kag.onPrimaryClick(); return 1;")
+            eng.wait("the smaller movie", 'KAGMoviePlaying !== void && kag.fore.layers[+KAGMoviePlaying.layer].flip !== void', timeout=20)
+            picked = str(eng.tjs('var f = kag.fore.layers[+KAGMoviePlaying.layer].flip;'
+                                 ' return [f.file, f.subtitles !== void ? f.subtitles.cues.count : 0].join(",");'))
+            if picked != "opening_sd,4":
+                raise SmokeError("Smaller didn't play opening_sd with opening.vtt's cues: %s" % picked)
+            # where it shows (the web's player can't open a movie inside data.xp3: it ends, no picture)
+            eng.wait("the smaller movie's first frames, or its end", 'KAGMoviePlaying === void'
+                     ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
+            small = str(eng.tjs('if (KAGMoviePlaying === void) return "none"; var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
+                                ' return [(int)(l.zoom * f.targetLayer.width / 100 + 0.5), (int)(l.zoom * f.targetLayer.height / 100 + 0.5)].join(",");'))
+            print("     the smaller movie: %s, shown at %s" % (picked, small), flush=True)
+            want = eng.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')
+            if small != "none" and small != want:
+                raise SmokeError("the smaller movie didn't fill the screen: shown at %s, not %s" % (small, want))
+            if small != "none":
+                time.sleep(0.4)
+                eng.tjs("kag.onPrimaryClick(); return 1;")
             eng.wait("Replay again", 'kag.conductor.curStorage == "replay.ks" && KAGMoviePlaying === void && kag.inStable', timeout=20)
             zoom = eng.tjs('return (int)kag.fore.layers[kag.fore.layers.count - 1].zoom;')
             if zoom != 100:
