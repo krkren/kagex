@@ -176,7 +176,7 @@ function KAGMovieTag(elm)
 	var prim = kag.primaryLayer;
 	kag.tagHandlers.image(%[ layer:n, page:"fore", movie:KAGMovieFile(name), alpha:elm.alpha !== void ? elm.alpha : "0",
 		visible:"true", index:"1500000", dafx:"center", dafy:"center", left:"" + (prim.width >> 1), top:"" + (prim.height >> 1),
-		subtitle:elm.subtitle !== void ? elm.subtitle : "true" ]);
+		subtitle:elm.subtitle !== void ? elm.subtitle : "true", once:"true" ]);
 	var canskip = seen || elm.skip == "always";
 	KAGMoviePlaying = %[ key:key, layer:n, seen:canskip, back:back, started:System.getTickCount() ];
 	// a movie that never shows a frame (no decoder for it here) ends after 3 s

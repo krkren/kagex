@@ -60,6 +60,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	function finalize() {
 
+		if (onceTrigger !== void) { invalidate onceTrigger; onceTrigger = void; }
+
 		stop();
 
 		layer1 = null;
@@ -94,13 +96,21 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	 */
 
-	function start(filename, loop=false, alpha=0, subtitle=void) {
+	function start(filename, loop=false, alpha=0, subtitle=void, once=false) {
 
 		this.alpha = alpha;
 
 		this.subtitle = subtitle;
 
+		this.once = once;
+
 		frames = 0;
+
+		ended = false;
+
+		stopped = false;
+
+		playedOut = false;
 
 		// The [image] tag shows the layer before the first frame arrives; left at ltOpaque its empty
 
@@ -110,7 +120,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		targetLayer.name = "Movie:" + filename;
 
-		this.loop=loop;
+		// once: played to its end once, by looping it and stopping it as it starts again
+
+		// (onPeriod): on Android a player that ran to its end and was then stopped and freed could
+
+		// hang the game, while one stopped as it plays is freed as a looping movie always was
+
+		this.loop = loop || once;
 
 		file = filename;
 
@@ -152,9 +168,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	// Stop from external
 
+	// (a player is stopped once: stopping one that stopped already is left out)
+
 	function stop() {
 
-		SUPER.stop();
+		if (!stopped && !playedOut) SUPER.stop();
+
+		stopped = true;
 
 		if (subtitles !== void) { invalidate subtitles; subtitles = void; }
 
@@ -168,7 +188,7 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	function onFrameUpdate() {
 
-		if (!isvalid this) return;
+		if (!isvalid this || ended) return; // once it has ended, not its first frame again
 
 		frames++;
 
@@ -212,11 +232,39 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 
 
+	// once: the movie came round to its start again, so it has played once; stopped after the
+
+	// event, which the engine posts from its update of the player
+
+	var once = false, ended = false, stopped = false, playedOut = false, onceTrigger;
+
+	function onPeriod(reason) {
+
+		if (!once || ended || reason != perLoop) return;
+
+		ended = true;
+
+		if (onceTrigger === void) onceTrigger = new AsyncTrigger(onOnceEnded, "");
+
+		onceTrigger.trigger();
+
+	}
+
+	function onOnceEnded() {
+
+		if (isvalid this) stop();
+
+	}
+
+
+
 	// Status change
 
 	function onStatusChanged(newstat) {
 
 		//dm("State:" + targetLayer.name + ":" + status + "->" + newstat);
+
+		playedOut = true if (status == "play" && newstat == "stop" && !stopped); // it ran to its end
 
 		flipStop() if (status == "play" && newstat == "stop");
 
@@ -238,6 +286,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 			;.alpha = alpha;
 
+			;.once  = once;
+
 			;.subtitle = subtitle;
 
 		}
@@ -246,13 +296,13 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	function flipRestore(dic) {
 
-		start(dic.file, dic.loop, dic.alpha, dic.subtitle);
+		start(dic.file, dic.loop, dic.alpha, dic.subtitle, dic.once);
 
 	}
 
 	function flipStart(storage, elm) {
 
-		start(storage, elm.loop, elm.alpha, elm.subtitle);
+		start(storage, elm.loop, elm.alpha, elm.subtitle, elm.once !== void && elm.once != "false" && +elm.once != 0);
 
 	}
 
@@ -276,7 +326,7 @@ GenericFlip.Entry(
 
 //		"checker"  => void,                // Determination process (function)
 
-		"options"  => [ "loop", "alpha", "subtitle" ], // Option values to use (for KAGEnvLayer)
+		"options"  => [ "loop", "alpha", "subtitle", "once" ], // Option values to use (for KAGEnvLayer)
 
 		"autoflag" => "movie",             // Auto flag tag name (for KAGEnvLayer)
 
