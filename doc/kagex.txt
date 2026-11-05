@@ -506,9 +506,11 @@ Attributes
 
 	              one's (since 0.17.0; "Movies" below)
 
-	    once      true: plays to its end once and stops there, without running out: it loops,
+	    once      true: plays once and stops without running out: on Android KAGMovieStopEarly
 
-	              and stops as it comes round (since 0.17.0; [movie] plays this way, UPSTREAM.md 38)
+	              (300) ms before its end, elsewhere as it loops round (since 0.17.0; [movie]
+
+	              plays this way, UPSTREAM.md 38)
 
 
 
