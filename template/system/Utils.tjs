@@ -523,6 +523,46 @@ function getExistImageName(storage)
 
 
 /**
+ * dst.shrinkCopy (the shrinkCopy plugin's area average) from a copy of the source rectangle with
+ * one more row under it, a copy of its last: the plugin weighs in the row below each output
+ * pixel's block, and for the last one rounding can leave that weight above 0, so it read a row
+ * past the source picture, which crashed the game where the picture's memory ended at a page
+ * (Android's 0.17.0 release run, saving a bookmark's thumbnail; UPSTREAM.md 39). The copy starts
+ * at 0, 0 as the source did (the plugin's edges come out otherwise for a rectangle that doesn't).
+ * Falls back to stretchCopy without the plugin
+ */
+
+function KAGShrinkCopy(dst, dx, dy, dw, dh, src, sx, sy, sw, sh, type = stLinear)
+
+{
+
+	if (typeof dst.shrinkCopy != "Object") return dst.stretchCopy(dx, dy, dw, dh, src, sx, sy, sw, sh, type);
+
+	var pad = new global.Layer(dst.window, dst.window.primaryLayer);
+
+	try {
+
+		pad.setImageSize(sw, sh + 1);
+		pad.face = dfAlpha;
+		pad.copyRect(0, 0, src, sx, sy, sw, sh);
+		pad.copyRect(0, sh, pad, 0, sh - 1, sw, 1); // the extra row repeats the last
+		dst.shrinkCopy(dx, dy, dw, dh, pad, 0, 0, sw, sh, type);
+
+	} catch (e) {
+
+		invalidate pad;
+
+		throw e;
+
+	}
+
+	invalidate pad;
+
+}
+
+
+
+/**
 
  * Rectangular range character drawing with line-breaking rules (Kinsoku)
 
