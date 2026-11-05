@@ -208,6 +208,26 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [pip leave]
 ……そして、みんな退場。
 
+*flashback|回想
+
+; Keeping a scene (since 0.18.0): [env keep] puts the whole World away (stage, characters, layers,
+; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
+; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies)
+[bgm01]
+[ai standard happy center]
+[pip standard neutral posright]
+いつもの通りにいる、あいとピップ。
+[env keep]
+[pip hide]
+[ai posleft sad]
+[env grayscale=true trans=normal]
+灰色の思い出：ずっと前の、ひとりきりのあい。
+[env restore trans=normal]
+そして今へ。音楽は流れたまま、何もかも元どおり。
+[bgm stop=1500]
+[pip hide]
+[ai hide]
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

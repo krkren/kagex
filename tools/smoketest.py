@@ -3216,6 +3216,41 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("keeping a scene: [env keep], a grey flashback, a save and a load in it, [env restore] back to the scene as it was with the music playing on")
+    def _():
+        if eng.tjs('return typeof world_object.env.keepScene != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates [env keep])", flush=True)
+            return
+        state = ('(function() { var e = world_object.env, r = [];'
+                 ' for (var i = 0; i < e.characterList.count; i++) { var c = e.characterList[i]; if (c.isShowBU()) r.add(c.name + "@" + c.xpos + ":" + c.face); }'
+                 ' r.sort(function(a, b) { return a < b; }, true);'
+                 ' return r.join(" ") + " grey=" + (e.grayscale !== void ? e.grayscale : "-") + " kept=" + e.keptScenes.count'
+                 ' + " bgm=" + e.bgm.filename + (kag.inStable ? "" : " (busy)"); })()')
+        def line(what, want):
+            try:
+                eng.wait(what, '(string)%s == "%s"' % (state, want), timeout=20)
+            except SmokeError:
+                raise SmokeError("%s: the World is %s, not %s" % (what, eng.tjs("return " + state + ";"), want))
+            print("     %s: %s" % (what, want), flush=True)
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*flashback"); return 1;')
+        now = "ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01"
+        memory = "ai@-480:sad grey=true kept=1 bgm=bgm01"
+        line("the scene", now)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env keep], a grey flashback", memory)
+        eng.tjs("kag.saveBookMark(5); return 1;")
+        eng.wait("data5 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(5))", timeout=10)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env restore]", now)
+        eng.tjs("kag.loadBookMark(5); return 1;")
+        line("loaded in the flashback, the kept scene with it", memory)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        line("[env restore] after the load", now)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
         if eng.tjs('return typeof global.roomMusicPlaying != "undefined" ? 1 : 0;') != 1:

@@ -208,6 +208,26 @@ They step apart for something in the middle...
 [pip leave]
 ...and everyone goes.
 
+*flashback|A Flashback
+
+; Keeping a scene (since 0.18.0): [env keep] puts the whole World away (stage, characters, layers,
+; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
+; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies)
+[bgm01]
+[ai standard happy center]
+[pip standard neutral posright]
+Ai and Pip on the street, as they are now.
+[env keep]
+[pip hide]
+[ai posleft sad]
+[env grayscale=true trans=normal]
+A memory, in grey: Ai, long ago, on her own.
+[env restore trans=normal]
+And back to now, just as it was, with the music still playing.
+[bgm stop=1500]
+[pip hide]
+[ai hide]
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

@@ -533,6 +533,11 @@ Compiled scenes do the same, and the scene compiler warns about a file no patter
                 and the stage and events are set to a non-displayed state.
     nostopbgm   Continues BGM during init.
     facewindow  off: no face window in this scene; on: back (since 0.18.0, ◇ Face Windows).
+    keep        Puts the whole scene away (since 0.18.0): =<name> keeps a named copy;
+                sound=true keeps the music and sounds too.
+    restore     Brings the last scene kept back as it was (=<name>: that copy), with the
+                music playing on unless it was kept with sound=true; trans= as for any env tag.
+    drop        =<name>: forgets that copy; alone: every one.
     layout      Places the characters on the stage evenly, by the layout for their count
                 (since 0.18.0, ◇ Layouts).
     makeroom    =<xpos>: pushes the characters apart there, room=<width> (◇ Layouts).
@@ -1176,6 +1181,26 @@ Config's Face Window (the faceWindow option, Options.tjs) turns them off for goo
 goes at once; on, it comes with the next speaker. The sample keeps room for the face by giving the
 message window a wider left margin (faceWindowMargin() in Override.tjs), and the Character demo's
 "Faces" scene shows each case.
+
+
+
+◇ Keeping a Scene
+
+
+
+A scene can be put away and brought back exactly as it was (since 0.18.0), for a flashback, a
+phone screen or a dream:
+
+    [env keep]                    the stage and time, the characters (pose, outfit, face, place,
+                                  level), the layers, the camera and the colour corrections
+    ... the flashback ...
+    [env restore trans=normal]    all of it back, while the music and looping sounds play on
+
+[env keep=<name>] keeps a named copy, which [env restore=<name>] brings back as often as wanted
+until [env drop=<name>]; plain keep and restore are a stack (the last kept comes back first).
+With sound=true the copy has the music and sounds too, and restoring it plays them as they were.
+The copies are part of the World's state: saves, Back and compiled scenes keep them. The Character
+demo's "A Flashback" scene keeps the street, plays a memory in grey and comes back.
 
 
 

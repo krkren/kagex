@@ -342,6 +342,8 @@ class KAGEnvironment extends KAGEnvTrans {
     // Fade specification for expressions
     var faceFadeTime;
 	var faceWindowOff = false; //< [env facewindow=off]: no face window in this scene (World state)
+	var keptScenes = [];       //< [env keep]: the World as it was, last kept last (World state)
+	var keptNamed = %[];       //< [env keep=<name>]
 
     // Enable expression display simultaneously with standing sprites
     var bothFace;
@@ -852,6 +854,8 @@ class KAGEnvironment extends KAGEnvTrans {
 
 		f.grayscale = _grayscale if _grayscale !== void;
 		f.faceWindowOff = true if faceWindowOff;
+		if (keptScenes.count > 0) { f.keptScenes = []; f.keptScenes.assign(keptScenes); }
+		if (Scripts.getObjectCount(keptNamed) > 0) { f.keptNamed = %[]; (Dictionary.assign incontextof f.keptNamed)(keptNamed); }
         f.rgamma    = _rgamma if _rgamma !== void;
         f.ggamma    = _ggamma if _ggamma !== void;
         f.bgamma    = _bgamma if _bgamma !== void;
@@ -880,7 +884,8 @@ class KAGEnvironment extends KAGEnvTrans {
      * Load process
      */
 	function onRestore(f, clear, elm, callPlugin=true) { // [XXX] callPlugin part is provisional. Consider later.
-		initEnv(,,callPlugin);
+		// [env restore] of a scene kept without its sounds: the music and looping sounds play on
+		initEnv(, elm !== void && elm.keepsound ? %[ nostopbgm:true ] : void, callPlugin);
 		if (f.characters) {
 			var count = f.characters.count;
 			for (var i=0;i<count;i++) {
@@ -934,6 +939,10 @@ class KAGEnvironment extends KAGEnvTrans {
         
 		_grayscale  = f.grayscale;
 		faceWindowOff = !!f.faceWindowOff;
+		keptScenes.clear();
+		keptScenes.assign(f.keptScenes) if f.keptScenes !== void;
+		(Dictionary.clear incontextof keptNamed)();
+		(Dictionary.assign incontextof keptNamed)(f.keptNamed) if f.keptNamed !== void;
 		_rgamma     = f.rgamma;
 		_ggamma     = f.ggamma;
 		_bgamma     = f.bgamma;
@@ -1830,6 +1839,10 @@ class KAGEnvironment extends KAGEnvTrans {
     stopallvoice : this.stopAllVoice incontextof this,
 	// ---------------------------------------------- Processing commands
 	grayscale : function(param, elm) { grayscale = param; } incontextof this,
+	keep : function(param, elm) { keepScene(param, elm); } incontextof this,
+	restore : function(param, elm) { restoreScene(param, elm); } incontextof this,
+	drop : function(param, elm) { dropScene(param); } incontextof this,
+	sound : null,
 	layout : function(param, elm) { layoutPlace(elm); } incontextof this,
 	makeroom : function(param, elm) { layoutMakeRoom(+param, elm); } incontextof this,
 	facewindow : function(param, elm) { faceWindowOff = param == "off" || param == "false" || param == "0"; redrawCurrentFace(faceFadeTime); } incontextof this,
@@ -2519,6 +2532,62 @@ class KAGEnvironment extends KAGEnvTrans {
 	/**
 	 * Character expression redrawing
 	 */
+	// ---- keeping a scene (since 0.18.0) -------------------------------------------------
+	// [env keep] puts the whole World away (stage, time, characters, layers, camera, colour, and
+	// with sound=true the music and sounds), [env restore] brings the last one back as it was,
+	// [env keep=<name>] and [env restore=<name>] a named copy, which stays until [env drop=<name>]
+	// ([env drop]: every copy). The copies are kept in the World's own state: saves, Back and the
+	// compiled scenes carry them
+
+	function keptName(param) {
+		return param === void || param == "" || param == "true" || param == "1" ? void : (string)param;
+	}
+
+	function keepScene(param, elm) {
+		var f = %[];
+		onStore(f);
+		delete f.keptScenes;
+		delete f.keptNamed;
+		var sound = elm.sound !== void && elm.sound != "false" && elm.sound != "0";
+		if (!sound) {
+			delete f.bgm;
+			delete f.ses;
+			f.keptSilent = true;
+		}
+		var name = keptName(param);
+		if (name === void) keptScenes.add(f);
+		else keptNamed[name] = f;
+	}
+
+	function restoreScene(param, elm) {
+		var name = keptName(param), f;
+		if (name === void) {
+			if (keptScenes.count == 0) { error("[env restore]: no scene was kept"); return; }
+			f = keptScenes[keptScenes.count - 1];
+			keptScenes.erase(keptScenes.count - 1);
+		} else {
+			f = keptNamed[name];
+			if (f === void) { error("[env restore=" + name + "]: no scene kept by that name"); return; }
+		}
+		// the copies outlive the restore, which takes the World back to what f had
+		var stack = [], named = %[];
+		stack.assign(keptScenes);
+		(Dictionary.assign incontextof named)(keptNamed);
+		onRestore(f, true, %[ keepsound:f.keptSilent ]);
+		keptScenes.assign(stack);
+		(Dictionary.assign incontextof keptNamed)(named);
+	}
+
+	function dropScene(param) {
+		var name = keptName(param);
+		if (name === void) {
+			keptScenes.clear();
+			(Dictionary.clear incontextof keptNamed)();
+		} else {
+			delete keptNamed[name];
+		}
+	}
+
 	// ---- layouts (since 0.18.0) ---------------------------------------------------------
 	// envinit's "layouts" => %[ "places" => [ [x], [x, x], [x, x, x], [x, x, x, x] ] (the xpos
 	// of one to four characters, left to right), "levels" => [ ... ] (a level for each count, or
