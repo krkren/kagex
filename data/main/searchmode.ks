@@ -32,27 +32,9 @@
 [locate x=1210 y=206]
 [button name="search_go" normal="search_go_normal" over="search_go_over" exp="searchFromField()"]
 
-; The lines found: 7 a page
-[locate x=316 y=322]
-[button name="row0" normal="search_row_normal" over="search_row_over" exp="searchPlay(0)"]
-[locate x=316 y=408]
-[button name="row1" normal="search_row_normal" over="search_row_over" exp="searchPlay(1)"]
-[locate x=316 y=494]
-[button name="row2" normal="search_row_normal" over="search_row_over" exp="searchPlay(2)"]
-[locate x=316 y=580]
-[button name="row3" normal="search_row_normal" over="search_row_over" exp="searchPlay(3)"]
-[locate x=316 y=666]
-[button name="row4" normal="search_row_normal" over="search_row_over" exp="searchPlay(4)"]
-[locate x=316 y=752]
-[button name="row5" normal="search_row_normal" over="search_row_over" exp="searchPlay(5)"]
-[locate x=316 y=838]
-[button name="row6" normal="search_row_normal" over="search_row_over" exp="searchPlay(6)"]
-[locate x=1676 y=322]
-[button name="search_prev" normal="replay_prev_normal" over="replay_prev_over" exp="tf.searchPage--" target="*loop"]
-[locate x=1676 y=850]
-[button name="search_next" normal="replay_next_normal" over="replay_next_over" exp="tf.searchPage++" target="*loop"]
-
-[eval exp='setSearchPage()']
+; The lines found: a list that scrolls with the wheel, by dragging (a flick coasts on), with its
+; bar and with the keys or a controller's D-pad (searchList in Override.tjs, ScrollList.tjs)
+[eval exp='searchList()']
 
 ; What was found
 [locate x=290 y=956]

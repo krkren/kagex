@@ -109,7 +109,7 @@
 [locate x=860 y=78]
 [button name="page5" exp="setConfigPage(5)" hint="Each Character's Voice"]
 [locate x=922 y=78]
-[button name="page6" exp="setConfigPage(6)" hint="Quick Menu and Tips"]
+[button name="page6" exp="setConfigPage(6)" hint="Screen and Controls"]
 
 ; Under the panels: Controls, the list of what each key and button does (Controls.tjs), where
 ; the engine can show it; Undo (the last change) and Revert (every change since the screen

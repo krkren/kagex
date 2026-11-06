@@ -200,15 +200,21 @@ class KAGGestures
 	function KAGGestures(win) { window = win; }
 	function finalize() {}
 
-	// whether a gesture may run now: in the story, nothing over it
+	// whether a gesture may run now: in the story, nothing over it (when: the game's own idea of
+	// the story, a function, or void)
+	var when;
 	function canRun()
 	{
 		with (window) {
 			if (.usingExtraConductor || .currentDialog !== void || .historyShowing || .selectShowing) return false;
 			if (.conductor !== .mainConductor || .messageLayerHiding) return false;
 		}
+		if (when !== void && !KAGBindToGlobal(when)()) return false;
 		return true;
 	}
+
+	// the touch or drag going on isn't a gesture (a scrolling list took it, ScrollList.tjs)
+	function cancel() { kind = ""; }
 
 	function begin(x, y, how)
 	{

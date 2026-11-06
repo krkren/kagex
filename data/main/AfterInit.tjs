@@ -82,6 +82,8 @@ with (KAGQuickMenuOf(kag)) {
 // (compiled scenes), right skips, up shows the message history and down hides the window
 kag.gestureActions.left  = "rewind";
 kag.gestureActions.right = "skip";
+// the story only, as the quick menu (Search's list is dragged on the title's conductor)
+kag.gestures.when = function { return !!f.quickMenu && !inSystemMenu(kag); };
 
 // Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
 // screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1, R2, L2

@@ -949,6 +949,57 @@ def interface_steps(eng, step):
         if eng.tjs("return __smokeShotNotice;") != 1:
             raise SmokeError("no notice said the screenshot was saved")
 
+    @step("screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings")
+    def _():
+        if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof global.KAGScreenshotTag != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: checked on the desktop engines, with a framework that has it)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        # JPEG is written at once; without the window and with the star at the top right, then
+        # with the window and no star: the window's middle and the star's corner differ
+        got = str(eng.tjs('var f0 = KAGOptionGet("screenshotFormat"), w0 = KAGOptionGet("screenshotWindow");'
+                          ' KAGOptionSet("screenshotFormat", "jpg"); KAGOptionSet("screenshotWindow", false);'
+                          ' kag.screenshotWatermark = "star"; kag.screenshotWatermarkPlace = "topright";'
+                          ' var a = kag.saveScreenshot(); KAGOptionSet("screenshotWindow", true); kag.screenshotWatermark = void;'
+                          ' var b = kag.saveScreenshot(); KAGOptionSet("screenshotFormat", f0); KAGOptionSet("screenshotWindow", w0);'
+                          ' var la = new Layer(kag, kag.primaryLayer), lb = new Layer(kag, kag.primaryLayer); la.loadImages(a); lb.loadImages(b);'
+                          ' var m = kag.fore.messages[0], cx = m.left + m.width \\ 2, cy = m.top + m.height \\ 2, dw = 0, ds = 0;'
+                          ' for (var y = -20; y <= 20; y += 10) for (var x = -200; x <= 200; x += 50) {'
+                          ' var p = la.getMainPixel(cx + x, cy + y), q = lb.getMainPixel(cx + x, cy + y);'
+                          ' dw += Math.abs((p & 0xff) - (q & 0xff)) + Math.abs(((p >> 8) & 0xff) - ((q >> 8) & 0xff)); }'
+                          ' var st = new Layer(kag, kag.primaryLayer); st.loadImages("star"); var sx = la.imageWidth - 24 - st.imageWidth \\ 2, sy = 24 + st.imageHeight \\ 2; invalidate st;'
+                          ' for (var y = -30; y <= 30; y += 10) for (var x = -30; x <= 30; x += 10) {'
+                          ' var p = la.getMainPixel(sx + x, sy + y), q = lb.getMainPixel(sx + x, sy + y);'
+                          ' ds += Math.abs((p & 0xff) - (q & 0xff)) + Math.abs(((p >> 16) & 0xff) - ((q >> 16) & 0xff)); }'
+                          ' var r = [Storages.extractStorageExt(a), Storages.extractStorageExt(b), dw, ds]; invalidate la; invalidate lb; return r.join(",");'))
+        print("     without the window, the star; then with the window (ext, ext, window difference, star difference): %s" % got, flush=True)
+        v = got.split(",")
+        if v[0].lower() != ".jpg" or v[1].lower() != ".jpg" or int(v[2]) < 500 or int(v[3]) < 500:
+            raise SmokeError("a screenshot without the window, or with the watermark, came out wrong: %s" % got)
+        # a scene turns them off: F12 says so and saves nothing; saves keep it
+        got = str(eng.tjs('KAGScreenshotTag(%[ enabled:"false" ]); var r = [kag.saveScreenshot() === void ? 1 : 0];'
+                          ' var f = %[]; kag.internalStoreFlags(f); r.add(f.screenshotsOff ? 1 : 0);'
+                          ' KAGScreenshotTag(%[ on:"true" ]); r.add(kag.screenshotsOff ? 1 : 0);'
+                          ' kag.screenshotsOff = !!f.screenshotsOff; r.add(kag.canScreenshot() ? 1 : 0); kag.screenshotsOff = false;'
+                          ' return r.join(",");'))
+        print("     [screenshot enabled=false]: nothing saved, kept in saves, [screenshot on], restored off: %s" % got, flush=True)
+        if got != "1,1,0,0":
+            raise SmokeError("[screenshot] didn't turn screenshots off and on, or saves didn't keep it: %s" % got)
+        # the screen's settings take (the window's sizes those that fit)
+        got = str(eng.tjs('var r = [], v = KAGOptions.windowSize.values, has = 0; for (var i = 0; i < v.count; i++) has++ if v[i][1] == 100; r.add(has);'
+                          ' KAGOptionSet("fullScreenFit", "cover"); r.add(kag.viewportFit); KAGOptionSet("fullScreenFit", "contain");'
+                          ' KAGOptionSet("smoothScaling", false); r.add(System.getArgument("-smoothzoom")); KAGOptionSet("smoothScaling", true);'
+                          ' if (KAGOptions.vsync.available()) { KAGOptionSet("vsync", false); r.add(kag.waitVSync ? 1 : 0); KAGOptionSet("vsync", true); } else r.add("-");'
+                          ' if (KAGOptions.padEnabled.available()) { KAGOptionSet("padEnabled", false); r.add(System.padEnabled ? 1 : 0); KAGOptionSet("padEnabled", true); } else r.add("-");'
+                          ' return r.join(",");'))
+        print("     100%% offered, the fit, smoothing off, vsync off, the controller off: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] != "1" or v[1] != "cover" or v[2] != "no" or v[3] not in ("0", "-") or v[4] not in ("0", "-"):
+            raise SmokeError("the screen's settings didn't take: %s" % got)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
 
 def template_steps(eng):
     """template/ run as a game of its own: it has to start without the sample's hooks."""
@@ -3901,6 +3952,21 @@ def sample_steps(eng):
         print("     the last line at %s, the scene before at %s, dragged down three lines: %s" % tuple(moves), flush=True)
         if not (int(moves[1]) < int(moves[0])) or int(moves[2]) != max(0, int(moves[1]) - 3):
             raise SmokeError("the scene button or dragging didn't move the backlog: %s" % moves)
+        # a flick (a Timer in the game moves it every 16 ms, as a finger would): it coasts on
+        if eng.tjs("return typeof %s.flick != \"undefined\" && %s.dataLines - %s.dispLines > 12 ? 1 : 0;" % (h, h, h)) == 1:
+            eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
+                    ' global.__smokeFlickTimer = new Timer(function {'
+                    ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight;'
+                    ' if (d.step == 0) h.onMouseDown(800, 700, mbLeft, 0);'
+                    ' else if (d.step < 4) h.onMouseMove(800, y, ssLeft);'
+                    ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
+                    ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
+            eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
+            time.sleep(0.6)
+            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart].join(",");' % h)).split(",")
+            print("     flicked four lines up: at line %s when let go, then %s" % tuple(flick), flush=True)
+            if not (int(flick[1]) > int(flick[0])):
+                raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -4340,9 +4406,52 @@ def sample_steps(eng):
         print("     \"%s\": %d lines" % (text, len(titles)), flush=True)
         if text != "layer" or "Vector Image" not in titles:
             raise SmokeError("searching for \"%s\" found %s" % (text, titles))
+        # the lines found are a list that scrolls (ScrollList.tjs, since 0.19.0)
+        scrolled = None
+        if eng.tjs('return typeof global.KAGScrollList != "undefined" && typeof global.searchList != "undefined" ? 1 : 0;') == 1:
+            info = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; if (l === void) return "none";'
+                               ' return [l.count, l.maxPosition, l.linkNum !== void ? 1 : 0].join(",");'))
+            print("     the list: %s lines, %s px to scroll, a link of the window: %s" % tuple((info + ",,").split(",")[:3]), flush=True)
+            if info == "none" or int(info.split(",")[0]) != len(titles) or info.split(",")[2] != "1":
+                raise SmokeError("Search's lines aren't a list on the screen: %s" % info)
+            if int(info.split(",")[1]) > 0:
+                # the wheel over it (through the window, which would show the history otherwise)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList, m = kag.fore.messages[0];'
+                        ' kag.primaryLayer.setCursorPos(m.left + l.left + 200, m.top + l.top + 200);'
+                        ' kag.onMouseWheel(0, -120, m.left + l.left + 200, m.top + l.top + 200); return 1;')
+                eng.wait("a wheel notch's scroll", "kag.fore.messages[0].names.searchList.position >= 80 && !kag.historyShowing", timeout=5)
+                # a drag, let go moving: it coasts on
+                # (a Timer in the game moves it every 16 ms, as a finger would: down at 500, up at 340)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); global.__smokeDrag = %[ step:0, p1:-1 ];'
+                        ' global.__smokeDragTimer = new Timer(function {'
+                        ' var l = kag.fore.messages[0].names.searchList, d = global.__smokeDrag, y = 500 - d.step * 40;'
+                        ' if (d.step == 0) l.onMouseDown(200, 500, mbLeft, 0);'
+                        ' else if (d.step < 5) l.onMouseMove(200, y, ssLeft);'
+                        ' else { l.onMouseUp(200, 340, mbLeft, 0); d.p1 = (int)l.position; global.__smokeDragTimer.enabled = false; }'
+                        ' d.step++; }, ""); __smokeDragTimer.interval = 16; __smokeDragTimer.enabled = true; return 1;')
+                eng.wait("the drag let go", "global.__smokeDrag.p1 >= 0", timeout=5)
+                p1 = eng.tjs("return global.__smokeDrag.p1;")
+                time.sleep(0.4)
+                p2 = eng.tjs("var l = kag.fore.messages[0].names.searchList; return [(int)l.position, (int)l.velocity, l.maxPosition].join(\",\");")
+                print("     dragged 160 px: at %s when let go, then %s (position, speed, end)" % (p1, p2), flush=True)
+                q = [int(x) for x in str(p2).split(",")]
+                if not (150 <= int(p1) <= 170) or not (q[0] > int(p1) + 40 or q[0] == q[2]):
+                    raise SmokeError("the list didn't follow the drag or coast on after it: %s, then %s" % (p1, p2))
+                # the keys: Down moves the focus and scrolls it into view
+                keys = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); l.focusIndex = 0; l.focus();'
+                                   ' l.onKeyDown(VK_END, 0); var r = [l.focusIndex, (l.target !== void ? l.target : l.position) > 0 ? 1 : 0];'
+                                   ' l.onKeyDown(VK_HOME, 0); l.onKeyDown(VK_DOWN, 0); r.add(l.focusIndex); return r.join(",");'))
+                print("     End, then Home and Down: %s" % keys, flush=True)
+                if keys != "%d,1,1" % (len(titles) - 1):
+                    raise SmokeError("the keys didn't move the list's focus: %s" % keys)
+                eng.wait("the list still", "kag.fore.messages[0].names.searchList.target === void", timeout=5)
+                scrolled = eng.tjs("var l = kag.fore.messages[0].names.searchList; l.scrollTo(120); return (int)l.position;")
         # the line in layer.ks's *label16, played from: the script played unseen up to it
         k = titles.index("Vector Image")
-        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        if scrolled is not None:
+            eng.tjs("kag.fore.messages[0].names.searchList.pick(%d); return 1;" % k)
+        else:
+            eng.tjs("searchPlay(%d); return 1;" % k)
         eng.wait("the line", 'world_object.player !== void && world_object.player.curLabel == "*label16"'
                  ' && !kag.skipNoDisp && kag.inStable', timeout=60)
         line = str(eng.tjs("return world_object.player.curText.text;"))
@@ -4354,6 +4463,11 @@ def sample_steps(eng):
         eng.clicker(False)
         if eng.tjs('return tf.searchText == "layer" && searchFound.count > 0 ? 1 : 0;') != 1:
             raise SmokeError("back in Search without what it found")
+        if scrolled is not None:
+            back = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; return l === void ? "none" : [(int)l.position, l.focusIndex].join(",");'))
+            print("     the list back as it was: %s" % back, flush=True)
+            if back != "%d,%d" % (scrolled, k):
+                raise SmokeError("the list didn't come back where it was (%d, line %d): %s" % (scrolled, k, back))
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
@@ -4376,7 +4490,7 @@ def sample_steps(eng):
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
                 ' if (c !== void && !kag.skipNoDisp) __smokeFace.add([c.eyeLevel, b !== void && b.status == "play" ? c.lipLevel : "-"]);'
                 ' }, ""); __smokeFaceTimer.interval = 20; __smokeFaceTimer.enabled = true; return 1;')
-        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.tjs("searchPlay(%d); return 1;" % k)
         eng.wait("Pip's line", 'world_object.player !== void && world_object.player.curStorage == "anim.ks"'
                  ' && !kag.skipNoDisp && kag.inStable', timeout=60)
         time.sleep(3.0)

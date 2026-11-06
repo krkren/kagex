@@ -709,9 +709,9 @@ var configPages = [
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote" ] ],
-    // the interface: the quick menu, tips
-    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips" ],
-      [] ]
+    // the interface: the quick menu, tips, screenshots; the screen and the controller (Display.tjs)
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips", "screenshotWindow", "screenshotFormat" ],
+      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
@@ -1684,7 +1684,7 @@ function replayTile(index)
 // --------------------------------------------------------
 
 var searchFound = []; // what the last search found (KAGEnvPlayer.searchTexts)
-var searchRows = 7;   // rows a page
+var searchRowPics = %[]; // the rows' pictures (search_row_normal, search_row_over)
 var searchMax = 500;  // the most it finds
 var searchTrigger;    // shows the screen again once the key or click that searched is over
 var searchNames;      // what replaylist.csv calls each script (its "Start" scene's title)
@@ -1701,7 +1701,8 @@ function searchInit()
     sf.extramode = 4;
     tf.recollect = 0;
     tf.searchText = "" if tf.searchText === void;
-    tf.searchPage = 0 if tf.searchPage === void;
+    tf.searchPosition = 0 if tf.searchPosition === void; // the list's scroll and focus, kept
+    tf.searchFocus = -1 if tf.searchFocus === void;      // over a line played from it
     // the scene player's script (it loads when first used)
     KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.world_object != "undefined" && typeof global.scnFindCompiled == "undefined";
     // the scripts' names, from Replay's list: a row says which demo its line is in
@@ -1742,7 +1743,7 @@ function searchFromField()
 // finds, from its first page
 function searchRun()
 {
-    tf.searchPage = 0;
+    tf.searchPosition = 0, tf.searchFocus = -1;
     if (searchTrigger === void) searchTrigger = new AsyncTrigger(function { kag.process("searchmode.ks"); }, "");
     searchTrigger.trigger();
 }
@@ -1767,70 +1768,99 @@ function searchFit(font, text, m, w)
     return [pre, a, b, b < text.length ? "..." : ""];
 }
 
-// A row: the scene and who speaks above, the line below with what was looked for picked out,
-// on each of the button's states
-function drawSearchRow(button, info, key)
+// A row: the scene and who speaks above, the line below with what was looked for picked out
+// (over: the row under the pointer or the keys)
+function drawSearchRow(layer, info, key, over)
 {
-    var hold = button.holdAlpha;
-    button.holdAlpha = true;
-    var f = button.font;
+    var hold = layer.holdAlpha;
+    layer.holdAlpha = true;
+    var f = layer.font;
     f.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-    var left = 24, w = button.width - left * 2;
+    var left = 24, w = 1314 - left * 2;
     // the demo (replaylist.csv's title for its script) and the scene, then who speaks
     var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
     var head = script === void || script == "" ? shownTitle(info) : info.title == "Start" ? tr(script) : tr(script) + "  ›  " + shownTitle(info);
     head += "  ·  " + info.name if info.name != "";
     var m = info.text.toLowerCase().indexOf(key);
-    for (var st = 0; st < 3; st++) {
-        var x0 = button.width * st + left;
-        var over = st != 0;
-        f.height = 19;
-        f.bold = true;
-        button.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
-        f.height = 26;
-        f.bold = false;
-        var fit = searchFit(f, info.text, m, w);
-        var x = x0, y = 36;
-        var pieces = [];
-        pieces.add([fit[0], false]);
-        if (m >= fit[1] && m < fit[2]) {
-            var e = m + key.length < fit[2] ? m + key.length : fit[2];
-            pieces.add([info.text.substring(fit[1], m - fit[1]), false]);
-            pieces.add([info.text.substring(m, e - m), true]);
-            pieces.add([info.text.substring(e, fit[2] - e), false]);
-        } else {
-            pieces.add([info.text.substring(fit[1], fit[2] - fit[1]), false]);
-        }
-        pieces.add([fit[3], false]);
-        for (var i = 0; i < pieces.count; i++) {
-            var t = pieces[i][0];
-            if (t == "") continue;
-            var mark = pieces[i][1];
-            f.bold = mark;
-            button.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
-            x += f.getTextWidth(t);
-        }
-        f.bold = false;
+    var x0 = left;
+    f.height = 19;
+    f.bold = true;
+    layer.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
+    f.height = 26;
+    f.bold = false;
+    var fit = searchFit(f, info.text, m, w);
+    var x = x0, y = 36;
+    var pieces = [];
+    pieces.add([fit[0], false]);
+    if (m >= fit[1] && m < fit[2]) {
+        var e = m + key.length < fit[2] ? m + key.length : fit[2];
+        pieces.add([info.text.substring(fit[1], m - fit[1]), false]);
+        pieces.add([info.text.substring(m, e - m), true]);
+        pieces.add([info.text.substring(e, fit[2] - e), false]);
+    } else {
+        pieces.add([info.text.substring(fit[1], fit[2] - fit[1]), false]);
     }
-    button.holdAlpha = hold;
+    pieces.add([fit[3], false]);
+    for (var i = 0; i < pieces.count; i++) {
+        var t = pieces[i][0];
+        if (t == "") continue;
+        var mark = pieces[i][1];
+        f.bold = mark;
+        layer.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
+        x += f.getTextWidth(t);
+    }
+    f.bold = false;
+    layer.holdAlpha = hold;
 }
 
-// The rows of the page shown (tf.searchPage), and the arrows to the others
-function setSearchPage()
+function searchRowPicture(state)
 {
-    var pages = (searchFound.count + searchRows - 1) \ searchRows;
-    tf.searchPage = 0 if tf.searchPage >= pages || tf.searchPage < 0;
-    var key = ((string)tf.searchText).trim().toLowerCase();
-    for (var i = 0; i < searchRows; i++) {
-        var button = kag.current.names["row" + i];
-        if (button === void) continue;
-        var info = searchFound[tf.searchPage * searchRows + i];
-        button.visible = button.enabled = info !== void;
-        if (info !== void) drawSearchRow(button, info, key);
-    }
-    var prev = kag.current.names["search_prev"], next = kag.current.names["search_next"];
-    if (prev !== void) prev.visible = prev.enabled = tf.searchPage > 0;
-    if (next !== void) next.visible = next.enabled = tf.searchPage < pages - 1;
+    var name = "search_row_" + state, p = searchRowPics[name];
+    if (p !== void && isvalid p) return p;
+    p = new Layer(kag, kag.primaryLayer);
+    p.visible = false;
+    p.loadImages(name);
+    p.setSizeToImageSize();
+    return searchRowPics[name] = p;
+}
+
+// The scrolling list's items (ScrollList.tjs): a row's picture, then its text
+function drawSearchItem(layer, index, w, h, state)
+{
+    var info = searchFound[index];
+    if (info === void) return;
+    var over = state != "normal";
+    var p = searchRowPicture(over ? "over" : "normal");
+    layer.copyRect(0, 0, p, 0, 0, p.imageWidth, p.imageHeight);
+    drawSearchRow(layer, info, ((string)tf.searchText).trim().toLowerCase(), over);
+}
+
+// what a screen reader says for a found line
+function searchItemName(index)
+{
+    var info = searchFound[index];
+    return info === void ? "" : (info.name != "" ? info.name + ": " : "") + info.text;
+}
+
+// The list of the lines found, on the screen's message layer (a link of it, so the keys and a
+// controller's D-pad reach it from the field and the buttons)
+function searchList()
+{
+    var m = kag.current;
+    var l = new KAGScrollList(kag, m);
+    l.name = "searchList";
+    l.a11yName = "Lines found";
+    l.itemHeight = 76;
+    l.gap = 10;
+    l.drawItem = drawSearchItem;
+    l.onPick = searchPlay;
+    l.itemName = searchItemName;
+    l.setPos(316, 318);
+    l.itemCount = searchFound.count;
+    l.setSize(1332, 604);
+    l.scrollTo(+tf.searchPosition);
+    l.focusIndex = tf.searchFocus < searchFound.count ? +tf.searchFocus : -1;
+    m.addLinkLayer(l);
 }
 
 /**
@@ -1839,8 +1869,10 @@ function setSearchPage()
  */
 function searchPlay(index)
 {
-    var info = searchFound[tf.searchPage * searchRows + index];
+    var info = searchFound[index];
     if (info === void) return;
+    var l = kag.fore.messages[0].names.searchList;
+    if (l !== void && isvalid l) tf.searchPosition = l.position, tf.searchFocus = index;
     tf.recollect = 1;
     kag.process('loadinit.ks', '', true, true);
     world_object.initPlayer();

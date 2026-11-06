@@ -3167,6 +3167,75 @@ Config's Tips option (tooltips) turns them off; it starts off on Android and iOS
 leaves the pointer resting where it tapped. The sample's Config tabs tell what each page holds.
 
 
+● Scrolling Lists
+
+A list or a grid of items on a layer of its own (since 0.19.0, template/system/ScrollList.tjs,
+KAGScrollList), which the game draws an item at a time, only while it's in view, and which
+scrolls with the mouse wheel, by dragging (the mouse, or a finger: a flick coasts on and slows
+down), with its scroll bar, and with the arrow keys, Page Up and Down, Home and End (a
+controller's D-pad sends the arrows). A click or a tap on an item, or Return on the focused
+one, picks it; screen readers get the items in view as a list.
+
+    var list = new KAGScrollList(kag, kag.current);
+    list.setPos(316, 318);
+    list.itemHeight = 76;  list.gap = 10;          // columns = 3 for a grid
+    list.drawItem = drawRow;                        // function(layer, index, w, h, state)
+    list.onPick = playRow;                          // function(index)
+    list.itemName = rowName;                        // function(index): for screen readers
+    list.count = rows.count;
+    list.setSize(1332, 604);                        // its picture too
+    kag.current.addLinkLayer(list);                 // a link of the message layer
+
+  drawItem    draws item index into layer (w x h, cleared) for its state: "normal", "over"
+              (under the pointer) or "focus" (the keys' item); the pictures are kept, so
+              refresh() after the data changes
+  position    how far it's scrolled (px); scrollTo(px, smooth), show(index)
+  focusIndex  the keys' item (-1: none)
+  loop        scrolling past the end comes round to the start
+  barWidth (10), barMargin, barColor, trackColor   the scroll bar (barWidth 0: none)
+  coasting    how fast a flick slows (what's left of its speed after a second, 0.05)
+
+A drag on a list makes no swipe (the window's gestures), and the wheel over it is its own,
+not KAG's (the message history, a click). messageLayer.addLinkLayer(object) makes a layer of
+the game's own one of a message layer's links (link type ltOwn): the keys and a controller
+move to it from the buttons and back (the arrows past its first or last item), [backlay]
+copies it to the other page through its cloneFor(window, messageLayer), and clearing the
+message layer's links invalidates it.
+
+The sample's Search shows the lines it finds in one (searchList in Override.tjs), kept where
+it was scrolled while a line plays; its backlog coasts after a flick too.
+
+
+● The Screen, the Controller and Screenshots
+
+Options for a Config screen (since 0.19.0, template/system/Display.tjs), kept in the system
+variables and applied at start; one the platform can't do leaves its row empty:
+
+  windowSize        the window's size as a share of the game's, those that fit the screen
+                    (desktops; in full screen it's kept for when the window comes back)
+  fullScreenFit     how the game fills a screen of another shape: Bars ("contain"), Fill (the
+                    edges cut off, "cover") or Stretch ("fill"); kag.viewportFit
+  smoothScaling     smooth or sharp scaling to the screen (-smoothzoom)
+  vsync             frames in step with the display (Window.waitVSync)
+  padEnabled        the controller on or off (System.padEnabled)
+  screenshotWindow  F12's pictures with the message windows, or without (the quick menu and the
+                    tips are left out too)
+  screenshotFormat  PNG or JPEG
+
+For the game, in KAGWindow (AfterInit.tjs):
+
+  kag.screenshotName       the file's name: %Y %m %d %H %M %S for the date and time
+                           ("screenshot-%Y%m%d-%H%M%S")
+  kag.screenshotWatermark  void, or an image stamped on each picture, at
+                           screenshotWatermarkPlace ("bottomright", "bottomleft", "topright",
+                           "topleft", "center"), screenshotWatermarkMargin (24 px) and
+                           screenshotWatermarkOpacity (200)
+
+[screenshot enabled=false] turns screenshots off until [screenshot enabled=true], for scenes
+that would spoil the story ([screenshot off] and [screenshot on] say the same); F12 then says
+so instead, and saves keep it. The sample's Config has them on its sixth page.
+
+
 
 ● KAGEX Operation System
 

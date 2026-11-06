@@ -20,6 +20,7 @@
  *   preview   a slider's function(event, value), called as it's pointed at ("enter"), moved while
  *             held ("drag"), let go ("change") and left ("leave"): a volume's sample (0.18.0)
  *   test      a function a Test button after the slider runs (a character's line, 0.18.0)
+ *   available a function: whether this platform can do it (its row is left empty when not, 0.19.0)
  *
  * A label can be a dictionary by language code (%[ "en" => "Ai", "ja" => <the Japanese name> ]), for names.
  * While a Config screen is open, KAGOptionUndo keeps what each change replaced (Undo, Revert).
@@ -32,7 +33,7 @@ function KAGDefineOption(o)
 	// a function written in the table has no object of its own, so called as the option's member
 	// it would run with the option as this, where kag and every global are void: the global
 	// object instead (as KAGWindow.keyBindingFunction does)
-	var keys = [ "getValue", "setValue", "action", "enabled", "preview", "test" ];
+	var keys = [ "getValue", "setValue", "action", "enabled", "preview", "test", "available" ];
 	for (var i = 0; i < keys.count; i++) {
 		var f = o[keys[i]];
 		if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
@@ -487,6 +488,7 @@ function KAGOptionColumn(layer, x, top, names)
 	var st = KAGOptionStyle, y = top;
 	for (var i = 0; i < names.count; i++) {
 		var o = names[i] !== void ? KAGOptions[names[i]] : void;
+		o = void if o !== void && o.available !== void && !o.available();
 		if (i > 0) {
 			var d = st.divider;
 			layer.colorRect(x + d.inset, y - 1, st.width - d.inset * 2, 2, d.color, d.opacity);

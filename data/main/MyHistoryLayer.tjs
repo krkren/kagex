@@ -48,6 +48,8 @@ class HistoryLayer extends Layer
     var prevSceneButton = void;
     var nextSceneButton = void;
     var dragY = void, dragStart = 0, dragging = false, pressX, pressY;
+    // a flick coasts on, slowing down (since 0.19.0): lines a second, the lines not yet scrolled
+    var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastLines = 0.0, coastTick = 0;
     var topPageButton  = void;
     var prevPageButton = void;
     var nextPageButton = void;
@@ -160,6 +162,7 @@ class HistoryLayer extends Layer
 
 	function finalize()
 	{
+        invalidate coastTimer if coastTimer !== void;
         invalidate baseImage if baseImage !== void;
         invalidate actionMark if actionMark !== void;
         invalidate actionMarkOver if actionMarkOver !== void;
@@ -1352,6 +1355,8 @@ class HistoryLayer extends Layer
 		{
 			// a mark acts when the button is let go without the log being dragged
 			dragY = y, dragStart = dispStart, dragging = false, pressX = x, pressY = y;
+			stopCoast();
+			dragSamples = [ [ System.getTickCount(), y ] ];
 		}
 		super.onMouseDown(...);
 	}
@@ -1361,6 +1366,7 @@ class HistoryLayer extends Layer
 		{
 			var dragged = dragging;
 			dragY = void, dragging = false;
+			if(dragged) flick(y);
 			if(!dragged)
 			{
 				var jump = getJumpFromPos(pressX, pressY);
@@ -1382,7 +1388,13 @@ class HistoryLayer extends Layer
 		if(dragY !== void && (shift & ssLeft) && canScroll && !everypage && !verticalView)
 		{
 			if(!dragging && Math.abs(y - dragY) > lineHeight \ 2) dragging = true;
-			if(dragging) scrollTo(dragStart + (dragY - y) \ lineHeight);
+			if(dragging)
+			{
+				scrollTo(dragStart + (dragY - y) \ lineHeight);
+				var now = System.getTickCount();
+				dragSamples.add([ now, y ]);
+				while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
+			}
 		}
 		setJumpHover(getJumpFromPos(x, y));
 		var n = getActionInfoFromPos(x,y);
@@ -1395,6 +1407,50 @@ class HistoryLayer extends Layer
 			if(n) cursor = window.cursorPointed;
 		}
 		super.onMouseMove(...);
+	}
+
+	// the speed of the last 100 ms of a drag let go, carried on: the log coasts and slows
+	function flick(y)
+	{
+		var now = System.getTickCount();
+		dragSamples.add([ now, y ]);
+		while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
+		var dt = now - dragSamples[0][0];
+		if(dt < 10 || now - dragSamples[dragSamples.count - 2][0] >= 80) return;
+		coastSpeed = (dragSamples[0][1] - y) * 1000.0 / dt / lineHeight;
+		if(Math.abs(coastSpeed) < 3) return;
+		coastLines = 0.0;
+		coastTick = now;
+		if(coastTimer === void)
+		{
+			coastTimer = new Timer(onCoast, "");
+			coastTimer.interval = 16;
+		}
+		coastTimer.enabled = true;
+	}
+
+	function onCoast()
+	{
+		var now = System.getTickCount(), dt = (now - coastTick) / 1000.0;
+		coastTick = now;
+		dt = 0.05 if dt > 0.05;
+		coastLines += coastSpeed * dt;
+		var n = (int)coastLines;
+		if(n != 0)
+		{
+			coastLines -= n;
+			var before = dispStart;
+			scrollTo(dispStart + n);
+			if(dispStart == before) { stopCoast(); return; } // an end
+		}
+		coastSpeed *= Math.pow(0.05, dt);
+		stopCoast() if Math.abs(coastSpeed) < 2;
+	}
+
+	function stopCoast()
+	{
+		coastSpeed = 0.0;
+		coastTimer.enabled = false if coastTimer !== void;
 	}
 
 	function onMouseLeave()
