@@ -3,8 +3,9 @@
  * the SDL engine's window never shows, appears beside it when the pointer rests on it a moment,
  * or at once when the keys or a controller move the focus to it; through tr(), in the dialogs'
  * look. A layer can give a tip by place with tipAt(x, y) (the quick menu's buttons give their
- * actions' labels). Config's Tips switch turns them off (the tooltips option). A KAG plugin of
- * the window (kag.tooltips).
+ * actions' labels). Config's Tips switch turns them off (the tooltips option). On a touch
+ * screen a long press shows the tip of what's under the finger while it's held (since 0.20.0).
+ * A KAG plugin of the window (kag.tooltips).
  *
  *   kag.tooltips.restTime   ms the pointer rests before a tip shows (600)
  *   kag.tooltips.helpLine   void, or a function(text): a screen with a help line takes the tips
@@ -84,6 +85,14 @@ class KAGTooltips extends KAGPlugin
 				var l = p.getLayerAt(x, y);
 				text = tipOf(l);
 			}
+		}
+		// a long press on a touch screen (since 0.20.0): the tip of what's under the finger, above
+		// it, while it's held, whatever the Tips switch says (a finger's pointer rests where it
+		// tapped, so tips by resting are off at first on phones)
+		var g = window.gestures;
+		if (text == "" && g !== void && typeof g.holding != "undefined" && g.holding(now)) {
+			text = tipOf(p.getLayerAt(x, y));
+			ax = x - 40, ay = y - 120;
 		}
 		show(text, ax, ay);
 	}

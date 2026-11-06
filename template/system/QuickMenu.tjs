@@ -160,6 +160,42 @@ class KAGQuickMenu extends KAGPlugin
 		return false;
 	}
 
+	// the player's order of the buttons (Change Controls, since 0.20.0): scflags.quickMenuOrder,
+	// action names; the strip then puts them one after another, gap px apart, in that order
+	function playerOrder() { return window.scflags.quickMenuOrder; }
+
+	// the game's buttons in the player's order (those it doesn't name keep the game's, after)
+	function orderedList(l)
+	{
+		var order = playerOrder();
+		if (order === void || order.count == 0) return l;
+		var r = [], used = %[];
+		for (var i = 0; i < order.count; i++)
+			for (var j = 0; j < l.count; j++) if (l[j].action == order[i] && used[j] === void) { r.add(l[j]); used[j] = 1; break; }
+		for (var j = 0; j < l.count; j++) r.add(l[j]) if used[j] === void;
+		return r;
+	}
+
+	// action name's button one place earlier (dir -1) or later (1)
+	function moveButton(name, dir)
+	{
+		var l = orderedList(list()), names = [];
+		for (var i = 0; i < l.count; i++) names.add(l[i].action);
+		var i = names.find(name), j = i + dir;
+		if (i < 0 || j < 0 || j >= names.count) return;
+		names[i] = names[j], names[j] = name;
+		window.scflags.quickMenuOrder = names;
+		stateKey = "";
+	}
+
+	// the game's buttons and order again (Change Controls' Reset)
+	function resetPlayerButtons()
+	{
+		delete window.scflags.quickMenuOrder;
+		delete window.scflags.quickMenuHidden;
+		stateKey = "";
+	}
+
 	// whether the player left action name out of the strip (Change Controls)
 	function hidden(name) { var h = window.scflags.quickMenuHidden; return h !== void && !!h[name]; }
 	function setHidden(name, v)
@@ -172,7 +208,7 @@ class KAGQuickMenu extends KAGPlugin
 	// the buttons laid out at scale k (drawScale): the strip's width
 	function layout(k)
 	{
-		var l = list(), x = 0, h = 0;
+		var l = orderedList(list()), x = 0, h = 0, ordered = playerOrder() !== void && playerOrder().count > 0;
 		drawScale = k;
 		shown = [];
 		for (var i = 0; i < l.count; i++) {
@@ -189,7 +225,7 @@ class KAGQuickMenu extends KAGPlugin
 				if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
 				b.w = (int)(150 * k), b.h = (int)(48 * k);
 			}
-			b.x = it.x !== void ? (int)(+it.x * k) : x;
+			b.x = it.x !== void && !ordered ? (int)(+it.x * k) : x;
 			b.y = 0;
 			x = b.x + b.w + gap;
 			h = b.h if b.h > h;
@@ -274,7 +310,8 @@ class KAGQuickMenu extends KAGPlugin
 
 	function stateOf()
 	{
-		var s = [ pinned ? 1 : 0, hover, scale, typeof global.KAGQuickPanelMode != "undefined" ? KAGQuickPanelMode() : "" ];
+		var order = playerOrder();
+		var s = [ pinned ? 1 : 0, hover, scale, typeof global.KAGQuickPanelMode != "undefined" ? KAGQuickPanelMode() : "", order !== void ? order.join("/") : "" ];
 		for (var i = 0; i < shown.count; i++) s.add(enabled(shown[i]) ? 1 : 0), s.add(lit(shown[i]) ? 1 : 0);
 		return s.join(",");
 	}

@@ -3079,7 +3079,7 @@ What the player can ask the game to do is one table (since 0.19.0, template/syst
 skip, auto mode, the message history, hiding the window, going back, save, load, quick save
 and load, playing the voice again, the scene moves of compiled scenes (rewind, back to the
 start of the scene, back to the last choice, on to the next scene), the next language, the
-menu and a screenshot. Keys, controller buttons, gestures and on-screen buttons name an action,
+menu, a screenshot and going on to the next text ("next", since 0.20.0). Keys, controller buttons, gestures and on-screen buttons name an action,
 so changing what an action does, or which key does it, changes it everywhere.
 
     KAGDefineAction(%[ name:"photo", label:"Take a photo", func:takePhoto,
@@ -3094,6 +3094,9 @@ so changing what an action does, or which key does it, changes it everywhere.
                keys and buttons bound to it are left out of the controls list while it's false
   enabled      whether it can be done now (a quick load needs a quick save; the framework's
                follow the window's menu items); KAGRunAction does nothing while it's false
+
+The mouse's back and forward buttons are keys of their own (VK_XBUTTON1, VK_XBUTTON2; since
+0.20.0): back a line and on to the next text, and Change Controls takes them as any key.
 
 Change Controls (the controls list's Change… button, or kag.showBindings()) lists the actions
 with their keys, controller buttons and gestures: picking one waits for a key or a controller
@@ -3121,6 +3124,12 @@ engine again at a press until it is. kag.gestures.when, a
 function, can narrow "the story" to the game's own idea of it (the sample's, as its quick
 menu's: after [initscene], not on the title or a system screen), and a drag that starts on a
 scrolling list is the list's (ScrollList.tjs).
+
+A long press (since 0.20.0): a finger held still on the story for kag.gestures.holdTime (600
+ms) runs kag.gestureActions.hold (the framework's is none; the sample's turns auto mode on or
+off) and makes no click as it lifts; Change Controls has it after the four swipes. Meanwhile,
+over a button with a hint, its tip shows above the finger, whatever Config's Tips switch says
+(Tooltips.tjs). A long press on a quick menu button opens its panel instead.
 
 
 
@@ -3167,7 +3176,10 @@ title clears, and its marginB keeps the text (four lines) above the strip at the
 The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
 is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
-kag.scflags.quickMenuHidden). A button's picture is drawn at the strip's size; a labelled one
+kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a
+button earlier or later, kept in kag.scflags.quickMenuOrder, and the strip then puts them one
+after another, gap px apart; Reset puts the game's back). A button's picture is drawn at the
+strip's size; a labelled one
 in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
 When it can show again (the story starting, the window back) an unpinned strip peeks out for
 a moment. Screen readers get its buttons beside the message or the choices

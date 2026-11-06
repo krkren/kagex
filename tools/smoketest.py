@@ -3042,6 +3042,43 @@ def sample_steps(eng):
                       " %s; %s; %s; %s" % (held, swiped, tap, slow), flush=True)
                 if held != "1,0" or swiped != 0 or tap != "0,1" or slow != "0,0":
                     raise SmokeError("a touch screen's press wasn't held until its release, a tap or a swipe: %s; %s; %s; %s" % (held, swiped, tap, slow))
+                # a long press (0.20.0 on): its gesture (the sample's: auto mode) and no click, and the
+                # tip of a quick menu button under a finger held on it
+                if eng.tjs('return typeof kag.gestures.holding != "undefined" ? 1 : 0;') == 1:
+                    eng.wait("a stable point", "kag.inStable", timeout=20)
+                    eng.tjs("kag.gestures.holdClicks = true; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("global.__smokeClicks = kag.clickCount; global.__smokeHold = kag.gestureActions.hold; kag.gestureActions.hold = \"auto\";"
+                            " kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick(); kag.onTouchDown(960, 640, 1, 1, 0); return 1;")
+                    try:
+                        eng.wait("auto mode (a long press)", "kag.autoMode", timeout=5)
+                    finally:
+                        eng.tjs("kag.onTouchUp(960, 640, 1, 1, 0); kag.onMouseUp(960, 640, mbLeft, 0); kag.gestureActions.hold = global.__smokeHold;"
+                                " kag.gestures.holdClicks = void; return 1;")
+                    clicks = eng.tjs("var c = kag.clickCount - global.__smokeClicks; kag.cancelAutoMode(); return c;")
+                    if clicks != 0:
+                        raise SmokeError("a long press made a click as well as its gesture")
+                    tip = ""
+                    if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') == 1:
+                        eng.tjs('var q = kag.quickMenu, b = q.shown[0]; global.__smokeTipAt = [q.layer.left + b.x + 5, q.layer.top + b.y + 5];'
+                                ' kag.primaryLayer.setCursorPos(__smokeTipAt[0], __smokeTipAt[1]); return 1;')
+                        time.sleep(0.2)
+                        eng.tjs("kag.onTouchDown(__smokeTipAt[0], __smokeTipAt[1], 1, 1, 0); return 1;")
+                        try:
+                            tip = eng.wait("a held finger's tip", 'kag.tooltips.shown', timeout=5)
+                        finally:
+                            eng.tjs("kag.onTouchUp(__smokeTipAt[0], __smokeTipAt[1], 1, 1, 0); return 1;")
+                    print("     a long press: auto mode, no click; a finger held on the quick menu's first button: %s" % tip, flush=True)
+        # the mouse's side buttons (0.20.0 on): back a line and on, keys of their own
+        if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" && kag.findKeyBinding(VK_XBUTTON2, 0, false) !== void ? 1 : 0;') == 1:
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+            got = str(eng.tjs('var a = [kag.findKeyBinding(VK_XBUTTON1, 0, false).actionName, kag.findKeyBinding(VK_XBUTTON2, 0, false).actionName];'
+                              ' var c = kag.clickCount; kag.onMouseDown(960, 400, mbX2, 0); kag.onMouseUp(960, 400, mbX2, 0); a.add(kag.clickCount - c);'
+                              ' return a.join(",");'))
+            print("     the mouse's back and forward buttons: %s (and the clicks forward made)" % got, flush=True)
+            if got != "back,next,1":
+                raise SmokeError("the mouse's side buttons aren't back and on, or forward didn't go on: %s" % got)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
         # the framework keeps some keys; the player's binding is the system variables', over the game's
         refused = eng.tjs("return kag.rebindKey(VK_F10, 0, \"skip\") ? 1 : 0;")
         if refused != 0:
@@ -3077,6 +3114,28 @@ def sample_steps(eng):
                 print("     the quick menu's Config button off, then on: %s" % got, flush=True)
                 if got != "1,0":
                     raise SmokeError("Change Controls' quick menu column didn't leave the button out and back: %s" % got)
+                # and moves a button earlier in the strip (0.20.0 on); Reset puts the game's order back
+                if eng.tjs('return typeof kag.currentDialog.moveQuick != "undefined" ? 1 : 0;') == 1:
+                    got = str(eng.tjs('var d = kag.currentDialog, q = kag.quickMenu, names = [];'
+                                      ' var b = q.orderedList(q.list()); for (var i = 0; i < b.count; i++) names.add(b[i].action);'
+                                      ' var at = names.find("config"); d.onPanelAction("qup_config"); q.layout(q.drawScale);'
+                                      ' var now = []; b = q.buttons(); for (var i = 0; i < b.count; i++) now.add(b[i][0]);'
+                                      ' var r = [at, names[at - 1], now.find("config"), now[now.find("config") + 1]];'
+                                      ' q.resetPlayerButtons(); q.layout(q.drawScale); r.add(q.playerOrder() === void ? 1 : 0); return r.join(",");'))
+                    print("     Config's button one place earlier (at, before it, now at, after it, the game's order after Reset): %s" % got, flush=True)
+                    g = got.split(",")
+                    if not (int(g[2]) == int(g[0]) - 1 and g[3] == g[1] and g[4] == "1"):
+                        raise SmokeError("Change Controls didn't move the quick menu's button, or Reset didn't put the order back: %s" % got)
+            # the mouse's back button taken as a key (0.20.0 on)
+            if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" ? 1 : 0;') == 1:
+                eng.tjs('kag.currentDialog.startWaiting("hide"); return 1;')
+                eng.wait("it to wait for a key", "kag.keyCapture !== void", timeout=10)
+                eng.tjs("kag.onMouseDown(100, 100, mbX1, 0); kag.onMouseUp(100, 100, mbX1, 0); return 1;")
+                time.sleep(0.5)
+                side = str(eng.tjs("var b = kag.findKeyBinding(VK_XBUTTON1, 0, true); b = kag.findKeyBinding(VK_XBUTTON1, 0, false) if b === void; return b !== void ? b.actionName : \"none\";"))
+                print("     the mouse's back button in Change Controls: %s" % side, flush=True)
+                if side != "hide":
+                    raise SmokeError("Change Controls didn't take the mouse's back button: %s" % side)
             eng.tjs("kag.currentDialog.close(); return 1;")
             eng.wait("Change Controls to close", "kag.currentDialog === void", timeout=10)
             eng.tjs("kag.runKeyBinding(#'J', 0, true); return 1;")

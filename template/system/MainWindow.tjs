@@ -13387,6 +13387,13 @@ class KAGWindow extends Window
 		pressArmed = button == mbLeft;
 		gestures.onRightDown(x, y) if gestures !== void && button == mbRight; // a right-button drag
 		super.onMouseDown(...);
+		// the mouse's back and forward buttons are keys of their own (VK_XBUTTON1, 2): bound,
+		// and taken by Change Controls as any key (since 0.20.0)
+		if ((button == mbX1 || button == mbX2) && typeof global.VK_XBUTTON1 != "undefined") {
+			var key = button == mbX1 ? VK_XBUTTON1 : VK_XBUTTON2;
+			onKeyDown(key, shift);
+			onKeyUp(key, shift) if (isvalid this);
+		}
 	}
 
 	function onMouseUp(x, y, btn)
@@ -13488,7 +13495,7 @@ class KAGWindow extends Window
 	// rebindKey, rebindPad, rebindGesture and resetPlayerBindings.
 	var gestures;              // the swipes and right-button drags (KAGGestures, Actions.tjs)
 	// what a gesture does in the story (an action's name; "" nothing): a game sets its own
-	var gestureActions = %[ "left" => "", "right" => "", "up" => "backlog", "down" => "hide" ];
+	var gestureActions = %[ "left" => "", "right" => "", "up" => "backlog", "down" => "hide", "hold" => "" ]; // hold: a long press (0.20.0)
 	var gameKeyBindings, gamePadKeyMap, gameGestureActions; // the game's, under the player's
 	// keys the framework keeps for itself: the player can't take these
 	var reservedKeys = [ [VK_F10, 0], [VK_F11, ssShift], [VK_F12, ssShift], [VK_RETURN, void], [VK_SPACE, void],
@@ -13643,6 +13650,9 @@ class KAGWindow extends Window
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
 			bindKey(VK_F10, 0, "@menu", void, false);
 			bindKey(VK_F12, 0, "@screenshot", void, false);
+			// the mouse's side buttons (since 0.20.0): back a line, and on
+			bindKey(VK_XBUTTON1, 0, "@back", void, false) if (typeof global.VK_XBUTTON1 != "undefined");
+			bindKey(VK_XBUTTON2, 0, "@next", void, false) if (typeof global.VK_XBUTTON2 != "undefined");
 		} else {
 			// Proceed to next choice/unread
 			bindKey(#'F', void, skipToNextStopByKey, "Skip to the next choice or unread text", false);

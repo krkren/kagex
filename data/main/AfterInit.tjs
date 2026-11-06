@@ -91,9 +91,11 @@ with (KAGQuickMenuOf(kag)) {
 kag.independentMovieAudioProperty = true;
 
 // Gestures in the story: a swipe on a phone, or a drag with the right mouse button, left rewinds
-// (compiled scenes), right skips, up shows the message history and down hides the window
+// (compiled scenes), right skips, up shows the message history and down hides the window; a long
+// press turns auto mode on or off
 kag.gestureActions.left  = "rewind";
 kag.gestureActions.right = "skip";
+kag.gestureActions.hold  = "auto"; // a long press on the story (since 0.20.0): auto mode on or off
 // the story only, as the quick menu (Search's list is dragged on the title's conductor)
 kag.gestures.when = function { return !!f.quickMenu && !inSystemMenu(kag); };
 

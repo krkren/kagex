@@ -33,6 +33,8 @@ function KAGKeyName(key, shift)
 		names[VK_RIGHT] = "→", names[VK_PRIOR] = "Page Up", names[VK_NEXT] = "Page Down";
 		names[VK_HOME] = "Home", names[VK_END] = "End", names[VK_DELETE] = "Delete", names[VK_INSERT] = "Insert";
 		names[global.VK_SNAPSHOT] = "Print Screen" if typeof global.VK_SNAPSHOT == "Integer";
+		names[global.VK_XBUTTON1] = tr("Mouse Back") if typeof global.VK_XBUTTON1 == "Integer";
+		names[global.VK_XBUTTON2] = tr("Mouse Forward") if typeof global.VK_XBUTTON2 == "Integer";
 		name = names[key];
 		name = "Key %02X".sprintf(key) if name === void;
 	}
@@ -403,8 +405,8 @@ function KAGActionBindings(win, name)
 		if (typeof global["VK_PAD" + i] != "Integer") continue;
 		if (KAGActionNameOf(win.padKeyMap[global["VK_PAD" + i]]) == name) pads.add(names.shown[i - 1]);
 	}
-	var dirNames = %[ left:tr("Swipe left"), right:tr("Swipe right"), up:tr("Swipe up"), down:tr("Swipe down") ];
-	var order = [ "left", "right", "up", "down" ];
+	var dirNames = %[ left:tr("Swipe left"), right:tr("Swipe right"), up:tr("Swipe up"), down:tr("Swipe down"), hold:tr("Long press") ];
+	var order = [ "left", "right", "up", "down", "hold" ];
 	for (var i = 0; i < order.count; i++) dirs.add(dirNames[order[i]]) if win.gestureActions[order[i]] == name;
 	return [ keys, pads, dirs ];
 }
@@ -414,6 +416,7 @@ class KAGBindingsPanel extends KAGElementsScreen
 	var rowWidth = 1480, rowHeight = 44, rowSize = 24, labelWidth = 560, keysWidth = 400, padsWidth = 230;
 	var gestureWidth = 230, padding = 44, titleSize = 40;
 	var quickWidth = 0;   // the quick menu's column (QuickMenu.tjs): whether it shows the action's button
+	var moveWidth = 52;   // its buttons moving the action's button earlier or later in the strip
 	var waiting = "";     // the action waiting for a key
 	var message = "";     // the line under the title
 
@@ -455,7 +458,7 @@ class KAGBindingsPanel extends KAGElementsScreen
 			buttons.add([ addPiece(180, 60, %[ kind:"button", text:buttonLabels[i], over:false ]),
 				addPiece(180, 60, %[ kind:"button", text:buttonLabels[i], over:true ]) ]);
 		var qm = quickMenu();
-		quickWidth = qm !== void ? 180 : 0;
+		quickWidth = qm !== void ? 240 : 0;
 		var heads = [ tr("Action"), tr("Keys"), tr("Controller"), tr("Gesture") ];
 		heads.add(tr("Quick Menu")) if qm !== void;
 		var head = addPiece(rowWidth + quickWidth, rowHeight, %[ kind:"row", cells:heads, head:true ]);
@@ -472,8 +475,16 @@ class KAGBindingsPanel extends KAGElementsScreen
 				gNormal:addPiece(gestureWidth, rowHeight, %[ kind:"cell", text:cells[3], over:false ]),
 				gOver:addPiece(gestureWidth, rowHeight, %[ kind:"cell", text:cells[3], over:true ]) ];
 			if (qm !== void) {
-				r.qNormal = addPiece(quickWidth, rowHeight, %[ kind:"cell", text:cells[4], over:false ]);
-				r.qOver = addPiece(quickWidth, rowHeight, %[ kind:"cell", text:cells[4], over:true ]);
+				// on or off, then earlier and later in the strip (since 0.20.0)
+				var tw = quickWidth - moveWidth * 2;
+				r.qNormal = addPiece(tw, rowHeight, %[ kind:"cell", text:cells[4], over:false ]);
+				r.qOver = addPiece(tw, rowHeight, %[ kind:"cell", text:cells[4], over:true ]);
+				if (qm.has(name)) {
+					r.upNormal = addPiece(moveWidth, rowHeight, %[ kind:"cell", text:"↑", over:false ]);
+					r.upOver = addPiece(moveWidth, rowHeight, %[ kind:"cell", text:"↑", over:true ]);
+					r.downNormal = addPiece(moveWidth, rowHeight, %[ kind:"cell", text:"↓", over:false ]);
+					r.downOver = addPiece(moveWidth, rowHeight, %[ kind:"cell", text:"↓", over:true ]);
+				}
 			}
 			rows.add(r);
 		}
@@ -509,9 +520,18 @@ class KAGBindingsPanel extends KAGElementsScreen
 				"a11y" => %[ "label" => tr("Gesture") + ": " + r.cells[3] ] ]);
 			if (r.qNormal !== void)
 				children.add(%[ "type" => "atlas_button", "atlas" => "ui", "id" => "quick_" + r.name,
-					"at" => [ x0 + r.normal.w + gestureWidth, y, quickWidth, rowHeight ],
+					"at" => [ x0 + r.normal.w + gestureWidth, y, r.qNormal.w, rowHeight ],
 					"frames" => %[ "normal" => rect(r.qNormal), "hilite" => rect(r.qOver), "pressed" => rect(r.qOver) ], "focus_hilite" => 1,
 					"a11y" => %[ "label" => tr("Quick Menu") + ": " + r.cells[4] ] ]);
+			if (r.upNormal !== void) {
+				var mx = x0 + r.normal.w + gestureWidth + r.qNormal.w;
+				children.add(%[ "type" => "atlas_button", "atlas" => "ui", "id" => "qup_" + r.name, "at" => [ mx, y, moveWidth, rowHeight ],
+					"frames" => %[ "normal" => rect(r.upNormal), "hilite" => rect(r.upOver), "pressed" => rect(r.upOver) ], "focus_hilite" => 1,
+					"a11y" => %[ "label" => tr("Earlier in the quick menu") ] ]);
+				children.add(%[ "type" => "atlas_button", "atlas" => "ui", "id" => "qdown_" + r.name, "at" => [ mx + moveWidth, y, moveWidth, rowHeight ],
+					"frames" => %[ "normal" => rect(r.downNormal), "hilite" => rect(r.downOver), "pressed" => rect(r.downOver) ], "focus_hilite" => 1,
+					"a11y" => %[ "label" => tr("Later in the quick menu") ] ]);
+			}
 		}
 		y += 24;
 		for (var i = 0; i < buttons.count; i++)
@@ -565,7 +585,14 @@ class KAGBindingsPanel extends KAGElementsScreen
 	function onPanelAction(id, payload)
 	{
 		if (id == "close") { defer(close); return; }
-		if (id == "reset") { window.resetPlayerBindings(); message = tr("The game's controls again"); waiting = ""; defer(build); return; }
+		if (id == "reset") {
+			window.resetPlayerBindings();
+			var q = quickMenu();
+			q.resetPlayerButtons() if (q !== void && typeof q.resetPlayerButtons != "undefined");
+			message = tr("The game's controls again"); waiting = ""; defer(build); return;
+		}
+		if (id.indexOf("qup_") == 0) { moveQuick(id.substring(4), -1); return; }
+		if (id.indexOf("qdown_") == 0) { moveQuick(id.substring(6), 1); return; }
 		if (id.indexOf("row_") == 0) { startWaiting(id.substring(4)); return; }
 		if (id.indexOf("gesture_") == 0) { nextGesture(id.substring(8)); return; }
 		if (id.indexOf("quick_") == 0) { toggleQuick(id.substring(6)); return; }
@@ -585,6 +612,16 @@ class KAGBindingsPanel extends KAGElementsScreen
 		if (q === void || !q.has(name)) return;
 		q.setHidden(name, !q.hidden(name));
 		message = KAGActionLabel(name) + ": " + tr("Quick Menu") + " " + (q.hidden(name) ? tr("Off") : tr("On"));
+		defer(build);
+	}
+
+	// the action's button earlier (-1) or later (1) in the strip
+	function moveQuick(name, dir)
+	{
+		var q = quickMenu();
+		if (q === void || !q.has(name)) return;
+		q.moveButton(name, dir);
+		message = KAGActionLabel(name) + ": " + tr(dir < 0 ? "earlier in the quick menu" : "later in the quick menu");
 		defer(build);
 	}
 
@@ -620,7 +657,7 @@ class KAGBindingsPanel extends KAGElementsScreen
 	// the gesture cell goes round: no gesture, then each direction (taking it from another action)
 	function nextGesture(name)
 	{
-		var order = [ "left", "right", "up", "down" ], g = window.gestureActions, now = -1;
+		var order = [ "left", "right", "up", "down", "hold" ], g = window.gestureActions, now = -1;
 		for (var i = 0; i < order.count; i++) if (g[order[i]] == name) { now = i; break; }
 		window.rebindGesture(order[now], "") if now >= 0;
 		if (now + 1 < order.count) window.rebindGesture(order[now + 1], name);

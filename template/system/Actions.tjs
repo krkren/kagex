@@ -143,6 +143,7 @@ function KAGDefineFrameworkActions(win)
 	KAGDefineAction(%[ name:"nextScene", label:"On to the next scene",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.nextScene(); },
 		available:KAGActionWorld, enabled:function { return KAGActionMovable(false) !== void; } ]);
+	KAGDefineAction(%[ name:"next", label:"Go on", func:win.onPrimaryClickByKey ]); // (since 0.20.0: the mouse's forward button)
 	KAGDefineAction(%[ name:"language", label:"Show the game in its next language", func:win.switchLanguageByKey,
 		available:function { return languageAvailable; } incontextof win ]);
 	KAGDefineAction(%[ name:"menu", label:"Menu", func:function { showMenuBar(); } incontextof win,
@@ -194,8 +195,13 @@ class KAGGestures
 	var window;
 	var startX, startY, startTick, touches = 0, kind = "";   // the touch or drag going on
 	var lastTouch = 0;                                       // when a finger last touched or moved
+	var curX, curY;                                          // where the finger is now
+	var holdTime = 600;          // ms a finger stays still for a long press (since 0.20.0)
+	var holdTimer, heldGesture = false;
 	var swallowTick = 0, swallowRightTick = 0;               // the click it makes is dropped
-	var ranTick = 0;                                         // when a swipe last ran its gesture
+	var ranTick = 0;                                         // when a swipe last ran its gesture (the
+	                                                         // mouse's and the finger's events of one
+	                                                         // swipe come within 400 ms: one gesture)
 	// a touch screen's press (the click KAG makes at a press, held until the release, when it's a
 	// tap or a swipe): void on a touch screen (Window.enableTouch), or true or false to say
 	var holdClicks;
@@ -204,7 +210,7 @@ class KAGGestures
 	var gestureTime = 800;       // ms
 
 	function KAGGestures(win) { window = win; }
-	function finalize() {}
+	function finalize() { invalidate holdTimer if holdTimer !== void; }
 
 	// whether a gesture may run now: in the story, nothing over it (when: the game's own idea of
 	// the story, a function, or void)
@@ -224,7 +230,27 @@ class KAGGestures
 
 	function begin(x, y, how)
 	{
-		startX = x, startY = y, startTick = System.getTickCount(), kind = how;
+		startX = curX = x, startY = curY = y, startTick = System.getTickCount(), kind = how;
+	}
+
+	// a finger held still for holdTime: a long press (a tip shows meanwhile, Tooltips.tjs)
+	function holding(now = System.getTickCount())
+	{
+		return kind == "touch" && touches == 1 && !moved(curX, curY) && now - startTick >= holdTime;
+	}
+
+	// the long press's gesture (gestureActions.hold), once, for a press whose click is held (one
+	// on the story itself, not on a button): it makes no click as it ends
+	function onHoldTimer()
+	{
+		if (!holding()) { holdTimer.enabled = false if kind != "touch"; return; }
+		holdTimer.enabled = false;
+		if (!held || heldGesture || !canRun()) return;
+		var name = window.gestureActions.hold;
+		if (name === void || name == "") return;
+		heldGesture = true;
+		ranTick = System.getTickCount();
+		KAGRunAction(name);
 	}
 
 	// whether the move from the start is long enough for a gesture (however long it took)
@@ -257,7 +283,7 @@ class KAGGestures
 		if (name === void || name == "") return false;
 		var now = System.getTickCount();
 		if (how == "touch") {
-			if (now - ranTick < 1000) return false; // the held click's release made it already
+			if (now - ranTick < 400) return false; // the held click's release made it already
 			swallowTick = now;
 		} else swallowRightTick = now;
 		ranTick = now;
@@ -270,9 +296,15 @@ class KAGGestures
 		touches++;
 		lastTouch = System.getTickCount();
 		if (touches == 1) begin(x, y, "touch"); else kind = ""; // two fingers: a pinch
+		if (holdTimer === void) { holdTimer = new Timer(onHoldTimer, ""); holdTimer.interval = 50; }
+		holdTimer.enabled = kind == "touch";
 	}
 
-	function onTouchMove(x, y, id) { lastTouch = System.getTickCount(); }
+	function onTouchMove(x, y, id)
+	{
+		lastTouch = System.getTickCount();
+		if (kind == "touch" && touches == 1) curX = x, curY = y;
+	}
 
 	function onTouchUp(x, y, id)
 	{
@@ -301,6 +333,7 @@ class KAGGestures
 		if (!touchScreen() || !canRun()) return false;
 		var p = window.primaryLayer;
 		held = true, heldX = p.cursorX, heldY = p.cursorY, heldTick = System.getTickCount();
+		heldGesture = false;
 		return true;
 	}
 
@@ -308,6 +341,7 @@ class KAGGestures
 	{
 		if (!held) return;
 		held = false;
+		if (heldGesture) { heldGesture = false; return; } // a long press made its gesture: no click
 		var p = window.primaryLayer, now = System.getTickCount();
 		var x = p.cursorX, y = p.cursorY, w = p.width, h = p.height;
 		var min = (w < h ? w : h) * gestureDistance;
@@ -320,7 +354,7 @@ class KAGGestures
 		}
 		kind = ""; // the finger's own events, if they come after, make no second gesture
 		swallowTick = 0;
-		if (now - ranTick < 1000 || now - heldTick > gestureTime || !canRun()) return;
+		if (now - ranTick < 400 || now - heldTick > gestureTime || !canRun()) return;
 		var dir = ax > ay * 1.5 ? (dx < 0 ? "left" : "right") : ay > ax * 1.5 ? (dy < 0 ? "up" : "down") : "";
 		var name = dir != "" ? window.gestureActions[dir] : void;
 		if (name === void || name == "") return;
