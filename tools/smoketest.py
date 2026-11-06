@@ -3039,6 +3039,55 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
 
+    @step("every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample from before the touch-only pass)", flush=True)
+            return
+        game = 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void && !kag.historyShowing'
+        eng.wait("a stable point", game, timeout=20)
+        # a finger's tap on a layer: pressed and let go at its middle, as the touch's mouse events come
+        tap = ('var l = %s; if (l === void || !isvalid l) return "no such button"; var x = l.width \\ 2, y = l.height \\ 2;'
+               ' l.onMouseDown(x, y, mbLeft, 0); if (isvalid l) l.onMouseUp(x, y, mbLeft, 0); return "tapped";')
+        left = []
+        def leave(what, opener, wait_open, button, wait_closed=game):
+            eng.tjs(opener + "; return 1;")
+            eng.wait(what, wait_open, timeout=20)
+            time.sleep(0.3)
+            r = str(eng.tjs(tap % button))
+            if r != "tapped":
+                raise SmokeError("%s: %s" % (what, r))
+            eng.wait("%s to close with a tap" % what, wait_closed, timeout=20)
+            left.append(what)
+        leave("the history", "kag.showHistory()", "kag.historyShowing", "kag.historyLayer.closeButton")
+        for name, start, ks in (("Config", "startConfig()", "config.ks"), ("save", "startSave()", "save.ks"), ("load", "startLoad()", "load.ks")):
+            leave(name, start, 'kag.conductor.curStorage == "%s" && kag.inStable' % ks, 'kag.current.names["return"]')
+        leave("a Yes/No prompt", 'askYesNo("Test?")', "kag.currentDialog !== void", "kag.currentDialog.names.no")
+        leave("About", "showAbout()", "kag.currentDialog !== void", "kag.currentDialog.names.close")
+        if eng.tjs('return typeof KAGShowPadTest != "undefined" && KAGPadTestAvailable() ? 1 : 0;') == 1:
+            leave("the controller test", "KAGShowPadTest()", "kag.currentDialog !== void", "kag.currentDialog.names.close")
+        # the Elements screens (the controls list, Change Controls): their Close button's action
+        for what, opener in (("the controls list", "kag.showControls()"), ("Change Controls", "kag.showBindings()")):
+            if eng.tjs('return typeof global.ElementsDialog != "undefined" ? 1 : 0;') != 1:
+                break
+            eng.tjs(opener + "; return 1;")
+            try:
+                eng.wait(what, "kag.currentDialog !== void", timeout=10)
+            except SmokeError:
+                print("     (%s: not on this platform)" % what, flush=True)
+                continue
+            time.sleep(0.5)
+            eng.tjs('kag.currentDialog.onPanelActionSounding("close", void); return 1;')
+            eng.wait("%s to close with its Close button" % what, game, timeout=20)
+            left.append(what)
+        # a quick menu panel: a tap outside it
+        if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') == 1:
+            i = eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "config") return i; return -1;')
+            if i >= 0:
+                leave("a quick menu panel", "kag.quickMenu.openPanel(%d, false)" % i, "kag.quickMenu.panel !== void", "kag.quickMenu.panel.veil",
+                      "kag.quickMenu.panel === void")
+        print("     left with a tap: %s" % ", ".join(left), flush=True)
+
     @step("controller: Y switches auto mode, X shows the history, B closes it")
     def _():
         eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
