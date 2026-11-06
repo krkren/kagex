@@ -3147,9 +3147,10 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.KAGTextEntryWebTap != "undefined" && Storages.isExistentStorage("namescreen.ks") ? 1 : 0;') != 1:
             print("     (skipped: a framework from before typing in a phone's browser)", flush=True)
             return
-        eng.tjs('sf.heroNamed = true; sf.heroName = "Kai"; kag.process("namescreen.ks", "*start"); return 1;')
+        eng.tjs('sf.heroNamed = true; kag.process("namescreen.ks", "*start"); return 1;')
         eng.wait("the name screen", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable'
                  ' && kag.current.names["tf.heroGiven"] !== void', timeout=30)
+        before = str(eng.tjs('return kag.current.names["tf.heroGiven"].text;'))
         gx, gy = [float(v) for v in str(eng.tjs('var f = kag.current.names["tf.heroGiven"];'
                   ' return "%d,%d".sprintf(f.parent.left + f.left + 40, f.parent.top + f.top + f.height \\ 2);')).split(",")]
         eng.touch_hold(gx, gy)
@@ -3158,8 +3159,8 @@ def sample_steps(eng):
                                 " document.fullscreenElement ? document.fullscreenElement.tagName : ''].join('~'); })()")
         print("     focused, its text, full screen: %s" % got, flush=True)
         focus, text = got.split("~")[:2]
-        if focus != "kagex-text" or text != "Kai":
-            raise SmokeError("the tap didn't give the page's field (kagex-text) the focus with the field's text: %s" % got)
+        if focus != "kagex-text" or text != before:
+            raise SmokeError("the tap didn't give the page's field (kagex-text) the focus with the field's text (%s): %s" % (before, got))
         eng.page.keyboard.type("Robin")  # its text is selected: typing replaces it
         eng.wait("the game's field showing what's typed", 'kag.current.names["tf.heroGiven"].text == "Robin"', timeout=10)
         eng.page.keyboard.press("Enter")
