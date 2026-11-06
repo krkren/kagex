@@ -47,7 +47,7 @@ KAGDefineAction(%[ name:"exitScene", label:"Leave the replay", func:exitScene,
 
 // The message window's buttons are the quick menu (QuickMenu.tjs): along the window's bottom
 // edge, at its right, with their pictures (msg_*: icons, but for the saves); dimmed while they
-// can't be used, auto and skip lit while on, and the pin at the end lets them fade out until the
+// can't be used, auto and skip lit while on; Config's Quick Menu lets them fade out until the
 // pointer comes near (a tap on the handle on a phone). In three groups: moving through the story
 // (the scene before, the last choice, rewind, back a line, auto, skip, the next scene), saving
 // and loading, then the history, a screenshot and Config. Five have panels (QuickPanels.tjs)

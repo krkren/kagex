@@ -3151,9 +3151,10 @@ A strip of buttons for actions that can keep out of the way (since 0.19.0,
 template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
 comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
 back, and as a finger leaves the pointer resting where it tapped, only taps on the strip keep it
-there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on; the
-pin at the end, and Config's Quick Menu option, are the player's (kept in the system
-variables). It shows in the story only: not over a system screen, a prompt or the message
+there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on;
+which of the two is the player's, Config's Quick Menu option (kept in the system variables;
+up to 0.20.0 a pin at the strip's end said it too, which since 0.21.0 it has no more: on a
+phone it was easy to hit and looked as if it did nothing). It shows in the story only: not over a system screen, a prompt or the message
 history, nor while the message window is hidden.
 
     with (KAGQuickMenuOf(kag)) {
@@ -3182,10 +3183,10 @@ The sample's message window buttons are its quick menu, along the bottom of the 
 at its right (since 0.20.0; on its top edge before, where they ran past the window's end):
 icons for moving through the story (the scene before, the last choice, rewind, back a line,
 auto, skip, the next scene), Q.SAVE, Q.LOAD, SAVE and LOAD, and icons for the history and
-Config, the pin last; a button's tip names its action. [initscene] sets f.quickMenu, which the
+Config; a button's tip names its action. [initscene] sets f.quickMenu, which the
 title clears, and its marginB keeps the text (four lines) above the strip at the larger size.
 
-The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
+The player's own, besides Quick Menu (Always, or Near the Pointer): Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
 is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
 kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a

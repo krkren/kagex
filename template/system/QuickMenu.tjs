@@ -3,9 +3,10 @@
  * of the way: shown all the time (pinned) or fading in when the pointer comes near it (on a
  * touch screen, a tap on its handle) and out a moment after it leaves. After a touch, where the
  * pointer stays where the finger was, only a tap on the strip keeps it (since 0.20.0). A button
- * is dimmed while its action can't be done now and lit while its toggle is on (auto mode, skipping); the pin at
- * its end is the player's (kept in the system variables). It shows only in the story: not over
- * a system screen, a prompt or the message history, nor while the message window is hidden.
+ * is dimmed while its action can't be done now and lit while its toggle is on (auto mode, skipping).
+ * Which of the two is the player's, Config's Quick Menu (kept in the system variables; a pin at
+ * the strip's end said it too up to 0.20.0). It shows only in the story: not over a system
+ * screen, a prompt or the message history, nor while the message window is hidden.
  * A KAG plugin of the window (kag.quickMenu), made by KAGQuickMenuOf(kag) once a game has given
  * it buttons:
  *
@@ -63,8 +64,8 @@ class KAGQuickMenu extends KAGPlugin
 	var seenTouch = 0;         // (not a finger) put it there: after a touch it rests where the
 	var byMouse = true;        // finger was
 	// Android and iOS: the pointer is always a finger's (since 0.21.0): it rests where the last tap
-	// was and never comes near by itself, whether or not the touches' own events tell it (the pin
-	// did nothing on an Android phone: the strip took the finger resting on it for a mouse)
+	// was and never comes near by itself, whether or not the touches' own events tell it (on an
+	// Android phone the strip took a finger resting on it for a mouse, and never went)
 	var fingerOnly = false;
 	var timer;
 	var pics = %[];            // loaded button pictures, by name
@@ -237,11 +238,10 @@ class KAGQuickMenu extends KAGPlugin
 			h = b.h if b.h > h;
 			shown.add(b);
 		}
-		// the pin
-		h = (int)(42 * k) if h == 0;
-		shown.add(%[ action:"", pin:true, x:x, y:0, w:(int)(36 * k), h:h ]);
-		stripHeight = h;
-		return x + (int)(36 * k);
+		stripHeight = h > 0 ? h : (int)(42 * k);
+		var right = 1;
+		for (var i = 0; i < shown.count; i++) right = shown[i].x + shown[i].w if shown[i].x + shown[i].w > right;
+		return right;
 	}
 
 	function build()
@@ -270,7 +270,7 @@ class KAGQuickMenu extends KAGPlugin
 		return (m !== void ? m.absolute : 1000000) + 100;
 	}
 
-	function enabled(b) { return b.pin || KAGActionEnabled(b.action); }
+	function enabled(b) { return KAGActionEnabled(b.action); }
 	function lit(b) { return b.on !== void && b.on(); }
 
 	function draw()
@@ -278,7 +278,6 @@ class KAGQuickMenu extends KAGPlugin
 		layer.fillRect(0, 0, layer.imageWidth, layer.imageHeight, 0);
 		for (var i = 0; i < shown.count; i++) {
 			var b = shown[i], over = i == hover, en = enabled(b);
-			if (b.pin) { drawPin(b, over); continue; }
 			if (b.normal !== void) {
 				var p = lit(b) && b.lit !== void ? b.lit : over && en && b.over !== void ? b.over : b.normal;
 				layer.operateStretch(b.x, b.y, b.w, b.h, p, 0, 0, p.width, p.height, omAlpha, en ? 255 : 96, stLinear);
@@ -294,23 +293,6 @@ class KAGQuickMenu extends KAGPlugin
 				var m = (int)(9 * drawScale), x1 = b.x + b.w - (int)(4 * drawScale), y0 = b.y + (int)(4 * drawScale);
 				for (var r = 0; r < m; r++) layer.fillRect(x1 - (m - r), y0 + r, m - r, 1, i == hover ? 0xffffd84a : 0xffffb020);
 			}
-		}
-	}
-
-	// a push pin: down (pinned) or lying (it slides away)
-	function drawPin(b, over)
-	{
-		var c = over ? 0xff5025ff : 0xffffffff, cx = b.x + (b.w >> 1), cy = b.y + (b.h >> 1), k = drawScale;
-		var p1 = (int)(k + 0.5), p3 = (int)(3 * k), p4 = (int)(4 * k), p7 = (int)(7 * k), p9 = (int)(9 * k), p11 = (int)(11 * k), p12 = (int)(12 * k);
-		layer.fillRect(b.x + 2, b.y + 4, b.w - 4, b.h - 8, over ? 0xc0ffffff : 0x805025ff);
-		if (pinned) {
-			layer.fillRect(cx - p7, cy - p12, p7 * 2, p9, c);
-			layer.fillRect(cx - p3, cy - p3, p3 * 2, p4, c);
-			layer.fillRect(cx - p1, cy + p1, p1 * 2, p11, c);
-		} else {
-			layer.fillRect(cx - p12, cy - p7, p9, p7 * 2, c);
-			layer.fillRect(cx - p3, cy - p3, p4, p3 * 2, c);
-			layer.fillRect(cx + p1, cy - p1, p11, p1 * 2, c);
 		}
 	}
 
@@ -451,7 +433,7 @@ class KAGQuickMenu extends KAGPlugin
 			var b = shown[i], states = [ "focusable" ];
 			states.add("disabled") if !enabled(b);
 			states.add("checked") if lit(b);
-			var name = b.pin ? (pinned ? tr("Let the buttons fade out") : tr("Keep the buttons shown")) : KAGActionLabel(b.action);
+			var name = KAGActionLabel(b.action);
 			nodes.add(%[ id:"quickmenu" + i, role:"button", parent:"quickmenu", name:name, states:states,
 				rect:KAGA11y.rectOf(layer, b.x, b.y, b.w, b.h) ]);
 		}
@@ -464,7 +446,6 @@ class KAGQuickMenu extends KAGPlugin
 		var i = +id.substring(9), b = shown[i];
 		if (b === void || action != "click") return;
 		lastNear = System.getTickCount();
-		if (b.pin) { togglePin(); return; }
 		if (enabled(b)) KAGRunAction(b.action);
 		stateKey = "";
 	}
@@ -529,19 +510,8 @@ class KAGQuickMenu extends KAGPlugin
 		pressed = -1;
 		var b = shown[i];
 		lastNear = System.getTickCount();
-		if (b.pin) { togglePin(); return; }
 		KAGRunAction(b.action);
 		stateKey = "";
-	}
-
-	// the pin pressed: unpinned by a mouse, the strip fades hideDelay after the pointer leaves it;
-	// by a finger (or a screen reader), it goes at once and its handle brings it back (since 0.21.0:
-	// it had stayed touchHideDelay, which looked like the pin doing nothing)
-	function togglePin()
-	{
-		pinned = !pinned;
-		stateKey = "";
-		if (!pinned && !byMouse) lastNear = 0;
 	}
 
 	// a button's tip: its action's label (Tooltips.tjs)
@@ -550,16 +520,14 @@ class KAGQuickMenu extends KAGPlugin
 		if (l === handle) return "Show the buttons";
 		var i = hit(x, y);
 		if (i < 0) return "";
-		var b = shown[i];
-		if (b.pin) return pinned ? "Let the buttons fade out" : "Keep the buttons shown";
-		return KAGActionLabel(b.action);
+		return KAGActionLabel(shown[i].action);
 	}
 
 	// the strip's buttons, for tests: [ action, enabled, lit ] each
 	function buttons()
 	{
 		var r = [];
-		for (var i = 0; i < shown.count; i++) if (!shown[i].pin) r.add([ shown[i].action, enabled(shown[i]), lit(shown[i]) ]);
+		for (var i = 0; i < shown.count; i++) r.add([ shown[i].action, enabled(shown[i]), lit(shown[i]) ]);
 		return r;
 	}
 
@@ -588,7 +556,8 @@ KAGDefineOption(%[ name:"quickMenuSize", label:"Quick Menu Size", kind:"toggle",
 KAGDefineOption(%[ name:"quickMenuOpacity", label:"Quick Menu Opacity", kind:"slider", save:true, initial:100,
 	min:30, max:100, step:5, ends:[ "Faint", "Solid" ] ]);
 
-// Config: the quick menu always shown (pinned), or only near the pointer
+// Config: the quick menu always shown (pinned), or only near the pointer (on a touch screen,
+// brought by a tap on its handle)
 KAGDefineOption(%[ name:"quickMenu", label:"Quick Menu", kind:"toggle",
 	values:[ ["Always", true], ["Near the Pointer", false] ],
 	getValue:function { return typeof kag.quickMenu == "Object" && kag.quickMenu !== void ? kag.quickMenu.pinned : true; },

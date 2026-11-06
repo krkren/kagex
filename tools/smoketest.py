@@ -3357,7 +3357,7 @@ def sample_steps(eng):
         finally:
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
         if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
-            raise SmokeError("the pin isn't kept in the system variables")
+            raise SmokeError("Config's Quick Menu (Always) isn't kept in the system variables")
         # the player's own: larger, fainter, a button left out
         if eng.tjs('return typeof kag.quickMenu.setHidden != "undefined" ? 1 : 0;') == 1:
             got = str(eng.tjs('var q = kag.quickMenu, s0 = KAGOptionGet("quickMenuSize"), o0 = KAGOptionGet("quickMenuOpacity");'
@@ -3385,13 +3385,13 @@ def sample_steps(eng):
             if got != "1,1,1":
                 raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
 
-    @step("Android: a real tap on the quick menu's pin unpins it and the strip goes at once, a tap on its handle brings it back, and a tap on the pin pins it again")
+    @step("Android: with the quick menu near the pointer, a real tap on its handle brings it, and it goes again though the finger's pointer rests on it")
     def _():
         if not isinstance(eng, AndroidEngine):
             print("     (Android only: real taps through adb)", flush=True)
             return
         if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible'
-                   ' && typeof kag.quickMenu.togglePin != "undefined" ? 1 : 0;') != 1:
+                   ' && typeof kag.quickMenu.fingerOnly != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: no quick menu shown here)", flush=True)
             return
         eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
@@ -3410,20 +3410,16 @@ def sample_steps(eng):
         kx = (p[1][0] - p[0][0]) / (c[1][0] - c[0][0]); ky = (p[1][1] - p[0][1]) / (c[1][1] - c[0][1])
         def screen(gx, gy):
             return (p[0][0] + (gx - c[0][0]) * kx, p[0][1] + (gy - c[0][1]) * ky)
-        eng.tjs("kag.quickMenu.pinned = true; return 1;")
-        time.sleep(0.5)
-        pin = [int(v) for v in str(eng.tjs('var q = kag.quickMenu, l = q.layer, b = q.shown[q.shown.count - 1];'
-                                           ' return [l.left + b.x + (b.w >> 1), l.top + b.y + (b.h >> 1)].join(",");')).split(",")]
         try:
-            eng.tap(*screen(*pin))
-            eng.wait("the pin tapped: unpinned", "!kag.quickMenu.pinned", timeout=5)
-            eng.wait("the strip gone at once, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle !== void && kag.quickMenu.handle.visible", timeout=3)
+            # Config's Quick Menu: Near the Pointer
+            eng.tjs("kag.quickMenu.pinned = false; return 1;")
+            eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle !== void && kag.quickMenu.handle.visible", timeout=15)
             hd = [int(v) for v in str(eng.tjs('var h = kag.quickMenu.handle; return [h.left + (h.width >> 1), h.top + (h.height >> 1)].join(",");')).split(",")]
             eng.tap(*screen(*hd))
             eng.wait("the strip back (its handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity > 200", timeout=5)
-            eng.tap(*screen(*pin))
-            eng.wait("the pin tapped again: pinned", "kag.quickMenu.pinned", timeout=5)
-            print("     the pin at %s (game), %s (screen): unpinned and away, the handle brought it back, pinned again" % (pin, [int(v) for v in screen(*pin)]), flush=True)
+            # the pointer rests where the finger was, over the strip: that doesn't keep it
+            eng.wait("the strip away again a few seconds later", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=15)
+            print("     the handle at %s (game), %s (screen): the strip came and went again" % (hd, [int(v) for v in screen(*hd)]), flush=True)
         finally:
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
 
