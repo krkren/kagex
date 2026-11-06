@@ -26,6 +26,8 @@ class KAGAccessibility
 {
 	var available = false; // the engine has the interface
 	var owners = [];       // %[ owner, nodes, focus ], the front one last
+	var toolbar;           // %[ owner, nodes ]: a strip of buttons always there beside the front
+	                       // owner's (the quick menu, since 0.20.0), its ids its own
 
 	function KAGAccessibility()
 	{
@@ -91,6 +93,24 @@ class KAGAccessibility
 		publish() if (i == owners.count - 1);
 	}
 
+	/**
+	 * A toolbar's nodes (the quick menu's), given to the engine after the front owner's, so
+	 * they're there beside the choices or the message; removeToolbar(owner) takes them away
+	 */
+	function setToolbar(owner, nodes)
+	{
+		if (!available) return;
+		toolbar = %[ owner:owner, nodes:nodes ];
+		publish();
+	}
+
+	function removeToolbar(owner)
+	{
+		if (!available || toolbar === void || toolbar.owner !== owner) return;
+		toolbar = void;
+		publish();
+	}
+
 	function removeNodes(owner)
 	{
 		if (!available) return;
@@ -113,9 +133,16 @@ class KAGAccessibility
 	{
 		for (var i = owners.count - 1; i >= 0; i--)
 			owners.erase(i) if (!isvalid owners[i].owner);
+		toolbar = void if (toolbar !== void && !isvalid toolbar.owner);
 		try {
-			if (owners.count == 0) ElementsDialog.clearGameA11y();
-			else with (owners[owners.count - 1]) ElementsDialog.setGameA11y(.nodes, .focus);
+			if (owners.count == 0 && toolbar === void) ElementsDialog.clearGameA11y();
+			else if (toolbar === void) with (owners[owners.count - 1]) ElementsDialog.setGameA11y(.nodes, .focus);
+			else {
+				var nodes = [], focus;
+				if (owners.count > 0) with (owners[owners.count - 1]) nodes.assign(.nodes), focus = .focus;
+				for (var i = 0; i < toolbar.nodes.count; i++) nodes.add(toolbar.nodes[i]);
+				ElementsDialog.setGameA11y(nodes, focus);
+			}
 		} catch (e) { dm("setGameA11y: " + e.message); }
 	}
 
@@ -124,6 +151,14 @@ class KAGAccessibility
 	 */
 	function onAction(id, action, arg)
 	{
+		// the toolbar's own nodes
+		if (toolbar !== void && isvalid toolbar.owner) {
+			for (var i = 0; i < toolbar.nodes.count; i++) {
+				if (toolbar.nodes[i].id != id) continue;
+				if (typeof toolbar.owner.onA11yAction != "undefined") toolbar.owner.onA11yAction(id, action, arg);
+				return;
+			}
+		}
 		for (var i = owners.count - 1; i >= 0; i--) {
 			var owner = owners[i].owner;
 			if (!isvalid owner) continue;

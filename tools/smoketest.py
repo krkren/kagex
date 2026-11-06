@@ -3165,6 +3165,70 @@ def sample_steps(eng):
             if got != "1,1,1":
                 raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
 
+    @step("the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip")
+    def _():
+        if eng.tjs('return typeof global.KAGQuickPanelLayer != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu panels here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        idx = lambda a: eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "%s") return i; return -1;' % a)
+        press = 'var q = kag.quickMenu, b = q.shown[%d]; q.onDown(b.x + 5, b.y + 5, %s); q.onUp(b.x + 5, b.y + 5, %s); return 1;'
+        eng.tjs('global.__smokeBgm = kag.bgmvolume; KAGOptionSet("quickMenuPanels", "press"); return 1;')
+        try:
+            eng.tjs(press % (idx("config"), "mbRight", "mbRight"))
+            eng.wait("the volume panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Volume"', timeout=5)
+            got = str(eng.tjs('var p = kag.quickMenu.panel, r = [p.rows.count, kag.bgmvolume]; p.onKey(VK_LEFT, 0); r.add(kag.bgmvolume);'
+                              ' var w = p.rows[0], x = w.x + p.labelW + 14 + ((p.controlW - 28) >> 1); p.onMouseDown(x, w.y + 20, mbLeft, 0);'
+                              ' p.onMouseUp(x, w.y + 20, mbLeft, 0); r.add(kag.bgmvolume); var c = kag.clickCount; p.veil.onMouseDown(10, 10, mbLeft, 0);'
+                              ' global.__smokeClicks = kag.clickCount - c; return r.join(",");'))
+            eng.wait("the panel to close (a click outside)", "kag.quickMenu.panel === void", timeout=5)
+            print("     the volume panel: rows, the music before, after Left, after a click halfway: %s; clicks that went on: %s"
+                  % (got, eng.tjs("return global.__smokeClicks;")), flush=True)
+            v = [int(float(x)) for x in got.split(",")]
+            if v[0] < 3 or v[2] != v[1] - 1 or not (45 <= v[3] <= 55) or eng.tjs("return global.__smokeClicks;") != 0:
+                raise SmokeError("the volume panel didn't change the music's volume, or a click outside it went on: %s" % got)
+            # a long press on Auto: its panel, and no auto mode
+            i = idx("auto")
+            eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onDown(b.x + 5, b.y + 5, mbLeft); return 1;' % i)
+            eng.wait("the text panel (a long press)", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Text"', timeout=5)
+            eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onUp(b.x + 5, b.y + 5, mbLeft); return 1;' % i)
+            time.sleep(0.3)
+            if eng.tjs("return kag.autoMode ? 1 : 0;") != 0:
+                raise SmokeError("a long press on Auto turned auto mode on as well as opening its panel")
+            eng.tjs("kag.onKeyDown(VK_ESCAPE, 0); return 1;")
+            eng.wait("the panel to close (Esc)", "kag.quickMenu.panel === void", timeout=5)
+            # Q.LOAD's: the quick saves, newest first
+            eng.tjs(press % (idx("quickLoad"), "mbRight", "mbRight"))
+            eng.wait("the quick saves panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Quick Saves"', timeout=5)
+            rows = str(eng.tjs('var p = kag.quickMenu.panel, r = []; for (var i = 0; i < p.rows.count; i++) r.add(p.rows[i].kind == "save" ? p.rows[i].n : p.rows[i].kind);'
+                               ' kag.quickMenu.closePanel(); return r.join(",") + "|" + kag.quickSaves().join(",");'))
+            print("     the quick saves panel's rows | the quick saves: %s" % rows, flush=True)
+            a, b = rows.split("|")
+            if b != "" and not b.startswith(a.split(",")[0]):
+                raise SmokeError("the quick saves panel doesn't list the newest quick save first: %s" % rows)
+            # Pointing at It: resting on Config's button opens its panel, going away closes it
+            eng.tjs('KAGOptionSet("quickMenuPanels", "hover"); var q = kag.quickMenu, b = q.shown[%d];'
+                    ' kag.primaryLayer.setCursorPos(q.layer.left + b.x + 5, q.layer.top + b.y + 5); return 1;' % idx("config"))
+            time.sleep(0.2)
+            if eng.tjs("var q = kag.quickMenu; return q.layer.left <= kag.primaryLayer.cursorX && kag.primaryLayer.cursorX < q.layer.left + q.layer.width ? 1 : 0;") == 1:
+                eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onMove(b.x + 5, b.y + 5); return 1;' % idx("config"))
+                eng.wait("the volume panel (resting on Config)", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.byHover', timeout=5)
+                eng.tjs("kag.quickMenu.onLeave(); kag.primaryLayer.setCursorPos(200, 200); return 1;")
+                eng.wait("the panel to close (the pointer gone)", "kag.quickMenu.panel === void", timeout=5)
+                print("     Pointing at It: opened as the pointer rested on Config, closed as it went", flush=True)
+            else:
+                print("     (Pointing at It: skipped, the pointer can't be moved here)", flush=True)
+            eng.tjs('KAGOptionSet("quickMenuPanels", "press"); return 1;')
+            # screen readers: the strip's buttons beside the rest
+            if eng.tjs("return KAGA11y.available ? 1 : 0;") == 1:
+                n = eng.tjs("kag.quickMenu.a11yKey = \"-\"; kag.quickMenu.onTimer(); return KAGA11y.toolbar !== void ? KAGA11y.toolbar.nodes.count : 0;")
+                print("     the strip's nodes for screen readers: %s" % n, flush=True)
+                if n < 6:
+                    raise SmokeError("screen readers didn't get the quick menu's buttons: %s" % n)
+        finally:
+            eng.tjs("kag.quickMenu.closePanel(); kag.bgmvolume = global.__smokeBgm; return 1;")
+
     @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
     def _():
         if eng.tjs('return typeof kag.tooltips == "Object" && kag.tooltips !== void && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
@@ -3475,8 +3539,19 @@ def sample_steps(eng):
         mode = str(eng.tjs('kag.enterAutoMode(); return 1;'))
         time.sleep(0.3)
         mode = str(eng.tjs('var i = kag.indicators, r = [i.modeShown, i.modeLayer.visible ? 1 : 0]; kag.cancelAutoMode(); return r.join(",");'))
-        if mode != "AUTO,1":
+        if mode not in ("AUTO,1", "Auto,1"):
             raise SmokeError("auto mode's mark didn't show: %s" % mode)
+        # skipping says it started and why it stopped, at the top right (0.20.0 on)
+        if eng.tjs('return typeof kag.indicators.skipWas != "undefined" ? 1 : 0;') == 1:
+            eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+            eng.tjs('global.__smokeAllskip = kag.allskip; kag.allskip = true; kag.skipToStop(); return 1;')
+            started = eng.wait("skipping's notice", 'kag.indicators.modeShown != "" && kag.indicators.modeShown != "Auto"'
+                               ' ? kag.indicators.modeShown + "," + kag.indicators.modeLayer.top : ""', timeout=5)
+            eng.tjs('kag.cancelSkip(); kag.allskip = global.__smokeAllskip; return 1;')
+            stopped = eng.wait("its end's notice", 'kag.indicators.modeShown.indexOf("top") >= 0 ? kag.indicators.modeShown : ""', timeout=5)
+            print("     skipping: %s; then %s" % (started, stopped), flush=True)
+            if not started.startswith("Skipping,") or int(started.split(",")[1]) > 300:
+                raise SmokeError("skipping's start wasn't told at the top right: %s" % started)
         play = eng.tjs('world_object.env.playVoice("ai", "ai000001", true); return world_object.env.characters.ai.soundBuffer.status == "play" ? 1 : 0;')
         if play == 1:
             eng.wait("the voice bar", "kag.indicators.voiceLayer !== void && kag.indicators.voiceLayer.visible", timeout=5)

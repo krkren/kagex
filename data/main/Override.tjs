@@ -702,15 +702,15 @@ function setConfigPage(page)
 var configPages = [
     void, void,
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
-      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
+      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
-    // the interface: the quick menu, tips, screenshots; the screen and the controller (Display.tjs)
-    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips", "screenshotWindow", "screenshotFormat" ],
+    // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ]
     ];
 

@@ -15,6 +15,8 @@
  *               without one, the action's label in the dialogs' look
  *       x       its left within the strip; void: after the one before, gap px on
  *       on      void, or a function: lit while it returns true (auto: kag.autoMode)
+ *       panel   void, or a panel it opens on a right-click, a long press or resting on it
+ *               (QuickPanels.tjs: "volume", "text", "quickSaves", or the game's own)
  *   kag.quickMenu.place   a function (width, height) returning [ left, top ] for the strip of
  *                         that size; void: the bottom of the screen, in the middle
  *   kag.quickMenu.when    void, or a function: shown only while it returns true (the sample's:
@@ -65,6 +67,14 @@ class KAGQuickMenu extends KAGPlugin
 	var language;              // the language they were loaded in (a language's own pictures)
 	var drawScale = 1.0;       // the size drawn at: the player's, or smaller to fit the screen
 	var stripHeight = 42;
+	var panel;                 // the panel open (QuickPanels.tjs), or void
+	var panelTrigger;          // closes it after the event that asked (AsyncTrigger)
+	var pressTick = 0, longPressed = false; // a press held on a button with a panel opens it
+	var longPress = 500;       // ms
+	var hoverSince = 0;        // when the pointer came onto the button it's on (panels by hovering)
+	var hoverOpen = 500;       // ms
+	var a11yKey = "";          // what the screen reader was last given
+	var showable = false;      // whether it could show at the last tick (it peeks out as it can again)
 
 	function KAGQuickMenu(win)
 	{
@@ -78,6 +88,9 @@ class KAGQuickMenu extends KAGPlugin
 	function finalize()
 	{
 		invalidate timer;
+		closePanel();
+		invalidate panelTrigger if panelTrigger !== void;
+		KAGA11y.removeToolbar(this) if typeof KAGA11y.removeToolbar != "undefined";
 		invalidate layer if layer !== void && isvalid layer;
 		invalidate handle if handle !== void && isvalid handle;
 		dropPictures();
@@ -165,7 +178,7 @@ class KAGQuickMenu extends KAGPlugin
 		for (var i = 0; i < l.count; i++) {
 			var it = l[i];
 			if (!KAGActionAvailable(it.action) || hidden(it.action)) continue;
-			var b = %[ action:it.action, on:KAGBindToGlobal(it.on) ];
+			var b = %[ action:it.action, on:KAGBindToGlobal(it.on), panel:it.panel ];
 			b.normal = picture(it.image + "_normal") if it.image !== void;
 			if (b.normal !== void) {
 				b.over = picture(it.image + "_over");
@@ -234,6 +247,11 @@ class KAGQuickMenu extends KAGPlugin
 				var tw = measureYesNoText(layer, b.label), th = layer.font.getTextHeight(b.label);
 				layer.drawText(b.x + ((b.w - tw) >> 1), b.y + ((b.h - th) >> 1), b.label, over && en || lit(b) ? 0xffffff : en ? 0x5025ff : 0xa0a0b8);
 			}
+			// a panel's mark: a small corner at the top right
+			if (b.panel !== void && typeof global.KAGQuickPanelMode != "undefined" && KAGQuickPanelMode() != "off") {
+				var m = (int)(9 * drawScale), x1 = b.x + b.w - (int)(4 * drawScale), y0 = b.y + (int)(4 * drawScale);
+				for (var r = 0; r < m; r++) layer.fillRect(x1 - (m - r), y0 + r, m - r, 1, i == hover ? 0xffffd84a : 0xffffb020);
+			}
 		}
 	}
 
@@ -256,7 +274,7 @@ class KAGQuickMenu extends KAGPlugin
 
 	function stateOf()
 	{
-		var s = [ pinned ? 1 : 0, hover, scale ];
+		var s = [ pinned ? 1 : 0, hover, scale, typeof global.KAGQuickPanelMode != "undefined" ? KAGQuickPanelMode() : "" ];
 		for (var i = 0; i < shown.count; i++) s.add(enabled(shown[i]) ? 1 : 0), s.add(lit(shown[i]) ? 1 : 0);
 		return s.join(",");
 	}
@@ -267,8 +285,14 @@ class KAGQuickMenu extends KAGPlugin
 		if (!canShow()) {
 			layer.visible = false if layer !== void;
 			handle.visible = false if handle !== void;
+			closePanel();
+			pushA11y(false);
+			showable = false;
 			return;
 		}
+		// it can show again (the story, the window back): unpinned, it peeks out for a moment so
+		// the player knows it's there (since 0.20.0)
+		if (!showable) { showable = true; lastNear = System.getTickCount(); }
 		var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
 		if (lang != language) { language = lang; dropPictures(); stateKey = ""; }
 		if (layer === void) build();
@@ -288,7 +312,7 @@ class KAGQuickMenu extends KAGPlugin
 		var near = byMouse && px >= at[0] - reveal && px < at[0] + layer.width + reveal && py >= at[1] - reveal && py < at[1] + layer.height + reveal;
 		// (the handle's tap, or a button's, notes the time once: a tap brings it for a while, it
 		// doesn't keep it, as 0.19.0's did for good)
-		lastNear = now if near;
+		lastNear = now if near || panel !== void; // (a panel open keeps it)
 		var want = pinned || now - lastNear < (byMouse ? hideDelay : touchHideDelay) ? 1 : 0;
 		slide += want > slide ? 0.2 : want < slide ? -0.2 : 0;
 		slide = 0 if slide < 0;
@@ -303,6 +327,102 @@ class KAGQuickMenu extends KAGPlugin
 		layer.visible = slide > 0;
 		layer.hitThreshold = slide >= 1 ? 16 : 256;
 		updateHandle(at, slide < 1 && !pinned);
+		panelTick(now);
+		pushA11y(slide >= 1);
+	}
+
+	//---------------------------------------------------------------- panels (QuickPanels.tjs) --
+
+	// a button's panel: its spec, or void
+	function panelSpec(b)
+	{
+		if (b === void || b.panel === void || typeof global.KAGQuickPanelSpecs == "undefined") return;
+		var p = b.panel;
+		p = KAGBindToGlobal(p)() if typeof p == "Object" && p !== void && !(p instanceof "Array") && !(p instanceof "Dictionary");
+		if (typeof p == "String") return KAGQuickPanelSpecs[p];
+		if (p instanceof "Array") return %[ title:"", options:p ];
+		return p;
+	}
+
+	function openPanel(i, byHover = false)
+	{
+		var b = shown[i], spec = panelSpec(b);
+		if (spec === void) return false;
+		closePanel();
+		if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		try { panel = new KAGQuickPanelLayer(window, this, spec, i, byHover); } catch (e) { dm("quick menu panel: " + e.message); panel = void; return false; }
+		lastNear = System.getTickCount();
+		return true;
+	}
+
+	function closePanel()
+	{
+		if (panel === void) return;
+		var p = panel;
+		panel = void;
+		invalidate p if isvalid p;
+	}
+
+	// closes it after the event going on (a click on the panel or its veil)
+	function closePanelLater()
+	{
+		if (panelTrigger === void) { panelTrigger = new AsyncTrigger(closePanel, ""); panelTrigger.cached = true; }
+		panelTrigger.trigger();
+	}
+
+	// long presses, resting on a button, and a panel opened by resting closing as the pointer goes
+	function panelTick(now)
+	{
+		var mode = typeof global.KAGQuickPanelMode != "undefined" ? KAGQuickPanelMode() : "off";
+		if (mode == "off") { closePanel(); return; }
+		if (pressed >= 0 && !longPressed && pressTick > 0 && now - pressTick >= longPress && panelSpec(shown[pressed]) !== void) {
+			longPressed = true;
+			openPanel(pressed);
+		}
+		if (mode == "hover" && byMouse && hover >= 0 && pressed < 0 && now - hoverSince >= hoverOpen && panelSpec(shown[hover]) !== void
+			&& (panel === void || panel.button != hover)) openPanel(hover, true);
+		if (panel !== void && panel.byHover) {
+			var over = hover == panel.button;
+			if (over) panel.away = 0;
+			else if (panel.away == 0 && hover != panel.button) {
+				var px = window.primaryLayer.cursorX, py = window.primaryLayer.cursorY;
+				if (!(px >= panel.left && py >= panel.top && px < panel.left + panel.width && py < panel.top + panel.height)) panel.away = now;
+			}
+			if (panel.away > 0 && now - panel.away > 700) closePanel();
+		}
+	}
+
+	//------------------------------------------------------------------------ screen readers --
+
+	// the strip's buttons, beside whatever else the screen reader has (KAGA11y.setToolbar)
+	function pushA11y(show)
+	{
+		if (!KAGA11y.available || typeof KAGA11y.setToolbar == "undefined") return;
+		var key = show ? stateKey + "|" + layer.left + "," + layer.top : "";
+		if (key == a11yKey) return;
+		a11yKey = key;
+		if (!show) { KAGA11y.removeToolbar(this); return; }
+		var nodes = [ %[ id:"quickmenu", role:"group", name:tr("Quick menu") ] ];
+		for (var i = 0; i < shown.count; i++) {
+			var b = shown[i], states = [ "focusable" ];
+			states.add("disabled") if !enabled(b);
+			states.add("checked") if lit(b);
+			var name = b.pin ? (pinned ? tr("Let the buttons fade out") : tr("Keep the buttons shown")) : KAGActionLabel(b.action);
+			nodes.add(%[ id:"quickmenu" + i, role:"button", parent:"quickmenu", name:name, states:states,
+				rect:KAGA11y.rectOf(layer, b.x, b.y, b.w, b.h) ]);
+		}
+		KAGA11y.setToolbar(this, nodes);
+	}
+
+	function onA11yAction(id, action, arg)
+	{
+		if (id.substring(0, 9) != "quickmenu" || id == "quickmenu") return;
+		var i = +id.substring(9), b = shown[i];
+		if (b === void || action != "click") return;
+		lastNear = System.getTickCount();
+		if (b.pin) { pinned = !pinned; return; }
+		if (enabled(b)) KAGRunAction(b.action);
+		stateKey = "";
 	}
 
 	// the handle while the strip is away: a tap brings it in (touch screens have no hover)
@@ -337,18 +457,28 @@ class KAGQuickMenu extends KAGPlugin
 		return -1;
 	}
 
-	function onMove(x, y) { var h = hit(x, y); if (h != hover) { hover = h; stateKey = ""; } }
+	function onMove(x, y) { var h = hit(x, y); if (h != hover) { hover = h; hoverSince = System.getTickCount(); stateKey = ""; } }
 	function onLeave() { if (hover != -1) { hover = -1; stateKey = ""; } }
 
 	function onDown(x, y, button)
 	{
 		pressed = button == mbLeft ? hit(x, y) : -1;
+		pressTick = pressed >= 0 ? System.getTickCount() : 0;
+		longPressed = false;
 	}
 
 	function onUp(x, y, button)
 	{
 		var i = hit(x, y);
+		pressTick = 0;
+		// a right-click on a button with a panel opens it
+		if (button == mbRight) {
+			if (i >= 0 && typeof global.KAGQuickPanelMode != "undefined" && KAGQuickPanelMode() != "off" && panelSpec(shown[i]) !== void) openPanel(i);
+			return;
+		}
 		if (button != mbLeft) return;
+		// a long press opened the button's panel: no click
+		if (longPressed) { longPressed = false; pressed = -1; return; }
 		// the handle: in
 		if (layer === void || !layer.visible || slide < 1) { lastNear = System.getTickCount(); pressed = -1; return; }
 		if (i < 0 || i != pressed) { pressed = -1; return; }

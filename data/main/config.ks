@@ -101,7 +101,7 @@
 [locate x=612 y=78]
 [button name="page1" exp="setConfigPage(1)" hint="Sound and Text"]
 [locate x=674 y=78]
-[button name="page2" exp="setConfigPage(2)" hint="Voices and Saves"]
+[button name="page2" exp="setConfigPage(2)" hint="Voices, Saves and Screenshots"]
 [locate x=736 y=78]
 [button name="page3" exp="setConfigPage(3)" hint="Reading"]
 [locate x=798 y=78]

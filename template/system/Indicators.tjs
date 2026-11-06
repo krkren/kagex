@@ -133,18 +133,38 @@ class KAGIndicators extends KAGPlugin
 	}
 
 	// ---- auto mode and skipping ----
+	// The mark at the top right (since 0.20.0; at the bottom right before, where the quick menu
+	// is now), under "now playing" while that shows; skipping says for 2 s that it started
+	// (read text only, or all) and why it stopped (unread text, a choice, or the player)
+	var skipWas = false, skipStopped = 0, modeNote = "", modeNoteUntil = 0;
 	function updateMode()
 	{
-		var mode = !on("modeMark") ? "" : window.autoMode ? "AUTO" : window.skipMode >= SKIP_STOP && !window.skipNoDisp ? "SKIP" : "";
-		if (mode == modeShown) return;
+		var now = System.getTickCount(), skipping = window.skipMode >= SKIP_STOP && !window.skipNoDisp;
+		if (skipping && !skipWas) {
+			modeNote = window.allskip ? "Skipping" : "Skipping read text", modeNoteUntil = now + 2000, skipStopped = 0;
+		} else if (!skipping && skipWas) skipStopped = now;
+		skipWas = skipping;
+		// why it stopped, a moment after (a choice shows a little later)
+		if (skipStopped > 0 && now - skipStopped >= 150) {
+			skipStopped = 0;
+			modeNote = window.selectShowing ? "Stopped at a choice" :
+				!window.allskip && !window.getCurrentRead() ? "Stopped at unread text" : "Skipping stopped";
+			modeNoteUntil = now + 2000;
+		}
+		var mode = !on("modeMark") ? "" : now < modeNoteUntil ? modeNote : window.autoMode ? "Auto" : skipping ? "Skip" : "";
+		var y = playingLayer !== void && playingLayer.visible ? 36 + playingLayer.height + 12 : 36;
+		if (mode == modeShown) {
+			if (modeLayer !== void && modeLayer.visible && modeLayer.top != y) modeLayer.top = y;
+			return;
+		}
 		modeShown = mode;
 		if (mode == "") {
 			if (modeLayer !== void) modeLayer.visible = false;
 			return;
 		}
 		if (modeLayer === void) modeLayer = newLayer("mode");
-		drawCard(modeLayer, tr(mode == "AUTO" ? "Auto" : "Skip"), 26);
-		modeLayer.setPos(window.primaryLayer.width - modeLayer.width - 40, window.primaryLayer.height - modeLayer.height - 40);
+		drawCard(modeLayer, tr(mode), 26);
+		modeLayer.setPos(window.primaryLayer.width - modeLayer.width - 40, y);
 		modeLayer.visible = true;
 	}
 

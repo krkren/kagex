@@ -1,0 +1,349 @@
+/**
+ * The quick menu's panels (since 0.20.0): a small panel over the scene that opens from a button
+ * of the quick menu with one (its item's panel), as Config's Quick Menu Panels says
+ * (quickMenuPanels): on a right-click or a long press on the button ("press", the default), as
+ * the pointer rests on it ("hover"), or never ("off"). It closes with Esc, the controller's B, a
+ * click outside it or, opened by resting, the pointer leaving it and the button. The keys and
+ * the D-pad move between its rows (up, down) and change the row (left, right); Return or A
+ * picks a quick save. A button with a panel has a small mark at its top right.
+ *
+ *   panel  "volume"      the music's, sounds' and voices' volumes and a switch for all sound
+ *          "text"        text speed, auto speed, what skip skips and the window's opacity
+ *          "quickSaves"  the newest quick saves with their pictures, scenes and dates: one is
+ *                        loaded (after asking, as quick load does)
+ *          [ "<option>", ... ]  rows of the options table (Options.tjs), with a title:
+ *                        %[ title:"...", options:[ ... ] ]
+ *          a function returning one of those
+ *
+ * KAGQuickPanelSpecs holds the named ones; a game changes them or adds its own.
+ */
+var KAGQuickPanelSpecs = %[
+	"volume" => %[ title:"Volume", options:[ "bgmVolume", "seVolume", "voiceVolume", "soundOn" ] ],
+	"text" => %[ title:"Text", options:[ "textSpeed", "autoModeSpeed", "allSkip", "windowOpacity" ] ],
+	"quickSaves" => %[ title:"Quick Saves", quickSaves:3 ]
+];
+
+// all sound on or off (the window's waveenable), for the volume panel
+KAGDefineOption(%[ name:"soundOn", label:"Sound", kind:"toggle", prop:"waveenable",
+	values:[ ["On", true], ["Muted", false] ] ]);
+
+// Config: how a quick menu button's panel opens
+KAGDefineOption(%[ name:"quickMenuPanels", label:"Quick Menu Panels", kind:"choice", save:true, initial:"press",
+	values:[ ["Right-Click or Hold", "press"], ["Pointing at It", "hover"], ["Off", "off"] ] ]);
+
+function KAGQuickPanelMode()
+{
+	var v = KAGOptionGet("quickMenuPanels");
+	return v === void ? "press" : v;
+}
+
+class KAGQuickPanelLayer extends Layer
+{
+	var menu;            // the quick menu
+	var spec;            // what it shows
+	var button;          // the strip's button it opened from (its index in menu.shown)
+	var byHover = false; // opened by resting on the button: closes as the pointer leaves
+	var rows = [];       // %[ kind, name, option, x, y, w, h, n (a quick save's bookmark) ]
+	var cur = 0;         // the row the keys are on
+	var dragging = -1;   // the slider row held
+	var veil;            // a click outside closes it (not when opened by resting)
+	var away = 0;        // when the pointer left it (hover)
+	var pics = [];       // the quick saves' pictures
+	var pad = 28, rowH = 64, labelW = 250, controlW = 340;
+	var a11yHidden = true;
+
+	function KAGQuickPanelLayer(win, owner, s, b, hover)
+	{
+		super.Layer(win, win.primaryLayer);
+		menu = owner, spec = s, button = b, byHover = hover;
+		name = "Quick menu panel";
+		hitType = htMask;
+		hitThreshold = 0;
+		absolute = owner.layer.absolute + 2;
+		if (!hover) {
+			veil = new KAGQuickPanelVeil(win, this);
+			veil.absolute = absolute - 1;
+		}
+		build();
+		visible = true;
+		window.keyCapture = onKey;
+		pushA11y();
+	}
+
+	function finalize()
+	{
+		window.keyCapture = void if (isvalid window && window.keyCapture === onKey);
+		KAGA11y.removeNodes(this);
+		invalidate veil if (veil !== void && isvalid veil);
+		for (var i = 0; i < pics.count; i++) invalidate pics[i] if (pics[i] !== void && isvalid pics[i]);
+		super.finalize(...);
+	}
+
+	// the rows, the panel's size and place, then drawn
+	function build()
+	{
+		rows = [];
+		for (var i = 0; i < pics.count; i++) invalidate pics[i] if (pics[i] !== void && isvalid pics[i]);
+		pics = [];
+		var y = pad + 56, w = pad * 2 + labelW + controlW;
+		if (spec.quickSaves !== void) {
+			var list = window.quickSaves();
+			for (var i = 0; i < list.count && i < +spec.quickSaves; i++) {
+				var n = list[i], p = new global.Layer(window, window.primaryLayer);
+				try { p.loadImages(window.getBookMarkFileNameAtNum(n)); } catch (e) { invalidate p; p = void; }
+				pics.add(p);
+				rows.add(%[ kind:"save", n:n, pic:p, x:pad, y:y, w:w - pad * 2, h:104 ]);
+				y += 112;
+			}
+			if (list.count == 0) rows.add(%[ kind:"note", text:tr("No quick saves yet"), x:pad, y:y, w:w - pad * 2, h:rowH ]), y += rowH;
+		} else {
+			var names = spec.options;
+			for (var i = 0; i < names.count; i++) {
+				var o = KAGOptions[names[i]];
+				if (o === void || o.available !== void && !o.available()) continue;
+				rows.add(%[ kind:o.kind == "slider" ? "slider" : "choice", name:names[i], option:o, x:pad, y:y, w:w - pad * 2, h:rowH ]);
+				y += rowH;
+			}
+		}
+		var h = y + pad - 8 + 12; // the panel's shadow: 12
+		w += 12;
+		setImageSize(w, h);
+		setSizeToImageSize();
+		// over its button, above the strip (below it when there's no room)
+		var s = menu.layer, b = menu.shown[button];
+		var x = s.left + (b !== void ? b.x + (b.w >> 1) : s.width >> 1) - (w >> 1);
+		x = window.primaryLayer.width - w - 8 if (x > window.primaryLayer.width - w - 8);
+		x = 8 if (x < 8);
+		var top = s.top - h - 8;
+		top = s.top + s.height + 8 if (top < 8);
+		setPos(x, top);
+		cur = 0 if (cur >= rows.count);
+		draw();
+	}
+
+	function draw()
+	{
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		drawYesNoPanel(this, 0, 0, imageWidth, imageHeight);
+		setYesNoFont(this, 30);
+		drawYesNoString(this, pad, pad - 4, tr(spec.title), 0xffffff, yesnoTextBase);
+		for (var i = 0; i < rows.count; i++) drawRow(rows[i], i == cur);
+		update();
+	}
+
+	function drawRow(r, on)
+	{
+		if (on && r.kind != "note") colorRect(r.x - 10, r.y - 4, r.w + 20, r.h + 2, 0xffffff, 64); // (blended: fillRect would cut a hole)
+		if (r.kind == "note") {
+			setYesNoFont(this, 24);
+			drawYesNoString(this, r.x, r.y + 14, r.text, 0xffffff, yesnoTextBase);
+			return;
+		}
+		if (r.kind == "save") {
+			var pw = 160, ph = 90;
+			fillRect(r.x - 3, r.y + 4, pw + 6, ph + 6, 0xff5025ff);
+			if (r.pic !== void && r.pic.imageWidth > 0) {
+				KAGShrinkCopy(this, r.x, r.y + 7, pw, ph, r.pic, 0, 0, r.pic.imageWidth, r.pic.imageHeight);
+				face = dfMask; fillRect(r.x, r.y + 7, pw, ph, 0xffffffff); face = dfAlpha;
+			} else fillRect(r.x, r.y + 7, pw, ph, 0xff241a6e);
+			var name = window.getBookMarkPageName(r.n), date = window.getBookMarkDate(r.n);
+			setYesNoFont(this, 26);
+			drawYesNoString(this, r.x + pw + 24, r.y + 18, name !== void ? tr(name) : "", 0xffffff, yesnoTextBase);
+			setYesNoFont(this, 22);
+			drawYesNoString(this, r.x + pw + 24, r.y + 58, date !== void ? date : "", 0xffffff, yesnoTextBase);
+			return;
+		}
+		setYesNoFont(this, 24);
+		drawYesNoString(this, r.x, r.y + 14, KAGOptionLabel(r.option), 0xffffff, yesnoTextBase);
+		var cx = r.x + labelW, cw = controlW, v = KAGOptionGet(r.name);
+		if (r.kind == "slider") {
+			var o = r.option, t = (+v - o.min) / (o.max - o.min);
+			t = 0 if (t < 0 || v === void);
+			t = 1 if (t > 1);
+			// the track white, filled violet up to the knob
+			var ty = r.y + 26;
+			fillRect(cx, ty, cw, 12, 0xff5025ff);
+			fillRect(cx + 2, ty + 2, cw - 4, 8, 0xffffffff);
+			fillRect(cx + 2, ty + 2, (int)((cw - 4) * t), 8, 0xff5025ff);
+			var kx = cx + (int)((cw - 28) * t);
+			fillRect(kx, ty - 8, 28, 28, 0xff5025ff);
+			fillRect(kx + 3, ty - 5, 22, 22, on ? 0xffffd84a : 0xffffffff);
+		} else {
+			var vals = r.option.values, n = vals.count, sw = (cw - (n - 1) * 6) \ n;
+			for (var j = 0; j < n; j++) {
+				var sx = cx + j * (sw + 6), sel = KAGOptionSame(v, vals[j][1]);
+				fillRect(sx, r.y + 8, sw, 44, 0xff5025ff);
+				fillRect(sx + 3, r.y + 11, sw - 6, 38, sel ? 0xff5025ff : 0xffffffff);
+				setYesNoFont(this, 20);
+				var label = tr(vals[j][0]), tw = measureYesNoText(this, label);
+				drawYesNoString(this, sx + ((sw - tw) >> 1), r.y + 18, label, sel ? 0xffffff : 0x5025ff, yesnoLabelBase);
+			}
+		}
+	}
+
+	function rowAt(x, y)
+	{
+		for (var i = 0; i < rows.count; i++) with (rows[i]) if (x >= .x - 10 && x < .x + .w + 10 && y >= .y - 4 && y < .y + .h) return i;
+		return -1;
+	}
+
+	// a slider's value at x, on its steps
+	function sliderValue(r, x)
+	{
+		var o = r.option, t = (x - (r.x + labelW) - 14) / (controlW - 28);
+		t = 0 if (t < 0);
+		t = 1 if (t > 1);
+		var v = o.min + (o.max - o.min) * t, step = o.step !== void ? +o.step : 1;
+		v = o.min + (int)((v - o.min) / step + 0.5) * step;
+		return v;
+	}
+
+	// a row's value changed (a slider dragged: applied when let go)
+	function set(i, v, apply = true)
+	{
+		var r = rows[i];
+		if (r.option.preview !== void) {
+			try { r.option.preview(apply ? "change" : "drag", v); } catch (e) { dm("panel: " + e.message); }
+		}
+		KAGOptionSet(r.name, v, apply);
+		draw();
+		pushA11y();
+	}
+
+	// a row moved by one step (left/right, a screen reader's decrement/increment)
+	function step(i, dir)
+	{
+		var r = rows[i];
+		if (r === void) return;
+		if (r.kind == "slider") {
+			var o = r.option, v = +KAGOptionGet(r.name) + dir * (o.step !== void ? +o.step : 1);
+			v = o.min if (v < o.min);
+			v = o.max if (v > o.max);
+			set(i, v);
+		} else if (r.kind == "choice") {
+			var vals = r.option.values, value = KAGOptionGet(r.name), k = 0;
+			for (var j = 0; j < vals.count; j++) if (KAGOptionSame(value, vals[j][1])) k = j;
+			k = (k + dir + vals.count) % vals.count;
+			set(i, vals[k][1]);
+		}
+	}
+
+	function pick(i)
+	{
+		var r = rows[i];
+		if (r === void) return;
+		if (r.kind == "save") {
+			// (the panel goes after this event: it may be the panel's own click)
+			menu.closePanelLater();
+			window.loadBookMarkWithAsk(r.n);
+		} else if (r.kind == "choice") step(i, 1);
+	}
+
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button == mbRight) { menu.closePanelLater(); return; }
+		if (button != mbLeft) return;
+		var i = rowAt(x, y);
+		if (i < 0) return;
+		cur = i;
+		var r = rows[i], cx = r.x + labelW;
+		if (r.kind == "slider" && x >= cx - 14) { dragging = i; set(i, sliderValue(r, x), false); return; }
+		if (r.kind == "choice" && x >= cx) {
+			var vals = r.option.values, n = vals.count, sw = (controlW - (n - 1) * 6) \ n, j = (x - cx) \ (sw + 6);
+			if (j >= 0 && j < n) set(i, vals[j][1]);
+			return;
+		}
+		if (r.kind == "save") pick(i);
+		else draw();
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		away = 0;
+		if (dragging >= 0) set(dragging, sliderValue(rows[dragging], x), false);
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (dragging < 0) return;
+		var i = dragging;
+		dragging = -1;
+		set(i, sliderValue(rows[i], x));
+	}
+
+	function onMouseLeave() { away = System.getTickCount() if byHover; }
+	function onMouseEnter() { away = 0; }
+
+	// the keys and the controller (KAGWindow.keyCapture, taken again after each key)
+	function onKey(key, shift)
+	{
+		if (!isvalid this) return;
+		switch (key) {
+		case VK_ESCAPE: case VK_BACK: case VK_PAD2: menu.closePanel(); return;
+		case VK_UP: case VK_PADUP: cur = (cur - 1 + rows.count) % rows.count if rows.count > 0; draw(); pushA11y(); break;
+		case VK_DOWN: case VK_PADDOWN: cur = (cur + 1) % rows.count if rows.count > 0; draw(); pushA11y(); break;
+		case VK_LEFT: case VK_PADLEFT: step(cur, -1); break;
+		case VK_RIGHT: case VK_PADRIGHT: step(cur, 1); break;
+		case VK_RETURN: case VK_SPACE: case VK_PAD1: pick(cur); if (!isvalid this) return; break;
+		}
+		window.keyCapture = onKey if (isvalid this);
+	}
+
+	// screen readers: the panel as a group of sliders, switches and buttons
+	function pushA11y()
+	{
+		if (!KAGA11y.available) return;
+		var nodes = [ %[ id:"panel", role:"group", name:tr(spec.title) ] ];
+		for (var i = 0; i < rows.count; i++) {
+			var r = rows[i], id = "row" + i, rect = KAGA11y.rectOf(this, r.x, r.y, r.w, r.h);
+			if (r.kind == "slider") {
+				var v = KAGOptionGet(r.name);
+				nodes.add(%[ id:id, role:"slider", parent:"panel", name:KAGOptionLabel(r.option), states:"focusable", rect:rect,
+					num_value:+v, num_min:+r.option.min, num_max:+r.option.max, num_step:r.option.step !== void ? +r.option.step : 1 ]);
+			} else if (r.kind == "choice") {
+				var value = KAGOptionGet(r.name), label = "";
+				for (var j = 0; j < r.option.values.count; j++) label = tr(r.option.values[j][0]) if KAGOptionSame(value, r.option.values[j][1]);
+				nodes.add(%[ id:id, role:"button", parent:"panel", name:KAGOptionLabel(r.option) + ": " + label, states:"focusable", rect:rect ]);
+			} else if (r.kind == "save") {
+				var name = window.getBookMarkPageName(r.n), date = window.getBookMarkDate(r.n);
+				nodes.add(%[ id:id, role:"button", parent:"panel", name:(name !== void ? tr(name) : "") + " " + (date !== void ? date : ""), states:"focusable", rect:rect ]);
+			} else nodes.add(%[ id:id, role:"label", parent:"panel", name:r.text, rect:rect ]);
+		}
+		KAGA11y.setNodes(this, nodes, rows.count > 0 ? "row" + cur : void);
+	}
+
+	function onA11yAction(id, action, arg)
+	{
+		if (id.substring(0, 3) != "row") return;
+		var i = +id.substring(3);
+		if (i < 0 || i >= rows.count) return;
+		cur = i;
+		switch (action) {
+		case "increment": step(i, 1); break;
+		case "decrement": step(i, -1); break;
+		case "set_value": if (rows[i].kind == "slider") set(i, +arg); break;
+		case "click": pick(i); break;
+		default: draw(); pushA11y(); break;
+		}
+	}
+}
+
+// the clicks outside a panel opened by a click: they close it and go no further
+class KAGQuickPanelVeil extends Layer
+{
+	var panel;
+	function KAGQuickPanelVeil(win, p)
+	{
+		super.Layer(win, win.primaryLayer);
+		panel = p;
+		name = "Quick menu panel's veil";
+		setImageSize(win.primaryLayer.width, win.primaryLayer.height);
+		setSizeToImageSize();
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		hitType = htMask;
+		hitThreshold = 0;
+		visible = true;
+	}
+	function onMouseDown(x, y, button, shift) { panel.menu.closePanelLater(); }
+	var a11yHidden = true;
+}

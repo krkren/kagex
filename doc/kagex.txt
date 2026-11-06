@@ -3169,6 +3169,34 @@ is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickM
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
 kag.scflags.quickMenuHidden). A button's picture is drawn at the strip's size; a labelled one
 in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
+When it can show again (the story starting, the window back) an unpinned strip peeks out for
+a moment. Screen readers get its buttons beside the message or the choices
+(KAGA11y.setToolbar).
+
+Panels (since 0.20.0, template/system/QuickPanels.tjs): an item's panel opens a small panel
+over the scene, above its button, which a small mark at the button's top right shows:
+
+        %[ action:"config", image:"msg_config", panel:"volume" ]
+
+  "volume"      the music's, sounds' and voices' volumes and a switch for all sound
+  "text"        text speed, auto speed, what skip skips and the window's opacity
+  "quickSaves"  the newest quick saves with their pictures, scenes and dates; one is loaded
+                after asking, as quick load does
+  [ "<option>", ... ]  rows of the options table; %[ title:"...", options:[ ... ] ] with a
+                title; or a function returning one. KAGQuickPanelSpecs holds the named ones.
+
+Config's Quick Menu Panels (quickMenuPanels) says how one opens: a right-click or a long press
+(half a second) on the button ("press", the default), the pointer resting on it ("hover"), or
+never ("off"). It closes with Esc, the controller's B, a click outside it (which goes no
+further) or, opened by resting, the pointer leaving it and the button. The keys and the D-pad
+move between its rows and change them, Return or A picks a quick save, and screen readers get
+it as sliders and buttons. Sliders apply as they're let go, and a volume's plays its sample.
+The sample's Auto has the text's, Q.LOAD the quick saves' and Config the volumes'.
+
+After a quick save (quickSaveNotice) or a screenshot (screenshotNotice) a card shows for a
+moment in the bottom right corner with the save's or the screenshot's picture and the scene's
+name and the date, or the file's name (showYesNoCard in YesNoDialogLayer.tjs, since 0.20.0;
+words alone before).
 
 
 ● Tips
@@ -3493,7 +3521,10 @@ a load, going back and compiled scenes show it as it was. kag.indicators.chapter
 When the music changes, its title shows for three seconds in the top right corner: titles come
 from titleList (musiclist.csv: the file's name without its extension, then the title; #
 comments), and a track without one shows nothing. A mark shows while auto mode or skip mode is
-on, and a bar under the message window fills from the left as the voice goes on.
+on, in the top right corner (under the music's title while that shows; at the bottom right up
+to 0.19.0, where the sample's quick menu is now), and for two seconds it says that skipping
+started (read text only, or all) and why it stopped (unread text, a choice, or the player);
+and a bar under the message window fills from the left as the voice goes on.
 
 ● The Hero's Name
 
