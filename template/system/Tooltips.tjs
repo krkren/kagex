@@ -10,6 +10,16 @@
  *   kag.tooltips.restTime   ms the pointer rests before a tip shows (600)
  *   kag.tooltips.helpLine   void, or a function(text): a screen with a help line takes the tips
  *                           there instead ("" when there's none)
+ *   kag.tooltips.helpArea   void, or a function returning [ x, y, w, h ] (since 0.20.0): while it
+ *                           returns one, a help line there says what the pointer or the focus
+ *                           is on, at once, whatever the Tips switch says, and the screen's own
+ *                           line (helptexts.csv's "<screen>._") when it's on nothing
+ *
+ * A button's tip is its hint (or help=, since 0.20.0: [button help=], [sysbutton help=],
+ * [link help=]), or else the game's helptexts.csv (since 0.20.0): lines of "<screen>.<button's
+ * name>" (or its number as #: save#), a tab, and the text in English for tr(); "*.<name>" for
+ * every screen; # comments.
+ * <screen> is the running scenario's name without its extension (config, save, cgmode ...).
  */
 class KAGTipLayer extends Layer
 {
@@ -43,6 +53,7 @@ class KAGTooltips extends KAGPlugin
 	{
 		invalidate timer;
 		invalidate layer if layer !== void && isvalid layer;
+		invalidate helpLayer if helpLayer !== void && isvalid helpLayer;
 		super.finalize(...);
 	}
 
@@ -58,10 +69,77 @@ class KAGTooltips extends KAGPlugin
 				if (t !== void && t != "") return t;
 			} else if (typeof l.hint == "String" && l.hint != "") {
 				return l.hint;
+			} else if (l !== window.primaryLayer && typeof l.name == "String" && l.name != "") {
+				var t = helpText(l.name);
+				if (t != "") return t;
 			}
 			l = l.parent;
 		}
 		return "";
+	}
+
+	// the game's help texts (helptexts.csv), by "<screen>.<name>"
+	var helpFile = "helptexts.csv", helpTexts;
+	function screenName()
+	{
+		var s = "";
+		try { s = window.conductor.curStorage; } catch {}
+		return s == "" ? "game" : Storages.chopStorageExt(Storages.extractStorageName(s)).toLowerCase();
+	}
+	function helpText(name, screen = screenName())
+	{
+		if (helpTexts === void) {
+			helpTexts = %[];
+			try {
+				if (Storages.isExistentStorage(helpFile)) {
+					var lines = [].load(helpFile);
+					for (var i = 0; i < lines.count; i++) {
+						var l = lines[i];
+						if (l == "" || l.charAt(0) == "#") continue;
+						var t = l.indexOf("\t");
+						if (t > 0) helpTexts[l.substring(0, t).trim().toLowerCase()] = l.substring(t + 1).trim();
+					}
+				}
+			} catch (e) { dm("tips: " + helpFile + ": " + e.message); }
+		}
+		// the name, then with its number as # (save3: save#), on this screen, then on every one
+		name = name.toLowerCase();
+		var names = [ name ], generic = name.replace(/[0-9]+$/, "#");
+		names.add(generic) if generic != name;
+		for (var i = 0; i < names.count; i++) {
+			var h = helpTexts[screen + "." + names[i]];
+			h = helpTexts["*." + names[i]] if h === void;
+			if (h !== void) return h;
+		}
+		return "";
+	}
+
+	// the help line (helpArea)
+	var helpArea, helpLayer, helpShown, helpRect = "";
+	function showHelp(area, text)
+	{
+		if (helpLayer === void) {
+			if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+			helpLayer = new KAGTipLayer(window, window.primaryLayer);
+			helpLayer.name = "help line";
+			helpLayer.hitType = htProvince;
+			helpLayer.hitThreshold = 256;
+			helpLayer.absolute = absolute;
+		}
+		var rect = area.join(",");
+		if (text === helpShown && rect == helpRect && helpLayer.visible) return;
+		helpShown = text, helpRect = rect;
+		var w = +area[2], h = +area[3];
+		helpLayer.setImageSize(w, h);
+		helpLayer.setSizeToImageSize();
+		helpLayer.fillRect(0, 0, w, h, 0);
+		if (text != "") {
+			var t = tr(text), size = 26;
+			do { setYesNoFont(helpLayer, size); } while (measureYesNoText(helpLayer, t) > w - 8 && --size > 16);
+			drawYesNoString(helpLayer, 4, (h - helpLayer.font.getTextHeight(t)) >> 1, t, 0xffffff, yesnoTextBase);
+		}
+		helpLayer.setPos(+area[0], +area[1]);
+		helpLayer.visible = true;
 	}
 
 	function onTimer()
@@ -69,6 +147,19 @@ class KAGTooltips extends KAGPlugin
 		if (!isvalid window) return;
 		var p = window.primaryLayer, x = p.cursorX, y = p.cursorY, now = System.getTickCount();
 		var text = "", ax = x + 16, ay = y + 28;
+		// a screen's help line: what the pointer or the focus is on, at once, else the screen's line
+		var area = helpArea !== void && helpLine === void ? KAGBindToGlobal(helpArea)() : void;
+		if (area !== void) {
+			var f = window.focusedLayer;
+			if (f !== focused) focused = f, focusTip = f !== void && f !== null && isvalid f;
+			if (x != lastX || y != lastY) { lastX = x, lastY = y; focusTip = false; }
+			var t = focusTip ? tipOf(focused) : tipOf(p.getLayerAt(x, y));
+			t = helpText("_") if t == "";
+			show("", 0, 0);
+			showHelp(area, t);
+			return;
+		}
+		helpLayer.visible = false if helpLayer !== void;
 		if (on()) {
 			// the keys or a controller moved the focus: its tip at once, under it
 			var f = window.focusedLayer;

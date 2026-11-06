@@ -596,6 +596,77 @@ function KAGOptionColumn(layer, x, top, names)
 	}
 }
 
+/**
+ * What each option does, in a line (since 0.20.0): its buttons' and slider's tip, shown beside
+ * them or on a screen's help line (Tooltips.tjs), in English for tr(). An option's own help
+ * wins; a game adds its options' lines here, or changes the framework's.
+ */
+var KAGOptionHelpTexts = %[
+	"windowSize" => "The window's size, as a share of the game's",
+	"fullScreenFit" => "How full screen fills a screen of another shape: bars, cut, or stretched",
+	"smoothScaling" => "Smooth or sharp pixels when the game is scaled to the screen",
+	"vsync" => "Frames in step with the display: smoother, and no tearing",
+	"padEnabled" => "Whether a controller plays the game",
+	"padTest" => "Shows which of the controller's buttons are held",
+	"screenshotWindow" => "Screenshots with the message window, or the picture alone",
+	"screenshotFormat" => "PNG keeps every pixel; JPEG files are smaller",
+	"chapterTitles" => "A chapter's title in the top left corner as it starts",
+	"nowPlaying" => "The music's title in the top right corner as it changes",
+	"modeMark" => "A mark while auto mode or skipping is on",
+	"voiceBar" => "A bar under the message window that fills as the voice plays",
+	"faceWindow" => "The speaker's face beside the text",
+	"subtitles" => "Subtitles under movies that have them",
+	"movieSkipping" => "Skipping passes movies you've seen",
+	"movieRightClick" => "A right-click skips a movie you've seen",
+	"movieQuality" => "The movies' size: smaller ones play more smoothly on slow devices",
+	"voiceCut" => "What a click does to a voice still playing",
+	"voiceFadeTime" => "How long a cut voice takes to fade out",
+	"voicePlacement" => "Voices heard from where the speaker stands",
+	"voiceSpeed" => "Voices faster or slower, at the same pitch",
+	"autoVoiceWait" => "In auto mode, the pause after a voice ends",
+	"dramaticMode" => "The window hides while a voice plays, so you see the whole scene",
+	"continueOn" => "The title offers to carry on where you left off",
+	"quickSaves" => "How many quick saves go round",
+	"askAgain" => "Brings back the questions you told not to ask again",
+	"hideCursorIdle" => "The pointer hides when it stays still",
+	"readSpeed" => "The speed of text you've read before",
+	"autoSpeed" => "The speed of text in auto mode",
+	"autoCharWait" => "In auto mode, a longer wait after longer lines",
+	"textFade" => "Text fades in, a character at a time",
+	"readColor" => "Text you've read before in another colour",
+	"readMark" => "A mark by the click wait of text you've read before",
+	"windowOpacity" => "How much of the scene shows through the message window",
+	"afterauto" => "Whether auto mode goes on after a choice",
+	"afterskip" => "Whether skipping goes on after a choice",
+	"enterSkip" => "Skipping text you've read when you reach it",
+	"reduceMotion" => "Still pictures in place of effects and moving things",
+	"bgmVolume" => "The music's volume",
+	"seVolume" => "The sound effects' volume",
+	"voiceVolume" => "The voices' volume",
+	"movieVolume" => "The movies' volume",
+	"textSpeed" => "How fast text appears",
+	"autoModeSpeed" => "How long auto mode waits before the next line",
+	"noEffect" => "Transitions and effects as they are, or skipped",
+	"allSkip" => "Skip everything, or only text you've read",
+	"volumeSamples" => "A volume plays a sample as you point at it and move it",
+	"quickMenuSize" => "The quick menu's buttons larger, for fingers",
+	"quickMenuOpacity" => "How solid the quick menu is",
+	"quickMenu" => "The quick menu always there, or only near the pointer",
+	"quickMenuPanels" => "How a quick menu button's panel opens",
+	"soundOn" => "All sound on, or muted",
+	"tooltips" => "Tips like this one beside what the pointer rests on",
+	"heroName" => "Your name in the story"
+];
+
+function KAGOptionHelp(o)
+{
+	if (o.help !== void) return o.help;
+	var h = KAGOptionHelpTexts[o.name];
+	if (h === void && o.name.indexOf("voice:") == 0) h = "A character's voice volume; Test plays one of their lines";
+	if (h === void && o.name.indexOf("voiceOn:") == 0) h = "A character's voice on or off";
+	return h !== void ? h : "";
+}
+
 function KAGOptionButtons(layer, o, x, y)
 {
 	var st = KAGOptionStyle.button;
@@ -608,6 +679,7 @@ function KAGOptionButtons(layer, o, x, y)
 		layer.addButton(%[ name:"option_" + o.name + "_" + i, normal:st.prefix + w + "_normal", over:st.prefix + w + "_over",
 			exp:"KAGOptionPick('" + o.name + "', " + i + ")" ]);
 		c.buttons.add(layer.names["option_" + o.name + "_" + i]);
+		layer.names["option_" + o.name + "_" + i].hint = KAGOptionHelp(o); // its tip (since 0.20.0)
 	}
 	KAGOptionDrawButtons(o, c);
 }
@@ -668,6 +740,7 @@ function KAGOptionSlider(layer, o, x, y)
 	if (o.preview !== void) elm.previewfunc = "KAGOptionPreview", elm.previewfuncdata = "'" + o.name + "'";
 	layer.addSlider(elm);
 	KAGOptionControls(layer)[o.name] = %[ kind:"slider", slider:layer.names["option_" + o.name] ];
+	layer.names["option_" + o.name].hint = KAGOptionHelp(o) if layer.names["option_" + o.name] !== void;
 	if (o.test !== void) {
 		var bs = KAGOptionStyle.button, w = st.testWidth;
 		layer.locate(sx + st.width + st.testGap, y + bs.y);

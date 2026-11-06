@@ -3227,6 +3227,27 @@ by place with a tipAt(x, y) method (the quick menu's buttons give their actions'
 Config's Tips option (tooltips) turns them off; it starts off on Android and iOS, where a tap
 leaves the pointer resting where it tapped. The sample's Config tabs tell what each page holds.
 
+Since 0.20.0 a button's tip can also come from help= ([button help=], [sysbutton help=],
+[link help=], the same as hint=) or from the game's helptexts.csv, by the screen and the
+button's name:
+
+    config.bgmvolume<tab>The music's volume
+    save.save#<tab>Save here           (# stands for the number at the end of a name)
+    *.return<tab>Back where you were    (* for every screen)
+    config._<tab>Point at a setting to see what it does   (the screen's own line)
+
+in English, for tr() (a language's lang.json translates them); <screen> is the running
+scenario's name without its extension. Every option of the options table has a line of help
+(KAGOptionHelpTexts in Options.tjs, or an option's own help), which its Config row's buttons
+and slider show. A long press on a touch screen shows the tip of what's under the finger.
+
+  kag.tooltips.helpArea   void, or a function returning [ x, y, w, h ]: while it returns one,
+                          a help line there says what the pointer or the focus is on, at once
+                          and whatever the Tips switch says, or the screen's own line
+
+The sample has help lines at the bottom of Config, the save and load screens and Extras
+(helpLineArea in AfterInit.tjs, data/main/helptexts.csv).
+
 
 ● Scrolling Lists
 
