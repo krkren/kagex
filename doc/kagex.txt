@@ -3110,7 +3110,14 @@ touch screen, or a drag with the right mouse button, runs kag.gestureActions[lef
 down], and the click or right click it would have made is dropped. The framework's are up for
 the message history and down to hide the window; the sample adds left to rewind and right to
 skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly one way
-(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. kag.gestures.when, a
+(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. KAG clicks at a press,
+and SDL and the engine send the mouse events a touch makes before the touch's own, so on a
+touch screen, in the story, the press's click is held until the release (since 0.20.0; up to
+0.19.0 a swipe's press had gone on to the next text): a tap clicks then, a swipe runs its
+gesture and makes no click, and a drag as long that takes longer than a gesture is neither
+(kag.gestures.holdClicks: void, on a touch screen, which Window.enableTouch says, or true or
+false). A browser's touch screen isn't known until its first touch, so the window asks the
+engine again at a press until it is. kag.gestures.when, a
 function, can narrow "the story" to the game's own idea of it (the sample's, as its quick
 menu's: after [initscene], not on the title or a system screen), and a drag that starts on a
 scrolling list is the list's (ScrollList.tjs).
@@ -3122,7 +3129,8 @@ scrolling list is the list's (ScrollList.tjs).
 A strip of buttons for actions that can keep out of the way (since 0.19.0,
 template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
 comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
-back. A button is dimmed while its action can't be done and lit while its toggle is on; the
+back, and as a finger leaves the pointer resting where it tapped, only taps on the strip keep it
+there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on; the
 pin at the end, and Config's Quick Menu option, are the player's (kept in the system
 variables). It shows in the story only: not over a system screen, a prompt or the message
 history, nor while the message window is hidden.
@@ -3131,20 +3139,30 @@ history, nor while the message window is hidden.
         .items = [ %[ action:"quickSave", image:"msg_qsave", x:228 ],
                    %[ action:"auto", image:"msg_auto", on:function { return kag.autoMode; } ],
                    %[ action:"backlog" ] ];          // no image: its label, in the dialogs' look
-        .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+        .place = function(w, h) { var m = kag.fore.messages[0];   // the strip is w x h
+            return [ m.left + m.width - 33 - w, m.top + m.height - 23 - h ]; };
         .when  = function { return !!f.quickMenu; };    // the game's own idea of "the story"
     }
 
   items          the buttons (or a function returning them): action, image (<image>_normal,
                  _over and, for a toggle, _on), x (its left in the strip; void: after the one
                  before), on (lit while it returns true), label
-  place          where the strip goes; void: the bottom of the screen, in the middle
+  place          where the strip goes, given its width and height (the player's size); void:
+                 the bottom of the screen, in the middle
   when           void, or whether it may show now
-  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms),
-                 reveal (48 px around it that bring it in), absolute (3500000)
+  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms;
+                 touchHideDelay, 4000 ms, after a finger's tap on the strip or its handle),
+                 reveal (48 px around it that bring it in), absolute (void: just over the first
+                 message window, 100 over it, so under the next window and under a World layer
+                 at level=message, such as the Effects demo's static; 3500000, over every
+                 window, up to 0.19.0)
 
-The sample's message window buttons are its quick menu, on the window's top edge as they were;
-[initscene] sets f.quickMenu and the title clears it.
+The sample's message window buttons are its quick menu, along the bottom of the window's panel
+at its right (since 0.20.0; on its top edge before, where they ran past the window's end):
+icons for moving through the story (the scene before, the last choice, rewind, back a line,
+auto, skip, the next scene), Q.SAVE, Q.LOAD, SAVE and LOAD, and icons for the history and
+Config, the pin last; a button's tip names its action. [initscene] sets f.quickMenu, which the
+title clears, and its marginB keeps the text (four lines) above the strip at the larger size.
 
 The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
 is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30

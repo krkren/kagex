@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.20.0
+
+### Changed
+
+- **The quick menu along the bottom of the message window, as icons**: the sample's strip of buttons sat on the window's top edge and, at the larger size phones start with, ran past the window's end. It now sits along the bottom of the window's panel at its right, inside it at both sizes, and most of its buttons are icons (the scene before, the last choice, rewind, back a line, auto, skip, the next scene, the message history, Config; their tips name them), with Q.SAVE, Q.LOAD, SAVE and LOAD still words: the strip is 950 px wide where it was 1452. The window's text keeps four lines above it (`[initscene]`'s margins). The quick menu's `place` function is given the strip's width and height (`doc/kagex.txt`, "The Quick Menu").
+
+### Fixed
+
+- **A swipe on a phone also went on to the next text**: KAG clicks at a press, so a swipe's press had gone on to the next text before the swipe was one (SDL and the engine send the mouse events a touch makes before the touch's own; in a browser all of a touch's come after its click). On a touch screen, in the story, the press's click is held until the release now: a tap clicks then, a swipe runs its gesture and makes no click, and a drag a swipe's length that took too long for a gesture is neither (`kag.gestures.holdClick`, `releaseClick`; `holdClicks` says whether, void for "on a touch screen"). And in a browser the engine looked for a touch screen only as the window was made, before the page's first touch told it of one, so it sent the game no touches at all: the window asks again at a press until it does (`Window.enableTouch`). The smoke test holds a press and swipes, taps and drags slowly, and with `--target web --touch` swipes and taps with Chrome's touch events.
+- **The quick menu's pin on phones did nothing**: a tap leaves the pointer resting where the finger was, so with the strip unpinned a tap on its pin left the pointer "near" it and it never faded, and a tap on its handle brought it back for good. After a touch the resting pointer doesn't count, and a tap on the strip or its handle brings it for four seconds (`touchHideDelay`), after which it fades to its handle.
+- **The Effects demo's static over the quick menu**: the strip was stacked over every message window (`absolute` 3500000), so the static the demo draws over the message window (`level=message`) went under its buttons. It stacks just over the first message window now (`absolute` void), under a World layer at `level=message` and the next window.
+
 ## 0.19.0
 
 ### Added

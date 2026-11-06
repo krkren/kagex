@@ -193,7 +193,13 @@ class KAGGestures
 {
 	var window;
 	var startX, startY, startTick, touches = 0, kind = "";   // the touch or drag going on
+	var lastTouch = 0;                                       // when a finger last touched or moved
 	var swallowTick = 0, swallowRightTick = 0;               // the click it makes is dropped
+	var ranTick = 0;                                         // when a swipe last ran its gesture
+	// a touch screen's press (the click KAG makes at a press, held until the release, when it's a
+	// tap or a swipe): void on a touch screen (Window.enableTouch), or true or false to say
+	var holdClicks;
+	var held = false, heldX, heldY, heldTick;
 	var gestureDistance = 0.12;  // of the window's shorter side
 	var gestureTime = 800;       // ms
 
@@ -221,14 +227,21 @@ class KAGGestures
 		startX = x, startY = y, startTick = System.getTickCount(), kind = how;
 	}
 
+	// whether the move from the start is long enough for a gesture (however long it took)
+	function moved(x, y)
+	{
+		if (kind == "") return false;
+		var w = window.innerWidth, h = window.innerHeight;
+		var min = (w < h ? w : h) * gestureDistance;
+		return Math.abs(x - startX) >= min || Math.abs(y - startY) >= min;
+	}
+
 	// the direction, if the move from the start is a gesture
 	function direction(x, y)
 	{
 		if (kind == "" || System.getTickCount() - startTick > gestureTime) return "";
-		var w = window.innerWidth, h = window.innerHeight;
-		var min = (w < h ? w : h) * gestureDistance;
+		if (!moved(x, y)) return "";
 		var dx = x - startX, dy = y - startY, ax = Math.abs(dx), ay = Math.abs(dy);
-		if (ax < min && ay < min) return "";
 		if (ax > ay * 1.5) return dx < 0 ? "left" : "right";
 		if (ay > ax * 1.5) return dy < 0 ? "up" : "down";
 		return "";
@@ -242,8 +255,12 @@ class KAGGestures
 		if (dir == "" || !canRun()) return false;
 		var name = window.gestureActions[dir];
 		if (name === void || name == "") return false;
-		if (how == "touch") swallowTick = System.getTickCount();
-		else swallowRightTick = System.getTickCount();
+		var now = System.getTickCount();
+		if (how == "touch") {
+			if (now - ranTick < 1000) return false; // the held click's release made it already
+			swallowTick = now;
+		} else swallowRightTick = now;
+		ranTick = now;
 		KAGRunAction(name);
 		return true;
 	}
@@ -251,19 +268,70 @@ class KAGGestures
 	function onTouchDown(x, y, id)
 	{
 		touches++;
+		lastTouch = System.getTickCount();
 		if (touches == 1) begin(x, y, "touch"); else kind = ""; // two fingers: a pinch
 	}
+
+	function onTouchMove(x, y, id) { lastTouch = System.getTickCount(); }
 
 	function onTouchUp(x, y, id)
 	{
 		touches-- if touches > 0;
+		lastTouch = System.getTickCount();
 		if (kind == "touch") finish(direction(x, y));
+	}
+
+	// KAG clicks at a press (the primary layer's onMouseDown), so a swipe had gone on to the next
+	// text before it was a swipe. On a touch screen, in the story, the press's click is held
+	// (since 0.20.0) and told at the release: a tap, the click as it was, or a swipe (the pointer
+	// a swipe's length from the press: SDL and the engine move it with the finger), its gesture
+	// and no click; a drag as long that took too long for a gesture is no click either. From the
+	// mouse events alone, which come before the touch's own (on the web all of a touch's come
+	// after its click), so whichever comes first makes the gesture, once
+	function touchScreen()
+	{
+		if (holdClicks !== void) return !!holdClicks;
+		return typeof window.enableTouch != "undefined" && !!window.enableTouch;
+	}
+
+	function holdClick()
+	{
+		if (!window.pressArmed) return false; // a key's click, or the engine's own
+		window.pressArmed = false;
+		if (!touchScreen() || !canRun()) return false;
+		var p = window.primaryLayer;
+		held = true, heldX = p.cursorX, heldY = p.cursorY, heldTick = System.getTickCount();
+		return true;
+	}
+
+	function releaseClick()
+	{
+		if (!held) return;
+		held = false;
+		var p = window.primaryLayer, now = System.getTickCount();
+		var x = p.cursorX, y = p.cursorY, w = p.width, h = p.height;
+		var min = (w < h ? w : h) * gestureDistance;
+		var dx = x - heldX, dy = y - heldY, ax = Math.abs(dx), ay = Math.abs(dy);
+		if (ax < min && ay < min) {
+			// a tap: its click, unless a finger's release made a swipe of it first
+			if (swallowClick()) return;
+			window.onPrimaryClick();
+			return;
+		}
+		kind = ""; // the finger's own events, if they come after, make no second gesture
+		swallowTick = 0;
+		if (now - ranTick < 1000 || now - heldTick > gestureTime || !canRun()) return;
+		var dir = ax > ay * 1.5 ? (dx < 0 ? "left" : "right") : ay > ax * 1.5 ? (dy < 0 ? "up" : "down") : "";
+		var name = dir != "" ? window.gestureActions[dir] : void;
+		if (name === void || name == "") return;
+		ranTick = now;
+		KAGRunAction(name);
 	}
 
 	function onRightDown(x, y) { begin(x, y, "right"); }
 	function onRightUp(x, y) { if (kind == "right") finish(direction(x, y)); }
 
-	// the click a swipe made (SDL makes mouse events from a touch, after the touch's own)
+	// the click a swipe made, where the finger's release came first
 	function swallowClick()
 	{
 		if (swallowTick == 0) return false;

@@ -597,6 +597,25 @@ class WebEngine(Engine):
         finally:
             cdp.detach()
 
+    def touch_swipe(self, gx0, gy0, gx1, gy1, steps=8, duration=0.25):
+        """A finger drawn across the game from (gx0, gy0) to (gx1, gy1) in duration seconds, as
+        Chrome's touch events (SDL makes its mouse events from them, as on a phone)"""
+        r = self.page.evaluate("(() => { const b = document.querySelector('canvas').getBoundingClientRect();"
+                               " return [b.left, b.top, b.width, b.height]; })()")
+        w, h = [float(v) for v in str(self.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')).split(",")]
+        s = min(r[2] / w, r[3] / h)
+        at = lambda gx, gy: {"x": r[0] + (r[2] - w * s) / 2 + gx * s, "y": r[1] + (r[3] - h * s) / 2 + gy * s}
+        cdp = self.page.context.new_cdp_session(self.page)
+        try:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [at(gx0, gy0)]})
+            for i in range(1, steps + 1):
+                time.sleep(duration / steps)
+                t = i / steps
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [at(gx0 + (gx1 - gx0) * t, gy0 + (gy1 - gy0) * t)]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        finally:
+            cdp.detach()
+
     def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
         try:
@@ -2978,6 +2997,44 @@ def sample_steps(eng):
             raise SmokeError("the swipe's own click went on to the next text")
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        # on a touch screen (0.20.0 on) KAG's click at a press is held until the release: a swipe's
+        # press makes no click (SDL and the engine send a touch's mouse events first, and KAG
+        # clicked at the press, before the swipe was one), a tap's clicks at the release, and a
+        # slow drag a swipe's length is neither
+        if eng.tjs('return typeof kag.gestures.holdClick != "undefined" ? 1 : 0;') == 1:
+            # (the REPL's round trips are slower than a swipe: a long gestureTime but for the slow drag)
+            eng.tjs("kag.gestures.holdClicks = true; kag.gestures.gestureTime = 30000; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+            time.sleep(0.2)
+            if eng.tjs("return Math.abs(kag.primaryLayer.cursorY - 640) <= 4 ? 1 : 0;") != 1:
+                print("     (a held press: skipped, the pointer can't be moved here)", flush=True)
+            else:
+                try:
+                    held = str(eng.tjs('global.__smokeClicks = kag.clickCount; kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick();'
+                                       ' return [kag.gestures.held ? 1 : 0, kag.clickCount - global.__smokeClicks].join(",");'))
+                    eng.tjs("kag.primaryLayer.setCursorPos(960, 240); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("kag.onMouseUp(960, 240, mbLeft, 0); return 1;")
+                    eng.wait("the message history (a held press swiped up)", "kag.historyShowing", timeout=10)
+                    swiped = eng.tjs("return kag.clickCount - global.__smokeClicks;")
+                    eng.tjs("kag.hideHistory(); return 1;")
+                    eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+                    eng.tjs("kag.primaryLayer.setCursorPos(960, 400); return 1;")
+                    time.sleep(0.2)
+                    tap = str(eng.tjs('var c = kag.clickCount; kag.onMouseDown(960, 400, mbLeft, 0); kag.onPrimaryClick(); var a = kag.clickCount - c;'
+                                      ' kag.onMouseUp(960, 400, mbLeft, 0); return [a, kag.clickCount - c].join(",");'))
+                    eng.wait("a stable point", "kag.inStable", timeout=20)
+                    eng.tjs("kag.gestures.gestureTime = -1; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("global.__smokeClicks = kag.clickCount; kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick();"
+                            " kag.primaryLayer.setCursorPos(960, 240); return 1;")
+                    time.sleep(0.2)
+                    slow = str(eng.tjs("kag.onMouseUp(960, 240, mbLeft, 0); return [kag.clickCount - global.__smokeClicks, kag.historyShowing ? 1 : 0].join(\",\");"))
+                finally:
+                    eng.tjs("kag.gestures.holdClicks = void; kag.gestures.gestureTime = 800; return 1;")
+                print("     a press held (held, clicks), clicks after its swipe, a tap's clicks at its press and release, a slow drag's clicks and history:"
+                      " %s; %s; %s; %s" % (held, swiped, tap, slow), flush=True)
+                if held != "1,0" or swiped != 0 or tap != "0,1" or slow != "0,0":
+                    raise SmokeError("a touch screen's press wasn't held until its release, a tap or a swipe: %s; %s; %s; %s" % (held, swiped, tap, slow))
         # the framework keeps some keys; the player's binding is the system variables', over the game's
         refused = eng.tjs("return kag.rebindKey(VK_F10, 0, \"skip\") ? 1 : 0;")
         if refused != 0:
@@ -3065,6 +3122,11 @@ def sample_steps(eng):
                 eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
                 eng.tjs("kag.quickMenu.onUp(10, 10, mbLeft); return 1;")
                 eng.wait("the strip back (the handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity == 255", timeout=5)
+                # a finger's tap leaves the pointer resting on the strip, which doesn't keep it (0.20.0 on)
+                if eng.tjs('return typeof kag.gestures.lastTouch != "undefined" ? 1 : 0;') == 1:
+                    eng.tjs("var l = kag.quickMenu.layer, x = l.left + l.width - 60, y = l.top + 10; kag.onTouchDown(x, y, 1, 1, 0);"
+                            " kag.primaryLayer.setCursorPos(x, y); kag.onTouchUp(x, y, 1, 1, 0); return 1;")
+                    eng.wait("the strip away after a finger rested on it", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
         finally:
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
         if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
@@ -3083,6 +3145,18 @@ def sample_steps(eng):
             v = [int(x) for x in got.split(",")]
             if not (v[1] > v[0] * 1.2 and v[1] <= v[5] - 8 and 120 <= v[2] <= 130 and v[3] == 0 and v[4] == 1):
                 raise SmokeError("the quick menu's size, opacity or a button left out didn't take: %s" % got)
+        # along the bottom of the message window's panel at both sizes, under the text, just over
+        # the window (the sample's, 0.20.0 on)
+        if eng.tjs('return typeof kag.quickMenu.level != "undefined" ? 1 : 0;') == 1:
+            got = str(eng.tjs('var q = kag.quickMenu, m = kag.fore.messages[0], s0 = KAGOptionGet("quickMenuSize"), r = [];'
+                              ' for (var k = 100; k <= 140; k += 40) { KAGOptionSet("quickMenuSize", k); q.onTimer(); var l = q.layer;'
+                              '  r.add(l.left >= m.left + 300 && l.top >= m.top + (m.height >> 1) && l.left + l.width <= m.left + m.width - 12'
+                              '   && l.top + l.height <= m.top + m.height - 12 && m.top + m.imageHeight - m.marginB <= l.top ? 1 : 0); }'
+                              ' KAGOptionSet("quickMenuSize", s0); q.onTimer(); var l = q.layer;'
+                              ' r.add(l.absolute > m.absolute && l.absolute < kag.fore.messages[1].absolute ? 1 : 0); return r.join(",");'))
+            print("     inside the window's bottom under the text at 100%% and 140%%, just over the window: %s" % got, flush=True)
+            if got != "1,1,1":
+                raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
 
     @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
     def _():
@@ -3256,12 +3330,15 @@ def sample_steps(eng):
         time.sleep(0.5)
         r = str(eng.tjs(env + 'var m = kag.fore.messages; return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
                         ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0,'
-                        ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0].join(",");'))
+                        ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0,'
+                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too
+                        ' typeof kag.quickMenu != "Object" || kag.quickMenu === void || kag.quickMenu.layer === void'
+                        '  || typeof kag.quickMenu.level == "undefined" || kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
         print("     on a World layer: %s" % r, flush=True)
         eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
-        if r != "static,1,10,4,1,1":
+        if r != "static,1,10,4,1,1,1":
             raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
-                             " over the message window and letting the pointer through: %s" % r)
+                             " over the message window (and the quick menu) and letting the pointer through: %s" % r)
 
     @step("Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back")
     def _():
@@ -3493,6 +3570,41 @@ def sample_steps(eng):
                 raise SmokeError("OK didn't keep the name typed: %s" % eng.tjs("return sf.heroName;"))
         finally:
             eng.tjs("KAGTextEntryMode = global.__smokeEntryMode; return 1;")
+
+    @step("a swipe in a phone's browser: up shows the message history, and the swipe's own click doesn't go on to the next text")
+    def _():
+        if not isinstance(eng, WebEngine) or not eng.touch:
+            print("     (skipped: only in a phone's browser, --target web --touch)", flush=True)
+            return
+        if eng.tjs('return typeof kag.gestures == "Object" && typeof kag.gestures.holdClick != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before swipes told at their click)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        # a browser's touch screen is known from its first touch: the engine sends touches from
+        # the next (kag.touchKnown), so a tap first, which goes on to the next text
+        eng.touch_hold(960, 400)
+        eng.wait("touches on", "kag.enableTouch", timeout=10)
+        for i in range(6):
+            if eng.tjs('return kag.inStable && KAGActionEnabled("backlog") ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs("global.__smokeClicks = kag.clickCount; global.__smokeLine = kag.conductor.curLine; return 1;")
+        eng.touch_swipe(960, 640, 960, 240)
+        eng.wait("the message history (a swipe up)", "kag.historyShowing", timeout=10)
+        time.sleep(0.5)
+        got = str(eng.tjs("return [kag.clickCount - global.__smokeClicks, kag.conductor.curLine - global.__smokeLine].join(\",\");"))
+        print("     clicks counted, lines gone on: %s" % got, flush=True)
+        eng.tjs("kag.hideHistory(); return 1;")
+        eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        if got != "0,0":
+            raise SmokeError("the swipe's own click went on to the next text: %s" % got)
+        # and a tap still goes on
+        eng.tjs("global.__smokeClicks = kag.clickCount; return 1;")
+        eng.touch_hold(960, 400)
+        eng.wait("a tap counted as a click", "kag.clickCount > global.__smokeClicks", timeout=10)
 
     @step("typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=")
     def _():

@@ -1,8 +1,9 @@
 /**
  * The quick menu (since 0.19.0): a strip of buttons for actions (Actions.tjs) that can keep out
  * of the way: shown all the time (pinned) or fading in when the pointer comes near it (on a
- * touch screen, a tap on its handle) and out a moment after it leaves. A button is dimmed while
- * its action can't be done now and lit while its toggle is on (auto mode, skipping); the pin at
+ * touch screen, a tap on its handle) and out a moment after it leaves. After a touch, where the
+ * pointer stays where the finger was, only a tap on the strip keeps it (since 0.20.0). A button
+ * is dimmed while its action can't be done now and lit while its toggle is on (auto mode, skipping); the pin at
  * its end is the player's (kept in the system variables). It shows only in the story: not over
  * a system screen, a prompt or the message history, nor while the message window is hidden.
  * A KAG plugin of the window (kag.quickMenu), made by KAGQuickMenuOf(kag) once a game has given
@@ -14,12 +15,14 @@
  *               without one, the action's label in the dialogs' look
  *       x       its left within the strip; void: after the one before, gap px on
  *       on      void, or a function: lit while it returns true (auto: kag.autoMode)
- *   kag.quickMenu.place   a function returning [ left, top ] for the strip; void: the bottom of
- *                         the screen, in the middle
+ *   kag.quickMenu.place   a function (width, height) returning [ left, top ] for the strip of
+ *                         that size; void: the bottom of the screen, in the middle
  *   kag.quickMenu.when    void, or a function: shown only while it returns true (the sample's:
  *                         while the story's message window is up, not on the title or Config)
- *   kag.quickMenu.pinnedDefault (true), hideDelay (2000 ms), reveal (48 px around the strip
- *       that brings it in), gap (8 px), absolute (3500000: over the message windows)
+ *   kag.quickMenu.pinnedDefault (true), hideDelay (2000 ms; touchHideDelay, 4000 ms, after a
+ *       finger's tap), reveal (48 px around the strip that brings it in), gap (8 px), absolute
+ *       (void: just over the first message window, under the next one and under a World layer
+ *       at level=message; since 0.20.0, 3500000 before)
  *
  * The player's own (Config, Change Controls): its size (quickMenuSize: 100%, or 140% where a
  * finger taps it, Android and iOS, by default), its opacity (quickMenuOpacity) and the buttons
@@ -45,14 +48,18 @@ class KAGQuickMenu extends KAGPlugin
 	var when;                  // a function: whether it's the story now, or void
 	var pinnedDefault = true;
 	var hideDelay = 2000, reveal = 48, gap = 8;
-	var absolute = 3500000;    // over the message layers (1000000 and up), under the backlog (4000000)
+	var touchHideDelay = 4000; // after a finger's tap on the strip or its handle
+	var absolute;              // void: just over message window 0 (1000000), under the World's
+	                           // level=message (1000200) and message window 1 (1001000)
 	var layer, handle;         // the strip, and its handle while it's away
 	var shown = [];            // the buttons drawn: %[ action, x, y, w, h, pics, on ]
 	var stateKey = "";         // what they were drawn for (redrawn when it changes)
 	var hover = -1, pressed = -1;
 	var slide = 0;             // 0 away .. 1 shown
 	var lastNear = 0;          // when the pointer was last near
-	var touchOpen = false;     // opened by its handle
+	var lastPx, lastPy;        // where the pointer was, the last touch seen, and whether a mouse
+	var seenTouch = 0;         // (not a finger) put it there: after a touch it rests where the
+	var byMouse = true;        // finger was
 	var timer;
 	var pics = %[];            // loaded button pictures, by name
 	var language;              // the language they were loaded in (a language's own pictures)
@@ -192,12 +199,20 @@ class KAGQuickMenu extends KAGPlugin
 			layer.name = "Quick menu";
 			layer.hitType = htMask;
 			layer.hitThreshold = 16; // the gaps let clicks through
-			layer.absolute = absolute;
 			layer.a11yHidden = true if typeof layer.a11yHidden != "undefined";
 		}
 		layer.setImageSize(w, stripHeight);
 		layer.setSizeToImageSize();
+		layer.absolute = level();
 		draw();
+	}
+
+	// where it stacks: the game's, or just over the first message window
+	function level()
+	{
+		if (absolute !== void) return absolute;
+		var m = window.fore.messages[0];
+		return (m !== void ? m.absolute : 1000000) + 100;
 	}
 
 	function enabled(b) { return b.pin || KAGActionEnabled(b.action); }
@@ -252,7 +267,6 @@ class KAGQuickMenu extends KAGPlugin
 		if (!canShow()) {
 			layer.visible = false if layer !== void;
 			handle.visible = false if handle !== void;
-			touchOpen = false;
 			return;
 		}
 		var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
@@ -260,16 +274,25 @@ class KAGQuickMenu extends KAGPlugin
 		if (layer === void) build();
 		var key = stateOf();
 		if (key != stateKey) { stateKey = key; build(); }
-		var at = place !== void ? KAGBindToGlobal(place)() : [ (window.primaryLayer.width - layer.width) >> 1, window.primaryLayer.height - layer.height - 12 ];
-		// near: the pointer within reveal px of the strip
+		var at = place !== void ? KAGBindToGlobal(place)(layer.width, layer.height) : [ (window.primaryLayer.width - layer.width) >> 1, window.primaryLayer.height - layer.height - 12 ];
+		// near: the pointer within reveal px of the strip, where a mouse put it (a finger leaves
+		// it resting where it was, and that would keep the strip for good)
 		var px = window.primaryLayer.cursorX, py = window.primaryLayer.cursorY, now = System.getTickCount();
-		var near = px >= at[0] - reveal && px < at[0] + layer.width + reveal && py >= at[1] - reveal && py < at[1] + layer.height + reveal;
-		lastNear = now if near || touchOpen;
-		var want = pinned || now - lastNear < hideDelay ? 1 : 0;
+		// (a touch's own events may come a little after the pointer's move: in a browser they come
+		// after its click)
+		var g = window.gestures, touch = typeof g == "Object" && g !== void && typeof g.lastTouch != "undefined" ? g.lastTouch : 0;
+		if (px != lastPx || py != lastPy || touch != seenTouch) {
+			byMouse = !(touch > 0 && now - touch < 600);
+			lastPx = px, lastPy = py, seenTouch = touch;
+		}
+		var near = byMouse && px >= at[0] - reveal && px < at[0] + layer.width + reveal && py >= at[1] - reveal && py < at[1] + layer.height + reveal;
+		// (the handle's tap, or a button's, notes the time once: a tap brings it for a while, it
+		// doesn't keep it, as 0.19.0's did for good)
+		lastNear = now if near;
+		var want = pinned || now - lastNear < (byMouse ? hideDelay : touchHideDelay) ? 1 : 0;
 		slide += want > slide ? 0.2 : want < slide ? -0.2 : 0;
 		slide = 0 if slide < 0;
 		slide = 1 if slide > 1;
-		touchOpen = false if !want;
 		// kept on the screen (a larger strip)
 		var maxX = window.primaryLayer.width - layer.width - 4;
 		at[0] = maxX if at[0] > maxX;
@@ -289,14 +312,18 @@ class KAGQuickMenu extends KAGPlugin
 		if (handle === void) {
 			handle = new KAGQuickMenuLayer(window, window.primaryLayer, this);
 			handle.name = "Quick menu handle";
-			handle.setImageSize(72, 16);
-			handle.setSizeToImageSize();
-			handle.fillRect(0, 0, 72, 16, 0);
-			handle.fillRect(0, 4, 72, 12, 0xc05025ff);
-			handle.fillRect(30, 7, 12, 3, 0xffffffff);
-			handle.absolute = absolute;
 		}
-		handle.setPos(at[0] + ((layer.width - 72) >> 1), at[1] + layer.height - 16);
+		// at the strip's size (a finger's at the larger one)
+		var k = drawScale, w = (int)(72 * k), h = (int)(16 * k);
+		if (handle.imageWidth != w || handle.imageHeight != h) {
+			handle.setImageSize(w, h);
+			handle.setSizeToImageSize();
+			handle.fillRect(0, 0, w, h, 0);
+			handle.fillRect(0, (int)(4 * k), w, h - (int)(4 * k), 0xc05025ff);
+			handle.fillRect((w - (int)(12 * k)) >> 1, (int)(7 * k), (int)(12 * k), (int)(3 * k), 0xffffffff);
+		}
+		handle.absolute = layer.absolute;
+		handle.setPos(at[0] + ((layer.width - w) >> 1), at[1] + layer.height - h);
 		handle.visible = true;
 		handle.opacity = (int)(255 * (1 - slide));
 	}
@@ -323,12 +350,12 @@ class KAGQuickMenu extends KAGPlugin
 		var i = hit(x, y);
 		if (button != mbLeft) return;
 		// the handle: in
-		if (layer === void || !layer.visible || slide < 1) { touchOpen = true; lastNear = System.getTickCount(); pressed = -1; return; }
+		if (layer === void || !layer.visible || slide < 1) { lastNear = System.getTickCount(); pressed = -1; return; }
 		if (i < 0 || i != pressed) { pressed = -1; return; }
 		pressed = -1;
 		var b = shown[i];
-		if (b.pin) { pinned = !pinned; return; }
 		lastNear = System.getTickCount();
+		if (b.pin) { pinned = !pinned; return; } // unpinned: it fades hideDelay later
 		KAGRunAction(b.action);
 		stateKey = "";
 	}

@@ -45,34 +45,39 @@ KAGDefineAction(%[ name:"config", label:"Config", func:startConfig,
 KAGDefineAction(%[ name:"exitScene", label:"Leave the replay", func:exitScene,
     available:function { return !!tf.recollect; } ]);
 
-// The message window's buttons are the quick menu (QuickMenu.tjs): on the window's top edge, as
-// they were, with their pictures (msg_*); dimmed while they can't be used, auto and skip lit
-// while on, and the pin at the end lets them fade out until the pointer comes near (a tap on the
-// handle on a phone). A replay has fewer
+// The message window's buttons are the quick menu (QuickMenu.tjs): along the window's bottom
+// edge, at its right, with their pictures (msg_*: icons, but for the saves); dimmed while they
+// can't be used, auto and skip lit while on, and the pin at the end lets them fade out until the
+// pointer comes near (a tap on the handle on a phone). In three groups: moving through the story
+// (the scene before, the last choice, rewind, back a line, auto, skip, the next scene), saving
+// and loading, then the history and Config. A replay has fewer
 var quickMenuStory = [
     %[ action:"prevScene",  image:"msg_prevscene",  x:0 ],
-    %[ action:"rewind",     image:"msg_rewind",     x:50 ],
-    %[ action:"prevChoice", image:"msg_prevchoice", x:100 ],
-    %[ action:"nextScene",  image:"msg_nextscene",  x:150 ],
-    %[ action:"quickSave",  image:"msg_qsave",      x:228 ],
-    %[ action:"quickLoad",  image:"msg_qload",      x:360 ],
-    %[ action:"save",       image:"msg_save",       x:492 ],
-    %[ action:"load",       image:"msg_load",       x:624 ],
-    %[ action:"back",       image:"msg_back",       x:756 ],
-    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
-    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
-    %[ action:"backlog",    image:"msg_log",        x:1152 ],
-    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+    %[ action:"prevChoice", image:"msg_prevchoice", x:50 ],
+    %[ action:"rewind",     image:"msg_rewind",     x:100 ],
+    %[ action:"back",       image:"msg_back",       x:150 ],
+    %[ action:"auto",       image:"msg_auto",       x:200, on:function { return kag.autoMode; } ],
+    %[ action:"skip",       image:"msg_skip",       x:250, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"nextScene",  image:"msg_nextscene",  x:300 ],
+    %[ action:"quickSave",  image:"msg_qsave",      x:366 ],
+    %[ action:"quickLoad",  image:"msg_qload",      x:474 ],
+    %[ action:"save",       image:"msg_save",       x:582 ],
+    %[ action:"load",       image:"msg_load",       x:690 ],
+    %[ action:"backlog",    image:"msg_log",        x:814 ],
+    %[ action:"config",     image:"msg_config",     x:864 ] ];
 var quickMenuReplay = [
-    %[ action:"exitScene",  image:"msg_exit",       x:624 ],
-    %[ action:"back",       image:"msg_back",       x:756 ],
-    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
-    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
-    %[ action:"backlog",    image:"msg_log",        x:1152 ],
-    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+    %[ action:"back",       image:"msg_back",       x:0 ],
+    %[ action:"auto",       image:"msg_auto",       x:50, on:function { return kag.autoMode; } ],
+    %[ action:"skip",       image:"msg_skip",       x:100, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"exitScene",  image:"msg_exit",       x:166 ],
+    %[ action:"backlog",    image:"msg_log",        x:290 ],
+    %[ action:"config",     image:"msg_config",     x:340 ] ];
+// the bottom right of the window's panel (1788x318 of its 1800x330; [initscene]'s marginB keeps
+// the text above the strip at its larger size)
+function quickMenuPlace(w, h) { var m = kag.fore.messages[0]; return [ m.left + m.width - 33 - w, m.top + m.height - 23 - h ]; }
 with (KAGQuickMenuOf(kag)) {
     .items = function { return tf.recollect ? quickMenuReplay : quickMenuStory; };
-    .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+    .place = quickMenuPlace;
     // in the story: after [initscene] (macro.ks), which sets f.quickMenu, until the title clears
     // it (f is the game's, so a save loaded brings it back); not over Config and the like
     .when = function { return !!f.quickMenu && !inSystemMenu(kag); };

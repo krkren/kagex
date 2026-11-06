@@ -13287,6 +13287,7 @@ class KAGWindow extends Window
 	function onPrimaryClick(force = false)
 	{
         // Called from primary layer when "Click Action" is not filtered
+		if (!force && gestures !== void && gestures.holdClick()) return; // a touch screen's press: told at its release
 		if (!force && clickInterceptor !== void && clickInterceptor()) return;
 		if (!force && gestures !== void && gestures.swallowClick()) return; // a swipe's own click
 		clickCount++ if (!force);
@@ -13368,10 +13369,22 @@ class KAGWindow extends Window
 		return -2;
 	}
 
+	// whether the engine sends touches (Window.enableTouch): it looks for a touch screen once, as
+	// the window is made, and a browser's isn't known until its first touch, so the web never got
+	// one (since 0.20.0: asked again at a press until it does; a touch's mouse events come first)
+	var touchKnown = false;
+	// a left press, which the window hears before its layers: onPrimaryClick (from the primary
+	// layer's) may hold its click until the release (KAGGestures.holdClick)
+	var pressArmed = false;
+
 	function onMouseDown(x, y, button, shift)
 	{
 		lastMouseDownX = x;
 		lastMouseDownY = y;
+		if (!touchKnown && typeof this.enableTouch != "undefined") {
+			try { enableTouch = true if !enableTouch; touchKnown = !!enableTouch; } catch { touchKnown = true; }
+		}
+		pressArmed = button == mbLeft;
 		gestures.onRightDown(x, y) if gestures !== void && button == mbRight; // a right-button drag
 		super.onMouseDown(...);
 	}
@@ -13379,6 +13392,7 @@ class KAGWindow extends Window
 	function onMouseUp(x, y, btn)
 	{
 		gestures.onRightUp(x, y) if gestures !== void && btn == mbRight;
+		if (btn == mbLeft) { pressArmed = false; gestures.releaseClick() if gestures !== void; } // a held click: a tap's or a swipe's
 		conductor.trigger("mouseup" + btn);
 		super.onMouseUp(...);
 		// [XXX] When dialog is shown in modal state, clicks outside layer bounds might not be detected
@@ -14650,6 +14664,12 @@ class KAGWindow extends Window
 	{
 		gestures.onTouchDown(x, y, id) if gestures !== void;
 		super.onTouchDown(...) if typeof super.onTouchDown != "undefined";
+	}
+
+	function onTouchMove(x, y, cx, cy, id)
+	{
+		gestures.onTouchMove(x, y, id) if gestures !== void;
+		super.onTouchMove(...) if typeof super.onTouchMove != "undefined";
 	}
 
 	function onTouchUp(x, y, cx, cy, id)
