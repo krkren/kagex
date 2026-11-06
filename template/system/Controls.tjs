@@ -230,6 +230,13 @@ class KAGControlsPanel extends KAGElementsScreen
 			changeNormal = addPiece(180, 64, %[ kind:"button", text:changeLabel, over:false ]);
 			changeOver = addPiece(180, 64, %[ kind:"button", text:changeLabel, over:true ]);
 		}
+		// the controller test (PadTest.tjs, since 0.19.0), where the engine reads pads
+		var testLabel = tr("Test Controller"), canTest = typeof System.padEnabled != "undefined";
+		var testNormal, testOver;
+		if (canTest) {
+			testNormal = addPiece(240, 64, %[ kind:"button", text:testLabel, over:false ]);
+			testOver = addPiece(240, 64, %[ kind:"button", text:testLabel, over:true ]);
+		}
 		var panelPiece = addPiece(yesNoImage(yesnoPanelImage).imageWidth, yesNoImage(yesnoPanelImage).imageHeight, %[ kind:"panel" ]);
 
 		// rows as pieces, flowed into columns
@@ -289,6 +296,11 @@ class KAGControlsPanel extends KAGElementsScreen
 				"at" => [ px + pw - padding - 380, py + padding + ((titlePiece.h - 64) >> 1), 180, 64 ],
 				"frames" => %[ "normal" => rect(changeNormal), "hilite" => rect(changeOver), "pressed" => rect(changeOver) ],
 				"focus_hilite" => 1, "a11y" => %[ "label" => changeLabel ] ]);
+		if (canTest)
+			children.add(%[ "type" => "atlas_button", "atlas" => "ui", "id" => "padtest",
+				"at" => [ px + pw - padding - (canChange ? 640 : 440), py + padding + ((titlePiece.h - 64) >> 1), 240, 64 ],
+				"frames" => %[ "normal" => rect(testNormal), "hilite" => rect(testOver), "pressed" => rect(testOver) ],
+				"focus_hilite" => 1, "a11y" => %[ "label" => testLabel ] ]);
 		for (var i = 0; i < placed.count; i++) {
 			var p = placed[i];
 			var a = %[ "label" => p.said, "role" => p.role !== void ? p.role : "label" ];
@@ -351,13 +363,20 @@ class KAGControlsPanel extends KAGElementsScreen
 	{
 		if (id == "close") defer(close);
 		if (id == "change") defer(changeControls);
+		if (id == "padtest") defer(padTest);
 	}
 
+	function padTest()
+	{
+		close();
+		KAGAfterDialogClosed(KAGShowPadTest);
+	}
+
+	// (the next screen opens once this one has gone: KAGAfterDialogClosed)
 	function changeControls()
 	{
-		var w = window;
 		close();
-		w.showBindings();
+		KAGAfterDialogClosed(function { kag.showBindings(); });
 	}
 }
 

@@ -711,7 +711,7 @@ var configPages = [
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu, tips, screenshots; the screen and the controller (Display.tjs)
     [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips", "screenshotWindow", "screenshotFormat" ],
-      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ] ]
+      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,

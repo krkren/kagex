@@ -412,3 +412,35 @@ class KAGElementsScreen extends Layer
 		if (key == VK_F12 && shift == 0 && window.screenshotEnabled) window.saveScreenshot();
 	}
 }
+
+/**
+ * Runs func() once the window's dialog has closed (KAGWindow.closeDialog lets it go a moment
+ * later, from an AsyncTrigger, and a dialog opened meanwhile is refused): one screen handing
+ * over to another (the controls list to Change Controls or the controller test). Gives up
+ * after two seconds (since 0.19.0)
+ */
+var KAGAfterDialogQueue = [], KAGAfterDialogTimer;
+function KAGAfterDialogClosed(func)
+{
+	KAGAfterDialogQueue.add([ func, System.getTickCount() ]);
+	if (KAGAfterDialogTimer === void) {
+		KAGAfterDialogTimer = new Timer(KAGAfterDialogTick, "");
+		KAGAfterDialogTimer.interval = 30;
+	}
+	KAGAfterDialogTimer.enabled = true;
+}
+function KAGAfterDialogTick()
+{
+	if (typeof global.kag != "Object" || !isvalid kag || kag.currentDialog !== void) {
+		if (KAGAfterDialogQueue.count > 0 && System.getTickCount() - KAGAfterDialogQueue[0][1] > 2000) KAGAfterDialogQueue.clear();
+		KAGAfterDialogTimer.enabled = false if KAGAfterDialogQueue.count == 0;
+		return;
+	}
+	KAGAfterDialogTimer.enabled = false;
+	var q = [];
+	q.assign(KAGAfterDialogQueue);
+	KAGAfterDialogQueue.clear();
+	for (var i = 0; i < q.count; i++) {
+		try { KAGBindToGlobal(q[i][0])(); } catch (e) { dm("After a dialog: " + e.message); }
+	}
+}

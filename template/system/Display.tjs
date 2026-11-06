@@ -12,6 +12,7 @@
  *   smoothScaling     smooth or sharp scaling of the game to the screen (-smoothzoom)
  *   vsync             frames in step with the display (Window.waitVSync)
  *   padEnabled        the controller on or off (System.padEnabled)
+ *   padTest           a button that opens the controller test (PadTest.tjs)
  *   screenshotWindow  screenshots with the message windows, or without (MainWindow.tjs)
  *   screenshotFormat  PNG or JPEG
  *
@@ -65,6 +66,17 @@ KAGDefineOption(%[ name:"padEnabled", label:"Controller", kind:"toggle", save:tr
 	values:[ ["On", true], ["Off", false] ],
 	available:function { return typeof System.padEnabled != "undefined"; },
 	setValue:function(v) { try { System.padEnabled = v; } catch (e) { dm("padEnabled: " + e.message); } } ]);
+
+// the controller test (PadTest.tjs, loaded on first use: it builds on the dialogs' classes)
+function KAGPadTestAvailable() { return typeof System.padEnabled != "undefined"; }
+function KAGShowPadTest()
+{
+	if (typeof global.KAGPadTestOpen == "undefined") KAGLoadScript("PadTest.tjs");
+	return KAGPadTestOpen();
+}
+
+KAGDefineOption(%[ name:"padTest", label:"Controller Test", kind:"button", button:"Test",
+	available:function { return KAGPadTestAvailable(); }, action:function { KAGShowPadTest(); } ]);
 
 KAGDefineOption(%[ name:"screenshotWindow", label:"Screenshots", kind:"toggle", save:true, initial:true,
 	values:[ ["With the Window", true], ["Without", false] ] ]);

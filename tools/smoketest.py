@@ -918,6 +918,33 @@ def interface_steps(eng, step):
         eng.key("VK_ESCAPE")
         eng.wait("the controls list to close", "kag.currentDialog === void", timeout=10)
 
+    @step("the controller test: a button pressed is named and lit without closing it, Esc closes it; the controls list hands over to it and to Change Controls")
+    def _():
+        if eng.tjs('return typeof global.KAGShowPadTest != "undefined" && KAGPadTestAvailable() ? 1 : 0;') != 1:
+            print("     (skipped: no controller test here, or no pads)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs("KAGShowPadTest(); return 1;")
+        eng.wait("the controller test", 'kag.currentDialog instanceof "KAGPadTestLayer"', timeout=10)
+        got = str(eng.tjs('var d = kag.currentDialog; kag.takeCapturedKey(VK_PAD2, 0);'
+                          ' return [kag.currentDialog === d ? 1 : 0, d.pressed, KAGPadButtonNames().shown[1]].join(",");'))
+        print("     B (VK_PAD2) pressed: still open, named, the pad's name: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] != "1" or v[1] != v[2]:
+            raise SmokeError("the controller test closed on a pad button, or didn't name it: %s" % got)
+        eng.tjs("kag.takeCapturedKey(VK_ESCAPE, 0); return 1;")
+        eng.wait("the test closed, the keys the game's again", "kag.currentDialog === void && kag.keyCapture === void", timeout=10)
+        if eng.tjs('return typeof global.KAGAfterDialogClosed != "undefined" && typeof kag.showControls != "undefined" ? 1 : 0;') == 1 \
+                and isinstance(eng, DesktopEngine) and eng.tjs("return KAGElementsScreenAvailable() ? 1 : 0;") == 1:
+            for button, cls in (("padtest", "KAGPadTestLayer"), ("change", "KAGBindingsPanel")):
+                eng.tjs("kag.showControls(); return 1;")
+                eng.wait("the controls list", 'kag.currentDialog instanceof "KAGControlsPanel"', timeout=10)
+                eng.tjs('kag.currentDialog.onPanelAction("%s"); return 1;' % button)
+                eng.wait("%s from the controls list" % cls, 'kag.currentDialog instanceof "%s"' % cls, timeout=10)
+                eng.tjs("kag.currentDialog.close(); return 1;")
+                eng.wait("it closed", "kag.currentDialog === void", timeout=10)
+            print("     the controls list's Test Controller and Change... open theirs", flush=True)
+
     @step("F12 saves the screen as a PNG and says so")
     def _():
         if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof kag.saveScreenshot != "undefined" ? 1 : 0;') != 1:

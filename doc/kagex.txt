@@ -3221,6 +3221,11 @@ variables and applied at start; one the platform can't do leaves its row empty:
   smoothScaling     smooth or sharp scaling to the screen (-smoothzoom)
   vsync             frames in step with the display (Window.waitVSync)
   padEnabled        the controller on or off (System.padEnabled)
+  padTest           a button that opens the controller test: a picture of the pad whose
+                    buttons light up while they're held, named for the pad in use, with the
+                    last one pressed under it (PadTest.tjs, KAGShowPadTest(); the controls list
+                    has a Test Controller button too). Its own keys aren't the game's while it's
+                    open (KAGWindow.keyCapture), so B lights B: Close, Esc or Return close it
   screenshotWindow  F12's pictures with the message windows, or without (the quick menu and the
                     tips are left out too)
   screenshotFormat  PNG or JPEG

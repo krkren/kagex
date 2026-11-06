@@ -1,0 +1,188 @@
+/**
+ * The controller test (since 0.19.0): a picture of a pad whose buttons light up while they're
+ * held, named for the pad in use (System.padStyle, KAGPadButtonNames in Controls.tjs), with the
+ * last button pressed under it, so the player can check the pad and see which button is which.
+ * In the dialogs' look (YesNoDialogLayer.tjs); its own keys aren't the game's while it's open
+ * (KAGWindow.keyCapture), so B lights B instead of closing it: Close, Esc or Return close it.
+ *
+ *   KAGShowPadTest()      opens it (Display.tjs, which loads this file on first use: the
+ *                         controls list's Test Controller, Config's row)
+ *   KAGPadTestAvailable() whether this engine reads pads (System.padEnabled)
+ */
+function KAGPadTestOpen()
+{
+	if (typeof global.yesNoCanUseLayer == "undefined") KAGLoadScript("YesNoDialog.tjs");
+	if (typeof global.KAGPadButtonNames == "undefined") KAGLoadScript("Controls.tjs");
+	if (!yesNoCanUseLayer() || kag.currentDialog !== void) return;
+	var d = new KAGPadTestLayer();
+	d.open();
+	return d;
+}
+
+class KAGPadTestLayer extends DialogLayer
+{
+	var timer;
+	var padNames;            // KAGPadButtonNames()
+	var frame, fx, fy;       // the dialog's frame and where it is
+	var shown = "";          // the buttons lit when it was last drawn
+	var pressed = "";        // the last button pressed
+	var buttons = [];        // %[ key, label, x, y, w, h, round ]
+
+	function KAGPadTestLayer()
+	{
+		super.DialogLayer(kag, kag.primaryLayer, "PadTest");
+		padNames = KAGPadButtonNames();
+		frame = yesnoFrames[yesnoFrames.count - 1]; // the wide one
+		var temp = kag.temporaryLayer;
+		temp.loadImages(frame.storage);
+		fx = (width - temp.imageWidth) >> 1, fy = (height - temp.imageHeight) >> 1;
+		setOption(%[ frame : frame.storage, left : fx, top : fy ]);
+		layout();
+		addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
+			normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+		drawYesNoLabel(names.close, tr("Close"));
+		a11yText = tr("Press the controller's buttons: each lights up while it's held"), a11yLabels = [ tr("Close") ];
+		timer = new Timer(onTick, "");
+		timer.interval = 33;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		window.keyCapture = void if isvalid window && window.keyCapture === onCaptured;
+		KAGA11y.removeNodes(this);
+		super.finalize(...);
+	}
+
+	// the buttons' places: shoulders at the top, the D-pad on the left, the face buttons on the
+	// right, BACK and START between them, the sticks under them
+	function layout()
+	{
+		var cx = fx + frame.centerX, top = fy + frame.textTop, s = padNames.shown;
+		var sw = typeof System.padButtonMapping != "undefined" && System.padButtonMapping == "position";
+		// VK_PAD1-4 are by label: on a Switch pad A is on the right (unless mapped by position)
+		var label = padNames.style == "switch" && !sw;
+		var face = label ? [ [ 1, 0 ], [ 0, 1 ], [ 0, -1 ], [ -1, 0 ] ] : [ [ 0, 1 ], [ 1, 0 ], [ -1, 0 ], [ 0, -1 ] ];
+		buttons = [];
+		buttons.add(%[ key:VK_PAD7, label:s[6], x:cx - 420, y:top, w:120, h:34 ]);
+		buttons.add(%[ key:VK_PAD5, label:s[4], x:cx - 290, y:top, w:120, h:34 ]);
+		buttons.add(%[ key:VK_PAD6, label:s[5], x:cx + 170, y:top, w:120, h:34 ]);
+		buttons.add(%[ key:VK_PAD8, label:s[7], x:cx + 300, y:top, w:120, h:34 ]);
+		var dx = cx - 330, dy = top + 120;
+		buttons.add(%[ key:VK_PADUP,    label:"↑", x:dx - 24, y:dy - 72, w:48, h:48 ]);
+		buttons.add(%[ key:VK_PADDOWN,  label:"↓", x:dx - 24, y:dy + 24, w:48, h:48 ]);
+		buttons.add(%[ key:VK_PADLEFT,  label:"←", x:dx - 72, y:dy - 24, w:48, h:48 ]);
+		buttons.add(%[ key:VK_PADRIGHT, label:"→", x:dx + 24, y:dy - 24, w:48, h:48 ]);
+		var bx = cx + 330, by = top + 120;
+		for (var i = 0; i < 4; i++)
+			buttons.add(%[ key:VK_PAD1 + i, label:s[i], x:bx + face[i][0] * 50 - 26, y:by + face[i][1] * 50 - 26, w:52, h:52, round:true ]);
+		buttons.add(%[ key:VK_PAD9,  label:s[8], x:cx - 150, y:top + 70, w:130, h:40 ]);
+		buttons.add(%[ key:VK_PAD10, label:s[9], x:cx + 20,  y:top + 70, w:130, h:40 ]);
+		buttons.add(%[ key:VK_PAD11, label:"L3", x:cx - 150, y:top + 150, w:70, h:70, round:true ]);
+		buttons.add(%[ key:VK_PAD12, label:"R3", x:cx + 80,  y:top + 150, w:70, h:70, round:true ]);
+	}
+
+	function held(key)
+	{
+		try { return !!System.getKeyState(key); } catch { return false; }
+	}
+
+	function stateOf()
+	{
+		var s = [];
+		for (var i = 0; i < buttons.count; i++) s.add(held(buttons[i].key) ? 1 : 0);
+		return s.join("") + pressed;
+	}
+
+	function draw()
+	{
+		var cx = fx + frame.centerX, top = fy + frame.textTop;
+		// the area under the buttons (the frame's own colour), then each button
+		var bottom = fy + frame.textBottom;
+		fillRect(cx - frame.textWidth \ 2, top - 4, frame.textWidth, bottom - top + 8, 0xffa690ff);
+		for (var i = 0; i < buttons.count; i++) {
+			var b = buttons[i], on = held(b.key);
+			var fill = on ? 0xff5025ff : 0xffffffff, ink = on ? 0xffffff : 0x5025ff;
+			if (b.round) {
+				// a round button: a square with its corners cut, as rounded as the dialogs' buttons look
+				// a violet ring 3 px wide around the button's colour
+				var r = b.w \ 2;
+				for (var y = 0; y < b.h; y++) {
+					var dy = y - r + 0.5, half = (int)Math.sqrt(r * r - dy * dy);
+					fillRect(b.x + r - half, b.y + y, half * 2, 1, 0xff5025ff);
+					var ri = r - 3;
+					if (Math.abs(dy) < ri) {
+						var inner = (int)Math.sqrt(ri * ri - dy * dy);
+						fillRect(b.x + r - inner, b.y + y, inner * 2, 1, fill);
+					}
+				}
+			} else {
+				fillRect(b.x, b.y, b.w, b.h, 0xff5025ff);
+				fillRect(b.x + 3, b.y + 3, b.w - 6, b.h - 6, fill);
+			}
+			setYesNoFont(this, b.h >= 48 ? 24 : 20);
+			var tw = measureYesNoText(this, b.label), th = font.getTextHeight(b.label);
+			drawText(b.x + ((b.w - tw) >> 1), b.y + ((b.h - th) >> 1), b.label, ink);
+		}
+		// the last one pressed
+		setYesNoFont(this, 26);
+		var t = pressed != "" ? tr("Pressed: %s").sprintf(pressed) : tr("Press the controller's buttons");
+		var w = measureYesNoText(this, t);
+		drawYesNoString(this, cx - (w >> 1), bottom - 40, t, 0xffffff, yesnoTextBase);
+		update();
+	}
+
+	function onTick()
+	{
+		if (!isvalid this) return;
+		var s = stateOf();
+		if (s == shown) return;
+		shown = s;
+		draw();
+	}
+
+	// a button pressed: its name (and the keys go no further while the test is open)
+	function onCaptured(key, shift)
+	{
+		if (!isvalid this) return;
+		if (KAGIsPadKey(key)) {
+			for (var i = 0; i < buttons.count; i++) if (buttons[i].key == key) { pressed = buttons[i].label; break; }
+			window.keyCapture = onCaptured;
+			onTick();
+			return;
+		}
+		if (key == VK_ESCAPE || key == VK_RETURN || key == VK_SPACE) { close(); return; }
+		window.keyCapture = onCaptured;
+	}
+
+	function onOpen()
+	{
+		setFocusToLink(0, true);
+		openYesNoA11y(this);
+		draw();
+		window.keyCapture = onCaptured;
+		timer.enabled = true;
+	}
+
+	function close()
+	{
+		timer.enabled = false;
+		window.keyCapture = void if window.keyCapture === onCaptured;
+		KAGA11y.removeNodes(this);
+		super.close(...);
+	}
+
+	// screen readers: the line, and the Close button (pushYesNoA11y)
+	var a11yOpen = false, a11yText = "", a11yLabels = [];
+	property keyLink {
+		getter { return super.keyLink; }
+		setter(v) { super.keyLink = v; pushYesNoA11y(this); }
+	}
+	function onA11yAction(id, action, arg) { yesNoA11yAction(this, id, action); }
+
+	function processLink(num)
+	{
+		super.processLink(num);
+		close() if (this isvalid);
+	}
+}
