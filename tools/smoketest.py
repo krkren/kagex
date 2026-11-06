@@ -4498,9 +4498,13 @@ def sample_steps(eng):
                 raise SmokeError("Search's lines aren't a list on the screen: %s" % info)
             if int(info.split(",")[1]) > 0:
                 # the wheel over it (through the window, which would show the history otherwise)
+                # (where the pointer can't be moved there, a touch screen's, the list's own wheel)
                 eng.tjs('var l = kag.fore.messages[0].names.searchList, m = kag.fore.messages[0];'
-                        ' kag.primaryLayer.setCursorPos(m.left + l.left + 200, m.top + l.top + 200);'
-                        ' kag.onMouseWheel(0, -120, m.left + l.left + 200, m.top + l.top + 200); return 1;')
+                        ' kag.primaryLayer.setCursorPos(m.left + l.left + 200, m.top + l.top + 200); return 1;')
+                time.sleep(0.2)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList, m = kag.fore.messages[0];'
+                        ' if (l.cursorX >= 0 && l.cursorY >= 0 && l.cursorX < l.width && l.cursorY < l.height)'
+                        ' kag.onMouseWheel(0, -120, m.left + l.left + 200, m.top + l.top + 200); else l.wheel(-120); return 1;')
                 eng.wait("a wheel notch's scroll", "kag.fore.messages[0].names.searchList.position >= 80 && !kag.historyShowing", timeout=5)
                 # a drag, let go moving: it coasts on
                 # (a Timer in the game moves it every 16 ms, as a finger would: down at 500, up at 340)
