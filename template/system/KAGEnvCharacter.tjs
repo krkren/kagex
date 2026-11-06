@@ -1291,13 +1291,24 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 			}
 			// Load image
 			imageFile = "";
+			var scaled = false;
 			if (!drawPose(layer, levelName, pose) &&
 				!(pose != init.defaultPose && drawPose(layer, levelName, init.defaultPose))) {
-				env.errorImage(imageFile + ":Standing CG image cannot be loaded name:" + name + " pose:" + pose + " dress:" + dress + " face:" + face);
+				var missing = imageFile;
+				// a sprite drawn at some levels only (Ai's angry and sad faces were at the middle
+				// size alone, and [ai far] showed the picture before in the far level's place):
+				// another level's, scaled to this level (since 0.19.0)
+				var other = drawOtherLevel(layer, level);
+				if (other !== void) {
+					dm(@"${missing}: not there, so ${imageFile} scaled to level ${levelName}");
+					scaled = true;
+				} else {
+					env.errorImage(missing + ":Standing CG image cannot be loaded name:" + name + " pose:" + pose + " dress:" + dress + " face:" + face);
+				}
 			}
 			// Special scaling correction
 			//dm(@"${name}:Layer rendering:${level}:${levelInfo}:${levelName}");
-			if (levelInfo !== void && levelInfo.imgzoom !== void) {
+			if (!scaled && levelInfo !== void && levelInfo.imgzoom !== void) {
 				//dm("Resolution specified");
 				layer.resolution = 10000 / levelInfo.imgzoom;
 			}
@@ -1307,6 +1318,40 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 			}
 			if (ypos === void) {
 				ypos = env.defaultYpos;
+			}
+		}
+	}
+
+	/**
+	 * The pose at the nearest other level that has its picture, a bigger one first (shrinking
+	 * looks better), shown at this level's size: the levels' zoom ratio, times the other level's
+	 * imgzoom (since 0.19.0)
+	 * @param layer Target layer
+	 * @param level This level's index
+	 * @return the level drawn from, or void
+	 */
+	function drawOtherLevel(layer, level) {
+		var levels = env.levels, here = levels[level];
+		if (here === void || here.zoom === void || +here.zoom <= 0) return;
+		var z = +here.zoom;
+		// the other levels by how far their zoom is from this one's, the bigger ones first
+		var order = [], keys = [];
+		for (var i = 0; i < levels.count; i++) {
+			var l = levels[i];
+			if (i == level || l === void || l.zoom === void || +l.zoom <= 0) continue;
+			var key = +l.zoom >= z ? +l.zoom - z : 100000 + z - +l.zoom;
+			var at = 0;
+			while (at < keys.count && keys[at] <= key) at++;
+			order.insert(at, i);
+			keys.insert(at, key);
+		}
+		for (var i = 0; i < order.count; i++) {
+			var l = levels[order[i]];
+			var name = l.name !== void ? l.name : order[i];
+			if (drawPose(layer, name, pose) || (pose != init.defaultPose && drawPose(layer, name, init.defaultPose))) {
+				var scale = z / +l.zoom * (l.imgzoom !== void ? +l.imgzoom : 100) / 100;
+				layer.resolution = 100 / scale;
+				return l;
 			}
 		}
 	}

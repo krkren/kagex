@@ -1,0 +1,384 @@
+/**
+ * The quick menu (since 0.19.0): a strip of buttons for actions (Actions.tjs) that can keep out
+ * of the way: shown all the time (pinned) or fading in when the pointer comes near it (on a
+ * touch screen, a tap on its handle) and out a moment after it leaves. A button is dimmed while
+ * its action can't be done now and lit while its toggle is on (auto mode, skipping); the pin at
+ * its end is the player's (kept in the system variables). It shows only in the story: not over
+ * a system screen, a prompt or the message history, nor while the message window is hidden.
+ * A KAG plugin of the window (kag.quickMenu), made by KAGQuickMenuOf(kag) once a game has given
+ * it buttons:
+ *
+ *   kag.quickMenu.items   [ %[ action, image, x, label, on ], ... ], or a function returning that
+ *       action  the action's name (Actions.tjs)
+ *       image   button pictures <image>_normal, <image>_over and, for a toggle, <image>_on;
+ *               without one, the action's label in the dialogs' look
+ *       x       its left within the strip; void: after the one before, gap px on
+ *       on      void, or a function: lit while it returns true (auto: kag.autoMode)
+ *   kag.quickMenu.place   a function returning [ left, top ] for the strip; void: the bottom of
+ *                         the screen, in the middle
+ *   kag.quickMenu.when    void, or a function: shown only while it returns true (the sample's:
+ *                         while the story's message window is up, not on the title or Config)
+ *   kag.quickMenu.pinnedDefault (true), hideDelay (2000 ms), reveal (48 px around the strip
+ *       that brings it in), gap (8 px), absolute (3500000: over the message windows)
+ *
+ * The player's own (Config, Change Controls): its size (quickMenuSize: 100%, or 140% where a
+ * finger taps it, Android and iOS, by default), its opacity (quickMenuOpacity) and the buttons
+ * it leaves out (kag.scflags.quickMenuHidden, an action name each).
+ */
+class KAGQuickMenuLayer extends Layer
+{
+	var menu;
+	function KAGQuickMenuLayer(win, par, owner) { super.Layer(win, par); menu = owner; }
+	function finalize() { super.finalize(...); }
+	function onMouseMove(x, y, shift) { menu.onMove(x, y); super.onMouseMove(...); }
+	function onMouseDown(x, y, button, shift) { menu.onDown(x, y, button); }
+	function onMouseUp(x, y, button, shift) { menu.onUp(x, y, button); }
+	function onMouseLeave() { menu.onLeave(); super.onMouseLeave(...); }
+	function tipAt(x, y) { return menu.tipAt(this, x, y); } // Tooltips.tjs
+}
+
+class KAGQuickMenu extends KAGPlugin
+{
+	var window;
+	var items;                 // the buttons: an array, or a function returning one
+	var place;                 // a function returning [ left, top ], or void
+	var when;                  // a function: whether it's the story now, or void
+	var pinnedDefault = true;
+	var hideDelay = 2000, reveal = 48, gap = 8;
+	var absolute = 3500000;    // over the message layers (1000000 and up), under the backlog (4000000)
+	var layer, handle;         // the strip, and its handle while it's away
+	var shown = [];            // the buttons drawn: %[ action, x, y, w, h, pics, on ]
+	var stateKey = "";         // what they were drawn for (redrawn when it changes)
+	var hover = -1, pressed = -1;
+	var slide = 0;             // 0 away .. 1 shown
+	var lastNear = 0;          // when the pointer was last near
+	var touchOpen = false;     // opened by its handle
+	var timer;
+	var pics = %[];            // loaded button pictures, by name
+	var language;              // the language they were loaded in (a language's own pictures)
+	var drawScale = 1.0;       // the size drawn at: the player's, or smaller to fit the screen
+	var stripHeight = 42;
+
+	function KAGQuickMenu(win)
+	{
+		super.KAGPlugin();
+		window = win;
+		timer = new Timer(onTimer, "");
+		timer.interval = 33;
+		timer.enabled = true;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		invalidate layer if layer !== void && isvalid layer;
+		invalidate handle if handle !== void && isvalid handle;
+		dropPictures();
+		super.finalize(...);
+	}
+
+	property pinned
+	{
+		getter { var p = window.scflags.quickMenuPinned; return p === void ? pinnedDefault : !!p; }
+		setter(v) { window.scflags.quickMenuPinned = v ? 1 : 0; stateKey = ""; }
+	}
+
+	function list()
+	{
+		// functions written outside any object get the global object (KAGBindToGlobal), or they'd
+		// run with their dictionary as this, where every global is void
+		var l = typeof items == "Object" && items !== void && !(items instanceof "Array") ? KAGBindToGlobal(items)() : items;
+		return l !== void ? l : [];
+	}
+
+	// in the story, with the message window showing
+	function canShow()
+	{
+		with (window) {
+			if (.usingExtraConductor || .currentDialog !== void || .historyShowing || .messageLayerHiding) return false;
+			if (.conductor !== .mainConductor || .skipNoDisp) return false;
+			var m = .fore.messages[0];
+			if (m === void || !m.visible) return false;
+		}
+		if (when !== void && !KAGBindToGlobal(when)()) return false;
+		return list().count > 0;
+	}
+
+	function dropPictures()
+	{
+		var ar = [];
+		ar.assign(pics);
+		for (var i = 1; i < ar.count; i += 2) invalidate ar[i] if ar[i] !== void && ar[i] !== false && isvalid ar[i];
+		(Dictionary.clear incontextof pics)();
+	}
+
+	function picture(name)
+	{
+		var p = pics[name];
+		if (p !== void) return p ? p : void;
+		if (typeof global.getExistImageName != "undefined" && getExistImageName(name) == "") { pics[name] = false; return; }
+		try {
+			p = new global.Layer(window, window.temporaryLayer !== void ? window.temporaryLayer : window.primaryLayer);
+			p.loadImages(name);
+			p.setSizeToImageSize();
+			pics[name] = p;
+			return p;
+		} catch (e) {
+			invalidate p if p !== void;
+			pics[name] = false;
+		}
+	}
+
+	// the buttons laid out, and the strip drawn for the state they're in
+	property scale { getter { var v = KAGOptionGet("quickMenuSize"); return (v !== void ? +v : 100) / 100.0; } }
+
+	// whether the game's strip has a button for action name
+	function has(name)
+	{
+		var l = list();
+		for (var i = 0; i < l.count; i++) if (l[i].action == name) return true;
+		return false;
+	}
+
+	// whether the player left action name out of the strip (Change Controls)
+	function hidden(name) { var h = window.scflags.quickMenuHidden; return h !== void && !!h[name]; }
+	function setHidden(name, v)
+	{
+		window.scflags.quickMenuHidden = %[] if window.scflags.quickMenuHidden === void;
+		window.scflags.quickMenuHidden[name] = v ? 1 : 0;
+		stateKey = "";
+	}
+
+	// the buttons laid out at scale k (drawScale): the strip's width
+	function layout(k)
+	{
+		var l = list(), x = 0, h = 0;
+		drawScale = k;
+		shown = [];
+		for (var i = 0; i < l.count; i++) {
+			var it = l[i];
+			if (!KAGActionAvailable(it.action) || hidden(it.action)) continue;
+			var b = %[ action:it.action, on:KAGBindToGlobal(it.on) ];
+			b.normal = picture(it.image + "_normal") if it.image !== void;
+			if (b.normal !== void) {
+				b.over = picture(it.image + "_over");
+				b.lit = picture(it.image + "_on");
+				b.w = (int)(b.normal.width * k), b.h = (int)(b.normal.height * k);
+			} else {
+				b.label = it.label !== void ? tr(it.label) : KAGActionLabel(it.action);
+				if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+				b.w = (int)(150 * k), b.h = (int)(48 * k);
+			}
+			b.x = it.x !== void ? (int)(+it.x * k) : x;
+			b.y = 0;
+			x = b.x + b.w + gap;
+			h = b.h if b.h > h;
+			shown.add(b);
+		}
+		// the pin
+		h = (int)(42 * k) if h == 0;
+		shown.add(%[ action:"", pin:true, x:x, y:0, w:(int)(36 * k), h:h ]);
+		stripHeight = h;
+		return x + (int)(36 * k);
+	}
+
+	function build()
+	{
+		// at the player's size, made smaller when that's wider than the screen
+		var k = scale, fit = window.primaryLayer.width - 8, w = layout(k);
+		for (var n = 0; n < 4 && w > fit; n++) { k *= fit / w; w = layout(k); }
+		if (layer === void) {
+			layer = new KAGQuickMenuLayer(window, window.primaryLayer, this);
+			layer.name = "Quick menu";
+			layer.hitType = htMask;
+			layer.hitThreshold = 16; // the gaps let clicks through
+			layer.absolute = absolute;
+			layer.a11yHidden = true if typeof layer.a11yHidden != "undefined";
+		}
+		layer.setImageSize(w, stripHeight);
+		layer.setSizeToImageSize();
+		draw();
+	}
+
+	function enabled(b) { return b.pin || KAGActionEnabled(b.action); }
+	function lit(b) { return b.on !== void && b.on(); }
+
+	function draw()
+	{
+		layer.fillRect(0, 0, layer.imageWidth, layer.imageHeight, 0);
+		for (var i = 0; i < shown.count; i++) {
+			var b = shown[i], over = i == hover, en = enabled(b);
+			if (b.pin) { drawPin(b, over); continue; }
+			if (b.normal !== void) {
+				var p = lit(b) && b.lit !== void ? b.lit : over && en && b.over !== void ? b.over : b.normal;
+				layer.operateStretch(b.x, b.y, b.w, b.h, p, 0, 0, p.width, p.height, omAlpha, en ? 255 : 96, stLinear);
+			} else {
+				// the dialogs' button frame at the button's height (the picture's 64 px was cut at 48)
+				drawYesNoNineSlice(layer, b.x, b.y, b.w, b.h, over && en || lit(b) ? "dialog_button_over" : "dialog_button_normal", yesnoButtonInsets);
+				setYesNoFont(layer, (int)(22 * drawScale));
+				var tw = measureYesNoText(layer, b.label), th = layer.font.getTextHeight(b.label);
+				layer.drawText(b.x + ((b.w - tw) >> 1), b.y + ((b.h - th) >> 1), b.label, over && en || lit(b) ? 0xffffff : en ? 0x5025ff : 0xa0a0b8);
+			}
+		}
+	}
+
+	// a push pin: down (pinned) or lying (it slides away)
+	function drawPin(b, over)
+	{
+		var c = over ? 0xff5025ff : 0xffffffff, cx = b.x + (b.w >> 1), cy = b.y + (b.h >> 1), k = drawScale;
+		var p1 = (int)(k + 0.5), p3 = (int)(3 * k), p4 = (int)(4 * k), p7 = (int)(7 * k), p9 = (int)(9 * k), p11 = (int)(11 * k), p12 = (int)(12 * k);
+		layer.fillRect(b.x + 2, b.y + 4, b.w - 4, b.h - 8, over ? 0xc0ffffff : 0x805025ff);
+		if (pinned) {
+			layer.fillRect(cx - p7, cy - p12, p7 * 2, p9, c);
+			layer.fillRect(cx - p3, cy - p3, p3 * 2, p4, c);
+			layer.fillRect(cx - p1, cy + p1, p1 * 2, p11, c);
+		} else {
+			layer.fillRect(cx - p12, cy - p7, p9, p7 * 2, c);
+			layer.fillRect(cx - p3, cy - p3, p4, p3 * 2, c);
+			layer.fillRect(cx + p1, cy - p1, p11, p1 * 2, c);
+		}
+	}
+
+	function stateOf()
+	{
+		var s = [ pinned ? 1 : 0, hover, scale ];
+		for (var i = 0; i < shown.count; i++) s.add(enabled(shown[i]) ? 1 : 0), s.add(lit(shown[i]) ? 1 : 0);
+		return s.join(",");
+	}
+
+	function onTimer()
+	{
+		if (!isvalid window) return;
+		if (!canShow()) {
+			layer.visible = false if layer !== void;
+			handle.visible = false if handle !== void;
+			touchOpen = false;
+			return;
+		}
+		var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
+		if (lang != language) { language = lang; dropPictures(); stateKey = ""; }
+		if (layer === void) build();
+		var key = stateOf();
+		if (key != stateKey) { stateKey = key; build(); }
+		var at = place !== void ? KAGBindToGlobal(place)() : [ (window.primaryLayer.width - layer.width) >> 1, window.primaryLayer.height - layer.height - 12 ];
+		// near: the pointer within reveal px of the strip
+		var px = window.primaryLayer.cursorX, py = window.primaryLayer.cursorY, now = System.getTickCount();
+		var near = px >= at[0] - reveal && px < at[0] + layer.width + reveal && py >= at[1] - reveal && py < at[1] + layer.height + reveal;
+		lastNear = now if near || touchOpen;
+		var want = pinned || now - lastNear < hideDelay ? 1 : 0;
+		slide += want > slide ? 0.2 : want < slide ? -0.2 : 0;
+		slide = 0 if slide < 0;
+		slide = 1 if slide > 1;
+		touchOpen = false if !want;
+		// kept on the screen (a larger strip)
+		var maxX = window.primaryLayer.width - layer.width - 4;
+		at[0] = maxX if at[0] > maxX;
+		at[0] = 4 if at[0] < 4;
+		layer.setPos(at[0], at[1]);
+		var o = KAGOptionGet("quickMenuOpacity");
+		layer.opacity = (int)(255 * slide * (o !== void ? +o : 100) / 100);
+		layer.visible = slide > 0;
+		layer.hitThreshold = slide >= 1 ? 16 : 256;
+		updateHandle(at, slide < 1 && !pinned);
+	}
+
+	// the handle while the strip is away: a tap brings it in (touch screens have no hover)
+	function updateHandle(at, show)
+	{
+		if (!show) { handle.visible = false if handle !== void; return; }
+		if (handle === void) {
+			handle = new KAGQuickMenuLayer(window, window.primaryLayer, this);
+			handle.name = "Quick menu handle";
+			handle.setImageSize(72, 16);
+			handle.setSizeToImageSize();
+			handle.fillRect(0, 0, 72, 16, 0);
+			handle.fillRect(0, 4, 72, 12, 0xc05025ff);
+			handle.fillRect(30, 7, 12, 3, 0xffffffff);
+			handle.absolute = absolute;
+		}
+		handle.setPos(at[0] + ((layer.width - 72) >> 1), at[1] + layer.height - 16);
+		handle.visible = true;
+		handle.opacity = (int)(255 * (1 - slide));
+	}
+
+	function hit(x, y)
+	{
+		for (var i = 0; i < shown.count; i++) {
+			var b = shown[i];
+			if (x >= b.x && y >= b.y && x < b.x + b.w && y < b.y + b.h) return i;
+		}
+		return -1;
+	}
+
+	function onMove(x, y) { var h = hit(x, y); if (h != hover) { hover = h; stateKey = ""; } }
+	function onLeave() { if (hover != -1) { hover = -1; stateKey = ""; } }
+
+	function onDown(x, y, button)
+	{
+		pressed = button == mbLeft ? hit(x, y) : -1;
+	}
+
+	function onUp(x, y, button)
+	{
+		var i = hit(x, y);
+		if (button != mbLeft) return;
+		// the handle: in
+		if (layer === void || !layer.visible || slide < 1) { touchOpen = true; lastNear = System.getTickCount(); pressed = -1; return; }
+		if (i < 0 || i != pressed) { pressed = -1; return; }
+		pressed = -1;
+		var b = shown[i];
+		if (b.pin) { pinned = !pinned; return; }
+		lastNear = System.getTickCount();
+		KAGRunAction(b.action);
+		stateKey = "";
+	}
+
+	// a button's tip: its action's label (Tooltips.tjs)
+	function tipAt(l, x, y)
+	{
+		if (l === handle) return "Show the buttons";
+		var i = hit(x, y);
+		if (i < 0) return "";
+		var b = shown[i];
+		if (b.pin) return pinned ? "Let the buttons fade out" : "Keep the buttons shown";
+		return KAGActionLabel(b.action);
+	}
+
+	// the strip's buttons, for tests: [ action, enabled, lit ] each
+	function buttons()
+	{
+		var r = [];
+		for (var i = 0; i < shown.count; i++) if (!shown[i].pin) r.add([ shown[i].action, enabled(shown[i]), lit(shown[i]) ]);
+		return r;
+	}
+
+	function onStore(f, elm) {}
+	function onRestore(f, clear, elm) { stateKey = ""; }
+}
+
+// The window's quick menu, made with it
+function KAGQuickMenuOf(win)
+{
+	if (typeof win.quickMenu != "Object" || win.quickMenu === void) {
+		win.quickMenu = new KAGQuickMenu(win);
+		win.addPlugin(win.quickMenu);
+	}
+	return win.quickMenu;
+}
+
+// Config: its size (larger where a finger taps it) and opacity
+function KAGQuickMenuTouch()
+{
+	var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+	return tag == "android" || tag == "ios";
+}
+KAGDefineOption(%[ name:"quickMenuSize", label:"Quick Menu Size", kind:"toggle", save:true, initial:KAGQuickMenuTouch() ? 140 : 100,
+	values:[ ["Normal", 100], ["Large", 140] ] ]);
+KAGDefineOption(%[ name:"quickMenuOpacity", label:"Quick Menu Opacity", kind:"slider", save:true, initial:100,
+	min:30, max:100, step:5, ends:[ "Faint", "Solid" ] ]);
+
+// Config: the quick menu always shown (pinned), or only near the pointer
+KAGDefineOption(%[ name:"quickMenu", label:"Quick Menu", kind:"toggle",
+	values:[ ["Always", true], ["Near the Pointer", false] ],
+	getValue:function { return typeof kag.quickMenu == "Object" && kag.quickMenu !== void ? kag.quickMenu.pinned : true; },
+	setValue:function(v) { KAGQuickMenuOf(kag).pinned = v; } ]);

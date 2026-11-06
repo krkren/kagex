@@ -1,0 +1,508 @@
+/**
+ * Scrolling lists (since 0.19.0): items in a list or a grid on a layer of their own, drawn by
+ * the game one at a time and only while they're in view, that scroll with the mouse wheel, by
+ * dragging (the mouse, or a finger: a flick coasts on and slows down), with the scroll bar, the
+ * arrow keys, Page Up and Down, Home and End (a controller's D-pad sends the arrows), and say
+ * their items to screen readers. A click or a tap on an item, or Return on the focused one,
+ * picks it.
+ *
+ *   var list = new KAGScrollList(kag, kag.fore.messages[0]);
+ *   list.setPos(316, 322);
+ *   list.setSize(1344, 600);         // the list's own picture is made this size too
+ *   list.itemHeight = 86;            // a row's height; gap, the space between rows
+ *   list.columns = 1;                // more for a grid (each row's items share the width)
+ *   list.drawItem = function(layer, index, w, h, state) { ... };  // "normal", "over", "focus"
+ *   list.onPick = function(index) { ... };
+ *   list.itemName = function(index) { return "..."; };          // for screen readers
+ *   list.count = 120;                // draws it
+ *
+ *   position         how far it's scrolled, in pixels (scrollTo(px, smooth))
+ *   focusIndex       the item the keys are on (-1: none); show(index) scrolls it into view
+ *   refresh()        draws every item again (the game's data changed)
+ *   loop             scrolling past the end comes round to the start
+ *   barWidth, barColor, trackColor, barMargin   the scroll bar (barWidth 0: none)
+ *   coasting         how fast a flick slows (a factor a second, 0.05)
+ *
+ * Functions written outside any object are run with the global object as this (KAGBindToGlobal,
+ * Actions.tjs). A drag on the list doesn't make a swipe (the window's gestures), and the wheel
+ * over it is its own (not KAG's history or click).
+ *
+ * On a message layer, messageLayer.addLinkLayer(list) makes it one of the layer's links: the
+ * keys and a controller's D-pad move to it from the buttons and back (the arrows past its first
+ * or last item), and [backlay] copies it to the other page (cloneFor).
+ */
+class KAGScrollList extends Layer
+{
+	var window;
+	var itemCount = 0;
+	var itemHeight = 64, columns = 1, gap = 0;
+	var drawItem, onPick, itemName, a11yName = "List";
+	var loop = false;
+	var barWidth = 10, barMargin = 4, barColor = 0xc05025ff, trackColor = 0x40ffffff;
+	var coasting = 0.05;
+	var dragThreshold = 12;
+
+	var position = 0.0;        // px scrolled
+	var target;                // where a smooth scroll is going (void: none)
+	var velocity = 0.0;        // px a second while it coasts
+	var focusIndex = -1, hoverIndex = -1;
+	var pressX, pressY, pressPos, pressTick, dragging = false, barDrag = false, pressed = false;
+	var samples = [];          // [ tick, y ] while dragged, for the flick's speed
+	var pace = 0;              // ms between the drag's last two moves
+	var timer, lastTick = 0;
+	var cache = %[];           // "<index>:<state>" => a layer holding the item's picture
+	var cacheKeys = [];
+	var wheelHook;             // the window's onMouseWheelHook: the wheel over the list is the list's
+
+	var a11yHidden = true;     // the list gives its own nodes (pushA11y)
+	var linkNum;               // its link number on a message layer (addLinkLayer)
+
+	function KAGScrollList(win, par)
+	{
+		super.Layer(win, par);
+		window = win;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 0;
+		focusable = true;
+		visible = true;
+		timer = new Timer(onTick, "");
+		timer.interval = 16;
+		wheelHook = onWheelHook;
+		window.addHook("onMouseWheelHook", wheelHook);
+	}
+
+	function finalize()
+	{
+		window.removeHook("onMouseWheelHook", wheelHook) if isvalid window;
+		invalidate timer;
+		dropCache();
+		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
+		super.finalize(...);
+	}
+
+	property count
+	{
+		getter { return itemCount; }
+		setter(n) { itemCount = n < 0 ? 0 : n; focusIndex = -1 if focusIndex >= itemCount; refresh(); }
+	}
+
+	function setSize(w, h)
+	{
+		super.setSize(w, h);
+		setImageSize(w, h);
+		refresh();
+	}
+
+	// geometry
+	property rowStride { getter { return itemHeight + gap; } }
+	property rows { getter { return (itemCount + columns - 1) \ columns; } }
+	property contentHeight { getter { var r = rows; return r > 0 ? r * rowStride - gap : 0; } }
+	property maxPosition
+	{
+		getter {
+			if (loop) return contentHeight + gap;
+			var m = contentHeight - height;
+			return m > 0 ? m : 0;
+		}
+	}
+	property itemWidth
+	{
+		getter { return (listWidth - gap * (columns - 1)) \ columns; }
+	}
+	// the width the items share (the scroll bar keeps its strip)
+	property listWidth
+	{
+		getter { return width - (showsBar ? barWidth + barMargin * 2 : 0); }
+	}
+	property showsBar { getter { return barWidth > 0 && contentHeight > height; } }
+
+	function clampPosition(p)
+	{
+		if (loop && contentHeight > height) {
+			var period = contentHeight + gap;
+			p = p % period;
+			p += period if p < 0;
+			return p;
+		}
+		var m = maxPosition;
+		return p < 0 ? 0 : p > m ? m : p;
+	}
+
+	function scrollTo(p, smooth = false)
+	{
+		if (smooth) { target = loop ? p : clampPosition(p); velocity = 0; start(); return; }
+		target = void;
+		var n = clampPosition(p);
+		if (n == position) return;
+		position = n;
+		redraw();
+	}
+
+	// the item at (x, y) on the list, or -1
+	function itemAt(x, y)
+	{
+		if (x < 0 || y < 0 || x >= listWidth || y >= height || itemCount == 0) return -1;
+		var yy = y + position, stride = rowStride;
+		if (loop && contentHeight > height) { var period = contentHeight + gap; yy = yy % period; }
+		var row = (int)(yy \ stride);
+		if (yy - row * stride >= itemHeight) return -1;
+		var col = (int)(x \ (itemWidth + gap));
+		if (col >= columns || x - col * (itemWidth + gap) >= itemWidth) return -1;
+		var i = row * columns + col;
+		return i < itemCount ? i : -1;
+	}
+
+	// scrolls so item index is wholly in view
+	function show(index, smooth = true)
+	{
+		if (index < 0 || index >= itemCount) return;
+		var top = (index \ columns) * rowStride, p = target !== void ? target : position;
+		if (loop) p = clampPosition(p);
+		if (top < p) scrollTo(top, smooth);
+		else if (top + itemHeight > p + height) scrollTo(top + itemHeight - height, smooth);
+	}
+
+	// pictures of items
+	function dropCache()
+	{
+		for (var i = 0; i < cacheKeys.count; i++) { var l = cache[cacheKeys[i]]; invalidate l if l !== void && isvalid l; }
+		(Dictionary.clear incontextof cache)();
+		cacheKeys.clear();
+	}
+
+	function stateOf(i) { return i == focusIndex && focused ? "focus" : i == hoverIndex ? "over" : "normal"; }
+
+	function pictureOf(i, state)
+	{
+		var key = i + ":" + state, l = cache[key];
+		if (l !== void) return l;
+		var w = itemWidth, h = itemHeight;
+		l = new global.Layer(window, this);
+		l.visible = false;
+		l.type = ltAlpha;
+		l.face = dfAlpha;
+		l.setImageSize(w, h);
+		l.setSizeToImageSize();
+		l.fillRect(0, 0, w, h, 0);
+		if (drawItem !== void) KAGBindToGlobal(drawItem)(l, i, w, h, state);
+		cache[key] = l;
+		cacheKeys.add(key);
+		// keep about four screens of pictures
+		var keep = ((height \ rowStride) + 2) * columns * 4 + 8;
+		while (cacheKeys.count > keep) {
+			var old = cacheKeys[0];
+			cacheKeys.erase(0);
+			var o = cache[old];
+			delete cache[old];
+			invalidate o if o !== void && isvalid o;
+		}
+		return l;
+	}
+
+	function refresh()
+	{
+		dropCache();
+		position = clampPosition(position);
+		redraw();
+	}
+
+	function redraw()
+	{
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		if (itemCount > 0 && itemHeight > 0) {
+			var stride = rowStride, w = itemWidth, total = rows;
+			var first = (int)(position \ stride), last = (int)((position + height) \ stride);
+			for (var r = first; r <= last; r++) {
+				var row = r;
+				if (loop && contentHeight > height) row = r % total;
+				else if (r >= total) break;
+				var y = (int)(r * stride - position); // (looping, the rows after the end follow on)
+				for (var c = 0; c < columns; c++) {
+					var i = row * columns + c;
+					if (i >= itemCount) break;
+					var p = pictureOf(i, stateOf(i));
+					copyRect(c * (w + gap), y, p, 0, 0, p.imageWidth, p.imageHeight);
+				}
+			}
+		}
+		drawBar();
+		update();
+	}
+
+	function drawBar()
+	{
+		if (!showsBar) return;
+		var x = width - barMargin - barWidth, h = height - barMargin * 2, total = contentHeight + (loop ? gap : 0);
+		fillRect(x, barMargin, barWidth, h, trackColor);
+		var t = (int)(h * height / total);
+		t = 24 if t < 24;
+		t = h if t > h;
+		var range = loop ? total : maxPosition;
+		var y = barMargin + (range > 0 ? (int)((h - t) * position / range) : 0);
+		fillRect(x, y, barWidth, t, barColor);
+	}
+
+	// moving: a smooth scroll or a coast
+	function start() { lastTick = System.getTickCount(); timer.enabled = true; }
+
+	function onTick()
+	{
+		if (!isvalid this) return;
+		var now = System.getTickCount(), dt = (now - lastTick) / 1000.0;
+		lastTick = now;
+		dt = 0.05 if dt > 0.05;
+		if (target !== void) {
+			var d = target - position;
+			if (Math.abs(d) < 1) { position = clampPosition(target); target = void; }
+			else position += d * (1 - Math.pow(0.0001, dt)); // most of the way in a quarter second
+			if (!loop) position = clampPosition(position);
+			redraw();
+			timer.enabled = target !== void;
+			return;
+		}
+		if (pressed) { timer.enabled = false; return; }
+		position += velocity * dt;
+		velocity *= Math.pow(coasting, dt);
+		var c = clampPosition(position);
+		if (c != position && !loop) velocity = 0; // it stops at the ends
+		position = c;
+		redraw();
+		if (Math.abs(velocity) < 20) { velocity = 0; timer.enabled = false; }
+	}
+
+	// the mouse and touch (SDL makes mouse events from a finger's)
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button != mbLeft) { super.onMouseDown(...); return; }
+		focus() if focusable && !focused;
+		window.gestures.cancel() if typeof window.gestures == "Object" && window.gestures !== void && typeof window.gestures.cancel != "undefined";
+		pressed = true, pressX = x, pressY = y, pressPos = position, pressTick = System.getTickCount(), dragging = false;
+		target = void, velocity = 0, timer.enabled = false;
+		samples = [ [ pressTick, y ] ];
+		pace = 0;
+		barDrag = showsBar && x >= width - barWidth - barMargin * 2;
+		if (barDrag) dragBar(y);
+	}
+
+	function dragBar(y)
+	{
+		var h = height - barMargin * 2, range = loop ? contentHeight + gap : maxPosition;
+		scrollTo(range * (y - barMargin) / (h > 0 ? h : 1));
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (pressed) {
+			if (barDrag) { dragBar(y); return; }
+			if (!dragging && Math.abs(y - pressY) > dragThreshold) {
+				dragging = true;
+				setHover(-1);
+			}
+			if (dragging) {
+				var now = System.getTickCount();
+				pace = now - samples[samples.count - 1][0];
+				samples.add([ now, y ]);
+				while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
+				scrollTo(pressPos - (y - pressY));
+			}
+			return;
+		}
+		setHover(itemAt(x, y));
+		super.onMouseMove(...);
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (button != mbLeft || !pressed) { super.onMouseUp(...); return; }
+		pressed = false;
+		if (barDrag) { barDrag = false; return; }
+		if (dragging) {
+			dragging = false;
+			// the flick: the speed over the last 100 ms
+			var now = System.getTickCount();
+			samples.add([ now, y ]);
+			while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
+			var dtm = now - samples[0][0];
+			// a finger that stopped before it lifted makes no flick: a gap well past the drag's
+			// own pace (a slow machine's moves come further apart than 80 ms)
+			var last = now - samples[samples.count - 2][0];
+			if (dtm > 0 && (last < 80 || last < pace * 2)) {
+				velocity = -(y - samples[0][1]) * 1000.0 / dtm;
+				start() if Math.abs(velocity) > 60;
+			}
+			return;
+		}
+		var i = itemAt(x, y);
+		if (i >= 0 && i == itemAt(pressX, pressY)) pick(i);
+	}
+
+	function onMouseLeave()
+	{
+		setHover(-1);
+		super.onMouseLeave(...);
+	}
+
+	// the wheel, through the window's hook (which keeps it from KAG's wheel: the history, a click)
+	function onMouseWheel(shift, delta, x, y) {}
+
+	function onWheelHook(shift, delta, x, y)
+	{
+		if (!isvalid this || window.currentDialog !== void) return false;
+		for (var l = this; l !== null && l !== void; l = l.parent) if (!l.visible) return false;
+		var cx = cursorX, cy = cursorY;
+		if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
+		wheel(delta);
+		return true;
+	}
+
+	// a notch scrolls a row (or a third of the list, whichever is less)
+	function wheel(delta)
+	{
+		var step = rowStride < height / 3 ? rowStride : height / 3;
+		var from = target !== void ? target : position;
+		scrollTo(from - delta / 120.0 * step, true);
+	}
+
+	function setHover(i)
+	{
+		if (i == hoverIndex) return;
+		hoverIndex = i;
+		redraw();
+	}
+
+	function pick(i)
+	{
+		if (i < 0 || i >= itemCount) return;
+		focusIndex = i;
+		redraw();
+		pushA11y();
+		if (onPick !== void) KAGBindToGlobal(onPick)(i);
+	}
+
+	// the keys (and a controller's D-pad, which sends the arrows)
+	function moveFocus(i)
+	{
+		if (itemCount == 0) return;
+		if (loop) { i = i % itemCount; i += itemCount if i < 0; }
+		else { i = 0 if i < 0; i = itemCount - 1 if i >= itemCount; }
+		if (i == focusIndex) return;
+		focusIndex = i;
+		show(i);
+		redraw();
+		pushA11y();
+	}
+
+	function onKeyDown(key, shift, process = true)
+	{
+		var page = (height \ rowStride) * columns;
+		page = columns if page < columns;
+		var f = focusIndex < 0 ? 0 : focusIndex, handled = true;
+		// past its first or last row (or a row's ends), on to the message layer's other links
+		var out = !loop && (key == VK_UP && f < columns || key == VK_DOWN && f + columns >= itemCount ||
+			(key == VK_LEFT || key == VK_RIGHT) && (columns == 1 || key == VK_LEFT && f % columns == 0 ||
+			key == VK_RIGHT && (f % columns == columns - 1 || f == itemCount - 1)));
+		if (itemCount == 0 || out) {
+			parent.keyLink = linkNum if linkNum !== void;
+			super.onKeyDown(key, shift, process);
+			// on to a button: the message layer has the keys then (an edit or another list
+			// takes the focus itself)
+			if (linkNum !== void && isvalid this && focused && parent.keyLink != linkNum) parent.focus();
+			return;
+		}
+		switch (key) {
+		case VK_UP:    moveFocus(f - columns); break;
+		case VK_DOWN:  moveFocus(f + columns); break;
+		case VK_LEFT:  moveFocus(f - 1); break;
+		case VK_RIGHT: moveFocus(f + 1); break;
+		case VK_PRIOR: moveFocus(f - page); break;
+		case VK_NEXT:  moveFocus(f + page); break;
+		case VK_HOME:  moveFocus(0); break;
+		case VK_END:   moveFocus(itemCount - 1); break;
+		case VK_RETURN:
+		case VK_SPACE: if (focusIndex >= 0) pick(focusIndex); else handled = false; break;
+		default: handled = false;
+		}
+		if (!handled) super.onKeyDown(key, shift, process);
+	}
+
+	function onFocus(prevfocused, direction)
+	{
+		parent.keyLink = linkNum if linkNum !== void;
+		super.onFocus(...);
+		focusIndex = 0 if focusIndex < 0 && itemCount > 0;
+		show(focusIndex, false) if focusIndex >= 0;
+		redraw();
+		pushA11y();
+	}
+
+	function onBlur(nextfocused)
+	{
+		super.onBlur(...);
+		redraw();
+	}
+
+	// as a message layer's link (addLinkLayer)
+	function commit() {}
+
+	function onSearchPrevFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findPrevFocusable != "undefined") layer = parent.findPrevFocusable(this, layer);
+		super.onSearchPrevFocusable(layer);
+	}
+
+	function onSearchNextFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findNextFocusable != "undefined") layer = parent.findNextFocusable(this, layer);
+		super.onSearchNextFocusable(layer);
+	}
+
+	// its copy on another message layer ([backlay]); a list of a class of its own gives its own
+	function cloneFor(win, par)
+	{
+		var l = new global.KAGScrollList(win, par);
+		copyTo(l);
+		return l;
+	}
+
+	function copyTo(l)
+	{
+		l.name = name;
+		l.itemHeight = itemHeight, l.columns = columns, l.gap = gap;
+		l.drawItem = drawItem, l.onPick = onPick, l.itemName = itemName, l.a11yName = a11yName;
+		l.loop = loop, l.coasting = coasting, l.dragThreshold = dragThreshold;
+		l.barWidth = barWidth, l.barMargin = barMargin, l.barColor = barColor, l.trackColor = trackColor;
+		l.setPos(left, top);
+		l.itemCount = itemCount;
+		l.setSize(width, height);
+		l.position = position, l.focusIndex = focusIndex;
+		l.visible = visible;
+		l.refresh();
+	}
+
+	// screen readers: the list and the items in view
+	function pushA11y()
+	{
+		if (typeof global.KAGA11y != "Object" || KAGA11y === void || !KAGA11y.available) return;
+		var nodes = [ %[ id:"list", role:"list", name:tr(a11yName) ] ], focus;
+		var stride = rowStride, first = (int)(position \ stride) * columns, last = ((int)((position + height) \ stride) + 1) * columns;
+		for (var i = first; i < last && i < itemCount; i++) {
+			var states = [ "focusable" ];
+			if (i == focusIndex) states.add("selected"), focus = "item" + i;
+			var row = i \ columns, col = i % columns;
+			nodes.add(%[ id:"item" + i, role:"list_item", parent:"list", states:states,
+				name:itemName !== void ? KAGBindToGlobal(itemName)(i) : "" + (i + 1),
+				rect:KAGA11y.rectOf(this, col * (itemWidth + gap), (int)(row * stride - position), itemWidth, itemHeight) ]);
+		}
+		KAGA11y.updateNodes(this, nodes, focus);
+	}
+
+	function onA11yAction(id, action, arg)
+	{
+		if (id.substring(0, 4) != "item") return;
+		var i = +id.substring(4);
+		if (action == "focus") moveFocus(i);
+		else if (action == "click") pick(i);
+	}
+}

@@ -35,6 +35,12 @@ JOBS = [
     ("data/fgimage/ch_0_0_3.png", "ch_0_0_3.png", "anime", (540, 1620), None),
     ("data/fgimage/ch_1_0_1.png", "ch_1_0_1.png", "anime", (324, 972), None),
     ("data/fgimage/ch_2_0_1.png", "ch_2_0_1.png", "anime", (810, 2430), None),
+    # the angry and sad faces far and near (since 0.19.0): the original art drew them at the
+    # middle size only, so they're made from it, at the sizes of the far and near levels
+    ("data/fgimage/ch_1_0_2.png", "ch_0_0_2.png", "anime", (324, 972), None),
+    ("data/fgimage/ch_1_0_3.png", "ch_0_0_3.png", "anime", (324, 972), None),
+    ("data/fgimage/ch_2_0_2.png", "ch_0_0_2.png", "anime", (810, 2430), None),
+    ("data/fgimage/ch_2_0_3.png", "ch_0_0_3.png", "anime", (810, 2430), None),
     # 800x600 -> 1920x1440, the middle 1080 lines
     ("data/bgimage/bg01_01.png", "bg01_01.png", "photo", (1920, 1440), (0, 180, 1920, 1080)),
     ("data/bgimage/event1.jpg", "event1.jpg", "photo", (1920, 1440), (0, 180, 1920, 1080)),

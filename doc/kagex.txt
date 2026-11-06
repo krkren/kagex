@@ -3073,6 +3073,178 @@ what it would say) and Agent.a11yTree(), or press a node with Agent.a11yAction(i
 
 
 
+● Actions, Rebinding and Gestures
+
+What the player can ask the game to do is one table (since 0.19.0, template/system/Actions.tjs):
+skip, auto mode, the message history, hiding the window, going back, save, load, quick save
+and load, playing the voice again, the scene moves of compiled scenes (rewind, back to the
+start of the scene, back to the last choice, on to the next scene), the next language, the
+menu and a screenshot. Keys, controller buttons, gestures and on-screen buttons name an action,
+so changing what an action does, or which key does it, changes it everywhere.
+
+    KAGDefineAction(%[ name:"photo", label:"Take a photo", func:takePhoto,
+                       available:function { return sf.cameraUnlocked; }, enabled:canTakePhoto ]);
+    kag.bindKey(VK_F6, 0, "@skip");          // a key names an action with "@"
+    kag.padKeyMap[VK_PAD6] = "@skip";        // and so does a controller button
+    kag.gestureActions.left = "rewind";      // a gesture takes the bare name
+    KAGActions.quickSave.func = mySave;      // the game's own way of doing a framework action
+    KAGRunAction("backlog"); KAGActionEnabled("quickLoad"); KAGActionLabel("auto");
+
+  available    whether the game has the action at all (quick saves only with a quick save slot);
+               keys and buttons bound to it are left out of the controls list while it's false
+  enabled      whether it can be done now (a quick load needs a quick save; the framework's
+               follow the window's menu items); KAGRunAction does nothing while it's false
+
+Change Controls (the controls list's Change… button, or kag.showBindings()) lists the actions
+with their keys, controller buttons and gestures: picking one waits for a key or a controller
+button (Esc leaves it, Backspace takes its keys away), its gesture cell goes round the
+directions, and Reset puts the game's back. The player's choices are kept in the system
+variables (scflags.keyRebinds, padRebinds, gestureRebinds) and laid over the game's bindings
+at start, after AfterInit.tjs (kag.applyPlayerBindings); a game's own screen can use
+kag.rebindKey(key, shift, name), rebindPad(button, name), rebindGesture(dir, name) and
+resetPlayerBindings(). The framework keeps F10, Shift+F11, Shift+F12, Return, Space, Tab, Ctrl,
+Shift and the arrows (kag.reservedKeys).
+
+Gestures: in the story (no system screen, prompt, history or choice showing), a swipe on a
+touch screen, or a drag with the right mouse button, runs kag.gestureActions[left, right, up,
+down], and the click or right click it would have made is dropped. The framework's are up for
+the message history and down to hide the window; the sample adds left to rewind and right to
+skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly one way
+(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. kag.gestures.when, a
+function, can narrow "the story" to the game's own idea of it (the sample's, as its quick
+menu's: after [initscene], not on the title or a system screen), and a drag that starts on a
+scrolling list is the list's (ScrollList.tjs).
+
+
+
+● The Quick Menu
+
+A strip of buttons for actions that can keep out of the way (since 0.19.0,
+template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
+comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
+back. A button is dimmed while its action can't be done and lit while its toggle is on; the
+pin at the end, and Config's Quick Menu option, are the player's (kept in the system
+variables). It shows in the story only: not over a system screen, a prompt or the message
+history, nor while the message window is hidden.
+
+    with (KAGQuickMenuOf(kag)) {
+        .items = [ %[ action:"quickSave", image:"msg_qsave", x:228 ],
+                   %[ action:"auto", image:"msg_auto", on:function { return kag.autoMode; } ],
+                   %[ action:"backlog" ] ];          // no image: its label, in the dialogs' look
+        .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+        .when  = function { return !!f.quickMenu; };    // the game's own idea of "the story"
+    }
+
+  items          the buttons (or a function returning them): action, image (<image>_normal,
+                 _over and, for a toggle, _on), x (its left in the strip; void: after the one
+                 before), on (lit while it returns true), label
+  place          where the strip goes; void: the bottom of the screen, in the middle
+  when           void, or whether it may show now
+  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms),
+                 reveal (48 px around it that bring it in), absolute (3500000)
+
+The sample's message window buttons are its quick menu, on the window's top edge as they were;
+[initscene] sets f.quickMenu and the title clears it.
+
+The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
+is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
+to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
+kag.scflags.quickMenuHidden). A button's picture is drawn at the strip's size; a labelled one
+in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
+
+
+● Tips
+
+A button's hint ([button hint=], [link hint=], any layer's hint) appears beside the pointer
+when it rests on the button a moment, or at once under the button when the keys or a
+controller move the focus to it (since 0.19.0, template/system/Tooltips.tjs, kag.tooltips; the
+SDL engine's window shows no hints of its own). The text goes through tr() and is drawn in
+the dialogs' look, over the quick menu and under the message history. A layer can give tips
+by place with a tipAt(x, y) method (the quick menu's buttons give their actions' labels).
+
+  kag.tooltips.restTime   how long the pointer rests before a tip shows (600 ms)
+  kag.tooltips.helpLine   void, or a function(text): a screen with a help line of its own takes
+                          the tips there instead ("" when there's none)
+
+Config's Tips option (tooltips) turns them off; it starts off on Android and iOS, where a tap
+leaves the pointer resting where it tapped. The sample's Config tabs tell what each page holds.
+
+
+● Scrolling Lists
+
+A list or a grid of items on a layer of its own (since 0.19.0, template/system/ScrollList.tjs,
+KAGScrollList), which the game draws an item at a time, only while it's in view, and which
+scrolls with the mouse wheel, by dragging (the mouse, or a finger: a flick coasts on and slows
+down), with its scroll bar, and with the arrow keys, Page Up and Down, Home and End (a
+controller's D-pad sends the arrows). A click or a tap on an item, or Return on the focused
+one, picks it; screen readers get the items in view as a list.
+
+    var list = new KAGScrollList(kag, kag.current);
+    list.setPos(316, 318);
+    list.itemHeight = 76;  list.gap = 10;          // columns = 3 for a grid
+    list.drawItem = drawRow;                        // function(layer, index, w, h, state)
+    list.onPick = playRow;                          // function(index)
+    list.itemName = rowName;                        // function(index): for screen readers
+    list.count = rows.count;
+    list.setSize(1332, 604);                        // its picture too
+    kag.current.addLinkLayer(list);                 // a link of the message layer
+
+  drawItem    draws item index into layer (w x h, cleared) for its state: "normal", "over"
+              (under the pointer) or "focus" (the keys' item); the pictures are kept, so
+              refresh() after the data changes
+  position    how far it's scrolled (px); scrollTo(px, smooth), show(index)
+  focusIndex  the keys' item (-1: none)
+  loop        scrolling past the end comes round to the start
+  barWidth (10), barMargin, barColor, trackColor   the scroll bar (barWidth 0: none)
+  coasting    how fast a flick slows (what's left of its speed after a second, 0.05)
+
+A drag on a list makes no swipe (the window's gestures), and the wheel over it is its own,
+not KAG's (the message history, a click). messageLayer.addLinkLayer(object) makes a layer of
+the game's own one of a message layer's links (link type ltOwn): the keys and a controller
+move to it from the buttons and back (the arrows past its first or last item), [backlay]
+copies it to the other page through its cloneFor(window, messageLayer), and clearing the
+message layer's links invalidates it.
+
+The sample's Search shows the lines it finds in one (searchList in Override.tjs), kept where
+it was scrolled while a line plays; its backlog coasts after a flick too.
+
+
+● The Screen, the Controller and Screenshots
+
+Options for a Config screen (since 0.19.0, template/system/Display.tjs), kept in the system
+variables and applied at start; one the platform can't do leaves its row empty:
+
+  windowSize        the window's size as a share of the game's, those that fit the screen
+                    (desktops; in full screen it's kept for when the window comes back)
+  fullScreenFit     how the game fills a screen of another shape: Bars ("contain"), Fill (the
+                    edges cut off, "cover") or Stretch ("fill"); kag.viewportFit
+  smoothScaling     smooth or sharp scaling to the screen (-smoothzoom)
+  vsync             frames in step with the display (Window.waitVSync)
+  padEnabled        the controller on or off (System.padEnabled)
+  padTest           a button that opens the controller test: a picture of the pad whose
+                    buttons light up while they're held, named for the pad in use, with the
+                    last one pressed under it (PadTest.tjs, KAGShowPadTest(); the controls list
+                    has a Test Controller button too). Its own keys aren't the game's while it's
+                    open (KAGWindow.keyCapture), so B lights B: Close, Esc or Return close it
+  screenshotWindow  F12's pictures with the message windows, or without (the quick menu and the
+                    tips are left out too)
+  screenshotFormat  PNG or JPEG
+
+For the game, in KAGWindow (AfterInit.tjs):
+
+  kag.screenshotName       the file's name: %Y %m %d %H %M %S for the date and time
+                           ("screenshot-%Y%m%d-%H%M%S")
+  kag.screenshotWatermark  void, or an image stamped on each picture, at
+                           screenshotWatermarkPlace ("bottomright", "bottomleft", "topright",
+                           "topleft", "center"), screenshotWatermarkMargin (24 px) and
+                           screenshotWatermarkOpacity (200)
+
+[screenshot enabled=false] turns screenshots off until [screenshot enabled=true], for scenes
+that would spoil the story ([screenshot off] and [screenshot on] say the same); F12 then says
+so instead, and saves keep it. The sample's Config has them on its sixth page.
+
+
+
 ● KAGEX Operation System
 
 
@@ -3465,6 +3637,10 @@ by motion:
     alpha movies         a looping one stops on its frame
     the TV static        stops on its frame
     Live2D and 3D layers stop as they show, once a motion played once has ended
+    actions              end where they'd end on the next frame; a looping one stops (since
+                         0.19.0; kag.reduceMotionActions = false leaves them to the game)
+    .asd animations      stay on their first frame, the click glyphs' too (since 0.19.0; a
+                         layer's animReduceMotion = false keeps its own running)
 
 Turned on while they play, they stop where they are; turned off, they move on. An [image] or a
 World layer can name a picture to show in place of its animation while Reduce Motion is on:
@@ -3475,7 +3651,7 @@ World layer can name a picture to show in place of its animation while Reduce Mo
 The picture is loaded instead of starting the animation, as an image of its own size; it stays
 until the layer is drawn again. The sample's Effects demo has stills for its petals, sparkles
 and magic circle (tools/assets/make_effects.py stills), and Config's last page has the switch.
-Transitions and actions are Screen Effects' (noeffect), not this option's.
+Transitions are Screen Effects' (noeffect), not this option's.
 
 
 

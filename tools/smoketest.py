@@ -77,6 +77,10 @@ class Engine:
     def _eval(self, cmd, timeout):
         raise NotImplementedError
 
+    def hang_report(self, path):
+        """Writes what the engine's threads are doing (a hung game) to path; False where it can't"""
+        return False
+
     def tjs(self, body, timeout=30.0):
         """Runs TJS statements on the main thread; 'return x;' gives the result. The REPLs print a
         string result as a TJS literal (EscapeC), where an apostrophe is \\', which JSON refuses
@@ -288,6 +292,15 @@ class DesktopEngine(FileChannel):
             raise SmokeError("the engine exited (code %s)" % self.proc.returncode)
         return True
 
+    def hang_report(self, path):
+        if self.proc.poll() is not None or not shutil.which("gdb"):
+            return False
+        r = subprocess.run(["gdb", "-p", str(self.proc.pid), "-batch", "-ex", "thread apply all bt"],
+                           capture_output=True, text=True, timeout=300)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(r.stdout + r.stderr)
+        return True
+
     def output(self):
         if not self.log.closed:
             self.log.flush()
@@ -453,6 +466,23 @@ class AndroidEngine(Engine):
         if not line:
             raise SmokeError("the REPL socket closed (did the app stop?)")
         return json.loads(line)
+
+    def hang_report(self, path):
+        # every thread's native stack (debuggerd; a debug APK is debuggable), then the Java ones
+        # (SIGQUIT writes them to the ANR traces)
+        pid = subprocess.run([self.adb, "shell", "pidof", self.package], capture_output=True, text=True).stdout.strip()
+        if not pid:
+            return False
+        out = ["pid %s" % pid]
+        for cmd in (["debuggerd", "-b", pid], ["kill", "-3", pid]):
+            r = subprocess.run([self.adb, "shell"] + cmd, capture_output=True, text=True, timeout=120)
+            out.append("$ %s (exit %d)\n%s%s" % (" ".join(cmd), r.returncode, r.stdout, r.stderr))
+        time.sleep(3)
+        r = subprocess.run([self.adb, "shell", "ls -t /data/anr/ 2>&1 | head -3"], capture_output=True, text=True)
+        out.append("$ ls /data/anr\n" + r.stdout)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(out))
+        return True
 
     def output(self):
         r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
@@ -888,6 +918,33 @@ def interface_steps(eng, step):
         eng.key("VK_ESCAPE")
         eng.wait("the controls list to close", "kag.currentDialog === void", timeout=10)
 
+    @step("the controller test: a button pressed is named and lit without closing it, Esc closes it; the controls list hands over to it and to Change Controls")
+    def _():
+        if eng.tjs('return typeof global.KAGShowPadTest != "undefined" && KAGPadTestAvailable() ? 1 : 0;') != 1:
+            print("     (skipped: no controller test here, or no pads)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs("KAGShowPadTest(); return 1;")
+        eng.wait("the controller test", 'kag.currentDialog instanceof "KAGPadTestLayer"', timeout=10)
+        got = str(eng.tjs('var d = kag.currentDialog; kag.takeCapturedKey(VK_PAD2, 0);'
+                          ' return [kag.currentDialog === d ? 1 : 0, d.pressed, KAGPadButtonNames().shown[1]].join(",");'))
+        print("     B (VK_PAD2) pressed: still open, named, the pad's name: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] != "1" or v[1] != v[2]:
+            raise SmokeError("the controller test closed on a pad button, or didn't name it: %s" % got)
+        eng.tjs("kag.takeCapturedKey(VK_ESCAPE, 0); return 1;")
+        eng.wait("the test closed, the keys the game's again", "kag.currentDialog === void && kag.keyCapture === void", timeout=10)
+        if eng.tjs('return typeof global.KAGAfterDialogClosed != "undefined" && typeof kag.showControls != "undefined" ? 1 : 0;') == 1 \
+                and isinstance(eng, DesktopEngine) and eng.tjs("return KAGElementsScreenAvailable() ? 1 : 0;") == 1:
+            for button, cls in (("padtest", "KAGPadTestLayer"), ("change", "KAGBindingsPanel")):
+                eng.tjs("kag.showControls(); return 1;")
+                eng.wait("the controls list", 'kag.currentDialog instanceof "KAGControlsPanel"', timeout=10)
+                eng.tjs('kag.currentDialog.onPanelAction("%s"); return 1;' % button)
+                eng.wait("%s from the controls list" % cls, 'kag.currentDialog instanceof "%s"' % cls, timeout=10)
+                eng.tjs("kag.currentDialog.close(); return 1;")
+                eng.wait("it closed", "kag.currentDialog === void", timeout=10)
+            print("     the controls list's Test Controller and Change... open theirs", flush=True)
+
     @step("F12 saves the screen as a PNG and says so")
     def _():
         if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof kag.saveScreenshot != "undefined" ? 1 : 0;') != 1:
@@ -918,6 +975,63 @@ def interface_steps(eng, step):
             raise SmokeError("the screenshot is %s, the screen %s" % (size, want))
         if eng.tjs("return __smokeShotNotice;") != 1:
             raise SmokeError("no notice said the screenshot was saved")
+
+    @step("screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings")
+    def _():
+        if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof global.KAGScreenshotTag != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: checked on the desktop engines, with a framework that has it)", flush=True)
+            return
+        # the sample's Character demo (a game of the template's own stays where it is)
+        sample = eng.tjs('return Storages.isExistentStorage("char.ks") ? 1 : 0;') == 1
+        if sample:
+            eng.tjs('kag.process("char.ks", "*start"); return 1;')
+            eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        # JPEG is written at once; without the window and with a button's picture at the top
+        # right, then with the window and no picture: the window's middle and the corner differ
+        got = str(eng.tjs('var f0 = KAGOptionGet("screenshotFormat"), w0 = KAGOptionGet("screenshotWindow");'
+                          ' KAGOptionSet("screenshotFormat", "jpg"); KAGOptionSet("screenshotWindow", false);'
+                          ' kag.screenshotWatermark = "dialog_button_over"; kag.screenshotWatermarkPlace = "topright";'
+                          ' var a = kag.saveScreenshot(); KAGOptionSet("screenshotWindow", true); kag.screenshotWatermark = void;'
+                          ' var b = kag.saveScreenshot(); KAGOptionSet("screenshotFormat", f0); KAGOptionSet("screenshotWindow", w0);'
+                          ' var la = new Layer(kag, kag.primaryLayer), lb = new Layer(kag, kag.primaryLayer); la.loadImages(a); lb.loadImages(b);'
+                          ' var m = kag.fore.messages[0], cx = m.left + m.width \\ 2, cy = m.top + m.height \\ 2, dw = 0, ds = 0;'
+                          ' for (var y = -20; y <= 20; y += 10) for (var x = -200; x <= 200; x += 50) {'
+                          ' var p = la.getMainPixel(cx + x, cy + y), q = lb.getMainPixel(cx + x, cy + y);'
+                          ' dw += Math.abs((p & 0xff) - (q & 0xff)) + Math.abs(((p >> 8) & 0xff) - ((q >> 8) & 0xff)); }'
+                          ' var st = new Layer(kag, kag.primaryLayer); st.loadImages("dialog_button_over"); var sx = la.imageWidth - 24 - st.imageWidth \\ 2, sy = 24 + st.imageHeight \\ 2; invalidate st;'
+                          ' for (var y = -30; y <= 30; y += 10) for (var x = -30; x <= 30; x += 10) {'
+                          ' var p = la.getMainPixel(sx + x, sy + y), q = lb.getMainPixel(sx + x, sy + y);'
+                          ' ds += Math.abs((p & 0xff) - (q & 0xff)) + Math.abs(((p >> 16) & 0xff) - ((q >> 16) & 0xff)); }'
+                          ' var r = [Storages.extractStorageExt(a), Storages.extractStorageExt(b), dw, ds, m.visible ? 1 : 0]; invalidate la; invalidate lb; return r.join(",");'))
+        print("     without the window, the watermark; then with the window (ext, ext, window difference, watermark difference, a window shown): %s" % got, flush=True)
+        v = got.split(",")
+        # (the window's middle differs in the sample, whose window has a frame; the template's is clear)
+        if v[0].lower() != ".jpg" or v[1].lower() != ".jpg" or (sample and float(v[2]) < 500) or float(v[3]) < 500:
+            raise SmokeError("a screenshot without the window, or with the watermark, came out wrong: %s" % got)
+        # a scene turns them off: F12 says so and saves nothing; saves keep it
+        got = str(eng.tjs('KAGScreenshotTag(%[ enabled:"false" ]); var r = [kag.saveScreenshot() === void ? 1 : 0];'
+                          ' var f = %[]; kag.internalStoreFlags(f); r.add(f.screenshotsOff ? 1 : 0);'
+                          ' KAGScreenshotTag(%[ on:"true" ]); r.add(kag.screenshotsOff ? 1 : 0);'
+                          ' kag.screenshotsOff = !!f.screenshotsOff; r.add(kag.canScreenshot() ? 1 : 0); kag.screenshotsOff = false;'
+                          ' return r.join(",");'))
+        print("     [screenshot enabled=false]: nothing saved, kept in saves, [screenshot on], restored off: %s" % got, flush=True)
+        if got != "1,1,0,0":
+            raise SmokeError("[screenshot] didn't turn screenshots off and on, or saves didn't keep it: %s" % got)
+        # the screen's settings take (the window's sizes those that fit)
+        got = str(eng.tjs('var r = [], v = KAGOptions.windowSize.values, has = 0; for (var i = 0; i < v.count; i++) has++ if v[i][1] == 100; r.add(has);'
+                          ' KAGOptionSet("fullScreenFit", "cover"); r.add(kag.viewportFit); KAGOptionSet("fullScreenFit", "contain");'
+                          ' KAGOptionSet("smoothScaling", false); r.add(System.getArgument("-smoothzoom")); KAGOptionSet("smoothScaling", true);'
+                          ' if (KAGOptions.vsync.available()) { KAGOptionSet("vsync", false); r.add(kag.waitVSync ? 1 : 0); KAGOptionSet("vsync", true); } else r.add("-");'
+                          ' if (KAGOptions.padEnabled.available()) { KAGOptionSet("padEnabled", false); r.add(System.padEnabled ? 1 : 0); KAGOptionSet("padEnabled", true); } else r.add("-");'
+                          ' return r.join(",");'))
+        print("     100%% offered, the fit, smoothing off, vsync off, the controller off: %s" % got, flush=True)
+        v = got.split(",")
+        if v[0] != "1" or v[1] != "cover" or v[2] != "no" or v[3] not in ("0", "-") or v[4] not in ("0", "-"):
+            raise SmokeError("the screen's settings didn't take: %s" % got)
+        if sample:
+            eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+            eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
 
 def template_steps(eng):
@@ -1821,6 +1935,68 @@ def switch_language(eng, lang, where):
         eng.key("VK_F9")
     eng.wait(lang + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
              ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (lang, where), timeout=20)
+
+
+def hunt_steps(eng):
+    """--hunt <script>:<from label>:<to label>:<rounds> (or KAGEX_SMOKE_HUNT): plays a stretch of
+    the sample again and again, clicking at a player's changing pace (80 ms to 1.3 s), until the
+    game stops answering; then writes what its threads were doing (hang-stacks.txt in the work
+    folder: debuggerd on Android, gdb here) and fails. For hangs a player meets now and then
+    (Android's in the first demo's rotation)"""
+    steps, step = collector()
+    storage, start, end, rounds = eng.opts.hunt.split(":")
+
+    @step("start-up reaches the title screen")
+    def _():
+        eng.wait("the REPL", "1", timeout=60)
+        eng.clicker(True, until="title.ks")  # clicks through the logo
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
+        eng.clicker(False)
+
+    @step("%s from %s to %s, %s times, at a player's changing pace, without the game hanging" % (storage, start, end, rounds))
+    def _():
+        eng.tjs(
+            'if (typeof global.__huntTimer == "undefined") {'
+            ' global.__huntTick = function() {'
+            '  var p = typeof global.world_object != "undefined" ? world_object.player : void;'
+            '  var l = kag.conductor.curStorage == global.__huntStorage && p !== void && p.curLabel !== void'
+            '   ? p.curLabel : kag.conductor.curLabel;'
+            '  global.__huntLabel = l !== void ? (string)l : "";'
+            '  global.__huntTimer.interval = 80 + (int)(Math.random() * 1200);'
+            '  if (!kag.inStable) return;'
+            '  if (global.__huntLabel == global.__huntEnd) { global.__huntTimer.enabled = false; global.__huntDone = true; return; }'
+            '  kag.onPrimaryClick();'
+            '  global.__huntClicks++;'
+            ' };'
+            ' global.__huntTimer = new Timer(global.__huntTick, "");'
+            '} return 1;')
+        report = os.path.join(eng.workdir, "hang-stacks.txt")
+        for r in range(int(rounds)):
+            eng.tjs('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0;'
+                    ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
+                    ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;' % (storage, end, storage, start))
+            last, since, began = None, time.time(), time.time()
+            while True:
+                try:
+                    state = str(eng.tjs('return [global.__huntDone ? 1 : 0, global.__huntClicks, global.__huntLabel].join(",");', 30))
+                except SmokeError as e:
+                    got = eng.hang_report(report)
+                    raise SmokeError("round %d: the game stopped answering at %s (%s)%s"
+                                     % (r + 1, last, str(e).split("\n")[0], "; its threads are in " + report if got else ""))
+                done, clicks, label = state.split(",", 2)
+                if done == "1":
+                    break
+                if label != last:
+                    last, since = label, time.time()
+                elif time.time() - since > 120:
+                    got = eng.hang_report(report)
+                    raise SmokeError("round %d: still at %s after 2 minutes of clicks, though the game answers%s"
+                                     % (r + 1, label, "; its threads are in " + report if got else ""))
+                time.sleep(2)
+            print("     round %d: %s clicks, %.0f s" % (r + 1, clicks, time.time() - began), flush=True)
+        eng.tjs("__huntTimer.enabled = false; return 1;")
+
+    return steps
 
 
 def sample_steps(eng):
@@ -2775,6 +2951,174 @@ def sample_steps(eng):
     prompt_steps(eng, step)
     interface_steps(eng, step)
 
+    @step("actions: keys, controller buttons and gestures run one table; Change Controls binds a key, the binding is kept, and Reset puts the game's back")
+    def _():
+        if eng.tjs('return typeof global.KAGActions == "Object" && typeof kag.rebindKey != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the actions)", flush=True)
+            return
+        # in the Character demo, where the message history is there after a line or two
+        eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        got = str(eng.tjs('return [kag.findKeyBinding(VK_F6, 0, true).actionName, kag.findKeyBinding(#\'R\', 0, false).actionName,'
+                          ' kag.padKeyMap[VK_PAD3], kag.gestureActions.up, kag.gestureActions.left].join(",");'))
+        if got != "skip,backlog,@backlog,backlog,rewind":
+            raise SmokeError("F6, R, the controller's X and the gestures up and left aren't skip, backlog, @backlog, backlog, rewind: %s" % got)
+        # a swipe up in the story shows the message history, and its own click is dropped
+        for i in range(6):
+            if eng.tjs('return kag.inStable && KAGActionEnabled("backlog") ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('global.__smokeClicks = kag.clickCount; kag.onTouchDown(500, 600, 1, 1, 0); kag.onTouchUp(500, 250, 1, 1, 0);'
+                ' kag.onPrimaryClick(); return 1;')
+        eng.wait("the message history (a swipe up)", "kag.historyShowing", timeout=10)
+        if eng.tjs("return kag.clickCount - global.__smokeClicks;") != 0:
+            raise SmokeError("the swipe's own click went on to the next text")
+        eng.tjs("kag.hideHistory(); return 1;")
+        eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        # the framework keeps some keys; the player's binding is the system variables', over the game's
+        refused = eng.tjs("return kag.rebindKey(VK_F10, 0, \"skip\") ? 1 : 0;")
+        if refused != 0:
+            raise SmokeError("F10 (the menu) could be taken for another action")
+        if elements_screens(eng):
+            # Change Controls: a row picked waits for a key, which then does its action
+            eng.tjs("kag.showBindings(); return 1;")
+            eng.wait("Change Controls", 'kag.currentDialog instanceof "KAGBindingsPanel"', timeout=10)
+            eng.tjs('kag.currentDialog.startWaiting("auto"); return 1;')
+            eng.wait("it to wait for a key", "kag.keyCapture !== void", timeout=10)
+            eng.tjs("kag.onKeyDown(#'J', 0); return 1;")
+            time.sleep(0.5)
+            got = str(eng.tjs("var b = kag.findKeyBinding(#'J', 0, true); var r = kag.scflags.keyRebinds;"
+                              ' return (b !== void ? b.actionName : "none") + "," + (r !== void ? r.count : 0) + "," + kag.currentDialog.message;'))
+            print("     J after Change Controls: %s" % got, flush=True)
+            if not got.startswith("auto,1,"):
+                raise SmokeError("Change Controls didn't bind J to auto mode in the system variables: %s" % got)
+            # the pointer on a row: the interface sound table's bindings.<row>.enter (since 0.19.0)
+            if eng.tjs('return typeof kag.currentDialog.hoverVars != "undefined" ? 1 : 0;') == 1:
+                eng.tjs("KAGInterfaceSounds.log = []; kag.currentDialog.onMouseMove(700, 400, 0); return 1;")
+                time.sleep(0.4)
+                heard = str(eng.tjs('kag.currentDialog.onMouseMove(700, 444, 0); var r = KAGInterfaceSounds.log.join(" "); return r;'))
+                time.sleep(0.2)
+                heard = str(eng.tjs('var r = KAGInterfaceSounds.log.join(" "); KAGInterfaceSounds.log = void; return r;'))
+                print("     the pointer on Change Controls' rows: %s" % heard, flush=True)
+                if ".enter" not in heard:
+                    raise SmokeError("the pointer on a row of Change Controls played no sound: %s" % heard)
+            # the quick menu's column leaves its Config button out, and puts it back
+            if eng.tjs('return typeof kag.currentDialog.toggleQuick != "undefined" && kag.currentDialog.quickMenu() !== void ? 1 : 0;') == 1:
+                got = str(eng.tjs('var d = kag.currentDialog, q = kag.quickMenu, r = [];'
+                                  ' d.onPanelAction("quick_config"); r.add(q.hidden("config") ? 1 : 0);'
+                                  ' d.onPanelAction("quick_config"); r.add(q.hidden("config") ? 1 : 0); return r.join(",");'))
+                print("     the quick menu's Config button off, then on: %s" % got, flush=True)
+                if got != "1,0":
+                    raise SmokeError("Change Controls' quick menu column didn't leave the button out and back: %s" % got)
+            eng.tjs("kag.currentDialog.close(); return 1;")
+            eng.wait("Change Controls to close", "kag.currentDialog === void", timeout=10)
+            eng.tjs("kag.runKeyBinding(#'J', 0, true); return 1;")
+            eng.wait("auto mode (J)", "kag.autoMode", timeout=5)
+            eng.tjs("kag.cancelAutoMode(); return 1;")
+        eng.tjs("kag.resetPlayerBindings(); return 1;")
+        got = str(eng.tjs("var b = kag.findKeyBinding(#'J', 0, true); return (b === void ? \"none\" : b.actionName) + \",\" + kag.gestureActions.left;"))
+        if got != "none,rewind":
+            raise SmokeError("Reset didn't put the game's bindings back: %s" % got)
+        eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
+    @step("the quick menu: the window's buttons as a strip, dimmed and lit by their actions; a click runs one; unpinned it fades and its handle brings it back")
+    def _():
+        if eng.tjs('return typeof global.KAGQuickMenu != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu here)", flush=True)
+            return
+        for i in range(6):
+            if eng.tjs("var q = kag.quickMenu; return q.layer !== void && q.layer.visible && kag.inStable ? 1 : 0;") == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        got = str(eng.tjs('var b = kag.quickMenu.buttons(), r = []; for (var i = 0; i < b.count; i++)'
+                          ' r.add(b[i][0] + (b[i][1] ? "" : "-") + (b[i][2] ? "+" : "")); return r.join(" ");'))
+        print("     buttons (- dimmed, + lit): %s" % got, flush=True)
+        names = [n.rstrip("-+") for n in got.split()]
+        for want in ("quickSave", "skip", "auto", "backlog", "config"):
+            if want not in names:
+                raise SmokeError("the quick menu has no %s button: %s" % (want, got))
+        # Auto, clicked: auto mode, and its button lit
+        eng.tjs('var q = kag.quickMenu, b = q.shown, i; for (i = 0; i < b.count; i++) if (b[i].action == "auto") break;'
+                ' q.onDown(b[i].x + 5, b[i].y + 5, mbLeft); q.onUp(b[i].x + 5, b[i].y + 5, mbLeft); return 1;')
+        eng.wait("auto mode", "kag.autoMode", timeout=5)
+        time.sleep(0.3)
+        lit = eng.tjs('var b = kag.quickMenu.buttons(); for (var i = 0; i < b.count; i++) if (b[i][0] == "auto") return b[i][2] ? 1 : 0; return -1;')
+        eng.tjs("kag.cancelAutoMode(); return 1;")
+        if lit != 1:
+            raise SmokeError("the Auto button isn't lit in auto mode")
+        # unpinned and the pointer away: it fades, and its handle brings it back
+        eng.tjs("var l = kag.quickMenu.layer; kag.quickMenu.pinned = false; global.__smokeAwayY = l.top > 540 ? 100 : 1000;"
+                " kag.primaryLayer.setCursorPos(l.left + (l.width >> 1), global.__smokeAwayY); return 1;")
+        try:
+            time.sleep(0.2)
+            if eng.tjs("return Math.abs(kag.primaryLayer.cursorY - global.__smokeAwayY) <= 4 ? 1 : 0;") != 1:
+                # a touch screen's pointer stays where it tapped and can't be moved from here
+                print("     (the fade and the handle: skipped, the pointer can't be moved here)", flush=True)
+            else:
+                eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
+                eng.tjs("kag.quickMenu.onUp(10, 10, mbLeft); return 1;")
+                eng.wait("the strip back (the handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity == 255", timeout=5)
+        finally:
+            eng.tjs("kag.quickMenu.pinned = true; return 1;")
+        if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
+            raise SmokeError("the pin isn't kept in the system variables")
+        # the player's own: larger, fainter, a button left out
+        if eng.tjs('return typeof kag.quickMenu.setHidden != "undefined" ? 1 : 0;') == 1:
+            got = str(eng.tjs('var q = kag.quickMenu, s0 = KAGOptionGet("quickMenuSize"), o0 = KAGOptionGet("quickMenuOpacity");'
+                              ' KAGOptionSet("quickMenuSize", 100); q.onTimer(); var w = q.layer.width;'
+                              ' KAGOptionSet("quickMenuSize", 140); q.onTimer(); var w2 = q.layer.width;'
+                              ' KAGOptionSet("quickMenuOpacity", 50); q.onTimer(); var o = q.layer.opacity;'
+                              ' q.setHidden("config", true); q.onTimer(); var b = q.buttons(), has = 0;'
+                              ' for (var i = 0; i < b.count; i++) has++ if b[i][0] == "config";'
+                              ' q.setHidden("config", false); KAGOptionSet("quickMenuSize", s0); KAGOptionSet("quickMenuOpacity", o0); q.onTimer();'
+                              ' return [w, w2, o, has, q.buttons().count == b.count + 1 ? 1 : 0, kag.primaryLayer.width].join(",");'))
+            print("     width at 100%% and 140%% (at most the screen's), opacity at 50%%, Config left out (has, back), the screen: %s" % got, flush=True)
+            v = [int(x) for x in got.split(",")]
+            if not (v[1] > v[0] * 1.2 and v[1] <= v[5] - 8 and 120 <= v[2] <= 130 and v[3] == 0 and v[4] == 1):
+                raise SmokeError("the quick menu's size, opacity or a button left out didn't take: %s" % got)
+
+    @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
+    def _():
+        if eng.tjs('return typeof kag.tooltips == "Object" && kag.tooltips !== void && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no tips or no quick menu here)", flush=True)
+            return
+        # the pointer on the Auto button: its action's label once it rests there (tips start off
+        # on Android and iOS, where a tap leaves the pointer resting: on for the step)
+        eng.tjs('global.__smokeTipsWere = KAGOptionGet("tooltips"); KAGOptionSet("tooltips", true);'
+                ' var q = kag.quickMenu, b = q.shown, i; for (i = 0; i < b.count; i++) if (b[i].action == "auto") break;'
+                ' global.__smokeTipWant = KAGActionLabel("auto");'
+                ' var x = q.layer.left + b[i].x + 5, y = q.layer.top + b[i].y + 5; global.__smokeTipAt = [x, y];'
+                ' kag.primaryLayer.setCursorPos(x, y); return 1;')
+        time.sleep(0.2)
+        if eng.tjs("var p = kag.primaryLayer, a = global.__smokeTipAt; return Math.abs(p.cursorX - a[0]) + Math.abs(p.cursorY - a[1]) <= 4 ? 1 : 0;") != 1:
+            eng.tjs('KAGOptionSet("tooltips", global.__smokeTipsWere); return 1;')
+            print("     (skipped: the pointer can't be moved here)", flush=True)
+            return
+        eng.wait("the Auto button's tip", "kag.tooltips.tip == global.__smokeTipWant", timeout=5)
+        at = str(eng.tjs('var t = kag.tooltips.layer, q = kag.quickMenu.layer; return [t.left, t.top, t.width, t.absolute > q.absolute ? 1 : 0].join(",");'))
+        print("     %s: at %s" % (eng.tjs("return global.__smokeTipWant;"), at), flush=True)
+        if at.split(",")[3] != "1":
+            raise SmokeError("the tip isn't over the quick menu: %s" % at)
+        # Config's switch takes it away; a help line gets it instead
+        got = str(eng.tjs('var t = kag.tooltips, r = []; KAGOptionSet("tooltips", false); t.onTimer(); r.add(t.tip == "" ? 1 : 0);'
+                          ' KAGOptionSet("tooltips", true); global.__smokeHelp = "-"; t.helpLine = function(s) { global.__smokeHelp = s; };'
+                          ' t.onTimer(); r.add(global.__smokeHelp); r.add(t.tip == "" ? 1 : 0); t.helpLine = void; t.shown = ""; t.onTimer();'
+                          ' r.add(t.tip != "" ? 1 : 0); kag.primaryLayer.setCursorPos(10, 10); return r.join("|");'))
+        print("     off, the help line, back beside it: %s" % got, flush=True)
+        v = got.split("|")
+        if v[0] != "1" or v[2] != "1" or v[3] != "1" or v[1] in ("", "-"):
+            raise SmokeError("the tips' switch or the help line didn't take: %s" % got)
+        eng.wait("the tip gone", 'kag.tooltips.tip == ""', timeout=5)
+        eng.tjs('KAGOptionSet("tooltips", global.__smokeTipsWere); return 1;')
+
     @step("the controls list has the sample's own keys and buttons (AfterInit.tjs)")
     def _():
         if not elements_screens(eng):
@@ -2926,12 +3270,15 @@ def sample_steps(eng):
             return
         eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
         eng.wait("config.ks", 'kag.conductor.curStorage == "config.ks" && kag.inStable', timeout=20)
-        for page in (2, 3):
+        pages = [(2, 8), (3, 8)]
+        if eng.tjs("return configPages.count;") > 6:
+            pages.append((6, 4))  # the interface (since 0.19.0)
+        for page, least in pages:
             eng.tjs("setConfigPage(%d); return 1;" % page)
             eng.wait("page %d" % page, "tf.configPage == %d && kag.inStable && typeof kag.current.optionControls == \"Object\"" % page, timeout=20)
             n = str(eng.tjs('var a = []; a.assign(kag.current.optionControls); return [a.count \\ 2, kag.current.numLinks].join(",");'))
             print("     page %d: %s options, %s controls" % (page, n.split(",")[0], n.split(",")[1]), flush=True)
-            if int(n.split(",")[0]) < 8:
+            if int(n.split(",")[0]) < least:
                 raise SmokeError("Config's page %d has too few option rows: %s" % (page, n))
         got = str(eng.tjs('KAGOptionPick("readColor", 1); KAGOptionPick("readMark", 0); var r = [kag.readTextColor, kag.readMark];'
                           ' var b = kag.current.names.option_readColor_1; r.add(b !== void ? b.getMainPixel(b.width \\ 2, 4) : "none");'
@@ -2940,6 +3287,13 @@ def sample_steps(eng):
         v = got.split(",")
         if v[0] == "-1" or v[1] != "1" or v[3] != "-1" or v[4] != "0":
             raise SmokeError("a pick didn't set the option, or Default didn't put it back: %s" % got)
+        # movies' own volume, apart from the music's (the sample keeps it apart, since 0.19.0)
+        if eng.tjs('return KAGOptions.movieVolume !== void && KAGOptions.movieVolume.available() ? 1 : 0;') == 1:
+            got = str(eng.tjs('var m0 = kag.movieAudioVolume, b0 = kag.bgmvolume; KAGOptionSet("movieVolume", 40);'
+                              ' var r = [kag.movieAudioVolume, kag.bgmvolume == b0 ? 1 : 0]; KAGOptionSet("movieVolume", m0); return r.join(",");'))
+            print("     the movie volume at 40, the music's as it was: %s" % got, flush=True)
+            if got != "40,1":
+                raise SmokeError("the movie volume didn't take, or moved the music's: %s" % got)
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=20)
 
@@ -3184,6 +3538,43 @@ def sample_steps(eng):
                           ' e.unknown("ai", %[tagname:"ai", "near" => "true"]); r.add(ai.level); return r.join(",");'))
         if got != "sad,happy,0,2":
             raise SmokeError("[ai 103], [ai 101], [ai far] and [ai near] didn't set face sad, happy, level 0 and 2: %s" % got)
+
+    @step("a character has the right size at every level with every face, and a level without the picture draws another level's, scaled")
+    def _():
+        if eng.tjs('var ai = world_object.env.getCharacter("ai"); return typeof ai.drawOtherLevel != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the level fallback)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*staging"); return 1;')
+        ai = 'world_object.env.characters["ai"]'
+        eng.wait("Ai", '%s !== void && %s.targetLayer !== void && kag.inStable' % (ai, ai), timeout=60)
+        # Ai's pictures are ch_<level>_<dress>_<face>: the far and near levels (60% and 150%)
+        # had the happy face only, and [ai far] after [ai 103] drew the picture before in the far
+        # level's place
+        sizes = str(eng.tjs('var ai = world_object.env.characters["ai"], l = ai.targetLayer, lv0 = ai.level, f0 = ai.face, r = [];'
+                            ' var levels = world_object.env.levels, faces = ["happy", "angry", "sad"];'
+                            ' for (var lv = 0; lv < levels.count; lv++) { if (levels[lv] === void) continue;'  # envinit's trailing comma
+                            ' for (var fi = 0; fi < faces.count; fi++) {'
+                            ' ai.level = lv; ai.face = faces[fi]; ai.drawLayer(l);'
+                            ' r.add("%s:%s:%s:%d:%d".sprintf(levels[lv].name, faces[fi], ai.imageFile, l.width, +levels[lv].zoom)); } }'
+                            ' ai.level = lv0; ai.face = f0; ai.drawLayer(l); return r.join(" ");'))
+        print("     level:face:picture:width:zoom %s" % sizes, flush=True)
+        for item in sizes.split():
+            lv, face, pic, width, zoom = item.split(":")
+            want = 540 * int(zoom) // 100
+            if abs(int(width) - want) > 2:
+                raise SmokeError("Ai at level %s with the %s face is %s wide (%s), not %d" % (lv, face, width, pic, want))
+        # a level whose pictures aren't there: the nearest level's, a bigger one first, scaled
+        got = str(eng.tjs('var e = world_object.env, ai = e.characters["ai"], l = ai.targetLayer, lv0 = ai.level, f0 = ai.face;'
+                          ' var far = e.levels[0], name = far.name, r; far.name = "9";'
+                          ' try { ai.level = 0; ai.face = "sad"; ai.drawLayer(l); r = "%s:%d:%d".sprintf(ai.imageFile, l.width, +far.zoom); }'
+                          ' catch (x) { r = "error " + x.message; }'
+                          ' far.name = name; ai.level = lv0; ai.face = f0; ai.drawLayer(l); return r;'))
+        print("     a level without pictures: %s" % got, flush=True)
+        parts = got.split(":")
+        if len(parts) != 3 or parts[0] != "ch_0_0_3" or abs(int(parts[1]) - 540 * int(parts[2]) // 100) > 2:
+            raise SmokeError("a level without its picture didn't draw the middle level's ch_0_0_3 at its size: %s" % got)
 
     @step("[vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too")
     def _():
@@ -3520,6 +3911,19 @@ def sample_steps(eng):
             if ticking():
                 raise SmokeError("the static didn't stop when Reduce Motion came on")
             print("     the static: still, moving when the option went off, still again when it came on", flush=True)
+            # an action ends where it would end at once, and the click glyph's .asd animation stays
+            # on its first frame (since 0.19.0)
+            if eng.tjs('return typeof kag.reduceMotionActions != "undefined" ? 1 : 0;') == 1:
+                eng.tjs('var l = kag.fore.layers[0]; global.__smokeRMLeft = l.left;'
+                        ' kag.beginAction(l, %[ left:%[ handler:"MoveAction", value:l.left + 300, time:3000 ] ], void, true); return 1;')
+                time.sleep(0.3)
+                got = str(eng.tjs('var l = kag.fore.layers[0], r = [l.left - global.__smokeRMLeft, kag.isInAction(l) ? 1 : 0];'
+                                  ' var g = new AnimationLayer(kag, kag.fore.base); g.loadImages(%[ storage:"LineBreak" ]);'
+                                  ' var seg = g.Anim_segments[0]; r.add(seg !== void && seg.timerEnabled ? 1 : 0); invalidate g;'
+                                  ' l.left = global.__smokeRMLeft; return r.join(",");'))
+                print("     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running: %s" % got, flush=True)
+                if got != "300,0,0":
+                    raise SmokeError("with Reduce Motion an action didn't end at once, or the click glyph kept moving: %s" % got)
         finally:
             eng.tjs('KAGOptionSet("reduceMotion", tf.smokeRM); return 1;')
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -3625,6 +4029,26 @@ def sample_steps(eng):
         print("     the last line at %s, the scene before at %s, dragged down three lines: %s" % tuple(moves), flush=True)
         if not (int(moves[1]) < int(moves[0])) or int(moves[2]) != max(0, int(moves[1]) - 3):
             raise SmokeError("the scene button or dragging didn't move the backlog: %s" % moves)
+        # a flick (a Timer in the game moves it every 16 ms, as a finger would): it coasts on
+        if eng.tjs("return typeof %s.flick != \"undefined\" && %s.dataLines - %s.dispLines > 12 ? 1 : 0;" % (h, h, h)) == 1:
+            eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
+                    ' global.__smokeFlickTimer = new Timer(function {'
+                    ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight, now = System.getTickCount();'
+                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
+                    ' if (d.step == 0) h.onMouseDown(800, 700, mbLeft, 0);'
+                    ' else if (d.step < 4) h.onMouseMove(800, y, ssLeft);'
+                    ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
+                    ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
+            eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
+            time.sleep(0.6)
+            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart, global.__smokeFlick.gap].join(",");' % h)).split(",")
+            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before)" % tuple(flick), flush=True)
+            # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
+            # timer ran that slow (an emulator), the coast can't be checked
+            if not (int(flick[1]) > int(flick[0])) and int(flick[2]) >= 60:
+                print("     (the coast: not checked, this machine's timer stepped %s ms apart)" % flick[2], flush=True)
+            elif not (int(flick[1]) > int(flick[0])):
+                raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -3962,6 +4386,32 @@ def sample_steps(eng):
         eng.wait("the title with its buttons", 'kag.conductor.curStorage == "title.ks" && kag.inStable'
                  ' && kag.fore.messages[0].numLinks >= 5', timeout=30)
 
+    @step("a title button pressed during the title's own crossfade opens its screen, with Effect Speed at Skip too")
+    def _():
+        # the old page's Config pressed while the title was drawn again (a language switch) left a
+        # transition counted, and Config's [wt] waited for ever: pressed here from the game, as
+        # soon as the title's [trans] runs, for each Effect Speed
+        for skip in (0, 1):
+            eng.tjs('global.__smokeNoEffect = kag.noeffect; kag.noeffect = %d; global.__smokePressed = "";'
+                    ' global.__smokePress = new Timer(function() {'
+                    '  if (kag.conductor.curStorage != "title.ks" || kag.transCount == 0) return;'
+                    '  global.__smokePress.enabled = false; var m = kag.fore.messages[0];'
+                    '  for (var i = 0; i < m.numLinks; i++) if (m.links[i].object !== void && m.links[i].object.name == "config")'
+                    '   { global.__smokePressed = "transCount " + kag.transCount; m.processLink(i); return; }'
+                    ' }, ""); __smokePress.interval = 5;'
+                    ' kag.process("title.ks", "*titleloop"); __smokePress.enabled = true; return 1;' % skip)
+            try:
+                eng.wait("Config, opened during the title's crossfade", 'kag.conductor.curStorage == "config.ks" && kag.inStable'
+                         ' && kag.transCount == 0', timeout=20)
+            finally:
+                pressed = str(eng.tjs('var p = global.__smokePressed; invalidate global.__smokePress;'
+                                      ' kag.noeffect = global.__smokeNoEffect; return p;'))
+            print("     Effect Speed %s: Config pressed at %s, opened" % ("Skip" if skip else "Normal", pressed), flush=True)
+            if pressed == "":
+                raise SmokeError("Config's button wasn't pressed during the title's crossfade")
+            eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
+            eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+
     for screen, mode in (("cgmode.ks", 1), ("replay.ks", 2), ("musicmode.ks", 3)):
         @step("Extras: " + screen + " opens and returns to the title")
         def _(screen=screen, mode=mode):
@@ -4038,9 +4488,61 @@ def sample_steps(eng):
         print("     \"%s\": %d lines" % (text, len(titles)), flush=True)
         if text != "layer" or "Vector Image" not in titles:
             raise SmokeError("searching for \"%s\" found %s" % (text, titles))
+        # the lines found are a list that scrolls (ScrollList.tjs, since 0.19.0)
+        scrolled = None
+        if eng.tjs('return typeof global.KAGScrollList != "undefined" && typeof global.searchList != "undefined" ? 1 : 0;') == 1:
+            info = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; if (l === void) return "none";'
+                               ' return [l.count, l.maxPosition, l.linkNum !== void ? 1 : 0].join(",");'))
+            print("     the list: %s lines, %s px to scroll, a link of the window: %s" % tuple((info + ",,").split(",")[:3]), flush=True)
+            if info == "none" or int(info.split(",")[0]) != len(titles) or info.split(",")[2] != "1":
+                raise SmokeError("Search's lines aren't a list on the screen: %s" % info)
+            if int(info.split(",")[1]) > 0:
+                # the wheel over it (through the window, which would show the history otherwise)
+                # (where the pointer can't be moved there, a touch screen's, the list's own wheel)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList, m = kag.fore.messages[0];'
+                        ' kag.primaryLayer.setCursorPos(m.left + l.left + 200, m.top + l.top + 200); return 1;')
+                time.sleep(0.2)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList, m = kag.fore.messages[0];'
+                        ' if (l.cursorX >= 0 && l.cursorY >= 0 && l.cursorX < l.width && l.cursorY < l.height)'
+                        ' kag.onMouseWheel(0, -120, m.left + l.left + 200, m.top + l.top + 200); else l.wheel(-120); return 1;')
+                eng.wait("a wheel notch's scroll", "kag.fore.messages[0].names.searchList.position >= 80 && !kag.historyShowing", timeout=5)
+                # a drag, let go moving: it coasts on
+                # (a Timer in the game moves it every 16 ms, as a finger would: down at 500, up at 340)
+                eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); global.__smokeDrag = %[ step:0, p1:-1 ];'
+                        ' global.__smokeDragTimer = new Timer(function {'
+                        ' var l = kag.fore.messages[0].names.searchList, d = global.__smokeDrag, y = 500 - d.step * 40, now = System.getTickCount();'
+                        ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
+                        ' if (d.step == 0) l.onMouseDown(200, 500, mbLeft, 0);'
+                        ' else if (d.step < 5) l.onMouseMove(200, y, ssLeft);'
+                        ' else { l.onMouseUp(200, 340, mbLeft, 0); d.p1 = (int)l.position; global.__smokeDragTimer.enabled = false; }'
+                        ' d.step++; }, ""); __smokeDragTimer.interval = 16; __smokeDragTimer.enabled = true; return 1;')
+                eng.wait("the drag let go", "global.__smokeDrag.p1 >= 0", timeout=5)
+                p1 = eng.tjs("return global.__smokeDrag.p1;")
+                time.sleep(0.4)
+                p2 = eng.tjs("var l = kag.fore.messages[0].names.searchList; return [(int)l.position, (int)l.velocity, l.maxPosition, global.__smokeDrag.gap].join(\",\");")
+                print("     dragged 160 px: at %s when let go, then %s (position, speed, end, the last step's ms)" % (p1, p2), flush=True)
+                q = [int(x) for x in str(p2).split(",")]
+                coasted = q[0] > int(p1) + 40 or q[0] == q[2]
+                slow = not coasted and q[3] >= 60  # the game's 16 ms timer that slow (an emulator): no flick to check
+                if slow:
+                    print("     (the coast: not checked, this machine's timer stepped %d ms apart)" % q[3], flush=True)
+                if not (150 <= int(p1) <= 170) or not (slow or q[0] > int(p1) + 40 or q[0] == q[2]):
+                    raise SmokeError("the list didn't follow the drag or coast on after it: %s, then %s" % (p1, p2))
+                # the keys: Down moves the focus and scrolls it into view
+                keys = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); l.focusIndex = 0; l.focus();'
+                                   ' l.onKeyDown(VK_END, 0); var r = [l.focusIndex, (l.target !== void ? l.target : l.position) > 0 ? 1 : 0];'
+                                   ' l.onKeyDown(VK_HOME, 0); l.onKeyDown(VK_DOWN, 0); r.add(l.focusIndex); return r.join(",");'))
+                print("     End, then Home and Down: %s" % keys, flush=True)
+                if keys != "%d,1,1" % (len(titles) - 1):
+                    raise SmokeError("the keys didn't move the list's focus: %s" % keys)
+                eng.wait("the list still", "kag.fore.messages[0].names.searchList.target === void", timeout=5)
+                scrolled = eng.tjs("var l = kag.fore.messages[0].names.searchList; l.scrollTo(120); return (int)l.position;")
         # the line in layer.ks's *label16, played from: the script played unseen up to it
         k = titles.index("Vector Image")
-        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        if scrolled is not None:
+            eng.tjs("kag.fore.messages[0].names.searchList.pick(%d); return 1;" % k)
+        else:
+            eng.tjs("searchPlay(%d); return 1;" % k)
         eng.wait("the line", 'world_object.player !== void && world_object.player.curLabel == "*label16"'
                  ' && !kag.skipNoDisp && kag.inStable', timeout=60)
         line = str(eng.tjs("return world_object.player.curText.text;"))
@@ -4052,6 +4554,11 @@ def sample_steps(eng):
         eng.clicker(False)
         if eng.tjs('return tf.searchText == "layer" && searchFound.count > 0 ? 1 : 0;') != 1:
             raise SmokeError("back in Search without what it found")
+        if scrolled is not None:
+            back = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; return l === void ? "none" : [(int)l.position, l.focusIndex].join(",");'))
+            print("     the list back as it was: %s" % back, flush=True)
+            if back != "%d,%d" % (scrolled, k):
+                raise SmokeError("the list didn't come back where it was (%d, line %d): %s" % (scrolled, k, back))
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
@@ -4074,7 +4581,7 @@ def sample_steps(eng):
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
                 ' if (c !== void && !kag.skipNoDisp) __smokeFace.add([c.eyeLevel, b !== void && b.status == "play" ? c.lipLevel : "-"]);'
                 ' }, ""); __smokeFaceTimer.interval = 20; __smokeFaceTimer.enabled = true; return 1;')
-        eng.tjs("tf.searchPage = %d; searchPlay(%d); return 1;" % (k // 7, k % 7))
+        eng.tjs("searchPlay(%d); return 1;" % k)
         eng.wait("Pip's line", 'world_object.player !== void && world_object.player.curStorage == "anim.ks"'
                  ' && !kag.skipNoDisp && kag.inStable', timeout=60)
         time.sleep(3.0)
@@ -4411,6 +4918,10 @@ def main():
     ap.add_argument("--url", help="web: the page that runs the game")
     ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
                     "instead of its own Chromium")
+    ap.add_argument("--hunt", default=os.environ.get("KAGEX_SMOKE_HUNT") or None,
+                    help="<script>:<from label>:<to label>:<rounds>: instead of the steps, play that stretch "
+                    "of the sample again and again at a player's pace until the game hangs, and keep its "
+                    "threads' stacks (also KAGEX_SMOKE_HUNT)")
     ap.add_argument("--touch", action="store_true",
                     help="web: as a phone's browser (touch events, a coarse pointer): the page opens the "
                     "keyboard for the game's [edit] fields, and full screen is the whole page's")
@@ -4444,6 +4955,10 @@ def main():
         opts.only = "sample"  # the platform packages hold the sample only
 
     failures = 0
+    if opts.hunt:
+        failures += run_project(opts, "sample", "data", hunt_steps)
+        print("smoke test:", "FAILED (%d)" % failures if failures else "passed")
+        return 1 if failures else 0
     if opts.only in (None, "sample"):
         failures += run_project(opts, "sample", "data", sample_steps)
         if opts.target == "desktop" and not opts.packaged:

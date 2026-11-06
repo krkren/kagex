@@ -2655,6 +2655,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
     var ltLayer    = 6;
 
+    var ltOwn      = 7; // a layer of the game's own (addLinkLayer: a scrolling list, since 0.19.0)
+
     
 
     // Layer for name drawing
@@ -7822,6 +7824,60 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
+	/**
+
+	 * A layer of the game's own as a link of this layer (since 0.19.0): the keys and a
+
+	 * controller's D-pad reach it as they reach the buttons, and the layer gives them the keys it
+
+	 * doesn't use (with keyLink at its linkNum). It needs enabled, focus(), commit() and
+
+	 * cloneFor(window, messageLayer), which makes its copy on the other page ([backlay]); clearing
+
+	 * the layer's links invalidates it. KAGScrollList (ScrollList.tjs) is one
+
+	 */
+
+	function addLinkLayer(object)
+
+	{
+
+		object.linkNum = numLinks;
+
+		links[numLinks] = %[
+
+			type :			ltOwn,
+
+			exp :			"",
+
+			object :		object,
+
+			x :				[object.left],
+
+			y :				[object.top],
+
+			w :				[object.width],
+
+			h :				[object.height],
+
+			fixed :			[true],
+
+			lineCount :		1
+
+			];
+
+		names[object.name] = object if object.name != "";
+
+		numLinks++;
+
+		focusable = true;
+
+		setSelProcessLock(false);
+
+	}
+
+
+
     /**
 
      * Registration of system buttons
@@ -8299,6 +8355,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		{
 
 			window.lockMessageLayerSelProcess(); // Lock selection
+			// (a transition still running ends first: KAGWindow.process)
 
 			if(window.getKeyState(VK_RETURN) || window.getKeyState(VK_SPACE) || window.getKeyState(VK_CONTROL))
 
@@ -8356,7 +8413,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 				if(type == ltButton) item.object.eventTransparent = b;
 
-                else if(type == ltEdit || type == ltCheckBox || type == ltSlider) item.object.enabled = !b;
+                else if(type == ltEdit || type == ltCheckBox || type == ltSlider || type == ltOwn) item.object.enabled = !b;
 
             }
 
@@ -8420,7 +8477,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			var type = item.type;
 
-            if(type == ltEdit || type == ltCheckBox || type == ltSlider) item.object.commit();
+            if(type == ltEdit || type == ltCheckBox || type == ltSlider || type == ltOwn) item.object.commit();
 
 		}
 
@@ -8904,7 +8961,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		}
 
-		if(linkn.type == ltEdit || linkn.type == ltCheckBox || linkn.type == ltSlider)
+		if(linkn.type == ltEdit || linkn.type == ltCheckBox || linkn.type == ltSlider || linkn.type == ltOwn)
 
 		{
 
@@ -9736,6 +9793,20 @@ class MessageLayer extends AnimKAGLayerTransMove
                     names[object.name] = object;
 
 					if (type == ltLayer) with (object) .enabled = .focusable = false;
+
+				}
+
+				else if(type == ltOwn)
+
+				{
+
+					// a layer of the game's own makes its copy on this page (cloneFor)
+
+					var object = sl_d.object.cloneFor(window, this);
+
+					tl_d.object = object;
+
+					names[object.name] = object if object.name != "";
 
 				}
 

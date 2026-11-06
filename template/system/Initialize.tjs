@@ -1146,9 +1146,19 @@ KAGLoadScript("DefaultMover.tjs");
 
 KAGLoadScript("Action.tjs");
 
+KAGLoadScript("Actions.tjs"); // what keys, buttons and gestures do, in one table (since 0.19.0)
+
 KAGLoadScript("MainWindow.tjs");
 
 KAGLoadScript("Options.tjs"); // the player's settings, for Config screens (since 0.17.0)
+
+KAGLoadScript("QuickMenu.tjs"); // a strip of buttons for the actions that keeps out of the way (since 0.19.0)
+
+KAGLoadScript("Tooltips.tjs"); // a button's hint beside it, or on a help line (since 0.19.0)
+
+KAGLoadScript("ScrollList.tjs"); // lists that scroll by dragging, flicks, the wheel and the keys (since 0.19.0)
+
+KAGLoadScript("Display.tjs"); // the screen, controller and screenshot settings (since 0.19.0)
 
 
 
@@ -1262,7 +1272,13 @@ KAGLoadScript("Indicators.tjs");
 
 KAGIndicatorsOf(kag);
 
+KAGTooltipsOf(kag); // tips (Tooltips.tjs)
+
+KAGApplyDisplayOptions(); // the screen and controller settings kept (Display.tjs)
+
 kag.tagHandlers.chapter = KAGChapterTag;
+
+kag.tagHandlers.screenshot = KAGScreenshotTag; // scenes that turn screenshots off (Display.tjs, since 0.19.0)
 
 
 // Movies as commercial games play them, and subtitles ([movie], since 0.17.0)
@@ -1371,6 +1387,10 @@ if(Storages.isExistentStorage("AfterInit.tjs"))
 //	if(ovr !== void && ovr != 'yes') Scripts.eval(ovr);
 
 //}
+
+// the player's own key, controller and gesture bindings, over the game's (Actions.tjs, since 0.19.0)
+if (typeof kag.applyPlayerBindings != "undefined") kag.applyPlayerBindings();
+
 
 
 

@@ -326,6 +326,11 @@ The character configuration is as follows:
 
 This is the structure.
 
+A character whose picture is missing at a level (a face drawn at some sizes only) is drawn
+from the nearest level that has it, a bigger one first, scaled by the two levels' zoom (and
+that level's imgzoom), with a note in the log (since 0.19.0). Without that, the character
+kept the picture it showed before, placed for the new level.
+
 ● Detailed Explanation of positions
 
     // Character position information definition

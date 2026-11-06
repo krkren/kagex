@@ -22,14 +22,71 @@ kag.bindKey(VK_F3, 0, startLoad, "Load");
 kag.bindKey(VK_F4, 0, startConfig, "Config");
 kag.bindKey(VK_F5, 0, toggleFullScreenByKey, "Full screen or window", true, false,
     function { return kag.displayMenu.enabled; });
-kag.bindKey(VK_F6, 0, kag.skipToNextStopByKey, "Skip to the next choice or unread text");
-kag.bindKey(VK_F7, 0, kag.showHistoryByKey, "Message history");
-kag.bindKey(VK_F8, 0, kag.switchAutoModeByKey, "Auto mode on or off");
-// Quick save and quick load, as the message window's Q.SAVE and Q.LOAD do: the framework binds
-// Shift+S and Shift+L to kag.quickSave and kag.quickLoad, and the sample to its own
-// (Override.tjs), which load through loadinit.ks
-kag.bindKey(#'S', ssShift, quicksaveAction, "Quick save", false, false, function { return kag.quickSaveSlot >= 0; });
-kag.bindKey(#'L', ssShift, quickloadAction, "Quick load", false, false, function { return kag.quickSaveSlot >= 0; });
+// F6 to F8 name actions (Actions.tjs): the controls list says what they do, and a player who
+// moves an action to another key in Change Controls finds these keys go with it
+kag.bindKey(VK_F6, 0, "@skip");
+kag.bindKey(VK_F7, 0, "@backlog");
+kag.bindKey(VK_F8, 0, "@auto");
+// Quick save and quick load are the sample's own (Override.tjs), which load through loadinit.ks:
+// the framework's actions do them, so Shift+S and Shift+L, the message window's Q.SAVE and Q.LOAD
+// and any key or gesture the player gives them all do the same
+KAGActions.quickSave.func = KAGBindToGlobal(quicksaveAction);
+KAGActions.quickLoad.func = KAGBindToGlobal(quickloadAction);
+// The sample's own screens behind the framework's actions, and two of its own: Config, and leaving
+// a replay. BACK is a message back in compiled scenes (rollBack, Override.tjs)
+KAGActions.save.func = KAGBindToGlobal(startSave);
+KAGActions.save.available = void;
+KAGActions.load.func = KAGBindToGlobal(startLoad);
+KAGActions.load.available = void;
+KAGActions.back.func = KAGBindToGlobal(rollBack);
+KAGActions.back.enabled = KAGBindToGlobal(function { return kag.inStable && canRollBack(); });
+KAGDefineAction(%[ name:"config", label:"Config", func:startConfig,
+    enabled:function { return typeof kag.configMenuItem == "Object" ? kag.configMenuItem.enabled : true; } ]);
+KAGDefineAction(%[ name:"exitScene", label:"Leave the replay", func:exitScene,
+    available:function { return !!tf.recollect; } ]);
+
+// The message window's buttons are the quick menu (QuickMenu.tjs): on the window's top edge, as
+// they were, with their pictures (msg_*); dimmed while they can't be used, auto and skip lit
+// while on, and the pin at the end lets them fade out until the pointer comes near (a tap on the
+// handle on a phone). A replay has fewer
+var quickMenuStory = [
+    %[ action:"prevScene",  image:"msg_prevscene",  x:0 ],
+    %[ action:"rewind",     image:"msg_rewind",     x:50 ],
+    %[ action:"prevChoice", image:"msg_prevchoice", x:100 ],
+    %[ action:"nextScene",  image:"msg_nextscene",  x:150 ],
+    %[ action:"quickSave",  image:"msg_qsave",      x:228 ],
+    %[ action:"quickLoad",  image:"msg_qload",      x:360 ],
+    %[ action:"save",       image:"msg_save",       x:492 ],
+    %[ action:"load",       image:"msg_load",       x:624 ],
+    %[ action:"back",       image:"msg_back",       x:756 ],
+    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
+    %[ action:"backlog",    image:"msg_log",        x:1152 ],
+    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+var quickMenuReplay = [
+    %[ action:"exitScene",  image:"msg_exit",       x:624 ],
+    %[ action:"back",       image:"msg_back",       x:756 ],
+    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
+    %[ action:"backlog",    image:"msg_log",        x:1152 ],
+    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+with (KAGQuickMenuOf(kag)) {
+    .items = function { return tf.recollect ? quickMenuReplay : quickMenuStory; };
+    .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+    // in the story: after [initscene] (macro.ks), which sets f.quickMenu, until the title clears
+    // it (f is the game's, so a save loaded brings it back); not over Config and the like
+    .when = function { return !!f.quickMenu && !inSystemMenu(kag); };
+}
+
+// Movies have a volume of their own (Config's fifth page), not the music's
+kag.independentMovieAudioProperty = true;
+
+// Gestures in the story: a swipe on a phone, or a drag with the right mouse button, left rewinds
+// (compiled scenes), right skips, up shows the message history and down hides the window
+kag.gestureActions.left  = "rewind";
+kag.gestureActions.right = "skip";
+// the story only, as the quick menu (Search's list is dragged on the title's conductor)
+kag.gestures.when = function { return !!f.quickMenu && !inSystemMenu(kag); };
 
 // Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
 // screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1, R2, L2

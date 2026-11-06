@@ -1,0 +1,109 @@
+/**
+ * The screen, the controller and screenshots (since 0.19.0): options for a Config screen
+ * (Options.tjs), kept in the system variables and applied at start (KAGApplyDisplayOptions,
+ * Initialize.tjs) and when they change. An option the platform can't do isn't offered: its row
+ * stays empty (available).
+ *
+ *   windowSize        the window's size, as a share of the game's: those that fit the screen
+ *                     (desktops, in a window; full screen keeps it for when the window comes back)
+ *   fullScreenFit     how full screen fills a screen of another shape: black bars at the sides
+ *                     or top and bottom ("contain"), filled with the edges cut off ("cover"), or
+ *                     stretched ("fill"); also a window the player resized
+ *   smoothScaling     smooth or sharp scaling of the game to the screen (-smoothzoom)
+ *   vsync             frames in step with the display (Window.waitVSync)
+ *   padEnabled        the controller on or off (System.padEnabled)
+ *   padTest           a button that opens the controller test (PadTest.tjs)
+ *   screenshotWindow  screenshots with the message windows, or without (MainWindow.tjs)
+ *   screenshotFormat  PNG or JPEG
+ *
+ * [screenshot enabled=false] turns F12's screenshots off until [screenshot enabled=true], for
+ * scenes with spoilers ([screenshot off] and [screenshot on] say the same); saves keep it.
+ */
+
+function KAGPlatformTag() { return typeof System.platformTag != "undefined" ? System.platformTag : "windows"; }
+function KAGIsDesktop() { var t = KAGPlatformTag(); return t != "android" && t != "ios" && t != "web"; }
+
+// the window's sizes that fit the screen it's on: percentages of the game's size
+var KAGWindowSizes = [ 50, 75, 100, 150, 200 ];
+function KAGWindowSizeValues()
+{
+	var list = [], w = kag.scWidth, h = kag.scHeight;
+	var sw = typeof System.desktopWidth != "undefined" ? System.desktopWidth : System.screenWidth;
+	var sh = typeof System.desktopHeight != "undefined" ? System.desktopHeight : System.screenHeight;
+	for (var i = 0; i < KAGWindowSizes.count; i++) {
+		var p = KAGWindowSizes[i];
+		if (p != 100 && (w * p / 100 > sw || h * p / 100 + kag.menuStripHeight > sh)) continue;
+		list.add([ p + "%", p ]);
+	}
+	list.erase(0) if list.count > 4; // a row takes up to four buttons
+	return list;
+}
+
+KAGDefineOption(%[ name:"windowSize", label:"Window Size", kind:"choice", initial:100,
+	values:[ ["50%", 50], ["75%", 75], ["100%", 100] ], // the sizes that fit, at start (KAGApplyDisplayOptions)
+	available:function { return KAGIsDesktop() && typeof kag.setZoom != "undefined"; },
+	getValue:function { return kag.zoomDenom > 0 ? (int)(kag.zoomNumer * 100 / kag.zoomDenom + 0.5) : 100; },
+	setValue:function(v) {
+		if (kag.fullScreened) { kag.scflags.zoomNumer = v, kag.scflags.zoomDenom = 100; return; }
+		kag.setZoom(v, 100);
+	} ]);
+
+KAGDefineOption(%[ name:"fullScreenFit", label:"Full Screen Fit", kind:"choice", save:true, initial:"contain",
+	values:[ ["Bars", "contain"], ["Fill", "cover"], ["Stretch", "fill"] ],
+	available:function { return typeof kag.setViewport != "undefined"; },
+	setValue:function(v) { kag.viewportFit = v; kag.applyMenuBarLayout(); } ]);
+
+KAGDefineOption(%[ name:"smoothScaling", label:"Smooth Scaling", kind:"toggle", save:true, initial:true,
+	values:[ ["Smooth", true], ["Sharp", false] ],
+	setValue:function(v) { System.setArgument("-smoothzoom", v ? "yes" : "no"); } ]);
+
+KAGDefineOption(%[ name:"vsync", label:"Vertical Sync", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ],
+	available:function { return typeof kag.waitVSync != "undefined"; },
+	setValue:function(v) { try { kag.waitVSync = v; } catch (e) { dm("waitVSync: " + e.message); } } ]);
+
+KAGDefineOption(%[ name:"padEnabled", label:"Controller", kind:"toggle", save:true, initial:true,
+	values:[ ["On", true], ["Off", false] ],
+	available:function { return typeof System.padEnabled != "undefined"; },
+	setValue:function(v) { try { System.padEnabled = v; } catch (e) { dm("padEnabled: " + e.message); } } ]);
+
+// the controller test (PadTest.tjs, loaded on first use: it builds on the dialogs' classes)
+function KAGPadTestAvailable() { return typeof System.padEnabled != "undefined"; }
+function KAGShowPadTest()
+{
+	if (typeof global.KAGPadTestOpen == "undefined") KAGLoadScript("PadTest.tjs");
+	return KAGPadTestOpen();
+}
+
+KAGDefineOption(%[ name:"padTest", label:"Controller Test", kind:"button", button:"Test",
+	available:function { return KAGPadTestAvailable(); }, action:function { KAGShowPadTest(); } ]);
+
+KAGDefineOption(%[ name:"screenshotWindow", label:"Screenshots", kind:"toggle", save:true, initial:true,
+	values:[ ["With the Window", true], ["Without", false] ] ]);
+
+KAGDefineOption(%[ name:"screenshotFormat", label:"Screenshot Format", kind:"toggle", save:true, initial:"png",
+	values:[ ["PNG", "png"], ["JPEG", "jpg"] ] ]);
+
+// at start, once the window and its system variables are there
+function KAGApplyDisplayOptions()
+{
+	KAGOptions.windowSize.values = KAGWindowSizeValues() if KAGIsDesktop();
+	var names = [ "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ];
+	for (var i = 0; i < names.count; i++) {
+		var o = KAGOptions[names[i]];
+		if (o.available !== void && !o.available()) continue;
+		var v = KAGOptionGet(names[i]);
+		if (v === void) continue; // never set: the engine's own
+		try { o.setValue(v); } catch (e) { dm(names[i] + ": " + e.message); }
+	}
+}
+
+// [screenshot enabled=false] / [screenshot off] ... (kept in saves: KAGWindow.screenshotsOff)
+function KAGScreenshotTag(elm)
+{
+	var v = elm.enabled;
+	if (elm.off !== void) kag.screenshotsOff = true;
+	else if (elm.on !== void) kag.screenshotsOff = false;
+	else if (v !== void) kag.screenshotsOff = v == "false" || v == "0" || v == "no";
+	return 0;
+}
