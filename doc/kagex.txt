@@ -1752,6 +1752,18 @@ Attributes
 
                  and followopacity)
 
+    buttonsfade  The window's own system buttons ([sysbutton]) fade out over so many ms
+
+                 while the pointer is away from them and back as it comes near, at a
+
+                 touch, or when the keys move to one; faded out, they're hidden, so a
+
+                 tap there presses none. 0 (the default) turns it off (since 0.21.0)
+
+    buttonsarea  "x,y,w,h" in the window: where the pointer brings them back (80 px
+
+                 around it); "" (the default) is around the buttons themselves
+
 
 
 ◆ craftername (New)
@@ -3194,6 +3206,9 @@ over the scene, above its button, which a small mark at the button's top right s
   "text"        text speed, auto speed, what skip skips and the window's opacity
   "quickSaves"  the newest quick saves with their pictures, scenes and dates; one is loaded
                 after asking, as quick load does
+  "saves"       a new save in the first empty slot, made at once with the card a quick save
+                shows, and the newest saves to write over after asking (since 0.21.0)
+  "loads"       the newest saves, one loaded after asking (since 0.21.0)
   [ "<option>", ... ]  rows of the options table; %[ title:"...", options:[ ... ] ] with a
                 title; or a function returning one. KAGQuickPanelSpecs holds the named ones.
 
@@ -3203,6 +3218,8 @@ never ("off"). It closes with Esc, the controller's B, a click outside it (which
 further) or, opened by resting, the pointer leaving it and the button. The keys and the D-pad
 move between its rows and change them, Return or A picks a quick save, and screen readers get
 it as sliders and buttons. Sliders apply as they're let go, and a volume's plays its sample.
+The wheel over a panel (since 0.21.0) moves the slider under the pointer, or the panel's first
+(the volume panel's: the music), by a twentieth of its range a notch.
 The sample's Auto has the text's, Q.LOAD the quick saves' and Config the volumes'.
 
 After a quick save (quickSaveNotice) or a screenshot (screenshotNotice) a card shows for a
