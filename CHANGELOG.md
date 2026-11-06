@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.19.0 (in progress)
+## 0.19.0
 
 ### Added
 
