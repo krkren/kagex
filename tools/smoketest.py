@@ -3482,17 +3482,18 @@ def sample_steps(eng):
                     ' kag.primaryLayer.setCursorPos(x, y); return 1;' % name)
             time.sleep(after)
             return str(eng.tjs('var t = kag.tooltips; return t.helpLayer !== void && t.helpLayer.visible ? t.helpShown : "(none)";'))
+        # (a touch screen's pointer stays where it tapped and can't be moved from here)
+        eng.tjs("kag.primaryLayer.setCursorPos(1800, 1061); return 1;")
+        time.sleep(0.3)
+        if eng.tjs("return Math.abs(kag.primaryLayer.cursorY - 1061) <= 4 && Math.abs(kag.primaryLayer.cursorX - 1800) <= 4 ? 1 : 0;") != 1:
+            print("     (skipped: the pointer can't be moved here)", flush=True)
+            return
         eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
         eng.wait("Config", 'kag.conductor.curStorage == "config.ks" && kag.inStable && kag.current.names.bgmvolume !== void', timeout=30)
         got = [point("bgmvolume"), point("config_title")]
         eng.tjs("kag.primaryLayer.setCursorPos(1800, 1060); return 1;")
         time.sleep(0.35)
         got.append(str(eng.tjs("return kag.tooltips.helpShown;")))
-        if eng.tjs("return kag.primaryLayer.cursorY > 1000 ? 1 : 0;") != 1:
-            print("     (skipped: the pointer can't be moved here)", flush=True)
-            eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
-            eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
-            return
         eng.tjs("setConfigPage(3); return 1;")
         eng.wait("page 3", "tf.configPage == 3 && kag.inStable && kag.current.names.option_readSpeed !== void", timeout=20)
         got.append(point("option_readSpeed"))
