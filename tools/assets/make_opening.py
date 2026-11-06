@@ -9,6 +9,11 @@ which logo.ks's [movie song=bgm01] unlocks in the music room. The words are in t
 
 usage: python3 tools/assets/make_opening.py [--frames DIR]    (--frames: also keep every 30th frame)
        python3 tools/assets/make_opening.py eyecatch          (only the eyecatch card)
+       python3 tools/assets/make_opening.py soundtrack        (only data/video/opening.opus)
+
+It also writes the movie's sound as a file of its own, data/video/opening.opus (the same Opus
+packets, in Ogg): on Android [movie] plays the movie muted and this beside it (Movies.tjs,
+KAGMovieSoundFile), since the engine's Android player can lose a movie's sound (UPSTREAM.md 45).
 
 It also draws the staging kit's eyecatch card, data/image/eyecatch.png ([eyecatch] in macro.ks):
 Pip waving on the lavender screen, with the badge and a few stars.
@@ -234,7 +239,21 @@ def encode(path, width, crf, keep=None):
     return subprocess.Popen(cmd, stdin=subprocess.PIPE)
 
 
+def soundtrack():
+    """the opening's sound as a file of its own, its Opus packets copied out of the movie"""
+    video = os.path.join(DATA, "video")
+    path = os.path.join(video, "opening.opus")
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", os.path.join(video, "opening.webm"),
+                        "-vn", "-map", "0:a", "-c:a", "copy", "-fflags", "+bitexact", "-flags:a", "+bitexact", path])
+    if r.returncode != 0:
+        raise SystemExit("ffmpeg failed")
+    print("wrote", os.path.relpath(path, REPO), "%.0f kB" % (os.path.getsize(path) / 1e3))
+
+
 def main():
+    if "soundtrack" in sys.argv[1:]:
+        soundtrack()
+        return
     keep = None
     if "--frames" in sys.argv:
         keep = sys.argv[sys.argv.index("--frames") + 1]
@@ -266,6 +285,7 @@ def main():
     for n in ("opening.webm", "opening_sd.webm"):
         f = os.path.join(video, n)
         print("wrote", os.path.relpath(f, REPO), "%.1f MB" % (os.path.getsize(f) / 1e6))
+    soundtrack()
 
 
 if __name__ == "__main__":

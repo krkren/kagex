@@ -1968,7 +1968,7 @@ class KAGEnvPlayer
 	 * Rewinds: goes back a message at a time, each one shown for a moment, until the start of
 	 * the scene or the message a choice came with; a click stops it
 	 */
-	var rewindTimer, rewindTo;
+	var rewindTimer, rewindTo, rewindAt, rewindWait = 0;
 	property rewinding { getter() { return rewindTimer !== void && rewindTimer.enabled; } }
 	function rewind() {
 		if (!working) return false;
@@ -1978,6 +1978,8 @@ class KAGEnvPlayer
 		to = sc if (sc !== void && (to === void || sc > to));
 		if (to === void || to >= now) return false;
 		rewindTo = to;
+		rewindAt = void;
+		rewindWait = 0;
 		if (rewindTimer === void) {
 			rewindTimer = new Timer(onRewindTimer, "");
 			rewindTimer.interval = 160;
@@ -1994,12 +1996,18 @@ class KAGEnvPlayer
 	}
 	function onRewindTimer() {
 		if (!working || laterPos !== void) return;
+		// a step's message is in the history only once the conductor has played it, which on
+		// the web waits for its pictures to download: until then the history ends before it,
+		// and the step after it went one too far (the rewind stopped a message short)
+		if (rewindAt !== void && historyNow() != rewindAt && ++rewindWait < 60) return;
+		rewindWait = 0;
 		var pos = getRollbackPoint();
 		if (pos === void || pos <= rewindTo) {
 			stopRewind();
 			if (historyNow() != rewindTo) goToHistory(rewindTo);
 			return;
 		}
+		rewindAt = pos;
 		goToHistory(pos);
 	}
 

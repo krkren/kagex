@@ -148,6 +148,18 @@
 
 [eval exp="offerContinue()"]
 
+; Esc, Android's Back or the right button asks whether to quit, as Exit does (since 0.21.0: on a
+; phone Back is the way out). Not on the web, where Back leaves the page
+[rclick enabled=true jump=true storage="title.ks" target=*askquit cond="!(typeof System.platformTag != 'undefined' && System.platformTag == 'web')"]
+
+[s]
+
+
+
+*askquit
+
+[eval exp="kag.close()"]
+
 [s]
 
 

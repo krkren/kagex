@@ -84,6 +84,26 @@ class HistoryLayer extends Layer
 
 	var closeButton = void;
 
+	// Since 0.21.0 the text scrolls by the pixel and can be dragged and flicked (touch screens):
+
+	// it's drawn on textPage, inside textClip (the text area), where it always was (display line n
+
+	// at n*lineHeight + controlHeight + marginT), and textPage moves up by scrollSub px; the line
+
+	// under the last is drawn too, for the part that shows between lines. Pulling the newest line
+
+	// up by closePull px and letting go closes the history, as turning the wheel past it does
+
+	var textClip = void, textPage = void;
+
+	var scrollSub = 0;
+
+	var dragY = void, dragPx = 0, dragging = false, pressX, pressY, dragPace = 0, dragSamples = [];
+
+	var coastTimer = void, coastSpeed = 0.0, coastPx = 0.0, coastTick = 0, inCoast = false;
+
+	var overPull = 0, closePull = 150, pullNote = void, pullNoteText = "";
+
 
 
 	var antialiased = true; // Whether to perform anti-aliased text rendering
@@ -265,7 +285,13 @@ class HistoryLayer extends Layer
 
 		invalidate closeButton if closeButton !== void;
 
+		invalidate coastTimer if coastTimer !== void;
 
+		invalidate pullNote if pullNote !== void;
+
+		invalidate textPage if textPage !== void;
+
+		invalidate textClip if textClip !== void;
 
 		invalidate richTextApp if richTextApp !== void;
 
@@ -485,6 +511,28 @@ class HistoryLayer extends Layer
 	{
 
 		if(prevPageButton !== void) return; // Already created
+
+		// the text's own layers, under the buttons (placeText sizes them)
+
+		textClip = new global.Layer(window, this);
+
+		textClip.name = "history text area";
+
+		textClip.hitType = htMask;
+
+		textClip.hitThreshold = 256; // the clicks and drags are the history layer's
+
+		textPage = new global.Layer(window, textClip);
+
+		textPage.name = "history text";
+
+		textPage.type = ltAlpha;
+
+		textPage.hitType = htMask;
+
+		textPage.hitThreshold = 256;
+
+		textPage.visible = true;
 
 
 		prevPageButton = new LButtonLayer(window, this);
@@ -1097,36 +1145,53 @@ class HistoryLayer extends Layer
 
 
 
-	function clearBack(n)
+	// the background (n void: the layer's own, and the text's cleared unless background is false),
+
+	// or display line n's rows of the text (since 0.21.0 the text has layers of its own)
+
+	function clearBack(n, background=true)
 
 	{
 
-		// Fill background
 		if(n === void)
 
 		{
 
-			face = dfAlpha;
+			if(background)
 
-			fillRect(0, 0, width, height, 0xc8000000);
+			{
+
+				face = dfAlpha;
+
+				fillRect(0, 0, width, height, 0xc8000000);
+
+			}
+
+			if(textPage !== void)
+
+			{
+
+				textPage.face = dfAlpha;
+
+				textPage.fillRect(0, 0, textPage.imageWidth, textPage.imageHeight, 0);
+
+			}
 
 		}
 
-		else
+		else if(textPage !== void)
 
 		{
 
-			face = dfAlpha;
+			textPage.face = dfAlpha;
 
 			if(verticalView)
 
-				fillRect(width - marginR - (n+1)*lineHeight, controlHeight, lineHeight,
-
-					height - controlHeight, 0xc8000000);
+				textPage.fillRect(width - marginR - (n+1)*lineHeight, controlHeight, lineHeight, height - controlHeight, 0);
 
 			else
 
-				fillRect(0, n*lineHeight + controlHeight + marginT, width, lineHeight, 0xc8000000);
+				textPage.fillRect(0, n*lineHeight + controlHeight + marginT, textPage.imageWidth, lineHeight, 0);
 
 		}
 
@@ -1153,6 +1218,30 @@ class HistoryLayer extends Layer
 
 
 		antialiased = window.chDefaultAntialiased;
+
+		if(!everypage)
+
+		{
+
+			if(verticalView)
+
+				dispLines = (width - marginR - marginL) \ lineHeight;
+
+			else
+
+				dispLines = (height - marginT - marginB - controlHeight) \ lineHeight;
+
+		}
+
+		scrollSub = 0;
+
+		setOverPull(0);
+
+		stopCoast();
+
+		dragY = void, dragging = false;
+
+		placeText();
 
 		clearBack();
 
@@ -1190,52 +1279,15 @@ class HistoryLayer extends Layer
 
 		{
 
-			if(verticalView)
+			// the newest lines; the history scrolls when they don't all fit
 
-				dispLines = (width - marginR - marginL) \ lineHeight;
+			canScroll = dataLines > dispLines;
 
-			else
+			dispStart = canScroll ? dataLines - dispLines : 0;
 
-				dispLines = (height - marginT - marginB - controlHeight) \ lineHeight;
-
-
-
-			if(dataLines <= dispLines)
-
-			{
-
-				// Fits within the displayable range
-				canScroll = false;
-
-				dispStart = 0;
-
-				var i;
-
-				for(i= 0; i < dataLines; i++)
-
-					drawLine(i);
-
-			}
-
-			else
-
-			{
-
-				// Does not fit within the displayable range
-				canScroll = true;
-
-				dispStart = dataLines - dispLines;
-
-				var i;
-
-				for(i = 0; i < dispLines; i++)
-
-					drawLine(i);
-
-			}
+			drawLines();
 
 		}
-
 
 
 		updateButtonState();
@@ -1261,6 +1313,13 @@ class HistoryLayer extends Layer
 	{
 
 		// Called from window
+
+		stopCoast();
+
+		setOverPull(0);
+
+		dragY = void, dragging = false;
+
 		removeMode();
 
 		visible = false;
@@ -1311,9 +1370,15 @@ class HistoryLayer extends Layer
 
 		var rta = getRichTextApp();
 
-		if (rta !== void) rta.drawText(richTextBase, this, x, y, text, color);
+		if (rta !== void) {
 
-		else drawText(x, y, text, color, 255, antialiased);
+			var attach = textPage.useCache; // the plugin's drawing finds the layer's pixels again
+
+			rta.drawText(richTextBase, textPage, x, y, text, color);
+
+		}
+
+		else textPage.drawText(x, y, text, color, 255, antialiased);
 
 	}
 
@@ -1322,6 +1387,9 @@ class HistoryLayer extends Layer
 	{
 
 		// Draw display line n
+
+		if(!everypage && (n + dispStart >= dataLines || n + dispStart < 0)) return;
+
 		var line = everypage?getPage(dispStart)[n]:getLine(n + dispStart);
 
 		if(everypage && line=="") return;
@@ -1334,7 +1402,7 @@ class HistoryLayer extends Layer
 
 			var x = width - marginR - n*lineHeight;
 
-			drawText(x, marginT + controlHeight + linestart, line, historyColor, 255, antialiased);
+			textPage.drawText(x, marginT + controlHeight + linestart, line, historyColor, 255, antialiased);
 
 		}
 
@@ -1372,7 +1440,7 @@ class HistoryLayer extends Layer
 
 				if(page[i]!="")
 
-					drawText(x, marginT + controlHeight + getLineStart2(dispStart, i),
+					textPage.drawText(x, marginT + controlHeight + getLineStart2(dispStart, i),
 
 						page[i], historyColor, 255, antialiased);
 
@@ -1419,13 +1487,23 @@ class HistoryLayer extends Layer
 
 			line = -(x - width + marginR) \ lineHeight;
 
-		else
+		else if(everypage)
 
 			line = (y - controlHeight - marginT) \ lineHeight;
 
+		else
+
+		{
+
+			line = lineAtY(y); // as scrolled (since 0.21.0)
+
+			if(line === void) return void;
+
+		}
+
 		if(line < 0) return void;
 
-		if(!everypage && dataLines <= dispLines && line >= dataLines) return void; // Out of bounds
+		if(!everypage && line + dispStart >= dataLines) return void; // Out of bounds
 
 
 		var ai;
@@ -1480,7 +1558,7 @@ class HistoryLayer extends Layer
 
 		if(id == 0) return;
 
-		var max = everypage ? repageLine : ((dataLines <= dispLines) ? dataLines : dispLines);
+		var max = shownLines();
 
 		for(var i = 0; i < max; i++)
 
@@ -1508,7 +1586,7 @@ class HistoryLayer extends Layer
 
 						var x = width - marginR - (i-1)*lineHeight - 1;
 
-						fillRect(x - lineHeight, info.start + marginT + controlHeight + linestart,
+						textPage.fillRect(x - lineHeight, info.start + marginT + controlHeight + linestart,
 
 							1,	info.end - info.start, 0xff000000 | historyColor);
 
@@ -1520,7 +1598,7 @@ class HistoryLayer extends Layer
 
 						var y = i*lineHeight + controlHeight + marginT;
 
-						fillRect(marginL + linestart + info.start, y + lineHeight - 1,
+						textPage.fillRect(marginL + linestart + info.start, y + lineHeight - 1,
 
 							info.end - info.start, 1, 0xff000000 | historyColor);
 
@@ -1544,7 +1622,7 @@ class HistoryLayer extends Layer
 		// Clear all
 		if(lastHighlightedActionID == 0) return;
 
-		var max = everypage ? repageLine : ((dataLines <= dispLines) ? dataLines : dispLines);
+		var max = shownLines();
 
 		for(var i = 0; i < max; i++)
 
@@ -1576,6 +1654,402 @@ class HistoryLayer extends Layer
 		lastHighlightedActionID = 0;
 
 		cursor = window.cursorDefault;
+
+	}
+
+
+
+	// ---- scrolling by the pixel, dragging and flicking (since 0.21.0) ----
+
+	// the display line at y, as scrolled (void: outside the text, or past the last line)
+
+	function lineAtY(y)
+
+	{
+
+		var top = controlHeight + marginT;
+
+		if(y < top || y >= top + dispLines*lineHeight) return void;
+
+		var line = (y - top + scrollSub) \ lineHeight;
+
+		if(line + dispStart >= dataLines) return void;
+
+		return line;
+
+	}
+
+	// the display lines drawn: the screenful and the one under it, shown between lines
+
+	function shownLines()
+
+	{
+
+		if(everypage) return repageLine;
+
+		var n = dataLines - dispStart, most = verticalView ? dispLines : dispLines + 1;
+
+		return n < most ? n : most;
+
+	}
+
+	function drawLines()
+
+	{
+
+		var max = shownLines();
+
+		for(var i = 0; i < max; i++) drawLine(i);
+
+	}
+
+	property scrollPx { getter { return dispStart * lineHeight + scrollSub; } }
+
+	function maxScrollPx() { return dataLines > dispLines ? (dataLines - dispLines) * lineHeight : 0; }
+
+	function scrollTo(n) { scrollToPx(n * lineHeight); }
+
+	// the text's layers for this layout: a text area that cuts the lines off at its edges (the
+
+	// whole layer for vertical text and page by page, which don't scroll by the pixel)
+
+	function placeText()
+
+	{
+
+		var smooth = !everypage && !verticalView;
+
+		var top = smooth ? controlHeight + marginT : 0, h = smooth ? dispLines*lineHeight : height;
+
+		with(textClip)
+
+		{
+
+			.setImageSize(width, h);
+
+			.setSizeToImageSize();
+
+			.face = dfAlpha;
+
+			.fillRect(0, 0, width, h, 0);
+
+			.setPos(0, top);
+
+			.visible = true;
+
+		}
+
+		with(textPage)
+
+		{
+
+			.setImageSize(width, height + lineHeight*2);
+
+			.setSizeToImageSize();
+
+			.font.angle = font.angle;
+
+			.font.face = font.face;
+
+			.font.height = font.height;
+
+			.font.bold = font.bold;
+
+		}
+
+		placePage();
+
+	}
+
+	function placePage()
+
+	{
+
+		if(textPage === void) return;
+
+		textPage.setPos(0, -textClip.top - scrollSub - overPull \ 3);
+
+	}
+
+	// to px pixels from the oldest line (kept within the history)
+
+	function scrollToPx(px)
+
+	{
+
+		stopCoast() if !inCoast && coastSpeed != 0.0; // a scroll of the player's own ends a coast
+
+		if(everypage || verticalView)
+
+		{
+
+			var n = px \ lineHeight, max = dataLines - dispLines;
+
+			n = max if n > max;
+
+			n = 0 if n < 0;
+
+			if(n == dispStart) return;
+
+			clearActionHighlights();
+
+			clearBack();
+
+			dispStart = n;
+
+			drawLines();
+
+			updateButtonState();
+
+			return;
+
+		}
+
+		var max = maxScrollPx();
+
+		px = (int)px;
+
+		px = max if px > max;
+
+		px = 0 if px < 0;
+
+		var start = px \ lineHeight, sub = px % lineHeight;
+
+		if(start != dispStart)
+
+		{
+
+			clearActionHighlights();
+
+			if(start == dispStart + 1 || start == dispStart - 1)
+
+			{
+
+				// a line on or back: the page moves a line, and one line is drawn
+
+				var top = controlHeight + marginT, n = dispLines + 1, w = textPage.imageWidth;
+
+				textPage.face = dfAlpha;
+
+				if(start > dispStart)
+
+				{
+
+					textPage.copyRect(0, top, textPage, 0, top + lineHeight, w, lineHeight * (n - 1));
+
+					dispStart = start;
+
+					clearBack(n - 1);
+
+					drawLine(n - 1);
+
+				}
+
+				else
+
+				{
+
+					textPage.copyRect(0, top + lineHeight, textPage, 0, top, w, lineHeight * (n - 1));
+
+					dispStart = start;
+
+					clearBack(0);
+
+					drawLine(0);
+
+				}
+
+			}
+
+			else
+
+			{
+
+				clearBack(void, false);
+
+				dispStart = start;
+
+				drawLines();
+
+			}
+
+			updateButtonState();
+
+		}
+
+		if(sub != scrollSub)
+
+		{
+
+			scrollSub = sub;
+
+			placePage();
+
+		}
+
+	}
+
+	// how far the newest line has been pulled past the end (px): the text moves a third of it,
+
+	// and a note says to let go to close
+
+	function setOverPull(v)
+
+	{
+
+		v = 0 if v < 0;
+
+		if(v == overPull) return;
+
+		overPull = v;
+
+		placePage();
+
+		if(v == 0)
+
+		{
+
+			pullNote.visible = false if pullNote !== void;
+
+			return;
+
+		}
+
+		var text = tr(v >= closePull ? "Let go to close" : "Pull up to close");
+
+		if(pullNote === void)
+
+		{
+
+			if(typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+
+			pullNote = new global.Layer(window, this);
+
+			pullNote.name = "history pull note";
+
+			pullNote.hitType = htMask;
+
+			pullNote.hitThreshold = 256;
+
+		}
+
+		if(text != pullNoteText || !pullNote.visible)
+
+		{
+
+			pullNoteText = text;
+
+			with(pullNote)
+
+			{
+
+				setYesNoFont(pullNote, 26);
+
+				var w = measureYesNoText(pullNote, text) + 48 + 12, h = .font.getTextHeight(text) + 28 + 12;
+
+				.setImageSize(w, h);
+
+				.setSizeToImageSize();
+
+				.face = dfAlpha;
+
+				.fillRect(0, 0, w, h, 0);
+
+				drawYesNoPanel(pullNote, 0, 0, w, h);
+
+				drawYesNoString(pullNote, 24, 14, text, 0xffffff, yesnoTextBase);
+
+				.setPos(marginL + (width - marginL - marginR - w) \ 2, controlHeight + marginT + dispLines*lineHeight - h - 16);
+
+			}
+
+		}
+
+		pullNote.opacity = v >= closePull ? 255 : 96 + 159 * v \ closePull;
+
+		pullNote.visible = true;
+
+	}
+
+	// the speed of the last 100 ms of a drag let go, carried on: the history coasts and slows
+
+	function flick(y)
+
+	{
+
+		var now = System.getTickCount();
+
+		dragSamples.add([ now, y ]);
+
+		while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
+
+		var dt = now - dragSamples[0][0];
+
+		// a finger that stopped before it lifted makes no flick: a gap well past the drag's own
+
+		// pace (each move redraws the history, which on a slow phone takes longer than 80 ms)
+
+		var last = now - dragSamples[dragSamples.count - 2][0];
+
+		if(dt < 10 || last >= 80 && last >= dragPace * 2) return;
+
+		coastSpeed = (dragSamples[0][1] - y) * 1000.0 / dt; // px a second
+
+		if(Math.abs(coastSpeed) < 3 * lineHeight) return;
+
+		coastPx = scrollPx;
+
+		coastTick = now;
+
+		if(coastTimer === void)
+
+		{
+
+			coastTimer = new Timer(onCoast, "");
+
+			coastTimer.interval = 16;
+
+		}
+
+		coastTimer.enabled = true;
+
+	}
+
+	function onCoast()
+
+	{
+
+		var now = System.getTickCount(), dt = (now - coastTick) / 1000.0;
+
+		coastTick = now;
+
+		dt = 0.05 if dt > 0.05;
+
+		coastPx += coastSpeed * dt;
+
+		var before = scrollPx;
+
+		inCoast = true;
+
+		scrollToPx(coastPx);
+
+		inCoast = false;
+
+		if(scrollPx == before && (coastPx <= 0 || coastPx >= maxScrollPx())) { stopCoast(); return; } // an end
+
+		coastSpeed *= Math.pow(0.05, dt);
+
+		stopCoast() if Math.abs(coastSpeed) < 2 * lineHeight;
+
+	}
+
+	function stopCoast()
+
+	{
+
+		coastSpeed = 0.0;
+
+		coastTimer.enabled = false if coastTimer !== void;
 
 	}
 
@@ -1674,21 +2148,9 @@ class HistoryLayer extends Layer
 
 		{
 
-			clearBack();
+			scrollToPx((dispStart - dispLines) * lineHeight);
 
-			if(dispStart >= dispLines)
-
-				dispStart -= dispLines;
-
-			else
-
-				dispStart = 0;
-
-			var i;
-
-			for(i = 0 ; i < dispLines; i++)
-
-				drawLine(i);
+			return;
 
 		}
 
@@ -1725,21 +2187,9 @@ class HistoryLayer extends Layer
 
 		{
 
-			clearBack();
+			scrollToPx((dispStart + dispLines) * lineHeight);
 
-			if(dispStart < dataLines - dispLines)
-
-				dispStart += dispLines;
-
-			if(dispStart > dataLines - dispLines)
-
-				dispStart = dataLines - dispLines;
-
-			var i;
-
-			for(i = 0 ; i < dispLines; i++)
-
-				drawLine(i);
+			return;
 
 		}
 
@@ -1753,25 +2203,21 @@ class HistoryLayer extends Layer
 
 	{
 
+		if(!verticalView) { scrollToPx((dispStart + 1) * lineHeight); return; } // a line on
+
 		if(dispStart < dataLines - dispLines)
 
 		{
 
 			clearActionHighlights();
 
-			if(verticalView)
+			textPage.face = dfAlpha;
 
-				copyRect(width - marginR - lineHeight *(dispLines - 1), controlHeight, this,
+			textPage.copyRect(width - marginR - lineHeight *(dispLines - 1), controlHeight, textPage,
 
-					width - marginR - lineHeight *(dispLines), controlHeight,
+				width - marginR - lineHeight *(dispLines), controlHeight,
 
-						lineHeight * (dispLines-1), height - controlHeight);
-
-			else
-
-				copyRect(0, controlHeight + marginT, this,
-
-					0, controlHeight + lineHeight + marginT, width, lineHeight*(dispLines-1));
+					lineHeight * (dispLines-1), height - controlHeight);
 
 			clearBack(dispLines - 1);
 
@@ -1791,25 +2237,23 @@ class HistoryLayer extends Layer
 
 	{
 
+		// a line back (to the start of the line in part shown, between lines)
+
+		if(!verticalView) { scrollToPx((scrollSub > 0 ? dispStart : dispStart - 1) * lineHeight); return; }
+
 		if(dispStart!=0)
 
 		{
 
 			clearActionHighlights();
 
-			if(verticalView)
+			textPage.face = dfAlpha;
 
-				copyRect(width - marginR - lineHeight *(dispLines), controlHeight, this,
+			textPage.copyRect(width - marginR - lineHeight *(dispLines), controlHeight, textPage,
 
-					width - marginR - lineHeight *(dispLines-1),
+				width - marginR - lineHeight *(dispLines-1),
 
-					controlHeight, lineHeight * (dispLines-1), height - controlHeight);
-
-			else
-
-				copyRect(0, controlHeight + lineHeight + marginT, this,
-
-					0, controlHeight + marginT, width, lineHeight*(dispLines-1));
+				controlHeight, lineHeight * (dispLines-1), height - controlHeight);
 
 			clearBack(0);
 
@@ -1873,19 +2317,65 @@ class HistoryLayer extends Layer
 
 		{
 
-			var n = getActionInfoFromPos(x,y);
+			// a line's action runs when the button is let go without the history being dragged
 
-			if(n !== void)
+			// (since 0.21.0: dragging scrolls it)
+
+			dragY = y, dragPx = scrollPx, dragging = false, pressX = x, pressY = y;
+
+			stopCoast();
+
+			dragSamples = [ [ System.getTickCount(), y ] ];
+
+			dragPace = 0;
+
+		}
+
+		super.onMouseDown(...);
+
+	}
+
+	function onMouseUp(x, y, button, shift)
+
+	{
+
+		if(button == mbLeft && dragY !== void)
+
+		{
+
+			var dragged = dragging;
+
+			dragY = void, dragging = false;
+
+			if(dragged)
 
 			{
 
-				Scripts.eval(n.action);
+				// the newest line pulled up far enough: the history closes
+
+				var close = overPull >= closePull;
+
+				setOverPull(0);
+
+				if(close) { hide(); return; }
+
+				flick(y);
+
+			}
+
+			else
+
+			{
+
+				var n = getActionInfoFromPos(pressX, pressY);
+
+				if(n !== void) Scripts.eval(n.action);
 
 			}
 
 		}
 
-		super.onMouseDown(...);
+		super.onMouseUp(...);
 
 	}
 
@@ -1894,6 +2384,36 @@ class HistoryLayer extends Layer
 	function onMouseMove(x, y, shift)
 
 	{
+
+		// dragging scrolls by the pixel, and past the newest line pulls the history to close
+
+		if(dragY !== void && (shift & ssLeft) && !everypage && !verticalView)
+
+		{
+
+			if(!dragging && Math.abs(y - dragY) > lineHeight \ 2) dragging = true;
+
+			if(dragging)
+
+			{
+
+				var want = dragPx + (dragY - y), max = maxScrollPx();
+
+				setOverPull(want > max ? want - max : 0);
+
+				scrollToPx(want);
+
+				var now = System.getTickCount();
+
+				dragPace = now - dragSamples[dragSamples.count - 1][0];
+
+				dragSamples.add([ now, y ]);
+
+				while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
+
+			}
+
+		}
 
 		var n = getActionInfoFromPos(x,y);
 
@@ -1922,6 +2442,10 @@ class HistoryLayer extends Layer
 	function onMouseLeave()
 
 	{
+
+		dragY = void, dragging = false;
+
+		setOverPull(0);
 
 		clearActionHighlights();
 

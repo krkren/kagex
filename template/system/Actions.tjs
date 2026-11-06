@@ -382,3 +382,36 @@ class KAGGestures
 		return t < 500;
 	}
 }
+
+// ---- Back on a phone's browser (since 0.21.0) ----
+// The page (platform/web/kagex-web.js) hands the browser's Back (Android's back button or
+// gesture, an installed web app's) to the game as Esc while Esc has something to do: close the
+// history, a panel, a prompt or a screen, or run the scene's right click. At the title, with none
+// of those, it answers "0" and the browser goes back as it always did. A call through the
+// engine's bridge only notes the press; the game presses Esc from its own loop.
+var KAGWebBackTimer;
+function KAGBackHasWork(win)
+{
+	if (win === void || !isvalid win) return false;
+	if (win.historyShowing || win.currentDialog !== void) return true;
+	if (typeof win.quickMenu == "Object" && win.quickMenu !== void && win.quickMenu.panel !== void) return true;
+	if (typeof global.KAGMoviePlaying != "undefined" && KAGMoviePlaying !== void) return true;
+	return !!win.rightClickEnabled;
+}
+function KAGWebBackPress()
+{
+	KAGWebBackTimer.enabled = false;
+	if (typeof global.kag == "undefined" || kag === void || !isvalid kag) return;
+	kag.postInputEvent("onKeyDown", %[key: VK_ESCAPE, shift: 0]);
+	kag.postInputEvent("onKeyUp", %[key: VK_ESCAPE, shift: 0]);
+}
+function KAGWebBack()
+{
+	if (typeof global.kag == "undefined" || !KAGBackHasWork(kag)) return "0";
+	if (KAGWebBackTimer === void) {
+		KAGWebBackTimer = new Timer(KAGWebBackPress, "");
+		KAGWebBackTimer.interval = 1;
+	}
+	KAGWebBackTimer.enabled = true;
+	return "1";
+}

@@ -393,9 +393,26 @@ function offerContinue()
     tf.continueAsked = true;
     if (!kag.hasContinue || !kag.canRestore()) return;
     var n = kag.continueSlot;
-    var date = kag.getBookMarkDate(n);
-    askYesNo(tr("Carry on where you left off?") + "\n" + tr(kag.getBookMarkPageName(n)) + (date !== void ? "  " + date : ""),
-        "Confirmation", loadFunction, void, n);
+    var date = kag.getBookMarkDate(n), name = tr(kag.getBookMarkPageName(n));
+    // the save as a card above the prompt, with its picture (since 0.21.0), or its scene and
+    // date in the prompt where there's no picture
+    if (typeof global.showYesNoCard == "undefined") KAGLoadScript("YesNoDialog.tjs");
+    var pic = new global.Layer(kag, kag.primaryLayer), card;
+    try { pic.loadImages(kag.getBookMarkFileNameAtNum(n)); } catch { invalidate pic; pic = void; }
+    if (pic !== void && typeof global.showYesNoCard != "undefined") {
+        var lines = [ name ];
+        lines.add(date) if date !== void;
+        try { card = showYesNoCard(kag, pic, lines, true, "above"); } catch (e) { dm("continue card: " + e.message); }
+    }
+    invalidate pic if pic !== void;
+    tf.continueCard = card;
+    askYesNo(tr("Carry on where you left off?") + (card !== void ? "" : "\n" + name + (date !== void ? "  " + date : "")),
+        "Confirmation", loadFunction, void, n, offerContinueDone);
+}
+function offerContinueDone()
+{
+    if (tf.continueCard !== void && isvalid tf.continueCard) invalidate tf.continueCard;
+    tf.continueCard = void;
 }
 
 // The name is centred in the message window's name box (namebox.png, [initscene] in
@@ -427,9 +444,14 @@ function setButtonOver(name, mode)
  */
 function fileDataButton(name, work) 
 {
-    var savedatanum = (sf.loadpage - 1) * 10 + work;
+    drawSaveSlot(kag.current.names[name + work], (sf.loadpage - 1) * 10 + work, name);
+}
+
+// a slot's button drawn for bookmark savedatanum ("save" or "load" picks its hovered look):
+// the old page buttons' and the slot lists' (since 0.21.0)
+function drawSaveSlot(target, savedatanum, name)
+{
     var savefilename = kag.getBookMarkFileNameAtNum(savedatanum);
-    var target = kag.current.names[name + work];
 
     // Button redraw: the slot frame for the normal state, <name>_win_over for the over and
     // pressed states (the button image holds the three side by side)
@@ -476,18 +498,53 @@ function fileDataButton(name, work)
     }
 }
 
+// ---- the save and load screens' slots as one scrolling list (since 0.21.0; ScrollList.tjs):
+// all of them two across, scrolled with the wheel, by dragging and flicks, the bar, the keys
+// or the D-pad; a page button scrolls to its ten (a page's five rows) ----
+
+var slotListRows = 5; // a page's rows in view
+function slotItem(prefix, layer, index, w, h, state) { listTile(layer, w, h, state, "sl_win_base", drawSlotTile, [ index, prefix ]); }
+function drawSlotTile(button, data) { drawSaveSlot(button, data[0], data[1]); }
+function saveSlotItem(layer, index, w, h, state) { slotItem("save", layer, index, w, h, state); }
+function loadSlotItem(layer, index, w, h, state) { slotItem("load", layer, index, w, h, state); }
+function slotItemName(index)
+{
+    var slot = tr("Slot %d").sprintf(index + 1);
+    if (!kag.isExistentBookMark(index)) return slot + ": " + tr("Empty");
+    var date = kag.getBookMarkDate(index);
+    return slot + ": " + tr(kag.getBookMarkPageName(index)) + (date !== void ? " " + date : "");
+}
+// the list on the screen's message layer: prefix "save" or "load" (save.ks, load.ks)
+function slotList(prefix)
+{
+    var l = screenList(prefix + "List", prefix == "save" ? "Save slots" : "Saves", 290, 190, 1337, 168 * slotListRows - 19, 149, 2, 19,
+        kag.numBookMarks, prefix == "save" ? saveSlotItem : loadSlotItem, prefix == "save" ? saveActionAt : loadActionAt, slotItemName);
+    l.scrollTo(((sf.loadpage !== void ? +sf.loadpage : 1) - 1) * slotListRows * l.rowStride);
+}
+// the page buttons lit, and the list (or the old slot buttons) at the page's ten
+function setSlotPage(prefix, work)
+{
+    sf.loadpage = work if work !== void;
+    sf.loadpage = 1 if sf.loadpage === void;
+    for (var i = 1; i < 10; i++) setButtonOver("page" + i, i == sf.loadpage);
+    var l = kag.current.names[prefix + "List"];
+    if (l !== void && isvalid l) l.scrollTo((sf.loadpage - 1) * slotListRows * l.rowStride, work !== void);
+    else for (var i = 0; i < 10; i++) fileDataButton(prefix, i);
+}
+function refreshSlotList(prefix)
+{
+    for (var i = 0; i < kag.fore.messages.count; i++) {
+        var l = kag.fore.messages[i].names[prefix + "List"];
+        l.refresh() if l !== void && isvalid l;
+    }
+}
+
 /**
  * Page button drawing process
  */
 function setSavePageButton(work=void)
 {
-    sf.loadpage = work if work !== void;
-    for (var i=1;i<10;i++) {
-        setButtonOver("page" + i, i == sf.loadpage);
-    }
-    for (var i=0;i<10;i++) {
-        fileDataButton("save", i);
-    }
+    setSlotPage("save", work);
 }
 
 /**
@@ -495,9 +552,13 @@ function setSavePageButton(work=void)
  */
 function saveFunction2(work)
 {
-    var savedatanum = (sf.loadpage - 1) * 10 + work;
+    saveAtSlot((sf.loadpage - 1) * 10 + work);
+}
+function saveAtSlot(savedatanum)
+{
     sf.newsavedata = savedatanum;
     saveFunction(savedatanum);
+    refreshSlotList("save");
     setSavePageButton();
 }
 
@@ -506,11 +567,15 @@ function saveFunction2(work)
  */
 function saveAction(work)
 {
-    var savedatanum = (sf.loadpage - 1) * 10 + work;
+    saveActionAt((sf.loadpage - 1) * 10 + work);
+}
+// a slot picked: saved over after asking, or at once into an empty one
+function saveActionAt(savedatanum)
+{
     if (Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(savedatanum))) {
-        askYesNo("Overwrite?", "Confirmation", saveFunction2, void, work);
+        askYesNo("Overwrite?", "Confirmation", saveAtSlot, void, savedatanum);
     } else {
-        saveFunction2(work);
+        saveAtSlot(savedatanum);
     }
 }
 
@@ -523,13 +588,7 @@ function saveAction(work)
  */
 function setLoadPageButton(work=void)
 {
-    sf.loadpage = work if work !== void;
-    for (var i=1;i<10;i++) {
-        setButtonOver("page" + i, i == sf.loadpage);
-    }
-    for (var i=0;i<10;i++) {
-        fileDataButton("load", i);
-    }
+    setSlotPage("load", work);
 }
 
 /**
@@ -537,7 +596,10 @@ function setLoadPageButton(work=void)
  */
 function loadAction(work)
 {
-    var loaddatanum = (sf.loadpage - 1) * 10 + work;
+    loadActionAt((sf.loadpage - 1) * 10 + work);
+}
+function loadActionAt(loaddatanum)
+{
     if (Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(loaddatanum))) {
         askYesNo("Load?", "Confirmation", loadFunction, void, loaddatanum);
     }

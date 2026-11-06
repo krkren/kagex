@@ -1752,6 +1752,18 @@ Attributes
 
                  and followopacity)
 
+    buttonsfade  The window's own system buttons ([sysbutton]) fade out over so many ms
+
+                 while the pointer is away from them and back as it comes near, at a
+
+                 touch, or when the keys move to one; faded out, they're hidden, so a
+
+                 tap there presses none. 0 (the default) turns it off (since 0.21.0)
+
+    buttonsarea  "x,y,w,h" in the window: where the pointer brings them back (80 px
+
+                 around it); "" (the default) is around the buttons themselves
+
 
 
 ◆ craftername (New)
@@ -3139,9 +3151,10 @@ A strip of buttons for actions that can keep out of the way (since 0.19.0,
 template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
 comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
 back, and as a finger leaves the pointer resting where it tapped, only taps on the strip keep it
-there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on; the
-pin at the end, and Config's Quick Menu option, are the player's (kept in the system
-variables). It shows in the story only: not over a system screen, a prompt or the message
+there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on;
+which of the two is the player's, Config's Quick Menu option (kept in the system variables;
+up to 0.20.0 a pin at the strip's end said it too, which since 0.21.0 it has no more: on a
+phone it was easy to hit and looked as if it did nothing). It shows in the story only: not over a system screen, a prompt or the message
 history, nor while the message window is hidden.
 
     with (KAGQuickMenuOf(kag)) {
@@ -3170,10 +3183,10 @@ The sample's message window buttons are its quick menu, along the bottom of the 
 at its right (since 0.20.0; on its top edge before, where they ran past the window's end):
 icons for moving through the story (the scene before, the last choice, rewind, back a line,
 auto, skip, the next scene), Q.SAVE, Q.LOAD, SAVE and LOAD, and icons for the history and
-Config, the pin last; a button's tip names its action. [initscene] sets f.quickMenu, which the
+Config; a button's tip names its action. [initscene] sets f.quickMenu, which the
 title clears, and its marginB keeps the text (four lines) above the strip at the larger size.
 
-The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
+The player's own, besides Quick Menu (Always, or Near the Pointer): Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
 is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
 kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a
@@ -3194,6 +3207,9 @@ over the scene, above its button, which a small mark at the button's top right s
   "text"        text speed, auto speed, what skip skips and the window's opacity
   "quickSaves"  the newest quick saves with their pictures, scenes and dates; one is loaded
                 after asking, as quick load does
+  "saves"       a new save in the first empty slot, made at once with the card a quick save
+                shows, and the newest saves to write over after asking (since 0.21.0)
+  "loads"       the newest saves, one loaded after asking (since 0.21.0)
   [ "<option>", ... ]  rows of the options table; %[ title:"...", options:[ ... ] ] with a
                 title; or a function returning one. KAGQuickPanelSpecs holds the named ones.
 
@@ -3203,6 +3219,8 @@ never ("off"). It closes with Esc, the controller's B, a click outside it (which
 further) or, opened by resting, the pointer leaving it and the button. The keys and the D-pad
 move between its rows and change them, Return or A picks a quick save, and screen readers get
 it as sliders and buttons. Sliders apply as they're let go, and a volume's plays its sample.
+The wheel over a panel (since 0.21.0) moves the slider under the pointer, or the panel's first
+(the volume panel's: the music), by a twentieth of its range a notch.
 The sample's Auto has the text's, Q.LOAD the quick saves' and Config the volumes'.
 
 After a quick save (quickSaveNotice) or a screenshot (screenshotNotice) a card shows for a
@@ -3599,6 +3617,58 @@ template/system/TextEntry.tjs):
   the game's field; Enter runs enter=, and closing the keyboard keeps the text. There, full screen
   is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
   element have the keyboard).
+
+● Games on Phones and in the Browser
+
+Android and iOS run a game made for a desktop window, with these differences (since 0.21.0
+this section collects them):
+
+◇ The screen
+
+The window fills the screen from the start: a switch to full screen changes nothing, and
+Config's window sizes and the menu bar aren't offered there (Display.tjs, KAGIsDesktop). The
+engine draws on a fixed 1920x1080 surface, scaled to fit the screen with bars where its shape
+differs, and the window's inner size is always 1920x1080: a game whose screen (scWidth,
+scHeight in Config.tjs) has another size is drawn shrunk, or only in part (UPSTREAM.md 48).
+Make phone builds at 1920x1080; the framework logs a warning at start on Android and iOS when
+the game's screen isn't that size. Don't pick a zoom for a phone: setZoom is for a desktop
+window.
+
+◇ Input
+
+A phone has no right button, no keys and no wheel, and the pointer rests where the last tap
+was (so tips by resting are off at first there: ● Tips). Everything the right button or Esc
+does needs another way:
+
+  Back (Android)     the game's Esc: closes the history, a panel, a prompt or a screen; on
+                     the sample's title it asks whether to quit (krkrz_android's Back goes to
+                     the engine as Escape through kagex's kit patch: UPSTREAM.md 46)
+  Back (a browser)   the same, while there's something for Esc to do (kagex-web.js)
+  two fingers (iOS)  a tap with two fingers is Esc (the engine's)
+  a long press       gestureActions.hold, and a button's tip (● Actions, Rebinding and Gestures)
+  swipes             gestureActions (up: the history, down: hide the window)
+  the history        its close button, or its newest line pulled up past the end
+
+A screen of the game's own needs a button that leaves it (the sample's all have one): the
+smoke test leaves every screen with taps alone on Android, iOS and a phone's browser. [edit]
+fields open a text box for the phone's keyboard (● Typing on Phones).
+
+◇ Movies
+
+[movie] plays <name>_sd where there is one (Movie Quality's Auto, ● Movies). On Android the
+engine's movie player can lose a movie's sound (UPSTREAM.md 45): give each movie its sound as a
+file of its own, <name>.opus or <name>.ogg beside it (for <name>_sd, <name>'s will do), and
+there the movie plays muted with that file alongside, in step with the picture
+(KAGMovieSoundPlatforms in Movies.tjs lists the platforms). ffmpeg copies a WebM's sound out as
+it is:
+
+    ffmpeg -i opening.webm -vn -c:a copy opening.opus
+
+◇ The app
+
+kagex-release names the app and gives it its icon, and makes the strip below the game (where
+Android's navigation bar is) black rather than the theme's white (a themes.xml in the build's
+res-override; the sample's is platform/android-res).
 
 ● Movies
 

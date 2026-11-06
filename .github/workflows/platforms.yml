@@ -510,6 +510,9 @@ jobs:
           # the bootstrap copies the game files once at a time (a restarted loading screen ran a
           # second copy alongside the first, which left the engine without its data)
           git -C kirikiri/krkrz_android apply "$PROJECT_DIR/.github/platforms/kit-android-bootstrap.patch"
+          # Back is the game's Esc (the history, a prompt, a screen; the title asks to quit): the
+          # kit let Android leave the game, or (before Android 13) sent a key the engine has no name for
+          git -C kirikiri/krkrz_android apply "$PROJECT_DIR/.github/platforms/kit-android-back.patch"
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
           echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt

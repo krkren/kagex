@@ -335,3 +335,34 @@
     try { f.select(); } catch (e) {}
   }, true);
 })();
+
+// --- Back on phones and tablets ---------------------------------------------------------------
+// The browser's Back (Android's back button or gesture, an installed web app's) goes to the game
+// as Esc while Esc has something to do there, as in the Android app: it closes the history, a
+// panel, a prompt or a screen (KAGWebBack in the game's Actions.tjs). With nothing for it (the
+// title) the page goes back as it always did. The page keeps one history entry of its own for
+// Back to land on, made again at the next touch after each Back the game took: browsers skip an
+// entry a page made without the player's touch.
+(function () {
+  "use strict";
+  var coarse = (navigator.maxTouchPoints || 0) > 0 && !!window.matchMedia && matchMedia("(pointer: coarse)").matches;
+  if (!coarse || !window.history || typeof history.pushState !== "function") return;
+  var armed = false, leaving = false;
+  function ready() { return typeof Module !== "undefined" && Module.krkrzLoadingDone && typeof Module.ccall === "function"; }
+  function arm() {
+    if (armed || leaving || !ready()) return;
+    armed = true;
+    history.pushState({ kagexBack: 1 }, "");
+  }
+  ["pointerdown", "touchstart"].forEach(function (t) { window.addEventListener(t, arm, true); });
+  window.addEventListener("popstate", function () {
+    if (!armed) return;
+    armed = false;
+    var took = false;
+    try {
+      var r = JSON.parse(Module.ccall("krkrz_repl_eval", "string", ["string"], ["KAGWebBack()"]));
+      took = !!(r && r.ok && /^"?1"?$/.test(String(r.result).trim()));
+    } catch (e) { took = false; }
+    if (!took) { leaving = true; history.back(); }
+  });
+})();

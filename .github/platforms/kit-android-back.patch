@@ -1,0 +1,81 @@
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 6060c19..e2ec477 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -39,6 +39,7 @@
+     android:supportsRtl="true"
+     android:theme="@style/Theme.Krkrz"
+     android:hardwareAccelerated="true"
++    android:enableOnBackInvokedCallback="true"
+     tools:targetApi="35">
+ 
+     <!-- PLAYGAMES:BEGIN  (app-config.json の cmake.plugins に "playgames" が無いビルドでは build.gradle がこのブロックを除去する。gms リソース/クラスを参照するため) -->
+diff --git a/app/src/main/java/jp/wamsoft/krkrz/KrkrzActivity.java b/app/src/main/java/jp/wamsoft/krkrz/KrkrzActivity.java
+index bcbea28..15b66f3 100644
+--- a/app/src/main/java/jp/wamsoft/krkrz/KrkrzActivity.java
++++ b/app/src/main/java/jp/wamsoft/krkrz/KrkrzActivity.java
+@@ -5,6 +5,7 @@ import android.content.Intent;
+ import android.content.res.AssetManager;
+ import android.os.Build;
+ import android.os.Bundle;
++import android.view.KeyEvent;
+ import android.view.LayoutInflater;
+ import android.view.View;
+ import android.view.ViewGroup;
+@@ -114,6 +115,42 @@ public class KrkrzActivity extends SDLActivity {
+         // モジュールレベル atomic を更新するので、virtualpad::Init() より早く呼ばれても
+         // 値は保持され Init 時に反映される。
+         VirtualPadPrefs.apply(this);
++
++        // kagex: Back is the game's Esc (closes its history, a prompt or a screen; on the title
++        // it asks to quit). Since Android 13 the system calls this, not onBackPressed or a
++        // KEYCODE_BACK key event, once the manifest enables it (enableOnBackInvokedCallback).
++        if (Build.VERSION.SDK_INT >= 33) {
++            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
++                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::onBackForGame);
++        }
++    }
++
++    /** kagex: Back closes the side menu, or goes to the game as Esc. */
++    private void onBackForGame() {
++        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
++            drawerLayout.closeDrawer(GravityCompat.START);
++            return;
++        }
++        SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_ESCAPE);
++        SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_ESCAPE);
++    }
++
++    /**
++     * kagex: before Android 13 Back comes as KEYCODE_BACK, which SDL hands the engine as a key
++     * it has no name for: it goes as Escape instead, held as long as Back is.
++     */
++    @Override
++    public boolean dispatchKeyEvent(KeyEvent event) {
++        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
++            if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
++                if (event.getAction() == KeyEvent.ACTION_UP) drawerLayout.closeDrawer(GravityCompat.START);
++                return true;
++            }
++            event = new KeyEvent(event.getDownTime(), event.getEventTime(), event.getAction(),
++                    KeyEvent.KEYCODE_ESCAPE, event.getRepeatCount(), event.getMetaState(),
++                    event.getDeviceId(), event.getScanCode(), event.getFlags(), event.getSource());
++        }
++        return super.dispatchKeyEvent(event);
+     }
+ 
+     @Override
+@@ -140,11 +177,8 @@ public class KrkrzActivity extends SDLActivity {
+ 
+     @Override
+     public void onBackPressed() {
+-        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+-            drawerLayout.closeDrawer(GravityCompat.START);
+-            return;
+-        }
+-        super.onBackPressed();
++        // kagex: not out of the game: Back is the game's Esc
++        onBackForGame();
+     }
+ 
+     /**

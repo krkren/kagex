@@ -158,6 +158,10 @@ class Engine:
     def output(self):
         return ""
 
+    def back(self):
+        """The platform's Back (Android's button, a phone browser's): False where there's none"""
+        return False
+
     def alive(self):
         return True
 
@@ -484,6 +488,22 @@ class AndroidEngine(Engine):
             f.write("\n".join(out))
         return True
 
+    def back(self):
+        """Android's Back (since 0.21.0 the game's Esc)"""
+        self.run_adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        return True
+
+    def tap(self, x, y):
+        """a real tap on the screen at x, y (the device's pixels), through the touch screen"""
+        self.run_adb("shell", "input", "tap", str(int(x)), str(int(y)))
+
+    def screen_size(self):
+        """the screen's size, landscape (wm size gives the device's natural, portrait one)"""
+        out = self.run_adb("shell", "wm", "size")
+        m = re.findall(r"(\d+)x(\d+)", out)
+        w, h = (int(m[-1][0]), int(m[-1][1])) if m else (1920, 1080)
+        return (max(w, h), min(w, h))
+
     def output(self):
         r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
         text = r.stdout.decode("utf-8", "replace")
@@ -596,6 +616,13 @@ class WebEngine(Engine):
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
         finally:
             cdp.detach()
+
+    def back(self):
+        """the browser's Back, in touch mode (a phone), where the page hands it to the game"""
+        if not self.touch:
+            return False
+        self.page.evaluate("history.back()")
+        return True
 
     def touch_swipe(self, gx0, gy0, gx1, gy1, steps=8, duration=0.25):
         """A finger drawn across the game from (gx0, gy0) to (gx1, gy1) in duration seconds, as
@@ -1079,6 +1106,29 @@ def template_steps(eng):
         r = str(eng.tjs('return KAGLanguage.list.join(",") + "|" + KAGLanguage.current + "|" + (KAGLanguage.chosen ? 1 : 0);'))
         if r != "en|en|0":
             raise SmokeError("languages, the one shown, chosen: %s" % r)
+
+    @step("the history: dragged by the pixel, pulled past the newest line it closes, and its close button closes it")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the history closed by touch)", flush=True)
+            return
+        h = "kag.historyLayer"
+        eng.tjs('var h = %s; for (var i = 0; i < 60; i++) { h.store("Line " + i + " of the history, long enough to read."); h.reline(); } return 1;' % h)
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the history", "kag.historyShowing", timeout=10)
+        r = str(eng.tjs('var h = %s; h.onMouseDown(800, 500, mbLeft, 0); h.onMouseMove(800, 500 + h.lineHeight * 5 \\ 2, ssLeft);'
+                        ' var r = [h.scrollSub, h.maxScrollPx() - h.scrollPx, h.lineHeight].join(","); h.onMouseUp(800, 500 + h.lineHeight * 5 \\ 2, mbLeft, 0);'
+                        ' h.scrollTo(h.dataLines); h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 800 - h.closePull - 60, ssLeft);'
+                        ' r += "|" + h.pullNoteText; h.onMouseUp(800, 800 - h.closePull - 60, mbLeft, 0); return r;' % h))
+        print("     dragged two lines and a half (px into a line, px from the end, the line's height), then pulled: %s" % r, flush=True)
+        px = r.split("|")[0].split(",")
+        if int(px[0]) != int(px[2]) // 2 or int(px[1]) != int(px[2]) * 5 // 2:
+            raise SmokeError("the history didn't move with the finger by the pixel: %s" % r)
+        eng.wait("the pull to close the history", "!kag.historyShowing", timeout=10)
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the history", "kag.historyShowing", timeout=10)
+        eng.tjs('var b = %s.closeButton; b.onMouseDown(5, 5, mbLeft, 0); b.onMouseUp(5, 5, mbLeft, 0); return 1;' % h)
+        eng.wait("the close button to close the history", "!kag.historyShowing", timeout=10)
 
     prompt_steps(eng, step)
     interface_steps(eng, step)
@@ -2731,6 +2781,37 @@ def sample_steps(eng):
         if found != "movie,movie,test.webm":
             raise SmokeError("test.webm and test are taken as %s, not movie,movie,test.webm" % found)
 
+    @step("a video slot that played and was stopped gets a new movie object, with its layer, before its next movie, which plays")
+    def _():
+        if eng.tjs('return typeof kag.renewMovie != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates renewMovie)", flush=True)
+            return
+        r = str(eng.tjs('var t = kag.tagHandlers; t.video(%[slot:"0", mode:"layer", visible:"true"]);'
+                        ' t.videolayer(%[slot:"0", layer:"0", page:"fore", channel:"1"]);'
+                        ' t.openvideo(%[slot:"0", storage:"opening_sd.webm"]); t.playvideo(%[slot:"0", storage:"opening_sd.webm"]); t.stopvideo(%[slot:"0"]);'
+                        ' var a = kag.movies[0]; t.openvideo(%[slot:"0", storage:"opening_sd.webm"]); var b = kag.movies[0];'
+                        ' return [a === b ? "same" : "new", b.mode == vomLayer ? "layer" : b.mode, b.layer1 === kag.fore.layers[0] ? "layer 0" : "another layer"].join(",");'))
+        print("     the slot after a movie played and stopped: %s" % r, flush=True)
+        if r != "new,layer,layer 0":
+            raise SmokeError("the used video slot wasn't renewed with its settings: %s" % r)
+        if eng.tjs('return typeof System.platformTag != "undefined" && ["linux", "windows", "macos"].find(System.platformTag) >= 0 ? 1 : 0;') == 1:
+            eng.tjs('kag.movies[0].play(); return 1;')
+            eng.wait("the next movie to play in the renewed slot", 'kag.movies[0].position > 500', timeout=15)
+        # stopped, the movie gives layer 0 its own size back: the engine sizes a layer to each
+        # frame it draws there, and a flip shown on it later was cut off at the frame's size
+        size = str(eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); var l = kag.fore.layers[0];'
+                           ' return [*(&global.Layer.imageWidth incontextof l), *(&global.Layer.imageHeight incontextof l)].join("x");'))
+        # the slot let go of layer 0 and the layer put back as [freeimage] leaves it (the next
+        # steps draw there)
+        eng.tjs('var m = kag.movies[0]; try { m.layer1 = null; m.layer2 = null; } catch {}'
+                ' m.layerNumber[0] = m.layerNumber[1] = void; m.layerPage[0] = m.layerPage[1] = void; try { m.mode = vomOverlay; } catch {}'
+                ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+        if eng.tjs('return typeof kag.movies[0].putLayersBack != "undefined" ? 1 : 0;') == 1:
+            screen = str(eng.tjs('var p = kag.fore.base; return [*(&global.Layer.width incontextof p), *(&global.Layer.height incontextof p)].join("x");'))
+            print("     layer 0 after the movie stopped: %s (the screen %s)" % (size, screen), flush=True)
+            if size != screen:
+                raise SmokeError("the movie left layer 0 at %s, not the screen's %s" % (size, screen))
+
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
         if not effekseer_framework(eng):
@@ -2950,6 +3031,86 @@ def sample_steps(eng):
             eng.wait(screen, 'kag.conductor.curStorage == "%s" && kag.inStable' % screen, timeout=20)
             eng.key("VK_ESCAPE")
             eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
+    @step("the save and load screens show every slot in one scrolling list: a pick saves, the page buttons scroll to their ten, the load screen lists the save")
+    def _():
+        if eng.tjs('return typeof global.slotList != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample whose save screens turn pages)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startSave(); return 1;")
+        eng.wait("save.ks", 'kag.conductor.curStorage == "save.ks" && kag.inStable', timeout=20)
+        got = str(eng.tjs('var l = kag.current.names.saveList; return l === void ? "none" : [l.itemCount, l.columns, l.itemWidth].join(",");'))
+        print("     the save list: %s (slots, columns, a slot's width)" % got, flush=True)
+        if got == "none" or int(got.split(",")[0]) != eng.tjs("return kag.numBookMarks;"):
+            raise SmokeError("the save screen has no list of every slot: %s" % got)
+        n = eng.tjs("return kag.numBookMarks - 3;")  # a slot on the last page
+        eng.tjs('setSavePageButton(9); return 1;')
+        eng.wait("the list at the last page", 'kag.current.names.saveList.position >= kag.current.names.saveList.maxPosition - 2', timeout=5)
+        eng.tjs('kag.current.names.saveList.onPick(%d); return 1;' % n)
+        eng.wait("the save in the slot picked (or the prompt to write over it)", "kag.isExistentBookMark(%d) || kag.currentDialog !== void" % n, timeout=10)
+        if eng.tjs("return kag.currentDialog !== void ? 1 : 0;") == 1:
+            eng.key("VK_LEFT"); eng.key("VK_RETURN")  # Yes
+            eng.wait("the save written over", "kag.currentDialog === void", timeout=10)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startLoad(); return 1;")
+        eng.wait("load.ks", 'kag.conductor.curStorage == "load.ks" && kag.inStable', timeout=20)
+        name = str(eng.tjs('var l = kag.current.names.loadList; return l === void ? "" : l.itemName(%d);' % n))
+        print("     the load list's slot %d: %s" % (n + 1, name), flush=True)
+        if name == "" or "Empty" in name:
+            raise SmokeError("the load screen's list doesn't show the save: %s" % name)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
+    @step("every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample from before the touch-only pass)", flush=True)
+            return
+        game = 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void && !kag.historyShowing'
+        eng.wait("a stable point", game, timeout=20)
+        # a finger's tap on a layer: pressed and let go at its middle, as the touch's mouse events come
+        tap = ('var l = %s; if (l === void || !isvalid l) return "no such button"; var x = l.width \\ 2, y = l.height \\ 2;'
+               ' l.onMouseDown(x, y, mbLeft, 0); if (isvalid l) l.onMouseUp(x, y, mbLeft, 0); return "tapped";')
+        left = []
+        def leave(what, opener, wait_open, button, wait_closed=game):
+            eng.tjs(opener + "; return 1;")
+            eng.wait(what, wait_open, timeout=20)
+            time.sleep(0.3)
+            r = str(eng.tjs(tap % button))
+            if r != "tapped":
+                raise SmokeError("%s: %s" % (what, r))
+            eng.wait("%s to close with a tap" % what, wait_closed, timeout=20)
+            left.append(what)
+        leave("the history", "kag.showHistory()", "kag.historyShowing", "kag.historyLayer.closeButton")
+        for name, start, ks in (("Config", "startConfig()", "config.ks"), ("save", "startSave()", "save.ks"), ("load", "startLoad()", "load.ks")):
+            leave(name, start, 'kag.conductor.curStorage == "%s" && kag.inStable' % ks, 'kag.current.names["return"]')
+        leave("a Yes/No prompt", 'askYesNo("Test?")', "kag.currentDialog !== void", "kag.currentDialog.names.no")
+        leave("About", "showAbout()", "kag.currentDialog !== void", "kag.currentDialog.names.close")
+        if eng.tjs('return typeof KAGShowPadTest != "undefined" && KAGPadTestAvailable() ? 1 : 0;') == 1:
+            leave("the controller test", "KAGShowPadTest()", "kag.currentDialog !== void", "kag.currentDialog.names.close")
+        # the Elements screens (the controls list, Change Controls): their Close button's action
+        for what, opener in (("the controls list", "kag.showControls()"), ("Change Controls", "kag.showBindings()")):
+            if eng.tjs('return typeof global.ElementsDialog != "undefined" ? 1 : 0;') != 1:
+                break
+            eng.tjs(opener + "; return 1;")
+            try:
+                eng.wait(what, "kag.currentDialog !== void", timeout=10)
+            except SmokeError:
+                print("     (%s: not on this platform)" % what, flush=True)
+                continue
+            time.sleep(0.5)
+            eng.tjs('kag.currentDialog.onPanelActionSounding("close", void); return 1;')
+            eng.wait("%s to close with its Close button" % what, game, timeout=20)
+            left.append(what)
+        # a quick menu panel: a tap outside it
+        if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') == 1:
+            i = eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "config") return i; return -1;')
+            if i >= 0:
+                leave("a quick menu panel", "kag.quickMenu.openPanel(%d, false)" % i, "kag.quickMenu.panel !== void", "kag.quickMenu.panel.veil",
+                      "kag.quickMenu.panel === void")
+        print("     left with a tap: %s" % ", ".join(left), flush=True)
 
     @step("controller: Y switches auto mode, X shows the history, B closes it")
     def _():
@@ -3196,7 +3357,7 @@ def sample_steps(eng):
         finally:
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
         if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
-            raise SmokeError("the pin isn't kept in the system variables")
+            raise SmokeError("Config's Quick Menu (Always) isn't kept in the system variables")
         # the player's own: larger, fainter, a button left out
         if eng.tjs('return typeof kag.quickMenu.setHidden != "undefined" ? 1 : 0;') == 1:
             got = str(eng.tjs('var q = kag.quickMenu, s0 = KAGOptionGet("quickMenuSize"), o0 = KAGOptionGet("quickMenuOpacity");'
@@ -3223,6 +3384,44 @@ def sample_steps(eng):
             print("     inside the window's bottom under the text at 100%% and 140%%, just over the window: %s" % got, flush=True)
             if got != "1,1,1":
                 raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
+
+    @step("Android: with the quick menu near the pointer, a real tap on its handle brings it, and it goes again though the finger's pointer rests on it")
+    def _():
+        if not isinstance(eng, AndroidEngine):
+            print("     (Android only: real taps through adb)", flush=True)
+            return
+        if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible'
+                   ' && typeof kag.quickMenu.fingerOnly != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu shown here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        # the screen's pixels to the game's: two taps in the upper middle (each goes on a line)
+        W, H = eng.screen_size()
+        p = [(W * 0.42, H * 0.25), (W * 0.58, H * 0.4)]
+        c = []
+        for x, y in p:
+            eng.tap(x, y)
+            time.sleep(1.0)
+            c.append([int(v) for v in str(eng.tjs('return [kag.primaryLayer.cursorX, kag.primaryLayer.cursorY].join(",");')).split(",")])
+            eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        if c[1][0] == c[0][0] or c[1][1] == c[0][1]:
+            print("     (the pointer didn't follow the taps: %s; not checked)" % c, flush=True)
+            return
+        kx = (p[1][0] - p[0][0]) / (c[1][0] - c[0][0]); ky = (p[1][1] - p[0][1]) / (c[1][1] - c[0][1])
+        def screen(gx, gy):
+            return (p[0][0] + (gx - c[0][0]) * kx, p[0][1] + (gy - c[0][1]) * ky)
+        try:
+            # Config's Quick Menu: Near the Pointer
+            eng.tjs("kag.quickMenu.pinned = false; return 1;")
+            eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle !== void && kag.quickMenu.handle.visible", timeout=15)
+            hd = [int(v) for v in str(eng.tjs('var h = kag.quickMenu.handle; return [h.left + (h.width >> 1), h.top + (h.height >> 1)].join(",");')).split(",")]
+            eng.tap(*screen(*hd))
+            eng.wait("the strip back (its handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity > 200", timeout=5)
+            # the pointer rests where the finger was, over the strip: that doesn't keep it
+            eng.wait("the strip away again a few seconds later", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=15)
+            print("     the handle at %s (game), %s (screen): the strip came and went again" % (hd, [int(v) for v in screen(*hd)]), flush=True)
+        finally:
+            eng.tjs("kag.quickMenu.pinned = true; return 1;")
 
     @step("the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip")
     def _():
@@ -3287,6 +3486,69 @@ def sample_steps(eng):
                     raise SmokeError("screen readers didn't get the quick menu's buttons: %s" % n)
         finally:
             eng.tjs("kag.quickMenu.closePanel(); kag.bgmvolume = global.__smokeBgm; return 1;")
+
+    @step("the quick menu's save and load panels: a new save in one click, the newest saves first; the wheel over the volume panel; a message window's own buttons fade away from the pointer (buttonsfade=)")
+    def _():
+        if eng.tjs('return typeof kag.recentBookMarks != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no save panels here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        idx = lambda a: eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "%s") return i; return -1;' % a)
+        si, li, ci = idx("save"), idx("load"), idx("config")
+        if si < 0 or li < 0:
+            print("     (skipped: the strip has no SAVE or LOAD)", flush=True)
+            return
+        rows = 'var p = kag.quickMenu.panel, r = []; for (var i = 0; i < p.rows.count; i++) r.add(p.rows[i].kind + ":" + p.rows[i].act + ":" + p.rows[i].n); return r.join(" ");'
+        # SAVE's panel: a new save into the first empty slot, at once
+        eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % si)
+        eng.wait("the save panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Save"', timeout=5)
+        got = str(eng.tjs(rows))
+        free = eng.tjs("return kag.firstFreeBookMark();")
+        print("     the save panel: %s (the first empty slot %s)" % (got, free), flush=True)
+        if not got.startswith("save:new:%s" % free):
+            raise SmokeError("the save panel doesn't start with a new save in the first empty slot: %s" % got)
+        eng.tjs("kag.quickMenu.panel.pick(0); return 1;")
+        eng.wait("the new save", "kag.isExistentBookMark(%s) && kag.quickMenu.panel === void" % free, timeout=10)
+        # LOAD's panel: the newest saves, the one just made first
+        eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % li)
+        eng.wait("the load panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Load"', timeout=5)
+        got = str(eng.tjs(rows))
+        print("     the load panel: %s" % got, flush=True)
+        if not got.startswith("save:load:%s" % free):
+            raise SmokeError("the load panel doesn't list the newest save first: %s" % got)
+        eng.tjs("kag.quickMenu.closePanel(); return 1;")
+        # the wheel over the volume panel moves its first slider (the music's)
+        if ci >= 0 and eng.tjs("return typeof KAGQuickPanelLayer.onWheel != \"undefined\" ? 1 : 0;") == 1:
+            eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % ci)
+            eng.wait("the volume panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Volume"', timeout=5)
+            w = str(eng.tjs('var p = kag.quickMenu.panel, b = KAGOptionGet("bgmVolume"); kag.primaryLayer.setCursorPos(p.left + 40, p.top + p.height - 30);'
+                            ' var moved = p.cursorX >= 0 && p.cursorX < p.width; p.onWheel(0, -120, 0, 0); var r = [moved ? 1 : 0, b, KAGOptionGet("bgmVolume")];'
+                            ' p.onWheel(0, 120, 0, 0); r.add(KAGOptionGet("bgmVolume")); kag.quickMenu.closePanel(); return r.join(",");')).split(",")
+            print("     the wheel over the volume panel (pointer on it, the music before, a notch down, a notch up): %s" % ",".join(w), flush=True)
+            if w[0] == "1" and not (float(w[2]) < float(w[1]) and float(w[3]) == float(w[1])):
+                raise SmokeError("the wheel over the volume panel didn't move the music's volume: %s" % w)
+        # a message window's own system buttons fading away from the pointer
+        if eng.tjs("return typeof kag.fore.messages[0].setButtonsFade != \"undefined\" ? 1 : 0;") == 1:
+            eng.tjs('var m = kag.fore.messages[0]; m.addSystemButton(%[ name:"smokesys", normal:"start_normal", over:"start_over", x:"1300", y:"20", exp:"void" ]);'
+                    ' m.setButtonsFade(200, ""); kag.primaryLayer.setCursorPos(100, 100); return 1;')
+            # (a touch screen's pointer stays where it tapped: where it didn't go where it was sent, the
+            # fade can't be checked; the iOS Simulator's left it away from the buttons already)
+            at = 'Math.abs(kag.primaryLayer.cursorX - %d) <= 4 && Math.abs(kag.primaryLayer.cursorY - %d) <= 4 ? 1 : 0'
+            moved = eng.tjs('return ' + at % (100, 100) + ';')
+            if moved == 1:
+                eng.wait("the buttons to fade out", 'kag.fore.messages[0].buttons.smokesys.opacity == 0 && !kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
+                near = str(eng.tjs('var m = kag.fore.messages[0]; kag.primaryLayer.setCursorPos(m.left + 1350, m.top + 40);'
+                                   ' return [m.left + 1350, m.top + 40].join(",");')).split(",")
+                if eng.tjs('return ' + at % (int(near[0]), int(near[1])) + ';') == 1:
+                    eng.wait("the buttons to come back near the pointer", 'kag.fore.messages[0].buttons.smokesys.opacity == 255 && kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
+                    print("     a [sysbutton] faded out with the pointer away and came back near it", flush=True)
+                else:
+                    print("     a [sysbutton] faded out with the pointer away (its coming back: not checked, the pointer didn't move)", flush=True)
+            else:
+                print("     (the fading buttons: not checked, the pointer can't be moved here)", flush=True)
+            eng.tjs('var m = kag.fore.messages[0]; m.setButtonsFade(0, ""); var b = m.buttons.smokesys; invalidate b; delete m.buttons.smokesys;'
+                    ' m.buttons_save.erase(m.buttons_save.count - 1); return 1;')
 
     @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
     def _():
@@ -3963,6 +4225,19 @@ def sample_steps(eng):
         print("     the movie on the screen: %s of its samples not the black backdrop" % shown, flush=True)
         if shown == 0:
             raise SmokeError("the movie didn't show: the screen was the backdrop's colour all over")
+        # its sound from a file of its own where the platform's movie player can lose it (Android,
+        # since 0.21.0): the movie muted, opening.opus playing beside it, in step with the picture
+        if eng.tjs('return typeof global.KAGMovieSoundFile != "undefined" && KAGMovieSoundFile("opening_sd.webm") !== void ? 1 : 0;') == 1:
+            time.sleep(1.5)
+            snd = str(eng.tjs('if (KAGMoviePlaying === void) return "ended"; var f = kag.fore.layers[+KAGMoviePlaying.layer].flip;'
+                              ' return [f.soundFile, f.audioVolume, f.sound !== void ? f.sound.status : "-", f.position, f.sound !== void ? f.sound.position : -1].join(",");'))
+            print("     the movie's sound from its own file (file, the movie's volume, the file's status, the movie's and the file's ms): %s" % snd, flush=True)
+            if snd != "ended":
+                v = snd.split(",")
+                if v[0] == "" or v[1] != "0" or v[2] != "play" or int(v[4]) <= 0:
+                    raise SmokeError("the movie's sound file isn't playing beside the muted movie: %s" % snd)
+                if abs(int(v[3]) - int(v[4])) > 600:
+                    raise SmokeError("the movie's sound file is out of step with its picture: %s" % snd)
         # the web's player asked for a movie inside data.xp3 by URL and got nothing (UPSTREAM.md
         # 41): since 0.18.0 the framework copies it out first, so the web must show it too
         web_movies = eng.tjs('return typeof System.platformTag != "undefined" && System.platformTag == "web"'
@@ -4320,9 +4595,10 @@ def sample_steps(eng):
         eng.tjs("kag.onShowHistoryMenuItemClick(); return 1;")
         eng.wait("the backlog", "kag.historyShowing", timeout=10)
         h = "kag.historyLayer"
-        faces = eng.tjs('var h = %s, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
+        # the text and faces on the text's own layer since 0.21.0 (at the same coordinates)
+        faces = eng.tjs('var h = %s, t = typeof h.textPage == "Object" && h.textPage !== void ? h.textPage : h, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
                         ' for (var y = h.controlHeight + h.marginT; y < h.height - 60; y += 6) for (var x = x0; x < x0 + h.faceSize; x += 6)'
-                        ' a++ if h.getMaskPixel(x, y) > 0 && (h.getMainPixel(x, y) & 0xffffff) != 0; return a;' % h)
+                        ' a++ if t.getMaskPixel(x, y) > 0 && (t.getMainPixel(x, y) & 0xffffff) != 0; return a;' % h)
         if faces < 100:
             raise SmokeError("the backlog shows no faces left of the speakers' lines (%s samples)" % faces)
         xy = eng.tjs('var h = %s; for (var n = 0; n < h.dispLines; n++) { var i = h.jumpIndex(n + h.dispStart);'
@@ -4349,25 +4625,96 @@ def sample_steps(eng):
             eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
                     ' global.__smokeFlickTimer = new Timer(function {'
                     ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight, now = System.getTickCount();'
-                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
+                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now; d.t0 = now if d.step == 0; d.total = now - d.t0;'
                     ' if (d.step == 0) h.onMouseDown(800, 700, mbLeft, 0);'
                     ' else if (d.step < 4) h.onMouseMove(800, y, ssLeft);'
                     ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
                     ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
             eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
             time.sleep(0.6)
-            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart, global.__smokeFlick.gap].join(",");' % h)).split(",")
-            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before)" % tuple(flick), flush=True)
+            flick = str(eng.tjs('with (global.__smokeFlick) return [.at, %s.dispStart, .gap, .total].join(",");' % h)).split(",")
+            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before, %s ms in all)" % tuple(flick), flush=True)
             # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
-            # timer ran that slow (an emulator), the coast can't be checked
-            if not (int(flick[1]) > int(flick[0])) and int(flick[2]) >= 60:
-                print("     (the coast: not checked, this machine's timer stepped %s ms apart)" % flick[2], flush=True)
+            # timer ran that slow (an emulator), the coast can't be checked; nor where its steps
+            # came all at once (a drag of under 10 ms is no flick either)
+            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 60 or int(flick[3]) < 10):
+                print("     (the coast: not checked, this machine's timer stepped %s ms apart, %s ms in all)" % (flick[2], flick[3]), flush=True)
             elif not (int(flick[1]) > int(flick[0])):
                 raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample from before the history closed by touch)", flush=True)
+            return
+        menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        for i in range(14):
+            eng.wait("a line", "kag.inStable", timeout=30)
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("a line", "kag.inStable", timeout=30)
+        h = "kag.historyLayer"
+        def show():
+            eng.tjs("kag.showHistory(); return 1;")
+            eng.wait("the history", "kag.historyShowing", timeout=10)
+        # the close button, pressed as a finger would
+        show()
+        eng.tjs('var b = %s.closeButton; b.onMouseDown(10, 10, mbLeft, 0); b.onMouseUp(10, 10, mbLeft, 0); return 1;' % h)
+        eng.wait("the close button to close the history", "!kag.historyShowing", timeout=10)
+        # dragged by the pixel: half a line down from the newest lines, the line above shows in part
+        show()
+        px = str(eng.tjs('var h = %s; h.onMouseDown(800, 500, mbLeft, 0); h.onMouseMove(800, 500 + h.lineHeight * 5 \\ 2, ssLeft);'
+                         ' var r = [h.scrollSub, h.maxScrollPx() - h.scrollPx, h.lineHeight].join(","); h.onMouseUp(800, 500 + h.lineHeight * 5 \\ 2, mbLeft, 0);'
+                         ' return r;' % h)).split(",")
+        print("     dragged two lines and a half: %s px into a line, %s px from the end (lines %s px)" % tuple(px), flush=True)
+        if eng.tjs("return %s.canScroll ? 1 : 0;" % h) != 1:
+            raise SmokeError("fourteen lines in, the history still fits the screen: nothing to scroll")
+        if int(px[0]) != int(px[2]) // 2 or int(px[1]) != int(px[2]) * 5 // 2:
+            raise SmokeError("the history didn't move with the finger by the pixel: %s" % px)
+        # pulled past the newest line: a note, then let go, it closes
+        pull = str(eng.tjs('var h = %s; h.scrollTo(h.dataLines); h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 800 - h.closePull - 60, ssLeft);'
+                           ' var r = [h.overPull, h.pullNote !== void && h.pullNote.visible ? 1 : 0, h.pullNoteText].join(",");'
+                           ' h.onMouseUp(800, 800 - h.closePull - 60, mbLeft, 0); return r;' % h))
+        print("     pulled past the newest line: %s" % pull, flush=True)
+        eng.wait("the pull to close the history", "!kag.historyShowing", timeout=10)
+        if not pull.split(",")[1] == "1":
+            raise SmokeError("pulling past the newest line showed no note: %s" % pull)
+        # a short pull and back: it stays open
+        show()
+        eng.tjs('var h = %s; h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 760, ssLeft); h.onMouseUp(800, 760, mbLeft, 0); return 1;' % h)
+        time.sleep(0.5)
+        if eng.tjs("return kag.historyShowing ? 1 : 0;") != 1:
+            raise SmokeError("a short pull past the newest line closed the history")
+        if eng.back():
+            # Android's Back is Esc (the kit's activity): the history closes
+            eng.wait("Back to close the history", "!kag.historyShowing && kag.inStable", timeout=15)
+            print("     Back closed the history", flush=True)
+        else:
+            eng.tjs("kag.hideHistory(); return 1;")
+            eng.wait("the history closed", "!kag.historyShowing", timeout=10)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        # at the title Esc (Back) asks whether to quit, and No (Esc again) leaves the title as it was
+        if eng.tjs('return typeof System.platformTag != "undefined" && System.platformTag == "web" ? 1 : 0;') == 1:
+            print("     (the title's quit prompt: not on the web, where Back leaves the page)", flush=True)
+            return
+        if not eng.back():
+            eng.tjs("kag.onPrimaryRightClick(); return 1;")
+        eng.wait("the quit prompt", "kag.currentDialog !== void", timeout=15)
+        if not eng.back():
+            eng.tjs("kag.currentDialog.close(); return 1;")
+        eng.wait("the quit prompt to close", 'kag.currentDialog === void && kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=15)
+        links = eng.tjs('return kag.fore.messages[0].numLinks;')
+        print("     the title asked whether to quit, and No left it with %s buttons" % links, flush=True)
+        if links < 4:
+            raise SmokeError("after the quit prompt the title has %s buttons" % links)
 
     @step("the CG viewer: a CG full screen, zoomed by the wheel about the pointer and by a pinch, moved by dragging, the next one on a click, the bar fading at rest, Esc back to the CGs")
     def _():
@@ -4644,10 +4991,17 @@ def sample_steps(eng):
         eng.tjs("kag.continueOn = true; tf.continueAsked = false; kag.goToStart(); return 1;")
         eng.wait("the title's offer", 'kag.conductor.curStorage == "title.ks" && typeof kag.currentDialog == "Object"'
                  ' && kag.currentDialog !== void', timeout=30)
+        # the save shown as a card above the prompt, with its picture (since 0.21.0)
+        card = eng.tjs('return typeof global.offerContinueDone == "undefined" ? -1 : tf.continueCard !== void && isvalid tf.continueCard && tf.continueCard.visible'
+                       ' && tf.continueCard.top + tf.continueCard.height <= kag.primaryLayer.height \\ 2 ? 1 : 0;')
+        if card == 0:
+            raise SmokeError("the title's offer to carry on showed no card with the save above the prompt")
         eng.key("VK_LEFT")  # the focus starts on No
         eng.key("VK_RETURN")
         eng.wait("the place to load", 'kag.conductor.curStorage == "layer.ks" && kag.conductor.curLine == %d && kag.inStable' % line,
                  timeout=30)
+        if card == 1 and eng.tjs("return tf.continueCard === void ? 1 : 0;") != 1:
+            raise SmokeError("the offer's card stayed after the answer")
 
     @step("voices: a cut voice fades out on a track of its own, voices come from where their speakers stand, and vol= makes a line quieter")
     def _():
@@ -5135,7 +5489,12 @@ def run_project(opts, label, data, make_steps):
     eng.boot_patches = boot_patches
     failures = 0
     try:
-        failures = run_steps(eng, make_steps(eng))
+        steps = make_steps(eng)
+        if getattr(opts, "steps", None):
+            keep = ["start-up", "the sample is in English", "the scripts in !scnlist.txt compile", "quit:"]
+            keep += [p for p in opts.steps.split("|") if p]
+            steps = [st for st in steps if any(st[0].startswith(k) for k in keep)]
+        failures = run_steps(eng, steps)
         if isinstance(eng, DesktopEngine):
             failures += quit_check(eng)
     except Exception as e:  # a bug here still gets the engine's log printed
@@ -5243,6 +5602,8 @@ def main():
     ap.add_argument("--only", choices=["sample", "template"],
                     help="run one project (default: the sample in data/, then template/)")
     ap.add_argument("--keep", action="store_true", help="keep the temporary folders")
+    ap.add_argument("--steps", help="only the steps whose titles start with one of these, separated by |"
+                    " (with the steps that set the game up: start-up, the language, compiling, quit)")
     ap.add_argument("--verbose", action="store_true", help="print the engine log at the end")
     ap.add_argument("--target", choices=["desktop", "android", "ios-sim", "web"], default="desktop")
     ap.add_argument("--packaged", action="store_true",

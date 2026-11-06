@@ -1399,6 +1399,14 @@ if (typeof kag.applyPlayerBindings != "undefined") kag.applyPlayerBindings();
     Executing first.ks
 */
 
+// Android and iOS draw on a fixed 1920x1080 surface scaled to the screen (UPSTREAM.md 48): a game
+// of another size shows shrunk or in part there, so say so at start (doc/kagex.txt, "Games on
+// Phones and in the Browser")
+if (typeof global.kag !== "undefined" && typeof System.platformTag != "undefined" &&
+    (System.platformTag == "android" || System.platformTag == "ios") && (kag.scWidth != 1920 || kag.scHeight != 1080))
+    dm("warning: this game's screen is " + kag.scWidth + "x" + kag.scHeight + ", and on " + System.platformTag +
+       " the engine draws a 1920x1080 surface: it shows shrunk or in part (doc/kagex.txt, Games on Phones)");
+
 // Force SDL3 window size right before processing the first script
 if (typeof global.kag !== "undefined") {
     // Skip while full-screen: the fullScreen setter already sized the surface

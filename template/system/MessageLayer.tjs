@@ -2677,6 +2677,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 
     var buttons_save = [];
 
+    // [position buttonsfade=<ms> buttonsarea="x,y,w,h"] (since 0.21.0): the system buttons fade
+
+    // out over buttonsfade ms while the pointer is away from their area (in this layer's
+
+    // coordinates; around all of them by default) and back as it comes near, at a touch, or
+
+    // when the keys move to one: for games that keep [sysbutton]s rather than the quick menu.
+
+    // Faded out, they're hidden, so a tap there doesn't press one
+
+    var buttonsFade = 0, buttonsArea, buttonsTimer, buttonsShown = 255;
+
 
 
     // For timeout processing
@@ -3102,6 +3114,128 @@ class MessageLayer extends AnimKAGLayerTransMove
 
     }
 
+    // buttonsfade= and buttonsarea= ("": around the buttons)
+
+    function setButtonsFade(ms, area) {
+
+        buttonsFade = ms;
+
+        if (area !== void) {
+
+            if (area == "") buttonsArea = void;
+
+            else { var a = area.split(",",, true); buttonsArea = [ +a[0], +a[1], +a[2], +a[3] ]; }
+
+        }
+
+        if (buttonsFade > 0) {
+
+            if (buttonsTimer === void) { buttonsTimer = new Timer(onButtonsTimer, ""); buttonsTimer.interval = 50; }
+
+            buttonsTimer.enabled = true;
+
+        } else {
+
+            buttonsTimer.enabled = false if buttonsTimer !== void;
+
+            setButtonsOpacity(255);
+
+        }
+
+    }
+
+    function systemButtonAt(i) {
+
+        var e = buttons_save[i];
+
+        return buttons[e.name != "" ? e.name : ("sysbutton" + i)];
+
+    }
+
+    // whether the pointer is near the buttons' area (80 px around it)
+
+    function buttonsNear() {
+
+        var r = buttonsArea;
+
+        if (r === void) {
+
+            var l = 100000, t = 100000, rr = -100000, b = -100000;
+
+            for (var i = 0; i < buttons_save.count; i++) {
+
+                var o = systemButtonAt(i);
+
+                if (o === void || !isvalid o) continue;
+
+                l = o.left if o.left < l; t = o.top if o.top < t;
+
+                rr = o.left + o.width if o.left + o.width > rr; b = o.top + o.height if o.top + o.height > b;
+
+            }
+
+            if (rr < l) return false;
+
+            r = [ l, t, rr - l, b - t ];
+
+        }
+
+        var x = cursorX, y = cursorY, m = 80;
+
+        return x >= r[0] - m && x < r[0] + r[2] + m && y >= r[1] - m && y < r[1] + r[3] + m;
+
+    }
+
+    function onButtonsTimer() {
+
+        if (!isvalid this || buttonsFade <= 0) return;
+
+        var g = window.gestures;
+
+        var touched = typeof g == "Object" && g !== void && typeof g.lastTouch != "undefined" && g.lastTouch > 0 &&
+
+            System.getTickCount() - g.lastTouch < 3000;
+
+        var focus = false, f = window.focusedLayer;
+
+        for (var i = 0; i < buttons_save.count && !focus; i++) focus = (systemButtonAt(i) === f);
+
+        var target = (!visible || touched || focus || buttonsNear()) ? 255 : 0;
+
+        if (buttonsShown == target) return;
+
+        var step = (int)(255 * 50 / buttonsFade);
+
+        step = 1 if step < 1;
+
+        var o = target > buttonsShown ? buttonsShown + step : buttonsShown - step;
+
+        o = target if (target > buttonsShown ? o > target : o < target);
+
+        setButtonsOpacity(o);
+
+    }
+
+    function setButtonsOpacity(o) {
+
+        buttonsShown = o;
+
+        for (var i = 0; i < buttons_save.count; i++) {
+
+            var b = systemButtonAt(i);
+
+            if (b === void || !isvalid b) continue;
+
+            b.opacity = o;
+
+            var shown = buttons_save[i].visible !== void ? +buttons_save[i].visible : true;
+
+            b.visible = shown && o > 0;
+
+        }
+
+    }
+
 
 
     function initNameLayer() {
@@ -3203,6 +3337,8 @@ class MessageLayer extends AnimKAGLayerTransMove
         invalidate lineLayer;
 
         invalidate timeoutTimer if timeoutTimer !== void;
+
+        invalidate buttonsTimer if buttonsTimer !== void;
 
         invalidate textLayer if (textLayer !== void);
 
@@ -3511,6 +3647,12 @@ class MessageLayer extends AnimKAGLayerTransMove
         }
 
         
+
+        // the system buttons fading while the pointer is away (since 0.21.0)
+
+        if (elm.buttonsfade !== void) setButtonsFade(+elm.buttonsfade, elm.buttonsarea);
+
+        else if (elm.buttonsarea !== void) setButtonsFade(buttonsFade, elm.buttonsarea);
 
         // Expression window
 
@@ -7974,6 +8116,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
+        if (buttonsFade > 0) { object.opacity = buttonsShown; object.visible = object.visible && buttonsShown > 0; }
+
         // the interface sound table's message.<name>.click and .enter (since 0.18.0)
 
         var tag = typeof global.KAGInterfaceSounds == "Object" ? "message." + object.name + "." : "";
@@ -10230,7 +10374,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		buttons_save.assign(src.buttons_save);
 
+		// the buttons' fading with them (since 0.21.0)
 
+		buttonsShown = src.buttonsShown;
+
+		setButtonsFade(src.buttonsFade, src.buttonsArea !== void ? src.buttonsArea.join(",") : "");
 
 		// Dictionary foreach cannot be used because it doesn't maintain addition order
 
@@ -10412,6 +10560,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         // [end_store_vars]
 
+        dic.buttonsFade = buttonsFade;
+
+        dic.buttonsArea = buttonsArea !== void ? buttonsArea.join(",") : "";
+
         dic.faceLayer = faceLayer.store() if faceLayer !== void;
 
         dic.nameLayer = nameLayer.store() if nameLayer !== void;
@@ -10529,6 +10681,8 @@ class MessageLayer extends AnimKAGLayerTransMove
         eventTransparent = dic.eventTransparent if dic.eventTransparent !== void;
 
         // [end_restore_vars]
+
+        if (dic.buttonsFade !== void) setButtonsFade(+dic.buttonsFade, dic.buttonsArea);
 
 		if (!dic.noFaceRestore) {
 

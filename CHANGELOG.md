@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.21.0
+
+### Added
+
+- **Save and load in one click from the quick menu**: a right-click or a long press on SAVE opens a panel with a new save in the first empty slot (made at once, with the card a quick save shows) and the newest saves to write over (after asking); on LOAD, the newest saves to load. The wheel over a panel moves the slider under the pointer, or its first (the volume panel's: the music), a twentieth of its range a notch (`QuickPanels.tjs`; `KAGWindow.recentBookMarks`, by the time each was saved, `firstFreeBookMark`, `saveIntoBookMark`).
+- **The save and load screens scroll**: all 90 slots in one list two across, scrolled with the wheel, by dragging and flicks, with the bar, the keys or the D-pad, as the Extras lists do, in place of nine pages of ten; the page buttons scroll to their ten (`slotList` in `Override.tjs`).
+- **Continue shows the save**: the title's offer to carry on shows the save as a card with its picture, scene and date above the prompt (`showYesNoCard`'s `stay` and `place`).
+- **System buttons that fade**: `[position buttonsfade=<ms> buttonsarea=x,y,w,h]` fades a message window's own `[sysbutton]`s out while the pointer is away and back as it comes near, at a touch, or as the keys move to one, for games that keep them rather than the quick menu; kept in saves (`doc/kagex.txt`).
+- **Android's Back and a phone browser's Back are the game's Esc**: they close the history, a panel, a prompt or a system screen, and on the sample's title ask whether to quit (also Esc and the right button there). On Android a patch to the kit's activity (applied in CI, so the engine packages for kagex-release carry it) turns Back into Escape; before, the engine got a key it has no name for, and since Android 13 Back left the game. In a phone's browser the page hands Back to the game while there's something for Esc to do, and leaves the page as before at the title (`kagex-web.js`, `KAGWebBack`; `UPSTREAM.md` 46).
+- **"Games on Phones and in the Browser"** in `doc/kagex.txt`: the fixed 1920x1080 surface, what stands in for the keys and the right button, movies' sound files on Android, the app's look. On Android and iOS the framework warns at start when the game's screen isn't 1920x1080 (`UPSTREAM.md` 48).
+
+### Changed
+
+- **The quick menu has no pin**: whether the strip stays or fades until the pointer comes near is Config's Quick Menu option alone (Always, or Near the Pointer). On a phone the pin was easy to hit and looked as if it did nothing: a finger resting on it counted as a mouse that stayed near, so on an Android phone the strip never went, and elsewhere it stayed four seconds. With Near the Pointer on Android and iOS the pointer is always a finger's now, so a tap on the handle brings the strip for a few seconds and it goes again. The smoke test taps the handle on the Android emulator with real taps (`adb shell input tap`).
+- **The history scrolls by the pixel**: both the sample's history and the framework's draw their text on a layer of their own, cut at the text area's edges, so a drag or a flick moves them smoothly rather than a line at a time; the framework's could not be dragged at all before. The sample's tips name every button of its column.
+
+### Fixed
+
+- **The history couldn't be closed on a phone**: the sample's had no close button (it closed on a right-click, Esc or turning the wheel past the newest line, none of which a phone has). It has one at the top of its button column now, both histories close when the newest line is pulled up past the end (a note says "Let go to close"), and Back closes them (above). The smoke test leaves every screen with taps alone (the history, Config, save, load, a prompt, About, the controls lists, the controller test, a quick menu panel), on every platform.
+- **Movies were silent on Android phones**: the engine's Android player flushes a movie's audio decoder as it starts the movie, before the decoder's first output, which Android documents can lose the codec's header (`UPSTREAM.md` 45); the emulator's decoder keeps it, so CI never heard it. On Android a movie with `<name>.opus` or `<name>.ogg` beside it now plays muted with that file alongside, started with its first frame and kept in step with the picture (`KAGMovieSoundFile`, `KAGMovieSoundPlatforms`); the sample's opening has `opening.opus` (`make_opening.py`, the movie's own sound copied out). The smoke test checks it on Android.
+- **A movie after a skipped one didn't play**: KAG's `[openvideo]` and `[playvideo]` give a slot that played and was stopped a new movie object with the old one's settings first, since the engine's leaves a frame flag set after a stop mid-frame and its next movie never sent `perPrepare` (`KAGWindow.renewMovie`; `UPSTREAM.md` 47).
+- **Android's strip below the game was white**: the window stops above the navigation bar, and the strip there showed the light theme's background. The sample's resource override and every game kagex-release builds give the theme a black window and navigation bar.
+- **A card's picture smaller than the card**: a save's thumbnail on a card was shrunk with a shrinking copy that refuses to enlarge, so the card wasn't made; it's stretched now.
+- **A movie in a KAG layer left the layer at the movie's size**: the engine sizes a layer to each frame a movie draws there, and KAGEX's layers keep their own picture the size of the screen and draw into it, so an effect or a flip shown on that layer after the movie was cut off at the movie's size (an Effekseer effect after a 960x540 movie threw "Out of Rectangle" when read). A movie in layer mode gives its layers their size back when it stops (`Movie.putLayersBack`).
+- **Rewind on the web stopped a message short**: after each step back the player's history ends before the message it went to until that message has been played, which in the browser waits for its pictures to download, and the step after that, landing in between, took the rewind for done. Each step waits for its message now.
+- **A flick on the history went on after the player scrolled**: a coast kept moving the history after a button, a key or the wheel moved it; a scroll of the player's own ends it now, in both histories.
+
 ## 0.20.0
 
 ### Added
