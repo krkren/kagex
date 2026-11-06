@@ -15,6 +15,12 @@
 //   button where the browser can install the page (beforeinstallprompt: Chrome, Edge, Samsung
 //   Internet, Opera), the steps elsewhere (iPhone and iPad browsers: Share, then Add to Home
 //   Screen; Firefox and other Android browsers: their menu). Closing it hides it for 30 days.
+// - Typing on phones and tablets: a phone's browser opens its keyboard only for a text field the
+//   page focuses while it handles a tap, and the game has none, so as a tap ends this asks the
+//   game (through the engine's krkrz_repl_eval) whether the tap went down on an [edit] field
+//   (KAGTextEntryWebTap in TextEntry.tjs), focuses a hidden field of its own with the text, and
+//   hands each change to the game; Enter runs the field's enter=, closing the keyboard keeps the
+//   text. A game whose framework predates it answers nothing, and nothing happens.
 (function () {
   "use strict";
   var meta = document.querySelector('meta[name="kagex-build"]');
@@ -241,4 +247,91 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
+})();
+
+// --- Typing on phones and tablets -------------------------------------------------------------
+(function () {
+  "use strict";
+  var coarse = (navigator.maxTouchPoints || 0) > 0 && !!window.matchMedia && matchMedia("(pointer: coarse)").matches;
+  if (!coarse) return;
+
+  // Full screen for the whole page, not the canvas the engine asks for: a browser lets nothing
+  // outside the full-screen element take the focus, so the field below couldn't have the
+  // keyboard (Android's full screen; iPhones have none). The page's style fits the canvas to
+  // the screen either way.
+  var canvasProto = window.HTMLCanvasElement && HTMLCanvasElement.prototype, root = document.documentElement;
+  if (canvasProto) ["requestFullscreen", "webkitRequestFullscreen"].forEach(function (name) {
+    if (typeof root[name] === "function") canvasProto[name] = function () { return root[name].apply(root, arguments); };
+  });
+
+  // TJS in the game, through the engine's bridge: its result as text, or null. Only calls that
+  // note things: the game does the rest from its own loop
+  function tjs(code) {
+    if (typeof Module === "undefined" || !Module.krkrzLoadingDone || typeof Module.ccall !== "function") return null;
+    try {
+      var r = JSON.parse(Module.ccall("krkrz_repl_eval", "string", ["string"], [code]));
+      return r && r.ok ? String(r.result).trim() : null;
+    } catch (e) { return null; }
+  }
+  function hex(s) {
+    var h = "";
+    for (var i = 0; i < s.length; i++) h += ("000" + s.charCodeAt(i).toString(16)).slice(-4);
+    return h;
+  }
+  function unhex(h) {
+    var s = "";
+    for (var i = 0; i + 4 <= h.length; i += 4) s += String.fromCharCode(parseInt(h.substr(i, 4), 16));
+    return s;
+  }
+
+  var input = null, typing = false;
+  function field() {
+    if (input) return input;
+    input = document.createElement("input");
+    input.type = "text";
+    input.id = "kagex-text";
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("autocapitalize", "words");
+    input.setAttribute("enterkeyhint", "done");
+    input.setAttribute("aria-hidden", "true");
+    // 16px: iPhones zoom the page into a field with smaller text
+    input.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;" +
+      "margin:0;font-size:16px;background:transparent;color:transparent;z-index:-1";
+    // the keys go to the field, not to the game (SDL listens on the window)
+    ["keydown", "keypress", "keyup"].forEach(function (t) {
+      input.addEventListener(t, function (e) {
+        e.stopPropagation();
+        if (t === "keydown" && (e.key === "Enter" || e.keyCode === 13)) { e.preventDefault(); end(1); }
+      });
+    });
+    input.addEventListener("input", function () { if (typing) tjs('KAGTextEntryWebInput("' + hex(input.value) + '")'); });
+    input.addEventListener("blur", function () { end(0); });
+    document.body.appendChild(input);
+    return input;
+  }
+  function end(ok) {
+    if (!typing) return;
+    typing = false;
+    tjs('KAGTextEntryWebInput("' + hex(input.value) + '")');
+    tjs("KAGTextEntryWebDone(" + ok + ")");
+    input.blur();
+  }
+
+  // inside the tap, so the browser lets the field have the keyboard
+  window.addEventListener("touchend", function (e) {
+    if (typing) return;
+    var r = tjs("KAGTextEntryWebTap()");
+    if (!r) return;
+    var m = /^"?(\d+):([0-9a-f]*)"?$/.exec(r);   // a string comes back as a TJS literal
+    if (!m) return;
+    // no mouse events made from the tap: their click would focus the canvas (tabindex) and
+    // take the keyboard away again (the game has the tap from SDL's touch events already)
+    e.preventDefault();
+    var f = field();
+    f.maxLength = +m[1] > 0 ? +m[1] : 524288;
+    f.value = unhex(m[2]);
+    typing = true;
+    f.focus();
+    try { f.select(); } catch (e) {}
+  }, true);
 })();

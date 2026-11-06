@@ -3321,6 +3321,28 @@ A character whose nameAlias is "&kag.heroName()" shows the name, and [emb exp="k
 puts it in a line; compiled scenes, the backlog and Search show the name as it was then. The
 sample asks the first time START is chosen (namescreen.ks), and Config's last page has Change.
 
+● Typing on Phones
+
+A phone has no keyboard until something asks for one, and the engine asks for its own text boxes
+only, so an [edit] field took no text on Android, nor in a phone's browser (since 0.18.1,
+template/system/TextEntry.tjs):
+
+  On Android and iOS without a keyboard plugged in, tapping an [edit] field (or Return, a pad's
+  A, on it) opens a box of the engine's at the top of the screen, above the system's keyboard,
+  with the field's text selected: what's typed shows in the field as it's typed, OK or the
+  keyboard's Enter keeps it and runs the field's enter=, and Cancel, Back or Esc puts back what
+  was there. Its title is the field's prompt=, through tr():
+
+    [edit name="tf.heroGiven" prompt="Given Name" maxchars=12 enter="nameOK()"]
+
+  KAGTextEntryMode is "auto" (that), true (the box everywhere, to try it on a desktop) or false.
+
+  In a phone's or tablet's browser, the page's script (kagex-web.js) does it: a tap on an [edit]
+  field gives a hidden field of the page's the keyboard, with the text, and what's typed shows in
+  the game's field; Enter runs enter=, and closing the keyboard keeps the text. There, full screen
+  is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
+  element have the keyboard).
+
 ● Movies
 
     [movie storage=opening alpha=0 song=bgm01 color=0x000000 skip=seen fit=true layer=]
@@ -3342,7 +3364,10 @@ mode stops before a movie not seen yet, and passes a seen one where Config says 
 (movieSkipping); the right button skips a seen one where it says so (movieRightClick). A
 movie with a smaller version, <name>_sd, plays that when Movie Quality says Smaller, and by
 itself on the web, Android and iOS (Auto), zoomed to fill the screen like any movie of another
-size (the sample's opening_sd is 960x540, half the screen each way). A movie that shows no picture in three seconds (no
+size (the sample's opening_sd is 960x540, half the screen each way). On Android the first two
+frames of a movie aren't shown (KAGMovieHideFirst, since 0.18.1): the opening glitched for a
+frame as it started on a phone, whose decoder can change its picture format as its first frame
+comes out. A movie that shows no picture in three seconds (no
 decoder for it here), or whose picture stops for three seconds (since 0.17.2: the engine holds a
 movie with sound at its first frame on a computer with no sound device, UPSTREAM.md 40), ends,
 so the game goes on.

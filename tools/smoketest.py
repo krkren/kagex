@@ -485,9 +485,10 @@ class WebEngine(Engine):
     crashed the page. So every command runs from a Timer, and the bridge only starts it and
     reads its result back."""
 
-    def __init__(self, url, workdir, verbose, channel=None, init_script=None):
+    def __init__(self, url, workdir, verbose, channel=None, init_script=None, touch=False):
         from playwright.sync_api import sync_playwright
         self.workdir = workdir
+        self.touch = touch
         self.verbose = verbose
         self.modals = []
         self.lines = []
@@ -500,7 +501,10 @@ class WebEngine(Engine):
                                                      # heap put the renderer's shared memory over it —
                                                      # the page dies as "Target crashed" mid-boot
                                                      "--disable-dev-shm-usage"])
-        self.page = self.browser.new_page(viewport={"width": 1280, "height": 720})
+        # touch: a phone's browser (touch events, a coarse pointer), where the page script
+        # (kagex-web.js) opens the keyboard for the game's fields and asks for full screen for
+        # the whole page
+        self.page = self.browser.new_page(viewport={"width": 1280, "height": 720}, has_touch=touch)
         if init_script:
             self.page.add_init_script(init_script)
         # written as it comes, so a page that hangs still leaves its console behind
@@ -546,6 +550,22 @@ class WebEngine(Engine):
         # asyncio loop"), hiding whether that page would have started
         self.stop()
         raise err
+
+    def touch_hold(self, gx, gy, hold=0.15):
+        """A finger on the game's point (gx, gy) for hold seconds (Chrome's touch events, which
+        the page sees as a person's tap)"""
+        r = self.page.evaluate("(() => { const b = document.querySelector('canvas').getBoundingClientRect();"
+                               " return [b.left, b.top, b.width, b.height]; })()")
+        w, h = [float(v) for v in str(self.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')).split(",")]
+        s = min(r[2] / w, r[3] / h)
+        x, y = r[0] + (r[2] - w * s) / 2 + gx * s, r[1] + (r[3] - h * s) / 2 + gy * s
+        cdp = self.page.context.new_cdp_session(self.page)
+        try:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": x, "y": y}]})
+            time.sleep(hold)
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        finally:
+            cdp.detach()
 
     def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
@@ -3077,6 +3097,77 @@ def sample_steps(eng):
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
         eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
 
+    @step("typing on a phone: a tap on an [edit] field opens a box with its text, typing shows in the field, Cancel puts it back and OK keeps it and runs enter=")
+    def _():
+        if eng.tjs('return typeof global.KAGTextEntryOpen != "undefined" && typeof global.ElementsDialog != "undefined"'
+                   ' && Storages.isExistentStorage("namescreen.ks") ? 1 : 0;') != 1:
+            print("     (skipped: no Elements here, or a framework from before the box)", flush=True)
+            return
+        eng.tjs('sf.heroNamed = true; kag.process("namescreen.ks", "*start"); return 1;')
+        eng.wait("the name screen", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable'
+                 ' && kag.current.names["tf.heroGiven"] !== void', timeout=30)
+        before = str(eng.tjs('return kag.current.names["tf.heroGiven"].text;'))
+        # the box where KAGTextEntryUsed() says so (Android and iOS without a keyboard): here always
+        typing = eng.tjs('return typeof global.Agent != "undefined" && typeof Agent.text != "undefined" ? 1 : 0;') == 1
+        try:
+            for answer, name in (("cancel", "Robin"), ("ok", "Sam")):
+                eng.tjs('KAGTextEntryMode = true; kag.current.names["tf.heroGiven"].onMouseUp(4, 4, mbLeft, 0); return 1;')
+                eng.wait("the box", "KAGTextEntryOpenNow !== void && isvalid KAGTextEntryOpenNow", timeout=10)
+                got = str(eng.tjs('return KAGTextEntryOpenNow.text + "~" + KAGTextEntryOpenNow.field.entryPrompt;'))
+                if got != before + "~Given Name":
+                    raise SmokeError("the box opened with \"%s\", not the field's text and prompt (\"%s~Given Name\")" % (got, before))
+                if typing:
+                    # the engine's text box has the focus and its text selected: typing replaces it
+                    time.sleep(0.5)
+                    eng.tjs('Agent.text("%s"); return 1;' % name)
+                else:
+                    eng.tjs('KAGTextEntryOpenNow.onAction("text", "%s"); return 1;' % name)
+                eng.wait("the field showing what's typed", 'kag.current.names["tf.heroGiven"].text == "%s"' % name, timeout=10)
+                if answer == "ok" and typing:
+                    eng.key("VK_RETURN")  # the keyboard's Enter is OK
+                else:
+                    eng.tjs('KAGTextEntryOpenNow.onAction("%s"); return 1;' % answer)
+                if answer == "cancel":
+                    eng.wait("the box gone", "KAGTextEntryOpenNow === void", timeout=10)
+                    back = str(eng.tjs('return kag.current.names["tf.heroGiven"].text + "~" + tf.heroGiven;'))
+                    if back != before + "~" + before:
+                        raise SmokeError("Cancel left \"%s\" in the field and its variable, not \"%s\"" % (back, before))
+            eng.wait("the demo menu (OK ran the field's enter=)", 'kag.conductor.curStorage == "s0001.ks" && KAGTextEntryOpenNow === void',
+                     timeout=30)
+            if str(eng.tjs("return sf.heroName;")) != "Sam":
+                raise SmokeError("OK didn't keep the name typed: %s" % eng.tjs("return sf.heroName;"))
+        finally:
+            eng.tjs('KAGTextEntryMode = "auto"; return 1;')
+
+    @step("typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=")
+    def _():
+        if not isinstance(eng, WebEngine) or not eng.touch:
+            print("     (skipped: only in a phone's browser, --target web --touch)", flush=True)
+            return
+        if eng.tjs('return typeof global.KAGTextEntryWebTap != "undefined" && Storages.isExistentStorage("namescreen.ks") ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before typing in a phone's browser)", flush=True)
+            return
+        eng.tjs('sf.heroNamed = true; sf.heroName = "Kai"; kag.process("namescreen.ks", "*start"); return 1;')
+        eng.wait("the name screen", 'kag.conductor.curStorage == "namescreen.ks" && kag.inStable'
+                 ' && kag.current.names["tf.heroGiven"] !== void', timeout=30)
+        gx, gy = [float(v) for v in str(eng.tjs('var f = kag.current.names["tf.heroGiven"];'
+                  ' return "%d,%d".sprintf(f.parent.left + f.left + 40, f.parent.top + f.top + f.height \\ 2);')).split(",")]
+        eng.touch_hold(gx, gy)
+        time.sleep(0.5)
+        got = eng.page.evaluate("(() => { const a = document.activeElement; return [a ? a.id : '', a && a.value !== undefined ? a.value : '',"
+                                " document.fullscreenElement ? document.fullscreenElement.tagName : ''].join('~'); })()")
+        print("     focused, its text, full screen: %s" % got, flush=True)
+        focus, text = got.split("~")[:2]
+        if focus != "kagex-text" or text != "Kai":
+            raise SmokeError("the tap didn't give the page's field (kagex-text) the focus with the field's text: %s" % got)
+        eng.page.keyboard.type("Robin")  # its text is selected: typing replaces it
+        eng.wait("the game's field showing what's typed", 'kag.current.names["tf.heroGiven"].text == "Robin"', timeout=10)
+        eng.page.keyboard.press("Enter")
+        eng.wait("the demo menu (Enter ran the field's enter=)", 'kag.conductor.curStorage == "s0001.ks"', timeout=30)
+        hero = str(eng.tjs("return sf.heroName;"))
+        if hero != "Robin":
+            raise SmokeError("Enter didn't keep the name typed: %s" % hero)
+
     @step("writers' shorthands: a code sets a pose and a face, and presets move a character back or forward at once")
     def _():
         eng.tjs('kag.process("char.ks", "*start"); return 1;')
@@ -4169,7 +4260,7 @@ def start_engine(opts, data, workdir):
     if opts.target == "ios-sim":
         return SimulatorEngine(opts.app, opts.bundle_id, workdir, opts.verbose, opts.device)
     if opts.target == "web":
-        return WebEngine(opts.url, workdir, opts.verbose, opts.channel)
+        return WebEngine(opts.url, workdir, opts.verbose, opts.channel, touch=opts.touch)
     return DesktopEngine(opts.engine, None if opts.packaged else data, workdir, opts.verbose)
 
 
@@ -4310,6 +4401,9 @@ def main():
     ap.add_argument("--url", help="web: the page that runs the game")
     ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
                     "instead of its own Chromium")
+    ap.add_argument("--touch", action="store_true",
+                    help="web: as a phone's browser (touch events, a coarse pointer): the page opens the "
+                    "keyboard for the game's [edit] fields, and full screen is the whole page's")
     ap.add_argument("--effekseer", choices=["required", "optional"], default="optional",
                     help="whether the build must draw Effekseer effects (the krkreffekseer plugin "
                     "and OpenGL ES): required fails when it can't; optional reports it")

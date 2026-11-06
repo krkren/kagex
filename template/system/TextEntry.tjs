@@ -1,0 +1,267 @@
+/**
+ * Typing on phones (since 0.18.1): the engine opens a phone's keyboard only for its own text
+ * boxes (Elements' input_box), never for a layer, so on Android an [edit] field took no text at
+ * all (the hero's name, Search). Where KAGTextEntryUsed() says so, tapping an [edit] field, or
+ * Return (a pad's A) on it, opens a box of the engine's at the top of the screen, above the
+ * keyboard, with the field's text: what's typed shows in the field as it's typed, OK (or the
+ * keyboard's Enter) keeps it and runs the field's enter=, and Cancel (Back, Esc) puts back what
+ * was there. The box's title is the field's prompt= ([edit prompt="Given Name"], through tr()).
+ *
+ *   KAGTextEntryMode   "auto": on Android and iOS without a physical keyboard (the default);
+ *                      true: everywhere (to try it on a desktop); false: never
+ *
+ * A phone's browser opens its keyboard only for a text field the page focuses while it handles
+ * a tap, which the game can't do: the web page's script (platform/web/kagex-web.js) asks as a
+ * tap ends whether it went down on an [edit] field (KAGTextEntryWebTap), focuses a hidden field
+ * of its own with the text, and hands what's typed to the game (KAGTextEntryWebInput), Enter
+ * running the field's enter= (KAGTextEntryWebDone). Those calls come through the engine's
+ * REPL bridge, so they only note things; a Timer does the rest.
+ */
+var KAGTextEntryMode = "auto";
+var KAGTextEntryOpenNow;   // the box that's open
+
+function KAGTextEntryUsed()
+{
+	if (typeof global.ElementsDialog == "undefined") return false;
+	var m = KAGTextEntryMode;
+	if (typeof m != "String") return m ? true : false;
+	if (m != "auto") return false;
+	var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+	if (tag != "android" && tag != "ios") return false;
+	// a keyboard plugged in types into the field itself (iOS always reports none)
+	try { return !ElementsDialog.hasPhysicalKeyboard; } catch { return true; }
+}
+
+// Opens the box for field (a LinkEditLayer); false when it can't be shown
+function KAGTextEntryOpen(field)
+{
+	if (KAGTextEntryOpenNow !== void && isvalid KAGTextEntryOpenNow) return true;
+	var entry = new KAGTextEntry(field);
+	if (!entry.show()) { invalidate entry; return false; }
+	KAGTextEntryOpenNow = entry;
+	return true;
+}
+
+class KAGTextEntry
+{
+	var field;          // the [edit] field typed into
+	var before;         // its text when the box opened (Cancel)
+	var text;           // what the box holds
+	var dialog;         // the ElementsDialog
+	var done = false;   // OK or Cancel taken
+	var keyboardBefore; // ElementsDialog.virtualKeyboard before it opened
+
+	function KAGTextEntry(f)
+	{
+		field = f;
+		before = text = f.text;
+	}
+
+	function finalize()
+	{
+		if (dialog !== void) { try { dialog.close(); } catch {} invalidate dialog; }
+		if (keyboardBefore !== void) try { ElementsDialog.virtualKeyboard = keyboardBefore; } catch {}
+		KAGTextEntryOpenNow = void if KAGTextEntryOpenNow === this;
+	}
+
+	function label(s) { return typeof global.tr != "undefined" ? global.tr(s) : s; }
+
+	// In the game's pixels, scaled with the picture ("base": "content"); text about the size of
+	// the game's own
+	function layout()
+	{
+		var title = field.entryPrompt != "" ? label(field.entryPrompt) : "";
+		var rows = [];
+		if (title != "") {
+			rows.add(%[ "type" => "align_left", "child" => %[ "type" => "label", "text" => title ] ]);
+			rows.add(%[ "type" => "vspacer", "height" => 16 ]);
+		}
+		var box = %[ "type" => "input_box", "id" => "text", "text" => text, "initial_focus" => true,
+			"size" => 2.6, "a11y" => %[ "label" => title != "" ? title : label("Text") ] ];
+		box["max_chars"] = field.maxChars if field.maxChars > 0;
+		rows.add(%[ "type" => "vsize", "height" => 84, "child" => box ]);
+		rows.add(%[ "type" => "vspacer", "height" => 24 ]);
+		var buttons = [];
+		var ids = [ "cancel", "ok" ], texts = [ label("Cancel"), label("OK") ];
+		for (var i = 0; i < ids.count; i++) {
+			buttons.add(%[ "type" => "hspacer", "width" => 24 ]) if i > 0;
+			buttons.add(%[ "type" => "hsize", "width" => 260, "child" => %[ "type" => "vsize", "height" => 76,
+				"child" => %[ "type" => "button", "id" => ids[i], "text" => texts[i] ] ] ]);
+		}
+		rows.add(%[ "type" => "align_right", "child" => %[ "type" => "htile", "children" => buttons ] ]);
+		return %[
+			"size" => [ 1200, title != "" ? 266 : 214 ],
+			"align" => "top",
+			"margin" => 40,
+			"base" => "content",
+			"font_scale" => 2.6,
+			"background" => [ 36, 22, 104, 248 ],
+			"a11y" => %[ "title" => title != "" ? title : label("Text") ],
+			"input" => %[ "shortcuts" => [ %[ "key" => "enter", "target" => "ok", "force" => 1 ] ] ],
+			"content" => %[ "type" => "margin", "padding" => 32, "child" => %[ "type" => "vtile", "children" => rows ] ]
+		];
+	}
+
+	function show()
+	{
+		try {
+			dialog = new ElementsDialog();
+			dialog.onAction = onAction;
+			dialog.onClose = onClose;
+			// the system's keyboard, not the engine's own (capital letters only)
+			try { keyboardBefore = ElementsDialog.virtualKeyboard; ElementsDialog.virtualKeyboard = "never"; } catch {}
+			return dialog.showDict(layout()) ? true : false;
+		} catch (e) {
+			dm("text entry: " + e.message);
+			return false;
+		}
+	}
+
+	function onAction(id, payload)
+	{
+		if (done) return;
+		if (id == "text") {
+			text = typeof payload == "String" ? payload : "";
+			if (isvalid field) field.text = clip(text);
+		} else if (id == "ok") {
+			answer(true);
+		} else if (id == "cancel") {
+			answer(false);
+		}
+	}
+
+	// Esc, Back or B closed it
+	function onClose()
+	{
+		answer(false) if !done;
+	}
+
+	function clip(s)
+	{
+		var n = isvalid field ? field.maxChars : 0;
+		return n > 0 && s.length > n ? s.substring(0, n) : s;
+	}
+
+	function answer(ok)
+	{
+		done = true;
+		accepted = ok;
+		if (KAGTextEntryTrigger === void) {
+			KAGTextEntryTrigger = new AsyncTrigger(KAGTextEntryAnswered, "");
+			KAGTextEntryTrigger.cached = true;
+		}
+		KAGTextEntryTrigger.trigger();
+	}
+	var accepted = false;
+
+	// The answer taken: the field gets its text, and enter= runs after OK
+	function finish()
+	{
+		if (dialog !== void) { try { dialog.close(); } catch {} }
+		var f = field;
+		if (!isvalid f) return "";
+		f.text = accepted ? clip(text) : before;
+		f.commit();
+		try { f.focus(); } catch {}
+		return accepted && f.enterExp != "" ? f.enterExp : "";
+	}
+}
+
+// After the box's event (Elements takes no new screen from inside one, and enter= may change
+// the screen)
+var KAGTextEntryTrigger;
+function KAGTextEntryAnswered()
+{
+	var entry = KAGTextEntryOpenNow;
+	if (entry === void || !isvalid entry || !entry.done) return;
+	var exp = entry.finish();
+	invalidate entry;
+	Scripts.eval(exp) if exp != "";
+}
+
+// ---- The browser on a phone (kagex-web.js) ----
+var KAGTextEntryWebOn = typeof System.platformTag != "undefined" && System.platformTag == "web";
+var KAGTextEntryWebField;     // the field a tap went down on, then the one the page types into
+var KAGTextEntryWebDown = 0;  // when that tap went down
+var KAGTextEntryWebTyping = false;
+var KAGTextEntryWebText;      // what the page's field holds, not yet in the game's
+var KAGTextEntryWebEnd;       // 1 (Enter) or 0 (the keyboard closed), not yet taken
+var KAGTextEntryWebTimer;
+
+// A tap went down on an [edit] field (LinkEditLayer.onMouseDown)
+function KAGTextEntryWebArm(field)
+{
+	if (!KAGTextEntryWebOn || KAGTextEntryWebTyping) return;
+	KAGTextEntryWebField = field;
+	KAGTextEntryWebDown = System.getTickCount();
+}
+
+function KAGTextEntryHex(s)
+{
+	var a = [];
+	for (var i = 0; i < s.length; i++) a.add("%04x".sprintf(#s.charAt(i)));
+	return a.join("");
+}
+
+function KAGTextEntryUnhex(h)
+{
+	var s = "";
+	for (var i = 0; i + 4 <= h.length; i += 4) s += $(+("0x" + h.substring(i, 4)));
+	return s;
+}
+
+// The page, as a tap ends: the field it went down on as "<most characters>:<its text in hex>",
+// or "" (no field, or the game hasn't seen the tap yet)
+function KAGTextEntryWebTap()
+{
+	var f = KAGTextEntryWebField;
+	if (f === void || !isvalid f || KAGTextEntryWebDown == 0 || System.getTickCount() - KAGTextEntryWebDown > 3000) return "";
+	KAGTextEntryWebDown = 0;
+	KAGTextEntryWebTyping = true;
+	KAGTextEntryWebText = KAGTextEntryWebEnd = void;
+	if (KAGTextEntryWebTimer === void) {
+		KAGTextEntryWebTimer = new Timer(KAGTextEntryWebStep, "");
+		KAGTextEntryWebTimer.interval = 30;
+	}
+	KAGTextEntryWebTimer.enabled = true;
+	return "%d:%s".sprintf(f.maxChars, KAGTextEntryHex(f.text));
+}
+
+// The page's field changed (its text in hex)
+function KAGTextEntryWebInput(hex)
+{
+	KAGTextEntryWebText = KAGTextEntryUnhex(hex);
+	return 1;
+}
+
+// Enter (1), or the keyboard closed (0)
+function KAGTextEntryWebDone(ok)
+{
+	KAGTextEntryWebEnd = +ok;
+	return 1;
+}
+
+function KAGTextEntryWebStep()
+{
+	var f = KAGTextEntryWebField;
+	if (f === void || !isvalid f) {
+		KAGTextEntryWebTimer.enabled = false;
+		KAGTextEntryWebTyping = false;
+		return;
+	}
+	if (KAGTextEntryWebText !== void) {
+		var s = KAGTextEntryWebText;
+		KAGTextEntryWebText = void;
+		s = s.substring(0, f.maxChars) if f.maxChars > 0 && s.length > f.maxChars;
+		f.text = s;
+	}
+	if (KAGTextEntryWebEnd !== void) {
+		var ok = KAGTextEntryWebEnd;
+		KAGTextEntryWebEnd = void;
+		KAGTextEntryWebTimer.enabled = false;
+		KAGTextEntryWebTyping = false;
+		KAGTextEntryWebField = void;
+		f.commit();
+		Scripts.eval(f.enterExp) if ok && f.enterExp != "";
+	}
+}

@@ -16,6 +16,12 @@ if (typeof global.Layer.copyBottomBlueToTopAlpha == "undefined") {
 // 0: at its end. On Android a player that reached its end hung the game as it was stopped
 // (UPSTREAM.md 38), so there it's stopped just before
 var KAGMovieStopEarly = typeof System.platformTag != "undefined" && System.platformTag == "android" ? 300 : 0;
+// The frames a movie's picture isn't shown for as it starts (the layer shows what's under it, the
+// backdrop for [movie]). On an Android phone the opening glitched for a frame before it played;
+// the engine sets its picture up for the decoder's first format, and the decoder reports another
+// as its first frame comes out (the emulator's log: color format 19, then flexible YUV), the likely
+// cause. Two frames are 66 ms of the backdrop at 30 frames a second
+var KAGMovieHideFirst = typeof System.platformTag != "undefined" && System.platformTag == "android" ? 2 : 0;
 
 class MovieControlLayer extends GenericFlip, VideoOverlay
 
@@ -239,6 +245,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 		if (!isvalid this || ended) return; // once it has ended, not its first frame again
 
 		frames++;
+
+		if (frames <= global.KAGMovieHideFirst) return; // a decoder's first frames (Android)
 
 		//dm("Update:" + targetLayer.name);
 
