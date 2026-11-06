@@ -72,9 +72,32 @@ function __ci_clickLayer(l, button = 0)
 	__ci_schedule([ "click", w[0], w[1], button ]);
 	return "game " + gx + "," + gy + " -> window " + w[0] + "," + w[1];
 }
+// Since 0.19.0 the sample's message-window buttons (msg_log, msg_save ...) are drawn in the
+// quick menu's strip (QuickMenu.tjs), one layer: a msg_* name with no layer of its own is that
+// strip's button for the same action
+var __ci_quickActions = %[ msg_log:"backlog", msg_save:"save", msg_load:"load", msg_config:"config",
+	msg_auto:"auto", msg_skip:"skip", msg_qsave:"quickSave", msg_qload:"quickLoad", msg_back:"back" ];
+function __ci_clickQuick(action, button = 0)
+{
+	var q = typeof kag.quickMenu == "Object" ? kag.quickMenu : void;
+	if (q === void || q.layer === void || !isvalid q.layer || !q.layer.visible) return void;
+	var b = q.shown;
+	for (var i = 0; i < b.count; i++) {
+		if (b[i].action != action) continue;
+		var a = __ci_abs(q.layer);
+		var gx = (int)(a[0] + b[i].x + b[i].w / 2), gy = (int)(a[1] + b[i].y + b[i].h / 2);
+		var w = __ci_map(gx, gy);
+		__ci_schedule([ "click", w[0], w[1], button ]);
+		return "the quick menu's " + action + ": game " + gx + "," + gy + " -> window " + w[0] + "," + w[1];
+	}
+}
 function __ci_click(name, button = 0)
 {
 	var l = __ci_find(kag.primaryLayer, name);
+	if (l === void && __ci_quickActions[name] !== void) {
+		var r = __ci_clickQuick(__ci_quickActions[name], button);
+		if (r !== void) return r;
+	}
 	if (l === void) throw new Exception("no visible layer named " + name + " (visible buttons: " + __ci_buttons() + ")");
 	return __ci_clickLayer(l, button);
 }

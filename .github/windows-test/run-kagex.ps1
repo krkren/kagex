@@ -385,7 +385,8 @@ Step 'history: no word split across lines' {
     "$($lines.Count) history lines; $pairs breaks between letters, none inside a word"
 }
 
-# In-game UI on char.ks: it uses [initscene], which adds the msg_* buttons (layer.ks clears them)
+# In-game UI on char.ks: it uses [initscene], which adds the msg_* buttons (layer.ks clears them;
+# since 0.19.0 they're the quick menu's, which __ci_click finds by the same names)
 if ($Plan -ne 'probe') {
 Step 'in game: message window + rich text' {
     Wait-State 'the demo menu' $atMenu 30 | Out-Null
