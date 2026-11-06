@@ -2,6 +2,10 @@
 
 ## 0.19.0 (in progress)
 
+### Added
+
+- **One table of actions, keys the player can change, and gestures**: skip, auto mode, the message history, hiding the window, going back, save and load, quick save and load, playing the voice again, the scene moves of compiled scenes, the next language, the menu and a screenshot are actions (`Actions.tjs`), and keys (`kag.bindKey(key, shift, "@name")`), controller buttons (`kag.padKeyMap[button] = "@name"`) and gestures point into them, so the controls list reads them and a game changes one in one place (`KAGDefineAction`, `KAGActions.quickSave.func`). Change Controls (the controls list's Change… button) lets the player give each action a key or a controller button, or none, and a gesture, kept in the system variables over the game's, with Reset. In the story a swipe on a phone, or a drag with the right mouse button, runs an action and drops the click it would make: up the message history, down hides the window, and in the sample left rewinds and right skips (`doc/kagex.txt`, "Actions, Rebinding and Gestures"). The smoke test swipes, binds a key through Change Controls and resets.
+
 ### Fixed
 
 - **`[ai far]` and `[ai near]` with an angry or sad face**: Ai's angry and sad pictures were drawn at the middle size only, so after `[ai 103]` the far and near presets showed the picture before in the far or near place (her head above the screen, or her almost wholly below it). A character whose picture is missing at a level is now drawn from the nearest level that has it, a bigger one first, scaled by the levels' zoom, with a note in the log (`KAGEnvCharacter.drawOtherLevel`, `doc/world_inst.txt`); and the sample has the far and near pictures (`ch_1_0_2`, `ch_1_0_3`, `ch_2_0_2`, `ch_2_0_3`, made by `upscale.py` from the middle ones). The smoke test checks every face at every level, and a level without pictures.

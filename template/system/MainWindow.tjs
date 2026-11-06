@@ -2719,6 +2719,12 @@ class KAGWindow extends Window
 
 
 
+		// The actions keys, buttons and gestures point into (Actions.tjs)
+		if (typeof global.KAGDefineFrameworkActions != "undefined") {
+			KAGDefineFrameworkActions(this);
+			gestures = new KAGGestures(this);
+		}
+
 		// Create pad button handlers
 
 		createPadKeyMap();
@@ -2811,6 +2817,8 @@ class KAGWindow extends Window
 
 
 		extractTrigger.cancel();
+
+		invalidate gestures if gestures !== void;
 
 		invalidate extractTrigger;
 
@@ -3271,13 +3279,13 @@ class KAGWindow extends Window
 
 		VK_PAD2 =>			VK_ESCAPE,
 
-		VK_PAD3 =>			showHistoryByKey, //#'R',
+		VK_PAD3 =>			"@backlog", // X (actions: Actions.tjs)
 
-		VK_PAD4 =>			switchAutoModeByKey, // Y
+		VK_PAD4 =>			"@auto", // Y
 
-		VK_PAD6 =>			skipToNextStopByKey, // R1
+		VK_PAD6 =>			"@skip", // R1
 
-		VK_PAD7 =>			switchLanguageByKey, // L2: the next language (Language.tjs)
+		VK_PAD7 =>			"@language", // L2: the next language (Language.tjs)
 
 		VK_PAD8 =>			VK_CONTROL, // R2: held, skips like Ctrl (getKeyState reads it through padKeyMapReverse)
 
@@ -3445,6 +3453,8 @@ class KAGWindow extends Window
 
 			// Processing for pad input
 
+			if(ev.type == 'onKeyDown' && keyCapture !== void && KAGIsPadKey(ev.key) && takeCapturedKey(ev.key, ev.shift)) return;
+
 			var handler = padKeyMap[ev.key];
 
 			if(handler !== void)
@@ -3453,7 +3463,13 @@ class KAGWindow extends Window
 
 				// Handler found
 
-				if(typeof(handler) == "Object")
+				var actionName = typeof global.KAGActionNameOf != "undefined" ? KAGActionNameOf(handler) : void;
+				if (actionName !== void)
+				{
+					// an action (Actions.tjs)
+					KAGRunAction(actionName) if (ev.type == 'onKeyDown');
+				}
+				else if(typeof(handler) == "Object")
 
 				{
 
@@ -11011,6 +11027,7 @@ class KAGWindow extends Window
 	function onPrimaryRightClick()
 	{
 		// Called when right clicked on primary layer
+		if (gestures !== void && gestures.swallowRightClick()) return; // a right-button drag's own
 
 		// Intercept with high priority during beginskip processing
 		if (prevSkipMode !== void) {
@@ -13252,6 +13269,7 @@ class KAGWindow extends Window
 	{
         // Called from primary layer when "Click Action" is not filtered
 		if (!force && clickInterceptor !== void && clickInterceptor()) return;
+		if (!force && gestures !== void && gestures.swallowClick()) return; // a swipe's own click
 		clickCount++ if (!force);
 		if(!force && showDramaticHidden()) return; // dramatic mode: a click shows the window first
 		if(force || !callHook(leftClickHook))
@@ -13331,15 +13349,17 @@ class KAGWindow extends Window
 		return -2;
 	}
 
-	function onMouseDown(x, y)
+	function onMouseDown(x, y, button, shift)
 	{
 		lastMouseDownX = x;
 		lastMouseDownY = y;
+		gestures.onRightDown(x, y) if gestures !== void && button == mbRight; // a right-button drag
 		super.onMouseDown(...);
 	}
 
 	function onMouseUp(x, y, btn)
 	{
+		gestures.onRightUp(x, y) if gestures !== void && btn == mbRight;
 		conductor.trigger("mouseup" + btn);
 		super.onMouseUp(...);
 		// [XXX] When dialog is shown in modal state, clicks outside layer bounds might not be detected
@@ -13402,11 +13422,19 @@ class KAGWindow extends Window
 	//   when    void, or a function: the binding is there while it returns true
 	var keyBindings = [];
 
+	// action may name one of the actions (Actions.tjs) as "@name": then label, when left void, is
+	// the action's, and the binding is there while the game has the action
 	function bindKey(key, shift, action, label, early = true, debug = false, when = void)
 	{
 		unbindKey(key, shift);
+		var name = typeof global.KAGActionNameOf != "undefined" ? KAGActionNameOf(action) : void;
+		if (name !== void) {
+			var a = KAGActions[name];
+			label = a.label if label === void && a !== void;
+			when = function { return KAGActionAvailable(this.name); } incontextof %[ name:name ] if when === void;
+		}
 		keyBindings.add(%[ key:key, shift:shift, action:keyBindingFunction(action), label:label,
-			early:early, debug:debug, when:keyBindingFunction(when) ]);
+			early:early, debug:debug, when:keyBindingFunction(when), actionName:name ]);
 	}
 
 	// A function written outside any object (function { ... } in AfterInit.tjs) has no object of
@@ -13417,6 +13445,100 @@ class KAGWindow extends Window
 		if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
 			Scripts.getObjectContext(f) === null) return f incontextof global;
 		return f;
+	}
+
+	//---------------------------------------- The player's own bindings (since 0.19.0) --
+	// Kept in the system variables and laid over the game's (applyPlayerBindings, which
+	// Initialize.tjs calls after AfterInit.tjs): scflags.keyRebinds, [key, shift, action name]
+	// each ("" takes the key's binding away); scflags.padRebinds and scflags.gestureRebinds,
+	// a controller button's or a direction's action name. A game's screen changes them through
+	// rebindKey, rebindPad, rebindGesture and resetPlayerBindings.
+	var gestures;              // the swipes and right-button drags (KAGGestures, Actions.tjs)
+	// what a gesture does in the story (an action's name; "" nothing): a game sets its own
+	var gestureActions = %[ "left" => "", "right" => "", "up" => "backlog", "down" => "hide" ];
+	var gameKeyBindings, gamePadKeyMap, gameGestureActions; // the game's, under the player's
+	// keys the framework keeps for itself: the player can't take these
+	var reservedKeys = [ [VK_F10, 0], [VK_F11, ssShift], [VK_F12, ssShift], [VK_RETURN, void], [VK_SPACE, void],
+		[VK_UP, 0], [VK_DOWN, 0], [VK_LEFT, 0], [VK_RIGHT, 0], [VK_CONTROL, void], [VK_SHIFT, void], [VK_TAB, void] ];
+
+	function applyPlayerBindings()
+	{
+		if (typeof global.KAGActions != "Object") return;
+		if (gameKeyBindings === void) {
+			gameKeyBindings = [];
+			gameKeyBindings.assign(keyBindings);
+			gamePadKeyMap = %[];
+			(Dictionary.assign incontextof gamePadKeyMap)(padKeyMap, true);
+			gameGestureActions = %[];
+			(Dictionary.assign incontextof gameGestureActions)(gestureActions, true);
+		} else {
+			keyBindings.assign(gameKeyBindings);
+			(Dictionary.assign incontextof padKeyMap)(gamePadKeyMap, true);
+			(Dictionary.assign incontextof gestureActions)(gameGestureActions, true);
+		}
+		var keys = scflags.keyRebinds;
+		if (keys !== void) {
+			for (var i = 0; i < keys.count; i++) {
+				var k = keys[i];
+				if (k[2] == "") unbindKey(k[0], k[1]);
+				else if (KAGActions[k[2]] !== void) bindKey(k[0], k[1], "@" + k[2], void, true);
+			}
+		}
+		var pads = scflags.padRebinds;
+		if (pads !== void) {
+			var ar = [];
+			ar.assign(pads);
+			for (var i = 0; i < ar.count; i += 2) padKeyMap[+ar[i]] = ar[i + 1] != "" ? "@" + ar[i + 1] : void;
+		}
+		recreatePadKeyMap();
+		var dirs = scflags.gestureRebinds;
+		if (dirs !== void) (Dictionary.assign incontextof gestureActions)(dirs, false);
+	}
+
+	function keyReserved(key, shift)
+	{
+		for (var i = 0; i < reservedKeys.count; i++) {
+			var r = reservedKeys[i];
+			if (r[0] == key && (r[1] === void || r[1] == shift)) return true;
+		}
+		return false;
+	}
+
+	// key and shift do action name ("" nothing); false for a key the framework keeps
+	function rebindKey(key, shift, name)
+	{
+		if (keyReserved(key, shift)) return false;
+		var keys = scflags.keyRebinds;
+		keys = scflags.keyRebinds = [] if keys === void;
+		for (var i = keys.count - 1; i >= 0; i--) keys.erase(i) if keys[i][0] == key && keys[i][1] === shift;
+		keys.add([ key, shift, name ]);
+		applyPlayerBindings();
+		return true;
+	}
+
+	// controller button (VK_PADn) does action name ("" nothing)
+	function rebindPad(button, name)
+	{
+		scflags.padRebinds = %[] if scflags.padRebinds === void;
+		scflags.padRebinds[button] = name;
+		applyPlayerBindings();
+	}
+
+	// a gesture's direction ("left", "right", "up", "down") does action name ("" nothing)
+	function rebindGesture(dir, name)
+	{
+		scflags.gestureRebinds = %[] if scflags.gestureRebinds === void;
+		scflags.gestureRebinds[dir] = name;
+		applyPlayerBindings();
+	}
+
+	// the game's bindings again
+	function resetPlayerBindings()
+	{
+		delete scflags.keyRebinds;
+		delete scflags.padRebinds;
+		delete scflags.gestureRebinds;
+		applyPlayerBindings();
 	}
 
 	function unbindKey(key, shift)
@@ -13448,7 +13570,8 @@ class KAGWindow extends Window
 	{
 		var b = findKeyBinding(key, shift, early);
 		if (b === void) return false;
-		if (typeof b.action == "String") Scripts.eval(b.action);
+		if (b.actionName !== void) KAGRunAction(b.actionName);
+		else if (typeof b.action == "String") Scripts.eval(b.action);
 		else if (b.action !== void) b.action(key, shift);
 		return true;
 	}
@@ -13471,34 +13594,52 @@ class KAGWindow extends Window
 		bindKey(VK_BACK, ssShift, function { backToAutoLabelStoreMenuItem.click(); } incontextof this,
 			"Go back to the last pass record", false, true,
 			function { return autoLabelStore !== void && typeof this.backToAutoLabelStoreMenuItem == "Object"; } incontextof this);
-		// Proceed to next choice/unread
-		bindKey(#'F', void, skipToNextStopByKey, "Skip to the next choice or unread text", false);
-		// Back to previous
-		bindKey(#'B', void, goBackByKey, "Go back", false);
-		// Auto-read
-		bindKey(#'A', void, switchAutoModeByKey, "Auto mode on or off", false);
-		// Save and load bookmarks, in free save mode
-		bindKey(#'S', void, function { menuItemClickByKey("storeMenu"); } incontextof this, "Save", false, false,
-			function { return freeSaveDataMode; } incontextof this);
-		bindKey(#'L', void, function { menuItemClickByKey("restoreMenu"); } incontextof this, "Load", false, false,
-			function { return freeSaveDataMode; } incontextof this);
-		// Quick save and quick load, where the game has quick saves (quickSaveSlot)
-		bindKey(#'S', ssShift, function { quickSave(); } incontextof this, "Quick save", false, false,
-			function { return quickSaveSlot >= 0; } incontextof this);
-		bindKey(#'L', ssShift, function { quickLoad(); } incontextof this, "Quick load", false, false,
-			function { return quickSaveSlot >= 0; } incontextof this);
-		// The next language (Language.tjs)
-		bindKey(VK_F9, 0, switchLanguageByKey, "Show the game in its next language", false, false,
-			function { return languageAvailable; } incontextof this);
-		// Show message history
-		bindKey(#'R', void, showHistoryByKey, "Message history", false);
-		bindKey(VK_UP, ssShift, showHistoryByKey, "Message history", false);
-		// Hide message
-		bindKey(VK_ESCAPE, void, function { menuItemClickByKey("rightClickMenuItem"); } incontextof this,
-			"Hide the message window", false);
-		// The menu bar (MenuBar.tjs; in a window) and screenshots
-		bindKey(VK_F10, 0, showMenuBar, "Menu", false, false, function { return menuBarShown; } incontextof this);
-		bindKey(VK_F12, 0, saveScreenshot, "Save a screenshot", false, false, function { return screenshotEnabled; } incontextof this);
+		// The actions (Actions.tjs): each key names one, which says what it does and whether the
+		// game has it (quick saves, free saves, languages, the menu bar, screenshots)
+		if (typeof global.KAGActions == "Object") {
+			bindKey(#'F', void, "@skip", void, false);
+			bindKey(#'B', void, "@back", void, false);
+			bindKey(#'A', void, "@auto", void, false);
+			bindKey(#'S', void, "@save", void, false);
+			bindKey(#'L', void, "@load", void, false);
+			bindKey(#'S', ssShift, "@quickSave", void, false);
+			bindKey(#'L', ssShift, "@quickLoad", void, false);
+			bindKey(VK_F9, 0, "@language", void, false);
+			bindKey(#'R', void, "@backlog", void, false);
+			bindKey(VK_UP, ssShift, "@backlog", void, false);
+			bindKey(VK_ESCAPE, void, "@hide", void, false);
+			bindKey(VK_F10, 0, "@menu", void, false);
+			bindKey(VK_F12, 0, "@screenshot", void, false);
+		} else {
+			// Proceed to next choice/unread
+			bindKey(#'F', void, skipToNextStopByKey, "Skip to the next choice or unread text", false);
+			// Back to previous
+			bindKey(#'B', void, goBackByKey, "Go back", false);
+			// Auto-read
+			bindKey(#'A', void, switchAutoModeByKey, "Auto mode on or off", false);
+			// Save and load bookmarks, in free save mode
+			bindKey(#'S', void, function { menuItemClickByKey("storeMenu"); } incontextof this, "Save", false, false,
+				function { return freeSaveDataMode; } incontextof this);
+			bindKey(#'L', void, function { menuItemClickByKey("restoreMenu"); } incontextof this, "Load", false, false,
+				function { return freeSaveDataMode; } incontextof this);
+			// Quick save and quick load, where the game has quick saves (quickSaveSlot)
+			bindKey(#'S', ssShift, function { quickSave(); } incontextof this, "Quick save", false, false,
+				function { return quickSaveSlot >= 0; } incontextof this);
+			bindKey(#'L', ssShift, function { quickLoad(); } incontextof this, "Quick load", false, false,
+				function { return quickSaveSlot >= 0; } incontextof this);
+			// The next language (Language.tjs)
+			bindKey(VK_F9, 0, switchLanguageByKey, "Show the game in its next language", false, false,
+				function { return languageAvailable; } incontextof this);
+			// Show message history
+			bindKey(#'R', void, showHistoryByKey, "Message history", false);
+			bindKey(VK_UP, ssShift, showHistoryByKey, "Message history", false);
+			// Hide message
+			bindKey(VK_ESCAPE, void, function { menuItemClickByKey("rightClickMenuItem"); } incontextof this,
+				"Hide the message window", false);
+			// The menu bar (MenuBar.tjs; in a window) and screenshots
+			bindKey(VK_F10, 0, showMenuBar, "Menu", false, false, function { return menuBarShown; } incontextof this);
+			bindKey(VK_F12, 0, saveScreenshot, "Save a screenshot", false, false, function { return screenshotEnabled; } incontextof this);
+		}
 		bindKey(VK_SNAPSHOT, void, saveScreenshot, void, false, false, function { return screenshotEnabled; } incontextof this)
 			if (typeof global.VK_SNAPSHOT == "Integer");
 	}
@@ -13630,6 +13771,16 @@ class KAGWindow extends Window
 	function closeMenuDropDown()
 	{
 		menuDropDown.close() if menuDropDown !== void && isvalid menuDropDown;
+	}
+
+	// Change Controls: the player's own keys, controller buttons and gestures for the actions
+	// (Controls.tjs, Actions.tjs)
+	function showBindings()
+	{
+		if (!KAGElementsScreenAvailable() || currentDialog !== void || typeof global.KAGBindingsPanel == "undefined") return false;
+		try { (new KAGBindingsPanel(this)).open(); }
+		catch (e) { dm("Could not show Change Controls: " + e.message); return false; }
+		return true;
 	}
 
 	function showControls()
@@ -14375,8 +14526,23 @@ class KAGWindow extends Window
 		layer.endTextUnit();
 	}
 
+	// Change Controls (KAGBindingsPanel) waiting for a key or a controller button: keyCapture
+	// takes the next one, and keys for a moment after are dropped (a controller button's own key
+	// follows it)
+	var keyCapture, keyCaptureUntil = 0;
+	function takeCapturedKey(key, shift)
+	{
+		if (keyCapture === void) return System.getTickCount() < keyCaptureUntil;
+		var f = keyCapture;
+		keyCapture = void;
+		keyCaptureUntil = System.getTickCount() + 250;
+		f(key, shift);
+		return true;
+	}
+
 	function onKeyDown(key, shift)
 	{
+		if(takeCapturedKey(key, shift)) return;
 		if(pseudoMenuShortcut(key, shift)) return;
 		if(focusedLayer === null)
 			internalOnKeyDown(key, shift);
@@ -14391,6 +14557,19 @@ class KAGWindow extends Window
 	// A pinch on a touch screen (since 0.18.0): the engine's onTouchScaling goes to the
 	// "onTouchScalingHook" hooks (startdistance, currentdistance, cx, cy, flag), the sample's CG
 	// viewer among them
+	// A swipe (Actions.tjs, KAGGestures)
+	function onTouchDown(x, y, cx, cy, id)
+	{
+		gestures.onTouchDown(x, y, id) if gestures !== void;
+		super.onTouchDown(...) if typeof super.onTouchDown != "undefined";
+	}
+
+	function onTouchUp(x, y, cx, cy, id)
+	{
+		gestures.onTouchUp(x, y, id) if gestures !== void;
+		super.onTouchUp(...) if typeof super.onTouchUp != "undefined";
+	}
+
 	function onTouchScaling(startdistance, currentdistance, cx, cy, flag)
 	{
 		if (callHook("onTouchScalingHook", startdistance, currentdistance, cx, cy, flag)) return;

@@ -1146,6 +1146,8 @@ KAGLoadScript("DefaultMover.tjs");
 
 KAGLoadScript("Action.tjs");
 
+KAGLoadScript("Actions.tjs"); // what keys, buttons and gestures do, in one table (since 0.19.0)
+
 KAGLoadScript("MainWindow.tjs");
 
 KAGLoadScript("Options.tjs"); // the player's settings, for Config screens (since 0.17.0)
@@ -1371,6 +1373,10 @@ if(Storages.isExistentStorage("AfterInit.tjs"))
 //	if(ovr !== void && ovr != 'yes') Scripts.eval(ovr);
 
 //}
+
+// the player's own key, controller and gesture bindings, over the game's (Actions.tjs, since 0.19.0)
+if (typeof kag.applyPlayerBindings != "undefined") kag.applyPlayerBindings();
+
 
 
 

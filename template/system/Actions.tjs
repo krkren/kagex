@@ -1,0 +1,267 @@
+/**
+ * Actions (since 0.19.0): one table of what the player can ask the game to do: skip, auto mode,
+ * the backlog, hiding the window, quick save and load, replaying the voice, going back by a
+ * message, a scene or a choice, on to the next scene, a screenshot, the menu, the next language.
+ * Keys, controller buttons, gestures and on-screen buttons point into it, so a player who
+ * changes what a key does, or a game that adds an action, changes it everywhere at once.
+ *
+ *   KAGDefineAction(%[ name, label, func, available, enabled ])   adds or replaces an action
+ *       name       what bindings call it ("quickSave")
+ *       label      what it does, in English (shown through tr(): the controls list, tips)
+ *       func       a function, or an expression (Scripts.eval)
+ *       available  void, or a function: whether this game has it at all (quick saves where
+ *                  Config.tjs gives them a slot); a binding to it is left out while it's false
+ *       enabled    void, or a function: whether it can be done now (a quick load needs a quick
+ *                  save); runAction does nothing while it's false
+ *   KAGRunAction(name), KAGActionAvailable(name), KAGActionEnabled(name), KAGActionLabel(name)
+ *   KAGActions (name -> action), KAGActionOrder (the names, in the order defined)
+ *
+ * Bindings name an action with "@": kag.bindKey(VK_F6, 0, "@skip"), kag.padKeyMap[VK_PAD6] =
+ * "@skip", kag.gestureActions["up"] = "backlog" (gestures take the bare name). The player's own
+ * key and controller bindings (kag.rebindKey, kag.rebindPad, kag.resetPlayerBindings) are kept
+ * in the system variables and laid over the game's (KAGWindow.applyPlayerBindings, at start).
+ *
+ * Gestures (KAGGestures, the window's): in the story (no system screen, prompt, backlog or
+ * choice showing), a swipe on a touch screen or a drag with the right mouse button runs
+ * kag.gestureActions[left|right|up|down], and the click or right click it would make is
+ * dropped. A swipe is at least gestureDistance (a share of the window's shorter side) within
+ * gestureTime ms, mostly in one direction; two fingers are a pinch, never a swipe.
+ */
+var KAGActions = %[];
+var KAGActionOrder = [];
+
+function KAGDefineAction(a)
+{
+	if (typeof a != "Object" || a === void || a.name === void || a.name == "") throw new Exception("KAGDefineAction: an action needs a name");
+	var bind = typeof global.KAGBindToGlobal != "undefined" ? KAGBindToGlobal : function(f) { return f; };
+	a.func = bind(a.func);
+	a.available = bind(a.available);
+	a.enabled = bind(a.enabled);
+	KAGActionOrder.add(a.name) if KAGActions[a.name] === void;
+	KAGActions[a.name] = a;
+	return a;
+}
+
+// A function written outside any object has no object of its own, so called as the action's
+// member it would run with the action's dictionary as this: it gets the global object instead
+function KAGBindToGlobal(f)
+{
+	if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
+		Scripts.getObjectContext(f) === null) return f incontextof global;
+	return f;
+}
+
+function KAGActionAvailable(name)
+{
+	var a = KAGActions[name];
+	if (a === void) return false;
+	if (a.available === void) return true;
+	try { return a.available() ? true : false; } catch (e) { dm("action " + name + ": " + e.message); return false; }
+}
+
+function KAGActionEnabled(name)
+{
+	if (!KAGActionAvailable(name)) return false;
+	var a = KAGActions[name];
+	if (a.enabled === void) return true;
+	try { return a.enabled() ? true : false; } catch (e) { dm("action " + name + ": " + e.message); return false; }
+}
+
+function KAGActionLabel(name)
+{
+	var a = KAGActions[name];
+	return a !== void && a.label !== void ? tr(a.label) : name;
+}
+
+// Runs the action when it can be done now; true if it ran
+function KAGRunAction(name)
+{
+	if (!KAGActionEnabled(name)) return false;
+	var a = KAGActions[name];
+	if (typeof a.func == "String") Scripts.eval(a.func);
+	else if (a.func !== void) a.func();
+	return true;
+}
+
+// Whether key is a controller button's (VK_PAD1 to VK_PAD12, the D-pad)
+function KAGIsPadKey(key)
+{
+	if (typeof global.VK_PAD1 != "Integer") return false;
+	for (var i = 1; i <= 12; i++) if (typeof global["VK_PAD" + i] == "Integer" && key == global["VK_PAD" + i]) return true;
+	return key == VK_PADLEFT || key == VK_PADRIGHT || key == VK_PADUP || key == VK_PADDOWN;
+}
+
+// "@name" -> "name"; void for anything else
+function KAGActionNameOf(binding)
+{
+	if (typeof binding == "String" && binding.length > 1 && binding.charAt(0) == "@") return binding.substring(1);
+}
+
+/**
+ * The framework's actions, for the window win (KAGWindow's constructor, before its bindings)
+ */
+function KAGDefineFrameworkActions(win)
+{
+	// enabled while the window's menu item for it is (the window keeps those up to date)
+	KAGDefineAction(%[ name:"skip", label:"Skip to the next choice or unread text", func:win.skipToNextStopByKey,
+		enabled:KAGMenuItemEnabled(win, "skipToNextStopMenuItem") ]);
+	KAGDefineAction(%[ name:"auto", label:"Auto mode on or off", func:win.switchAutoModeByKey,
+		enabled:KAGMenuItemEnabled(win, "autoModeMenuItem") ]);
+	KAGDefineAction(%[ name:"backlog", label:"Message history", func:win.showHistoryByKey,
+		enabled:KAGMenuItemEnabled(win, "showHistoryMenuItem") ]);
+	KAGDefineAction(%[ name:"hide", label:"Hide the message window",
+		func:function { menuItemClickByKey("rightClickMenuItem"); } incontextof win,
+		enabled:KAGMenuItemEnabled(win, "rightClickMenuItem") ]);
+	KAGDefineAction(%[ name:"back", label:"Go back", func:win.goBackByKey,
+		enabled:KAGMenuItemEnabled(win, "goBackMenuItem") ]);
+	KAGDefineAction(%[ name:"save", label:"Save", func:function { menuItemClickByKey("storeMenu"); } incontextof win,
+		available:function { return freeSaveDataMode; } incontextof win, enabled:KAGMenuItemEnabled(win, "storeMenu") ]);
+	KAGDefineAction(%[ name:"load", label:"Load", func:function { menuItemClickByKey("restoreMenu"); } incontextof win,
+		available:function { return freeSaveDataMode; } incontextof win, enabled:KAGMenuItemEnabled(win, "restoreMenu") ]);
+	KAGDefineAction(%[ name:"quickSave", label:"Quick save", func:function { quickSave(); } incontextof win,
+		available:function { return quickSaveSlot >= 0; } incontextof win, enabled:KAGMenuItemEnabled(win, "storeMenu") ]);
+	KAGDefineAction(%[ name:"quickLoad", label:"Quick load", func:function { quickLoad(); } incontextof win,
+		available:function { return quickSaveSlot >= 0; } incontextof win,
+		enabled:function { return newestQuickSave() >= 0 && (typeof this.restoreMenu != "Object" || restoreMenu.enabled); } incontextof win ]);
+	KAGDefineAction(%[ name:"voiceReplay", label:"Play the voice again",
+		func:function { Scripts.eval(currentVoiceScript); } incontextof win,
+		available:function { return typeof global.world_object != "undefined"; },
+		enabled:function { return hasCurrentVoice && currentVoiceScript != ""; } incontextof win ]);
+	// the scene player's moves (compiled scenes, KAGEnvPlayer.tjs)
+	KAGDefineAction(%[ name:"rewind", label:"Rewind to the start of the scene or the last choice",
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.rewind(); },
+		available:KAGActionWorld,
+		enabled:function { var p = KAGActionPlayer(); return p !== void && (p.canPrevScene || p.canPrevChoice); } ]);
+	KAGDefineAction(%[ name:"prevScene", label:"Back to the start of the scene",
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevScene(true); },
+		available:KAGActionWorld,
+		enabled:function { var p = KAGActionPlayer(); return p !== void && p.canPrevScene; } ]);
+	KAGDefineAction(%[ name:"prevChoice", label:"Back to the last choice",
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevChoice(true); },
+		available:KAGActionWorld,
+		enabled:function { var p = KAGActionPlayer(); return p !== void && p.canPrevChoice; } ]);
+	KAGDefineAction(%[ name:"nextScene", label:"On to the next scene",
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.nextScene(); },
+		available:KAGActionWorld, enabled:function { return KAGActionPlayer() !== void; } ]);
+	KAGDefineAction(%[ name:"language", label:"Show the game in its next language", func:win.switchLanguageByKey,
+		available:function { return languageAvailable; } incontextof win ]);
+	KAGDefineAction(%[ name:"menu", label:"Menu", func:function { showMenuBar(); } incontextof win,
+		available:function { return menuBarShown; } incontextof win ]);
+	KAGDefineAction(%[ name:"screenshot", label:"Save a screenshot", func:function { saveScreenshot(); } incontextof win,
+		available:function { return screenshotEnabled; } incontextof win ]);
+}
+
+// A function telling whether win's menu item (by member name) is enabled: true where the
+// window has no such item
+function KAGMenuItemEnabled(win, item)
+{
+	return function {
+		var w = this.win;
+		if (typeof w[this.item] != "Object") return true;
+		var m = w[this.item];
+		return m === void || m.enabled;
+	} incontextof %[ win:win, item:item ];
+}
+
+// A World game: one that can play compiled scenes (the scene moves are there while one plays)
+function KAGActionWorld()
+{
+	return typeof global.world_object != "undefined";
+}
+
+// The scene player while it plays a compiled scene
+function KAGActionPlayer()
+{
+	if (typeof global.world_object == "undefined" || world_object.player === void) return;
+	var p = world_object.player;
+	return p.working ? p : void;
+}
+
+/**
+ * Swipes and right-button drags (the window's; see above)
+ */
+class KAGGestures
+{
+	var window;
+	var startX, startY, startTick, touches = 0, kind = "";   // the touch or drag going on
+	var swallowTick = 0, swallowRightTick = 0;               // the click it makes is dropped
+	var gestureDistance = 0.12;  // of the window's shorter side
+	var gestureTime = 800;       // ms
+
+	function KAGGestures(win) { window = win; }
+	function finalize() {}
+
+	// whether a gesture may run now: in the story, nothing over it
+	function canRun()
+	{
+		with (window) {
+			if (.usingExtraConductor || .currentDialog !== void || .historyShowing || .selectShowing) return false;
+			if (.conductor !== .mainConductor || .messageLayerHiding) return false;
+		}
+		return true;
+	}
+
+	function begin(x, y, how)
+	{
+		startX = x, startY = y, startTick = System.getTickCount(), kind = how;
+	}
+
+	// the direction, if the move from the start is a gesture
+	function direction(x, y)
+	{
+		if (kind == "" || System.getTickCount() - startTick > gestureTime) return "";
+		var w = window.innerWidth, h = window.innerHeight;
+		var min = (w < h ? w : h) * gestureDistance;
+		var dx = x - startX, dy = y - startY, ax = Math.abs(dx), ay = Math.abs(dy);
+		if (ax < min && ay < min) return "";
+		if (ax > ay * 1.5) return dx < 0 ? "left" : "right";
+		if (ay > ax * 1.5) return dy < 0 ? "up" : "down";
+		return "";
+	}
+
+	// a gesture made: its action, if it has one and can run; true if it ran
+	function finish(dir)
+	{
+		var how = kind;
+		kind = "";
+		if (dir == "" || !canRun()) return false;
+		var name = window.gestureActions[dir];
+		if (name === void || name == "") return false;
+		if (how == "touch") swallowTick = System.getTickCount();
+		else swallowRightTick = System.getTickCount();
+		KAGRunAction(name);
+		return true;
+	}
+
+	function onTouchDown(x, y, id)
+	{
+		touches++;
+		if (touches == 1) begin(x, y, "touch"); else kind = ""; // two fingers: a pinch
+	}
+
+	function onTouchUp(x, y, id)
+	{
+		touches-- if touches > 0;
+		if (kind == "touch") finish(direction(x, y));
+	}
+
+	function onRightDown(x, y) { begin(x, y, "right"); }
+	function onRightUp(x, y) { if (kind == "right") finish(direction(x, y)); }
+
+	// the click a swipe made (SDL makes mouse events from a touch, after the touch's own)
+	function swallowClick()
+	{
+		if (swallowTick == 0) return false;
+		var t = System.getTickCount() - swallowTick;
+		swallowTick = 0;
+		return t < 500;
+	}
+
+	function swallowRightClick()
+	{
+		if (swallowRightTick == 0) return false;
+		var t = System.getTickCount() - swallowRightTick;
+		swallowRightTick = 0;
+		return t < 500;
+	}
+}

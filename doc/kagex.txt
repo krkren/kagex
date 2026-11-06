@@ -3073,6 +3073,47 @@ what it would say) and Agent.a11yTree(), or press a node with Agent.a11yAction(i
 
 
 
+● Actions, Rebinding and Gestures
+
+What the player can ask the game to do is one table (since 0.19.0, template/system/Actions.tjs):
+skip, auto mode, the message history, hiding the window, going back, save, load, quick save
+and load, playing the voice again, the scene moves of compiled scenes (rewind, back to the
+start of the scene, back to the last choice, on to the next scene), the next language, the
+menu and a screenshot. Keys, controller buttons, gestures and on-screen buttons name an action,
+so changing what an action does, or which key does it, changes it everywhere.
+
+    KAGDefineAction(%[ name:"photo", label:"Take a photo", func:takePhoto,
+                       available:function { return sf.cameraUnlocked; }, enabled:canTakePhoto ]);
+    kag.bindKey(VK_F6, 0, "@skip");          // a key names an action with "@"
+    kag.padKeyMap[VK_PAD6] = "@skip";        // and so does a controller button
+    kag.gestureActions.left = "rewind";      // a gesture takes the bare name
+    KAGActions.quickSave.func = mySave;      // the game's own way of doing a framework action
+    KAGRunAction("backlog"); KAGActionEnabled("quickLoad"); KAGActionLabel("auto");
+
+  available    whether the game has the action at all (quick saves only with a quick save slot);
+               keys and buttons bound to it are left out of the controls list while it's false
+  enabled      whether it can be done now (a quick load needs a quick save; the framework's
+               follow the window's menu items); KAGRunAction does nothing while it's false
+
+Change Controls (the controls list's Change… button, or kag.showBindings()) lists the actions
+with their keys, controller buttons and gestures: picking one waits for a key or a controller
+button (Esc leaves it, Backspace takes its keys away), its gesture cell goes round the
+directions, and Reset puts the game's back. The player's choices are kept in the system
+variables (scflags.keyRebinds, padRebinds, gestureRebinds) and laid over the game's bindings
+at start, after AfterInit.tjs (kag.applyPlayerBindings); a game's own screen can use
+kag.rebindKey(key, shift, name), rebindPad(button, name), rebindGesture(dir, name) and
+resetPlayerBindings(). The framework keeps F10, Shift+F11, Shift+F12, Return, Space, Tab, Ctrl,
+Shift and the arrows (kag.reservedKeys).
+
+Gestures: in the story (no system screen, prompt, history or choice showing), a swipe on a
+touch screen, or a drag with the right mouse button, runs kag.gestureActions[left, right, up,
+down], and the click or right click it would have made is dropped. The framework's are up for
+the message history and down to hide the window; the sample adds left to rewind and right to
+skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly one way
+(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch.
+
+
+
 ● KAGEX Operation System
 
 

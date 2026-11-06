@@ -2867,6 +2867,63 @@ def sample_steps(eng):
     prompt_steps(eng, step)
     interface_steps(eng, step)
 
+    @step("actions: keys, controller buttons and gestures run one table; Change Controls binds a key, the binding is kept, and Reset puts the game's back")
+    def _():
+        if eng.tjs('return typeof global.KAGActions == "Object" && typeof kag.rebindKey != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the actions)", flush=True)
+            return
+        # in the Character demo, where the message history is there after a line or two
+        eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        got = str(eng.tjs('return [kag.findKeyBinding(VK_F6, 0, true).actionName, kag.findKeyBinding(#\'R\', 0, false).actionName,'
+                          ' kag.padKeyMap[VK_PAD3], kag.gestureActions.up, kag.gestureActions.left].join(",");'))
+        if got != "skip,backlog,@backlog,backlog,rewind":
+            raise SmokeError("F6, R, the controller's X and the gestures up and left aren't skip, backlog, @backlog, backlog, rewind: %s" % got)
+        # a swipe up in the story shows the message history, and its own click is dropped
+        for i in range(6):
+            if eng.tjs('return kag.inStable && KAGActionEnabled("backlog") ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('global.__smokeClicks = kag.clickCount; kag.onTouchDown(500, 600, 1, 1, 0); kag.onTouchUp(500, 250, 1, 1, 0);'
+                ' kag.onPrimaryClick(); return 1;')
+        eng.wait("the message history (a swipe up)", "kag.historyShowing", timeout=10)
+        if eng.tjs("return kag.clickCount - global.__smokeClicks;") != 0:
+            raise SmokeError("the swipe's own click went on to the next text")
+        eng.tjs("kag.hideHistory(); return 1;")
+        eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        # the framework keeps some keys; the player's binding is the system variables', over the game's
+        refused = eng.tjs("return kag.rebindKey(VK_F10, 0, \"skip\") ? 1 : 0;")
+        if refused != 0:
+            raise SmokeError("F10 (the menu) could be taken for another action")
+        if elements_screens(eng):
+            # Change Controls: a row picked waits for a key, which then does its action
+            eng.tjs("kag.showBindings(); return 1;")
+            eng.wait("Change Controls", 'kag.currentDialog instanceof "KAGBindingsPanel"', timeout=10)
+            eng.tjs('kag.currentDialog.startWaiting("auto"); return 1;')
+            eng.wait("it to wait for a key", "kag.keyCapture !== void", timeout=10)
+            eng.tjs("kag.onKeyDown(#'J', 0); return 1;")
+            time.sleep(0.5)
+            got = str(eng.tjs("var b = kag.findKeyBinding(#'J', 0, true); var r = kag.scflags.keyRebinds;"
+                              ' return (b !== void ? b.actionName : "none") + "," + (r !== void ? r.count : 0) + "," + kag.currentDialog.message;'))
+            print("     J after Change Controls: %s" % got, flush=True)
+            if not got.startswith("auto,1,"):
+                raise SmokeError("Change Controls didn't bind J to auto mode in the system variables: %s" % got)
+            eng.tjs("kag.currentDialog.close(); return 1;")
+            eng.wait("Change Controls to close", "kag.currentDialog === void", timeout=10)
+            eng.tjs("kag.runKeyBinding(#'J', 0, true); return 1;")
+            eng.wait("auto mode (J)", "kag.autoMode", timeout=5)
+            eng.tjs("kag.cancelAutoMode(); return 1;")
+        eng.tjs("kag.resetPlayerBindings(); return 1;")
+        got = str(eng.tjs("var b = kag.findKeyBinding(#'J', 0, true); return (b === void ? \"none\" : b.actionName) + \",\" + kag.gestureActions.left;"))
+        if got != "none,rewind":
+            raise SmokeError("Reset didn't put the game's bindings back: %s" % got)
+        eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs('kag.process("layer.ks", "*start"); return 1;')
+        eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
+
     @step("the controls list has the sample's own keys and buttons (AfterInit.tjs)")
     def _():
         if not elements_screens(eng):
