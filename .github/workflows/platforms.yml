@@ -76,6 +76,10 @@ env:
   # CMake 4 (the macOS runners) refuses the old cmake_minimum_required of some engine
   # dependencies (krkrz_vorbis)
   CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+  # Emscripten for the web build: "latest" changes under a release (7.0.0, out four minutes
+  # before 0.21.0's release run, no longer gives Effekseer's sources malloc through the C++
+  # headers, and the web build stopped); move it on deliberately, with a platforms run
+  EMSDK_VERSION: "6.0.13"
 
 jobs:
   select:
@@ -291,7 +295,7 @@ jobs:
         if: steps.engine.outputs.reuse == ''
         run: |
           git clone -q https://github.com/emscripten-core/emsdk.git "$EMSDK"
-          kirikiri/kagex/.github/platforms/run-logged.sh emsdk bash -c "cd '$EMSDK' && ./emsdk install latest && ./emsdk activate latest"
+          kirikiri/kagex/.github/platforms/run-logged.sh emsdk bash -c "cd '$EMSDK' && ./emsdk install $EMSDK_VERSION && ./emsdk activate $EMSDK_VERSION"
           git clone -q https://github.com/microsoft/vcpkg "$RUNNER_TEMP/vcpkg"
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
