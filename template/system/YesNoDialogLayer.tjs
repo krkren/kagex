@@ -512,6 +512,167 @@ function showYesNoNotice(win, text)
 }
 
 
+/**
+
+ * A card in the bottom right corner for a moment (since 0.20.0): the dialogs' panel with a
+
+ * picture at the left (a layer, drawn into it at most cardPictureWidth wide) and lines at its
+
+ * right, the first in the dialogs' message look, the rest smaller; it fades out and goes by
+
+ * itself as the notice does. A screenshot's shows the picture taken, a quick save's the save's.
+
+ */
+
+var cardPictureWidth = 256, cardPictureHeight = 144;
+
+class YesNoCardLayer extends Layer
+
+{
+
+    var timer, shown, a11yHidden;
+
+    function YesNoCardLayer(win, picture, lines)
+
+    {
+
+        super.Layer(win, win.primaryLayer);
+
+        name = "notice card";
+
+        var pad = 28, gap = 24, small = 24;
+
+        // the picture, kept in shape
+
+        var pw = 0, ph = 0;
+
+        if (picture !== void && isvalid picture && picture.imageWidth > 0 && picture.imageHeight > 0) {
+
+            var k = cardPictureWidth / picture.imageWidth;
+
+            k = cardPictureHeight / picture.imageHeight if picture.imageHeight * k > cardPictureHeight;
+
+            pw = (int)(picture.imageWidth * k), ph = (int)(picture.imageHeight * k);
+
+        }
+
+        // the lines' sizes
+
+        var tw = 0, th = 0, hs = [];
+
+        for (var i = 0; i < lines.count; i++) {
+
+            setYesNoFont(this, i == 0 ? yesnoLabelSize : small);
+
+            var w = measureYesNoText(this, lines[i]), h = font.getTextHeight(lines[i]);
+
+            tw = w if w > tw;
+
+            hs.add(h);
+
+            th += h + (i > 0 ? 6 : 0);
+
+        }
+
+        var inner = ph > th ? ph : th;
+
+        var w = pad * 2 + pw + (pw > 0 && tw > 0 ? gap : 0) + tw + 12, h = pad * 2 + inner + 12; // the panel's shadow: 12
+
+        setImageSize(w, h);
+
+        setSizeToImageSize();
+
+        fillRect(0, 0, w, h, 0);
+
+        drawYesNoPanel(this, 0, 0, w, h);
+
+        if (pw > 0) {
+
+            var px = pad, py = pad + ((inner - ph) >> 1);
+
+            fillRect(px - 3, py - 3, pw + 6, ph + 6, 0xff5025ff);
+
+            if (typeof global.KAGShrinkCopy != "undefined") KAGShrinkCopy(this, px, py, pw, ph, picture, 0, 0, picture.imageWidth, picture.imageHeight);
+
+            else stretchCopy(px, py, pw, ph, picture, 0, 0, picture.imageWidth, picture.imageHeight, stLinear);
+
+            // opaque: what a picture leaves in the alpha channel means nothing here
+
+            face = dfMask;
+
+            fillRect(px, py, pw, ph, 0xffffffff);
+
+            face = dfAlpha;
+
+        }
+
+        var x = pad + pw + (pw > 0 ? gap : 0), y = pad + ((inner - th) >> 1);
+
+        for (var i = 0; i < lines.count; i++) {
+
+            setYesNoFont(this, i == 0 ? yesnoLabelSize : small);
+
+            drawYesNoString(this, x, y, lines[i], 0xffffff, yesnoTextBase);
+
+            y += hs[i] + 6;
+
+        }
+
+        setPos(win.primaryLayer.width - w - 28, win.primaryLayer.height - h - 28);
+
+        hitType = htProvince;
+
+        absolute = 2000000000;
+
+        a11yHidden = true;
+
+        visible = true;
+
+        shown = System.getTickCount();
+
+        timer = new Timer(onTimer, "");
+
+        timer.interval = 30;
+
+        timer.enabled = true;
+
+    }
+
+    function finalize()
+
+    {
+
+        invalidate timer if timer !== void;
+
+        super.finalize(...);
+
+    }
+
+    function onTimer()
+
+    {
+
+        var t = System.getTickCount() - shown;
+
+        if (t < 2500) return;
+
+        if (t >= 3000) { timer.enabled = false; visible = false; return; }
+
+        opacity = 255 * (3000 - t) \ 500;
+
+    }
+
+}
+
+function showYesNoCard(win, picture, lines)
+
+{
+
+    return new YesNoCardLayer(win, picture, lines);
+
+}
+
+
 
 
 

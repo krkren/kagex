@@ -597,6 +597,25 @@ class WebEngine(Engine):
         finally:
             cdp.detach()
 
+    def touch_swipe(self, gx0, gy0, gx1, gy1, steps=8, duration=0.25):
+        """A finger drawn across the game from (gx0, gy0) to (gx1, gy1) in duration seconds, as
+        Chrome's touch events (SDL makes its mouse events from them, as on a phone)"""
+        r = self.page.evaluate("(() => { const b = document.querySelector('canvas').getBoundingClientRect();"
+                               " return [b.left, b.top, b.width, b.height]; })()")
+        w, h = [float(v) for v in str(self.tjs('return "%d,%d".sprintf(kag.primaryLayer.width, kag.primaryLayer.height);')).split(",")]
+        s = min(r[2] / w, r[3] / h)
+        at = lambda gx, gy: {"x": r[0] + (r[2] - w * s) / 2 + gx * s, "y": r[1] + (r[3] - h * s) / 2 + gy * s}
+        cdp = self.page.context.new_cdp_session(self.page)
+        try:
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [at(gx0, gy0)]})
+            for i in range(1, steps + 1):
+                time.sleep(duration / steps)
+                t = i / steps
+                cdp.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [at(gx0 + (gx1 - gx0) * t, gy0 + (gy1 - gy0) * t)]})
+            cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        finally:
+            cdp.detach()
+
     def _raw(self, cmd):
         js = "c => Module.ccall('krkrz_repl_eval', 'string', ['string'], [c])"
         try:
@@ -956,6 +975,8 @@ def interface_steps(eng, step):
         eng.tjs('global.__smokeShot = ""; global.__smokeShotNotice = 0; global.__smokeShotHook = function(name) {'
                 ' var n = kag.screenshotNoticeLayer;'
                 ' global.__smokeShotNotice = n !== void && (isvalid n) && n.visible ? 1 : 0;'
+                # a card with the picture (0.20.0 on): wider than the words alone
+                ' global.__smokeShotCard = n !== void && (isvalid n) && n instanceof "YesNoCardLayer" ? n.width + "x" + n.height : "";'
                 ' global.__smokeShot = name === void ? "(failed)" : name; };'
                 ' kag.screenshotHook.add(__smokeShotHook); return 1;')
         try:
@@ -975,6 +996,11 @@ def interface_steps(eng, step):
             raise SmokeError("the screenshot is %s, the screen %s" % (size, want))
         if eng.tjs("return __smokeShotNotice;") != 1:
             raise SmokeError("no notice said the screenshot was saved")
+        if eng.tjs('return typeof global.showYesNoCard != "undefined" ? 1 : 0;') == 1:
+            card = str(eng.tjs("return __smokeShotCard;"))
+            print("     its card: %s" % card, flush=True)
+            if card == "":
+                raise SmokeError("the screenshot's notice had no picture")
 
     @step("screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings")
     def _():
@@ -2978,6 +3004,81 @@ def sample_steps(eng):
             raise SmokeError("the swipe's own click went on to the next text")
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        # on a touch screen (0.20.0 on) KAG's click at a press is held until the release: a swipe's
+        # press makes no click (SDL and the engine send a touch's mouse events first, and KAG
+        # clicked at the press, before the swipe was one), a tap's clicks at the release, and a
+        # slow drag a swipe's length is neither
+        if eng.tjs('return typeof kag.gestures.holdClick != "undefined" ? 1 : 0;') == 1:
+            # (the REPL's round trips are slower than a swipe: a long gestureTime but for the slow drag)
+            eng.tjs("kag.gestures.holdClicks = true; kag.gestures.gestureTime = 30000; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+            time.sleep(0.2)
+            if eng.tjs("return Math.abs(kag.primaryLayer.cursorY - 640) <= 4 ? 1 : 0;") != 1:
+                print("     (a held press: skipped, the pointer can't be moved here)", flush=True)
+            else:
+                try:
+                    held = str(eng.tjs('global.__smokeClicks = kag.clickCount; kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick();'
+                                       ' return [kag.gestures.held ? 1 : 0, kag.clickCount - global.__smokeClicks].join(",");'))
+                    eng.tjs("kag.primaryLayer.setCursorPos(960, 240); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("kag.onMouseUp(960, 240, mbLeft, 0); return 1;")
+                    eng.wait("the message history (a held press swiped up)", "kag.historyShowing", timeout=10)
+                    swiped = eng.tjs("return kag.clickCount - global.__smokeClicks;")
+                    eng.tjs("kag.hideHistory(); return 1;")
+                    eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+                    eng.tjs("kag.primaryLayer.setCursorPos(960, 400); return 1;")
+                    time.sleep(0.2)
+                    tap = str(eng.tjs('var c = kag.clickCount; kag.onMouseDown(960, 400, mbLeft, 0); kag.onPrimaryClick(); var a = kag.clickCount - c;'
+                                      ' kag.onMouseUp(960, 400, mbLeft, 0); return [a, kag.clickCount - c].join(",");'))
+                    eng.wait("a stable point", "kag.inStable", timeout=20)
+                    eng.tjs("kag.gestures.gestureTime = -1; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("global.__smokeClicks = kag.clickCount; kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick();"
+                            " kag.primaryLayer.setCursorPos(960, 240); return 1;")
+                    time.sleep(0.2)
+                    slow = str(eng.tjs("kag.onMouseUp(960, 240, mbLeft, 0); return [kag.clickCount - global.__smokeClicks, kag.historyShowing ? 1 : 0].join(\",\");"))
+                finally:
+                    eng.tjs("kag.gestures.holdClicks = void; kag.gestures.gestureTime = 800; return 1;")
+                print("     a press held (held, clicks), clicks after its swipe, a tap's clicks at its press and release, a slow drag's clicks and history:"
+                      " %s; %s; %s; %s" % (held, swiped, tap, slow), flush=True)
+                if held != "1,0" or swiped != 0 or tap != "0,1" or slow != "0,0":
+                    raise SmokeError("a touch screen's press wasn't held until its release, a tap or a swipe: %s; %s; %s; %s" % (held, swiped, tap, slow))
+                # a long press (0.20.0 on): its gesture (the sample's: auto mode) and no click, and the
+                # tip of a quick menu button under a finger held on it
+                if eng.tjs('return typeof kag.gestures.holding != "undefined" ? 1 : 0;') == 1:
+                    eng.wait("a stable point", "kag.inStable", timeout=20)
+                    eng.tjs("kag.gestures.holdClicks = true; kag.primaryLayer.setCursorPos(960, 640); return 1;")
+                    time.sleep(0.2)
+                    eng.tjs("global.__smokeClicks = kag.clickCount; global.__smokeHold = kag.gestureActions.hold; kag.gestureActions.hold = \"auto\";"
+                            " kag.onMouseDown(960, 640, mbLeft, 0); kag.onPrimaryClick(); kag.onTouchDown(960, 640, 1, 1, 0); return 1;")
+                    try:
+                        eng.wait("auto mode (a long press)", "kag.autoMode", timeout=5)
+                    finally:
+                        eng.tjs("kag.onTouchUp(960, 640, 1, 1, 0); kag.onMouseUp(960, 640, mbLeft, 0); kag.gestureActions.hold = global.__smokeHold;"
+                                " kag.gestures.holdClicks = void; return 1;")
+                    clicks = eng.tjs("var c = kag.clickCount - global.__smokeClicks; kag.cancelAutoMode(); return c;")
+                    if clicks != 0:
+                        raise SmokeError("a long press made a click as well as its gesture")
+                    tip = ""
+                    if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') == 1:
+                        eng.tjs('var q = kag.quickMenu, b = q.shown[0]; global.__smokeTipAt = [q.layer.left + b.x + 5, q.layer.top + b.y + 5];'
+                                ' kag.primaryLayer.setCursorPos(__smokeTipAt[0], __smokeTipAt[1]); return 1;')
+                        time.sleep(0.2)
+                        eng.tjs("kag.onTouchDown(__smokeTipAt[0], __smokeTipAt[1], 1, 1, 0); return 1;")
+                        try:
+                            tip = eng.wait("a held finger's tip", 'kag.tooltips.shown', timeout=5)
+                        finally:
+                            eng.tjs("kag.onTouchUp(__smokeTipAt[0], __smokeTipAt[1], 1, 1, 0); return 1;")
+                    print("     a long press: auto mode, no click; a finger held on the quick menu's first button: %s" % tip, flush=True)
+        # the mouse's side buttons (0.20.0 on): back a line and on, keys of their own
+        if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" && kag.findKeyBinding(VK_XBUTTON2, 0, false) !== void ? 1 : 0;') == 1:
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+            got = str(eng.tjs('var a = [kag.findKeyBinding(VK_XBUTTON1, 0, false).actionName, kag.findKeyBinding(VK_XBUTTON2, 0, false).actionName];'
+                              ' var c = kag.clickCount; kag.onMouseDown(960, 400, mbX2, 0); kag.onMouseUp(960, 400, mbX2, 0); a.add(kag.clickCount - c);'
+                              ' return a.join(",");'))
+            print("     the mouse's back and forward buttons: %s (and the clicks forward made)" % got, flush=True)
+            if got != "back,next,1":
+                raise SmokeError("the mouse's side buttons aren't back and on, or forward didn't go on: %s" % got)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
         # the framework keeps some keys; the player's binding is the system variables', over the game's
         refused = eng.tjs("return kag.rebindKey(VK_F10, 0, \"skip\") ? 1 : 0;")
         if refused != 0:
@@ -3013,6 +3114,28 @@ def sample_steps(eng):
                 print("     the quick menu's Config button off, then on: %s" % got, flush=True)
                 if got != "1,0":
                     raise SmokeError("Change Controls' quick menu column didn't leave the button out and back: %s" % got)
+                # and moves a button earlier in the strip (0.20.0 on); Reset puts the game's order back
+                if eng.tjs('return typeof kag.currentDialog.moveQuick != "undefined" ? 1 : 0;') == 1:
+                    got = str(eng.tjs('var d = kag.currentDialog, q = kag.quickMenu, names = [];'
+                                      ' var b = q.orderedList(q.list()); for (var i = 0; i < b.count; i++) names.add(b[i].action);'
+                                      ' var at = names.find("config"); d.onPanelAction("qup_config"); q.layout(q.drawScale);'
+                                      ' var now = []; b = q.buttons(); for (var i = 0; i < b.count; i++) now.add(b[i][0]);'
+                                      ' var r = [at, names[at - 1], now.find("config"), now[now.find("config") + 1]];'
+                                      ' q.resetPlayerButtons(); q.layout(q.drawScale); r.add(q.playerOrder() === void ? 1 : 0); return r.join(",");'))
+                    print("     Config's button one place earlier (at, before it, now at, after it, the game's order after Reset): %s" % got, flush=True)
+                    g = got.split(",")
+                    if not (int(g[2]) == int(g[0]) - 1 and g[3] == g[1] and g[4] == "1"):
+                        raise SmokeError("Change Controls didn't move the quick menu's button, or Reset didn't put the order back: %s" % got)
+            # the mouse's back button taken as a key (0.20.0 on)
+            if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" ? 1 : 0;') == 1:
+                eng.tjs('kag.currentDialog.startWaiting("hide"); return 1;')
+                eng.wait("it to wait for a key", "kag.keyCapture !== void", timeout=10)
+                eng.tjs("kag.onMouseDown(100, 100, mbX1, 0); kag.onMouseUp(100, 100, mbX1, 0); return 1;")
+                time.sleep(0.5)
+                side = str(eng.tjs("var b = kag.findKeyBinding(VK_XBUTTON1, 0, true); b = kag.findKeyBinding(VK_XBUTTON1, 0, false) if b === void; return b !== void ? b.actionName : \"none\";"))
+                print("     the mouse's back button in Change Controls: %s" % side, flush=True)
+                if side != "hide":
+                    raise SmokeError("Change Controls didn't take the mouse's back button: %s" % side)
             eng.tjs("kag.currentDialog.close(); return 1;")
             eng.wait("Change Controls to close", "kag.currentDialog === void", timeout=10)
             eng.tjs("kag.runKeyBinding(#'J', 0, true); return 1;")
@@ -3065,6 +3188,11 @@ def sample_steps(eng):
                 eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
                 eng.tjs("kag.quickMenu.onUp(10, 10, mbLeft); return 1;")
                 eng.wait("the strip back (the handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity == 255", timeout=5)
+                # a finger's tap leaves the pointer resting on the strip, which doesn't keep it (0.20.0 on)
+                if eng.tjs('return typeof kag.gestures.lastTouch != "undefined" ? 1 : 0;') == 1:
+                    eng.tjs("var l = kag.quickMenu.layer, x = l.left + l.width - 60, y = l.top + 10; kag.onTouchDown(x, y, 1, 1, 0);"
+                            " kag.primaryLayer.setCursorPos(x, y); kag.onTouchUp(x, y, 1, 1, 0); return 1;")
+                    eng.wait("the strip away after a finger rested on it", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
         finally:
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
         if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
@@ -3083,6 +3211,82 @@ def sample_steps(eng):
             v = [int(x) for x in got.split(",")]
             if not (v[1] > v[0] * 1.2 and v[1] <= v[5] - 8 and 120 <= v[2] <= 130 and v[3] == 0 and v[4] == 1):
                 raise SmokeError("the quick menu's size, opacity or a button left out didn't take: %s" % got)
+        # along the bottom of the message window's panel at both sizes, under the text, just over
+        # the window (the sample's, 0.20.0 on)
+        if eng.tjs('return typeof kag.quickMenu.level != "undefined" ? 1 : 0;') == 1:
+            got = str(eng.tjs('var q = kag.quickMenu, m = kag.fore.messages[0], s0 = KAGOptionGet("quickMenuSize"), r = [];'
+                              ' for (var k = 100; k <= 140; k += 40) { KAGOptionSet("quickMenuSize", k); q.onTimer(); var l = q.layer;'
+                              '  r.add(l.left >= m.left + 300 && l.top >= m.top + (m.height >> 1) && l.left + l.width <= m.left + m.width - 12'
+                              '   && l.top + l.height <= m.top + m.height - 12 && m.top + m.imageHeight - m.marginB <= l.top ? 1 : 0); }'
+                              ' KAGOptionSet("quickMenuSize", s0); q.onTimer(); var l = q.layer;'
+                              ' r.add(l.absolute > m.absolute && l.absolute < kag.fore.messages[1].absolute ? 1 : 0); return r.join(",");'))
+            print("     inside the window's bottom under the text at 100%% and 140%%, just over the window: %s" % got, flush=True)
+            if got != "1,1,1":
+                raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
+
+    @step("the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip")
+    def _():
+        if eng.tjs('return typeof global.KAGQuickPanelLayer != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu panels here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        idx = lambda a: eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "%s") return i; return -1;' % a)
+        press = 'var q = kag.quickMenu, b = q.shown[%d]; q.onDown(b.x + 5, b.y + 5, %s); q.onUp(b.x + 5, b.y + 5, %s); return 1;'
+        eng.tjs('global.__smokeBgm = kag.bgmvolume; KAGOptionSet("quickMenuPanels", "press"); return 1;')
+        try:
+            eng.tjs(press % (idx("config"), "mbRight", "mbRight"))
+            eng.wait("the volume panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Volume"', timeout=5)
+            got = str(eng.tjs('var p = kag.quickMenu.panel, r = [p.rows.count, kag.bgmvolume]; p.onKey(VK_LEFT, 0); r.add(kag.bgmvolume);'
+                              ' var w = p.rows[0], x = w.x + p.labelW + 14 + ((p.controlW - 28) >> 1); p.onMouseDown(x, w.y + 20, mbLeft, 0);'
+                              ' p.onMouseUp(x, w.y + 20, mbLeft, 0); r.add(kag.bgmvolume); var c = kag.clickCount; p.veil.onMouseDown(10, 10, mbLeft, 0);'
+                              ' global.__smokeClicks = kag.clickCount - c; return r.join(",");'))
+            eng.wait("the panel to close (a click outside)", "kag.quickMenu.panel === void", timeout=5)
+            print("     the volume panel: rows, the music before, after Left, after a click halfway: %s; clicks that went on: %s"
+                  % (got, eng.tjs("return global.__smokeClicks;")), flush=True)
+            v = [int(float(x)) for x in got.split(",")]
+            if v[0] < 3 or v[2] != v[1] - 1 or not (45 <= v[3] <= 55) or eng.tjs("return global.__smokeClicks;") != 0:
+                raise SmokeError("the volume panel didn't change the music's volume, or a click outside it went on: %s" % got)
+            # a long press on Auto: its panel, and no auto mode
+            i = idx("auto")
+            eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onDown(b.x + 5, b.y + 5, mbLeft); return 1;' % i)
+            eng.wait("the text panel (a long press)", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Text"', timeout=5)
+            eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onUp(b.x + 5, b.y + 5, mbLeft); return 1;' % i)
+            time.sleep(0.3)
+            if eng.tjs("return kag.autoMode ? 1 : 0;") != 0:
+                raise SmokeError("a long press on Auto turned auto mode on as well as opening its panel")
+            eng.tjs("kag.onKeyDown(VK_ESCAPE, 0); return 1;")
+            eng.wait("the panel to close (Esc)", "kag.quickMenu.panel === void", timeout=5)
+            # Q.LOAD's: the quick saves, newest first
+            eng.tjs(press % (idx("quickLoad"), "mbRight", "mbRight"))
+            eng.wait("the quick saves panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Quick Saves"', timeout=5)
+            rows = str(eng.tjs('var p = kag.quickMenu.panel, r = []; for (var i = 0; i < p.rows.count; i++) r.add(p.rows[i].kind == "save" ? p.rows[i].n : p.rows[i].kind);'
+                               ' kag.quickMenu.closePanel(); return r.join(",") + "|" + kag.quickSaves().join(",");'))
+            print("     the quick saves panel's rows | the quick saves: %s" % rows, flush=True)
+            a, b = rows.split("|")
+            if b != "" and not b.startswith(a.split(",")[0]):
+                raise SmokeError("the quick saves panel doesn't list the newest quick save first: %s" % rows)
+            # Pointing at It: resting on Config's button opens its panel, going away closes it
+            eng.tjs('KAGOptionSet("quickMenuPanels", "hover"); var q = kag.quickMenu, b = q.shown[%d];'
+                    ' kag.primaryLayer.setCursorPos(q.layer.left + b.x + 5, q.layer.top + b.y + 5); return 1;' % idx("config"))
+            time.sleep(0.2)
+            if eng.tjs("var q = kag.quickMenu; return q.layer.left <= kag.primaryLayer.cursorX && kag.primaryLayer.cursorX < q.layer.left + q.layer.width ? 1 : 0;") == 1:
+                eng.tjs('var q = kag.quickMenu, b = q.shown[%d]; q.onMove(b.x + 5, b.y + 5); return 1;' % idx("config"))
+                eng.wait("the volume panel (resting on Config)", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.byHover', timeout=5)
+                eng.tjs("kag.quickMenu.onLeave(); kag.primaryLayer.setCursorPos(200, 200); return 1;")
+                eng.wait("the panel to close (the pointer gone)", "kag.quickMenu.panel === void", timeout=5)
+                print("     Pointing at It: opened as the pointer rested on Config, closed as it went", flush=True)
+            else:
+                print("     (Pointing at It: skipped, the pointer can't be moved here)", flush=True)
+            eng.tjs('KAGOptionSet("quickMenuPanels", "press"); return 1;')
+            # screen readers: the strip's buttons beside the rest
+            if eng.tjs("return KAGA11y.available ? 1 : 0;") == 1:
+                n = eng.tjs("kag.quickMenu.a11yKey = \"-\"; kag.quickMenu.onTimer(); return KAGA11y.toolbar !== void ? KAGA11y.toolbar.nodes.count : 0;")
+                print("     the strip's nodes for screen readers: %s" % n, flush=True)
+                if n < 6:
+                    raise SmokeError("screen readers didn't get the quick menu's buttons: %s" % n)
+        finally:
+            eng.tjs("kag.quickMenu.closePanel(); kag.bgmvolume = global.__smokeBgm; return 1;")
 
     @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
     def _():
@@ -3256,12 +3460,56 @@ def sample_steps(eng):
         time.sleep(0.5)
         r = str(eng.tjs(env + 'var m = kag.fore.messages; return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
                         ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0,'
-                        ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0].join(",");'))
+                        ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0,'
+                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too
+                        ' typeof kag.quickMenu != "Object" || kag.quickMenu === void || kag.quickMenu.layer === void'
+                        '  || typeof kag.quickMenu.level == "undefined" || kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
         print("     on a World layer: %s" % r, flush=True)
         eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
-        if r != "static,1,10,4,1,1":
+        if r != "static,1,10,4,1,1,1":
             raise SmokeError("[newlay static=tv level=message] didn't play on as asked through flipupdate and a redraw,"
-                             " over the message window and letting the pointer through: %s" % r)
+                             " over the message window (and the quick menu) and letting the pointer through: %s" % r)
+
+    @step("help lines: Config, the save screen and Extras say what the pointer is on at their bottom, from helptexts.csv and the options' help, and what the screen is for")
+    def _():
+        if eng.tjs('return typeof kag.tooltips == "Object" && kag.tooltips !== void && typeof kag.tooltips.helpArea != "undefined"'
+                   ' && kag.tooltips.helpArea !== void ? 1 : 0;') != 1:
+            print("     (skipped: no help lines here)", flush=True)
+            return
+        def point(name, after=0.35):
+            eng.tjs('var l = kag.current.names["%s"]; if (l === void) return 0; var x = l.left + 8, y = l.top + 8;'
+                    ' for (var p = l.parent; p !== void && p !== null && p !== kag.primaryLayer; p = p.parent) x += p.left, y += p.top;'
+                    ' kag.primaryLayer.setCursorPos(x, y); return 1;' % name)
+            time.sleep(after)
+            return str(eng.tjs('var t = kag.tooltips; return t.helpLayer !== void && t.helpLayer.visible ? t.helpShown : "(none)";'))
+        # (a touch screen's pointer stays where it tapped and can't be moved from here)
+        eng.tjs("kag.primaryLayer.setCursorPos(1800, 1061); return 1;")
+        time.sleep(0.3)
+        if eng.tjs("return Math.abs(kag.primaryLayer.cursorY - 1061) <= 4 && Math.abs(kag.primaryLayer.cursorX - 1800) <= 4 ? 1 : 0;") != 1:
+            print("     (skipped: the pointer can't be moved here)", flush=True)
+            return
+        eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
+        eng.wait("Config", 'kag.conductor.curStorage == "config.ks" && kag.inStable && kag.current.names.bgmvolume !== void', timeout=30)
+        got = [point("bgmvolume"), point("config_title")]
+        eng.tjs("kag.primaryLayer.setCursorPos(1800, 1060); return 1;")
+        time.sleep(0.35)
+        got.append(str(eng.tjs("return kag.tooltips.helpShown;")))
+        eng.tjs("setConfigPage(3); return 1;")
+        eng.wait("page 3", "tf.configPage == 3 && kag.inStable && kag.current.names.option_readSpeed !== void", timeout=20)
+        got.append(point("option_readSpeed"))
+        print("     Config: the music's slider, Title, nothing, Read Text Speed: %s" % " | ".join(got), flush=True)
+        if got != ["The music's volume", "Back to the title screen", "Point at a setting to see what it does", "The speed of text you've read before"]:
+            raise SmokeError("Config's help line didn't say what the pointer was on: %s" % got)
+        eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs('sf.clear = true; kag.process("cgmode.ks"); return 1;')
+        eng.wait("Extras", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
+        ex = point("extra_musicmode")
+        print("     Extras, its Music tab: %s" % ex, flush=True)
+        if ex != "The music":
+            raise SmokeError("Extras' help line didn't say what its tab is: %s" % ex)
+        eng.tjs('galleryStop() if typeof global.galleryStop != "undefined"; kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
     @step("Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back")
     def _():
@@ -3391,8 +3639,19 @@ def sample_steps(eng):
         mode = str(eng.tjs('kag.enterAutoMode(); return 1;'))
         time.sleep(0.3)
         mode = str(eng.tjs('var i = kag.indicators, r = [i.modeShown, i.modeLayer.visible ? 1 : 0]; kag.cancelAutoMode(); return r.join(",");'))
-        if mode != "AUTO,1":
+        if mode not in ("AUTO,1", "Auto,1"):
             raise SmokeError("auto mode's mark didn't show: %s" % mode)
+        # skipping says it started and why it stopped, at the top right (0.20.0 on)
+        if eng.tjs('return typeof kag.indicators.skipWas != "undefined" ? 1 : 0;') == 1:
+            eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+            eng.tjs('global.__smokeAllskip = kag.allskip; kag.allskip = true; kag.skipToStop(); return 1;')
+            started = eng.wait("skipping's notice", 'kag.indicators.modeShown != "" && kag.indicators.modeShown != "Auto"'
+                               ' ? kag.indicators.modeShown + "," + kag.indicators.modeLayer.top : ""', timeout=5)
+            eng.tjs('kag.cancelSkip(); kag.allskip = global.__smokeAllskip; return 1;')
+            stopped = eng.wait("its end's notice", 'kag.indicators.modeShown.indexOf("top") >= 0 ? kag.indicators.modeShown : ""', timeout=5)
+            print("     skipping: %s; then %s" % (started, stopped), flush=True)
+            if not started.startswith("Skipping,") or int(started.split(",")[1]) > 300:
+                raise SmokeError("skipping's start wasn't told at the top right: %s" % started)
         play = eng.tjs('world_object.env.playVoice("ai", "ai000001", true); return world_object.env.characters.ai.soundBuffer.status == "play" ? 1 : 0;')
         if play == 1:
             eng.wait("the voice bar", "kag.indicators.voiceLayer !== void && kag.indicators.voiceLayer.visible", timeout=5)
@@ -3493,6 +3752,41 @@ def sample_steps(eng):
                 raise SmokeError("OK didn't keep the name typed: %s" % eng.tjs("return sf.heroName;"))
         finally:
             eng.tjs("KAGTextEntryMode = global.__smokeEntryMode; return 1;")
+
+    @step("a swipe in a phone's browser: up shows the message history, and the swipe's own click doesn't go on to the next text")
+    def _():
+        if not isinstance(eng, WebEngine) or not eng.touch:
+            print("     (skipped: only in a phone's browser, --target web --touch)", flush=True)
+            return
+        if eng.tjs('return typeof kag.gestures == "Object" && typeof kag.gestures.holdClick != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before swipes told at their click)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        # a browser's touch screen is known from its first touch: the engine sends touches from
+        # the next (kag.touchKnown), so a tap first, which goes on to the next text
+        eng.touch_hold(960, 400)
+        eng.wait("touches on", "kag.enableTouch", timeout=10)
+        for i in range(6):
+            if eng.tjs('return kag.inStable && KAGActionEnabled("backlog") ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        eng.tjs("global.__smokeClicks = kag.clickCount; global.__smokeLine = kag.conductor.curLine; return 1;")
+        eng.touch_swipe(960, 640, 960, 240)
+        eng.wait("the message history (a swipe up)", "kag.historyShowing", timeout=10)
+        time.sleep(0.5)
+        got = str(eng.tjs("return [kag.clickCount - global.__smokeClicks, kag.conductor.curLine - global.__smokeLine].join(\",\");"))
+        print("     clicks counted, lines gone on: %s" % got, flush=True)
+        eng.tjs("kag.hideHistory(); return 1;")
+        eng.wait("the history to close", "!kag.historyShowing && kag.inStable", timeout=10)
+        if got != "0,0":
+            raise SmokeError("the swipe's own click went on to the next text: %s" % got)
+        # and a tap still goes on
+        eng.tjs("global.__smokeClicks = kag.clickCount; return 1;")
+        eng.touch_hold(960, 400)
+        eng.wait("a tap counted as a click", "kag.clickCount > global.__smokeClicks", timeout=10)
 
     @step("typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=")
     def _():
@@ -3887,6 +4181,14 @@ def sample_steps(eng):
                 eng.wait("the petals' still in place of the effect", '%s.layers["petals"] !== void && %s.layers["petals"].targetLayer !== void'
                          ' && %s.layers["petals"].targetLayer.flip === void && (int)%s.layers["petals"].targetLayer.width == 1920' % (env, env, env, env), timeout=30)
                 print("     the petals: a still picture, 1920x1080, no effect playing", flush=True)
+                # as the option changes, the effect and its still take turns at once (0.20.0 on)
+                if eng.tjs('return typeof global.KAGReduceMotionLayers != "undefined" ? 1 : 0;') == 1:
+                    petals = '%s.layers["petals"].targetLayer' % env
+                    eng.tjs('KAGOptionSet("reduceMotion", false); return 1;')
+                    eng.wait("the petals' effect again (Reduce Motion off)", petals + '.flip !== void', timeout=10)
+                    eng.tjs('KAGOptionSet("reduceMotion", true); return 1;')
+                    eng.wait("the petals' still again (Reduce Motion on)", petals + '.flip === void && (int)' + petals + '.width == 1920', timeout=10)
+                    print("     the petals: the effect when the option went off, the still when it came on", flush=True)
             else:
                 print("     (no Effekseer here: the stills' check is skipped)", flush=True)
             eng.tjs('kag.process("effect.ks", "*static"); return 1;')
@@ -3918,12 +4220,16 @@ def sample_steps(eng):
                         ' kag.beginAction(l, %[ left:%[ handler:"MoveAction", value:l.left + 300, time:3000 ] ], void, true); return 1;')
                 time.sleep(0.3)
                 got = str(eng.tjs('var l = kag.fore.layers[0], r = [l.left - global.__smokeRMLeft, kag.isInAction(l) ? 1 : 0];'
-                                  ' var g = new AnimationLayer(kag, kag.fore.base); g.loadImages(%[ storage:"LineBreak" ]);'
-                                  ' var seg = g.Anim_segments[0]; r.add(seg !== void && seg.timerEnabled ? 1 : 0); invalidate g;'
-                                  ' l.left = global.__smokeRMLeft; return r.join(",");'))
-                print("     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running: %s" % got, flush=True)
-                if got != "300,0,0":
-                    raise SmokeError("with Reduce Motion an action didn't end at once, or the click glyph kept moving: %s" % got)
+                                  ' var g = global.__smokeRMAnim = new AnimationLayer(kag, kag.fore.base); g.loadImages(%[ storage:"LineBreak" ]);'
+                                  ' var seg = g.Anim_segments[0]; r.add(seg !== void && seg.timerEnabled ? 1 : 0);'
+                                  # turned off, it goes on, and on again it stops (0.20.0 on)
+                                  ' if (typeof global.KAGReduceMotionAnims != "undefined") {'
+                                  '  KAGOptionSet("reduceMotion", false); r.add(seg.timerEnabled ? 1 : 0);'
+                                  '  KAGOptionSet("reduceMotion", true); r.add(seg.timerEnabled ? 1 : 0); }'
+                                  ' invalidate g; global.__smokeRMAnim = void; l.left = global.__smokeRMLeft; return r.join(",");'))
+                print("     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running (then with the option off, on): %s" % got, flush=True)
+                if got not in ("300,0,0", "300,0,0,1,0"):
+                    raise SmokeError("with Reduce Motion an action didn't end at once, or the click glyph kept moving (or didn't go on as it went off): %s" % got)
         finally:
             eng.tjs('KAGOptionSet("reduceMotion", tf.smokeRM); return 1;')
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -4207,11 +4513,21 @@ def sample_steps(eng):
         print("     Pip's volume %s, then undone %s; the samples: %s" % (v[0], v[2], v[1]), flush=True)
         if not (v[0] == "40" and v[2] == "100" and "voice:pip" in v[1] and "voice:ai000001" in v[1]):
             raise SmokeError("a character's volume, its sample or its Test didn't work: %s" % v)
+        # the movies' volume: its sample plays at the volume the slider shows, the music waiting (0.20.0 on)
+        if eng.tjs('return typeof KAGVolumeSamples.movie != "undefined" && kag.current.names["option_movieVolume"] !== void ? 1 : 0;') == 1:
+            m = str(eng.tjs('KAGVolumeSamples.played.clear(); var s = kag.current.names["option_movieVolume"]; s.onMouseEnter(); KAGOptionPreview("drag", 60, "movieVolume");'
+                            ' var v = KAGVolumeSamples, a = [v.moviePlaying ? 1 : 0, v.movieBuffer !== void ? v.movieBuffer.volume : -1, v.movieVolume(60),'
+                            ' kag.bgm.playingStorage == "" || kag.bgm.buf1.paused ? 1 : 0, v.played.join(" ")];'
+                            ' s.onMouseLeave(); return a.join(",");'))
+            print("     the movies' slider at 60: its sample playing, its volume and the movies' at 60, the music waiting, the samples: %s" % m, flush=True)
+            mv = m.split(",")
+            if not (mv[0] == "1" and mv[1] == mv[2] and mv[3] == "1" and "movie:bgm01" in mv[4]):
+                raise SmokeError("the movies' volume played no sample at its volume: %s" % m)
         eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
-        left = str(eng.tjs('return [KAGOptionUndo.recording, KAGVolumeSamples.playing].join(",");'))
-        if left != "0,0":
-            raise SmokeError("leaving Config left Undo recording or the music sample playing: %s" % left)
+        left = str(eng.tjs('return [KAGOptionUndo.recording, KAGVolumeSamples.playing, typeof KAGVolumeSamples.moviePlaying != "undefined" && KAGVolumeSamples.moviePlaying ? 1 : 0].join(",");'))
+        if left != "0,0,0":
+            raise SmokeError("leaving Config left Undo recording or the music or movie sample playing: %s" % left)
 
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
@@ -4235,7 +4551,9 @@ def sample_steps(eng):
             playing = False
             print("     (the music doesn't play here: the checks of the music playing on are skipped)", flush=True)
         if playing:
-            lit = eng.tjs('var b = kag.fore.messages[0].names.track01; return b.getMainPixel(100, 23) != 0xffffff ? 1 : 0;')
+            lit = eng.tjs('var l = kag.fore.messages[0].names.musicList; if (l !== void) { l.refresh(); var p = l.pictureOf(0, "normal");'
+                          ' return p.getMainPixel(100, 23) != 0xffffff ? 1 : 0; }'
+                          ' var b = kag.fore.messages[0].names.track01; return b.getMainPixel(100, 23) != 0xffffff ? 1 : 0;')
             if lit != 1:
                 raise SmokeError("the track playing isn't lit in the music room")
         # the CG screen: the track plays on, with its Stop button; the counts
@@ -4269,6 +4587,13 @@ def sample_steps(eng):
         got = str(eng.tjs('var r = []; for (var i = 0; i < 4; i++) r.add(kag.quickSave());'
                           ' return r.join(",") + "|" + kag.newestQuickSave() + "|" + kag.quickSaves().join(",");'))
         print("     four quick saves went to %s; the newest %s, newest first %s" % tuple(got.split("|")), flush=True)
+        # its card: the save's picture, the scene's name and the date (0.20.0 on)
+        if eng.tjs('return typeof global.showYesNoCard != "undefined" ? 1 : 0;') == 1:
+            card = str(eng.tjs('var n = kag.screenshotNoticeLayer; return n !== void && (isvalid n) && n instanceof "YesNoCardLayer"'
+                               ' ? n.width + "x" + n.height : "none";'))
+            print("     the quick save's card: %s" % card, flush=True)
+            if card == "none":
+                raise SmokeError("a quick save showed no card")
         if got != "90,91,92,90|90|90,92,91":
             raise SmokeError("the quick saves didn't go round bookmarks 90 to 92: %s" % got)
         for n in (90, 91, 92):
@@ -4420,8 +4745,12 @@ def sample_steps(eng):
             if screen != "musicmode.ks":
                 # The demos unlock the first CG and Replay entry, whose tile shows a picture;
                 # the browser build once drew it transparent (an empty frame)
-                a = eng.tjs('var b = kag.current.names["cg0"]; if (b === void || !b.visible || !b.enabled)'
-                            ' return -1; return b.getMaskPixel(b.width >> 1, b.height >> 1);')
+                # (0.20.0 on the tiles are a scrolling grid's items: its first item's picture)
+                a = eng.tjs('var l = kag.current.names["%s"]; if (l !== void) { if (%s === void) return -1;'
+                            ' var p = l.pictureOf(0, "normal"); return p.getMaskPixel(p.imageWidth >> 1, p.imageHeight >> 1); }'
+                            ' var b = kag.current.names["cg0"]; if (b === void || !b.visible || !b.enabled)'
+                            ' return -1; return b.getMaskPixel(b.width >> 1, b.height >> 1);'
+                            % (("cgList", "tf.cgviewlist[0]") if screen == "cgmode.ks" else ("replayList", "tf.replaylist[0]")))
                 if a == -1:
                     raise SmokeError("the first entry is still locked")
                 if a != 255:
@@ -4438,7 +4767,7 @@ def sample_steps(eng):
         eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
         # the Layers tab: a tile for each scene of layer.ks, which the demos have read
         titles = str(eng.tjs('var t = replayTabs.find("Layers"); setReplayPage(t, 0); var r = [];'
-                             ' for (var i = 0; i < tf.cgbtnnum; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
+                             ' for (var i = 0; i < tf.replaylist.count; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
                              ' return r.join("|");')).split("|")
         if "Blending Mode" not in titles:
             raise SmokeError("no Blending Mode tile on the Layers tab: %s" % titles)

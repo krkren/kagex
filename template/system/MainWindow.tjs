@@ -13287,6 +13287,7 @@ class KAGWindow extends Window
 	function onPrimaryClick(force = false)
 	{
         // Called from primary layer when "Click Action" is not filtered
+		if (!force && gestures !== void && gestures.holdClick()) return; // a touch screen's press: told at its release
 		if (!force && clickInterceptor !== void && clickInterceptor()) return;
 		if (!force && gestures !== void && gestures.swallowClick()) return; // a swipe's own click
 		clickCount++ if (!force);
@@ -13368,17 +13369,37 @@ class KAGWindow extends Window
 		return -2;
 	}
 
+	// whether the engine sends touches (Window.enableTouch): it looks for a touch screen once, as
+	// the window is made, and a browser's isn't known until its first touch, so the web never got
+	// one (since 0.20.0: asked again at a press until it does; a touch's mouse events come first)
+	var touchKnown = false;
+	// a left press, which the window hears before its layers: onPrimaryClick (from the primary
+	// layer's) may hold its click until the release (KAGGestures.holdClick)
+	var pressArmed = false;
+
 	function onMouseDown(x, y, button, shift)
 	{
 		lastMouseDownX = x;
 		lastMouseDownY = y;
+		if (!touchKnown && typeof this.enableTouch != "undefined") {
+			try { enableTouch = true if !enableTouch; touchKnown = !!enableTouch; } catch { touchKnown = true; }
+		}
+		pressArmed = button == mbLeft;
 		gestures.onRightDown(x, y) if gestures !== void && button == mbRight; // a right-button drag
 		super.onMouseDown(...);
+		// the mouse's back and forward buttons are keys of their own (VK_XBUTTON1, 2): bound,
+		// and taken by Change Controls as any key (since 0.20.0)
+		if ((button == mbX1 || button == mbX2) && typeof global.VK_XBUTTON1 != "undefined") {
+			var key = button == mbX1 ? VK_XBUTTON1 : VK_XBUTTON2;
+			onKeyDown(key, shift);
+			onKeyUp(key, shift) if (isvalid this);
+		}
 	}
 
 	function onMouseUp(x, y, btn)
 	{
 		gestures.onRightUp(x, y) if gestures !== void && btn == mbRight;
+		if (btn == mbLeft) { pressArmed = false; gestures.releaseClick() if gestures !== void; } // a held click: a tap's or a swipe's
 		conductor.trigger("mouseup" + btn);
 		super.onMouseUp(...);
 		// [XXX] When dialog is shown in modal state, clicks outside layer bounds might not be detected
@@ -13474,7 +13495,7 @@ class KAGWindow extends Window
 	// rebindKey, rebindPad, rebindGesture and resetPlayerBindings.
 	var gestures;              // the swipes and right-button drags (KAGGestures, Actions.tjs)
 	// what a gesture does in the story (an action's name; "" nothing): a game sets its own
-	var gestureActions = %[ "left" => "", "right" => "", "up" => "backlog", "down" => "hide" ];
+	var gestureActions = %[ "left" => "", "right" => "", "up" => "backlog", "down" => "hide", "hold" => "" ]; // hold: a long press (0.20.0)
 	var gameKeyBindings, gamePadKeyMap, gameGestureActions; // the game's, under the player's
 	// keys the framework keeps for itself: the player can't take these
 	var reservedKeys = [ [VK_F10, 0], [VK_F11, ssShift], [VK_F12, ssShift], [VK_RETURN, void], [VK_SPACE, void],
@@ -13629,6 +13650,9 @@ class KAGWindow extends Window
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
 			bindKey(VK_F10, 0, "@menu", void, false);
 			bindKey(VK_F12, 0, "@screenshot", void, false);
+			// the mouse's side buttons (since 0.20.0): back a line, and on
+			bindKey(VK_XBUTTON1, 0, "@back", void, false) if (typeof global.VK_XBUTTON1 != "undefined");
+			bindKey(VK_XBUTTON2, 0, "@next", void, false) if (typeof global.VK_XBUTTON2 != "undefined");
 		} else {
 			// Proceed to next choice/unread
 			bindKey(#'F', void, skipToNextStopByKey, "Skip to the next choice or unread text", false);
@@ -13875,6 +13899,7 @@ class KAGWindow extends Window
 	var screenshotNotice = true;
 	var screenshotHook = [];
 	var screenshotNoticeLayer;     // the notice on show
+	var screenshotPicture;         // the last screenshot, small, for its card
 	var screenshotsSaving = 0;     // written on other threads now
 
 	function screenshotStorage(ext = "png")
@@ -13957,16 +13982,21 @@ class KAGWindow extends Window
 			lay.face = dfMask;
 			lay.fillRect(0, 0, w, h, 0xffffffff);
 			lay.face = dfAlpha;
+			// the card's picture (a small copy: the screenshot's own layer goes at once)
+			invalidate screenshotPicture if (screenshotPicture !== void && isvalid screenshotPicture);
+			screenshotPicture = new global.Layer(this, primaryLayer);
+			screenshotPicture.setImageSize(w \ 4, h \ 4);
+			KAGShrinkCopy(screenshotPicture, 0, 0, w \ 4, h \ 4, lay, 0, 0, w, h);
 			if (jpeg) {
 				lay.saveLayerImage(name, "jpg");
-				onScreenshotSaved(name);
+				onScreenshotSaved(name, screenshotPicture);
 			} else if (typeof this.startSaveLayerImage == "Object" && name.substring(0, 7) == "file://") {
 				// layerExSave copies the picture, so the layer can go at once
 				startSaveLayerImage(lay, name, %[]);
 				screenshotsSaving++;
 			} else {
 				lay.saveLayerImage(name, "png");
-				onScreenshotSaved(name);
+				onScreenshotSaved(name, screenshotPicture);
 			}
 		} catch (e) {
 			dm("Could not save a screenshot as " + name + ": " + e.message);
@@ -13982,19 +14012,29 @@ class KAGWindow extends Window
 	function onSaveLayerImageDone(handler, canceled, layer, filename)
 	{
 		screenshotsSaving-- if (screenshotsSaving > 0);
-		onScreenshotSaved(canceled ? void : filename);
+		onScreenshotSaved(canceled ? void : filename, screenshotPicture);
 	}
 
 	function onSaveLayerImageProgress(handler, progress, layer, filename) {}
 
-	function onScreenshotSaved(name)
+	function onScreenshotSaved(name, picture)
 	{
 		if (name !== void) {
 			dm("Screenshot saved: " + name);
 			KAGA11y.announce(tr("Screenshot saved"));
-			showScreenshotNotice(tr("Screenshot saved")) if (screenshotNotice);
+			// a card with the picture (since 0.20.0) and the file's name
+			showScreenshotCard(picture, [ tr("Screenshot saved"), Storages.extractStorageName(name) ]) if (screenshotNotice);
 		}
 		callHook(screenshotHook, name);
+	}
+
+	// a notice card with a picture (YesNoDialogLayer.tjs, showYesNoCard), or the words alone
+	function showScreenshotCard(picture, lines)
+	{
+		hideScreenshotNotice();
+		if (typeof global.showYesNoNotice == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		if (typeof global.showYesNoCard == "undefined") { showScreenshotNotice(lines[0]); return; }
+		try { screenshotNoticeLayer = showYesNoCard(this, picture, lines); } catch (e) { dm("notice: " + e.message); showScreenshotNotice(lines[0]); }
 	}
 
 	function showScreenshotNotice(text)
@@ -14288,7 +14328,20 @@ class KAGWindow extends Window
 		scflags.quickSaveLast = n;
 		saveSystemVariables();
 		KAGA11y.announce(tr("Quick saved"));
-		showScreenshotNotice(tr("Quick saved")) if (quickSaveNotice);
+		if (quickSaveNotice) {
+			// a card with the save's picture, its scene and date (since 0.20.0; words only before)
+			var name = getBookMarkPageName(n), date = getBookMarkDate(n), lines = [ tr("Quick saved") ];
+			lines.add(tr(name)) if (name !== void && name != "");
+			lines.add(date) if (date !== void && date != "");
+			// the save's picture: the locked snapshot it was made from, or the screen as saved
+			var pic = snapshotLayer, own;
+			if (pic === void) {
+				pic = own = new global.Layer(this, primaryLayer);
+				try { captureSnapshot(own); } catch (e) { dm("quick save card: " + e.message); invalidate own; pic = own = void; }
+			}
+			showScreenshotCard(pic, lines);
+			invalidate own if (own !== void);
+		}
 		callHook(quickSaveHook, n);
 		return n;
 	}
@@ -14650,6 +14703,12 @@ class KAGWindow extends Window
 	{
 		gestures.onTouchDown(x, y, id) if gestures !== void;
 		super.onTouchDown(...) if typeof super.onTouchDown != "undefined";
+	}
+
+	function onTouchMove(x, y, cx, cy, id)
+	{
+		gestures.onTouchMove(x, y, id) if gestures !== void;
+		super.onTouchMove(...) if typeof super.onTouchMove != "undefined";
 	}
 
 	function onTouchUp(x, y, cx, cy, id)

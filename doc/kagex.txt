@@ -3079,7 +3079,7 @@ What the player can ask the game to do is one table (since 0.19.0, template/syst
 skip, auto mode, the message history, hiding the window, going back, save, load, quick save
 and load, playing the voice again, the scene moves of compiled scenes (rewind, back to the
 start of the scene, back to the last choice, on to the next scene), the next language, the
-menu and a screenshot. Keys, controller buttons, gestures and on-screen buttons name an action,
+menu, a screenshot and going on to the next text ("next", since 0.20.0). Keys, controller buttons, gestures and on-screen buttons name an action,
 so changing what an action does, or which key does it, changes it everywhere.
 
     KAGDefineAction(%[ name:"photo", label:"Take a photo", func:takePhoto,
@@ -3094,6 +3094,9 @@ so changing what an action does, or which key does it, changes it everywhere.
                keys and buttons bound to it are left out of the controls list while it's false
   enabled      whether it can be done now (a quick load needs a quick save; the framework's
                follow the window's menu items); KAGRunAction does nothing while it's false
+
+The mouse's back and forward buttons are keys of their own (VK_XBUTTON1, VK_XBUTTON2; since
+0.20.0): back a line and on to the next text, and Change Controls takes them as any key.
 
 Change Controls (the controls list's Change… button, or kag.showBindings()) lists the actions
 with their keys, controller buttons and gestures: picking one waits for a key or a controller
@@ -3110,10 +3113,23 @@ touch screen, or a drag with the right mouse button, runs kag.gestureActions[lef
 down], and the click or right click it would have made is dropped. The framework's are up for
 the message history and down to hide the window; the sample adds left to rewind and right to
 skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly one way
-(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. kag.gestures.when, a
+(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. KAG clicks at a press,
+and SDL and the engine send the mouse events a touch makes before the touch's own, so on a
+touch screen, in the story, the press's click is held until the release (since 0.20.0; up to
+0.19.0 a swipe's press had gone on to the next text): a tap clicks then, a swipe runs its
+gesture and makes no click, and a drag as long that takes longer than a gesture is neither
+(kag.gestures.holdClicks: void, on a touch screen, which Window.enableTouch says, or true or
+false). A browser's touch screen isn't known until its first touch, so the window asks the
+engine again at a press until it is. kag.gestures.when, a
 function, can narrow "the story" to the game's own idea of it (the sample's, as its quick
 menu's: after [initscene], not on the title or a system screen), and a drag that starts on a
 scrolling list is the list's (ScrollList.tjs).
+
+A long press (since 0.20.0): a finger held still on the story for kag.gestures.holdTime (600
+ms) runs kag.gestureActions.hold (the framework's is none; the sample's turns auto mode on or
+off) and makes no click as it lifts; Change Controls has it after the four swipes. Meanwhile,
+over a button with a hint, its tip shows above the finger, whatever Config's Tips switch says
+(Tooltips.tjs). A long press on a quick menu button opens its panel instead.
 
 
 
@@ -3122,7 +3138,8 @@ scrolling list is the list's (ScrollList.tjs).
 A strip of buttons for actions that can keep out of the way (since 0.19.0,
 template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
 comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
-back. A button is dimmed while its action can't be done and lit while its toggle is on; the
+back, and as a finger leaves the pointer resting where it tapped, only taps on the strip keep it
+there (since 0.20.0). A button is dimmed while its action can't be done and lit while its toggle is on; the
 pin at the end, and Config's Quick Menu option, are the player's (kept in the system
 variables). It shows in the story only: not over a system screen, a prompt or the message
 history, nor while the message window is hidden.
@@ -3131,26 +3148,67 @@ history, nor while the message window is hidden.
         .items = [ %[ action:"quickSave", image:"msg_qsave", x:228 ],
                    %[ action:"auto", image:"msg_auto", on:function { return kag.autoMode; } ],
                    %[ action:"backlog" ] ];          // no image: its label, in the dialogs' look
-        .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+        .place = function(w, h) { var m = kag.fore.messages[0];   // the strip is w x h
+            return [ m.left + m.width - 33 - w, m.top + m.height - 23 - h ]; };
         .when  = function { return !!f.quickMenu; };    // the game's own idea of "the story"
     }
 
   items          the buttons (or a function returning them): action, image (<image>_normal,
                  _over and, for a toggle, _on), x (its left in the strip; void: after the one
                  before), on (lit while it returns true), label
-  place          where the strip goes; void: the bottom of the screen, in the middle
+  place          where the strip goes, given its width and height (the player's size); void:
+                 the bottom of the screen, in the middle
   when           void, or whether it may show now
-  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms),
-                 reveal (48 px around it that bring it in), absolute (3500000)
+  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms;
+                 touchHideDelay, 4000 ms, after a finger's tap on the strip or its handle),
+                 reveal (48 px around it that bring it in), absolute (void: just over the first
+                 message window, 100 over it, so under the next window and under a World layer
+                 at level=message, such as the Effects demo's static; 3500000, over every
+                 window, up to 0.19.0)
 
-The sample's message window buttons are its quick menu, on the window's top edge as they were;
-[initscene] sets f.quickMenu and the title clears it.
+The sample's message window buttons are its quick menu, along the bottom of the window's panel
+at its right (since 0.20.0; on its top edge before, where they ran past the window's end):
+icons for moving through the story (the scene before, the last choice, rewind, back a line,
+auto, skip, the next scene), Q.SAVE, Q.LOAD, SAVE and LOAD, and icons for the history and
+Config, the pin last; a button's tip names its action. [initscene] sets f.quickMenu, which the
+title clears, and its marginB keeps the text (four lines) above the strip at the larger size.
 
 The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
 is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
-kag.scflags.quickMenuHidden). A button's picture is drawn at the strip's size; a labelled one
+kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a
+button earlier or later, kept in kag.scflags.quickMenuOrder, and the strip then puts them one
+after another, gap px apart; Reset puts the game's back). A button's picture is drawn at the
+strip's size; a labelled one
 in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
+When it can show again (the story starting, the window back) an unpinned strip peeks out for
+a moment. Screen readers get its buttons beside the message or the choices
+(KAGA11y.setToolbar).
+
+Panels (since 0.20.0, template/system/QuickPanels.tjs): an item's panel opens a small panel
+over the scene, above its button, which a small mark at the button's top right shows:
+
+        %[ action:"config", image:"msg_config", panel:"volume" ]
+
+  "volume"      the music's, sounds' and voices' volumes and a switch for all sound
+  "text"        text speed, auto speed, what skip skips and the window's opacity
+  "quickSaves"  the newest quick saves with their pictures, scenes and dates; one is loaded
+                after asking, as quick load does
+  [ "<option>", ... ]  rows of the options table; %[ title:"...", options:[ ... ] ] with a
+                title; or a function returning one. KAGQuickPanelSpecs holds the named ones.
+
+Config's Quick Menu Panels (quickMenuPanels) says how one opens: a right-click or a long press
+(half a second) on the button ("press", the default), the pointer resting on it ("hover"), or
+never ("off"). It closes with Esc, the controller's B, a click outside it (which goes no
+further) or, opened by resting, the pointer leaving it and the button. The keys and the D-pad
+move between its rows and change them, Return or A picks a quick save, and screen readers get
+it as sliders and buttons. Sliders apply as they're let go, and a volume's plays its sample.
+The sample's Auto has the text's, Q.LOAD the quick saves' and Config the volumes'.
+
+After a quick save (quickSaveNotice) or a screenshot (screenshotNotice) a card shows for a
+moment in the bottom right corner with the save's or the screenshot's picture and the scene's
+name and the date, or the file's name (showYesNoCard in YesNoDialogLayer.tjs, since 0.20.0;
+words alone before).
 
 
 ● Tips
@@ -3168,6 +3226,27 @@ by place with a tipAt(x, y) method (the quick menu's buttons give their actions'
 
 Config's Tips option (tooltips) turns them off; it starts off on Android and iOS, where a tap
 leaves the pointer resting where it tapped. The sample's Config tabs tell what each page holds.
+
+Since 0.20.0 a button's tip can also come from help= ([button help=], [sysbutton help=],
+[link help=], the same as hint=) or from the game's helptexts.csv, by the screen and the
+button's name:
+
+    config.bgmvolume<tab>The music's volume
+    save.save#<tab>Save here           (# stands for the number at the end of a name)
+    *.return<tab>Back where you were    (* for every screen)
+    config._<tab>Point at a setting to see what it does   (the screen's own line)
+
+in English, for tr() (a language's lang.json translates them); <screen> is the running
+scenario's name without its extension. Every option of the options table has a line of help
+(KAGOptionHelpTexts in Options.tjs, or an option's own help), which its Config row's buttons
+and slider show. A long press on a touch screen shows the tip of what's under the finger.
+
+  kag.tooltips.helpArea   void, or a function returning [ x, y, w, h ]: while it returns one,
+                          a help line there says what the pointer or the focus is on, at once
+                          and whatever the Tips switch says, or the screen's own line
+
+The sample has help lines at the bottom of Config, the save and load screens and Extras
+(helpLineArea in AfterInit.tjs, data/main/helptexts.csv).
 
 
 ● Scrolling Lists
@@ -3206,7 +3285,10 @@ copies it to the other page through its cloneFor(window, messageLayer), and clea
 message layer's links invalidates it.
 
 The sample's Search shows the lines it finds in one (searchList in Override.tjs), kept where
-it was scrolled while a line plays; its backlog coasts after a flick too.
+it was scrolled while a line plays; its backlog coasts after a flick too. Since 0.20.0 the
+CG and Replay tiles are grids of four across (cgList, replayList) and the music room's tracks a
+list (musicTrackList), as many as there are, in place of pages of sixteen and twelve buttons;
+screenList and listTile in Override.tjs make them and draw a tile as its button was drawn.
 
 
 ● The Screen, the Controller and Screenshots
@@ -3475,7 +3557,10 @@ a load, going back and compiled scenes show it as it was. kag.indicators.chapter
 When the music changes, its title shows for three seconds in the top right corner: titles come
 from titleList (musiclist.csv: the file's name without its extension, then the title; #
 comments), and a track without one shows nothing. A mark shows while auto mode or skip mode is
-on, and a bar under the message window fills from the left as the voice goes on.
+on, in the top right corner (under the music's title while that shows; at the bottom right up
+to 0.19.0, where the sample's quick menu is now), and for two seconds it says that skipping
+started (read text only, or all) and why it stopped (unread text, a choice, or the player);
+and a bar under the message window fills from the left as the voice goes on.
 
 ● The Hero's Name
 

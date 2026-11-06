@@ -1118,6 +1118,11 @@ class GenericFlip {
 
 }
 
+// the layers with a flip started with still= (GraphicLayerEx.flipStart), for Reduce Motion
+// turned on or off (Options.tjs)
+
+var KAGReduceMotionLayers = [];
+
 // whether a flip starting now stays still (Reduce Motion)
 
 function KAGFlipShouldStill(flip)
@@ -1468,6 +1473,8 @@ class GraphicLayerEx extends GraphicLayer {
 
 		stopAllMods();
 
+		flipStart = void;
+
 		super.loadImages(elm);
 
 		if (elm !== void) {
@@ -1520,6 +1527,8 @@ class GraphicLayerEx extends GraphicLayer {
 
 		stopAllMods();
 
+		flipStart = void;
+
 		super.freeImage(...);
 
 		reset();
@@ -1567,6 +1576,8 @@ class GraphicLayerEx extends GraphicLayer {
 		}
 
 		storeFlip(dic);
+
+		dic.flipStart = flipStart if (flipStart !== void);
 
 		if (_rasterStart !== void) {
 
@@ -1640,6 +1651,18 @@ class GraphicLayerEx extends GraphicLayer {
 
 		}
 
+		// a flip with a still picture: as Reduce Motion is now
+
+		if (dic.flipStart !== void) {
+
+			var s = dic.flipStart;
+
+			noteFlipStart(s.storage, s.elm, s.type);
+
+			try { reduceMotionChanged(KAGReduceMotion()); } catch (e) { dm("Reduce Motion's picture during restore: " + e.message); }
+
+		}
+
 		if (dic.raster !== void) {
 
 			raster = dic.raster;
@@ -1678,6 +1701,11 @@ class GraphicLayerEx extends GraphicLayer {
 
 	var flip, flipType;
 
+	// a flip started with still= (Reduce Motion's picture for it): %[ storage, type, elm ], to
+	// switch between the two as the option changes (since 0.20.0, KAGApplyReduceMotion)
+
+	var flipStart, flipStartKnown = false;
+
 
 
 	/**
@@ -1690,15 +1718,21 @@ class GraphicLayerEx extends GraphicLayer {
 
 		// Reduce Motion: a picture given as still= stands in for the flip (since 0.18.0)
 
-		if (elm !== void && elm.still !== void && elm.still != "" && typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion()) {
+		var still = elm !== void && elm.still !== void && elm.still != "" && typeof global.KAGReduceMotion != "undefined";
+
+		if (still && KAGReduceMotion()) {
 
 			flipType = flip = void;
 
 			loadImages(%[ storage:elm.still ]);
 
+			noteFlipStart(storage, elm, type);
+
 			return;
 
 		}
+
+		flipStart = void;
 
 		flipType = type;
 
@@ -1723,6 +1757,34 @@ class GraphicLayerEx extends GraphicLayer {
 		flip.flipStart(storage, elm);
 
 		flip.flipStill(true) if (KAGFlipShouldStill(flip));
+
+		noteFlipStart(storage, elm, type) if (still);
+
+	}
+
+	function noteFlipStart(storage, elm, type) {
+
+		flipStart = %[ storage:storage, type:type, elm:%[] ];
+
+		(Dictionary.assign incontextof flipStart.elm)(elm);
+
+		KAGReduceMotionLayers.add(this) if (!flipStartKnown);
+
+		flipStartKnown = true;
+
+	}
+
+	// Reduce Motion turned on or off: the still picture in place of the flip, or the flip again
+
+	function reduceMotionChanged(on) {
+
+		if (flipStart === void) return;
+
+		var s = flipStart;
+
+		if (on && flip !== void) { stopFlip(); startFlip(s.storage, s.elm, s.type); }
+
+		else if (!on && flip === void) startFlip(s.storage, s.elm, s.type);
 
 	}
 

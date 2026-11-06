@@ -269,10 +269,22 @@ function KAGReduceMotion()
 	return on !== void && !!on;
 }
 
-// every flip running now: still, or moving again
+// every flip running now: still, or moving again; a layer whose flip has a still= picture shows
+// that, or its flip again, and .asd animations stop on their frame or go on (since 0.20.0; up to
+// 0.19.0 those changed only when the layer or the animation was loaded again)
 function KAGApplyReduceMotion(on)
 {
 	if (typeof global.kag != "Object" || kag === void || typeof kag.genericFlipsInstances == "undefined") return;
+	var layers = global.KAGReduceMotionLayers, kept = [];
+	if (layers !== void) {
+		for (var i = 0; i < layers.count; i++) {
+			var l = layers[i];
+			if (l === void || !isvalid l) continue;
+			kept.add(l);
+			try { l.reduceMotionChanged(on); } catch (e) { dm("Reduce Motion: " + l.name + ": " + e.message); }
+		}
+		layers.assign(kept);
+	}
 	var types = [];
 	types.assign(kag.genericFlipsInstances);
 	for (var i = 0; i < types.count; i += 2) {
@@ -282,6 +294,19 @@ function KAGApplyReduceMotion(on)
 			var f = list[j];
 			if (f !== void && isvalid f && f.flipCanStill()) f.flipStill(on);
 		}
+	}
+	var anims = global.KAGReduceMotionAnims;
+	if (anims !== void) {
+		kept = [];
+		for (var i = 0; i < anims.count; i++) {
+			var seg = anims[i];
+			if (seg === void || !isvalid seg) continue;
+			kept.add(seg);
+			if (!seg.running) continue;
+			if (on && seg.timerEnabled) seg.stop();
+			else if (!on && !seg.timerEnabled) seg.start();
+		}
+		anims.assign(kept);
 	}
 }
 
@@ -302,7 +327,8 @@ KAGDefineOption(%[ name:"voiceVolume", label:"Voice Volume", kind:"slider", prop
 	preview:function(event, v) { KAGVolumeSamples.voice(event); } ]);
 // movies' own volume, where the game keeps it apart from the music's (since 0.19.0)
 KAGDefineOption(%[ name:"movieVolume", label:"Movie Volume", kind:"slider", prop:"movieAudioVolume", min:0, max:100, step:1, ends:[ "Min", "Max" ],
-	initial:100, available:function { return !!kag.independentMovieAudioProperty; } ]);
+	initial:100, available:function { return !!kag.independentMovieAudioProperty; },
+	preview:function(event, v) { KAGVolumeSamples.movie(event, v); } ]);
 KAGDefineOption(%[ name:"textSpeed", label:"Text Speed", kind:"slider", prop:"textspeed", min:0, max:10, step:1, ends:[ "Slow", "Fast" ] ]);
 KAGDefineOption(%[ name:"autoModeSpeed", label:"Auto Speed", kind:"slider", prop:"autospeed", min:0, max:10, step:1, ends:[ "Slow", "Fast" ] ]);
 KAGDefineOption(%[ name:"noEffect", label:"Effect Speed", kind:"toggle", prop:"noeffect", values:[ ["Normal", false], ["Skip", true] ] ]);
@@ -315,19 +341,23 @@ KAGDefineOption(%[ name:"volumeSamples", label:"Hear Volumes as You Set Them", k
  * moving it plays musicStorage (when the game plays no music, which is a sample of its own) for
  * musicTime ms after the last move, then fades it out; letting go of the sound's plays
  * soundStorage in sound buffer soundBuffer; letting go of the voices' plays a character's test
- * line (KAGVoiceTest). A game sets musicStorage and soundStorage (void: none), and the player turns
- * them off with the volumeSamples option. stop() ends the music sample (Config closing).
+ * line (KAGVoiceTest); pointing at the movies' slider or moving it plays movieStorage (a sound of
+ * the game's movies, the sample's the opening's song) at the movie volume the slider shows, with
+ * the game's music paused meanwhile, for musicTime ms after the last move (since 0.20.0). A game
+ * sets musicStorage, soundStorage and movieStorage (void: none), and the player turns them off
+ * with the volumeSamples option. stop() ends the music's and the movies' samples (Config closing).
  */
 class KAGVolumeSampleSet
 {
-	var musicStorage, soundStorage, soundBuffer = 0;
+	var musicStorage, soundStorage, soundBuffer = 0, movieStorage;
 	var musicTime = 5000, musicFade = 1000;
 	var playing = false, timer, lastMove = 0;
-	var played = [];       // the last samples played, for tests: "music:<file>", "sound:<file>", "voice:<file>"
+	var movieBuffer, moviePlaying = false, movieLast = 0, movieFading = 0, movieResumesMusic = false;
+	var played = [];       // the last samples played, for tests: "music:<file>", "sound:<file>", "voice:<file>", "movie:<file>"
 
 	function note(what) { played.add(what); played.erase(0) if played.count > 20; }
 
-	function finalize() { invalidate timer if timer !== void; }
+	function finalize() { invalidate timer if timer !== void; invalidate movieBuffer if movieBuffer !== void; }
 
 	property on { getter { var v = KAGOptionGet("volumeSamples"); return v === void || !!v; } }
 
@@ -346,18 +376,66 @@ class KAGVolumeSampleSet
 
 	function onTimer()
 	{
-		if (!playing) { timer.enabled = false; return; }
-		if (System.getTickCount() - lastMove < musicTime) return;
-		stop(musicFade);
+		var now = System.getTickCount();
+		if (moviePlaying) {
+			if (movieFading == 0 && now - movieLast >= musicTime) { movieBuffer.fade(0, musicFade); movieFading = now; }
+			else if (movieFading != 0 && now - movieFading >= musicFade) stopMovie();
+		}
+		if (playing && now - lastMove >= musicTime) stop(musicFade);
+		timer.enabled = false if !playing && !moviePlaying;
 	}
 
-	// the music sample stops (faded over fade ms)
+	// the music sample stops (faded over fade ms), and the movies' (at once)
 	function stop(fade = 0)
 	{
+		stopMovie();
 		timer.enabled = false if timer !== void;
 		if (!playing) return;
 		playing = false;
 		if (fade > 0) kag.bgm.fadeOut(%[ time:fade ]); else kag.bgm.stop();
+	}
+
+	// the movies' sample at the volume a movie plays at with the slider at v (GFX_Movie.tjs)
+	function movieVolume(v)
+	{
+		v = kag.movieAudioVolume if v === void;
+		with (kag) return (.waveenable && .movieAudioEnable) ? (int)(.wavevolume * v * 10) : 0;
+	}
+
+	function movie(event, v)
+	{
+		if (event == "leave" || !on || movieStorage === void || movieStorage == "") return;
+		movieLast = System.getTickCount();
+		if (moviePlaying) {
+			if (movieFading != 0) { movieBuffer.stopFade(); movieFading = 0; }
+			movieBuffer.volume = movieVolume(v);
+			return;
+		}
+		var file = "";
+		var exts = [ "", ".ogg", ".opus", ".wav" ];
+		for (var i = 0; i < exts.count && file == ""; i++) file = movieStorage + exts[i] if Storages.isExistentStorage(movieStorage + exts[i]);
+		if (file == "") { dm("volume sample: no " + movieStorage); return; }
+		try {
+			movieBuffer = new WaveSoundBuffer(kag) if movieBuffer === void;
+			movieBuffer.open(file);
+			movieBuffer.volume = movieVolume(v);
+			// the game's music waits (the movie's sound is heard alone)
+			movieResumesMusic = kag.bgm.playingStorage != "" && !kag.bgm.buf1.paused;
+			kag.bgm.pause() if movieResumesMusic;
+			movieBuffer.play();
+		} catch (e) { dm("volume sample: " + e.message); return; }
+		moviePlaying = true, movieFading = 0;
+		note("movie:" + movieStorage);
+		if (timer === void) { timer = new Timer(onTimer, ""); timer.interval = 250; }
+		timer.enabled = true;
+	}
+
+	function stopMovie()
+	{
+		if (!moviePlaying) return;
+		moviePlaying = false, movieFading = 0;
+		try { movieBuffer.stop(); } catch (e) {}
+		if (movieResumesMusic) { movieResumesMusic = false; kag.bgm.resume(); }
 	}
 
 	function sound(event)
@@ -518,6 +596,77 @@ function KAGOptionColumn(layer, x, top, names)
 	}
 }
 
+/**
+ * What each option does, in a line (since 0.20.0): its buttons' and slider's tip, shown beside
+ * them or on a screen's help line (Tooltips.tjs), in English for tr(). An option's own help
+ * wins; a game adds its options' lines here, or changes the framework's.
+ */
+var KAGOptionHelpTexts = %[
+	"windowSize" => "The window's size, as a share of the game's",
+	"fullScreenFit" => "How full screen fills a screen of another shape: bars, cut, or stretched",
+	"smoothScaling" => "Smooth or sharp pixels when the game is scaled to the screen",
+	"vsync" => "Frames in step with the display: smoother, and no tearing",
+	"padEnabled" => "Whether a controller plays the game",
+	"padTest" => "Shows which of the controller's buttons are held",
+	"screenshotWindow" => "Screenshots with the message window, or the picture alone",
+	"screenshotFormat" => "PNG keeps every pixel; JPEG files are smaller",
+	"chapterTitles" => "A chapter's title in the top left corner as it starts",
+	"nowPlaying" => "The music's title in the top right corner as it changes",
+	"modeMark" => "A mark while auto mode or skipping is on",
+	"voiceBar" => "A bar under the message window that fills as the voice plays",
+	"faceWindow" => "The speaker's face beside the text",
+	"subtitles" => "Subtitles under movies that have them",
+	"movieSkipping" => "Skipping passes movies you've seen",
+	"movieRightClick" => "A right-click skips a movie you've seen",
+	"movieQuality" => "The movies' size: smaller ones play more smoothly on slow devices",
+	"voiceCut" => "What a click does to a voice still playing",
+	"voiceFadeTime" => "How long a cut voice takes to fade out",
+	"voicePlacement" => "Voices heard from where the speaker stands",
+	"voiceSpeed" => "Voices faster or slower, at the same pitch",
+	"autoVoiceWait" => "In auto mode, the pause after a voice ends",
+	"dramaticMode" => "The window hides while a voice plays, so you see the whole scene",
+	"continueOn" => "The title offers to carry on where you left off",
+	"quickSaves" => "How many quick saves go round",
+	"askAgain" => "Brings back the questions you told not to ask again",
+	"hideCursorIdle" => "The pointer hides when it stays still",
+	"readSpeed" => "The speed of text you've read before",
+	"autoSpeed" => "The speed of text in auto mode",
+	"autoCharWait" => "In auto mode, a longer wait after longer lines",
+	"textFade" => "Text fades in, a character at a time",
+	"readColor" => "Text you've read before in another colour",
+	"readMark" => "A mark by the click wait of text you've read before",
+	"windowOpacity" => "How much of the scene shows through the message window",
+	"afterauto" => "Whether auto mode goes on after a choice",
+	"afterskip" => "Whether skipping goes on after a choice",
+	"enterSkip" => "Skipping text you've read when you reach it",
+	"reduceMotion" => "Still pictures in place of effects and moving things",
+	"bgmVolume" => "The music's volume",
+	"seVolume" => "The sound effects' volume",
+	"voiceVolume" => "The voices' volume",
+	"movieVolume" => "The movies' volume",
+	"textSpeed" => "How fast text appears",
+	"autoModeSpeed" => "How long auto mode waits before the next line",
+	"noEffect" => "Transitions and effects as they are, or skipped",
+	"allSkip" => "Skip everything, or only text you've read",
+	"volumeSamples" => "A volume plays a sample as you point at it and move it",
+	"quickMenuSize" => "The quick menu's buttons larger, for fingers",
+	"quickMenuOpacity" => "How solid the quick menu is",
+	"quickMenu" => "The quick menu always there, or only near the pointer",
+	"quickMenuPanels" => "How a quick menu button's panel opens",
+	"soundOn" => "All sound on, or muted",
+	"tooltips" => "Tips like this one beside what the pointer rests on",
+	"heroName" => "Your name in the story"
+];
+
+function KAGOptionHelp(o)
+{
+	if (o.help !== void) return o.help;
+	var h = KAGOptionHelpTexts[o.name];
+	if (h === void && o.name.indexOf("voice:") == 0) h = "A character's voice volume; Test plays one of their lines";
+	if (h === void && o.name.indexOf("voiceOn:") == 0) h = "A character's voice on or off";
+	return h !== void ? h : "";
+}
+
 function KAGOptionButtons(layer, o, x, y)
 {
 	var st = KAGOptionStyle.button;
@@ -530,6 +679,7 @@ function KAGOptionButtons(layer, o, x, y)
 		layer.addButton(%[ name:"option_" + o.name + "_" + i, normal:st.prefix + w + "_normal", over:st.prefix + w + "_over",
 			exp:"KAGOptionPick('" + o.name + "', " + i + ")" ]);
 		c.buttons.add(layer.names["option_" + o.name + "_" + i]);
+		layer.names["option_" + o.name + "_" + i].hint = KAGOptionHelp(o); // its tip (since 0.20.0)
 	}
 	KAGOptionDrawButtons(o, c);
 }
@@ -590,6 +740,7 @@ function KAGOptionSlider(layer, o, x, y)
 	if (o.preview !== void) elm.previewfunc = "KAGOptionPreview", elm.previewfuncdata = "'" + o.name + "'";
 	layer.addSlider(elm);
 	KAGOptionControls(layer)[o.name] = %[ kind:"slider", slider:layer.names["option_" + o.name] ];
+	layer.names["option_" + o.name].hint = KAGOptionHelp(o) if layer.names["option_" + o.name] !== void;
 	if (o.test !== void) {
 		var bs = KAGOptionStyle.button, w = st.testWidth;
 		layer.locate(sx + st.width + st.testGap, y + bs.y);

@@ -702,15 +702,15 @@ function setConfigPage(page)
 var configPages = [
     void, void,
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
-      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
+      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
-    // the interface: the quick menu, tips, screenshots; the screen and the controller (Display.tjs)
-    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips", "screenshotWindow", "screenshotFormat" ],
+    // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ]
     ];
 
@@ -999,36 +999,15 @@ function setCgmodePageButton(work=void)
         }
     }
 
-    // Hide all buttons once
-    for (var i=0;i<tf.cgbtnnum;i++) {
-        var button = kag.current.names["cg" + i];
-        if (button !== void) {
-            button.enabled = false;
-            button.visible = false;
-        }
-    }
-
-    // Search for items corresponding to the page in the list
+    // the tab's pictures, each a tile of the grid (cgList: tf.cgviewlist[tile] is its CG's
+    // number, void while it hasn't been seen)
+    tf.cgtiles = [];
     tf.cgviewlist = [];
     var pagename = "page" + tf.cgmodepage;
-    var cgnum = 0;
-    for (var i=0;i<tf.cgmodelist.count && cgnum < tf.cgbtnnum;i++) {
-        var info = tf.cgmodelist[i];
-        if (info.page == pagename) {
-            var button = kag.current.names["cg" + cgnum];
-            if (button !== void) {
-                if (isCgSeen(i) ) {
-                    setCGImage(button, info.cglist[0]);
-                    tf.cgviewlist[cgnum] = i;
-                    button.enabled = true;
-                } else {
-                    button.loadButtons("cgmode_thum_normal");
-                    button.enabled = false;
-                }
-            }
-            cgnum++;
-            button.visible = true;
-        }
+    for (var i=0;i<tf.cgmodelist.count;i++) {
+        if (tf.cgmodelist[i].page != pagename) continue;
+        tf.cgviewlist[tf.cgtiles.count] = isCgSeen(i) ? i : void;
+        tf.cgtiles.add(i);
     }
 
     // how many of each page's pictures were found, on its button, and of all of them under the
@@ -1051,6 +1030,73 @@ function setCgmodePageButton(work=void)
         }
     }
     drawScreenText(1654, 966, tr("Found: %d/%d").sprintf(counts.all[0], counts.all[1]), "right");
+}
+
+// ---- the tiles of CG and Replay, and the music room's tracks, as scrolling lists (since
+// 0.20.0; ScrollList.tjs): drawn as their buttons were, one at a time while in view, and
+// scrolled with the wheel, by dragging, with the bar, the keys or a controller's D-pad ----
+
+// A tile's picture for a list: a hidden button of the tile's look (normal: its picture's name),
+// drawn as a [button] of it would be by draw(button, data), then the state's third copied out
+var tileDraw, tileData; // (no closures in TJS: what listTile's caller draws with)
+function listTile(layer, w, h, state, normal, draw = void, data = void, opacity = 255)
+{
+    var b = new ButtonLayer(kag, kag.fore.base);
+    b.visible = false;
+    try {
+        b.loadButtons(normal, getExistImageName(normal.replace(/_normal$/, "_over")) != "" ? normal.replace(/_normal$/, "_over") : normal);
+        if (draw !== void) draw(b, data);
+        var st = state == "normal" ? 0 : 1; // pointed at or focused: the hovered look
+        layer.operateRect(0, 0, b, b.width * st, 0, b.width, b.height, omAlpha, opacity);
+    } catch (e) { dm("list tile " + normal + ": " + e.message); }
+    invalidate b;
+}
+
+// a list on the screen's message layer (one of its links, so the keys reach it from the buttons)
+function screenList(name, a11y, x, y, w, h, itemHeight, columns, gap, count, drawItem, onPick, itemName)
+{
+    var m = kag.current;
+    var l = new KAGScrollList(kag, m);
+    l.name = name;
+    l.a11yName = a11y;
+    l.itemHeight = itemHeight;
+    l.columns = columns;
+    l.gap = gap;
+    l.drawItem = drawItem;
+    l.onPick = onPick;
+    l.itemName = itemName;
+    l.setPos(x, y);
+    l.itemCount = count;
+    l.setSize(w, h);
+    m.addLinkLayer(l);
+    return l;
+}
+
+function drawCgTile(button, i) { setCGImage(button, tf.cgmodelist[i].cglist[0]); }
+function drawCgItem(layer, index, w, h, state)
+{
+    var i = tf.cgviewlist[index];
+    if (i !== void) listTile(layer, w, h, state, "cgmode_thum_normal", drawCgTile, i);
+    else listTile(layer, w, h, "normal", "cgmode_thum_normal");
+}
+function cgItemName(index)
+{
+    return tf.cgviewlist[index] !== void ? tr("Picture %d").sprintf(index + 1) : tr("Not seen yet");
+}
+function cgPick(index)
+{
+    if (tf.cgviewlist[index] === void) return;
+    var l = kag.fore.messages[0].names.cgList;
+    tf.cgPosition = l.position if l !== void && isvalid l;
+    tf.cgnum = index;
+    kag.process("cgmode.ks", "*cgview");
+}
+// the grid of the tab's pictures (cgmode.ks): four across, as the buttons were
+function cgList()
+{
+    var l = screenList("cgList", "Pictures", 681, 322, 967, 585, 123, 4, 31, tf.cgtiles.count, drawCgItem, cgPick, cgItemName);
+    l.scrollTo(tf.cgPosition !== void && tf.cgPositionTab == tf.cgmodepage ? +tf.cgPosition : 0);
+    tf.cgPositionTab = tf.cgmodepage;
 }
 
 /**
@@ -1606,15 +1652,13 @@ function drawReplayTile(button, info)
 }
 
 /**
- * Lays out Replay's tabs and the tiles of the tab and page shown (tf.replayTab, tf.replayPage)
+ * Lays out Replay's tabs and the tiles of the tab shown (tf.replayTab; page is kept for scripts
+ * that pass it, since the tiles scroll)
  */
 function setReplayPage(tab = void, page = void)
 {
     tf.replayTab = tab if tab !== void;
-    tf.replayPage = page if page !== void;
     var tiles = replayTiles[tf.replayTab] !== void ? replayTiles[tf.replayTab] : [];
-    var pages = (tiles.count + tf.cgbtnnum - 1) \ tf.cgbtnnum;
-    tf.replayPage = 0 if tf.replayPage >= pages || tf.replayPage < 0;
 
     for (var i = 0; i < 6; i++) {
         var button = kag.current.names["replay_tab" + i];
@@ -1628,30 +1672,37 @@ function setReplayPage(tab = void, page = void)
         button.loadButtons(current ? "replay_tab_over" : "replay_tab_normal", "replay_tab_over");
         drawButtonLabel(button, tr(replayTabs[i]), current ? [0xffffff, 0xffffff, 0xffffff] : [0x5025ff, 0xffffff, 0xffffff]);
     }
-    var prev = kag.current.names["replay_prev"], next = kag.current.names["replay_next"];
-    if (prev !== void) prev.visible = prev.enabled = tf.replayPage > 0;
-    if (next !== void) next.visible = next.enabled = tf.replayPage < pages - 1;
-
+    // the tab's tiles, in a scrolling grid (replayList; since 0.20.0, pages of 16 before):
+    // tf.replaylist[tile] is a tile that can be played, void while it's locked
+    tf.replaytiles = tiles;
     tf.replaylist = [];
-    for (var i = 0; i < tf.cgbtnnum; i++) {
-        var button = kag.current.names["cg" + i];
-        if (button === void) continue;
-        var info = tiles[tf.replayPage * tf.cgbtnnum + i];
-        if (info === void) {
-            button.enabled = false;
-            button.visible = false;
-            continue;
-        }
-        button.visible = true;
-        if (replayUnlocked(info)) {
-            drawReplayTile(button, info);
-            tf.replaylist[i] = info;
-            button.enabled = true;
-        } else {
-            button.loadButtons("cgmode_thum_normal");
-            button.enabled = false;
-        }
-    }
+    for (var i = 0; i < tiles.count; i++) tf.replaylist[i] = replayUnlocked(tiles[i]) ? tiles[i] : void;
+}
+
+function drawReplayItem(layer, index, w, h, state)
+{
+    var info = tf.replaylist[index];
+    if (info !== void) listTile(layer, w, h, state, "cgmode_thum_normal", drawReplayTile, info);
+    else listTile(layer, w, h, "normal", "cgmode_thum_normal");
+}
+function replayItemName(index)
+{
+    var info = tf.replaylist[index];
+    return info !== void ? shownTitle(info) : tr("Not reached yet");
+}
+function replayPick(index)
+{
+    if (tf.replaylist[index] === void) return;
+    var l = kag.fore.messages[0].names.replayList;
+    tf.replayPosition = l.position if l !== void && isvalid l;
+    replayTile(index);
+}
+// the grid of the tab's scenes (replay.ks)
+function replayList()
+{
+    var l = screenList("replayList", "Scenes", 681, 322, 967, 585, 123, 4, 31, tf.replaytiles.count, drawReplayItem, replayPick, replayItemName);
+    l.scrollTo(tf.replayPosition !== void && tf.replayPositionTab == tf.replayTab ? +tf.replayPosition : 0);
+    tf.replayPositionTab = tf.replayTab;
 }
 
 /**
@@ -2092,30 +2143,37 @@ function setRepeat(work=void)
  */
 function setMusicmodePageButton()
 {
-    // Change Play button
-    for (var i=0;i<tf.musicbtnnum;i++) {
-        var name = "track%02d".sprintf(i + 1);
-        var target = kag.current.names[name];
-        if (target !== void) {
-            if (i < tf.musicmodelist.count) {
-                target.visible = true;
-                if (tf.bgmplayflag[i]) {
-                    target.enabled = true;
-                    // the track playing lit (comparing with tf.beforemusic, void at first, took
-                    // void as track 1, which then never lit)
-                    setButtonOver(name, tf.musicplaying && tf.playbgmnum !== void && i == tf.playbgmnum);
-                } else {
-                    target.enabled = false;
-                }
-            } else {
-                target.visible = false;
-                target.enabled = false;
-            }
-        }
-    }
+    // the tracks' list (musicList): drawn again for the track playing
+    var l = kag.current.names.musicList;
+    l.refresh() if l !== void && isvalid l;
 
     // Playback state
     setButtonOver("musicmode_play", tf.musicplaying);
+}
+
+// A track's row: its picture (trackNN), lit while it plays, faint while it's locked
+function drawTrackItem(layer, index, w, h, state)
+{
+    var name = "track%02d_normal".sprintf(index + 1);
+    if (getExistImageName(name) == "") name = "track01_normal";
+    var lit = tf.musicplaying && tf.playbgmnum !== void && index == tf.playbgmnum;
+    if (!tf.bgmplayflag[index]) listTile(layer, w, h, "normal", name, void, void, 96);
+    else listTile(layer, w, h, lit ? "over" : state, name);
+}
+function trackItemName(index)
+{
+    if (!tf.bgmplayflag[index]) return tr("Not heard yet");
+    var info = tf.musicmodelist[index];
+    return info.title !== void && info.title != "" ? tr(info.title) : info.filename;
+}
+function trackPick(index)
+{
+    if (tf.bgmplayflag[index]) playBgm(index);
+}
+// the music room's tracks (musicmode.ks): a list, as many as musiclist.csv has
+function musicTrackList()
+{
+    screenList("musicList", "Tracks", 870, 291, 748, 640, 46, 1, 8, tf.musicmodelist.count, drawTrackItem, trackPick, trackItemName);
 }
 
 /**

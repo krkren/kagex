@@ -6977,7 +6977,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			countPage :	(elm.countpage === void) ? true : +elm.countpage,
 
-			hint :		elm.hint,
+			hint :		elm.hint !== void ? elm.hint : elm.help,
 
 			color :		(elm.color === void) ? defaultLinkColor : +elm.color,
 
@@ -7205,7 +7205,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.setPos(x, y);
 
-		object.hint = elm.hint;
+		object.hint = elm.hint !== void ? elm.hint : elm.help; // help= (since 0.20.0) is the same
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 
@@ -7970,7 +7970,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         object.setPos(elm.x, elm.y);
 
-        object.hint = elm.hint;
+        object.hint = elm.hint !== void ? elm.hint : elm.help; // help= (since 0.20.0) is the same
 
         object.visible = (elm.visible !== void) ? elm.visible : true;
 

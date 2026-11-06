@@ -467,6 +467,50 @@ def ic_prevchoice(c, cx, cy, s, col):
     c.ellipse((x0 - s * 0.1, y0 - s * 0.1, x0 + s * 0.1, y0 + s * 0.1), fill=col)
 
 
+def ic_skip(c, cx, cy, s, col):
+    """two triangles pointing on: skipping (rewind's mirror)"""
+    tri(c, cx - s * 0.3, cy, s * 0.8, col, False)
+    tri(c, cx + s * 0.3, cy, s * 0.8, col, False)
+
+
+def ic_auto(c, cx, cy, s, col):
+    """a play triangle in a circling arrow: the text going on by itself"""
+    r = s * 0.48
+    pts = [(cx + r * math.cos(a), cy + r * math.sin(a)) for a in np.linspace(math.radians(-50), math.radians(250), 30)]
+    c.stroke(pts, s * 0.1, col)
+    ex, ey = pts[0]
+    c.polygon([(ex - s * 0.2, ey - s * 0.12), (ex + s * 0.14, ey - s * 0.12), (ex + s * 0.02, ey + s * 0.2)], col)
+    c.polygon([(cx - s * 0.13, cy - s * 0.22), (cx + s * 0.22, cy), (cx - s * 0.13, cy + s * 0.22)], col)
+
+
+def ic_log(c, cx, cy, s, col):
+    """lines of text, the last one short: the message history"""
+    for i, (y, w) in enumerate(((-0.34, 0.92), (-0.11, 0.92), (0.12, 0.92), (0.35, 0.56))):
+        x0 = cx - s * 0.46
+        c.rrect((x0, cy + s * (y - 0.06), x0 + s * w, cy + s * (y + 0.06)), s * 0.05, fill=col)
+
+
+def ic_config(c, cx, cy, s, col):
+    """a cog: the settings"""
+    teeth = 8
+    for k in range(teeth):
+        a = 2 * math.pi * k / teeth
+        ca, sa = math.cos(a), math.sin(a)
+        pts = []
+        for (r, t) in ((0.3, -0.13), (0.52, -0.09), (0.52, 0.09), (0.3, 0.13)):
+            # t is sideways (along the tangent), r out from the centre
+            pts.append((cx + s * (r * ca - t * sa), cy + s * (r * sa + t * ca)))
+        c.polygon(pts, col)
+    c.ellipse((cx - s * 0.36, cy - s * 0.36, cx + s * 0.36, cy + s * 0.36), outline=col, width=s * 0.17)
+
+
+def ic_camera(c, cx, cy, s, col):
+    """a camera, in outline: a screenshot"""
+    c.rrect((cx - s * 0.2, cy - s * 0.42, cx + s * 0.2, cy - s * 0.2), s * 0.05, fill=col)
+    c.rrect((cx - s * 0.52, cy - s * 0.26, cx + s * 0.52, cy + s * 0.42), s * 0.12, outline=col, width=s * 0.1)
+    c.ellipse((cx - s * 0.2, cy - s * 0.12, cx + s * 0.2, cy + s * 0.28), outline=col, width=s * 0.1)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -591,8 +635,12 @@ def make_logo():
 
 
 # --- the message window ----------------------------------------------------------------
-MSG_BUTTONS = ["save", "load", "back", "skip", "auto", "log", "config", "exit", "hide", "qsave", "qload"]
+MSG_BUTTONS = ["save", "load", "exit", "hide", "qsave", "qload"]
 MSG_LABELS = {"qsave": "Q.SAVE", "qload": "Q.LOAD"}   # the others' are their names in capitals
+# the quick menu's other buttons are icons (since 0.20.0), so no language needs its own
+MSG_ICONS = (("rewind", ic_rewind), ("prevscene", ic_prevscene), ("prevchoice", ic_prevchoice),
+             ("nextscene", ic_nextscene), ("back", ic_back), ("skip", ic_skip), ("auto", ic_auto),
+             ("log", ic_log), ("config", ic_config), ("screenshot", ic_camera))
 
 
 def make_message():
@@ -610,16 +658,14 @@ def make_message():
 
     for name in MSG_BUTTONS:
         for st in ("normal", "over"):
-            button(124, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
+            button(100, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
                 out("msg_%s_%s.png" % (name, st)))
-    # the scene player's moves (since 0.18.0): icons only, so no language needs its own
-    for name, icon in (("rewind", ic_rewind), ("prevscene", ic_prevscene), ("prevchoice", ic_prevchoice),
-                       ("nextscene", ic_nextscene)):
+    for name, icon in MSG_ICONS:
         for st in ("normal", "over"):
-            button(42, 42, "", st, r=10, bw=3, icon=icon, icon_size=20).save(out("msg_%s_%s.png" % (name, st), False))
+            button(42, 42, "", st, r=10, bw=3, icon=icon, icon_size=22).save(out("msg_%s_%s.png" % (name, st), False))
     for name in ("auto", "skip"):  # latched while auto mode / skipping is on
-        button(124, 42, L(name.upper()), "on", size=19, r=10, bw=3, tracking=1.5, icon=ic_dot,
-               icon_size=8).save(out("msg_%s_on.png" % name))
+        button(42, 42, "", "on", r=10, bw=3, icon=dict(MSG_ICONS)[name], icon_size=22).save(
+            out("msg_%s_on.png" % name, False))
 
     # the choices ([selopt] in first.ks)
     for st, fill, border, sh in (("normal", rgba(LAV, 238), VIOLET, VIOLET), ("over", rgba(VIOLET), WHITE, NAVY)):

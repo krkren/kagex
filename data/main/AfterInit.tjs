@@ -45,34 +45,43 @@ KAGDefineAction(%[ name:"config", label:"Config", func:startConfig,
 KAGDefineAction(%[ name:"exitScene", label:"Leave the replay", func:exitScene,
     available:function { return !!tf.recollect; } ]);
 
-// The message window's buttons are the quick menu (QuickMenu.tjs): on the window's top edge, as
-// they were, with their pictures (msg_*); dimmed while they can't be used, auto and skip lit
-// while on, and the pin at the end lets them fade out until the pointer comes near (a tap on the
-// handle on a phone). A replay has fewer
+// The message window's buttons are the quick menu (QuickMenu.tjs): along the window's bottom
+// edge, at its right, with their pictures (msg_*: icons, but for the saves); dimmed while they
+// can't be used, auto and skip lit while on, and the pin at the end lets them fade out until the
+// pointer comes near (a tap on the handle on a phone). In three groups: moving through the story
+// (the scene before, the last choice, rewind, back a line, auto, skip, the next scene), saving
+// and loading, then the history, a screenshot and Config. Three have panels (QuickPanels.tjs)
+// that a right-click or a long press opens: Auto the text's settings, Q.LOAD the latest quick
+// saves, Config the volumes. A replay has fewer
 var quickMenuStory = [
     %[ action:"prevScene",  image:"msg_prevscene",  x:0 ],
-    %[ action:"rewind",     image:"msg_rewind",     x:50 ],
-    %[ action:"prevChoice", image:"msg_prevchoice", x:100 ],
-    %[ action:"nextScene",  image:"msg_nextscene",  x:150 ],
-    %[ action:"quickSave",  image:"msg_qsave",      x:228 ],
-    %[ action:"quickLoad",  image:"msg_qload",      x:360 ],
-    %[ action:"save",       image:"msg_save",       x:492 ],
-    %[ action:"load",       image:"msg_load",       x:624 ],
-    %[ action:"back",       image:"msg_back",       x:756 ],
-    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
-    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
-    %[ action:"backlog",    image:"msg_log",        x:1152 ],
-    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+    %[ action:"prevChoice", image:"msg_prevchoice", x:50 ],
+    %[ action:"rewind",     image:"msg_rewind",     x:100 ],
+    %[ action:"back",       image:"msg_back",       x:150 ],
+    %[ action:"auto",       image:"msg_auto",       x:200, on:function { return kag.autoMode; }, panel:"text" ],
+    %[ action:"skip",       image:"msg_skip",       x:250, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"nextScene",  image:"msg_nextscene",  x:300 ],
+    %[ action:"quickSave",  image:"msg_qsave",      x:366 ],
+    %[ action:"quickLoad",  image:"msg_qload",      x:474, panel:"quickSaves" ],
+    %[ action:"save",       image:"msg_save",       x:582 ],
+    %[ action:"load",       image:"msg_load",       x:690 ],
+    %[ action:"backlog",    image:"msg_log",        x:814 ],
+    %[ action:"screenshot", image:"msg_screenshot", x:864 ],
+    %[ action:"config",     image:"msg_config",     x:914, panel:"volume" ] ];
 var quickMenuReplay = [
-    %[ action:"exitScene",  image:"msg_exit",       x:624 ],
-    %[ action:"back",       image:"msg_back",       x:756 ],
-    %[ action:"skip",       image:"msg_skip",       x:888, on:function { return kag.skipMode != SKIP_NONE; } ],
-    %[ action:"auto",       image:"msg_auto",       x:1020, on:function { return kag.autoMode; } ],
-    %[ action:"backlog",    image:"msg_log",        x:1152 ],
-    %[ action:"config",     image:"msg_config",     x:1284 ] ];
+    %[ action:"back",       image:"msg_back",       x:0 ],
+    %[ action:"auto",       image:"msg_auto",       x:50, on:function { return kag.autoMode; }, panel:"text" ],
+    %[ action:"skip",       image:"msg_skip",       x:100, on:function { return kag.skipMode != SKIP_NONE; } ],
+    %[ action:"exitScene",  image:"msg_exit",       x:166 ],
+    %[ action:"backlog",    image:"msg_log",        x:290 ],
+    %[ action:"screenshot", image:"msg_screenshot", x:340 ],
+    %[ action:"config",     image:"msg_config",     x:390, panel:"volume" ] ];
+// the bottom right of the window's panel (1788x318 of its 1800x330; [initscene]'s marginB keeps
+// the text above the strip at its larger size)
+function quickMenuPlace(w, h) { var m = kag.fore.messages[0]; return [ m.left + m.width - 33 - w, m.top + m.height - 23 - h ]; }
 with (KAGQuickMenuOf(kag)) {
     .items = function { return tf.recollect ? quickMenuReplay : quickMenuStory; };
-    .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+    .place = quickMenuPlace;
     // in the story: after [initscene] (macro.ks), which sets f.quickMenu, until the title clears
     // it (f is the game's, so a save loaded brings it back); not over Config and the like
     .when = function { return !!f.quickMenu && !inSystemMenu(kag); };
@@ -82,11 +91,24 @@ with (KAGQuickMenuOf(kag)) {
 kag.independentMovieAudioProperty = true;
 
 // Gestures in the story: a swipe on a phone, or a drag with the right mouse button, left rewinds
-// (compiled scenes), right skips, up shows the message history and down hides the window
+// (compiled scenes), right skips, up shows the message history and down hides the window; a long
+// press turns auto mode on or off
 kag.gestureActions.left  = "rewind";
 kag.gestureActions.right = "skip";
+kag.gestureActions.hold  = "auto"; // a long press on the story (since 0.20.0): auto mode on or off
 // the story only, as the quick menu (Search's list is dragged on the title's conductor)
 kag.gestures.when = function { return !!f.quickMenu && !inSystemMenu(kag); };
+
+// Help lines (Tooltips.tjs, since 0.20.0): at the bottom of Config, the save and load screens and
+// Extras, what the pointer or the focus is on (helptexts.csv), or what the screen is for
+function helpLineArea()
+{
+    var s = kag.conductor.curStorage;
+    if (s == "config.ks") return [ 290, 1008, 760, 54 ];
+    if (s == "save.ks" || s == "load.ks") return [ 290, 1014, 1340, 50 ];
+    if (s == "cgmode.ks" || s == "replay.ks" || s == "musicmode.ks" || s == "searchmode.ks") return [ 290, 1000, 1000, 54 ];
+}
+kag.tooltips.helpArea = helpLineArea;
 
 // Controller: START opens the config screen, BACK (Select) the save screen and L1 the load
 // screen, the same as F4, F2 and F3 above. The framework maps the D-pad, A/B/X/Y, R1, R2, L2
@@ -102,6 +124,7 @@ kag.recreatePadKeyMap();
 var configVoiceOptions = KAGDefineVoiceOptions([ "ai", "pip", "hiyori", "vee" ]);
 KAGVolumeSamples.musicStorage = "bgm01"; // the opening's song, heard as the game starts
 KAGVolumeSamples.soundStorage = "se_chime";
+KAGVolumeSamples.movieStorage = "bgm01"; // the opening's sound is the start of its song
 
 // Languages: F9 and the controller's L2 show the game in its next language (KAGLanguageList in
 // Config.tjs), as Config's Language buttons choose one. The framework draws the message window

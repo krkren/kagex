@@ -1,0 +1,52 @@
+﻿# What the sample's screens' buttons do, for their tips and help lines (template/system/Tooltips.tjs):
+# "<screen>.<button's name>" (a number at the end as #: save#), a tab, the text in English, which
+# tr() translates (data/lang/<code>/lang.json); "*.<name>" on every screen; "<screen>._" is the
+# screen's own line, shown while the pointer is on nothing
+*.return	Back where you were
+config._	Point at a setting to see what it does
+config.config_window	Play in a window
+config.config_fullscreen	Play in full screen
+config.textspeed	How fast text appears
+config.autospeed	How long auto mode waits before the next line
+config.config_effecton	Transitions and effects as they are
+config.config_effectoff	Skip transitions and effects
+config.config_skipall	Skipping skips everything
+config.config_skipalrdy	Skipping skips only text you've read
+config.config_lang_en	Show the game in English
+config.config_lang_ja	Show the game in Japanese
+config.bgmvolume	The music's volume
+config.sevolume	The sound effects' volume
+config.voicevolume	The voices' volume
+config.config_voice#	A character's voice on or off
+config.page#	Another page of settings
+config.config_controls	The keys and buttons, and changing them
+config.config_undo	Take back the last change
+config.config_revert	Put back every setting as it was when you came in
+config.config_initial	Every setting as the game starts it
+config.config_title	Back to the title screen
+save._	Pick a slot to save in
+save.save#	Save here (a slot with a save is written over, after asking)
+save.page#	Another page of slots
+load._	Pick a save to load
+load.load#	Load this save
+load.page#	Another page of slots
+*.extra_cgmode	The pictures you've seen
+*.extra_replaymode	Play the scenes you've reached again
+*.extra_musicmode	The music
+*.extra_searchmode	Find a line you've read
+*.gallery_stop	Stop the music
+cgmode._	Pick a picture to see it full size
+cgmode.cglist	Pick a picture to see it full size; the wheel or a drag scrolls
+cgmode.cgmode_page#	Another group of pictures
+replay._	Pick a scene to play it again
+replay.replaylist	Pick a scene to play it again; the wheel or a drag scrolls
+replay.replay_tab#	Another group of scenes
+musicmode._	Pick a track to play it
+musicmode.musiclist	Pick a track to play it; the wheel or a drag scrolls
+musicmode.musicmode_play	Play the track picked
+musicmode.musicmode_stop	Stop the music
+musicmode.musicmode_repeat	Play this track over and over
+musicmode.musicmode_allrepeat	Play every track in turn
+musicmode.musicmode_title	Keep this music on the title screen
+searchmode._	Type words from a line, then search
+searchmode.search_go	Search for the words typed
