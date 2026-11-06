@@ -8265,6 +8265,7 @@ class KAGWindow extends Window
 			set(num, "Storage",  dic.currentStorage);
 
 			set(num, "PlayTime", dic.playTime);
+			set(num, "Time",     dic.storeTime); // when it was saved, in ms (recentBookMarks)
 
 
 
@@ -14304,6 +14305,57 @@ class KAGWindow extends Window
 		return -1;
 	}
 
+	// The save screens' bookmarks (not the quick or continue saves) that hold a save, newest first,
+	// up to count (since 0.21.0: the quick menu's save and load panels). Their dates sort as text
+	function recentBookMarks(count = 3)
+	{
+		var list = [];
+		for (var i = 0; i < numBookMarks; i++) {
+			if (!isExistentBookMark(i)) continue;
+			var t = getBookMarkIndex(i, "Time", void);
+			list.add([ typeof t == "Integer" || typeof t == "Real" ? +t : 0, (string)getBookMarkDate(i), i ]);
+		}
+		// by the time saved (since 0.21.0), then by the date shown (a save from before has no time)
+		list.sort(function(a, b) { return a[0] != b[0] ? a[0] > b[0] : a[1] > b[1]; });
+		var out = [];
+		for (var i = 0; i < list.count && i < count; i++) out.add(list[i][2]);
+		return out;
+	}
+
+	// The first of the save screens' bookmarks with nothing in it, or -1
+	function firstFreeBookMark()
+	{
+		for (var i = 0; i < numBookMarks; i++) if (!isExistentBookMark(i) && !getBookMarkProtectedState(i)) return i;
+		return -1;
+	}
+
+	// A save into bookmark n: after asking when n holds one (saveBookMarkWithAsk), otherwise at once
+	// with the card a quick save shows (since 0.21.0: the quick menu's save panel)
+	function saveIntoBookMark(n)
+	{
+		if (isExistentBookMark(n)) return saveBookMarkWithAsk(n);
+		if (readOnlyMode || !canStore() || !saveBookMark(n)) return false;
+		KAGA11y.announce(tr("Saved"));
+		showSaveCard(n, tr("Saved"));
+		return true;
+	}
+
+	// The card after a save: the save's picture, its scene and its date under the title
+	function showSaveCard(n, title)
+	{
+		var name = getBookMarkPageName(n), date = getBookMarkDate(n), lines = [ title ];
+		lines.add(tr(name)) if (name !== void && name != "");
+		lines.add(date) if (date !== void && date != "");
+		// the save's picture: the locked snapshot it was made from, or the screen as saved
+		var pic = snapshotLayer, own;
+		if (pic === void) {
+			pic = own = new global.Layer(this, primaryLayer);
+			try { captureSnapshot(own); } catch (e) { dm("save card: " + e.message); invalidate own; pic = own = void; }
+		}
+		showScreenshotCard(pic, lines);
+		invalidate own if (own !== void);
+	}
+
 	// The quick saves, newest first
 	function quickSaves()
 	{
@@ -14328,20 +14380,8 @@ class KAGWindow extends Window
 		scflags.quickSaveLast = n;
 		saveSystemVariables();
 		KAGA11y.announce(tr("Quick saved"));
-		if (quickSaveNotice) {
-			// a card with the save's picture, its scene and date (since 0.20.0; words only before)
-			var name = getBookMarkPageName(n), date = getBookMarkDate(n), lines = [ tr("Quick saved") ];
-			lines.add(tr(name)) if (name !== void && name != "");
-			lines.add(date) if (date !== void && date != "");
-			// the save's picture: the locked snapshot it was made from, or the screen as saved
-			var pic = snapshotLayer, own;
-			if (pic === void) {
-				pic = own = new global.Layer(this, primaryLayer);
-				try { captureSnapshot(own); } catch (e) { dm("quick save card: " + e.message); invalidate own; pic = own = void; }
-			}
-			showScreenshotCard(pic, lines);
-			invalidate own if (own !== void);
-		}
+		// a card with the save's picture, its scene and date (since 0.20.0; words only before)
+		if (quickSaveNotice) showSaveCard(n, tr("Quick saved"));
 		callHook(quickSaveHook, n);
 		return n;
 	}

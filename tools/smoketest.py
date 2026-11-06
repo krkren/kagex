@@ -3345,6 +3345,62 @@ def sample_steps(eng):
         finally:
             eng.tjs("kag.quickMenu.closePanel(); kag.bgmvolume = global.__smokeBgm; return 1;")
 
+    @step("the quick menu's save and load panels: a new save in one click, the newest saves first; the wheel over the volume panel; a message window's own buttons fade away from the pointer (buttonsfade=)")
+    def _():
+        if eng.tjs('return typeof kag.recentBookMarks != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no save panels here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        idx = lambda a: eng.tjs('var b = kag.quickMenu.shown; for (var i = 0; i < b.count; i++) if (b[i].action == "%s") return i; return -1;' % a)
+        si, li, ci = idx("save"), idx("load"), idx("config")
+        if si < 0 or li < 0:
+            print("     (skipped: the strip has no SAVE or LOAD)", flush=True)
+            return
+        rows = 'var p = kag.quickMenu.panel, r = []; for (var i = 0; i < p.rows.count; i++) r.add(p.rows[i].kind + ":" + p.rows[i].act + ":" + p.rows[i].n); return r.join(" ");'
+        # SAVE's panel: a new save into the first empty slot, at once
+        eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % si)
+        eng.wait("the save panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Save"', timeout=5)
+        got = str(eng.tjs(rows))
+        free = eng.tjs("return kag.firstFreeBookMark();")
+        print("     the save panel: %s (the first empty slot %s)" % (got, free), flush=True)
+        if not got.startswith("save:new:%s" % free):
+            raise SmokeError("the save panel doesn't start with a new save in the first empty slot: %s" % got)
+        eng.tjs("kag.quickMenu.panel.pick(0); return 1;")
+        eng.wait("the new save", "kag.isExistentBookMark(%s) && kag.quickMenu.panel === void" % free, timeout=10)
+        # LOAD's panel: the newest saves, the one just made first
+        eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % li)
+        eng.wait("the load panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Load"', timeout=5)
+        got = str(eng.tjs(rows))
+        print("     the load panel: %s" % got, flush=True)
+        if not got.startswith("save:load:%s" % free):
+            raise SmokeError("the load panel doesn't list the newest save first: %s" % got)
+        eng.tjs("kag.quickMenu.closePanel(); return 1;")
+        # the wheel over the volume panel moves its first slider (the music's)
+        if ci >= 0 and eng.tjs("return typeof KAGQuickPanelLayer.onWheel != \"undefined\" ? 1 : 0;") == 1:
+            eng.tjs('kag.quickMenu.openPanel(%d, false); return 1;' % ci)
+            eng.wait("the volume panel", 'kag.quickMenu.panel !== void && kag.quickMenu.panel.spec.title == "Volume"', timeout=5)
+            w = str(eng.tjs('var p = kag.quickMenu.panel, b = KAGOptionGet("bgmVolume"); kag.primaryLayer.setCursorPos(p.left + 40, p.top + p.height - 30);'
+                            ' var moved = p.cursorX >= 0 && p.cursorX < p.width; p.onWheel(0, -120, 0, 0); var r = [moved ? 1 : 0, b, KAGOptionGet("bgmVolume")];'
+                            ' p.onWheel(0, 120, 0, 0); r.add(KAGOptionGet("bgmVolume")); kag.quickMenu.closePanel(); return r.join(",");')).split(",")
+            print("     the wheel over the volume panel (pointer on it, the music before, a notch down, a notch up): %s" % ",".join(w), flush=True)
+            if w[0] == "1" and not (float(w[2]) < float(w[1]) and float(w[3]) == float(w[1])):
+                raise SmokeError("the wheel over the volume panel didn't move the music's volume: %s" % w)
+        # a message window's own system buttons fading away from the pointer
+        if eng.tjs("return typeof kag.fore.messages[0].setButtonsFade != \"undefined\" ? 1 : 0;") == 1:
+            eng.tjs('var m = kag.fore.messages[0]; m.addSystemButton(%[ name:"smokesys", normal:"start_normal", over:"start_over", x:"1300", y:"20", exp:"void" ]);'
+                    ' m.setButtonsFade(200, ""); kag.primaryLayer.setCursorPos(100, 100); return 1;')
+            moved = eng.tjs('var m = kag.fore.messages[0]; return m.cursorX < 1000 || m.cursorY < -100 ? 1 : 0;')
+            if moved == 1:
+                eng.wait("the buttons to fade out", 'kag.fore.messages[0].buttons.smokesys.opacity == 0 && !kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
+                eng.tjs('var m = kag.fore.messages[0]; kag.primaryLayer.setCursorPos(m.left + 1350, m.top + 40); return 1;')
+                eng.wait("the buttons to come back near the pointer", 'kag.fore.messages[0].buttons.smokesys.opacity == 255 && kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
+                print("     a [sysbutton] faded out with the pointer away and came back near it", flush=True)
+            else:
+                print("     (the fading buttons: not checked, the pointer can't be moved here)", flush=True)
+            eng.tjs('var m = kag.fore.messages[0]; m.setButtonsFade(0, ""); var b = m.buttons.smokesys; invalidate b; delete m.buttons.smokesys;'
+                    ' m.buttons_save.erase(m.buttons_save.count - 1); return 1;')
+
     @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
     def _():
         if eng.tjs('return typeof kag.tooltips == "Object" && kag.tooltips !== void && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
@@ -4785,10 +4841,17 @@ def sample_steps(eng):
         eng.tjs("kag.continueOn = true; tf.continueAsked = false; kag.goToStart(); return 1;")
         eng.wait("the title's offer", 'kag.conductor.curStorage == "title.ks" && typeof kag.currentDialog == "Object"'
                  ' && kag.currentDialog !== void', timeout=30)
+        # the save shown as a card above the prompt, with its picture (since 0.21.0)
+        card = eng.tjs('return typeof global.offerContinueDone == "undefined" ? -1 : tf.continueCard !== void && isvalid tf.continueCard && tf.continueCard.visible'
+                       ' && tf.continueCard.top + tf.continueCard.height <= kag.primaryLayer.height \\ 2 ? 1 : 0;')
+        if card == 0:
+            raise SmokeError("the title's offer to carry on showed no card with the save above the prompt")
         eng.key("VK_LEFT")  # the focus starts on No
         eng.key("VK_RETURN")
         eng.wait("the place to load", 'kag.conductor.curStorage == "layer.ks" && kag.conductor.curLine == %d && kag.inStable' % line,
                  timeout=30)
+        if card == 1 and eng.tjs("return tf.continueCard === void ? 1 : 0;") != 1:
+            raise SmokeError("the offer's card stayed after the answer")
 
     @step("voices: a cut voice fades out on a track of its own, voices come from where their speakers stand, and vol= makes a line quieter")
     def _():

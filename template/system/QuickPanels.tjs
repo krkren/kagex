@@ -11,16 +11,22 @@
  *          "text"        text speed, auto speed, what skip skips and the window's opacity
  *          "quickSaves"  the newest quick saves with their pictures, scenes and dates: one is
  *                        loaded (after asking, as quick load does)
+ *          "saves"       a new save in the first empty slot, and the newest saves to save over
+ *                        (after asking): saving in one click (since 0.21.0)
+ *          "loads"       the newest saves, one loaded after asking (since 0.21.0)
  *          [ "<option>", ... ]  rows of the options table (Options.tjs), with a title:
  *                        %[ title:"...", options:[ ... ] ]
  *          a function returning one of those
  *
- * KAGQuickPanelSpecs holds the named ones; a game changes them or adds its own.
+ * KAGQuickPanelSpecs holds the named ones; a game changes them or adds its own. The wheel over a
+ * panel moves the slider under the pointer, or its first (the volume panel's: the music's).
  */
 var KAGQuickPanelSpecs = %[
 	"volume" => %[ title:"Volume", options:[ "bgmVolume", "seVolume", "voiceVolume", "soundOn" ] ],
 	"text" => %[ title:"Text", options:[ "textSpeed", "autoModeSpeed", "allSkip", "windowOpacity" ] ],
-	"quickSaves" => %[ title:"Quick Saves", quickSaves:3 ]
+	"quickSaves" => %[ title:"Quick Saves", quickSaves:3 ],
+	"saves" => %[ title:"Save", saveSlots:3 ],
+	"loads" => %[ title:"Load", loadSlots:3 ]
 ];
 
 // all sound on or off (the window's waveenable), for the volume panel
@@ -48,7 +54,9 @@ class KAGQuickPanelLayer extends Layer
 	var dragging = -1;   // the slider row held
 	var veil;            // a click outside closes it (not when opened by resting)
 	var away = 0;        // when the pointer left it (hover)
-	var pics = [];       // the quick saves' pictures
+	var pics = [];       // the saves' pictures
+	var wheelHook;       // the window's onMouseWheelHook while it's open
+	var wheelRest = 0;
 	var pad = 28, rowH = 64, labelW = 250, controlW = 340;
 	var a11yHidden = true;
 
@@ -67,12 +75,15 @@ class KAGQuickPanelLayer extends Layer
 		build();
 		visible = true;
 		window.keyCapture = onKey;
+		wheelHook = onWheel;
+		window.addHook("onMouseWheelHook", wheelHook);
 		pushA11y();
 	}
 
 	function finalize()
 	{
 		window.keyCapture = void if (isvalid window && window.keyCapture === onKey);
+		window.removeHook("onMouseWheelHook", wheelHook) if (isvalid window && wheelHook !== void);
 		KAGA11y.removeNodes(this);
 		invalidate veil if (veil !== void && isvalid veil);
 		for (var i = 0; i < pics.count; i++) invalidate pics[i] if (pics[i] !== void && isvalid pics[i]);
@@ -86,16 +97,27 @@ class KAGQuickPanelLayer extends Layer
 		for (var i = 0; i < pics.count; i++) invalidate pics[i] if (pics[i] !== void && isvalid pics[i]);
 		pics = [];
 		var y = pad + 56, w = pad * 2 + labelW + controlW;
-		if (spec.quickSaves !== void) {
-			var list = window.quickSaves();
-			for (var i = 0; i < list.count && i < +spec.quickSaves; i++) {
+		if (spec.quickSaves !== void || spec.saveSlots !== void || spec.loadSlots !== void) {
+			// saves with their pictures: quick saves or the newest saves to load, or to save over
+			var saving = spec.saveSlots !== void, act = saving ? "save" : "load";
+			var most = +(spec.quickSaves !== void ? spec.quickSaves : saving ? spec.saveSlots : spec.loadSlots);
+			var list = spec.quickSaves !== void ? window.quickSaves() : window.recentBookMarks(most);
+			if (saving && !window.canStore()) {
+				rows.add(%[ kind:"note", text:tr("The game can't be saved here"), x:pad, y:y, w:w - pad * 2, h:rowH ]), y += rowH;
+				list = [];
+			} else if (saving) {
+				var free = window.firstFreeBookMark();
+				if (free >= 0) rows.add(%[ kind:"save", act:"new", n:free, x:pad, y:y, w:w - pad * 2, h:104 ]), y += 112;
+			}
+			for (var i = 0; i < list.count && i < most; i++) {
 				var n = list[i], p = new global.Layer(window, window.primaryLayer);
 				try { p.loadImages(window.getBookMarkFileNameAtNum(n)); } catch (e) { invalidate p; p = void; }
 				pics.add(p);
-				rows.add(%[ kind:"save", n:n, pic:p, x:pad, y:y, w:w - pad * 2, h:104 ]);
+				rows.add(%[ kind:"save", act:act, n:n, pic:p, x:pad, y:y, w:w - pad * 2, h:104 ]);
 				y += 112;
 			}
-			if (list.count == 0) rows.add(%[ kind:"note", text:tr("No quick saves yet"), x:pad, y:y, w:w - pad * 2, h:rowH ]), y += rowH;
+			if (rows.count == 0)
+				rows.add(%[ kind:"note", text:tr(spec.quickSaves !== void ? "No quick saves yet" : "No saves yet"), x:pad, y:y, w:w - pad * 2, h:rowH ]), y += rowH;
 		} else {
 			var names = spec.options;
 			for (var i = 0; i < names.count; i++) {
@@ -137,6 +159,19 @@ class KAGQuickPanelLayer extends Layer
 		if (r.kind == "note") {
 			setYesNoFont(this, 24);
 			drawYesNoString(this, r.x, r.y + 14, r.text, 0xffffff, yesnoTextBase);
+			return;
+		}
+		if (r.kind == "save" && r.act == "new") {
+			// a save in the first empty slot: an empty picture with a plus
+			var pw = 160, ph = 90;
+			fillRect(r.x - 3, r.y + 4, pw + 6, ph + 6, 0xff5025ff);
+			fillRect(r.x, r.y + 7, pw, ph, 0xff241a6e);
+			fillRect(r.x + pw / 2 - 18, r.y + 7 + ph / 2 - 3, 36, 6, 0xffffffff);
+			fillRect(r.x + pw / 2 - 3, r.y + 7 + ph / 2 - 18, 6, 36, 0xffffffff);
+			setYesNoFont(this, 26);
+			drawYesNoString(this, r.x + pw + 24, r.y + 18, tr("New save"), 0xffffff, yesnoTextBase);
+			setYesNoFont(this, 22);
+			drawYesNoString(this, r.x + pw + 24, r.y + 58, tr("Slot %d").sprintf(r.n + 1), 0xffffff, yesnoTextBase);
 			return;
 		}
 		if (r.kind == "save") {
@@ -235,7 +270,9 @@ class KAGQuickPanelLayer extends Layer
 		if (r.kind == "save") {
 			// (the panel goes after this event: it may be the panel's own click)
 			menu.closePanelLater();
-			window.loadBookMarkWithAsk(r.n);
+			if (r.act == "new") window.saveIntoBookMark(r.n);
+			else if (r.act == "save") window.saveBookMarkWithAsk(r.n);
+			else window.loadBookMarkWithAsk(r.n);
 		} else if (r.kind == "choice") step(i, 1);
 	}
 
@@ -271,6 +308,33 @@ class KAGQuickPanelLayer extends Layer
 		set(i, sliderValue(rows[i], x));
 	}
 
+	// the wheel over the panel: the slider under the pointer, or the panel's first one
+	function onWheel(shift, delta, x, y)
+	{
+		if (!isvalid this || !visible) return false;
+		var lx = cursorX, ly = cursorY; // (the hook's x, y are the window's)
+		if (lx < 0 || ly < 0 || lx >= width || ly >= height) return false;
+		delta = (int)delta + wheelRest;
+		wheelRest = delta % 120;
+		var notches = delta \ 120;
+		if (notches == 0) return true;
+		var i = rowAt(lx, ly);
+		if (i < 0 || rows[i].kind != "slider") {
+			i = -1;
+			for (var j = 0; j < rows.count; j++) if (rows[j].kind == "slider") { i = j; break; }
+		}
+		if (i < 0) return true;
+		cur = i;
+		// a notch is a twentieth of the slider, on its steps (away from the player, up: more)
+		var o = rows[i].option, st = o.step !== void ? +o.step : 1, by = (int)((o.max - o.min) / 20 / st + 0.5) * st;
+		by = st if by < st;
+		var v = +KAGOptionGet(rows[i].name) + notches * by;
+		v = o.min if v < o.min;
+		v = o.max if v > o.max;
+		set(i, v);
+		return true;
+	}
+
 	function onMouseLeave() { away = System.getTickCount() if byHover; }
 	function onMouseEnter() { away = 0; }
 
@@ -304,6 +368,8 @@ class KAGQuickPanelLayer extends Layer
 				var value = KAGOptionGet(r.name), label = "";
 				for (var j = 0; j < r.option.values.count; j++) label = tr(r.option.values[j][0]) if KAGOptionSame(value, r.option.values[j][1]);
 				nodes.add(%[ id:id, role:"button", parent:"panel", name:KAGOptionLabel(r.option) + ": " + label, states:"focusable", rect:rect ]);
+			} else if (r.kind == "save" && r.act == "new") {
+				nodes.add(%[ id:id, role:"button", parent:"panel", name:tr("New save"), states:"focusable", rect:rect ]);
 			} else if (r.kind == "save") {
 				var name = window.getBookMarkPageName(r.n), date = window.getBookMarkDate(r.n);
 				nodes.add(%[ id:id, role:"button", parent:"panel", name:(name !== void ? tr(name) : "") + " " + (date !== void ? date : ""), states:"focusable", rect:rect ]);

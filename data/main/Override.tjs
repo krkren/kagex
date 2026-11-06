@@ -393,9 +393,26 @@ function offerContinue()
     tf.continueAsked = true;
     if (!kag.hasContinue || !kag.canRestore()) return;
     var n = kag.continueSlot;
-    var date = kag.getBookMarkDate(n);
-    askYesNo(tr("Carry on where you left off?") + "\n" + tr(kag.getBookMarkPageName(n)) + (date !== void ? "  " + date : ""),
-        "Confirmation", loadFunction, void, n);
+    var date = kag.getBookMarkDate(n), name = tr(kag.getBookMarkPageName(n));
+    // the save as a card above the prompt, with its picture (since 0.21.0), or its scene and
+    // date in the prompt where there's no picture
+    if (typeof global.showYesNoCard == "undefined") KAGLoadScript("YesNoDialog.tjs");
+    var pic = new global.Layer(kag, kag.primaryLayer), card;
+    try { pic.loadImages(kag.getBookMarkFileNameAtNum(n)); } catch { invalidate pic; pic = void; }
+    if (pic !== void && typeof global.showYesNoCard != "undefined") {
+        var lines = [ name ];
+        lines.add(date) if date !== void;
+        try { card = showYesNoCard(kag, pic, lines, true, "above"); } catch (e) { dm("continue card: " + e.message); }
+    }
+    invalidate pic if pic !== void;
+    tf.continueCard = card;
+    askYesNo(tr("Carry on where you left off?") + (card !== void ? "" : "\n" + name + (date !== void ? "  " + date : "")),
+        "Confirmation", loadFunction, void, n, offerContinueDone);
+}
+function offerContinueDone()
+{
+    if (tf.continueCard !== void && isvalid tf.continueCard) invalidate tf.continueCard;
+    tf.continueCard = void;
 }
 
 // The name is centred in the message window's name box (namebox.png, [initscene] in

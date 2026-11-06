@@ -522,6 +522,10 @@ function showYesNoNotice(win, text)
 
  * itself as the notice does. A screenshot's shows the picture taken, a quick save's the save's.
 
+ * With stay (since 0.21.0) it stays until it's invalidated, and place "above" puts it above the
+
+ * Yes/No prompt's panel (the sample's Continue offer shows the save it would load).
+
  */
 
 var cardPictureWidth = 256, cardPictureHeight = 144;
@@ -532,7 +536,7 @@ class YesNoCardLayer extends Layer
 
     var timer, shown, a11yHidden;
 
-    function YesNoCardLayer(win, picture, lines)
+    function YesNoCardLayer(win, picture, lines, stay = false, place = "corner")
 
     {
 
@@ -592,7 +596,11 @@ class YesNoCardLayer extends Layer
 
             fillRect(px - 3, py - 3, pw + 6, ph + 6, 0xff5025ff);
 
-            if (typeof global.KAGShrinkCopy != "undefined") KAGShrinkCopy(this, px, py, pw, ph, picture, 0, 0, picture.imageWidth, picture.imageHeight);
+            // (a save's thumbnail is smaller than the card's picture: stretched, not shrunk)
+
+            if (typeof global.KAGShrinkCopy != "undefined" && pw <= picture.imageWidth && ph <= picture.imageHeight)
+
+                KAGShrinkCopy(this, px, py, pw, ph, picture, 0, 0, picture.imageWidth, picture.imageHeight);
 
             else stretchCopy(px, py, pw, ph, picture, 0, 0, picture.imageWidth, picture.imageHeight, stLinear);
 
@@ -618,7 +626,15 @@ class YesNoCardLayer extends Layer
 
         }
 
-        setPos(win.primaryLayer.width - w - 28, win.primaryLayer.height - h - 28);
+        if (place == "above") {
+
+            // above the prompt's panel (the small frame's, 18 px above its text), centred
+
+            var y0 = yesnoFrames[0].textTop - 18 - h - 12;
+
+            setPos((win.primaryLayer.width - w) \ 2, y0 < 8 ? 8 : y0);
+
+        } else setPos(win.primaryLayer.width - w - 28, win.primaryLayer.height - h - 28);
 
         hitType = htProvince;
 
@@ -629,6 +645,8 @@ class YesNoCardLayer extends Layer
         visible = true;
 
         shown = System.getTickCount();
+
+        if (stay) return;
 
         timer = new Timer(onTimer, "");
 
@@ -664,11 +682,11 @@ class YesNoCardLayer extends Layer
 
 }
 
-function showYesNoCard(win, picture, lines)
+function showYesNoCard(win, picture, lines, stay = false, place = "corner")
 
 {
 
-    return new YesNoCardLayer(win, picture, lines);
+    return new YesNoCardLayer(win, picture, lines, stay, place);
 
 }
 
