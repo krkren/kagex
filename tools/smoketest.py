@@ -3008,6 +3008,37 @@ def sample_steps(eng):
             eng.key("VK_ESCAPE")
             eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
 
+    @step("the save and load screens show every slot in one scrolling list: a pick saves, the page buttons scroll to their ten, the load screen lists the save")
+    def _():
+        if eng.tjs('return typeof global.slotList != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample whose save screens turn pages)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startSave(); return 1;")
+        eng.wait("save.ks", 'kag.conductor.curStorage == "save.ks" && kag.inStable', timeout=20)
+        got = str(eng.tjs('var l = kag.current.names.saveList; return l === void ? "none" : [l.itemCount, l.columns, l.itemWidth].join(",");'))
+        print("     the save list: %s (slots, columns, a slot's width)" % got, flush=True)
+        if got == "none" or int(got.split(",")[0]) != eng.tjs("return kag.numBookMarks;"):
+            raise SmokeError("the save screen has no list of every slot: %s" % got)
+        n = eng.tjs("return kag.numBookMarks - 3;")  # a slot on the last page
+        eng.tjs('setSavePageButton(9); return 1;')
+        eng.wait("the list at the last page", 'kag.current.names.saveList.position >= kag.current.names.saveList.maxPosition - 2', timeout=5)
+        eng.tjs('kag.current.names.saveList.onPick(%d); return 1;' % n)
+        eng.wait("the save in the slot picked (or the prompt to write over it)", "kag.isExistentBookMark(%d) || kag.currentDialog !== void" % n, timeout=10)
+        if eng.tjs("return kag.currentDialog !== void ? 1 : 0;") == 1:
+            eng.key("VK_LEFT"); eng.key("VK_RETURN")  # Yes
+            eng.wait("the save written over", "kag.currentDialog === void", timeout=10)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startLoad(); return 1;")
+        eng.wait("load.ks", 'kag.conductor.curStorage == "load.ks" && kag.inStable', timeout=20)
+        name = str(eng.tjs('var l = kag.current.names.loadList; return l === void ? "" : l.itemName(%d);' % n))
+        print("     the load list's slot %d: %s" % (n + 1, name), flush=True)
+        if name == "" or "Empty" in name:
+            raise SmokeError("the load screen's list doesn't show the save: %s" % name)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
     @step("controller: Y switches auto mode, X shows the history, B closes it")
     def _():
         eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)

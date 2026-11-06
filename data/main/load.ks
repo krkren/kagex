@@ -88,53 +88,10 @@
 
 
 
-; Save data frame
+; The slots: one scrolling list of all of them, two across (since 0.21.0; slotList in
+; Override.tjs). The page buttons scroll it to their ten
 
-; 1st Column
-
-[locate x=290 y=190]
-
-[button name="load0" normal="sl_win_base" exp="loadAction(0)"]
-
-[locate x=290 y=358]
-
-[button name="load1" normal="sl_win_base" exp="loadAction(1)"]
-
-[locate x=290 y=526]
-
-[button name="load2" normal="sl_win_base" exp="loadAction(2)"]
-
-[locate x=290 y=694]
-
-[button name="load3" normal="sl_win_base" exp="loadAction(3)"]
-
-[locate x=290 y=862]
-
-[button name="load4" normal="sl_win_base" exp="loadAction(4)"]
-
-
-
-; 2nd Column
-
-[locate x=980 y=190]
-
-[button name="load5" normal="sl_win_base" exp="loadAction(5)"]
-
-[locate x=980 y=358]
-
-[button name="load6" normal="sl_win_base" exp="loadAction(6)"]
-
-[locate x=980 y=526]
-
-[button name="load7" normal="sl_win_base" exp="loadAction(7)"]
-
-[locate x=980 y=694]
-
-[button name="load8" normal="sl_win_base" exp="loadAction(8)"]
-
-[locate x=980 y=862]
-
-[button name="load9" normal="sl_win_base" exp="loadAction(9)"]
+[eval exp="slotList('load')"]
 
 
 
