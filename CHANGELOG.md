@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.18.1 (in progress)
+## 0.18.1
 
 ### Fixed
 
