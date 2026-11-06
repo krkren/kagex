@@ -3999,6 +3999,32 @@ def sample_steps(eng):
         eng.wait("the title with its buttons", 'kag.conductor.curStorage == "title.ks" && kag.inStable'
                  ' && kag.fore.messages[0].numLinks >= 5', timeout=30)
 
+    @step("a title button pressed during the title's own crossfade opens its screen, with Effect Speed at Skip too")
+    def _():
+        # the old page's Config pressed while the title was drawn again (a language switch) left a
+        # transition counted, and Config's [wt] waited for ever: pressed here from the game, as
+        # soon as the title's [trans] runs, for each Effect Speed
+        for skip in (0, 1):
+            eng.tjs('global.__smokeNoEffect = kag.noeffect; kag.noeffect = %d; global.__smokePressed = "";'
+                    ' global.__smokePress = new Timer(function() {'
+                    '  if (kag.conductor.curStorage != "title.ks" || kag.transCount == 0) return;'
+                    '  global.__smokePress.enabled = false; var m = kag.fore.messages[0];'
+                    '  for (var i = 0; i < m.numLinks; i++) if (m.links[i].object !== void && m.links[i].object.name == "config")'
+                    '   { global.__smokePressed = "transCount " + kag.transCount; m.processLink(i); return; }'
+                    ' }, ""); __smokePress.interval = 5;'
+                    ' kag.process("title.ks", "*titleloop"); __smokePress.enabled = true; return 1;' % skip)
+            try:
+                eng.wait("Config, opened during the title's crossfade", 'kag.conductor.curStorage == "config.ks" && kag.inStable'
+                         ' && kag.transCount == 0', timeout=20)
+            finally:
+                pressed = str(eng.tjs('var p = global.__smokePressed; invalidate global.__smokePress;'
+                                      ' kag.noeffect = global.__smokeNoEffect; return p;'))
+            print("     Effect Speed %s: Config pressed at %s, opened" % ("Skip" if skip else "Normal", pressed), flush=True)
+            if pressed == "":
+                raise SmokeError("Config's button wasn't pressed during the title's crossfade")
+            eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
+            eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+
     for screen, mode in (("cgmode.ks", 1), ("replay.ks", 2), ("musicmode.ks", 3)):
         @step("Extras: " + screen + " opens and returns to the title")
         def _(screen=screen, mode=mode):

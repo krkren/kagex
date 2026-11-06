@@ -301,7 +301,15 @@ class KAGTransMove {
 		transWithChildren = withchildren;
 		inTransition = true;
 		window.transCount++; // Increase the number of transitions in progress
-		global.KAGLayer.beginTransition(elm, src, withchildren);
+		try {
+			global.KAGLayer.beginTransition(elm, src, withchildren);
+		} catch (e) {
+			// the engine refused it (this layer is still in a transition): without taking the count
+			// back, [wt] waited for ever
+			inTransition = false;
+			window.transCount--;
+			throw e;
+		}
 	}
 
 	function onTransitionCompleted(dest, src)
