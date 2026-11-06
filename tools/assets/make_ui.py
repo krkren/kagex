@@ -504,6 +504,13 @@ def ic_config(c, cx, cy, s, col):
     c.ellipse((cx - s * 0.36, cy - s * 0.36, cx + s * 0.36, cy + s * 0.36), outline=col, width=s * 0.17)
 
 
+def ic_camera(c, cx, cy, s, col):
+    """a camera, in outline: a screenshot"""
+    c.rrect((cx - s * 0.2, cy - s * 0.42, cx + s * 0.2, cy - s * 0.2), s * 0.05, fill=col)
+    c.rrect((cx - s * 0.52, cy - s * 0.26, cx + s * 0.52, cy + s * 0.42), s * 0.12, outline=col, width=s * 0.1)
+    c.ellipse((cx - s * 0.2, cy - s * 0.12, cx + s * 0.2, cy + s * 0.28), outline=col, width=s * 0.1)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -633,7 +640,7 @@ MSG_LABELS = {"qsave": "Q.SAVE", "qload": "Q.LOAD"}   # the others' are their na
 # the quick menu's other buttons are icons (since 0.20.0), so no language needs its own
 MSG_ICONS = (("rewind", ic_rewind), ("prevscene", ic_prevscene), ("prevchoice", ic_prevchoice),
              ("nextscene", ic_nextscene), ("back", ic_back), ("skip", ic_skip), ("auto", ic_auto),
-             ("log", ic_log), ("config", ic_config))
+             ("log", ic_log), ("config", ic_config), ("screenshot", ic_camera))
 
 
 def make_message():

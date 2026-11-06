@@ -13889,6 +13889,7 @@ class KAGWindow extends Window
 	var screenshotNotice = true;
 	var screenshotHook = [];
 	var screenshotNoticeLayer;     // the notice on show
+	var screenshotPicture;         // the last screenshot, small, for its card
 	var screenshotsSaving = 0;     // written on other threads now
 
 	function screenshotStorage(ext = "png")
@@ -13971,16 +13972,21 @@ class KAGWindow extends Window
 			lay.face = dfMask;
 			lay.fillRect(0, 0, w, h, 0xffffffff);
 			lay.face = dfAlpha;
+			// the card's picture (a small copy: the screenshot's own layer goes at once)
+			invalidate screenshotPicture if (screenshotPicture !== void && isvalid screenshotPicture);
+			screenshotPicture = new global.Layer(this, primaryLayer);
+			screenshotPicture.setImageSize(w \ 4, h \ 4);
+			KAGShrinkCopy(screenshotPicture, 0, 0, w \ 4, h \ 4, lay, 0, 0, w, h);
 			if (jpeg) {
 				lay.saveLayerImage(name, "jpg");
-				onScreenshotSaved(name);
+				onScreenshotSaved(name, screenshotPicture);
 			} else if (typeof this.startSaveLayerImage == "Object" && name.substring(0, 7) == "file://") {
 				// layerExSave copies the picture, so the layer can go at once
 				startSaveLayerImage(lay, name, %[]);
 				screenshotsSaving++;
 			} else {
 				lay.saveLayerImage(name, "png");
-				onScreenshotSaved(name);
+				onScreenshotSaved(name, screenshotPicture);
 			}
 		} catch (e) {
 			dm("Could not save a screenshot as " + name + ": " + e.message);
@@ -13996,19 +14002,29 @@ class KAGWindow extends Window
 	function onSaveLayerImageDone(handler, canceled, layer, filename)
 	{
 		screenshotsSaving-- if (screenshotsSaving > 0);
-		onScreenshotSaved(canceled ? void : filename);
+		onScreenshotSaved(canceled ? void : filename, screenshotPicture);
 	}
 
 	function onSaveLayerImageProgress(handler, progress, layer, filename) {}
 
-	function onScreenshotSaved(name)
+	function onScreenshotSaved(name, picture)
 	{
 		if (name !== void) {
 			dm("Screenshot saved: " + name);
 			KAGA11y.announce(tr("Screenshot saved"));
-			showScreenshotNotice(tr("Screenshot saved")) if (screenshotNotice);
+			// a card with the picture (since 0.20.0) and the file's name
+			showScreenshotCard(picture, [ tr("Screenshot saved"), Storages.extractStorageName(name) ]) if (screenshotNotice);
 		}
 		callHook(screenshotHook, name);
+	}
+
+	// a notice card with a picture (YesNoDialogLayer.tjs, showYesNoCard), or the words alone
+	function showScreenshotCard(picture, lines)
+	{
+		hideScreenshotNotice();
+		if (typeof global.showYesNoNotice == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		if (typeof global.showYesNoCard == "undefined") { showScreenshotNotice(lines[0]); return; }
+		try { screenshotNoticeLayer = showYesNoCard(this, picture, lines); } catch (e) { dm("notice: " + e.message); showScreenshotNotice(lines[0]); }
 	}
 
 	function showScreenshotNotice(text)
@@ -14302,7 +14318,20 @@ class KAGWindow extends Window
 		scflags.quickSaveLast = n;
 		saveSystemVariables();
 		KAGA11y.announce(tr("Quick saved"));
-		showScreenshotNotice(tr("Quick saved")) if (quickSaveNotice);
+		if (quickSaveNotice) {
+			// a card with the save's picture, its scene and date (since 0.20.0; words only before)
+			var name = getBookMarkPageName(n), date = getBookMarkDate(n), lines = [ tr("Quick saved") ];
+			lines.add(tr(name)) if (name !== void && name != "");
+			lines.add(date) if (date !== void && date != "");
+			// the save's picture: the locked snapshot it was made from, or the screen as saved
+			var pic = snapshotLayer, own;
+			if (pic === void) {
+				pic = own = new global.Layer(this, primaryLayer);
+				try { captureSnapshot(own); } catch (e) { dm("quick save card: " + e.message); invalidate own; pic = own = void; }
+			}
+			showScreenshotCard(pic, lines);
+			invalidate own if (own !== void);
+		}
 		callHook(quickSaveHook, n);
 		return n;
 	}

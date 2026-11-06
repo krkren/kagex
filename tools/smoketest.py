@@ -975,6 +975,8 @@ def interface_steps(eng, step):
         eng.tjs('global.__smokeShot = ""; global.__smokeShotNotice = 0; global.__smokeShotHook = function(name) {'
                 ' var n = kag.screenshotNoticeLayer;'
                 ' global.__smokeShotNotice = n !== void && (isvalid n) && n.visible ? 1 : 0;'
+                # a card with the picture (0.20.0 on): wider than the words alone
+                ' global.__smokeShotCard = n !== void && (isvalid n) && n instanceof "YesNoCardLayer" ? n.width + "x" + n.height : "";'
                 ' global.__smokeShot = name === void ? "(failed)" : name; };'
                 ' kag.screenshotHook.add(__smokeShotHook); return 1;')
         try:
@@ -994,6 +996,11 @@ def interface_steps(eng, step):
             raise SmokeError("the screenshot is %s, the screen %s" % (size, want))
         if eng.tjs("return __smokeShotNotice;") != 1:
             raise SmokeError("no notice said the screenshot was saved")
+        if eng.tjs('return typeof global.showYesNoCard != "undefined" ? 1 : 0;') == 1:
+            card = str(eng.tjs("return __smokeShotCard;"))
+            print("     its card: %s" % card, flush=True)
+            if card == "":
+                raise SmokeError("the screenshot's notice had no picture")
 
     @step("screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings")
     def _():
@@ -3999,6 +4006,14 @@ def sample_steps(eng):
                 eng.wait("the petals' still in place of the effect", '%s.layers["petals"] !== void && %s.layers["petals"].targetLayer !== void'
                          ' && %s.layers["petals"].targetLayer.flip === void && (int)%s.layers["petals"].targetLayer.width == 1920' % (env, env, env, env), timeout=30)
                 print("     the petals: a still picture, 1920x1080, no effect playing", flush=True)
+                # as the option changes, the effect and its still take turns at once (0.20.0 on)
+                if eng.tjs('return typeof global.KAGReduceMotionLayers != "undefined" ? 1 : 0;') == 1:
+                    petals = '%s.layers["petals"].targetLayer' % env
+                    eng.tjs('KAGOptionSet("reduceMotion", false); return 1;')
+                    eng.wait("the petals' effect again (Reduce Motion off)", petals + '.flip !== void', timeout=10)
+                    eng.tjs('KAGOptionSet("reduceMotion", true); return 1;')
+                    eng.wait("the petals' still again (Reduce Motion on)", petals + '.flip === void && (int)' + petals + '.width == 1920', timeout=10)
+                    print("     the petals: the effect when the option went off, the still when it came on", flush=True)
             else:
                 print("     (no Effekseer here: the stills' check is skipped)", flush=True)
             eng.tjs('kag.process("effect.ks", "*static"); return 1;')
@@ -4030,12 +4045,16 @@ def sample_steps(eng):
                         ' kag.beginAction(l, %[ left:%[ handler:"MoveAction", value:l.left + 300, time:3000 ] ], void, true); return 1;')
                 time.sleep(0.3)
                 got = str(eng.tjs('var l = kag.fore.layers[0], r = [l.left - global.__smokeRMLeft, kag.isInAction(l) ? 1 : 0];'
-                                  ' var g = new AnimationLayer(kag, kag.fore.base); g.loadImages(%[ storage:"LineBreak" ]);'
-                                  ' var seg = g.Anim_segments[0]; r.add(seg !== void && seg.timerEnabled ? 1 : 0); invalidate g;'
-                                  ' l.left = global.__smokeRMLeft; return r.join(",");'))
-                print("     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running: %s" % got, flush=True)
-                if got != "300,0,0":
-                    raise SmokeError("with Reduce Motion an action didn't end at once, or the click glyph kept moving: %s" % got)
+                                  ' var g = global.__smokeRMAnim = new AnimationLayer(kag, kag.fore.base); g.loadImages(%[ storage:"LineBreak" ]);'
+                                  ' var seg = g.Anim_segments[0]; r.add(seg !== void && seg.timerEnabled ? 1 : 0);'
+                                  # turned off, it goes on, and on again it stops (0.20.0 on)
+                                  ' if (typeof global.KAGReduceMotionAnims != "undefined") {'
+                                  '  KAGOptionSet("reduceMotion", false); r.add(seg.timerEnabled ? 1 : 0);'
+                                  '  KAGOptionSet("reduceMotion", true); r.add(seg.timerEnabled ? 1 : 0); }'
+                                  ' invalidate g; global.__smokeRMAnim = void; l.left = global.__smokeRMLeft; return r.join(",");'))
+                print("     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running (then with the option off, on): %s" % got, flush=True)
+                if got not in ("300,0,0", "300,0,0,1,0"):
+                    raise SmokeError("with Reduce Motion an action didn't end at once, or the click glyph kept moving (or didn't go on as it went off): %s" % got)
         finally:
             eng.tjs('KAGOptionSet("reduceMotion", tf.smokeRM); return 1;')
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -4319,11 +4338,21 @@ def sample_steps(eng):
         print("     Pip's volume %s, then undone %s; the samples: %s" % (v[0], v[2], v[1]), flush=True)
         if not (v[0] == "40" and v[2] == "100" and "voice:pip" in v[1] and "voice:ai000001" in v[1]):
             raise SmokeError("a character's volume, its sample or its Test didn't work: %s" % v)
+        # the movies' volume: its sample plays at the volume the slider shows, the music waiting (0.20.0 on)
+        if eng.tjs('return typeof KAGVolumeSamples.movie != "undefined" && kag.current.names["option_movieVolume"] !== void ? 1 : 0;') == 1:
+            m = str(eng.tjs('KAGVolumeSamples.played.clear(); var s = kag.current.names["option_movieVolume"]; s.onMouseEnter(); KAGOptionPreview("drag", 60, "movieVolume");'
+                            ' var v = KAGVolumeSamples, a = [v.moviePlaying ? 1 : 0, v.movieBuffer !== void ? v.movieBuffer.volume : -1, v.movieVolume(60),'
+                            ' kag.bgm.playingStorage == "" || kag.bgm.buf1.paused ? 1 : 0, v.played.join(" ")];'
+                            ' s.onMouseLeave(); return a.join(",");'))
+            print("     the movies' slider at 60: its sample playing, its volume and the movies' at 60, the music waiting, the samples: %s" % m, flush=True)
+            mv = m.split(",")
+            if not (mv[0] == "1" and mv[1] == mv[2] and mv[3] == "1" and "movie:bgm01" in mv[4]):
+                raise SmokeError("the movies' volume played no sample at its volume: %s" % m)
         eng.tjs('kag.process("config.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
-        left = str(eng.tjs('return [KAGOptionUndo.recording, KAGVolumeSamples.playing].join(",");'))
-        if left != "0,0":
-            raise SmokeError("leaving Config left Undo recording or the music sample playing: %s" % left)
+        left = str(eng.tjs('return [KAGOptionUndo.recording, KAGVolumeSamples.playing, typeof KAGVolumeSamples.moviePlaying != "undefined" && KAGVolumeSamples.moviePlaying ? 1 : 0].join(",");'))
+        if left != "0,0,0":
+            raise SmokeError("leaving Config left Undo recording or the music or movie sample playing: %s" % left)
 
     @step("Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title")
     def _():
@@ -4381,6 +4410,13 @@ def sample_steps(eng):
         got = str(eng.tjs('var r = []; for (var i = 0; i < 4; i++) r.add(kag.quickSave());'
                           ' return r.join(",") + "|" + kag.newestQuickSave() + "|" + kag.quickSaves().join(",");'))
         print("     four quick saves went to %s; the newest %s, newest first %s" % tuple(got.split("|")), flush=True)
+        # its card: the save's picture, the scene's name and the date (0.20.0 on)
+        if eng.tjs('return typeof global.showYesNoCard != "undefined" ? 1 : 0;') == 1:
+            card = str(eng.tjs('var n = kag.screenshotNoticeLayer; return n !== void && (isvalid n) && n instanceof "YesNoCardLayer"'
+                               ' ? n.width + "x" + n.height : "none";'))
+            print("     the quick save's card: %s" % card, flush=True)
+            if card == "none":
+                raise SmokeError("a quick save showed no card")
         if got != "90,91,92,90|90|90,92,91":
             raise SmokeError("the quick saves didn't go round bookmarks 90 to 92: %s" % got)
         for n in (90, 91, 92):

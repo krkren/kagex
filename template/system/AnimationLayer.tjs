@@ -399,9 +399,14 @@ be changed, the size specified in the [image] tag remains fixed.
 
 
 
+// the .asd segments Reduce Motion stills: stopped on their frame as it's turned on, going on as
+// it's turned off (since 0.20.0; KAGApplyReduceMotion)
+var KAGReduceMotionAnims = [];
+
 class AnimationConductor extends BaseConductor
 {
 	var owner;
+	var reduceMotionKnown = false; // in KAGReduceMotionAnims
 	var number; // Number of this conductor
 	var looping = false;
 	var startLabel = "";
@@ -606,8 +611,11 @@ class AnimationLayer extends AffineLayer
 		// Reduce Motion (Config, since 0.19.0): the animation's first frame (drawn above, up to its
 		// first wait) stays; animReduceMotion false keeps a layer's animation running
 		// (this method is ClickGlyphLayer's too, which has no animReduceMotion of its own)
-		if ((typeof this.animReduceMotion == "undefined" || this.animReduceMotion) &&
-			typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion() && seg.running) seg.stop();
+		if (typeof this.animReduceMotion == "undefined" || this.animReduceMotion) {
+			KAGReduceMotionAnims.add(seg) if (!seg.reduceMotionKnown); // turned on or off later (Options.tjs)
+			seg.reduceMotionKnown = true;
+			if (typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion() && seg.running) seg.stop();
+		}
 	}
 
 	function startAnim(elm)
