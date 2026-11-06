@@ -1689,6 +1689,23 @@ private:
 		for (const char* values : { "values", "values-ja", "values-zh-rCN", "values-zh-rTW" })
 			writeText(res / values / "strings.xml", "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"app_name\">" +
 			          androidString(str(s_, "identity.title")) + "</string>\n</resources>\n");
+		// the kit's theme with a black window and navigation bar (since 0.21.0): the game's window
+		// stops above the navigation bar, and the strip there was the light theme's white
+		for (const bool night : { false, true }) {
+			writeText(res / (night ? "values-night" : "values") / "themes.xml",
+				std::string("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n"
+				"    <style name=\"Theme.Krkrz\" parent=\"Theme.MaterialComponents.DayNight.DarkActionBar\">\n"
+				"        <item name=\"colorPrimary\">@color/") + (night ? "purple_200" : "purple_500") + "</item>\n"
+				"        <item name=\"colorPrimaryVariant\">@color/purple_700</item>\n"
+				"        <item name=\"colorOnPrimary\">@color/" + (night ? "black" : "white") + "</item>\n"
+				"        <item name=\"colorSecondary\">@color/teal_200</item>\n"
+				"        <item name=\"colorSecondaryVariant\">@color/" + (night ? "teal_200" : "teal_700") + "</item>\n"
+				"        <item name=\"colorOnSecondary\">@color/black</item>\n"
+				"        <item name=\"android:statusBarColor\">?attr/colorPrimaryVariant</item>\n"
+				"        <item name=\"android:windowBackground\">@android:color/black</item>\n"
+				"        <item name=\"android:navigationBarColor\">@android:color/black</item>\n"
+				"    </style>\n</resources>\n");
+		}
 		if (icons_.loaded()) {
 			writeText(res / "values" / "colors.xml", "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <color name=\"ic_launcher_background\">#FF000000</color>\n</resources>\n");
 			// the adaptive icon's 72dp visible square, inside its 108dp layer

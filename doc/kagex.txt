@@ -3600,6 +3600,58 @@ template/system/TextEntry.tjs):
   is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
   element have the keyboard).
 
+● Games on Phones and in the Browser
+
+Android and iOS run a game made for a desktop window, with these differences (since 0.21.0
+this section collects them):
+
+◇ The screen
+
+The window fills the screen from the start: a switch to full screen changes nothing, and
+Config's window sizes and the menu bar aren't offered there (Display.tjs, KAGIsDesktop). The
+engine draws on a fixed 1920x1080 surface, scaled to fit the screen with bars where its shape
+differs, and the window's inner size is always 1920x1080: a game whose screen (scWidth,
+scHeight in Config.tjs) has another size is drawn shrunk, or only in part (UPSTREAM.md 48).
+Make phone builds at 1920x1080; the framework logs a warning at start on Android and iOS when
+the game's screen isn't that size. Don't pick a zoom for a phone: setZoom is for a desktop
+window.
+
+◇ Input
+
+A phone has no right button, no keys and no wheel, and the pointer rests where the last tap
+was (so tips by resting are off at first there: ● Tips). Everything the right button or Esc
+does needs another way:
+
+  Back (Android)     the game's Esc: closes the history, a panel, a prompt or a screen; on
+                     the sample's title it asks whether to quit (krkrz_android's Back goes to
+                     the engine as Escape through kagex's kit patch: UPSTREAM.md 46)
+  Back (a browser)   the same, while there's something for Esc to do (kagex-web.js)
+  two fingers (iOS)  a tap with two fingers is Esc (the engine's)
+  a long press       gestureActions.hold, and a button's tip (● Actions, Rebinding and Gestures)
+  swipes             gestureActions (up: the history, down: hide the window)
+  the history        its close button, or its newest line pulled up past the end
+
+A screen of the game's own needs a button that leaves it (the sample's all have one): the
+smoke test leaves every screen with taps alone on Android, iOS and a phone's browser. [edit]
+fields open a text box for the phone's keyboard (● Typing on Phones).
+
+◇ Movies
+
+[movie] plays <name>_sd where there is one (Movie Quality's Auto, ● Movies). On Android the
+engine's movie player can lose a movie's sound (UPSTREAM.md 45): give each movie its sound as a
+file of its own, <name>.opus or <name>.ogg beside it (for <name>_sd, <name>'s will do), and
+there the movie plays muted with that file alongside, in step with the picture
+(KAGMovieSoundPlatforms in Movies.tjs lists the platforms). ffmpeg copies a WebM's sound out as
+it is:
+
+    ffmpeg -i opening.webm -vn -c:a copy opening.opus
+
+◇ The app
+
+kagex-release names the app and gives it its icon, and makes the strip below the game (where
+Android's navigation bar is) black rather than the theme's white (a themes.xml in the build's
+res-override; the sample's is platform/android-res).
+
 ● Movies
 
     [movie storage=opening alpha=0 song=bgm01 color=0x000000 skip=seen fit=true layer=]
