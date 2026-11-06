@@ -1,7 +1,7 @@
 /**
  * On-screen indicators (since 0.17.0): the chapter's title in a corner, a "now playing" bar when
  * the music changes, a mark while auto mode or skipping is on, and a bar on the message window
- * for how much of the voice is left. A KAG plugin of the window (kag.indicators): the chapter on
+ * that fills from the left as the voice goes on. A KAG plugin of the window (kag.indicators): the chapter on
  * show is kept with the save points, so a load, going back and compiled scenes show it as it
  * was. The player turns each off in Config (Options.tjs: chapterTitles, nowPlaying, modeMark,
  * voiceBar); they're drawn in the Yes/No prompts' look (YesNoDialogLayer.tjs).
@@ -148,7 +148,9 @@ class KAGIndicators extends KAGPlugin
 		modeLayer.visible = true;
 	}
 
-	// ---- the voice left ----
+	// ---- the voice's progress ----
+	var voiceBuffer, voiceStorage, voiceStart; // the voice the bar shows, and the tick it started
+	var voiceDone = 0; // how much of it the bar shows done, 0 to 1
 	function playingVoice()
 	{
 		if (typeof global.world_object == "undefined") return;
@@ -164,6 +166,7 @@ class KAGIndicators extends KAGPlugin
 		var m = window.fore.messages[0], b = on("voiceBar") && m.visible && window.skipMode == SKIP_NONE ? playingVoice() : void;
 		if (b === void) {
 			if (voiceLayer !== void) voiceLayer.visible = false;
+			voiceStart = void; // the next voice starts its own count (the same line again too)
 			return;
 		}
 		var w = m.width - 160, h = 8;
@@ -172,10 +175,22 @@ class KAGIndicators extends KAGPlugin
 			voiceLayer.setImageSize(w, h);
 			voiceLayer.setSizeToImageSize();
 		}
-		var left = 1.0 - b.position / b.totalTime;
-		left = 0 if left < 0;
+		// how far the voice has got, by the clock since it started (times its speed): the engine's
+		// position now and then reads another buffer and jumps back and forth (UPSTREAM.md), and
+		// the bar fills from the left as the voice goes on
+		var now = System.getTickCount(), storage = (string)b.storage;
+		if (b !== voiceBuffer || storage != voiceStorage || voiceStart === void) {
+			voiceBuffer = b, voiceStorage = storage;
+			var at = +b.position;
+			voiceStart = now - (at > 0 && at < 400 ? at : 0);
+		}
+		var speed = typeof b.speed != "undefined" && +b.speed > 0 ? +b.speed : 1.0;
+		var done = (now - voiceStart) * speed / b.totalTime;
+		done = 0 if done < 0;
+		done = 1 if done > 1;
+		voiceDone = done;
 		voiceLayer.fillRect(0, 0, w, h, 0x60ffffff);
-		voiceLayer.fillRect(0, 0, (int)(w * left), h, 0xff5025ff);
+		voiceLayer.fillRect(0, 0, (int)(w * done + 0.5), h, 0xff5025ff);
 		voiceLayer.setPos(m.left + 80, m.top + m.height - 34);
 		voiceLayer.visible = true;
 	}

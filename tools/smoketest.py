@@ -3022,6 +3022,14 @@ def sample_steps(eng):
         play = eng.tjs('world_object.env.playVoice("ai", "ai000001", true); return world_object.env.characters.ai.soundBuffer.status == "play" ? 1 : 0;')
         if play == 1:
             eng.wait("the voice bar", "kag.indicators.voiceLayer !== void && kag.indicators.voiceLayer.visible", timeout=5)
+            # it fills from the left as the voice goes on, and never goes back
+            done = []
+            for i in range(8):
+                done.append(float(eng.tjs('return "%f".sprintf(kag.indicators.voiceDone);').split()[0]))
+                time.sleep(0.15)
+            print("     the voice bar: %s" % " ".join("%.2f" % d for d in done), flush=True)
+            if any(b < a for a, b in zip(done, done[1:])) or done[-1] <= done[0]:
+                raise SmokeError("the voice bar didn't fill steadily as the voice went on: %s" % done)
         eng.tjs("world_object.env.stopAllVoice(); return 1;")
         kept = str(eng.tjs('KAGChapterTag(%[title:"Chapter One", stay:"true"]); var d = %[]; kag.indicators.onStore(d, void);'
                            ' kag.indicators.onRestore(%[], true, void); var gone = kag.indicators.chapterLayer.visible ? 0 : 1;'
