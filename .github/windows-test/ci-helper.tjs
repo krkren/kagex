@@ -91,9 +91,30 @@ function __ci_clickQuick(action, button = 0)
 		return "the quick menu's " + action + ": game " + gx + "," + gy + " -> window " + w[0] + "," + w[1];
 	}
 }
+// Since 0.21.0 the sample's save and load screens show their slots as one scrolling list
+// (saveList, loadList): save<n>/load<n> with no layer of its own is that list's slot n of the
+// page shown (sf.loadpage), scrolled into view and clicked where it's drawn
+function __ci_clickSlot(name, button)
+{
+	var m = /^(save|load)([0-9]+)$/.exec(name);
+	if (m === void || m.count < 3) return void;
+	var l = __ci_find(kag.primaryLayer, m[1] + "List");
+	if (l === void) return void;
+	var n = ((typeof sf.loadpage != "undefined" && sf.loadpage !== void ? +sf.loadpage : 1) - 1) * 10 + +m[2];
+	l.show(n, false);
+	var a = __ci_abs(l), w = l.itemWidth, col = n % l.columns, row = n \ l.columns;
+	var gx = (int)(a[0] + col * (w + l.gap) + w / 2), gy = (int)(a[1] + row * l.rowStride - l.position + l.itemHeight / 2);
+	var p = __ci_map(gx, gy);
+	__ci_schedule([ "click", p[0], p[1], button ]);
+	return "slot " + n + " of " + l.name + ": game " + gx + "," + gy + " -> window " + p[0] + "," + p[1];
+}
 function __ci_click(name, button = 0)
 {
 	var l = __ci_find(kag.primaryLayer, name);
+	if (l === void) {
+		var r = __ci_clickSlot(name, button);
+		if (r !== void) return r;
+	}
 	if (l === void && __ci_quickActions[name] !== void) {
 		var r = __ci_clickQuick(__ci_quickActions[name], button);
 		if (r !== void) return r;
