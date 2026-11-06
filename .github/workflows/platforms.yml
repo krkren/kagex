@@ -39,6 +39,9 @@ on:
       reuse_from:
         description: "Test the reuse steps with this release's engine packages, whatever their keys"
         default: ""
+      hunt:
+        description: "Android: instead of the smoke test's steps, play <script>:<from label>:<to label>:<rounds> until it hangs, keeping the threads' stacks (smoketest.py --hunt)"
+        default: ""
   workflow_call:
     inputs:
       ref:
@@ -548,6 +551,8 @@ jobs:
           echo "APK=$(find "$PROJECT_DIR/build/android/app/outputs/apk/debug" -name '*.apk' | head -1)" >> "$GITHUB_ENV"
       - name: Smoke test on an emulator
         timeout-minutes: 45
+        env:
+          KAGEX_SMOKE_HUNT: ${{ inputs.hunt }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -555,7 +560,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --effekseer required --alphamovie required --three required --vector required --zip required --clip required --encryption required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png results/ 2>/dev/null; exit $s
+          script: kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target android --apk "$APK" --keep --effekseer required --alphamovie required --three required --vector required --zip required --clip required --encryption required; s=$?; cp /tmp/kagex-smoke-*/logcat.txt /tmp/kagex-smoke-*/*.png /tmp/kagex-smoke-*/hang-*.txt results/ 2>/dev/null; exit $s
       # The smoke test needs the debug build (only it has the REPL); the package is the
       # optimized release build, signed with the same debug key (the kit's release-debug)
       - name: Build the release APK

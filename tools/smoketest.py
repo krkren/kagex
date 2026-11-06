@@ -77,6 +77,10 @@ class Engine:
     def _eval(self, cmd, timeout):
         raise NotImplementedError
 
+    def hang_report(self, path):
+        """Writes what the engine's threads are doing (a hung game) to path; False where it can't"""
+        return False
+
     def tjs(self, body, timeout=30.0):
         """Runs TJS statements on the main thread; 'return x;' gives the result. The REPLs print a
         string result as a TJS literal (EscapeC), where an apostrophe is \\', which JSON refuses
@@ -288,6 +292,15 @@ class DesktopEngine(FileChannel):
             raise SmokeError("the engine exited (code %s)" % self.proc.returncode)
         return True
 
+    def hang_report(self, path):
+        if self.proc.poll() is not None or not shutil.which("gdb"):
+            return False
+        r = subprocess.run(["gdb", "-p", str(self.proc.pid), "-batch", "-ex", "thread apply all bt"],
+                           capture_output=True, text=True, timeout=300)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(r.stdout + r.stderr)
+        return True
+
     def output(self):
         if not self.log.closed:
             self.log.flush()
@@ -453,6 +466,23 @@ class AndroidEngine(Engine):
         if not line:
             raise SmokeError("the REPL socket closed (did the app stop?)")
         return json.loads(line)
+
+    def hang_report(self, path):
+        # every thread's native stack (debuggerd; a debug APK is debuggable), then the Java ones
+        # (SIGQUIT writes them to the ANR traces)
+        pid = subprocess.run([self.adb, "shell", "pidof", self.package], capture_output=True, text=True).stdout.strip()
+        if not pid:
+            return False
+        out = ["pid %s" % pid]
+        for cmd in (["debuggerd", "-b", pid], ["kill", "-3", pid]):
+            r = subprocess.run([self.adb, "shell"] + cmd, capture_output=True, text=True, timeout=120)
+            out.append("$ %s (exit %d)\n%s%s" % (" ".join(cmd), r.returncode, r.stdout, r.stderr))
+        time.sleep(3)
+        r = subprocess.run([self.adb, "shell", "ls -t /data/anr/ 2>&1 | head -3"], capture_output=True, text=True)
+        out.append("$ ls /data/anr\n" + r.stdout)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(out))
+        return True
 
     def output(self):
         r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
@@ -1821,6 +1851,68 @@ def switch_language(eng, lang, where):
         eng.key("VK_F9")
     eng.wait(lang + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
              ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (lang, where), timeout=20)
+
+
+def hunt_steps(eng):
+    """--hunt <script>:<from label>:<to label>:<rounds> (or KAGEX_SMOKE_HUNT): plays a stretch of
+    the sample again and again, clicking at a player's changing pace (80 ms to 1.3 s), until the
+    game stops answering; then writes what its threads were doing (hang-stacks.txt in the work
+    folder: debuggerd on Android, gdb here) and fails. For hangs a player meets now and then
+    (Android's in the first demo's rotation)"""
+    steps, step = collector()
+    storage, start, end, rounds = eng.opts.hunt.split(":")
+
+    @step("start-up reaches the title screen")
+    def _():
+        eng.wait("the REPL", "1", timeout=60)
+        eng.clicker(True, until="title.ks")  # clicks through the logo
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
+        eng.clicker(False)
+
+    @step("%s from %s to %s, %s times, at a player's changing pace, without the game hanging" % (storage, start, end, rounds))
+    def _():
+        eng.tjs(
+            'if (typeof global.__huntTimer == "undefined") {'
+            ' global.__huntTick = function() {'
+            '  var p = typeof global.world_object != "undefined" ? world_object.player : void;'
+            '  var l = kag.conductor.curStorage == global.__huntStorage && p !== void && p.curLabel !== void'
+            '   ? p.curLabel : kag.conductor.curLabel;'
+            '  global.__huntLabel = l !== void ? (string)l : "";'
+            '  global.__huntTimer.interval = 80 + (int)(Math.random() * 1200);'
+            '  if (!kag.inStable) return;'
+            '  if (global.__huntLabel == global.__huntEnd) { global.__huntTimer.enabled = false; global.__huntDone = true; return; }'
+            '  kag.onPrimaryClick();'
+            '  global.__huntClicks++;'
+            ' };'
+            ' global.__huntTimer = new Timer(global.__huntTick, "");'
+            '} return 1;')
+        report = os.path.join(eng.workdir, "hang-stacks.txt")
+        for r in range(int(rounds)):
+            eng.tjs('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0;'
+                    ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
+                    ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;' % (storage, end, storage, start))
+            last, since, began = None, time.time(), time.time()
+            while True:
+                try:
+                    state = str(eng.tjs('return [global.__huntDone ? 1 : 0, global.__huntClicks, global.__huntLabel].join(",");', 30))
+                except SmokeError as e:
+                    got = eng.hang_report(report)
+                    raise SmokeError("round %d: the game stopped answering at %s (%s)%s"
+                                     % (r + 1, last, str(e).split("\n")[0], "; its threads are in " + report if got else ""))
+                done, clicks, label = state.split(",", 2)
+                if done == "1":
+                    break
+                if label != last:
+                    last, since = label, time.time()
+                elif time.time() - since > 120:
+                    got = eng.hang_report(report)
+                    raise SmokeError("round %d: still at %s after 2 minutes of clicks, though the game answers%s"
+                                     % (r + 1, label, "; its threads are in " + report if got else ""))
+                time.sleep(2)
+            print("     round %d: %s clicks, %.0f s" % (r + 1, clicks, time.time() - began), flush=True)
+        eng.tjs("__huntTimer.enabled = false; return 1;")
+
+    return steps
 
 
 def sample_steps(eng):
@@ -4474,6 +4566,10 @@ def main():
     ap.add_argument("--url", help="web: the page that runs the game")
     ap.add_argument("--channel", help="web: an installed browser for Playwright to use (chrome), "
                     "instead of its own Chromium")
+    ap.add_argument("--hunt", default=os.environ.get("KAGEX_SMOKE_HUNT") or None,
+                    help="<script>:<from label>:<to label>:<rounds>: instead of the steps, play that stretch "
+                    "of the sample again and again at a player's pace until the game hangs, and keep its "
+                    "threads' stacks (also KAGEX_SMOKE_HUNT)")
     ap.add_argument("--touch", action="store_true",
                     help="web: as a phone's browser (touch events, a coarse pointer): the page opens the "
                     "keyboard for the game's [edit] fields, and full screen is the whole page's")
@@ -4507,6 +4603,10 @@ def main():
         opts.only = "sample"  # the platform packages hold the sample only
 
     failures = 0
+    if opts.hunt:
+        failures += run_project(opts, "sample", "data", hunt_steps)
+        print("smoke test:", "FAILED (%d)" % failures if failures else "passed")
+        return 1 if failures else 0
     if opts.only in (None, "sample"):
         failures += run_project(opts, "sample", "data", sample_steps)
         if opts.target == "desktop" and not opts.packaged:
