@@ -78,6 +78,9 @@ with (KAGQuickMenuOf(kag)) {
     .when = function { return !!f.quickMenu && !inSystemMenu(kag); };
 }
 
+// Movies have a volume of their own (Config's fifth page), not the music's
+kag.independentMovieAudioProperty = true;
+
 // Gestures in the story: a swipe on a phone, or a drag with the right mouse button, left rewinds
 // (compiled scenes), right skips, up shows the message history and down hides the window
 kag.gestureActions.left  = "rewind";

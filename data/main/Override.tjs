@@ -708,7 +708,7 @@ var configPages = [
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
-    [ [], [ "volumeSamples", "voiceNote" ] ],
+    [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu, tips, screenshots; the screen and the controller (Display.tjs)
     [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips", "screenshotWindow", "screenshotFormat" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ] ]

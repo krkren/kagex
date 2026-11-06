@@ -69,6 +69,7 @@ class KAGElementsScreen extends Layer
 		panel = new global.ElementsPanel(this);
 		panel.onAction = onPanelActionSounding;
 		panel.onClose = onPanelClose;
+		panel.onVar = onPanelVarSounding;
 		if (typeof global.drawYesNoPanel == "undefined") KAGLoadScript("YesNoDialog.tjs");
 	}
 
@@ -208,6 +209,7 @@ class KAGElementsScreen extends Layer
 	 */
 	function show(layout)
 	{
+		hoverVars(layout);
 		fillRect(0, 0, imageWidth, imageHeight, 0);
 		a11yName = layout["a11y"] !== void && layout["a11y"].title !== void ? layout["a11y"].title : "";
 		var ok = panel.showDict(layout);
@@ -242,6 +244,34 @@ class KAGElementsScreen extends Layer
 	}
 
 	function onPanelAction(id, payload) {}
+
+	// the pointer on a button: the interface sound table's <screen>.<id>.enter (since 0.19.0).
+	// Every button with an id that sets no hover variable of its own sets "hover" to its id
+	var hovered = "";
+	function hoverVars(layout)
+	{
+		var content = layout["content"], children = content !== void ? content["children"] : void;
+		if (children === void) return;
+		var any = false;
+		for (var i = 0; i < children.count; i++) {
+			var c = children[i];
+			if (typeof c != "Object" || c === void || c["type"] != "atlas_button" || c["id"] === void || c["vars_on_hover"] !== void) continue;
+			c["vars_on_hover"] = %[ "hover" => "" + c["id"] ];
+			any = true;
+		}
+		if (!any) return;
+		layout["vars"] = %[] if layout["vars"] === void;
+		layout["vars"]["hover"] = "" if layout["vars"]["hover"] === void;
+	}
+	function onPanelVarSounding(name, value)
+	{
+		if (name == "hover") {
+			KAGInterfaceSound(soundScreen + "." + value + ".enter") if soundScreen != "" && value != "" && value != hovered;
+			hovered = value;
+		}
+		onPanelVar(name, value);
+	}
+	function onPanelVar(name, value) {}
 
 	// the panel's actions, with the interface sound table's <screen>.<id>.click first (since 0.18.0)
 	function onPanelActionSounding(id, payload)

@@ -300,6 +300,9 @@ KAGDefineOption(%[ name:"seVolume", label:"SE Volume", kind:"slider", prop:"sevo
 	preview:function(event, v) { KAGVolumeSamples.sound(event); } ]);
 KAGDefineOption(%[ name:"voiceVolume", label:"Voice Volume", kind:"slider", prop:"voicevolume", min:0, max:100, step:1, ends:[ "Min", "Max" ],
 	preview:function(event, v) { KAGVolumeSamples.voice(event); } ]);
+// movies' own volume, where the game keeps it apart from the music's (since 0.19.0)
+KAGDefineOption(%[ name:"movieVolume", label:"Movie Volume", kind:"slider", prop:"movieAudioVolume", min:0, max:100, step:1, ends:[ "Min", "Max" ],
+	initial:100, available:function { return !!kag.independentMovieAudioProperty; } ]);
 KAGDefineOption(%[ name:"textSpeed", label:"Text Speed", kind:"slider", prop:"textspeed", min:0, max:10, step:1, ends:[ "Slow", "Fast" ] ]);
 KAGDefineOption(%[ name:"autoModeSpeed", label:"Auto Speed", kind:"slider", prop:"autospeed", min:0, max:10, step:1, ends:[ "Slow", "Fast" ] ]);
 KAGDefineOption(%[ name:"noEffect", label:"Effect Speed", kind:"toggle", prop:"noeffect", values:[ ["Normal", false], ["Skip", true] ] ]);

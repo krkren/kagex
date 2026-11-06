@@ -960,6 +960,7 @@ class KAGWindow extends Window
 	var movies = []; // Movie objects
 
 	var independentMovieAudioProperty = false; // true if movie volume should be independent, false if synced to bgmvolume
+	var reduceMotionActions = true; // Reduce Motion ends actions at once (onFlipTimerInterval, since 0.19.0)
 
 
 
@@ -2017,6 +2018,10 @@ class KAGWindow extends Window
 
 		// Action update
 
+		// Reduce Motion (Config, since 0.19.0): every action goes straight to where it ends, a
+		// looping one stops (reduceMotionActions false leaves them to the game)
+		if (reduceMotionActions && typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion() && hasActions())
+			stopAllActions(true);
 		work = true if updateAction(now);
 
 
@@ -12204,6 +12209,13 @@ class KAGWindow extends Window
 
     // All action targets
     var allActions = %[];
+
+	// Whether any action runs, nowait ones too (since 0.19.0)
+	function hasActions() {
+		var names = [];
+		names.assign(allActions);
+		return names.count > 0;
+	}
 
 	// Whether actions targeted by wait are running
 	function isWorkingAction() {

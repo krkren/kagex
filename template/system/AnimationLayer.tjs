@@ -480,6 +480,8 @@ class AnimationLayer extends AffineLayer
 	var Anim_cellLayer; // Cell layer
 	var Anim_segments = []; // Conductors for each segment
 	var Anim_storageName; // Animation data filename
+
+	var animReduceMotion = true; // Reduce Motion stops its .asd animation on the first frame
 	var Anim_loadParams = void; // Parameters specified during loading
 	var Anim_partialImageInfo = void; // Parameters for partial image loading
 	var Anim_interrupted = false; // Whether it is interrupted
@@ -600,6 +602,12 @@ class AnimationLayer extends AffineLayer
 		seg.loadScenario(Anim_storageName);
 		if(label != '') seg.goToLabel(label);
 		seg.startProcess(true);
+
+		// Reduce Motion (Config, since 0.19.0): the animation's first frame (drawn above, up to its
+		// first wait) stays; animReduceMotion false keeps a layer's animation running
+		// (this method is ClickGlyphLayer's too, which has no animReduceMotion of its own)
+		if ((typeof this.animReduceMotion == "undefined" || this.animReduceMotion) &&
+			typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion() && seg.running) seg.stop();
 	}
 
 	function startAnim(elm)

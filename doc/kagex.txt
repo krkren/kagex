@@ -3110,7 +3110,10 @@ touch screen, or a drag with the right mouse button, runs kag.gestureActions[lef
 down], and the click or right click it would have made is dropped. The framework's are up for
 the message history and down to hide the window; the sample adds left to rewind and right to
 skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly one way
-(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch.
+(kag.gestures.gestureDistance, gestureTime); two fingers are a pinch. kag.gestures.when, a
+function, can narrow "the story" to the game's own idea of it (the sample's, as its quick
+menu's: after [initscene], not on the title or a system screen), and a drag that starts on a
+scrolling list is the list's (ScrollList.tjs).
 
 
 
@@ -3629,6 +3632,10 @@ by motion:
     alpha movies         a looping one stops on its frame
     the TV static        stops on its frame
     Live2D and 3D layers stop as they show, once a motion played once has ended
+    actions              end where they'd end on the next frame; a looping one stops (since
+                         0.19.0; kag.reduceMotionActions = false leaves them to the game)
+    .asd animations      stay on their first frame, the click glyphs' too (since 0.19.0; a
+                         layer's animReduceMotion = false keeps its own running)
 
 Turned on while they play, they stop where they are; turned off, they move on. An [image] or a
 World layer can name a picture to show in place of its animation while Reduce Motion is on:
@@ -3639,7 +3646,7 @@ World layer can name a picture to show in place of its animation while Reduce Mo
 The picture is loaded instead of starting the animation, as an image of its own size; it stays
 until the layer is drawn again. The sample's Effects demo has stills for its petals, sparkles
 and magic circle (tools/assets/make_effects.py stills), and Config's last page has the switch.
-Transitions and actions are Screen Effects' (noeffect), not this option's.
+Transitions are Screen Effects' (noeffect), not this option's.
 
 
 
