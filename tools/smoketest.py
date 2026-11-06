@@ -3109,6 +3109,7 @@ def sample_steps(eng):
         before = str(eng.tjs('return kag.current.names["tf.heroGiven"].text;'))
         # the box where KAGTextEntryUsed() says so (Android and iOS without a keyboard): here always
         typing = eng.tjs('return typeof global.Agent != "undefined" && typeof Agent.text != "undefined" ? 1 : 0;') == 1
+        eng.tjs("global.__smokeEntryMode = KAGTextEntryMode; return 1;")
         try:
             for answer, name in (("cancel", "Robin"), ("ok", "Sam")):
                 eng.tjs('KAGTextEntryMode = true; kag.current.names["tf.heroGiven"].onMouseUp(4, 4, mbLeft, 0); return 1;')
@@ -3137,7 +3138,7 @@ def sample_steps(eng):
             if str(eng.tjs("return sf.heroName;")) != "Sam":
                 raise SmokeError("OK didn't keep the name typed: %s" % eng.tjs("return sf.heroName;"))
         finally:
-            eng.tjs('KAGTextEntryMode = "auto"; return 1;')
+            eng.tjs("KAGTextEntryMode = global.__smokeEntryMode; return 1;")
 
     @step("typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=")
     def _():
@@ -4020,6 +4021,14 @@ def sample_steps(eng):
         eng.tjs('var e = kag.fore.messages[0].names["tf.searchText"]; e.focus();'
                 ' for (var i = 0; i < "layer".length; i++) e.onKeyPress("layer".charAt(i)); return 1;')
         eng.key("VK_RETURN")
+        # on a phone (Android and iOS without a keyboard) Return, a pad's A, opens the box to type
+        # in (TextEntry.tjs) with what's in the field, and its OK runs enter=; left open, it took
+        # the keys of every later step
+        time.sleep(0.5)
+        boxed = eng.tjs('if (typeof global.KAGTextEntryOpenNow == "undefined" || KAGTextEntryOpenNow === void) return 0;'
+                        ' var t = KAGTextEntryOpenNow.text; KAGTextEntryOpenNow.onAction("ok"); return t;')
+        if boxed not in (0, "0"):
+            print("     Return opened the box to type in, with \"%s\": OK" % boxed, flush=True)
         eng.wait("what it found", 'kag.conductor.curStorage == "searchmode.ks" && kag.inStable && searchFound.count > 0',
                  timeout=20)
         found = str(eng.tjs('var r = []; for (var i = 0; i < searchFound.count; i++) r.add(searchFound[i].title);'
