@@ -3476,12 +3476,19 @@ def sample_steps(eng):
                    ' && kag.tooltips.helpArea !== void ? 1 : 0;') != 1:
             print("     (skipped: no help lines here)", flush=True)
             return
-        def point(name, after=0.35):
+        def shown():
+            return str(eng.tjs('var t = kag.tooltips; return t.helpLayer !== void && t.helpLayer.visible ? t.helpShown : "(none)";'))
+        def point(name, want):
+            # (the pointer's move and the tips' 100 ms timer take a moment, longer in a browser)
             eng.tjs('var l = kag.current.names["%s"]; if (l === void) return 0; var x = l.left + 8, y = l.top + 8;'
                     ' for (var p = l.parent; p !== void && p !== null && p !== kag.primaryLayer; p = p.parent) x += p.left, y += p.top;'
                     ' kag.primaryLayer.setCursorPos(x, y); return 1;' % name)
-            time.sleep(after)
-            return str(eng.tjs('var t = kag.tooltips; return t.helpLayer !== void && t.helpLayer.visible ? t.helpShown : "(none)";'))
+            end = time.time() + 4
+            got = shown()
+            while got != want and time.time() < end:
+                time.sleep(0.2)
+                got = shown()
+            return got
         # (a touch screen's pointer stays where it tapped and can't be moved from here)
         eng.tjs("kag.primaryLayer.setCursorPos(1800, 1061); return 1;")
         time.sleep(0.3)
@@ -3490,13 +3497,15 @@ def sample_steps(eng):
             return
         eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
         eng.wait("Config", 'kag.conductor.curStorage == "config.ks" && kag.inStable && kag.current.names.bgmvolume !== void', timeout=30)
-        got = [point("bgmvolume"), point("config_title")]
+        got = [point("bgmvolume", "The music's volume"), point("config_title", "Back to the title screen")]
         eng.tjs("kag.primaryLayer.setCursorPos(1800, 1060); return 1;")
-        time.sleep(0.35)
-        got.append(str(eng.tjs("return kag.tooltips.helpShown;")))
+        idle, end = "Point at a setting to see what it does", time.time() + 4
+        while shown() != idle and time.time() < end:
+            time.sleep(0.2)
+        got.append(shown())
         eng.tjs("setConfigPage(3); return 1;")
         eng.wait("page 3", "tf.configPage == 3 && kag.inStable && kag.current.names.option_readSpeed !== void", timeout=20)
-        got.append(point("option_readSpeed"))
+        got.append(point("option_readSpeed", "The speed of text you've read before"))
         print("     Config: the music's slider, Title, nothing, Read Text Speed: %s" % " | ".join(got), flush=True)
         if got != ["The music's volume", "Back to the title screen", "Point at a setting to see what it does", "The speed of text you've read before"]:
             raise SmokeError("Config's help line didn't say what the pointer was on: %s" % got)
@@ -3504,7 +3513,7 @@ def sample_steps(eng):
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
         eng.tjs('sf.clear = true; kag.process("cgmode.ks"); return 1;')
         eng.wait("Extras", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
-        ex = point("extra_musicmode")
+        ex = point("extra_musicmode", "The music")
         print("     Extras, its Music tab: %s" % ex, flush=True)
         if ex != "The music":
             raise SmokeError("Extras' help line didn't say what its tab is: %s" % ex)
