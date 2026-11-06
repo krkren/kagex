@@ -2786,7 +2786,11 @@ def sample_steps(eng):
         if eng.tjs('return typeof System.platformTag != "undefined" && ["linux", "windows", "macos"].find(System.platformTag) >= 0 ? 1 : 0;') == 1:
             eng.tjs('kag.movies[0].play(); return 1;')
             eng.wait("the next movie to play in the renewed slot", 'kag.movies[0].position > 500', timeout=15)
-        eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); kag.fore.layers[0].freeImage(); return 1;')
+        # the slot let go of layer 0 and the layer put back as [freeimage] leaves it (the next
+        # steps draw there)
+        eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); var m = kag.movies[0]; try { m.layer1 = null; m.layer2 = null; } catch {}'
+                ' m.layerNumber[0] = m.layerNumber[1] = void; m.layerPage[0] = m.layerPage[1] = void; try { m.mode = vomOverlay; } catch {}'
+                ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
 
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
