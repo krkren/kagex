@@ -3143,6 +3143,29 @@ history, nor while the message window is hidden.
 The sample's message window buttons are its quick menu, on the window's top edge as they were;
 [initscene] sets f.quickMenu and the title clears it.
 
+The player's own, besides the pin: Quick Menu Size (quickMenuSize: Normal, or Large, 140%, which
+is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickMenuOpacity, 30
+to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
+kag.scflags.quickMenuHidden). A button's picture is drawn at the strip's size; a labelled one
+in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
+
+
+● Tips
+
+A button's hint ([button hint=], [link hint=], any layer's hint) appears beside the pointer
+when it rests on the button a moment, or at once under the button when the keys or a
+controller move the focus to it (since 0.19.0, template/system/Tooltips.tjs, kag.tooltips; the
+SDL engine's window shows no hints of its own). The text goes through tr() and is drawn in
+the dialogs' look, over the quick menu and under the message history. A layer can give tips
+by place with a tipAt(x, y) method (the quick menu's buttons give their actions' labels).
+
+  kag.tooltips.restTime   how long the pointer rests before a tip shows (600 ms)
+  kag.tooltips.helpLine   void, or a function(text): a screen with a help line of its own takes
+                          the tips there instead ("" when there's none)
+
+Config's Tips option (tooltips) turns them off; it starts off on Android and iOS, where a tap
+leaves the pointer resting where it tapped. The sample's Config tabs tell what each page holds.
+
 
 
 ● KAGEX Operation System

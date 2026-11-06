@@ -1154,6 +1154,8 @@ KAGLoadScript("Options.tjs"); // the player's settings, for Config screens (sinc
 
 KAGLoadScript("QuickMenu.tjs"); // a strip of buttons for the actions that keeps out of the way (since 0.19.0)
 
+KAGLoadScript("Tooltips.tjs"); // a button's hint beside it, or on a help line (since 0.19.0)
+
 
 
 // Loading World extension features
@@ -1265,6 +1267,8 @@ if (typeof global.KAGWorldPlugin != 'undefined') {
 KAGLoadScript("Indicators.tjs");
 
 KAGIndicatorsOf(kag);
+
+KAGTooltipsOf(kag); // tips (Tooltips.tjs)
 
 kag.tagHandlers.chapter = KAGChapterTag;
 

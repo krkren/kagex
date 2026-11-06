@@ -2911,6 +2911,14 @@ def sample_steps(eng):
             print("     J after Change Controls: %s" % got, flush=True)
             if not got.startswith("auto,1,"):
                 raise SmokeError("Change Controls didn't bind J to auto mode in the system variables: %s" % got)
+            # the quick menu's column leaves its Config button out, and puts it back
+            if eng.tjs('return typeof kag.currentDialog.toggleQuick != "undefined" && kag.currentDialog.quickMenu() !== void ? 1 : 0;') == 1:
+                got = str(eng.tjs('var d = kag.currentDialog, q = kag.quickMenu, r = [];'
+                                  ' d.onPanelAction("quick_config"); r.add(q.hidden("config") ? 1 : 0);'
+                                  ' d.onPanelAction("quick_config"); r.add(q.hidden("config") ? 1 : 0); return r.join(",");'))
+                print("     the quick menu's Config button off, then on: %s" % got, flush=True)
+                if got != "1,0":
+                    raise SmokeError("Change Controls' quick menu column didn't leave the button out and back: %s" % got)
             eng.tjs("kag.currentDialog.close(); return 1;")
             eng.wait("Change Controls to close", "kag.currentDialog === void", timeout=10)
             eng.tjs("kag.runKeyBinding(#'J', 0, true); return 1;")
@@ -2962,6 +2970,46 @@ def sample_steps(eng):
             eng.tjs("kag.quickMenu.pinned = true; return 1;")
         if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
             raise SmokeError("the pin isn't kept in the system variables")
+        # the player's own: larger, fainter, a button left out
+        if eng.tjs('return typeof kag.quickMenu.setHidden != "undefined" ? 1 : 0;') == 1:
+            got = str(eng.tjs('var q = kag.quickMenu, s0 = KAGOptionGet("quickMenuSize"), o0 = KAGOptionGet("quickMenuOpacity");'
+                              ' KAGOptionSet("quickMenuSize", 100); q.onTimer(); var w = q.layer.width;'
+                              ' KAGOptionSet("quickMenuSize", 140); q.onTimer(); var w2 = q.layer.width;'
+                              ' KAGOptionSet("quickMenuOpacity", 50); q.onTimer(); var o = q.layer.opacity;'
+                              ' q.setHidden("config", true); q.onTimer(); var b = q.buttons(), has = 0;'
+                              ' for (var i = 0; i < b.count; i++) has++ if b[i][0] == "config";'
+                              ' q.setHidden("config", false); KAGOptionSet("quickMenuSize", s0); KAGOptionSet("quickMenuOpacity", o0); q.onTimer();'
+                              ' return [w, w2, o, has, q.buttons().count == b.count + 1 ? 1 : 0, kag.primaryLayer.width].join(",");'))
+            print("     width at 100%% and 140%% (at most the screen's), opacity at 50%%, Config left out (has, back), the screen: %s" % got, flush=True)
+            v = [int(x) for x in got.split(",")]
+            if not (v[1] > v[0] * 1.2 and v[1] <= v[5] - 8 and 120 <= v[2] <= 130 and v[3] == 0 and v[4] == 1):
+                raise SmokeError("the quick menu's size, opacity or a button left out didn't take: %s" % got)
+
+    @step("tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line")
+    def _():
+        if eng.tjs('return typeof kag.tooltips == "Object" && kag.tooltips !== void && typeof kag.quickMenu == "Object" && kag.quickMenu !== void'
+                   ' && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible ? 1 : 0;') != 1:
+            print("     (skipped: no tips or no quick menu here)", flush=True)
+            return
+        # the pointer on the Auto button: its action's label once it rests there
+        eng.tjs('var q = kag.quickMenu, b = q.shown, i; for (i = 0; i < b.count; i++) if (b[i].action == "auto") break;'
+                ' global.__smokeTipWant = KAGActionLabel("auto");'
+                ' kag.primaryLayer.setCursorPos(q.layer.left + b[i].x + 5, q.layer.top + b[i].y + 5); return 1;')
+        eng.wait("the Auto button's tip", "kag.tooltips.tip == global.__smokeTipWant", timeout=5)
+        at = str(eng.tjs('var t = kag.tooltips.layer, q = kag.quickMenu.layer; return [t.left, t.top, t.width, t.absolute > q.absolute ? 1 : 0].join(",");'))
+        print("     %s: at %s" % (eng.tjs("return global.__smokeTipWant;"), at), flush=True)
+        if at.split(",")[3] != "1":
+            raise SmokeError("the tip isn't over the quick menu: %s" % at)
+        # Config's switch takes it away; a help line gets it instead
+        got = str(eng.tjs('var t = kag.tooltips, r = []; KAGOptionSet("tooltips", false); t.onTimer(); r.add(t.tip == "" ? 1 : 0);'
+                          ' KAGOptionSet("tooltips", true); global.__smokeHelp = "-"; t.helpLine = function(s) { global.__smokeHelp = s; };'
+                          ' t.onTimer(); r.add(global.__smokeHelp); r.add(t.tip == "" ? 1 : 0); t.helpLine = void; t.shown = ""; t.onTimer();'
+                          ' r.add(t.tip != "" ? 1 : 0); kag.primaryLayer.setCursorPos(10, 10); return r.join("|");'))
+        print("     off, the help line, back beside it: %s" % got, flush=True)
+        v = got.split("|")
+        if v[0] != "1" or v[2] != "1" or v[3] != "1" or v[1] in ("", "-"):
+            raise SmokeError("the tips' switch or the help line didn't take: %s" % got)
+        eng.wait("the tip gone", 'kag.tooltips.tip == ""', timeout=5)
 
     @step("the controls list has the sample's own keys and buttons (AfterInit.tjs)")
     def _():
@@ -3114,12 +3162,15 @@ def sample_steps(eng):
             return
         eng.tjs('kag.process("config.ks", "*startFromTitle"); return 1;')
         eng.wait("config.ks", 'kag.conductor.curStorage == "config.ks" && kag.inStable', timeout=20)
-        for page in (2, 3):
+        pages = [(2, 8), (3, 8)]
+        if eng.tjs("return configPages.count;") > 6:
+            pages.append((6, 4))  # the interface (since 0.19.0)
+        for page, least in pages:
             eng.tjs("setConfigPage(%d); return 1;" % page)
             eng.wait("page %d" % page, "tf.configPage == %d && kag.inStable && typeof kag.current.optionControls == \"Object\"" % page, timeout=20)
             n = str(eng.tjs('var a = []; a.assign(kag.current.optionControls); return [a.count \\ 2, kag.current.numLinks].join(",");'))
             print("     page %d: %s options, %s controls" % (page, n.split(",")[0], n.split(",")[1]), flush=True)
-            if int(n.split(",")[0]) < 8:
+            if int(n.split(",")[0]) < least:
                 raise SmokeError("Config's page %d has too few option rows: %s" % (page, n))
         got = str(eng.tjs('KAGOptionPick("readColor", 1); KAGOptionPick("readMark", 0); var r = [kag.readTextColor, kag.readMark];'
                           ' var b = kag.current.names.option_readColor_1; r.add(b !== void ? b.getMainPixel(b.width \\ 2, 4) : "none");'

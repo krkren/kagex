@@ -97,17 +97,19 @@
 [eval exp="configOptionsPage()"]
 
 *nav
-; The pages' tabs (the save screens' page buttons)
+; The pages' tabs (the save screens' page buttons), each with a tip of what it holds
 [locate x=612 y=78]
-[button name="page1" exp="setConfigPage(1)"]
+[button name="page1" exp="setConfigPage(1)" hint="Sound and Text"]
 [locate x=674 y=78]
-[button name="page2" exp="setConfigPage(2)"]
+[button name="page2" exp="setConfigPage(2)" hint="Voices and Saves"]
 [locate x=736 y=78]
-[button name="page3" exp="setConfigPage(3)"]
+[button name="page3" exp="setConfigPage(3)" hint="Reading"]
 [locate x=798 y=78]
-[button name="page4" exp="setConfigPage(4)"]
+[button name="page4" exp="setConfigPage(4)" hint="On the Screen"]
 [locate x=860 y=78]
-[button name="page5" exp="setConfigPage(5)"]
+[button name="page5" exp="setConfigPage(5)" hint="Each Character's Voice"]
+[locate x=922 y=78]
+[button name="page6" exp="setConfigPage(6)" hint="Quick Menu and Tips"]
 
 ; Under the panels: Controls, the list of what each key and button does (Controls.tjs), where
 ; the engine can show it; Undo (the last change) and Revert (every change since the screen

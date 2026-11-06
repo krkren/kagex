@@ -704,11 +704,14 @@ var configPages = [
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
-      [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "quickMenu" ] ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
-    [ [], [ "volumeSamples", "voiceNote" ] ]
+    [ [], [ "volumeSamples", "voiceNote" ] ],
+    // the interface: the quick menu, tips
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "tooltips" ],
+      [] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,

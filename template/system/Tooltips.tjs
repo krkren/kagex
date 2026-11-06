@@ -1,0 +1,154 @@
+/**
+ * Tips (since 0.19.0): a button's hint (KAG's [button hint=], [link hint=], a layer's hint), which
+ * the SDL engine's window never shows, appears beside it when the pointer rests on it a moment,
+ * or at once when the keys or a controller move the focus to it; through tr(), in the dialogs'
+ * look. A layer can give a tip by place with tipAt(x, y) (the quick menu's buttons give their
+ * actions' labels). Config's Tips switch turns them off (the tooltips option). A KAG plugin of
+ * the window (kag.tooltips).
+ *
+ *   kag.tooltips.restTime   ms the pointer rests before a tip shows (600)
+ *   kag.tooltips.helpLine   void, or a function(text): a screen with a help line takes the tips
+ *                           there instead ("" when there's none)
+ */
+class KAGTipLayer extends Layer
+{
+	var a11yHidden = true;
+	function KAGTipLayer(win, par) { super.Layer(...); }
+	function finalize() { super.finalize(...); }
+}
+
+class KAGTooltips extends KAGPlugin
+{
+	var window;
+	var timer, layer;
+	var restTime = 600;
+	var helpLine;
+	var lastX = -1, lastY = -1, restTick = 0;
+	var focused;               // the layer with the focus when it was last looked at
+	var focusTip = false;      // the tip shown is the focused layer's
+	var shown = "";            // the tip on show
+	var absolute = 3900000;    // over the quick menu, under the backlog (4000000)
+
+	function KAGTooltips(win)
+	{
+		super.KAGPlugin();
+		window = win;
+		timer = new Timer(onTimer, "");
+		timer.interval = 100;
+		timer.enabled = true;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		invalidate layer if layer !== void && isvalid layer;
+		super.finalize(...);
+	}
+
+	function on() { var v = KAGOptionGet("tooltips"); return v === void ? KAGTooltipsByDefault() : !!v; }
+
+	// the tip of layer l at the pointer, from l up through its parents
+	function tipOf(l)
+	{
+		while (l !== void && l !== null && isvalid l) {
+			if (!l.visible) return "";
+			if (typeof l.tipAt != "undefined") {
+				var t = l.tipAt(l.cursorX, l.cursorY);
+				if (t !== void && t != "") return t;
+			} else if (typeof l.hint == "String" && l.hint != "") {
+				return l.hint;
+			}
+			l = l.parent;
+		}
+		return "";
+	}
+
+	function onTimer()
+	{
+		if (!isvalid window) return;
+		var p = window.primaryLayer, x = p.cursorX, y = p.cursorY, now = System.getTickCount();
+		var text = "", ax = x + 16, ay = y + 28;
+		if (on()) {
+			// the keys or a controller moved the focus: its tip at once, under it
+			var f = window.focusedLayer;
+			if (f !== focused) {
+				focused = f;
+				focusTip = f !== void && f !== null && isvalid f && !(x >= 0 && y >= 0 && f.cursorX >= 0 && f.cursorY >= 0 &&
+					f.cursorX < f.width && f.cursorY < f.height);
+			}
+			if (x != lastX || y != lastY) { lastX = x, lastY = y, restTick = now; focusTip = false; }
+			if (focusTip && focused !== void && focused !== null && isvalid focused) {
+				text = tipOf(focused);
+				ax = layerLeft(focused), ay = layerTop(focused) + focused.height + 8;
+			} else if (now - restTick >= restTime) {
+				var l = p.getLayerAt(x, y);
+				text = tipOf(l);
+			}
+		}
+		show(text, ax, ay);
+	}
+
+	function layerLeft(l) { var x = 0; while (l !== void && l !== null && l !== window.primaryLayer) { x += l.left; l = l.parent; } return x; }
+	function layerTop(l)  { var y = 0; while (l !== void && l !== null && l !== window.primaryLayer) { y += l.top;  l = l.parent; } return y; }
+
+	function show(text, x, y)
+	{
+		if (helpLine !== void) {
+			if (text != shown) { shown = text; KAGBindToGlobal(helpLine)(text != "" ? tr(text) : ""); }
+			layer.visible = false if layer !== void;
+			return;
+		}
+		if (text == "") {
+			layer.visible = false if layer !== void;
+			shown = "";
+			return;
+		}
+		if (text != shown || layer === void) {
+			shown = text;
+			if (typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+			if (layer === void) {
+				layer = new KAGTipLayer(window, window.primaryLayer);
+				layer.name = "tip";
+				layer.hitType = htProvince;
+				layer.hitThreshold = 256; // clicks go through
+				layer.absolute = absolute;
+			}
+			var t = tr(text);
+			setYesNoFont(layer, 24);
+			// the dialogs' panel (its shadow, 12 px, on the right and at the bottom) around the text
+			var w = measureYesNoText(layer, t) + 48 + 12, h = layer.font.getTextHeight(t) + 28 + 12;
+			layer.setImageSize(w, h);
+			layer.setSizeToImageSize();
+			layer.fillRect(0, 0, w, h, 0);
+			drawYesNoPanel(layer, 0, 0, w, h);
+			drawYesNoString(layer, 24, 14, t, 0xffffff, yesnoTextBase);
+		}
+		// kept on the screen
+		var pw = window.primaryLayer.width, ph = window.primaryLayer.height;
+		x = pw - layer.width - 8 if x + layer.width > pw - 8;
+		y = y - layer.height - 44 if y + layer.height > ph - 8;
+		layer.setPos(x < 8 ? 8 : x, y < 8 ? 8 : y);
+		layer.visible = true;
+	}
+
+	// the tip on show, for tests ("" for none)
+	property tip { getter { return layer !== void && layer.visible ? shown : ""; } }
+}
+
+function KAGTooltipsOf(win)
+{
+	if (typeof win.tooltips != "Object" || win.tooltips === void) {
+		win.tooltips = new KAGTooltips(win);
+		win.addPlugin(win.tooltips);
+	}
+	return win.tooltips;
+}
+
+// on by default where a mouse points (a finger's tap leaves the pointer resting where it tapped)
+function KAGTooltipsByDefault()
+{
+	var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+	return tag != "android" && tag != "ios";
+}
+KAGDefineOption(%[ name:"tooltips", label:"Tips", kind:"toggle", save:true, initial:KAGTooltipsByDefault(),
+	values:[ ["On", true], ["Off", false] ] ]);
