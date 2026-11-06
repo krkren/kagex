@@ -90,58 +90,9 @@
 
 
 
-; Music Buttons
-
-[locate x=870 y=291]
-
-[button name="track01" exp='playBgm(0)']
-
-[locate x=870 y=345]
-
-[button name="track02" exp='playBgm(1)']
-
-[locate x=870 y=399]
-
-[button name="track03" exp='playBgm(2)']
-
-[locate x=870 y=453]
-
-[button name="track04" exp='playBgm(3)']
-
-[locate x=870 y=507]
-
-[button name="track05" exp='playBgm(4)']
-
-[locate x=870 y=561]
-
-[button name="track06" exp='playBgm(5)']
-
-[locate x=870 y=615]
-
-[button name="track07" exp='playBgm(6)']
-
-[locate x=870 y=669]
-
-[button name="track08" exp='playBgm(7)']
-
-[locate x=870 y=723]
-
-[button name="track09" exp='playBgm(8)']
-
-[locate x=870 y=777]
-
-[button name="track10" exp='playBgm(9)']
-
-[locate x=870 y=831]
-
-[button name="track11" exp='playBgm(10)']
-
-[locate x=870 y=885]
-
-[button name="track12" exp='playBgm(11)']
-
-
-
+; The tracks: a list that scrolls with the wheel, by dragging, with its bar and with the keys or a
+; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs)
+[eval exp='musicTrackList()']
 [eval exp='setRepeat()']
 
 [eval exp='setButtonOver("musicmode_title", keepTitleMusic())']

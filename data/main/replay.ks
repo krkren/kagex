@@ -82,95 +82,15 @@
 
 
 
-; The tab's pages of tiles
+; The tab's scenes: a grid that scrolls with the wheel, by dragging (a flick coasts on), with its
 
-[locate x=1676 y=322]
-
-[button name="replay_prev" normal="replay_prev_normal" over="replay_prev_over" exp="tf.replayPage--" target="*loop"]
-
-[locate x=1676 y=843]
-
-[button name="replay_next" normal="replay_next_normal" over="replay_next_over" exp="tf.replayPage++" target="*loop"]
-
-
-
-; Replay selection
-
-; 1st Row
-
-[locate x=681 y=322]
-
-[button name="cg0" normal="cgmode_thum_normal" exp='replayTile(0)']
-
-[locate x=926 y=322]
-
-[button name="cg1" normal="cgmode_thum_normal" exp='replayTile(1)']
-
-[locate x=1171 y=322]
-
-[button name="cg2" normal="cgmode_thum_normal" exp='replayTile(2)']
-
-[locate x=1416 y=322]
-
-[button name="cg3" normal="cgmode_thum_normal" exp='replayTile(3)']
-
-; 2nd Row
-
-[locate x=681 y=476]
-
-[button name="cg4" normal="cgmode_thum_normal" exp='replayTile(4)']
-
-[locate x=926 y=476]
-
-[button name="cg5" normal="cgmode_thum_normal" exp='replayTile(5)']
-
-[locate x=1171 y=476]
-
-[button name="cg6" normal="cgmode_thum_normal" exp='replayTile(6)']
-
-[locate x=1416 y=476]
-
-[button name="cg7" normal="cgmode_thum_normal" exp='replayTile(7)']
-
-; 3rd Row
-
-[locate x=681 y=630]
-
-[button name="cg8" normal="cgmode_thum_normal" exp='replayTile(8)']
-
-[locate x=926 y=630]
-
-[button name="cg9" normal="cgmode_thum_normal" exp='replayTile(9)']
-
-[locate x=1171 y=630]
-
-[button name="cg10" normal="cgmode_thum_normal" exp='replayTile(10)']
-
-[locate x=1416 y=630]
-
-[button name="cg11" normal="cgmode_thum_normal" exp='replayTile(11)']
-
-; 4th Row
-
-[locate x=681 y=784]
-
-[button name="cg12" normal="cgmode_thum_normal" exp='replayTile(12)']
-
-[locate x=926 y=784]
-
-[button name="cg13" normal="cgmode_thum_normal" exp='replayTile(13)']
-
-[locate x=1171 y=784]
-
-[button name="cg14" normal="cgmode_thum_normal" exp='replayTile(14)']
-
-[locate x=1416 y=784]
-
-[button name="cg15" normal="cgmode_thum_normal" exp='replayTile(15)']
+; bar and with the keys or a controller's D-pad (replayList in Override.tjs, ScrollList.tjs)
 
 
 
 [eval exp='setReplayPage()']
+
+[eval exp='replayList()']
 
 ; the music room's track, playing on, with its Stop button (Override.tjs)
 

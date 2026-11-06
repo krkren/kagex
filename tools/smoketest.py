@@ -4550,7 +4550,9 @@ def sample_steps(eng):
             playing = False
             print("     (the music doesn't play here: the checks of the music playing on are skipped)", flush=True)
         if playing:
-            lit = eng.tjs('var b = kag.fore.messages[0].names.track01; return b.getMainPixel(100, 23) != 0xffffff ? 1 : 0;')
+            lit = eng.tjs('var l = kag.fore.messages[0].names.musicList; if (l !== void) { l.refresh(); var p = l.pictureOf(0, "normal");'
+                          ' return p.getMainPixel(100, 23) != 0xffffff ? 1 : 0; }'
+                          ' var b = kag.fore.messages[0].names.track01; return b.getMainPixel(100, 23) != 0xffffff ? 1 : 0;')
             if lit != 1:
                 raise SmokeError("the track playing isn't lit in the music room")
         # the CG screen: the track plays on, with its Stop button; the counts
@@ -4742,8 +4744,12 @@ def sample_steps(eng):
             if screen != "musicmode.ks":
                 # The demos unlock the first CG and Replay entry, whose tile shows a picture;
                 # the browser build once drew it transparent (an empty frame)
-                a = eng.tjs('var b = kag.current.names["cg0"]; if (b === void || !b.visible || !b.enabled)'
-                            ' return -1; return b.getMaskPixel(b.width >> 1, b.height >> 1);')
+                # (0.20.0 on the tiles are a scrolling grid's items: its first item's picture)
+                a = eng.tjs('var l = kag.current.names["%s"]; if (l !== void) { if (%s === void) return -1;'
+                            ' var p = l.pictureOf(0, "normal"); return p.getMaskPixel(p.imageWidth >> 1, p.imageHeight >> 1); }'
+                            ' var b = kag.current.names["cg0"]; if (b === void || !b.visible || !b.enabled)'
+                            ' return -1; return b.getMaskPixel(b.width >> 1, b.height >> 1);'
+                            % (("cgList", "tf.cgviewlist[0]") if screen == "cgmode.ks" else ("replayList", "tf.replaylist[0]")))
                 if a == -1:
                     raise SmokeError("the first entry is still locked")
                 if a != 255:
@@ -4760,7 +4766,7 @@ def sample_steps(eng):
         eng.wait("replay.ks", 'kag.conductor.curStorage == "replay.ks" && kag.inStable', timeout=20)
         # the Layers tab: a tile for each scene of layer.ks, which the demos have read
         titles = str(eng.tjs('var t = replayTabs.find("Layers"); setReplayPage(t, 0); var r = [];'
-                             ' for (var i = 0; i < tf.cgbtnnum; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
+                             ' for (var i = 0; i < tf.replaylist.count; i++) r.add(tf.replaylist[i] !== void ? tf.replaylist[i].title : "");'
                              ' return r.join("|");')).split("|")
         if "Blending Mode" not in titles:
             raise SmokeError("no Blending Mode tile on the Layers tab: %s" % titles)

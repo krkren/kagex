@@ -40,45 +40,10 @@
 [locate x=290 y=822]
 [button name="cgmode_page5" exp="tf.cgmodepage=5" target=*loop]
 
-; CG Selection
-; 1st Row
-[locate x=681 y=322]
-[button name="cg0" normal="cgmode_thum_normal" exp="tf.cgnum=0" target=*cgview]
-[locate x=926 y=322]
-[button name="cg1" normal="cgmode_thum_normal" exp="tf.cgnum=1" target=*cgview]
-[locate x=1171 y=322]
-[button name="cg2" normal="cgmode_thum_normal" exp="tf.cgnum=2" target=*cgview]
-[locate x=1416 y=322]
-[button name="cg3" normal="cgmode_thum_normal" exp="tf.cgnum=3" target=*cgview]
-; 2nd Row
-[locate x=681 y=476]
-[button name="cg4" normal="cgmode_thum_normal" exp="tf.cgnum=4" target=*cgview]
-[locate x=926 y=476]
-[button name="cg5" normal="cgmode_thum_normal" exp="tf.cgnum=5" target=*cgview]
-[locate x=1171 y=476]
-[button name="cg6" normal="cgmode_thum_normal" exp="tf.cgnum=6" target=*cgview]
-[locate x=1416 y=476]
-[button name="cg7" normal="cgmode_thum_normal" exp="tf.cgnum=7" target=*cgview]
-; 3rd Row
-[locate x=681 y=630]
-[button name="cg8" normal="cgmode_thum_normal" exp="tf.cgnum=8" target=*cgview]
-[locate x=926 y=630]
-[button name="cg9" normal="cgmode_thum_normal" exp="tf.cgnum=9" target=*cgview]
-[locate x=1171 y=630]
-[button name="cg10" normal="cgmode_thum_normal" exp="tf.cgnum=10" target=*cgview]
-[locate x=1416 y=630]
-[button name="cg11" normal="cgmode_thum_normal" exp="tf.cgnum=11" target=*cgview]
-; 4th Row
-[locate x=681 y=784]
-[button name="cg12" normal="cgmode_thum_normal" exp="tf.cgnum=12" target=*cgview]
-[locate x=926 y=784]
-[button name="cg13" normal="cgmode_thum_normal" exp="tf.cgnum=13" target=*cgview]
-[locate x=1171 y=784]
-[button name="cg14" normal="cgmode_thum_normal" exp="tf.cgnum=14" target=*cgview]
-[locate x=1416 y=784]
-[button name="cg15" normal="cgmode_thum_normal" exp="tf.cgnum=15" target=*cgview]
-
+; The tab's pictures: a grid that scrolls with the wheel, by dragging (a flick coasts on), with
+; its bar and with the keys or a controller's D-pad (cgList in Override.tjs, ScrollList.tjs)
 [eval exp='setCgmodePageButton()']
+[eval exp='cgList()']
 ; the music room's track, playing on, with its Stop button (Override.tjs)
 [if exp="roomMusicPlaying()"]
 [locate x=654 y=950]

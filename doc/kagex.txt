@@ -3285,7 +3285,10 @@ copies it to the other page through its cloneFor(window, messageLayer), and clea
 message layer's links invalidates it.
 
 The sample's Search shows the lines it finds in one (searchList in Override.tjs), kept where
-it was scrolled while a line plays; its backlog coasts after a flick too.
+it was scrolled while a line plays; its backlog coasts after a flick too. Since 0.20.0 the
+CG and Replay tiles are grids of four across (cgList, replayList) and the music room's tracks a
+list (musicTrackList), as many as there are, in place of pages of sixteen and twelve buttons;
+screenList and listTile in Override.tjs make them and draw a tile as its button was drawn.
 
 
 ● The Screen, the Controller and Screenshots
