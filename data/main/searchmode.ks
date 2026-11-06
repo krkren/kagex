@@ -28,7 +28,7 @@
 
 ; What to look for: Return or the button searches
 [locate x=306 y=218]
-[edit name="tf.searchText" length=868 fontheight=32 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=40 enter="searchRun()"]
+[edit name="tf.searchText" prompt="Search" length=868 fontheight=32 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=40 enter="searchRun()"]
 [locate x=1210 y=206]
 [button name="search_go" normal="search_go_normal" over="search_go_over" exp="searchFromField()"]
 

@@ -115,7 +115,7 @@ jobs:
           URL: ${{ needs.deploy.outputs.page_url }}
         run: |
           python3 -m pip install --quiet playwright
-          .github/platforms/run-logged.sh smoke python3 -B tools/smoketest.py --target web --url "$URL" --channel chrome --keep
+          .github/platforms/run-logged.sh smoke python3 -B tools/smoketest.py --target web --url "$URL" --channel chrome --keep --touch
       - name: Publish results branch
         if: always()
         env:

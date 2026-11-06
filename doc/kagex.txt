@@ -1360,7 +1360,7 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
-book and multiripple are drawn by kagex itself (ScriptTransitions.tjs, since 0.18.0): extNagano's, as rebuilt, stop three quarters of the way and bring the old picture back halfway (UPSTREAM.md 42). They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns or ripples over the stage. They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
+book and multiripple (since 0.18.0) and rgbfade, zoomfade and spin (since 0.18.1) are drawn by kagex itself (ScriptTransitions.tjs): extNagano's, as rebuilt, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way, multiripple brings the old picture back halfway, rgbfade's colours each take the shortest one's time, zoomfade's zoom is jagged and spin's box doesn't turn. They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns, ripples, zooms or changes colour over the stage. They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
 
     class MyTransition extends KAGScriptTransitionEffect {
         function MyTransition(owner) { super.KAGScriptTransitionEffect(owner); }
@@ -1401,23 +1401,31 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
     scanline     Lines slide in from alternate sides.
 
-    zoomfade     zoom1: the old picture's zoom at the end, in %. zoom2: the new picture's zoom at
+    zoomfade     A crossfade in which the old picture grows from 100% to zoom1% and the new one
 
-                 the start, in %.
+                 shrinks from zoom2% to 100%, about the middle (defaults 100 and 200: a picture
 
-    rgbfade      Red, green, blue and alpha each change at their own time. delayr, delayg, delayb,
+                 that goes, with nothing after it, only zooms with zoom1). Drawn by kagex.
 
-                 delaya: how late each starts (0-255). It blends alpha too and takes a pixel of
+    rgbfade      Red, green and blue each change at a time of their own. delayr, delayg, delayb:
 
-                 alpha 0 as transparent, and a screen of layers composited for a transition has no
+                 how late each starts (0-255 of the time); they all end together. A picture that
 
-                 meaningful alpha: there it shows solid colours. Use it between two whole pictures
+                 comes or goes changes colour by colour against what's behind it. Drawn by kagex
 
-                 on one layer, with children=false.
+                 (delaya, the plugin's alpha delay, isn't used: each colour's coverage goes with it).
 
-    spin         The picture turns. type1 (the old picture), type2 (the new one): -1 still, 0 and 1
+    spin         The pictures turn about an upright axis, in perspective. type1 (the old picture)
 
-                 like the side of a box, 4 and 5 like a door hinged on the left, 6 and 7 on the right.
+                 and type2 (the new one): -1 stays still; 0 and 1 are the faces of a box turning
+
+                 (type1 0 turns away to the left, 1 to the right; type2 1 comes in from the right,
+
+                 0 from the left; the defaults, 0 and 1, turn one box); 4 and 5 a door hinged on
+
+                 its left edge, 6 and 7 on its right (type1 4 and 6 swing away from the viewer, 5
+
+                 and 7 towards; type2 4 and 6 come in from the viewer's side). Drawn by kagex.
 
     flutter      The picture peels away like paper. back: the colour of the paper's back
 
@@ -3295,7 +3303,7 @@ a load, going back and compiled scenes show it as it was. kag.indicators.chapter
 When the music changes, its title shows for three seconds in the top right corner: titles come
 from titleList (musiclist.csv: the file's name without its extension, then the title; #
 comments), and a track without one shows nothing. A mark shows while auto mode or skip mode is
-on, and a bar under the message window tells how much of the voice is left.
+on, and a bar under the message window fills from the left as the voice goes on.
 
 ● The Hero's Name
 
@@ -3312,6 +3320,28 @@ The names are kept with the game (kag.flags.name and family), so each playthroug
 A character whose nameAlias is "&kag.heroName()" shows the name, and [emb exp="kag.heroName()"]
 puts it in a line; compiled scenes, the backlog and Search show the name as it was then. The
 sample asks the first time START is chosen (namescreen.ks), and Config's last page has Change.
+
+● Typing on Phones
+
+A phone has no keyboard until something asks for one, and the engine asks for its own text boxes
+only, so an [edit] field took no text on Android, nor in a phone's browser (since 0.18.1,
+template/system/TextEntry.tjs):
+
+  On Android and iOS without a keyboard plugged in, tapping an [edit] field (or Return, a pad's
+  A, on it) opens a box of the engine's at the top of the screen, above the system's keyboard,
+  with the field's text selected: what's typed shows in the field as it's typed, OK or the
+  keyboard's Enter keeps it and runs the field's enter=, and Cancel, Back or Esc puts back what
+  was there. Its title is the field's prompt=, through tr():
+
+    [edit name="tf.heroGiven" prompt="Given Name" maxchars=12 enter="nameOK()"]
+
+  KAGTextEntryMode is "auto" (that), true (the box everywhere, to try it on a desktop) or false.
+
+  In a phone's or tablet's browser, the page's script (kagex-web.js) does it: a tap on an [edit]
+  field gives a hidden field of the page's the keyboard, with the text, and what's typed shows in
+  the game's field; Enter runs enter=, and closing the keyboard keeps the text. There, full screen
+  is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
+  element have the keyboard).
 
 ● Movies
 
@@ -3334,7 +3364,10 @@ mode stops before a movie not seen yet, and passes a seen one where Config says 
 (movieSkipping); the right button skips a seen one where it says so (movieRightClick). A
 movie with a smaller version, <name>_sd, plays that when Movie Quality says Smaller, and by
 itself on the web, Android and iOS (Auto), zoomed to fill the screen like any movie of another
-size (the sample's opening_sd is 960x540, half the screen each way). A movie that shows no picture in three seconds (no
+size (the sample's opening_sd is 960x540, half the screen each way). On Android the first two
+frames of a movie aren't shown (KAGMovieHideFirst, since 0.18.1): the opening glitched for a
+frame as it started on a phone, whose decoder can change its picture format as its first frame
+comes out. A movie that shows no picture in three seconds (no
 decoder for it here), or whose picture stops for three seconds (since 0.17.2: the engine holds a
 movie with sound at its first frame on a computer with no sound device, UPSTREAM.md 40), ends,
 so the game goes on.

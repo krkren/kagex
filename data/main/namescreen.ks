@@ -18,9 +18,9 @@
 ; the rows' titles, the fields' backgrounds, a refused name's reason
 [eval exp="nameInit()"]
 [locate x=330 y=274]
-[edit name="tf.heroGiven" length=600 fontheight=36 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=12 enter="nameOK()"]
+[edit name="tf.heroGiven" prompt="Given Name" length=600 fontheight=36 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=12 enter="nameOK()"]
 [locate x=1030 y=274]
-[edit name="tf.heroFamily" length=560 fontheight=36 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=12 enter="nameOK()"]
+[edit name="tf.heroFamily" prompt="Family Name" length=560 fontheight=36 fontbold=true color=0x24107a bgcolor=0xffffff opacity=0 noborder=true maxchars=12 enter="nameOK()"]
 [locate x=1118 y=470]
 [button name="name_default" normal="config_choice240_normal" over="config_choice240_over" exp="nameDefault()"]
 [locate x=1374 y=470]

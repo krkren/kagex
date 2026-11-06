@@ -539,6 +539,7 @@ class LinkEditLayer extends EditLayer
 	var exp; // Expression
 
 	var enterExp; // Run on Return ([edit enter=]), after the text is committed
+	var entryPrompt = ""; // [edit prompt=]: the title of the box a phone types in (TextEntry.tjs)
 
 
 
@@ -580,6 +581,8 @@ class LinkEditLayer extends EditLayer
 
 		exp = src.exp;
 
+		enterExp = src.enterExp;
+		entryPrompt = src.entryPrompt;
 	}
 
 
@@ -600,6 +603,8 @@ class LinkEditLayer extends EditLayer
 
 		}
 
+		// On a phone, Return (a pad's A) opens the box to type in (TextEntry.tjs)
+		if (key == VK_RETURN && KAGTextEntryUsed() && KAGTextEntryOpen(this)) return;
 		// Return runs enter= ([edit enter=]) with the text committed
 
 		if (key == VK_RETURN && enterExp != "")
@@ -683,6 +688,8 @@ class LinkEditLayer extends EditLayer
 	{
 
 		super.onMouseDown(...);
+		// in a phone's browser the page opens the keyboard as the tap ends (TextEntry.tjs)
+		KAGTextEntryWebArm(this) if button == mbLeft;
 
         if(button == mbRight) {
 
@@ -694,6 +701,14 @@ class LinkEditLayer extends EditLayer
 
 	}
 
+	// On a phone, a tap opens the box to type in: the engine opens the keyboard only for
+	// that (TextEntry.tjs)
+	function onMouseUp(x, y, button, shift)
+	{
+		super.onMouseUp(...);
+		if (button == mbLeft && x >= 0 && y >= 0 && x < width && y < height && KAGTextEntryUsed())
+			KAGTextEntryOpen(this);
+	}
 }
 
 
@@ -7307,6 +7322,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 		object.exp  = exp;
 
 		object.enterExp = elm.enter if elm.enter !== void;
+		object.entryPrompt = elm.prompt if elm.prompt !== void;
+		// the box takes the typing on a phone: no keyboard of the system's for the field itself
+		object.imeMode = imDisable if KAGTextEntryUsed();
 
 		object.antialiased = antialiased;
 

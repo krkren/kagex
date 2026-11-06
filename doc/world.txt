@@ -1154,9 +1154,11 @@ faceleft= facetop= facewidth= faceheight=] (the sample's [initscene] in macro.ks
 names the level faces come from with "faceLevelName" (void: no faces). Then, with no face command
 in the scenario:
 
-  - each line's speaker shows their face, as their sprite looks now (pose, outfit, expression
-    and, with "faceApplyColor" => true, the time of day's colour), crossfading from the last
-    speaker's over "faceFadeTime" ms;
+  - each line's speaker shows their face in their sprite's pose, outfit and expression, but in
+    its own colours: the time of day's lighting and the colour effects on the character or the
+    scene ([env grayscale], a character's color= and the like) aren't applied to it, nor are
+    the layer's zoom, turn or opacity ("faceApplyColor" => true lights it as the sprite is);
+    it crossfades from the last speaker's over "faceFadeTime" ms;
   - narration (no name) has none, and neither has a line over an event CG (envinit's
     "faceOverEvent" => true keeps them);
   - a character on the stage (shown, disp BOTH) or in the face window only ([name facewin]: a
