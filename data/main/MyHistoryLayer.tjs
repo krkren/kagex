@@ -48,8 +48,9 @@ class HistoryLayer extends Layer
     var prevSceneButton = void;
     var nextSceneButton = void;
     var dragY = void, dragStart = 0, dragging = false, pressX, pressY;
-    // a flick coasts on, slowing down (since 0.19.0): lines a second, the lines not yet scrolled
-    var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastLines = 0.0, coastTick = 0;
+    // a flick coasts on, slowing down (since 0.19.0): px a second (since 0.21.0; coastPx is where
+    // it has got to)
+    var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastTick = 0;
     var dragPace = 0; // ms between the drag's last two moves
     var topPageButton  = void;
     var prevPageButton = void;
@@ -57,6 +58,18 @@ class HistoryLayer extends Layer
     var endPageButton  = void;
 	var closeButton = void;
     var scrollSlider = void;
+    // Since 0.21.0 the text scrolls by the pixel, like the Extras lists: it's drawn on textPage,
+    // inside textClip (the text area), where it always was (display line n at n*lineHeight +
+    // controlHeight + marginT), and textPage moves up by scrollSub px; the line under the last is
+    // drawn too, for the part that shows between lines. Each line's rows hold only what belongs
+    // in them (a face taller than a line is drawn a line's part at a time), so a line is redrawn
+    // alone and the page shifted a line with copyRect. Pulling the newest line up by closePull px
+    // and letting go closes the log, as turning the wheel past it does: a phone has no right
+    // button, Esc or wheel (the close button at the top of the column is the other way)
+    var textClip = void, textPage = void;
+    var scrollSub = 0;
+    var dragPx = 0, coastPx = 0.0;
+    var overPull = 0, closePull = 150, pullNote = void, pullNoteText = "";
 
 
 	var antialiased = true; // Whether to perform antialiased text drawing
@@ -164,6 +177,9 @@ class HistoryLayer extends Layer
 	function finalize()
 	{
         invalidate coastTimer if coastTimer !== void;
+        invalidate pullNote if pullNote !== void;
+        invalidate textPage if textPage !== void;
+        invalidate textClip if textClip !== void;
         invalidate baseImage if baseImage !== void;
         invalidate actionMark if actionMark !== void;
         invalidate actionMarkOver if actionMarkOver !== void;
@@ -295,6 +311,18 @@ class HistoryLayer extends Layer
 	{
         if(prevPageButton !== void) return; // Already created
 
+        // the text's own layers, under the buttons (placeText sizes them)
+        textClip = new global.Layer(window, this);
+        textClip.name = "history text area";
+        textClip.hitType = htMask;
+        textClip.hitThreshold = 256; // the clicks and drags are the history layer's
+        textPage = new global.Layer(window, textClip);
+        textPage.name = "history text";
+        textPage.type = ltAlpha;
+        textPage.hitType = htMask;
+        textPage.hitThreshold = 256;
+        textPage.visible = true;
+
         baseImage =new global.Layer(window, this);
         baseImage.loadImages("log_base");
         baseImage.setSizeToImageSize();
@@ -322,47 +350,55 @@ class HistoryLayer extends Layer
         closeButton    = new LButtonLayer(window, this);
         scrollSlider   = new LSliderLayer(window, this, true);
         
+        // the column, top to bottom: close, first, back a page, the scene before, the scroll bar,
+        // the scene after, on a page, last (the close button since 0.21.0)
+        closeButton.left = 1766;
+        closeButton.top  = 58;
+        closeButton.loadButtons("log_close_normal", "log_close_over");
+        closeButton.visible = true;
+        closeButton.hint = "Close the history";
+
         topPageButton.left = 1766;
-        topPageButton.top  = 58;
+        topPageButton.top  = 116;
+        topPageButton.hint = "To the oldest line";
         topPageButton.loadButtons("log_first_normal", "log_first_over");
         topPageButton.visible = true;
         
         prevPageButton.left    = 1766;
-        prevPageButton.top     = 116;
+        prevPageButton.top     = 174;
+        prevPageButton.hint    = "Back a page";
         prevPageButton.loadButtons("log_uppage_normal", "log_uppage_over");
         prevPageButton.visible = true;
         
         nextPageButton.left    = 1766;
         nextPageButton.top     = 909;
+        nextPageButton.hint    = "On a page";
         nextPageButton.loadButtons("log_downpage_normal", "log_downpage_over");
         nextPageButton.visible = true;
 
         endPageButton.left    = 1766;
         endPageButton.top     = 967;
+        endPageButton.hint    = "To the newest line";
         endPageButton.loadButtons("log_last_normal", "log_last_over");
         endPageButton.visible = true;
         
-/**        closeButton.left      = 720;
-       closeButton.top       = 562;
-        closeButton.loadButtons("backlog_return", "backlog_return");
-        closeButton.visible   = true;
-        closeButton.hint      = "Close Message History";
-*/
 
         prevSceneButton = new LButtonLayer(window, this);
         prevSceneButton.left = 1766;
-        prevSceneButton.top  = 174;
+        prevSceneButton.top  = 232;
+        prevSceneButton.hint = "To the scene or choice before";
         prevSceneButton.loadButtons("log_prevscene_normal", "log_prevscene_over");
         prevSceneButton.visible = true;
         nextSceneButton = new LButtonLayer(window, this);
         nextSceneButton.left = 1766;
         nextSceneButton.top  = 851;
+        nextSceneButton.hint = "To the next scene or choice";
         nextSceneButton.loadButtons("log_nextscene_normal", "log_nextscene_over");
         nextSceneButton.visible = true;
         scrollSlider.left     = 1802; // centred under the buttons; its track is drawn in log_base
-        scrollSlider.top      = 236;
+        scrollSlider.top      = 294;
         scrollSlider.width    =  43;
-        scrollSlider.height   = 611;
+        scrollSlider.height   = 553;
         scrollSlider.loadTabs("log_bar_normal", "log_bar_over");
         scrollSlider.visible = true;
         scrollSlider.bgOpacity = 0;
@@ -467,7 +503,7 @@ class HistoryLayer extends Layer
 		var i = jumpIndex(n + dispStart);
 		if(jumpInfo[i] === void) return;
 		var img = jumpHover === i ? jumpMarkOver : jumpMark;
-		operateRect(jumpMarkLeft, n*lineHeight + controlHeight + marginT, img, 0, 0, img.width, img.height);
+		textPage.operateRect(jumpMarkLeft, n*lineHeight + controlHeight + marginT, img, 0, 0, img.width, img.height);
 	}
 
 	// The jumpInfo index whose mark is at x, y (void: none)
@@ -475,9 +511,8 @@ class HistoryLayer extends Layer
 	{
 		if(everypage || verticalView || jumpMark === void) return void;
 		if(x < jumpMarkLeft || x >= jumpMarkLeft + jumpMark.width) return void;
-		var line = (y - controlHeight - marginT) \ lineHeight;
-		if(line < 0 || y < controlHeight + marginT) return void;
-		if(dataLines <= dispLines ? line >= dataLines : line >= dispLines) return void;
+		var line = lineAtY(y);
+		if(line === void) return void;
 		var i = jumpIndex(line + dispStart);
 		return jumpInfo[i] !== void ? i : void;
 	}
@@ -486,7 +521,7 @@ class HistoryLayer extends Layer
 	function redrawJumpLine(i)
 	{
 		if(i === void) return;
-		var max = (dataLines <= dispLines) ? dataLines : dispLines;
+		var max = shownLines();
 		for(var n = 0; n < max; n++)
 		{
 			if(jumpIndex(n + dispStart) == i)
@@ -522,17 +557,25 @@ class HistoryLayer extends Layer
 		var m = /jumpFromHistory\((\d+)\)/.exec((string)jumpInfo[i]);
 		return m.count > 1 ? +m[1] : void;
 	}
-	// the speaker's face of display line n's message, left of its marks
-	function drawFaceIcon(n)
+	// the speakers' faces in display line n's rows, left of the marks: its own message's top
+	// part, and the parts of the lines above whose faces reach down into it (a face is taller
+	// than a line), so the line comes out whole when it's redrawn alone (since 0.21.0)
+	function drawFaceParts(n)
 	{
-		if(everypage || verticalView || jumpMark === void || n < 0 || player === void) return;
-		var pos = jumpPosOf(jumpIndex(n + dispStart));
-		if(pos === void) return;
-		var icon;
-		try { icon = player.historyFaceIcon(pos, faceSize); } catch(e) { dm("backlog face: " + e.message); }
-		if(icon === void) return;
+		if(everypage || verticalView || jumpMark === void || player === void) return;
 		var x = jumpMarkLeft - 8 - faceSize, y = n*lineHeight + controlHeight + marginT;
-		operateRect(x, y, icon, 0, 0, faceSize, faceSize);
+		for(var k = 0; k*lineHeight < faceSize; k++)
+		{
+			if(n - k + dispStart < 0) break;
+			var pos = jumpPosOf(jumpIndex(n - k + dispStart));
+			if(pos === void) continue;
+			var icon;
+			try { icon = player.historyFaceIcon(pos, faceSize); } catch(e) { dm("backlog face: " + e.message); }
+			if(icon === void) continue;
+			var sy = k*lineHeight, h = faceSize - sy;
+			h = lineHeight if h > lineHeight;
+			textPage.operateRect(x, y, icon, 0, sy, faceSize, h);
+		}
 	}
 	// the scene as it was at history position pos, top right, while its mark is pointed at
 	function showPreview(pos)
@@ -597,15 +640,164 @@ class HistoryLayer extends Layer
 	}
 	function scrollTo(n)
 	{
-		var max = dataLines - dispLines;
-		n = max if n > max;
-		n = 0 if n < 0;
-		if(n == dispStart) return;
-		clearActionHighlights();
-		clearBack();
-		dispStart = n;
-		for(var i = 0 ; i < dispLines; i++) drawLine(i);
-		updateButtonState();
+		scrollToPx(n * lineHeight);
+	}
+
+	// ---- scrolling by the pixel (since 0.21.0) ----
+
+	// the display line at y, as scrolled (void: outside the text, or past the last line)
+	function lineAtY(y)
+	{
+		var top = controlHeight + marginT;
+		if(y < top || y >= top + dispLines*lineHeight) return void;
+		var line = (y - top + scrollSub) \ lineHeight;
+		if(line + dispStart >= dataLines) return void;
+		return line;
+	}
+	// the display lines drawn: the screenful and the one under it, shown between lines
+	function shownLines()
+	{
+		if(everypage) return repageLine;
+		var n = dataLines - dispStart, most = verticalView ? dispLines : dispLines + 1;
+		return n < most ? n : most;
+	}
+	function drawLines()
+	{
+		var max = shownLines();
+		for(var i = 0; i < max; i++) drawLine(i);
+	}
+	property scrollPx { getter { return dispStart * lineHeight + scrollSub; } }
+	function maxScrollPx() { return dataLines > dispLines ? (dataLines - dispLines) * lineHeight : 0; }
+	// the text's layers for this log's layout: a text area that cuts the lines off at its edges
+	// (the whole layer for vertical text and page by page, which don't scroll by the pixel)
+	function placeText()
+	{
+		var smooth = !everypage && !verticalView;
+		var top = smooth ? controlHeight + marginT : 0, h = smooth ? dispLines*lineHeight : height;
+		with(textClip)
+		{
+			.setImageSize(width, h);
+			.setSizeToImageSize();
+			.face = dfAlpha;
+			.fillRect(0, 0, width, h, 0);
+			.setPos(0, top);
+			.visible = true;
+		}
+		with(textPage)
+		{
+			.setImageSize(width, height + lineHeight*2);
+			.setSizeToImageSize();
+			.font.angle = font.angle;
+			.font.face = font.face;
+			.font.height = font.height;
+			.font.bold = font.bold;
+		}
+		placePage();
+	}
+	function placePage()
+	{
+		if(textPage === void) return;
+		textPage.setPos(0, -textClip.top - scrollSub - overPull \ 3);
+	}
+	// to px pixels from the oldest line (kept within the log); slider: move the scroll bar too
+	function scrollToPx(px, slider=true)
+	{
+		if(everypage || verticalView)
+		{
+			var n = px \ lineHeight, max = dataLines - dispLines;
+			n = max if n > max;
+			n = 0 if n < 0;
+			if(n == dispStart) return;
+			clearActionHighlights();
+			clearBack();
+			dispStart = n;
+			drawLines();
+			updateButtonState(slider);
+			return;
+		}
+		var max = maxScrollPx();
+		px = (int)px;
+		px = max if px > max;
+		px = 0 if px < 0;
+		var start = px \ lineHeight, sub = px % lineHeight;
+		if(start != dispStart)
+		{
+			clearActionHighlights();
+			if(start == dispStart + 1 || start == dispStart - 1)
+			{
+				// a line on or back: the page moves a line, and one line is drawn
+				var top = controlHeight + marginT, n = dispLines + 1, w = textPage.imageWidth;
+				textPage.face = dfAlpha;
+				if(start > dispStart)
+				{
+					textPage.copyRect(0, top, textPage, 0, top + lineHeight, w, lineHeight * (n - 1));
+					dispStart = start;
+					clearBack(n - 1);
+					drawLine(n - 1);
+				}
+				else
+				{
+					textPage.copyRect(0, top + lineHeight, textPage, 0, top, w, lineHeight * (n - 1));
+					dispStart = start;
+					clearBack(0);
+					drawLine(0);
+				}
+			}
+			else
+			{
+				clearBack(void, false);
+				dispStart = start;
+				drawLines();
+			}
+			updateButtonState(slider);
+		}
+		if(sub != scrollSub)
+		{
+			scrollSub = sub;
+			placePage();
+		}
+	}
+	// how far the newest line has been pulled past the end (px): the text moves a third of it,
+	// and a note says to let go to close
+	function setOverPull(v)
+	{
+		v = 0 if v < 0;
+		if(v == overPull) return;
+		overPull = v;
+		placePage();
+		if(v == 0)
+		{
+			pullNote.visible = false if pullNote !== void;
+			return;
+		}
+		var text = tr(v >= closePull ? "Let go to close" : "Pull up to close");
+		if(pullNote === void)
+		{
+			if(typeof global.setYesNoFont == "undefined") KAGLoadScript("YesNoDialog.tjs");
+			pullNote = new global.Layer(window, this);
+			pullNote.name = "history pull note";
+			pullNote.hitType = htMask;
+			pullNote.hitThreshold = 256;
+			pullNote.absolute = 1000001;
+		}
+		if(text != pullNoteText || !pullNote.visible)
+		{
+			pullNoteText = text;
+			with(pullNote)
+			{
+				setYesNoFont(pullNote, 26);
+				var w = measureYesNoText(pullNote, text) + 48 + 12, h = .font.getTextHeight(text) + 28 + 12;
+				.setImageSize(w, h);
+				.setSizeToImageSize();
+				.face = dfAlpha;
+				.fillRect(0, 0, w, h, 0);
+				drawYesNoPanel(pullNote, 0, 0, w, h);
+				drawYesNoString(pullNote, 24, 14, text, 0xffffff, yesnoTextBase);
+				.setPos(marginL + (width - marginL - marginR - w) \ 2, controlHeight + marginT + dispLines*lineHeight - h - 16);
+			}
+		}
+		pullNote.opacity = v >= closePull ? 255 : 96 + 159 * v \ closePull;
+		pullNote.visible = true;
 	}
 
 	function getActionInfo(n)
@@ -802,43 +994,33 @@ class HistoryLayer extends Layer
 		indentPos = 0;
 	}
 
-	function clearBack(n)
+	// the background (n void: the layer's own, and the text's cleared unless text is false), or
+	// display line n's rows of the text (since 0.21.0 the text has layers of its own)
+	function clearBack(n, background=true)
 	{
-        if (baseImage === void) {
-            // Fill background
-            if(n === void) {
-                face = dfAlpha;
-                fillRect(0, 0, width, height, 0xc8000000);
-            }
-            else
-            {
-                face = dfAlpha;
-                if(verticalView)
-                    fillRect(width - marginR - (n+1)*lineHeight, controlHeight, lineHeight,
-                             height - controlHeight, 0xc8000000);
-                else
-                    fillRect(0, n*lineHeight + controlHeight + marginT, width, lineHeight, 0xc8000000);
-            }
-        } else {
-            // Fill background
-            if(n === void) {
-                face = dfAlpha;
-                copyRect(0, 0, baseImage, 0, 0, width, height);
-            }
-            else
-            {
-                face = dfAlpha;
-                if(verticalView) {
-                    var xpos = width - marginR - (n+1)*lineHeight;
-                    var ypos = controlHeight;
-                    copyRect(xpos, ypos, baseImage, xpos, ypos, lineHeight, height - controlHeight);
-                } else {
-                    var ypos = n*lineHeight + controlHeight + marginT;
-                    copyRect(0, ypos, baseImage, 0, ypos, width, lineHeight);
-                }
-            }
-        }
-    }
+		if(n === void)
+		{
+			if(background)
+			{
+				face = dfAlpha;
+				if(baseImage === void) fillRect(0, 0, width, height, 0xc8000000);
+				else copyRect(0, 0, baseImage, 0, 0, width, height);
+			}
+			if(textPage !== void)
+			{
+				textPage.face = dfAlpha;
+				textPage.fillRect(0, 0, textPage.imageWidth, textPage.imageHeight, 0);
+			}
+		}
+		else if(textPage !== void)
+		{
+			textPage.face = dfAlpha;
+			if(verticalView)
+				textPage.fillRect(width - marginR - (n+1)*lineHeight, controlHeight, lineHeight, height - controlHeight, 0);
+			else
+				textPage.fillRect(0, n*lineHeight + controlHeight + marginT, textPage.imageWidth, lineHeight, 0);
+		}
+	}
 
 
 	function dispInit()
@@ -855,6 +1037,18 @@ class HistoryLayer extends Layer
 
 		antialiased = window.chDefaultAntialiased;
 		jumpHover = void;
+		if(!everypage)
+		{
+			if(verticalView)
+				dispLines = (width - marginR - marginL) \ lineHeight;
+			else
+				dispLines = (height - marginT - marginB - controlHeight) \ lineHeight;
+		}
+		scrollSub = 0;
+		setOverPull(0);
+		stopCoast();
+		dragY = void, dragging = false;
+		placeText();
 		clearBack();
 
 		if(everypage)
@@ -873,29 +1067,10 @@ class HistoryLayer extends Layer
 		}
 		else
 		{
-			if(verticalView)
-				dispLines = (width - marginR - marginL) \ lineHeight;
-			else
-				dispLines = (height - marginT - marginB - controlHeight) \ lineHeight;
-
-			if(dataLines <= dispLines)
-			{
-				// Fits within the displayable range
-				canScroll = false;
-				dispStart = 0;
-				var i;
-				for(i= 0; i < dataLines; i++)
-					drawLine(i);
-			}
-			else
-			{
-				// Does not fit within the displayable range
-				canScroll = true;
-				dispStart = dataLines - dispLines;
-				var i;
-				for(i = 0; i < dispLines; i++)
-					drawLine(i);
-			}
+			// the newest lines; the log scrolls when they don't all fit
+			canScroll = dataLines > dispLines;
+			dispStart = canScroll ? dataLines - dispLines : 0;
+			drawLines();
 		}
         scrollSlider.min = 0;
         scrollSlider.max = dispStart;
@@ -915,6 +1090,9 @@ class HistoryLayer extends Layer
 	function dispUninit()
 	{
 		// Called from window
+		stopCoast();
+		setOverPull(0);
+		dragY = void, dragging = false;
 		removeMode();
 		visible = false;
 
@@ -939,11 +1117,11 @@ class HistoryLayer extends Layer
             var y = n*lineHeight + controlHeight + marginT;
             if (!over) {
                 if (actionMark !== void) {
-                    operateRect(marginL - actionIndent - actionMark.width, y, actionMark, 0, 0, actionMark.width, actionMark.height);
+                    textPage.operateRect(marginL - actionIndent - actionMark.width, y, actionMark, 0, 0, actionMark.width, actionMark.height);
                 }
             } else {
                 if (actionMarkOver !== void) {
-                    operateRect(marginL - actionIndent - actionMark.width, y, actionMarkOver, 0, 0, actionMarkOver.width, actionMarkOver.height);
+                    textPage.operateRect(marginL - actionIndent - actionMark.width, y, actionMarkOver, 0, 0, actionMarkOver.width, actionMarkOver.height);
                 }
             }
         } 
@@ -971,12 +1149,16 @@ class HistoryLayer extends Layer
 	// Draws a horizontal line of history text with its top-left at x, y
 	function drawHistoryText(x, y, text, color) {
 		var rta = getRichTextApp();
-		if (rta !== void) rta.drawText(richTextBase, this, x, y, text, color);
-		else drawText(x, y, text, color, 255, antialiased);
+		if (rta !== void) {
+			var attach = textPage.useCache; // the plugin's drawing finds the layer's pixels again
+			rta.drawText(richTextBase, textPage, x, y, text, color);
+		}
+		else textPage.drawText(x, y, text, color, 255, antialiased);
 	}
     function drawLine(n, over=false)
 	{
 		// Draw display line n
+		if(!everypage && (n + dispStart >= dataLines || n + dispStart < 0)) return;
 		var line = everypage?getPage(dispStart)[n]:getLine(n + dispStart);
 		if(everypage && line=="") return;
 		var linestart = everypage?getLineStart2(dispStart, n):getLineStart(n + dispStart);
@@ -984,7 +1166,7 @@ class HistoryLayer extends Layer
         if(verticalView)
 		{
 			var x = width - marginR - n*lineHeight;
-			drawText(x, marginT + controlHeight + linestart, line, over ? historyOverColor : historyColor, 255, antialiased);
+			textPage.drawText(x, marginT + controlHeight + linestart, line, over ? historyOverColor : historyColor, 255, antialiased);
 		}
 		else
 		{
@@ -994,8 +1176,7 @@ class HistoryLayer extends Layer
         
         drawActionMark(n,over);
         drawJumpMark(n);
-        drawFaceIcon(n);
-        drawFaceIcon(n - 1); // its face reaches into this line
+        drawFaceParts(n);
     }
 
 	function drawPage()
@@ -1008,7 +1189,7 @@ class HistoryLayer extends Layer
 			for(i = 0; i < repageLine; i++)
 			{
 				if(page[i]!="")
-					drawText(x, marginT + controlHeight + getLineStart2(dispStart, i),
+					textPage.drawText(x, marginT + controlHeight + getLineStart2(dispStart, i),
 						page[i], historyColor, 255, antialiased);
 				x -= lineHeight;
 			}
@@ -1033,10 +1214,15 @@ class HistoryLayer extends Layer
 		var line;
 		if(verticalView)
 			line = -(x - width + marginR) \ lineHeight;
-		else
+		else if(everypage)
 			line = (y - controlHeight - marginT) \ lineHeight;
+		else
+		{
+			line = lineAtY(y); // as scrolled (since 0.21.0)
+			if(line === void) return void;
+		}
 		if(line < 0) return void;
-		if(!everypage && dataLines <= dispLines && line >= dataLines) return void; // Protruding
+		if(!everypage && line + dispStart >= dataLines) return void; // Protruding
 		var ai;
 		if(everypage)
 		{
@@ -1068,7 +1254,7 @@ class HistoryLayer extends Layer
 		// Highlight all IDs indicated by the ID on the screen
 		lastHighlightedActionID = id;
 		if(id == 0) return;
-		var max = everypage ? repageLine : ((dataLines <= dispLines) ? dataLines : dispLines);
+		var max = shownLines();
 		for(var i = 0; i < max; i++)
 		{
 			var ai = everypage?getActionInfo2(dispStart, i):getActionInfo(i + dispStart);
@@ -1108,7 +1294,7 @@ class HistoryLayer extends Layer
 	{
 		// Remove all highlight displays indicated by lastHighlightedActionID on the screen
 		if(lastHighlightedActionID == 0) return;
-		var max = everypage ? repageLine : ((dataLines <= dispLines) ? dataLines : dispLines);
+		var max = shownLines();
 		for(var i = 0; i < max; i++)
 		{
 			var ai = everypage?getActionInfo2(dispStart, i):getActionInfo(i + dispStart);
@@ -1164,21 +1350,11 @@ class HistoryLayer extends Layer
         // Move to the beginning
 		// Move to previous page
 		if(!canScroll) return;
+        if(!everypage) { scrollToPx(0); return; }
         clearActionHighlights();
-        if(everypage)
-		{
-            dispStart = 0;
-            clearBack();
-            drawPage();
-		}
-		else
-		{
-            clearBack();
-            dispStart = 0;
-            var i;
-            for(i = 0 ; i < dispLines; i++)
-                drawLine(i);
-		}
+        dispStart = 0;
+        clearBack();
+        drawPage();
 		updateButtonState();
     }
     
@@ -1196,14 +1372,8 @@ class HistoryLayer extends Layer
 		}
 		else
 		{
-			clearBack();
-			if(dispStart >= dispLines)
-				dispStart -= dispLines;
-			else
-				dispStart = 0;
-			var i;
-			for(i = 0 ; i < dispLines; i++)
-				drawLine(i);
+			scrollToPx((dispStart - dispLines) * lineHeight);
+			return;
 		}
 		updateButtonState();
 	}
@@ -1222,14 +1392,8 @@ class HistoryLayer extends Layer
 		}
 		else
 		{
-			clearBack();
-			if(dispStart < dataLines - dispLines)
-				dispStart += dispLines;
-			if(dispStart > dataLines - dispLines)
-				dispStart = dataLines - dispLines;
-			var i;
-			for(i = 0 ; i < dispLines; i++)
-				drawLine(i);
+			scrollToPx((dispStart + dispLines) * lineHeight);
+			return;
 		}
 		updateButtonState();
 	}
@@ -1247,14 +1411,8 @@ class HistoryLayer extends Layer
 		}
 		else
 		{
-            clearBack();
-            dispStart = dataLines - dispLines;
-            if (dispStart < 0) {
-                dispStart = 0;
-            }
-            var i;
-            for(i = 0 ; i < dispLines; i++)
-                drawLine(i);
+			scrollToPx(maxScrollPx());
+			return;
 		}
 		updateButtonState();
 	}
@@ -1262,16 +1420,14 @@ class HistoryLayer extends Layer
 
 	function scrollUp()
 	{
+		if(!verticalView) { scrollToPx((dispStart + 1) * lineHeight); return; } // a line on
 		if(dispStart < dataLines - dispLines)
 		{
 			clearActionHighlights();
-			if(verticalView)
-				copyRect(width - marginR - lineHeight *(dispLines - 1), controlHeight, this,
-					width - marginR - lineHeight *(dispLines), controlHeight,
-						lineHeight * (dispLines-1), height - controlHeight);
-			else
-				copyRect(0, controlHeight + marginT, this,
-					0, controlHeight + lineHeight + marginT, width, lineHeight*(dispLines-1));
+			textPage.face = dfAlpha;
+			textPage.copyRect(width - marginR - lineHeight *(dispLines - 1), controlHeight, textPage,
+				width - marginR - lineHeight *(dispLines), controlHeight,
+					lineHeight * (dispLines-1), height - controlHeight);
 			clearBack(dispLines - 1);
 			dispStart++;
 			drawLine(dispLines - 1);
@@ -1281,16 +1437,15 @@ class HistoryLayer extends Layer
 	
 	function scrollDown()
 	{
+		// a line back (to the start of the line in part shown, between lines)
+		if(!verticalView) { scrollToPx((scrollSub > 0 ? dispStart : dispStart - 1) * lineHeight); return; }
 		if(dispStart!=0)
 		{
 			clearActionHighlights();
-			if(verticalView)
-				copyRect(width - marginR - lineHeight *(dispLines), controlHeight, this,
-					width - marginR - lineHeight *(dispLines-1),
-					controlHeight, lineHeight * (dispLines-1), height - controlHeight);
-			else
-				copyRect(0, controlHeight + lineHeight + marginT, this,
-					0, controlHeight + marginT, width, lineHeight*(dispLines-1));
+			textPage.face = dfAlpha;
+			textPage.copyRect(width - marginR - lineHeight *(dispLines), controlHeight, textPage,
+				width - marginR - lineHeight *(dispLines-1),
+				controlHeight, lineHeight * (dispLines-1), height - controlHeight);
 			clearBack(0);
 			dispStart--;
 			drawLine(0);
@@ -1339,11 +1494,8 @@ class HistoryLayer extends Layer
 		}
 		else
 		{
-            clearBack();
-            dispStart = pos;
-            var i;
-            for(i = 0 ; i < dispLines; i++)
-                drawLine(i);
+			scrollToPx(pos * lineHeight, false);
+			return;
 		}
         updateButtonState(false);
     }
@@ -1355,7 +1507,7 @@ class HistoryLayer extends Layer
 		else if(button == mbLeft)
 		{
 			// a mark acts when the button is let go without the log being dragged
-			dragY = y, dragStart = dispStart, dragging = false, pressX = x, pressY = y;
+			dragY = y, dragStart = dispStart, dragPx = scrollPx, dragging = false, pressX = x, pressY = y;
 			stopCoast();
 			dragSamples = [ [ System.getTickCount(), y ] ];
 			dragPace = 0;
@@ -1368,7 +1520,14 @@ class HistoryLayer extends Layer
 		{
 			var dragged = dragging;
 			dragY = void, dragging = false;
-			if(dragged) flick(y);
+			if(dragged)
+			{
+				// the newest line pulled up far enough: the log closes (since 0.21.0)
+				var close = overPull >= closePull;
+				setOverPull(0);
+				if(close) { hide(); return; }
+				flick(y);
+			}
 			if(!dragged)
 			{
 				var jump = getJumpFromPos(pressX, pressY);
@@ -1386,13 +1545,15 @@ class HistoryLayer extends Layer
 
 	function onMouseMove(x, y, shift)
 	{
-		// dragging the log scrolls it, a line for each line's height moved
-		if(dragY !== void && (shift & ssLeft) && canScroll && !everypage && !verticalView)
+		// dragging the log scrolls it by the pixel, and past the newest line pulls it to close
+		if(dragY !== void && (shift & ssLeft) && !everypage && !verticalView)
 		{
 			if(!dragging && Math.abs(y - dragY) > lineHeight \ 2) dragging = true;
 			if(dragging)
 			{
-				scrollTo(dragStart + (dragY - y) \ lineHeight);
+				var want = dragPx + (dragY - y), max = maxScrollPx();
+				setOverPull(want > max ? want - max : 0);
+				scrollToPx(want);
 				var now = System.getTickCount();
 				dragPace = now - dragSamples[dragSamples.count - 1][0];
 				dragSamples.add([ now, y ]);
@@ -1423,9 +1584,9 @@ class HistoryLayer extends Layer
 		// pace (each move redraws the log, which on a slow phone takes longer than 80 ms)
 		var last = now - dragSamples[dragSamples.count - 2][0];
 		if(dt < 10 || last >= 80 && last >= dragPace * 2) return;
-		coastSpeed = (dragSamples[0][1] - y) * 1000.0 / dt / lineHeight;
-		if(Math.abs(coastSpeed) < 3) return;
-		coastLines = 0.0;
+		coastSpeed = (dragSamples[0][1] - y) * 1000.0 / dt; // px a second
+		if(Math.abs(coastSpeed) < 3 * lineHeight) return;
+		coastPx = scrollPx;
 		coastTick = now;
 		if(coastTimer === void)
 		{
@@ -1440,17 +1601,12 @@ class HistoryLayer extends Layer
 		var now = System.getTickCount(), dt = (now - coastTick) / 1000.0;
 		coastTick = now;
 		dt = 0.05 if dt > 0.05;
-		coastLines += coastSpeed * dt;
-		var n = (int)coastLines;
-		if(n != 0)
-		{
-			coastLines -= n;
-			var before = dispStart;
-			scrollTo(dispStart + n);
-			if(dispStart == before) { stopCoast(); return; } // an end
-		}
+		coastPx += coastSpeed * dt;
+		var before = scrollPx;
+		scrollToPx(coastPx);
+		if(scrollPx == before && (coastPx <= 0 || coastPx >= maxScrollPx())) { stopCoast(); return; } // an end
 		coastSpeed *= Math.pow(0.05, dt);
-		stopCoast() if Math.abs(coastSpeed) < 2;
+		stopCoast() if Math.abs(coastSpeed) < 2 * lineHeight;
 	}
 
 	function stopCoast()
@@ -1462,6 +1618,7 @@ class HistoryLayer extends Layer
 	function onMouseLeave()
 	{
 		dragY = void, dragging = false;
+		setOverPull(0);
 		setJumpHover(void);
 		clearActionHighlights();
 		super.onMouseLeave(...);

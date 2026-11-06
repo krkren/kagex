@@ -511,6 +511,13 @@ def ic_camera(c, cx, cy, s, col):
     c.ellipse((cx - s * 0.2, cy - s * 0.12, cx + s * 0.2, cy + s * 0.28), outline=col, width=s * 0.1)
 
 
+def ic_close(c, cx, cy, s, col):
+    """a cross: closing a screen"""
+    r = s * 0.36
+    c.stroke([(cx - r, cy - r), (cx + r, cy + r)], s * 0.14, col)
+    c.stroke([(cx - r, cy + r), (cx + r, cy - r)], s * 0.14, col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -934,10 +941,19 @@ def make_history():
     c.pattern((0, 0, 1920, 1080), 36, 2.2, rgba(WHITE, 16))
     # the rail for the page buttons and the scroll bar (MyHistoryLayer.tjs: x 1766-1881)
     c.rrect((1750, 42, 1898, 1037), 20, fill=rgba(WHITE, 26))
-    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 236-847 (since 0.18.0 the
-    # scene buttons sit above and below it)
-    c.rrect((1817, 256, 1830, 827), 6, fill=rgba(WHITE, 70))
+    # the scroll bar's track: its 43x48 tab moves over x 1802-1845, y 294-847 (since 0.18.0 the
+    # scene buttons sit above and below it, since 0.21.0 the close button at the top of the rail)
+    c.rrect((1817, 314, 1830, 827), 6, fill=rgba(WHITE, 70))
     c.save(out("log_base.png", False))
+
+    # closing the history (since 0.21.0: a phone has no right button, Esc or wheel to close it)
+    for st in ("normal", "over"):
+        fill, border, fg, _ = STYLE[st]
+        b = Canvas(115, 58)
+        b.rrect((0, 0, 115, 54), 12, fill=rgba(border))
+        b.rrect((3, 3, 112, 51), 9, fill=fill)
+        ic_close(b, 57.5, 27, 30, rgba(fg))
+        b.save(out("log_close_%s.png" % st, False))
 
     for name, up, double in (("first", True, True), ("uppage", True, False), ("downpage", False, False),
                              ("last", False, True)):

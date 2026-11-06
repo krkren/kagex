@@ -64,7 +64,7 @@ PLATFORMS = {
         "pins": ["KRKRZ_ANDROID_SHA"],
         "configs": {"app-config.json": ["versionCode", "versionName"]},
         "debug": True,
-        "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/krkreffekseer-odr.cpp",
+        "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/kit-android-back.patch", ".github/platforms/krkreffekseer-odr.cpp",
                                  "tools/release/scripts/android-engine.py"],
     },
     "ios": {

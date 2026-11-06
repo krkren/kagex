@@ -158,6 +158,10 @@ class Engine:
     def output(self):
         return ""
 
+    def back(self):
+        """The platform's Back (Android's button, a phone browser's): False where there's none"""
+        return False
+
     def alive(self):
         return True
 
@@ -484,6 +488,11 @@ class AndroidEngine(Engine):
             f.write("\n".join(out))
         return True
 
+    def back(self):
+        """Android's Back (since 0.21.0 the game's Esc)"""
+        self.run_adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        return True
+
     def output(self):
         r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
         text = r.stdout.decode("utf-8", "replace")
@@ -596,6 +605,13 @@ class WebEngine(Engine):
             cdp.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
         finally:
             cdp.detach()
+
+    def back(self):
+        """the browser's Back, in touch mode (a phone), where the page hands it to the game"""
+        if not self.touch:
+            return False
+        self.page.evaluate("history.back()")
+        return True
 
     def touch_swipe(self, gx0, gy0, gx1, gy1, steps=8, duration=0.25):
         """A finger drawn across the game from (gx0, gy0) to (gx1, gy1) in duration seconds, as
@@ -1079,6 +1095,29 @@ def template_steps(eng):
         r = str(eng.tjs('return KAGLanguage.list.join(",") + "|" + KAGLanguage.current + "|" + (KAGLanguage.chosen ? 1 : 0);'))
         if r != "en|en|0":
             raise SmokeError("languages, the one shown, chosen: %s" % r)
+
+    @step("the history: dragged by the pixel, pulled past the newest line it closes, and its close button closes it")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates the history closed by touch)", flush=True)
+            return
+        h = "kag.historyLayer"
+        eng.tjs('var h = %s; for (var i = 0; i < 60; i++) { h.store("Line " + i + " of the history, long enough to read."); h.reline(); } return 1;' % h)
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the history", "kag.historyShowing", timeout=10)
+        r = str(eng.tjs('var h = %s; h.onMouseDown(800, 500, mbLeft, 0); h.onMouseMove(800, 500 + h.lineHeight * 5 \\ 2, ssLeft);'
+                        ' var r = [h.scrollSub, h.maxScrollPx() - h.scrollPx, h.lineHeight].join(","); h.onMouseUp(800, 500 + h.lineHeight * 5 \\ 2, mbLeft, 0);'
+                        ' h.scrollTo(h.dataLines); h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 800 - h.closePull - 60, ssLeft);'
+                        ' r += "|" + h.pullNoteText; h.onMouseUp(800, 800 - h.closePull - 60, mbLeft, 0); return r;' % h))
+        print("     dragged two lines and a half (px into a line, px from the end, the line's height), then pulled: %s" % r, flush=True)
+        px = r.split("|")[0].split(",")
+        if int(px[0]) != int(px[2]) // 2 or int(px[1]) != int(px[2]) * 5 // 2:
+            raise SmokeError("the history didn't move with the finger by the pixel: %s" % r)
+        eng.wait("the pull to close the history", "!kag.historyShowing", timeout=10)
+        eng.tjs("kag.showHistory(); return 1;")
+        eng.wait("the history", "kag.historyShowing", timeout=10)
+        eng.tjs('var b = %s.closeButton; b.onMouseDown(5, 5, mbLeft, 0); b.onMouseUp(5, 5, mbLeft, 0); return 1;' % h)
+        eng.wait("the close button to close the history", "!kag.historyShowing", timeout=10)
 
     prompt_steps(eng, step)
     interface_steps(eng, step)
@@ -4320,9 +4359,10 @@ def sample_steps(eng):
         eng.tjs("kag.onShowHistoryMenuItemClick(); return 1;")
         eng.wait("the backlog", "kag.historyShowing", timeout=10)
         h = "kag.historyLayer"
-        faces = eng.tjs('var h = %s, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
+        # the text and faces on the text's own layer since 0.21.0 (at the same coordinates)
+        faces = eng.tjs('var h = %s, t = typeof h.textPage == "Object" && h.textPage !== void ? h.textPage : h, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
                         ' for (var y = h.controlHeight + h.marginT; y < h.height - 60; y += 6) for (var x = x0; x < x0 + h.faceSize; x += 6)'
-                        ' a++ if h.getMaskPixel(x, y) > 0 && (h.getMainPixel(x, y) & 0xffffff) != 0; return a;' % h)
+                        ' a++ if t.getMaskPixel(x, y) > 0 && (t.getMainPixel(x, y) & 0xffffff) != 0; return a;' % h)
         if faces < 100:
             raise SmokeError("the backlog shows no faces left of the speakers' lines (%s samples)" % faces)
         xy = eng.tjs('var h = %s; for (var n = 0; n < h.dispLines; n++) { var i = h.jumpIndex(n + h.dispStart);'
@@ -4368,6 +4408,76 @@ def sample_steps(eng):
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit")
+    def _():
+        if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a sample from before the history closed by touch)", flush=True)
+            return
+        menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
+        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.wait("the demo menu", menu, timeout=30)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        for i in range(14):
+            eng.wait("a line", "kag.inStable", timeout=30)
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("a line", "kag.inStable", timeout=30)
+        h = "kag.historyLayer"
+        def show():
+            eng.tjs("kag.showHistory(); return 1;")
+            eng.wait("the history", "kag.historyShowing", timeout=10)
+        # the close button, pressed as a finger would
+        show()
+        eng.tjs('var b = %s.closeButton; b.onMouseDown(10, 10, mbLeft, 0); b.onMouseUp(10, 10, mbLeft, 0); return 1;' % h)
+        eng.wait("the close button to close the history", "!kag.historyShowing", timeout=10)
+        # dragged by the pixel: half a line down from the newest lines, the line above shows in part
+        show()
+        px = str(eng.tjs('var h = %s; h.onMouseDown(800, 500, mbLeft, 0); h.onMouseMove(800, 500 + h.lineHeight * 5 \\ 2, ssLeft);'
+                         ' var r = [h.scrollSub, h.maxScrollPx() - h.scrollPx, h.lineHeight].join(","); h.onMouseUp(800, 500 + h.lineHeight * 5 \\ 2, mbLeft, 0);'
+                         ' return r;' % h)).split(",")
+        print("     dragged two lines and a half: %s px into a line, %s px from the end (lines %s px)" % tuple(px), flush=True)
+        if eng.tjs("return %s.canScroll ? 1 : 0;" % h) != 1:
+            raise SmokeError("fourteen lines in, the history still fits the screen: nothing to scroll")
+        if int(px[0]) != int(px[2]) // 2 or int(px[1]) != int(px[2]) * 5 // 2:
+            raise SmokeError("the history didn't move with the finger by the pixel: %s" % px)
+        # pulled past the newest line: a note, then let go, it closes
+        pull = str(eng.tjs('var h = %s; h.scrollTo(h.dataLines); h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 800 - h.closePull - 60, ssLeft);'
+                           ' var r = [h.overPull, h.pullNote !== void && h.pullNote.visible ? 1 : 0, h.pullNoteText].join(",");'
+                           ' h.onMouseUp(800, 800 - h.closePull - 60, mbLeft, 0); return r;' % h))
+        print("     pulled past the newest line: %s" % pull, flush=True)
+        eng.wait("the pull to close the history", "!kag.historyShowing", timeout=10)
+        if not pull.split(",")[1] == "1":
+            raise SmokeError("pulling past the newest line showed no note: %s" % pull)
+        # a short pull and back: it stays open
+        show()
+        eng.tjs('var h = %s; h.onMouseDown(800, 800, mbLeft, 0); h.onMouseMove(800, 760, ssLeft); h.onMouseUp(800, 760, mbLeft, 0); return 1;' % h)
+        time.sleep(0.5)
+        if eng.tjs("return kag.historyShowing ? 1 : 0;") != 1:
+            raise SmokeError("a short pull past the newest line closed the history")
+        if eng.back():
+            # Android's Back is Esc (the kit's activity): the history closes
+            eng.wait("Back to close the history", "!kag.historyShowing && kag.inStable", timeout=15)
+            print("     Back closed the history", flush=True)
+        else:
+            eng.tjs("kag.hideHistory(); return 1;")
+            eng.wait("the history closed", "!kag.historyShowing", timeout=10)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        # at the title Esc (Back) asks whether to quit, and No (Esc again) leaves the title as it was
+        if eng.tjs('return typeof System.platformTag != "undefined" && System.platformTag == "web" ? 1 : 0;') == 1:
+            print("     (the title's quit prompt: not on the web, where Back leaves the page)", flush=True)
+            return
+        if not eng.back():
+            eng.tjs("kag.onPrimaryRightClick(); return 1;")
+        eng.wait("the quit prompt", "kag.currentDialog !== void", timeout=15)
+        if not eng.back():
+            eng.tjs("kag.currentDialog.close(); return 1;")
+        eng.wait("the quit prompt to close", 'kag.currentDialog === void && kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=15)
+        links = eng.tjs('return kag.fore.messages[0].numLinks;')
+        print("     the title asked whether to quit, and No left it with %s buttons" % links, flush=True)
+        if links < 4:
+            raise SmokeError("after the quit prompt the title has %s buttons" % links)
 
     @step("the CG viewer: a CG full screen, zoomed by the wheel about the pointer and by a pinch, moved by dragging, the next one on a click, the bar fading at rest, Esc back to the CGs")
     def _():
