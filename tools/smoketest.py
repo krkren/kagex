@@ -5486,7 +5486,12 @@ def run_project(opts, label, data, make_steps):
     eng.boot_patches = boot_patches
     failures = 0
     try:
-        failures = run_steps(eng, make_steps(eng))
+        steps = make_steps(eng)
+        if getattr(opts, "steps", None):
+            keep = ["start-up", "the sample is in English", "the scripts in !scnlist.txt compile", "quit:"]
+            keep += [p for p in opts.steps.split("|") if p]
+            steps = [st for st in steps if any(st[0].startswith(k) for k in keep)]
+        failures = run_steps(eng, steps)
         if isinstance(eng, DesktopEngine):
             failures += quit_check(eng)
     except Exception as e:  # a bug here still gets the engine's log printed
@@ -5594,6 +5599,8 @@ def main():
     ap.add_argument("--only", choices=["sample", "template"],
                     help="run one project (default: the sample in data/, then template/)")
     ap.add_argument("--keep", action="store_true", help="keep the temporary folders")
+    ap.add_argument("--steps", help="only the steps whose titles start with one of these, separated by |"
+                    " (with the steps that set the game up: start-up, the language, compiling, quit)")
     ap.add_argument("--verbose", action="store_true", help="print the engine log at the end")
     ap.add_argument("--target", choices=["desktop", "android", "ios-sim", "web"], default="desktop")
     ap.add_argument("--packaged", action="store_true",
