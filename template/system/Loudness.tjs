@@ -50,6 +50,8 @@ class KAGLoudnessTable
 		var path = Storages.extractStoragePath(placed).toLowerCase();
 		var m = /([^\/>]+)[\/>]$/.exec(path);
 		var folder = m.count > 1 ? m[1] : "";
+		// a release keeps each media folder in an archive of its own (voice.xp3>ai000001.ogg)
+		folder = folder.substring(0, folder.length - 4) if folder.length > 4 && folder.substring(folder.length - 4) == ".xp3";
 		switch (folder) {
 		case "voice": return "voice";
 		case "bgm": return "bgm";

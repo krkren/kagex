@@ -3564,8 +3564,12 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.KAGLoudness != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates loudness correction)", flush=True)
             return
-        got = str(eng.tjs('var k = KAGLoudness; return [k.gainOf("bgm01.ogg"), k.gainOf("hiyori000001.ogg"), k.gainOf("pip000009.ogg"),'
-                          ' k.gainOf("pip000001.ogg"), k.kindOf("se_chime.ogg")].join(",");'))
+        # the files as the package has them (a converted one has .opus): the kind comes from the
+        # folder a file is found in
+        got = str(eng.tjs('var f = function(n) { var e = [ ".ogg", ".opus", ".wav" ]; for (var i = 0; i < e.count; i++)'
+                          ' if (Storages.isExistentStorage(n + e[i])) return n + e[i]; return n + ".ogg"; };'
+                          ' var k = KAGLoudness; return [k.gainOf(f("bgm01")), k.gainOf(f("hiyori000001")), k.gainOf(f("pip000009")),'
+                          ' k.gainOf(f("pip000001")), k.kindOf(f("se_chime"))].join(",");'))
         print("     bgm01, hiyori000001, pip000009, pip000001, se_chime's kind: %s" % got, flush=True)
         g = got.split(",")
         if not (float(g[0]) == -4 and float(g[1]) == 2.5 and float(g[2]) == 5 and float(g[3]) == 0 and g[4] == "se"):
@@ -3574,7 +3578,9 @@ def sample_steps(eng):
             print("     (this engine has no gain callback: the level check is skipped)", flush=True)
             return
         def level(gain):
-            eng.tjs('KAGLoudness.set("ai000001", %s); var b = new WaveSoundBuffer(kag); b.useVisBuffer = true; b.open("ai000001.ogg"); b.play();'
+            # a converted package (kagex-release's tests) has ai000001.opus
+            eng.tjs('KAGLoudness.set("ai000001", %s); var b = new WaveSoundBuffer(kag); b.useVisBuffer = true;'
+                    ' b.open(Storages.isExistentStorage("ai000001.ogg") ? "ai000001.ogg" : "ai000001.opus"); b.play();'
                     ' global.__smokeLb = b; return 1;' % gain)
             vals = []
             for i in range(12):
@@ -3591,7 +3597,7 @@ def sample_steps(eng):
         # some systems: macOS's runner read 0.280 then 0.233 for one with the gain applied)
         asked = str(eng.tjs('var q = KAGLoudness.lastQuery; return q !== void ? Storages.extractStorageName(q[0]) + "," + q[1] : "none";'))
         print("     the engine's last gain query: %s" % asked, flush=True)
-        if asked.split(",")[0] != "ai000001.ogg" or abs(float(asked.split(",")[-1]) - 6) > 0.01:
+        if asked.split(",")[0] not in ("ai000001.ogg", "ai000001.opus") or abs(float(asked.split(",")[-1]) - 6) > 0.01:
             raise SmokeError("the engine didn't ask for ai000001's +6 dB as it opened it: %s" % asked)
         if a <= 0:
             print("     (no level to read here: the gain's check is skipped)", flush=True)
