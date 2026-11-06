@@ -15578,6 +15578,62 @@ class KAGWindow extends Window
 		onMovieStatusChanged("stop", id);
 	}
 
+	// A movie slot that played and stopped gets a new Movie, with the settings [video] gave the old
+
+	// one, before it opens or plays the next movie (since 0.21.0): the engine's VideoOverlay leaves
+
+	// its frame-handed-over flag set when it's stopped and closed between the decoder handing a
+
+	// frame over and the game taking it (a movie skipped as it plays), and its next movie never
+
+	// sends perPrepare ([wp for=prepare] waits for ever) or shows a frame (UPSTREAM.md 47)
+
+	function renewMovie(slot)
+
+	{
+
+		var m = movies[slot];
+
+		if (m === void || !m.used || m.opened || m.lastStatus == "play" || m.lastStatus == "pause") return m;
+
+		var n = new Movie(this, slot);
+
+		for (var i = 0; i < 2; i++) n.layerNumber[i] = m.layerNumber[i], n.layerPage[i] = m.layerPage[i];
+
+		n._offsetx = m._offsetx, n._offsety = m._offsety;
+
+		// each on its own: a closed player may refuse one (the mode first, the layers need it)
+
+		var props = [ "mode", "layerResizeMode", "layer1", "layer2", "aspectZoom", "visible", "loop", "playRate",
+
+			"useOwnerVolume", "audioVolume", "audioBalance" ];
+
+		for (var i = 0; i < props.count; i++) {
+
+			var name = props[i];
+
+			if ((name == "layer1" || name == "layer2") && m.mode != vomLayer) continue;
+
+			try { var v = m[name]; n[name] = v if v !== void; } catch (e) { dm("video slot " + slot + ": " + name + " not kept: " + e.message); }
+
+		}
+
+		try { n.setBounds(m._left, m._top, m._boundWidth, m._boundHeight) if m._boundWidth !== void && m._boundHeight !== void; } catch {}
+
+		remove(m);
+
+		invalidate m;
+
+		add(movies[slot] = n);
+
+		return n;
+
+	}
+
+
+
+
+
 	function waitMovieStop(elm)
 	{
 		var id = +elm.slot;
@@ -18235,7 +18291,7 @@ class KAGWindow extends Window
 	playvideo : function(elm)
 	{
 		// Play movie
-		movies[+elm.slot].play(elm.storage);
+		renewMovie(+elm.slot).play(elm.storage);
 		return waitFunc(elm, waitMovieStop);
 	} incontextof this,
 
@@ -18249,7 +18305,7 @@ class KAGWindow extends Window
 	openvideo : function(elm)
 	{
 		// Prepare movie playback
-		movies[+elm.slot].open(elm.storage);
+		renewMovie(+elm.slot).open(elm.storage);
 		return 0;
 	} incontextof this,
 

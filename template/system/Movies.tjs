@@ -156,6 +156,25 @@ function KAGMovieFile(name)
 	return name;
 }
 
+// A movie's sound from a file of its own (since 0.21.0): on these platforms a movie with
+// <name>.opus or <name>.ogg beside it (for <name>_sd, <name>'s too) plays muted and that file
+// plays alongside, in step with the picture (GFX_Movie.tjs). The engine's Android movie player
+// can lose a movie's Opus sound (UPSTREAM.md 45)
+var KAGMovieSoundPlatforms = [ "android" ];
+function KAGMovieSoundFile(movie)
+{
+	var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+	if (KAGMovieSoundPlatforms.find(tag) < 0) return void;
+	var stem = Storages.chopStorageExt(Storages.extractStorageName(movie));
+	var names = [ stem ];
+	names.add(stem.substring(0, stem.length - 3)) if stem.length > 3 && stem.substring(stem.length - 3) == "_sd";
+	for (var i = 0; i < names.count; i++) {
+		var exts = [ ".opus", ".ogg" ];
+		for (var j = 0; j < exts.count; j++)
+			if (Storages.isExistentStorage(names[i] + exts[j])) return names[i] + exts[j];
+	}
+}
+
 function KAGMovieTag(elm)
 {
 	var name = Storages.chopStorageExt(elm.storage), key = "movie:" + name.toLowerCase();

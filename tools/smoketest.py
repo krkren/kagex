@@ -2770,6 +2770,24 @@ def sample_steps(eng):
         if found != "movie,movie,test.webm":
             raise SmokeError("test.webm and test are taken as %s, not movie,movie,test.webm" % found)
 
+    @step("a video slot that played and was stopped gets a new movie object, with its layer, before its next movie, which plays")
+    def _():
+        if eng.tjs('return typeof kag.renewMovie != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: this build's framework predates renewMovie)", flush=True)
+            return
+        r = str(eng.tjs('var t = kag.tagHandlers; t.video(%[slot:"0", mode:"layer", visible:"true"]);'
+                        ' t.videolayer(%[slot:"0", layer:"0", page:"fore", channel:"1"]);'
+                        ' t.openvideo(%[slot:"0", storage:"opening_sd.webm"]); t.playvideo(%[slot:"0", storage:"opening_sd.webm"]); t.stopvideo(%[slot:"0"]);'
+                        ' var a = kag.movies[0]; t.openvideo(%[slot:"0", storage:"opening_sd.webm"]); var b = kag.movies[0];'
+                        ' return [a === b ? "same" : "new", b.mode == vomLayer ? "layer" : b.mode, b.layer1 === kag.fore.layers[0] ? "layer 0" : "another layer"].join(",");'))
+        print("     the slot after a movie played and stopped: %s" % r, flush=True)
+        if r != "new,layer,layer 0":
+            raise SmokeError("the used video slot wasn't renewed with its settings: %s" % r)
+        if eng.tjs('return typeof System.platformTag != "undefined" && ["linux", "windows", "macos"].find(System.platformTag) >= 0 ? 1 : 0;') == 1:
+            eng.tjs('kag.movies[0].play(); return 1;')
+            eng.wait("the next movie to play in the renewed slot", 'kag.movies[0].position > 500', timeout=15)
+        eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); kag.fore.layers[0].freeImage(); return 1;')
+
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
         if not effekseer_framework(eng):
@@ -4002,6 +4020,19 @@ def sample_steps(eng):
         print("     the movie on the screen: %s of its samples not the black backdrop" % shown, flush=True)
         if shown == 0:
             raise SmokeError("the movie didn't show: the screen was the backdrop's colour all over")
+        # its sound from a file of its own where the platform's movie player can lose it (Android,
+        # since 0.21.0): the movie muted, opening.opus playing beside it, in step with the picture
+        if eng.tjs('return typeof global.KAGMovieSoundFile != "undefined" && KAGMovieSoundFile("opening_sd.webm") !== void ? 1 : 0;') == 1:
+            time.sleep(1.5)
+            snd = str(eng.tjs('if (KAGMoviePlaying === void) return "ended"; var f = kag.fore.layers[+KAGMoviePlaying.layer].flip;'
+                              ' return [f.soundFile, f.audioVolume, f.sound !== void ? f.sound.status : "-", f.position, f.sound !== void ? f.sound.position : -1].join(",");'))
+            print("     the movie's sound from its own file (file, the movie's volume, the file's status, the movie's and the file's ms): %s" % snd, flush=True)
+            if snd != "ended":
+                v = snd.split(",")
+                if v[0] == "" or v[1] != "0" or v[2] != "play" or int(v[4]) <= 0:
+                    raise SmokeError("the movie's sound file isn't playing beside the muted movie: %s" % snd)
+                if abs(int(v[3]) - int(v[4])) > 600:
+                    raise SmokeError("the movie's sound file is out of step with its picture: %s" % snd)
         # the web's player asked for a movie inside data.xp3 by URL and got nothing (UPSTREAM.md
         # 41): since 0.18.0 the framework copies it out first, so the web must show it too
         web_movies = eng.tjs('return typeof System.platformTag != "undefined" && System.platformTag == "web"'

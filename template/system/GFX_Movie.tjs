@@ -51,6 +51,14 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 	var fitWidth = 0, fitHeight = 0; //< the frame size it was fitted to
 
+	// its sound from a file of its own (since 0.21.0; KAGMovieSoundFile in Movies.tjs): the movie
+
+	// plays muted and this buffer alongside, started with the first frame and put back in step
+
+	// with the movie when the two stay apart
+
+	var sound, soundFile, soundTimer, soundStarted = false, soundDrift = 0;
+
 
 
 	function MovieControlLayer(window) {
@@ -80,6 +88,10 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 		if (onceTimer !== void) { invalidate onceTimer; onceTimer = void; }
 
 		stop();
+
+		if (soundTimer !== void) { invalidate soundTimer; soundTimer = void; }
+
+		if (sound !== void) { invalidate sound; sound = void; }
 
 		layer1 = null;
 
@@ -181,9 +193,17 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		KAGMovieOpened(o[1]) if o[1] !== void;
 
+		// its sound from a file of its own, where there's one for this platform (the movie muted)
+
+		soundFile = typeof global.KAGMovieSoundFile != "undefined" ? KAGMovieSoundFile(fn) : void;
+
+		soundStarted = false;
+
+		if (soundFile !== void) prepareSound();
+
 		// Set volume if audio exists
 
-		try { audioVolume = getAudioVolume(); } catch {}
+		try { audioVolume = soundFile !== void ? 0 : getAudioVolume(); } catch {}
 
 		play();
 
@@ -213,11 +233,125 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 
 
+	// the sound file, opened and ready for the first frame
+
+	function prepareSound() {
+
+		try {
+
+			if (sound === void) sound = new WaveSoundBuffer(targetLayer.window);
+
+			sound.stop();
+
+			sound.open(soundFile);
+
+			sound.looping = loop;
+
+			sound.volume = getAudioVolume();
+
+			if (soundTimer === void) soundTimer = new Timer(onSoundTimer, "");
+
+			soundTimer.interval = 250;
+
+			soundTimer.enabled = false;
+
+		} catch (e) {
+
+			dm("movie sound: " + soundFile + ": " + e.message);
+
+			soundFile = void;
+
+		}
+
+	}
+
+	function startSound() {
+
+		if (sound === void || soundFile === void || soundStarted) return;
+
+		soundStarted = true;
+
+		soundDrift = 0;
+
+		try {
+
+			var pos = 0;
+
+			try { pos = position; } catch {}
+
+			sound.position = pos if pos > 0;
+
+			sound.play();
+
+			soundTimer.enabled = true;
+
+		} catch (e) { dm("movie sound: " + soundFile + ": " + e.message); }
+
+	}
+
+	function stopSound() {
+
+		soundTimer.enabled = false if soundTimer !== void;
+
+		if (sound !== void && soundStarted) try { sound.stop(); } catch {}
+
+		soundStarted = false;
+
+	}
+
+	// the sound put back where the movie is when they're apart by more than 300 ms twice running
+
+	// (a movie's position comes in steps, and once lagged its picture on a slow emulator); not
+
+	// across a loop's turn, where one is at its end and the other at its start
+
+	function onSoundTimer() {
+
+		if (!isvalid this || sound === void || !soundStarted) return;
+
+		var mp = 0, sp = 0, total = 0;
+
+		try { mp = position; sp = sound.position; total = totalTime; } catch { return; }
+
+		var d = mp - sp;
+
+		if (total > 0 && Math.abs(d) > total / 2) { soundDrift = 0; return; }
+
+		if (Math.abs(d) <= 300) { soundDrift = 0; return; }
+
+		if (++soundDrift < 2) return;
+
+		soundDrift = 0;
+
+		try { sound.position = mp; } catch {}
+
+	}
+
+	// paused and played again (Reduce Motion, a test): the sound file with it
+
+	function pause() {
+
+		SUPER.pause(...);
+
+		if (sound !== void && soundStarted) try { sound.paused = true; } catch {}
+
+	}
+
+	function play() {
+
+		SUPER.play(...);
+
+		if (sound !== void && soundStarted) try { sound.paused = false; } catch {}
+
+	}
+
 	// Stop from external
 
 	// (a player is stopped once: stopping one that stopped already is left out)
 
 	function stop() {
+
+		stopSound();
 
 		if (!stopped && !playedOut) SUPER.stop();
 
@@ -245,6 +379,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 		if (!isvalid this || ended) return; // once it has ended, not its first frame again
 
 		frames++;
+
+		if (frames == 1) startSound(); // its sound file starts with its picture
 
 		if (frames <= global.KAGMovieHideFirst) return; // a decoder's first frames (Android)
 
@@ -381,7 +517,7 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		playedOut = true if (status == "play" && newstat == "stop" && !stopped); // it ran to its end
 
-		flipStop() if (status == "play" && newstat == "stop");
+		if (status == "play" && newstat == "stop") { stopSound(); flipStop(); }
 
 		status = newstat;
 
