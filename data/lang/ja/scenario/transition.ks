@@ -48,15 +48,9 @@ extNagano プラグインでトランジションがさらに12種類増えま�
 [EV file=event1 trans=book time=1500 dir=1]book：ページがめくれる
 [EV hide trans=flutter time=1500]flutter：絵が紙のようにはがれていく
 [EV file=event1 trans=blurfade time=1500 blur1=48 blur2=48]blurfade：ぼかしを通したクロスフェード
-[EV hide trans=zoomfade time=1500]zoomfade：消えながら拡大する
+[EV hide trans=zoomfade time=1500 zoom1=200]zoomfade：消えながら拡大する
 [EV file=event1 trans=scanline time=1200]scanline：線が左右交互にすべり込む
-; rgbfade blends alpha as well as colour and takes a pixel of alpha 0 as transparent, so on a
-; screen of composited layers (alpha is meaningless there) it shows solid colours. Run it on one
-; layer between two whole pictures: layer 0 takes over from the event picture, and the road
-; under it looks the same as layer 0's daytime road
-[image layer=0 page=fore storage=event1 visible=true][image layer=0 page=back storage=bg01_01 visible=true][EV hide trans=notrans]
-[trans layer=0 method=rgbfade time=1800 delayr=0 delayg=96 delayb=192 children=false][wt]
-[freeimage layer=0 page=fore][freeimage layer=0 page=back]rgbfade：赤・緑・青が順番に切り替わる
+[EV hide trans=rgbfade time=1800 delayr=0 delayg=96 delayb=192]rgbfade：赤・緑・青が順番に切り替わる
 [EV file=event1 trans=spin time=1500]spin：箱の側面のように絵が回る
 [EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple：五か所から波紋が広がる
 [EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe：画像に沿ったワイプ（ここでは筆のストローク）

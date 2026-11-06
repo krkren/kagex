@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1 (in progress)
+
+### Fixed
+
+- **rgbfade, zoomfade and spin**: extNagano's, as krkrz_dev rebuilt them, didn't work as they say (`UPSTREAM.md` 42): rgbfade's colours each took the shortest one's time, so red was done at a quarter of the transition and the picture flashed through solid colours, and on a whole scene it drew solid colours (the demo ran it on KAG layer 0 for that); zoomfade sampled the nearest pixel and, by default, didn't zoom a picture that goes; and spin showed the new picture as a flat panel growing from the middle with a gap in it, while the old one didn't turn. kagex now draws all three itself, as it has book and multiripple since 0.18.0 (`ScriptTransitions.tjs`): rgbfade's colours start at their delays and end together, each the old picture over what's behind turning into the new one (a multiplying and an adding layer), so it works on the World's pictures too; zoomfade grows the old picture and shrinks the new one smoothly; and spin turns the pictures as the faces of a box (types 0 and 1) or as doors (4 to 7), in perspective. These five no longer need the plugin, and the transitions demo runs rgbfade on the event picture and gives zoomfade's picture its zoom (`zoom1=200`). The smoke test runs each of them from an empty layer to its end.
+- **Face windows keep the character's own colours**: the sample's faces by the message window took the lighting and colour effects of the character's sprite (night's blue, a flashback's grey), since its `envinit.tjs` set `faceApplyColor`; it doesn't now, so a face shows the pose, outfit and expression in its own colours (`doc/world.txt`, "Face Windows").
+
 ## 0.18.0
 
 ### Added

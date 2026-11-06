@@ -45,22 +45,17 @@ The extNagano plugin adds twelve more transitions.
 [if exp="KAGPluginTransitions.book != 'linked'"]
 This build doesn't have it, so they all run as crossfades here.
 [endif]
-; book and multiripple are drawn by kagex itself (ScriptTransitions.tjs): the plugin's page
-; stopped three quarters of the way, and its ripples brought the old picture back.
+; book, multiripple, rgbfade, zoomfade and spin are drawn by kagex itself (ScriptTransitions.tjs):
+; the plugin's page stopped three quarters of the way, its ripples brought the old picture back,
+; its colours each took the shortest one's time, its zoom was jagged and its box didn't turn.
 ; 3duniversal's pieces fly only with a speed: accel1 (or speed1) for the old picture's pieces,
 ; accel2 (speed2) for the new one's (with none at all, the plugin fades the new picture out).
 [EV file=event1 trans=book time=1500 dir=1]book: a page turns
 [EV hide trans=flutter time=1500]flutter: the picture peels away like paper
 [EV file=event1 trans=blurfade time=1500 blur1=48 blur2=48]blurfade: a crossfade through a blur
-[EV hide trans=zoomfade time=1500]zoomfade: the picture zooms in as it fades
+[EV hide trans=zoomfade time=1500 zoom1=200]zoomfade: the picture zooms in as it fades
 [EV file=event1 trans=scanline time=1200]scanline: lines slide in from alternate sides
-; rgbfade blends alpha as well as colour and takes a pixel of alpha 0 as transparent, so on a
-; screen of composited layers (alpha is meaningless there) it shows solid colours. Run it on one
-; layer between two whole pictures: layer 0 takes over from the event picture, and the road
-; under it looks the same as layer 0's daytime road
-[image layer=0 page=fore storage=event1 visible=true][image layer=0 page=back storage=bg01_01 visible=true][EV hide trans=notrans]
-[trans layer=0 method=rgbfade time=1800 delayr=0 delayg=96 delayb=192 children=false][wt]
-[freeimage layer=0 page=fore][freeimage layer=0 page=back]rgbfade: red, green and blue change one after another
+[EV hide trans=rgbfade time=1800 delayr=0 delayg=96 delayb=192]rgbfade: red, green and blue change one after another
 [EV file=event1 trans=spin time=1500]spin: the picture turns like the side of a box
 [EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple: ripples spread from five points
 [EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe: a wipe led by a picture, here a brush stroke

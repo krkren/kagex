@@ -215,13 +215,14 @@
 
     // Level specification for face window. If not using face window, use void.
     // (since 0.18.0 the sample's speakers show their faces by the message window: [initscene]'s
-    // face box, each character's faceCrop below, crossfading, lit as their sprites are)
+    // face box, each character's faceCrop below, crossfading; the faces keep their own colours,
+    // whatever lighting or colour effects their sprites have)
 
     "faceLevelName" => "0",
 
     "faceFadeTime" => 200,
 
-    "faceApplyColor" => true,
+    "faceApplyColor" => false,
 
     // Layouts (since 0.18.0): where one to four characters stand ([name join], [name leave],
     // [env layout], [env makeroom=]), and how long the others take to slide over
