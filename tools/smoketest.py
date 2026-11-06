@@ -3185,6 +3185,43 @@ def sample_steps(eng):
         if got != "sad,happy,0,2":
             raise SmokeError("[ai 103], [ai 101], [ai far] and [ai near] didn't set face sad, happy, level 0 and 2: %s" % got)
 
+    @step("a character has the right size at every level with every face, and a level without the picture draws another level's, scaled")
+    def _():
+        if eng.tjs('var ai = world_object.env.getCharacter("ai"); return typeof ai.drawOtherLevel != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the level fallback)", flush=True)
+            return
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*staging"); return 1;')
+        ai = 'world_object.env.characters["ai"]'
+        eng.wait("Ai", '%s !== void && %s.targetLayer !== void && kag.inStable' % (ai, ai), timeout=60)
+        # Ai's pictures are ch_<level>_<dress>_<face>: the far and near levels (60% and 150%)
+        # had the happy face only, and [ai far] after [ai 103] drew the picture before in the far
+        # level's place
+        sizes = str(eng.tjs('var ai = world_object.env.characters["ai"], l = ai.targetLayer, lv0 = ai.level, f0 = ai.face, r = [];'
+                            ' var levels = world_object.env.levels, faces = ["happy", "angry", "sad"];'
+                            ' for (var lv = 0; lv < levels.count; lv++) { if (levels[lv] === void) continue;'  # envinit's trailing comma
+                            ' for (var fi = 0; fi < faces.count; fi++) {'
+                            ' ai.level = lv; ai.face = faces[fi]; ai.drawLayer(l);'
+                            ' r.add("%s:%s:%s:%d:%d".sprintf(levels[lv].name, faces[fi], ai.imageFile, l.width, +levels[lv].zoom)); } }'
+                            ' ai.level = lv0; ai.face = f0; ai.drawLayer(l); return r.join(" ");'))
+        print("     level:face:picture:width:zoom %s" % sizes, flush=True)
+        for item in sizes.split():
+            lv, face, pic, width, zoom = item.split(":")
+            want = 540 * int(zoom) // 100
+            if abs(int(width) - want) > 2:
+                raise SmokeError("Ai at level %s with the %s face is %s wide (%s), not %d" % (lv, face, width, pic, want))
+        # a level whose pictures aren't there: the nearest level's, a bigger one first, scaled
+        got = str(eng.tjs('var e = world_object.env, ai = e.characters["ai"], l = ai.targetLayer, lv0 = ai.level, f0 = ai.face;'
+                          ' var far = e.levels[0], name = far.name, r; far.name = "9";'
+                          ' try { ai.level = 0; ai.face = "sad"; ai.drawLayer(l); r = "%s:%d:%d".sprintf(ai.imageFile, l.width, +far.zoom); }'
+                          ' catch (x) { r = "error " + x.message; }'
+                          ' far.name = name; ai.level = lv0; ai.face = f0; ai.drawLayer(l); return r;'))
+        print("     a level without pictures: %s" % got, flush=True)
+        parts = got.split(":")
+        if len(parts) != 3 or parts[0] != "ch_0_0_3" or abs(int(parts[1]) - 540 * int(parts[2]) // 100) > 2:
+            raise SmokeError("a level without its picture didn't draw the middle level's ch_0_0_3 at its size: %s" % got)
+
     @step("[vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too")
     def _():
         if eng.tjs('return typeof world_object.env.voiceSpeaker != "undefined" ? 1 : 0;') != 1:

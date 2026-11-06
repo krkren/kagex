@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0 (in progress)
+
+### Fixed
+
+- **`[ai far]` and `[ai near]` with an angry or sad face**: Ai's angry and sad pictures were drawn at the middle size only, so after `[ai 103]` the far and near presets showed the picture before in the far or near place (her head above the screen, or her almost wholly below it). A character whose picture is missing at a level is now drawn from the nearest level that has it, a bigger one first, scaled by the levels' zoom, with a note in the log (`KAGEnvCharacter.drawOtherLevel`, `doc/world_inst.txt`); and the sample has the far and near pictures (`ch_1_0_2`, `ch_1_0_3`, `ch_2_0_2`, `ch_2_0_3`, made by `upscale.py` from the middle ones). The smoke test checks every face at every level, and a level without pictures.
+
 ## 0.18.1
 
 ### Fixed
