@@ -3532,12 +3532,19 @@ def sample_steps(eng):
         if eng.tjs("return typeof kag.fore.messages[0].setButtonsFade != \"undefined\" ? 1 : 0;") == 1:
             eng.tjs('var m = kag.fore.messages[0]; m.addSystemButton(%[ name:"smokesys", normal:"start_normal", over:"start_over", x:"1300", y:"20", exp:"void" ]);'
                     ' m.setButtonsFade(200, ""); kag.primaryLayer.setCursorPos(100, 100); return 1;')
-            moved = eng.tjs('var m = kag.fore.messages[0]; return m.cursorX < 1000 || m.cursorY < -100 ? 1 : 0;')
+            # (a touch screen's pointer stays where it tapped: where it didn't go where it was sent, the
+            # fade can't be checked; the iOS Simulator's left it away from the buttons already)
+            at = 'Math.abs(kag.primaryLayer.cursorX - %d) <= 4 && Math.abs(kag.primaryLayer.cursorY - %d) <= 4 ? 1 : 0'
+            moved = eng.tjs('return ' + at % (100, 100) + ';')
             if moved == 1:
                 eng.wait("the buttons to fade out", 'kag.fore.messages[0].buttons.smokesys.opacity == 0 && !kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
-                eng.tjs('var m = kag.fore.messages[0]; kag.primaryLayer.setCursorPos(m.left + 1350, m.top + 40); return 1;')
-                eng.wait("the buttons to come back near the pointer", 'kag.fore.messages[0].buttons.smokesys.opacity == 255 && kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
-                print("     a [sysbutton] faded out with the pointer away and came back near it", flush=True)
+                near = str(eng.tjs('var m = kag.fore.messages[0]; kag.primaryLayer.setCursorPos(m.left + 1350, m.top + 40);'
+                                   ' return [m.left + 1350, m.top + 40].join(",");')).split(",")
+                if eng.tjs('return ' + at % (int(near[0]), int(near[1])) + ';') == 1:
+                    eng.wait("the buttons to come back near the pointer", 'kag.fore.messages[0].buttons.smokesys.opacity == 255 && kag.fore.messages[0].buttons.smokesys.visible', timeout=5)
+                    print("     a [sysbutton] faded out with the pointer away and came back near it", flush=True)
+                else:
+                    print("     a [sysbutton] faded out with the pointer away (its coming back: not checked, the pointer didn't move)", flush=True)
             else:
                 print("     (the fading buttons: not checked, the pointer can't be moved here)", flush=True)
             eng.tjs('var m = kag.fore.messages[0]; m.setButtonsFade(0, ""); var b = m.buttons.smokesys; invalidate b; delete m.buttons.smokesys;'
