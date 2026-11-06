@@ -308,6 +308,7 @@ class KAGTransMove {
 			// back, [wt] waited for ever
 			inTransition = false;
 			window.transCount--;
+			dm("A transition refused on " + name + " (" + window.transCount + " others running): " + e.message);
 			throw e;
 		}
 	}

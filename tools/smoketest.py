@@ -2924,6 +2924,45 @@ def sample_steps(eng):
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
         eng.wait("layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=30)
 
+    @step("the quick menu: the window's buttons as a strip, dimmed and lit by their actions; a click runs one; unpinned it fades and its handle brings it back")
+    def _():
+        if eng.tjs('return typeof global.KAGQuickMenu != "undefined" && typeof kag.quickMenu == "Object" && kag.quickMenu !== void ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu here)", flush=True)
+            return
+        for i in range(6):
+            if eng.tjs("var q = kag.quickMenu; return q.layer !== void && q.layer.visible && kag.inStable ? 1 : 0;") == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.5)
+            eng.wait("a stable point", "kag.inStable", timeout=20)
+        got = str(eng.tjs('var b = kag.quickMenu.buttons(), r = []; for (var i = 0; i < b.count; i++)'
+                          ' r.add(b[i][0] + (b[i][1] ? "" : "-") + (b[i][2] ? "+" : "")); return r.join(" ");'))
+        print("     buttons (- dimmed, + lit): %s" % got, flush=True)
+        names = [n.rstrip("-+") for n in got.split()]
+        for want in ("quickSave", "skip", "auto", "backlog", "config"):
+            if want not in names:
+                raise SmokeError("the quick menu has no %s button: %s" % (want, got))
+        # Auto, clicked: auto mode, and its button lit
+        eng.tjs('var q = kag.quickMenu, b = q.shown, i; for (i = 0; i < b.count; i++) if (b[i].action == "auto") break;'
+                ' q.onDown(b[i].x + 5, b[i].y + 5, mbLeft); q.onUp(b[i].x + 5, b[i].y + 5, mbLeft); return 1;')
+        eng.wait("auto mode", "kag.autoMode", timeout=5)
+        time.sleep(0.3)
+        lit = eng.tjs('var b = kag.quickMenu.buttons(); for (var i = 0; i < b.count; i++) if (b[i][0] == "auto") return b[i][2] ? 1 : 0; return -1;')
+        eng.tjs("kag.cancelAutoMode(); return 1;")
+        if lit != 1:
+            raise SmokeError("the Auto button isn't lit in auto mode")
+        # unpinned and the pointer away: it fades, and its handle brings it back
+        eng.tjs("var l = kag.quickMenu.layer; kag.quickMenu.pinned = false;"
+                " kag.primaryLayer.setCursorPos(l.left + (l.width >> 1), l.top > 540 ? 100 : 1000); return 1;")
+        try:
+            eng.wait("the strip away, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle.visible", timeout=10)
+            eng.tjs("kag.quickMenu.onUp(10, 10, mbLeft); return 1;")
+            eng.wait("the strip back (the handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity == 255", timeout=5)
+        finally:
+            eng.tjs("kag.quickMenu.pinned = true; return 1;")
+        if eng.tjs("return kag.scflags.quickMenuPinned;") != 1:
+            raise SmokeError("the pin isn't kept in the system variables")
+
     @step("the controls list has the sample's own keys and buttons (AfterInit.tjs)")
     def _():
         if not elements_screens(eng):

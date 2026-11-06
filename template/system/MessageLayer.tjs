@@ -8299,10 +8299,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		{
 
 			window.lockMessageLayerSelProcess(); // Lock selection
-			// a transition still running (a screen's own [trans], when its old page's button is
-			// pressed) ends first, as a click during [wt] ends it: the next screen's [trans] failed on
-			// a layer that was still in one, its count stayed up and its [wt] waited for ever
-			window.stopAllTransitions(true) if window.transCount > 0;
+			// (a transition still running ends first: KAGWindow.process)
 
 			if(window.getKeyState(VK_RETURN) || window.getKeyState(VK_SPACE) || window.getKeyState(VK_CONTROL))
 

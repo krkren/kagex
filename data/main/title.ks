@@ -71,6 +71,8 @@
 
 
 *titleloop
+; the message window's quick menu is the story's (AfterInit.tjs)
+[eval exp="f.quickMenu = false"]
 
 
 

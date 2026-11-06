@@ -146,22 +146,8 @@ function playerMove(move)
  */
 function onModeChange(kag, autoMode, skipMode, canAuto, canSkip, selectShowing, modal)
 {
-    // Adjust auto / skip modes
-    setButtonMode(kag, "msg_auto", autoMode);
-    setButtonMode(kag, "msg_skip", skipMode);
-
-    // Adjust message window buttons
-    setButtonEnabled(kag, "msg_save", kag.storeMenu.enabled);
-    setButtonEnabled(kag, "msg_load", kag.restoreMenu.enabled);
-    setButtonEnabled(kag, "msg_qsave", kag.storeMenu.enabled && kag.quickSaveSlot >= 0);
-    setButtonEnabled(kag, "msg_qload", kag.restoreMenu.enabled && kag.newestQuickSave() >= 0);
-    setButtonEnabled(kag, "msg_log",  kag.showHistoryMenuItem.enabled);
-    setButtonEnabled(kag, "msg_auto", kag.autoModeMenuItem.enabled);
-    setButtonEnabled(kag, "msg_skip", kag.skipToNextStopMenuItem.enabled);
-    setButtonEnabled(kag, "msg_back", !modal && kag.inStable && canRollBack());
-    var moves = [ "prevScene", "rewind", "prevChoice", "nextScene" ];
-    for (var i = 0; i < moves.count; i++)
-        setButtonEnabled(kag, "msg_" + moves[i].toLowerCase(), !modal && (kag.inStable || moves[i] == "nextScene") && !skipMode && canPlayerMove(moves[i]));
+    // (the message window's buttons are the quick menu, which dims and lights them by their
+    // actions: AfterInit.tjs, since 0.19.0)
 
     // Sync config menu
     if (typeof kag.configMenuItem != "undefined") {
@@ -718,7 +704,7 @@ var configPages = [
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
-      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "quickMenu" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage

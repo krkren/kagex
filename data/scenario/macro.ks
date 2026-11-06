@@ -22,47 +22,8 @@
 
 [current layer=message0]
 
-[if exp="tf.recollect"]
-
-[sysbutton name=msg_exit   x=976 y=18 exp="exitScene()"]
-
-[sysbutton name=msg_back   x=1108 y=18 exp="rollBack()"]
-
-[sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
-
-[sysbutton name=msg_auto   x=1372 y=18 exp="kag.onAutoModeMenuItemClick()" nostable]
-
-[sysbutton name=msg_log    x=1504 y=18 exp="kag.onShowHistoryMenuItemClick()"]
-
-[sysbutton name=msg_config x=1636 y=18 exp="startConfig()"]
-
-[else]
-
-[sysbutton name=msg_prevscene  x=352 y=18 exp="playerMove('prevScene')"]
-
-[sysbutton name=msg_rewind     x=402 y=18 exp="playerMove('rewind')"]
-
-[sysbutton name=msg_prevchoice x=452 y=18 exp="playerMove('prevChoice')"]
-
-[sysbutton name=msg_nextscene  x=502 y=18 exp="playerMove('nextScene')" nostable]
-
-[sysbutton name=msg_qsave  x=580 y=18 exp="quicksaveAction()"]
-[sysbutton name=msg_qload  x=712 y=18 exp="quickloadAction()"]
-[sysbutton name=msg_save   x=844 y=18 exp="startSave()"]
-
-[sysbutton name=msg_load   x=976 y=18 exp="startLoad()"]
-
-[sysbutton name=msg_back   x=1108 y=18 exp="rollBack()"]
-
-[sysbutton name=msg_skip   x=1240 y=18 exp="kag.onSkipToNextStopMenuItemClick()" nostable]
-
-[sysbutton name=msg_auto   x=1372 y=18 exp="kag.onAutoModeMenuItemClick()" nostable]
-
-[sysbutton name=msg_log    x=1504 y=18 exp="kag.onShowHistoryMenuItemClick()"]
-
-[sysbutton name=msg_config x=1636 y=18 exp="startConfig()"]
-
-[endif]
+; the window's buttons are the quick menu (since 0.19.0; AfterInit.tjs: kag.quickMenu), drawn over its top edge
+[eval exp="f.quickMenu = true"]
 
 [init]
 

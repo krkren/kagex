@@ -10155,6 +10155,11 @@ class KAGWindow extends Window
 
 	{
 
+		// a transition still running ends first, as a click during [wt] ends it: the place jumped
+		// to starts its own, and the engine refuses a second one on a layer in one (a Config tab
+		// turned while the screen was drawn again for a language switch; since 0.19.0)
+		stopAllTransitions(true) if transCount > 0;
+
 		forEachEventHook('onProcess',,usingExtraConductor);
 
 

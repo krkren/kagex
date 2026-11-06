@@ -3114,6 +3114,37 @@ skip. A swipe is at least 12% of the window's shorter side within 0.8 s, mostly 
 
 
 
+● The Quick Menu
+
+A strip of buttons for actions that can keep out of the way (since 0.19.0,
+template/system/QuickMenu.tjs): shown all the time (pinned), or fading in when the pointer
+comes near and out a moment after it leaves; on a touch screen a tap on its handle brings it
+back. A button is dimmed while its action can't be done and lit while its toggle is on; the
+pin at the end, and Config's Quick Menu option, are the player's (kept in the system
+variables). It shows in the story only: not over a system screen, a prompt or the message
+history, nor while the message window is hidden.
+
+    with (KAGQuickMenuOf(kag)) {
+        .items = [ %[ action:"quickSave", image:"msg_qsave", x:228 ],
+                   %[ action:"auto", image:"msg_auto", on:function { return kag.autoMode; } ],
+                   %[ action:"backlog" ] ];          // no image: its label, in the dialogs' look
+        .place = function { var m = kag.fore.messages[0]; return [ m.left + 352, m.top + 18 ]; };
+        .when  = function { return !!f.quickMenu; };    // the game's own idea of "the story"
+    }
+
+  items          the buttons (or a function returning them): action, image (<image>_normal,
+                 _over and, for a toggle, _on), x (its left in the strip; void: after the one
+                 before), on (lit while it returns true), label
+  place          where the strip goes; void: the bottom of the screen, in the middle
+  when           void, or whether it may show now
+  pinnedDefault  shown all the time until the player says otherwise (true); hideDelay (2000 ms),
+                 reveal (48 px around it that bring it in), absolute (3500000)
+
+The sample's message window buttons are its quick menu, on the window's top edge as they were;
+[initscene] sets f.quickMenu and the title clears it.
+
+
+
 ● KAGEX Operation System
 
 

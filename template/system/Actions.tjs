@@ -131,18 +131,18 @@ function KAGDefineFrameworkActions(win)
 	KAGDefineAction(%[ name:"rewind", label:"Rewind to the start of the scene or the last choice",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.rewind(); },
 		available:KAGActionWorld,
-		enabled:function { var p = KAGActionPlayer(); return p !== void && (p.canPrevScene || p.canPrevChoice); } ]);
+		enabled:function { var p = KAGActionMovable(true); return p !== void && (p.canPrevScene || p.canPrevChoice); } ]);
 	KAGDefineAction(%[ name:"prevScene", label:"Back to the start of the scene",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevScene(true); },
 		available:KAGActionWorld,
-		enabled:function { var p = KAGActionPlayer(); return p !== void && p.canPrevScene; } ]);
+		enabled:function { var p = KAGActionMovable(true); return p !== void && p.canPrevScene; } ]);
 	KAGDefineAction(%[ name:"prevChoice", label:"Back to the last choice",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevChoice(true); },
 		available:KAGActionWorld,
-		enabled:function { var p = KAGActionPlayer(); return p !== void && p.canPrevChoice; } ]);
+		enabled:function { var p = KAGActionMovable(true); return p !== void && p.canPrevChoice; } ]);
 	KAGDefineAction(%[ name:"nextScene", label:"On to the next scene",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.nextScene(); },
-		available:KAGActionWorld, enabled:function { return KAGActionPlayer() !== void; } ]);
+		available:KAGActionWorld, enabled:function { return KAGActionMovable(false) !== void; } ]);
 	KAGDefineAction(%[ name:"language", label:"Show the game in its next language", func:win.switchLanguageByKey,
 		available:function { return languageAvailable; } incontextof win ]);
 	KAGDefineAction(%[ name:"menu", label:"Menu", func:function { showMenuBar(); } incontextof win,
@@ -167,6 +167,15 @@ function KAGMenuItemEnabled(win, item)
 function KAGActionWorld()
 {
 	return typeof global.world_object != "undefined";
+}
+
+// The scene player, when its moves can be made: not while skipping, nor over a prompt, and for
+// going back only at a stable point
+function KAGActionMovable(stable)
+{
+	var p = KAGActionPlayer();
+	if (p === void || kag.skipMode != SKIP_NONE || kag.currentDialog !== void || (stable && !kag.inStable)) return;
+	return p;
 }
 
 // The scene player while it plays a compiled scene
