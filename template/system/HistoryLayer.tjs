@@ -100,7 +100,7 @@ class HistoryLayer extends Layer
 
 	var dragY = void, dragPx = 0, dragging = false, pressX, pressY, dragPace = 0, dragSamples = [];
 
-	var coastTimer = void, coastSpeed = 0.0, coastPx = 0.0, coastTick = 0;
+	var coastTimer = void, coastSpeed = 0.0, coastPx = 0.0, coastTick = 0, inCoast = false;
 
 	var overPull = 0, closePull = 150, pullNote = void, pullNoteText = "";
 
@@ -1777,6 +1777,8 @@ class HistoryLayer extends Layer
 
 	{
 
+		stopCoast() if !inCoast && coastSpeed != 0.0; // a scroll of the player's own ends a coast
+
 		if(everypage || verticalView)
 
 		{
@@ -2027,7 +2029,11 @@ class HistoryLayer extends Layer
 
 		var before = scrollPx;
 
+		inCoast = true;
+
 		scrollToPx(coastPx);
+
+		inCoast = false;
 
 		if(scrollPx == before && (coastPx <= 0 || coastPx >= maxScrollPx())) { stopCoast(); return; } // an end
 

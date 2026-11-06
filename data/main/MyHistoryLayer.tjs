@@ -50,7 +50,7 @@ class HistoryLayer extends Layer
     var dragY = void, dragStart = 0, dragging = false, pressX, pressY;
     // a flick coasts on, slowing down (since 0.19.0): px a second (since 0.21.0; coastPx is where
     // it has got to)
-    var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastTick = 0;
+    var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastTick = 0, inCoast = false;
     var dragPace = 0; // ms between the drag's last two moves
     var topPageButton  = void;
     var prevPageButton = void;
@@ -702,6 +702,7 @@ class HistoryLayer extends Layer
 	// to px pixels from the oldest line (kept within the log); slider: move the scroll bar too
 	function scrollToPx(px, slider=true)
 	{
+		stopCoast() if !inCoast && coastSpeed != 0.0; // a scroll of the player's own ends a coast
 		if(everypage || verticalView)
 		{
 			var n = px \ lineHeight, max = dataLines - dispLines;
@@ -1603,7 +1604,9 @@ class HistoryLayer extends Layer
 		dt = 0.05 if dt > 0.05;
 		coastPx += coastSpeed * dt;
 		var before = scrollPx;
+		inCoast = true;
 		scrollToPx(coastPx);
+		inCoast = false;
 		if(scrollPx == before && (coastPx <= 0 || coastPx >= maxScrollPx())) { stopCoast(); return; } // an end
 		coastSpeed *= Math.pow(0.05, dt);
 		stopCoast() if Math.abs(coastSpeed) < 2 * lineHeight;

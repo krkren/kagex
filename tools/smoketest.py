@@ -493,6 +493,17 @@ class AndroidEngine(Engine):
         self.run_adb("shell", "input", "keyevent", "KEYCODE_BACK")
         return True
 
+    def tap(self, x, y):
+        """a real tap on the screen at x, y (the device's pixels), through the touch screen"""
+        self.run_adb("shell", "input", "tap", str(int(x)), str(int(y)))
+
+    def screen_size(self):
+        """the screen's size, landscape (wm size gives the device's natural, portrait one)"""
+        out = self.run_adb("shell", "wm", "size")
+        m = re.findall(r"(\d+)x(\d+)", out)
+        w, h = (int(m[-1][0]), int(m[-1][1])) if m else (1920, 1080)
+        return (max(w, h), min(w, h))
+
     def output(self):
         r = subprocess.run([self.adb, "logcat", "-d"], capture_output=True)
         text = r.stdout.decode("utf-8", "replace")
@@ -2786,11 +2797,20 @@ def sample_steps(eng):
         if eng.tjs('return typeof System.platformTag != "undefined" && ["linux", "windows", "macos"].find(System.platformTag) >= 0 ? 1 : 0;') == 1:
             eng.tjs('kag.movies[0].play(); return 1;')
             eng.wait("the next movie to play in the renewed slot", 'kag.movies[0].position > 500', timeout=15)
+        # stopped, the movie gives layer 0 its own size back: the engine sizes a layer to each
+        # frame it draws there, and a flip shown on it later was cut off at the frame's size
+        size = str(eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); var l = kag.fore.layers[0];'
+                           ' return [*(&global.Layer.imageWidth incontextof l), *(&global.Layer.imageHeight incontextof l)].join("x");'))
         # the slot let go of layer 0 and the layer put back as [freeimage] leaves it (the next
         # steps draw there)
-        eng.tjs('kag.tagHandlers.stopvideo(%[slot:"0"]); var m = kag.movies[0]; try { m.layer1 = null; m.layer2 = null; } catch {}'
+        eng.tjs('var m = kag.movies[0]; try { m.layer1 = null; m.layer2 = null; } catch {}'
                 ' m.layerNumber[0] = m.layerNumber[1] = void; m.layerPage[0] = m.layerPage[1] = void; try { m.mode = vomOverlay; } catch {}'
                 ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
+        if eng.tjs('return typeof kag.movies[0].putLayersBack != "undefined" ? 1 : 0;') == 1:
+            screen = str(eng.tjs('var p = kag.fore.base; return [*(&global.Layer.width incontextof p), *(&global.Layer.height incontextof p)].join("x");'))
+            print("     layer 0 after the movie stopped: %s (the screen %s)" % (size, screen), flush=True)
+            if size != screen:
+                raise SmokeError("the movie left layer 0 at %s, not the screen's %s" % (size, screen))
 
     @step("an Effekseer effect draws (--effekseer required), or the build says why not")
     def _():
@@ -3364,6 +3384,48 @@ def sample_steps(eng):
             print("     inside the window's bottom under the text at 100%% and 140%%, just over the window: %s" % got, flush=True)
             if got != "1,1,1":
                 raise SmokeError("the quick menu isn't along the bottom of the message window, under its text: %s" % got)
+
+    @step("Android: a real tap on the quick menu's pin unpins it and the strip goes at once, a tap on its handle brings it back, and a tap on the pin pins it again")
+    def _():
+        if not isinstance(eng, AndroidEngine):
+            print("     (Android only: real taps through adb)", flush=True)
+            return
+        if eng.tjs('return typeof kag.quickMenu == "Object" && kag.quickMenu !== void && kag.quickMenu.layer !== void && kag.quickMenu.layer.visible'
+                   ' && typeof kag.quickMenu.togglePin != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no quick menu shown here)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        # the screen's pixels to the game's: two taps in the upper middle (each goes on a line)
+        W, H = eng.screen_size()
+        p = [(W * 0.42, H * 0.25), (W * 0.58, H * 0.4)]
+        c = []
+        for x, y in p:
+            eng.tap(x, y)
+            time.sleep(1.0)
+            c.append([int(v) for v in str(eng.tjs('return [kag.primaryLayer.cursorX, kag.primaryLayer.cursorY].join(",");')).split(",")])
+            eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        if c[1][0] == c[0][0] or c[1][1] == c[0][1]:
+            print("     (the pointer didn't follow the taps: %s; not checked)" % c, flush=True)
+            return
+        kx = (p[1][0] - p[0][0]) / (c[1][0] - c[0][0]); ky = (p[1][1] - p[0][1]) / (c[1][1] - c[0][1])
+        def screen(gx, gy):
+            return (p[0][0] + (gx - c[0][0]) * kx, p[0][1] + (gy - c[0][1]) * ky)
+        eng.tjs("kag.quickMenu.pinned = true; return 1;")
+        time.sleep(0.5)
+        pin = [int(v) for v in str(eng.tjs('var q = kag.quickMenu, l = q.layer, b = q.shown[q.shown.count - 1];'
+                                           ' return [l.left + b.x + (b.w >> 1), l.top + b.y + (b.h >> 1)].join(",");')).split(",")]
+        try:
+            eng.tap(*screen(*pin))
+            eng.wait("the pin tapped: unpinned", "!kag.quickMenu.pinned", timeout=5)
+            eng.wait("the strip gone at once, its handle there", "!kag.quickMenu.layer.visible && kag.quickMenu.handle !== void && kag.quickMenu.handle.visible", timeout=3)
+            hd = [int(v) for v in str(eng.tjs('var h = kag.quickMenu.handle; return [h.left + (h.width >> 1), h.top + (h.height >> 1)].join(",");')).split(",")]
+            eng.tap(*screen(*hd))
+            eng.wait("the strip back (its handle tapped)", "kag.quickMenu.layer.visible && kag.quickMenu.layer.opacity > 200", timeout=5)
+            eng.tap(*screen(*pin))
+            eng.wait("the pin tapped again: pinned", "kag.quickMenu.pinned", timeout=5)
+            print("     the pin at %s (game), %s (screen): unpinned and away, the handle brought it back, pinned again" % (pin, [int(v) for v in screen(*pin)]), flush=True)
+        finally:
+            eng.tjs("kag.quickMenu.pinned = true; return 1;")
 
     @step("the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip")
     def _():
@@ -4560,19 +4622,20 @@ def sample_steps(eng):
             eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
                     ' global.__smokeFlickTimer = new Timer(function {'
                     ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight, now = System.getTickCount();'
-                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
+                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now; d.t0 = now if d.step == 0; d.total = now - d.t0;'
                     ' if (d.step == 0) h.onMouseDown(800, 700, mbLeft, 0);'
                     ' else if (d.step < 4) h.onMouseMove(800, y, ssLeft);'
                     ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
                     ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
             eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
             time.sleep(0.6)
-            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart, global.__smokeFlick.gap].join(",");' % h)).split(",")
-            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before)" % tuple(flick), flush=True)
+            flick = str(eng.tjs('with (global.__smokeFlick) return [.at, %s.dispStart, .gap, .total].join(",");' % h)).split(",")
+            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before, %s ms in all)" % tuple(flick), flush=True)
             # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
-            # timer ran that slow (an emulator), the coast can't be checked
-            if not (int(flick[1]) > int(flick[0])) and int(flick[2]) >= 60:
-                print("     (the coast: not checked, this machine's timer stepped %s ms apart)" % flick[2], flush=True)
+            # timer ran that slow (an emulator), the coast can't be checked; nor where its steps
+            # came all at once (a drag of under 10 ms is no flick either)
+            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 60 or int(flick[3]) < 10):
+                print("     (the coast: not checked, this machine's timer stepped %s ms apart, %s ms in all)" % (flick[2], flick[3]), flush=True)
             elif not (int(flick[1]) > int(flick[0])):
                 raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
         eng.tjs("kag.hideHistory(); return 1;")

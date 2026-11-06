@@ -62,6 +62,10 @@ class KAGQuickMenu extends KAGPlugin
 	var lastPx, lastPy;        // where the pointer was, the last touch seen, and whether a mouse
 	var seenTouch = 0;         // (not a finger) put it there: after a touch it rests where the
 	var byMouse = true;        // finger was
+	// Android and iOS: the pointer is always a finger's (since 0.21.0): it rests where the last tap
+	// was and never comes near by itself, whether or not the touches' own events tell it (the pin
+	// did nothing on an Android phone: the strip took the finger resting on it for a mouse)
+	var fingerOnly = false;
 	var timer;
 	var pics = %[];            // loaded button pictures, by name
 	var language;              // the language they were loaded in (a language's own pictures)
@@ -80,6 +84,8 @@ class KAGQuickMenu extends KAGPlugin
 	{
 		super.KAGPlugin();
 		window = win;
+		var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+		fingerOnly = tag == "android" || tag == "ios";
 		timer = new Timer(onTimer, "");
 		timer.interval = 33;
 		timer.enabled = true;
@@ -342,7 +348,8 @@ class KAGQuickMenu extends KAGPlugin
 		// (a touch's own events may come a little after the pointer's move: in a browser they come
 		// after its click)
 		var g = window.gestures, touch = typeof g == "Object" && g !== void && typeof g.lastTouch != "undefined" ? g.lastTouch : 0;
-		if (px != lastPx || py != lastPy || touch != seenTouch) {
+		if (fingerOnly) byMouse = false;
+		else if (px != lastPx || py != lastPy || touch != seenTouch) {
 			byMouse = !(touch > 0 && now - touch < 600);
 			lastPx = px, lastPy = py, seenTouch = touch;
 		}
@@ -457,7 +464,7 @@ class KAGQuickMenu extends KAGPlugin
 		var i = +id.substring(9), b = shown[i];
 		if (b === void || action != "click") return;
 		lastNear = System.getTickCount();
-		if (b.pin) { pinned = !pinned; return; }
+		if (b.pin) { togglePin(); return; }
 		if (enabled(b)) KAGRunAction(b.action);
 		stateKey = "";
 	}
@@ -522,9 +529,19 @@ class KAGQuickMenu extends KAGPlugin
 		pressed = -1;
 		var b = shown[i];
 		lastNear = System.getTickCount();
-		if (b.pin) { pinned = !pinned; return; } // unpinned: it fades hideDelay later
+		if (b.pin) { togglePin(); return; }
 		KAGRunAction(b.action);
 		stateKey = "";
+	}
+
+	// the pin pressed: unpinned by a mouse, the strip fades hideDelay after the pointer leaves it;
+	// by a finger (or a screen reader), it goes at once and its handle brings it back (since 0.21.0:
+	// it had stayed touchHideDelay, which looked like the pin doing nothing)
+	function togglePin()
+	{
+		pinned = !pinned;
+		stateKey = "";
+		if (!pinned && !byMouse) lastNear = 0;
 	}
 
 	// a button's tip: its action's label (Tooltips.tjs)
