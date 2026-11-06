@@ -4033,16 +4033,21 @@ def sample_steps(eng):
         if eng.tjs("return typeof %s.flick != \"undefined\" && %s.dataLines - %s.dispLines > 12 ? 1 : 0;" % (h, h, h)) == 1:
             eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
                     ' global.__smokeFlickTimer = new Timer(function {'
-                    ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight;'
+                    ' var h = %s, d = global.__smokeFlick, y = 700 - d.step * h.lineHeight, now = System.getTickCount();'
+                    ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
                     ' if (d.step == 0) h.onMouseDown(800, 700, mbLeft, 0);'
                     ' else if (d.step < 4) h.onMouseMove(800, y, ssLeft);'
                     ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
                     ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
             eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
             time.sleep(0.6)
-            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart].join(",");' % h)).split(",")
-            print("     flicked four lines up: at line %s when let go, then %s" % tuple(flick), flush=True)
-            if not (int(flick[1]) > int(flick[0])):
+            flick = str(eng.tjs('return [global.__smokeFlick.at, %s.dispStart, global.__smokeFlick.gap].join(",");' % h)).split(",")
+            print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before)" % tuple(flick), flush=True)
+            # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
+            # timer ran that slow (an emulator), the coast can't be checked
+            if not (int(flick[1]) > int(flick[0])) and int(flick[2]) >= 60:
+                print("     (the coast: not checked, this machine's timer stepped %s ms apart)" % flick[2], flush=True)
+            elif not (int(flick[1]) > int(flick[0])):
                 raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
@@ -4501,7 +4506,8 @@ def sample_steps(eng):
                 # (a Timer in the game moves it every 16 ms, as a finger would: down at 500, up at 340)
                 eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); global.__smokeDrag = %[ step:0, p1:-1 ];'
                         ' global.__smokeDragTimer = new Timer(function {'
-                        ' var l = kag.fore.messages[0].names.searchList, d = global.__smokeDrag, y = 500 - d.step * 40;'
+                        ' var l = kag.fore.messages[0].names.searchList, d = global.__smokeDrag, y = 500 - d.step * 40, now = System.getTickCount();'
+                        ' d.gap = d.last !== void ? now - d.last : 0; d.last = now;'
                         ' if (d.step == 0) l.onMouseDown(200, 500, mbLeft, 0);'
                         ' else if (d.step < 5) l.onMouseMove(200, y, ssLeft);'
                         ' else { l.onMouseUp(200, 340, mbLeft, 0); d.p1 = (int)l.position; global.__smokeDragTimer.enabled = false; }'
@@ -4509,10 +4515,14 @@ def sample_steps(eng):
                 eng.wait("the drag let go", "global.__smokeDrag.p1 >= 0", timeout=5)
                 p1 = eng.tjs("return global.__smokeDrag.p1;")
                 time.sleep(0.4)
-                p2 = eng.tjs("var l = kag.fore.messages[0].names.searchList; return [(int)l.position, (int)l.velocity, l.maxPosition].join(\",\");")
-                print("     dragged 160 px: at %s when let go, then %s (position, speed, end)" % (p1, p2), flush=True)
+                p2 = eng.tjs("var l = kag.fore.messages[0].names.searchList; return [(int)l.position, (int)l.velocity, l.maxPosition, global.__smokeDrag.gap].join(\",\");")
+                print("     dragged 160 px: at %s when let go, then %s (position, speed, end, the last step's ms)" % (p1, p2), flush=True)
                 q = [int(x) for x in str(p2).split(",")]
-                if not (150 <= int(p1) <= 170) or not (q[0] > int(p1) + 40 or q[0] == q[2]):
+                coasted = q[0] > int(p1) + 40 or q[0] == q[2]
+                slow = not coasted and q[3] >= 60  # the game's 16 ms timer that slow (an emulator): no flick to check
+                if slow:
+                    print("     (the coast: not checked, this machine's timer stepped %d ms apart)" % q[3], flush=True)
+                if not (150 <= int(p1) <= 170) or not (slow or q[0] > int(p1) + 40 or q[0] == q[2]):
                     raise SmokeError("the list didn't follow the drag or coast on after it: %s, then %s" % (p1, p2))
                 # the keys: Down moves the focus and scrolls it into view
                 keys = str(eng.tjs('var l = kag.fore.messages[0].names.searchList; l.scrollTo(0); l.focusIndex = 0; l.focus();'

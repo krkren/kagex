@@ -50,6 +50,7 @@ class HistoryLayer extends Layer
     var dragY = void, dragStart = 0, dragging = false, pressX, pressY;
     // a flick coasts on, slowing down (since 0.19.0): lines a second, the lines not yet scrolled
     var dragSamples = [], coastTimer = void, coastSpeed = 0.0, coastLines = 0.0, coastTick = 0;
+    var dragPace = 0; // ms between the drag's last two moves
     var topPageButton  = void;
     var prevPageButton = void;
     var nextPageButton = void;
@@ -1357,6 +1358,7 @@ class HistoryLayer extends Layer
 			dragY = y, dragStart = dispStart, dragging = false, pressX = x, pressY = y;
 			stopCoast();
 			dragSamples = [ [ System.getTickCount(), y ] ];
+			dragPace = 0;
 		}
 		super.onMouseDown(...);
 	}
@@ -1392,6 +1394,7 @@ class HistoryLayer extends Layer
 			{
 				scrollTo(dragStart + (dragY - y) \ lineHeight);
 				var now = System.getTickCount();
+				dragPace = now - dragSamples[dragSamples.count - 1][0];
 				dragSamples.add([ now, y ]);
 				while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
 			}
@@ -1416,7 +1419,10 @@ class HistoryLayer extends Layer
 		dragSamples.add([ now, y ]);
 		while(dragSamples.count > 2 && now - dragSamples[0][0] > 100) dragSamples.erase(0);
 		var dt = now - dragSamples[0][0];
-		if(dt < 10 || now - dragSamples[dragSamples.count - 2][0] >= 80) return;
+		// a finger that stopped before it lifted makes no flick: a gap well past the drag's own
+		// pace (each move redraws the log, which on a slow phone takes longer than 80 ms)
+		var last = now - dragSamples[dragSamples.count - 2][0];
+		if(dt < 10 || last >= 80 && last >= dragPace * 2) return;
 		coastSpeed = (dragSamples[0][1] - y) * 1000.0 / dt / lineHeight;
 		if(Math.abs(coastSpeed) < 3) return;
 		coastLines = 0.0;

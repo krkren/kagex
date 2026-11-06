@@ -48,6 +48,7 @@ class KAGScrollList extends Layer
 	var focusIndex = -1, hoverIndex = -1;
 	var pressX, pressY, pressPos, pressTick, dragging = false, barDrag = false, pressed = false;
 	var samples = [];          // [ tick, y ] while dragged, for the flick's speed
+	var pace = 0;              // ms between the drag's last two moves
 	var timer, lastTick = 0;
 	var cache = %[];           // "<index>:<state>" => a layer holding the item's picture
 	var cacheKeys = [];
@@ -280,6 +281,7 @@ class KAGScrollList extends Layer
 		pressed = true, pressX = x, pressY = y, pressPos = position, pressTick = System.getTickCount(), dragging = false;
 		target = void, velocity = 0, timer.enabled = false;
 		samples = [ [ pressTick, y ] ];
+		pace = 0;
 		barDrag = showsBar && x >= width - barWidth - barMargin * 2;
 		if (barDrag) dragBar(y);
 	}
@@ -300,6 +302,7 @@ class KAGScrollList extends Layer
 			}
 			if (dragging) {
 				var now = System.getTickCount();
+				pace = now - samples[samples.count - 1][0];
 				samples.add([ now, y ]);
 				while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
 				scrollTo(pressPos - (y - pressY));
@@ -322,7 +325,10 @@ class KAGScrollList extends Layer
 			samples.add([ now, y ]);
 			while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
 			var dtm = now - samples[0][0];
-			if (dtm > 0 && now - samples[samples.count - 2][0] < 80) {
+			// a finger that stopped before it lifted makes no flick: a gap well past the drag's
+			// own pace (a slow machine's moves come further apart than 80 ms)
+			var last = now - samples[samples.count - 2][0];
+			if (dtm > 0 && (last < 80 || last < pace * 2)) {
 				velocity = -(y - samples[0][1]) * 1000.0 / dtm;
 				start() if Math.abs(velocity) > 60;
 			}
