@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.1
+
+### Fixed
+
+- **Q.SAVE no longer shows an error after saving**: the sample's quick save (Q.SAVE on the message window, Shift+S and whatever the player binds to it) saved, then read a global left over from an older notice that no script defines, and TJS refuses a missing member even when it's asked for through `global.`, so every quick save ended with "Member "qsavenotify_object" does not exist". The leftover is gone, and the smoke test makes one of its quick saves through the game's own Q.SAVE action rather than `kag.quickSave()` alone.
+
 ## 0.21.0
 
 ### Added

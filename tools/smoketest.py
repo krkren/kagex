@@ -4940,7 +4940,11 @@ def sample_steps(eng):
         eng.tjs('kag.process("layer.ks", "*start"); return 1;')
         eng.wait("a stable point in layer.ks", 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void', timeout=20)
         line = eng.tjs("return kag.conductor.curLine;")
-        got = str(eng.tjs('var r = []; for (var i = 0; i < 4; i++) r.add(kag.quickSave());'
+        # the last through the game's own Q.SAVE action (the sample's quicksaveAction), which
+        # threw after saving up to 0.21.0 (a hook reading a global that didn't exist)
+        got = str(eng.tjs('var r = []; for (var i = 0; i < 3; i++) r.add(kag.quickSave());'
+                          ' if (typeof global.KAGRunAction != "undefined" && typeof global.KAGActions.quickSave != "undefined")'
+                          ' { KAGRunAction("quickSave"); r.add(kag.newestQuickSave()); } else r.add(kag.quickSave());'
                           ' return r.join(",") + "|" + kag.newestQuickSave() + "|" + kag.quickSaves().join(",");'))
         print("     four quick saves went to %s; the newest %s, newest first %s" % tuple(got.split("|")), flush=True)
         # its card: the save's picture, the scene's name and the date (0.20.0 on)

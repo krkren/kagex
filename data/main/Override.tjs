@@ -372,12 +372,9 @@ function quickloadAction()
  * Quick save (Q.SAVE, Shift+S): into the next of the quick saves, which go round
  * (Config.tjs's quickSaveSlot and quickSaveSlots; kag.quickSave shows the notice)
  */
-function quicksaveAction(map=false)
+function quicksaveAction()
 {
     if (kag.quickSave() >= 0) {
-        if (global.qsavenotify_object !== void) {
-            global.qsavenotify_object.start(map);
-        }
         kag.setMenuAccessibleAll(); // Q.LOAD has something to load now
     }
 }
