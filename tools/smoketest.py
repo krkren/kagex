@@ -2903,12 +2903,16 @@ def sample_steps(eng):
                 raise SmokeError("Effekseer effects are " + why)
             return
         eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"fore", flip:"sparkle.efk", visible:"true"]); return 1;')
-        time.sleep(1.5)
-        n = eng.tjs('var l = kag.fore.layers[0], n = 0; for (var y = 0; y < l.height; y += 8)'
-                    ' for (var x = 0; x < l.width; x += 8) if (l.getMainPixel(x, y)) n++;'
-                    ' kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return n;')
+        # up to 8 s for its first frames: an emulator busy after the movie steps took more than
+        # the 1.5 s this waited up to 0.24.0 (its release run)
+        n, end = 0, time.time() + 8.0
+        while n <= 0 and time.time() < end:
+            time.sleep(0.5)
+            n = eng.tjs('var l = kag.fore.layers[0], n = 0; for (var y = 0; y < l.height; y += 8)'
+                        ' for (var x = 0; x < l.width; x += 8) if (l.getMainPixel(x, y)) n++; return n;')
+        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); return 1;')
         if n <= 0:
-            raise SmokeError("sparkle.efk drew nothing")
+            raise SmokeError("sparkle.efk drew nothing in 8 s")
 
     @step("an SVG image draws, zoomed and turned too (--vector required), or the build says why not")
     def _():
