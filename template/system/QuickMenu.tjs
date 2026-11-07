@@ -27,6 +27,13 @@
  *       (void: just over the first message window, under the next one and under a World layer
  *       at level=message; since 0.20.0, 3500000 before)
  *
+ * The strip is on the fore page, among the message windows and the World's layers (since 0.23.0:
+ * on the primary layer before, over all of them, so a World layer at level=message, the TV
+ * static, didn't cover it as it covers the window), with a picture of it on the back page while
+ * the back page's first message window shows, so a transition doesn't fade it out; it goes on to
+ * the new fore page when the pages are exchanged. A copy of the fore page that's a picture of the
+ * scene (a save's thumbnail, the scene player's snapshot) leaves it out (hideForCopy).
+ *
  * The player's own (Config, Change Controls): its size (quickMenuSize: 100%, or 140% where a
  * finger taps it, Android and iOS, by default), its opacity (quickMenuOpacity) and the buttons
  * it leaves out (kag.scflags.quickMenuHidden, an action name each).
@@ -54,7 +61,9 @@ class KAGQuickMenu extends KAGPlugin
 	var touchHideDelay = 4000; // after a finger's tap on the strip or its handle
 	var absolute;              // void: just over message window 0 (1000000), under the World's
 	                           // level=message (1000200) and message window 1 (1001000)
-	var layer, handle;         // the strip, and its handle while it's away
+	var layer, handle;         // the strip, and its handle while it's away (on the fore page)
+	var backLayer, backHandle; // their pictures on the back page
+	var drawCount = 0, backDrawn = -1, handleDrawn = 0, backHandleDrawn = -1;
 	var shown = [];            // the buttons drawn: %[ action, x, y, w, h, pics, on ]
 	var stateKey = "";         // what they were drawn for (redrawn when it changes)
 	var hover = -1, pressed = -1;
@@ -100,6 +109,8 @@ class KAGQuickMenu extends KAGPlugin
 		KAGA11y.removeToolbar(this) if typeof KAGA11y.removeToolbar != "undefined";
 		invalidate layer if layer !== void && isvalid layer;
 		invalidate handle if handle !== void && isvalid handle;
+		invalidate backLayer if backLayer !== void && isvalid backLayer;
+		invalidate backHandle if backHandle !== void && isvalid backHandle;
 		dropPictures();
 		super.finalize(...);
 	}
@@ -250,7 +261,7 @@ class KAGQuickMenu extends KAGPlugin
 		var k = scale, fit = window.primaryLayer.width - 8, w = layout(k);
 		for (var n = 0; n < 4 && w > fit; n++) { k *= fit / w; w = layout(k); }
 		if (layer === void) {
-			layer = new KAGQuickMenuLayer(window, window.primaryLayer, this);
+			layer = new KAGQuickMenuLayer(window, window.fore.base, this);
 			layer.name = "Quick menu";
 			layer.hitType = htMask;
 			layer.hitThreshold = 16; // the gaps let clicks through
@@ -275,6 +286,7 @@ class KAGQuickMenu extends KAGPlugin
 
 	function draw()
 	{
+		drawCount++;
 		layer.fillRect(0, 0, layer.imageWidth, layer.imageHeight, 0);
 		for (var i = 0; i < shown.count; i++) {
 			var b = shown[i], over = i == hover, en = enabled(b);
@@ -307,12 +319,14 @@ class KAGQuickMenu extends KAGPlugin
 	function onTimer()
 	{
 		if (!isvalid window) return;
+		reparent();
 		if (!canShow()) {
 			layer.visible = false if layer !== void;
 			handle.visible = false if handle !== void;
 			closePanel();
 			pushA11y(false);
 			showable = false;
+			syncBack();
 			return;
 		}
 		// it can show again (the story, the window back): unpinned, it peeks out for a moment so
@@ -355,6 +369,78 @@ class KAGQuickMenu extends KAGPlugin
 		updateHandle(at, slide < 1 && !pinned);
 		panelTick(now);
 		pushA11y(slide >= 1);
+		syncBack();
+	}
+
+	//------------------------------------------------------------------------- the two pages --
+
+	// The strip and its handle on the fore page (they stay where they were when the pages are
+	// exchanged: a layer=base transition with exchange=true), their pictures on the back one
+	function reparent()
+	{
+		var fb = window.fore.base, bb = window.back.base;
+		if (layer !== void && isvalid layer && layer.parent !== fb) { layer.parent = fb; layer.absolute = level(); }
+		if (handle !== void && isvalid handle && handle.parent !== fb) { handle.parent = fb; handle.absolute = layer.absolute; }
+		if (backLayer !== void && isvalid backLayer && backLayer.parent !== bb) backLayer.parent = bb;
+		if (backHandle !== void && isvalid backHandle && backHandle.parent !== bb) backHandle.parent = bb;
+	}
+
+	function onExchangeForeBack()
+	{
+		reparent();
+		backDrawn = backHandleDrawn = -1; // (the pictures went with the pages)
+	}
+
+	// The back page's pictures, as the fore page shows them while the back page has its first
+	// message window: a transition fades the fore page into the back page, children and all, and
+	// the strip goes on through it as the window does (gone with it when the window goes)
+	function syncBack()
+	{
+		var m = window.back.messages[0], show = m !== void && m.visible;
+		if (copyTo(backLayer, layer, show)) {
+			if (backLayer === void) backLayer = newCopy("Quick menu (back page)");
+			backLayer.assignImages(layer) if backDrawn != drawCount;
+			backDrawn = drawCount;
+			placeCopy(backLayer, layer);
+		} else if (backLayer !== void && isvalid backLayer) backLayer.visible = false;
+		if (copyTo(backHandle, handle, show)) {
+			if (backHandle === void) backHandle = newCopy("Quick menu handle (back page)");
+			backHandle.assignImages(handle) if backHandleDrawn != handleDrawn;
+			backHandleDrawn = handleDrawn;
+			placeCopy(backHandle, handle);
+		} else if (backHandle !== void && isvalid backHandle) backHandle.visible = false;
+	}
+	function copyTo(copy, live, show) { return show && live !== void && isvalid live && live.visible; }
+	function newCopy(name)
+	{
+		var l = new global.Layer(window, window.back.base);
+		l.name = name;
+		l.hitType = htMask;
+		l.hitThreshold = 256; // a picture: no clicks
+		return l;
+	}
+	function placeCopy(copy, live)
+	{
+		copy.setSize(live.width, live.height) if copy.width != live.width || copy.height != live.height;
+		copy.setPos(live.left, live.top);
+		copy.opacity = live.opacity;
+		copy.absolute = live.absolute;
+		copy.visible = true;
+	}
+
+	// Left out of a copy of the fore page that's a picture of the scene: hideForCopy() hides
+	// what shows and returns it, showAfterCopy(that) shows it again (the screen isn't drawn between)
+	function hideForCopy()
+	{
+		var r = [];
+		if (layer !== void && isvalid layer && layer.visible) layer.visible = false, r.add(layer);
+		if (handle !== void && isvalid handle && handle.visible) handle.visible = false, r.add(handle);
+		return r;
+	}
+	function showAfterCopy(r)
+	{
+		if (r === void) return;
+		for (var i = 0; i < r.count; i++) r[i].visible = true if isvalid r[i];
 	}
 
 	//---------------------------------------------------------------- panels (QuickPanels.tjs) --
@@ -455,7 +541,7 @@ class KAGQuickMenu extends KAGPlugin
 	{
 		if (!show) { handle.visible = false if handle !== void; return; }
 		if (handle === void) {
-			handle = new KAGQuickMenuLayer(window, window.primaryLayer, this);
+			handle = new KAGQuickMenuLayer(window, window.fore.base, this);
 			handle.name = "Quick menu handle";
 		}
 		// at the strip's size (a finger's at the larger one)
@@ -466,6 +552,7 @@ class KAGQuickMenu extends KAGPlugin
 			handle.fillRect(0, 0, w, h, 0);
 			handle.fillRect(0, (int)(4 * k), w, h - (int)(4 * k), 0xc05025ff);
 			handle.fillRect((w - (int)(12 * k)) >> 1, (int)(7 * k), (int)(12 * k), (int)(3 * k), 0xffffffff);
+			handleDrawn++;
 		}
 		handle.absolute = layer.absolute;
 		handle.setPos(at[0] + ((layer.width - w) >> 1), at[1] + layer.height - h);

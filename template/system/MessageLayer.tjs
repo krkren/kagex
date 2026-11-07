@@ -2575,6 +2575,20 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	/*C*/var gradDir = "vertical"; // the gradients' direction ([font graddir])
 
+	/*CS*/var defaultTextAnim = ""; // how text moves by default ([deffont anim]): "", shake, wave, pulse, rainbow (since 0.23.0)
+
+	/*C*/var textAnim = ""; // how the text moves while it shows ([font anim])
+
+	/*C*/var textAnimSize = 0; // how far (px; 0: the motion's own) ([font animsize])
+
+	/*C*/var textAnimSpeed = 1.0; // how fast (1: the motion's own) ([font animspeed])
+
+	/*CS*/var defaultTextAppear = ""; // how each character comes in by default ([deffont appear]): "", fade, rise, drop, slide
+
+	/*C*/var textAppear = ""; // how each character comes in as it's drawn ([font appear])
+
+	/*C*/var textAppearTime = 0; // over so many ms (0: 400) ([font appeartime])
+
 	property hasTextGradient { getter { return chGradColor >= 0 || edgeGradColor >= 0 || shadowGradColor >= 0; } }
 
 	// the player's outline and shadow (Config's Text page, TextSettings.tjs; void: the game's
@@ -3390,6 +3404,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
         invalidate highlightLayer;
 
+		clearAnimChars();
+
+		invalidate animTimer if animTimer !== void;
+
         invalidate lineLayer;
 
         invalidate timeoutTimer if timeoutTimer !== void;
@@ -3785,6 +3803,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		termRects.clear(), termMark = void;
 
+		clearAnimChars();
+
 		// Display position to initial position
 
 		if(vertical)
@@ -3852,6 +3872,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		clearLayer(all);
 
 		termRects.clear(), termMark = void;
+
+		clearAnimChars();
 
 
 
@@ -3933,7 +3955,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		{
 
-			lineLayer.font.face = '@' + (fontFace = defaultFace == 'user' ? userFace : defaultFace);
+			lineLayer.font.face = KAGVerticalFace(fontFace = defaultFace == 'user' ? userFace : defaultFace);
 
 			lineLayer.font.angle = 2700;
 
@@ -3972,6 +3994,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 		shadowGradColor = defaultShadowGradColor;
 
 		gradDir = defaultGradDir;
+
+		textAnim = defaultTextAnim, textAnimSize = 0, textAnimSpeed = 1.0;
+
+		textAppear = defaultTextAppear, textAppearTime = 0;
 
 		// Calculate line break position
 
@@ -4051,7 +4077,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			{
 
-				var f = '@' + (fontFace = defaultFace);
+				var f = KAGVerticalFace(fontFace = defaultFace);
 
 				lineLayer.font.angle = 2700;
 
@@ -4063,7 +4089,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			{
 
-				var f = '@' + (fontFace = userFace);
+				var f = KAGVerticalFace(fontFace = userFace);
 
 				lineLayer.font.angle = 2700;
 
@@ -4075,7 +4101,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			{
 
-				var f = '@' + (fontFace = elmface);
+				var f = KAGVerticalFace(fontFace = elmface);
 
 				lineLayer.font.angle = 2700;
 
@@ -4209,6 +4235,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		else if (elm.graddir !== void) gradDir = elm.graddir;
 
+		// characters that move (since 0.23.0): a motion, "default" or "none"
+
+		if (elm.anim !== void) textAnim = elm.anim == 'default' ? defaultTextAnim : elm.anim == 'none' ? "" : elm.anim;
+
+		if (elm.animsize !== void) textAnimSize = elm.animsize == 'default' ? 0 : +elm.animsize;
+
+		if (elm.animspeed !== void) textAnimSpeed = elm.animspeed == 'default' ? 1.0 : +elm.animspeed;
+
+		if (elm.appear !== void) textAppear = elm.appear == 'default' ? defaultTextAppear : elm.appear == 'none' ? "" : elm.appear;
+
+		if (elm.appeartime !== void) textAppearTime = elm.appeartime == 'default' ? 0 : +elm.appeartime;
+
 
 
 		if(!vertical)
@@ -4260,6 +4298,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 		defaultShadowGradColor = gradAttribute(elm.shadowgradcolor, defaultShadowGradColor, -1);
 
 		defaultGradDir = elm.graddir if elm.graddir !== void && elm.graddir != 'default';
+
+		if (elm.anim !== void) defaultTextAnim = elm.anim == 'none' ? "" : elm.anim;
+
+		if (elm.appear !== void) defaultTextAppear = elm.appear == 'none' ? "" : elm.appear;
 
 	}
 
@@ -4498,6 +4540,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		styledRun = void;
 
 		termRectsLine.clear();
+
+		dropLineAnimChars();
 
 		resetLineSize();
 
@@ -4876,6 +4920,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		var lloy = lineLayerOriginY + getLineLayerTopOffset();
 
 		fixTermRects(llox, lloy);
+
+		fixAnimChars(llox, lloy);
 
 		var target =   hasTextLayer ? textLayer : this; // Drawing destination
 
@@ -5600,6 +5646,26 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			dx = int(lineLayerPos), dy = int(lineLayerBase-fontSize);
 
+		// (an engine that draws a vertical face upright from x, y: centred on the line; since 0.23.0)
+
+		var turned = false;
+
+		if (vert && global.KAGVerticalUpright(window)) {
+
+			dx = int(lineLayerBase - (cw >> 1));
+
+			// its punctuation as vertical text has it: the full stop and the comma at the top
+
+			// right of their cell, brackets and dashes turned a quarter (the engine has no
+
+			// vertical forms)
+
+			if (KAGVerticalCorner.indexOf(ch) >= 0) dx += int(fontSize * 0.55), dy -= int(fontSize * 0.55);
+
+			else turned = KAGVerticalTurned.indexOf(ch) >= 0;
+
+		}
+
 
 
 
@@ -5608,7 +5674,31 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var chColor = termMark !== void ? termMarkColor : shownChColor;
 
-		if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
+		// a character that moves (since 0.23.0): on a layer of its own (drawAnimChar)
+
+		var moving = !vert && (textAnim != "" || textAppear != "");
+
+		if (turned) {
+
+			if (styledRun !== void) flushStyledRun(), styledRun = void;
+
+			drawTurnedChar(ll, ch, chColor, cw);
+
+			lastFill = void;
+
+		}
+
+		else if (moving) {
+
+			if (styledRun !== void) flushStyledRun(), styledRun = void;
+
+			drawAnimChar(lineLayer, dx, dy, ch, chColor, cw);
+
+			lastFill = void;
+
+		}
+
+		else if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
 
 		else {
 
@@ -5658,7 +5748,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			{
 
-				rx = int(dx + rubySize + rubyOffset);
+				rx = global.KAGVerticalUpright(window) ? int(lineLayerBase + (fontSize >> 1) + rubyOffset) : int(dx + rubySize + rubyOffset);
 
 				ry = int(dy + (cw>>1) - (rw>>1));
 
@@ -6303,6 +6393,201 @@ class MessageLayer extends AnimKAGLayerTransMove
 		var attach = ll.useCache;
 		ll.drawStyledLayout(sl, r.x, r.y + r.baseLine + ascent);
 		for (var i = 0; i < r.underlines.count; i++) drawTermUnderline(ll, r.underlines[i]*);
+	}
+
+	// A character of vertical text turned a quarter, where the engine draws it upright (a
+	// bracket, a dash): drawn level on a layer of its own, then copied onto the line turned,
+	// centred on its cell (since 0.23.0)
+	function drawTurnedChar(ll, ch, color, cw) {
+		var pad = (fontSize >> 1) + 4, w = cw + pad * 2, h = fontSize + pad * 2;
+		var t = new global.Layer(window, window.primaryLayer);
+		try {
+			t.visible = false;
+			t.setImageSize(w, h);
+			t.face = dfAlpha;
+			t.fillRect(0, 0, w, h, 0);
+			t.font.face = global.KAGHorizontalFace(ll.font.face);
+			t.font.height = ll.font.height;
+			t.font.bold = ll.font.bold;
+			t.font.italic = ll.font.italic;
+			t.font.angle = 0;
+			var v = vertical;
+			vertical = false;
+			if (typeof t.useCache != "undefined") t.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun; no member without the plugin, as on the web)
+			try { drawTextToLayer(t, pad, pad, ch, color); } catch (e) { vertical = v; throw e; }
+			vertical = v;
+			// a quarter turn clockwise: (x, y) -> (-y + E, x + F), the picture's centre on the cell's
+			var cx = lineLayerBase, cy = lineLayerPos + (cw >> 1);
+			ll.face = dfAlpha;
+			ll.operateAffine(t, 0, 0, w, h, true, 0, 1, -1, 0, cx + (h >> 1), cy - (w >> 1), omAlpha, 255, stLinear);
+			ll.face = dfAuto;
+		} catch (e) {
+			dm("vertical text: " + e.message);
+		}
+		invalidate t;
+	}
+
+	// ---- characters that move (since 0.23.0) ---------------------------------------------------
+	// [font anim=shake|wave|pulse|rainbow] keeps the characters drawn after it moving while the
+	// page shows; [font appear=fade|rise|drop|slide] brings each in as it's drawn. Such a
+	// character is drawn on a layer of its own (rainbow: once in each of its colours, side by
+	// side, the layer showing one at a time), a child of this layer over where it would have
+	// been drawn: placed by the line layer while its line is being drawn (the line moves as an
+	// aligned line grows), then where fixLineLayer puts the line. Reduce Motion holds them still,
+	// skipping brings them in at once; vertical text doesn't move.
+	var animChars = [];     // %[ layer, lx, ly (on the line), ox, oy (the line's place, once fixed), fixed, anim, size, speed, appear, time, born, index, cells, cellW ]
+	var animSerial = 0;     // each character's place in the page (a wave runs along them)
+	var animTimer;
+	var animHues = 12;      // a rainbow's colours
+	function drawAnimChar(ll, dx, dy, ch, color, cw) {
+		var pad = (fontSize >> 1) + 8; // room for the outline, the shadow and an italic's lean
+		var w = cw + pad * 2, h = ll.imageHeight;
+		var rainbow = textAnim == "rainbow";
+		var cells = rainbow ? animHues : 1;
+		var lay = new global.KAGLayer(window, this); // (beside the line layer, in its coordinates)
+		with (lay) {
+			.name = name + ":Moving Char";
+			.hitType = htMask;
+			.hitThreshold = 256; // the pointer goes through
+			.type = layerType;
+			.setImageSize(w * cells, h);
+			.setSize(w, h);
+			.face = dfAlpha;
+			.fillRect(0, 0, w * cells, h, 0);
+			with (.font) {
+				.face = ll.font.face;
+				.height = ll.font.height;
+				.bold = ll.font.bold;
+				.italic = ll.font.italic;
+				.angle = ll.font.angle;
+			}
+		}
+		if (typeof lay.useCache != "undefined") lay.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun; no member without the plugin, as on the web)
+		for (var i = 0; i < cells; i++) drawTextToLayer(lay, pad + w * i, dy, ch, rainbow ? animHue(i / cells) : color);
+		var a = %[ layer:lay, lx:dx - pad, ly:0, ox:0, oy:0, fixed:false, anim:textAnim, speed:textAnimSpeed,
+			appear:textAppear, time:window.skipMode ? 0 : (textAppearTime > 0 ? textAppearTime : 400),
+			born:System.getTickCount(), index:animSerial++, cells:cells, cellW:w ];
+		a.size = textAnimSize > 0 ? textAnimSize : animDefaultSize(textAnim);
+		animChars.add(a);
+		placeAnimChar(a, a.born);
+		lay.visible = true;
+		if (animTimer === void) { animTimer = new Timer(onAnimTimer, ""); animTimer.interval = 33; }
+		animTimer.enabled = true;
+	}
+	function animDefaultSize(kind) {
+		if (kind == "shake") return Math.max(2, fontSize \ 14);
+		if (kind == "wave") return Math.max(3, fontSize \ 6);
+		return 0;
+	}
+	// a hue (0 to 1) as 0xRRGGBB, bright and a little soft
+	function animHue(h) {
+		var r = 0, g = 0, b = 0, k = (h * 6) % 6, f = k - (int)k, s = 0.7;
+		var q = 1 - s * f, t = 1 - s * (1 - f), p = 1 - s;
+		switch ((int)k) {
+		case 0: r = 1, g = t, b = p; break;
+		case 1: r = q, g = 1, b = p; break;
+		case 2: r = p, g = 1, b = t; break;
+		case 3: r = p, g = q, b = 1; break;
+		case 4: r = t, g = p, b = 1; break;
+		default: r = 1, g = p, b = q; break;
+		}
+		return ((int)(r * 255) << 16) | ((int)(g * 255) << 8) | (int)(b * 255);
+	}
+	function placeAnimChar(a, now) {
+		var lay = a.layer;
+		if (!isvalid lay) return;
+		var bx = a.fixed ? a.ox : lineLayer.left, by = a.fixed ? a.oy : lineLayer.top;
+		var x = 0, y = 0, op = 255;
+		var still = typeof global.KAGReduceMotion != "undefined" && global.KAGReduceMotion();
+		var t = now - a.born, sec = now * a.speed / 1000;
+		if (!still && a.appear != "" && a.time > 0 && t < a.time) {
+			var k = t / a.time, e = 1 - (1 - k) * (1 - k) * (1 - k), d = 1 - e;
+			switch (a.appear) {
+			case "rise":  y = (int)(d * fontSize * 0.7); break;
+			case "drop":  y = -(int)(d * fontSize * 0.9); break;
+			case "slide": x = (int)(d * fontSize * 1.2); break;
+			}
+			op = (int)(255 * k);
+		}
+		if (!still) {
+			switch (a.anim) {
+			case "shake":
+				x += (int)(Math.random() * (a.size * 2 + 1)) - a.size;
+				y += (int)(Math.random() * (a.size * 2 + 1)) - a.size;
+				break;
+			case "wave":
+				y -= (int)(a.size * Math.sin(sec * Math.PI * 2 * 0.8 - a.index * 0.55));
+				break;
+			case "pulse":
+				op = (int)(op * (0.5 + 0.5 * (0.5 + 0.5 * Math.cos(sec * Math.PI * 2 * 0.7 - a.index * 0.35))));
+				break;
+			}
+		}
+		if (a.cells > 1) {
+			var c = still ? a.index % a.cells : (int)(sec * 3 + a.index * 0.6) % a.cells;
+			lay.imageLeft = -c * a.cellW;
+		}
+		lay.setPos(bx + a.lx + x, by + a.ly + y);
+		lay.opacity = op;
+	}
+	function onAnimTimer() {
+		if (animChars.count == 0) { animTimer.enabled = false; return; }
+		if (!visible) return;
+		var now = System.getTickCount();
+		for (var i = 0; i < animChars.count; i++) placeAnimChar(animChars[i], now);
+	}
+	// the line's characters go where fixLineLayer puts the line
+	function fixAnimChars(llox, lloy) {
+		for (var i = 0; i < animChars.count; i++) {
+			var a = animChars[i];
+			if (a.fixed) continue;
+			a.fixed = true, a.ox = llox, a.oy = lloy;
+			placeAnimChar(a, System.getTickCount());
+		}
+	}
+	// a line drawn again from its start (or never placed): its characters go
+	function dropLineAnimChars() {
+		for (var i = animChars.count - 1; i >= 0; i--) {
+			var a = animChars[i];
+			if (a.fixed) continue;
+			invalidate a.layer if isvalid a.layer;
+			animChars.erase(i);
+		}
+	}
+	function clearAnimChars() {
+		for (var i = 0; i < animChars.count; i++) invalidate animChars[i].layer if isvalid animChars[i].layer;
+		animChars.clear();
+		animSerial = 0;
+		animTimer.enabled = false if animTimer !== void;
+	}
+	// the other page's copy ([backlay], [forelay]): the same characters, moving the same way
+	function copyAnimChars(src) {
+		clearAnimChars();
+		if (typeof src.animChars != "Object" || src.animChars === void) return;
+		for (var i = 0; i < src.animChars.count; i++) {
+			var sa = src.animChars[i];
+			if (!isvalid sa.layer) continue;
+			var a = %[];
+			(Dictionary.assign incontextof a)(sa);
+			var lay = new global.KAGLayer(window, this);
+			lay.name = sa.layer.name;
+			lay.hitType = htMask;
+			lay.hitThreshold = 256;
+			lay.type = sa.layer.type;
+			lay.assignImages(sa.layer);
+			lay.setSize(sa.layer.width, sa.layer.height);
+			lay.imageLeft = sa.layer.imageLeft;
+			lay.setPos(sa.layer.left, sa.layer.top);
+			lay.opacity = sa.layer.opacity;
+			lay.visible = true;
+			a.layer = lay;
+			animChars.add(a);
+		}
+		animSerial = src.animSerial;
+		if (animChars.count > 0) {
+			if (animTimer === void) { animTimer = new Timer(onAnimTimer, ""); animTimer.interval = 33; }
+			animTimer.enabled = true;
+		}
 	}
 
 	// ---- the glossary's words (Glossary.tjs; since 0.22.0) ------------------------------------
@@ -6977,7 +7262,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var organgle = lf.angle;
 
-		lf.face = orgfont.substring(1); // Remove leading @ mark
+		lf.face = global.KAGHorizontalFace(orgfont); // Remove the @ marks (each face's, since 0.23.0)
 
 		lf.angle = 0;
 
@@ -10118,6 +10403,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		termRects.assignStruct(src.termRects), termRectsLine.assignStruct(src.termRectsLine), termMark = src.termMark;
 
+		copyAnimChars(src);
+
         
 
 		// Copy links
@@ -10510,6 +10797,20 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		gradDir = src.gradDir;
 
+		defaultTextAnim = src.defaultTextAnim;
+
+		textAnim = src.textAnim;
+
+		textAnimSize = src.textAnimSize;
+
+		textAnimSpeed = src.textAnimSpeed;
+
+		defaultTextAppear = src.defaultTextAppear;
+
+		textAppear = src.textAppear;
+
+		textAppearTime = src.textAppearTime;
+
 		sizeChanged = src.sizeChanged;
 
 		nextClearFlag = src.nextClearFlag;
@@ -10824,6 +11125,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		dic.defaultGradDir = defaultGradDir;
 
+		dic.defaultTextAnim = defaultTextAnim;
+
+		dic.defaultTextAppear = defaultTextAppear;
+
 		dic.defaultAutoReturn = defaultAutoReturn;
 
 		dic.lineBreakGlyph = lineBreakGlyph;
@@ -10959,6 +11264,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 		defaultShadowGradColor = dic.defaultShadowGradColor if dic.defaultShadowGradColor !== void;
 
 		defaultGradDir = dic.defaultGradDir if dic.defaultGradDir !== void;
+
+		defaultTextAnim = dic.defaultTextAnim if dic.defaultTextAnim !== void;
+
+		defaultTextAppear = dic.defaultTextAppear if dic.defaultTextAppear !== void;
 
 		defaultAutoReturn = dic.defaultAutoReturn if dic.defaultAutoReturn !== void;
 

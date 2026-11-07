@@ -1360,7 +1360,7 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
-book and multiripple (since 0.18.0) and rgbfade, zoomfade and spin (since 0.18.1) are drawn by kagex itself (ScriptTransitions.tjs): extNagano's, as rebuilt, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way, multiripple brings the old picture back halfway, rgbfade's colours each take the shortest one's time, zoomfade's zoom is jagged and spin's box doesn't turn. They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns, ripples, zooms or changes colour over the stage. They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
+book and multiripple (since 0.18.0) and rgbfade, zoomfade and spin (since 0.18.1) are drawn by kagex itself (ScriptTransitions.tjs): extNagano's, as rebuilt, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way, multiripple brings the old picture back halfway, rgbfade's colours each take the shortest one's time, zoomfade's zoom is jagged and spin's box doesn't turn. They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns, ripples, zooms or changes colour over the stage. The page itself ([trans] of the base layer) is opaque, the bottom of the screen: its pictures are taken opaque (since 0.23.0: they kept the message window's see-through alpha, and the window's inside came out black through the transition). They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
 
     class MyTransition extends KAGScriptTransitionEffect {
         function MyTransition(owner) { super.KAGScriptTransitionEffect(owner); }
@@ -3179,6 +3179,15 @@ history, nor while the message window is hidden.
                  at level=message, such as the Effects demo's static; 3500000, over every
                  window, up to 0.19.0)
 
+The strip is a layer of the fore page, beside the message windows and the World's layers (since
+0.23.0: up to 0.22.0 it was on the primary layer, over the whole page, so the static of a World
+layer at level=message covered the window but not its buttons). While the back page's first
+message window shows, the back page has a picture of the strip in the same place, so a
+transition of the page doesn't fade it out ([backlay] copies the window, and the strip goes on
+with it); when a transition exchanges the pages, the strip moves on to the new fore page. A save's
+thumbnail leaves it out (captureSnapshot); kag.quickMenu.hideForCopy() and showAfterCopy(r) do
+the same for a game's own copy of the fore page.
+
 The sample's message window buttons are its quick menu, along the bottom of the window's panel
 at its right (since 0.20.0; on its top edge before, where they ran past the window's end):
 icons for moving through the story (the scene before, the last choice, rewind, back a line,
@@ -3680,6 +3689,55 @@ the game's colour.
 
 The sample marks KAGEX, the World and Pip (and their Japanese), and its Extras has a fifth tab,
 Glossary (glossary.ks): the terms met, a "?" for the others, and the one chosen beside them.
+
+● Text Effects
+
+The sample's Text Effects demo (data/scenario/text.ks, since 0.23.0) shows, a page each, what a
+message window does with its text: colour, size, weight and slant, another font ([font face=]),
+outlines and shadows, gradients, ruby, pictures in a line ([graph char=false]: a picture as it is;
+char=true, the default, draws its shape in the text's colour), alignment, letter and line
+spacing ([style align= pitch= linespacing=]), indents, speed and pauses ([delay], [nowait],
+[wait], [l] in the middle of a line), characters that move and come in (below), a name shown as
+another for a line (【ai/A Voice】), [emb], the glossary's marks, a window style ([env
+msgstyle=]) and vertical text.
+
+Characters that move (since 0.23.0): the characters drawn after these keep moving while the page
+shows, until [resetfont]:
+
+    [font anim=wave]rolls like the sea[resetfont]
+    [font anim=shake animsize=6 color=0xff9090]Eek![resetfont]
+    [font appear=drop anim=wave]comes in, then keeps moving[resetfont]
+
+  anim         shake (each character jumps about), wave (a wave runs along them), pulse (they
+               fade and come back, one after another), rainbow (each runs through the colours);
+               none or "" stops (default: [deffont anim=]'s)
+  animsize     how far a shake or a wave goes, in px (default: a sixth of the size for a wave,
+               a fourteenth for a shake)
+  animspeed    how fast (1: the motion's own)
+  appear       how each character comes in as it's drawn: fade, rise (from below), drop (from
+               above), slide (from the right), over appeartime ms (400)
+
+[deffont anim= appear=] sets them for the window. Each such character is drawn on a small layer of
+its own over where it would have been drawn (a rainbow's once in each of its twelve colours,
+side by side, the layer showing one at a time); [backlay] copies them to the back page, so a
+transition keeps them. Reduce Motion (Config) holds them still and brings them in at once, and
+skipping brings them in at once. Vertical text doesn't move. The history shows the text plainly.
+
+Vertical text ([position vertical=true]): since 0.23.0 it lays out on the SDL engines too.
+KAG put one "@" before the window's face, which since 0.0.x is a list, and the engine found no
+font for "@Noto Sans JP,Roboto": every character was the icon font's arrow, 0 wide, drawn on the
+last. KAGVerticalFace(list) puts it before each face (KAGHorizontalFace takes it off again, for
+[hch]). The SDL engines draw a vertical face's characters upright from the point given, as
+horizontal text, not as Windows GDI does (left of it), which KAG was written for:
+KAGVerticalUpright(window) finds out which once, and on such an engine each character is centred
+on its line, the full stop and the comma go to the top right of their cell (KAGVerticalCorner)
+and brackets and dashes are drawn turned a quarter (KAGVerticalTurned), as vertical forms are.
+
+A [style] given before a line's text in a line mode outlives the clear before the text, as a
+[font] has since 0.22.0 (kag.clearForLine re-applies both). In Japanese and Chinese a character
+that may not start a line (。、」...) isn't broken before in the middle of a line: it hangs into
+the margin, as KAG's own wrap lets it (the text after an [emb] is a piece of its own, and the
+line breaker put its 。 at the start of the next line).
 
 ● The Name Box
 

@@ -569,6 +569,64 @@ function KAGMovieOpened(temp)
 }
 
 
+// A face list for vertical text: "@" before each face (KAG put one before the whole list, and
+// since the faces became lists, "@Noto Sans JP,Roboto" found no font: vertical text drew the
+// icon font's arrows, 0 wide, every character on the last; since 0.23.0)
+function KAGVerticalFace(face)
+{
+	var list = ((string)face).split(","), r = [];
+	for (var i = 0; i < list.count; i++) {
+		var f = list[i].trim();
+		if (f == "") continue;
+		r.add(f.charAt(0) == "@" ? f : "@" + f);
+	}
+	return r.join(",");
+}
+// and the same list for horizontal text again ([hch] in a vertical line)
+function KAGHorizontalFace(face)
+{
+	var list = ((string)face).split(","), r = [];
+	for (var i = 0; i < list.count; i++) {
+		var f = list[i].trim();
+		if (f == "") continue;
+		r.add(f.charAt(0) == "@" ? f.substring(1) : f);
+	}
+	return r.join(",");
+}
+
+// Whether this engine draws a vertical face's characters upright from x, y, as it draws
+// horizontal text (the SDL engines: the ink right of x and below y), rather than as Windows
+// GDI does, which KAG was written for (the ink left of x): measured once. Vertical text is
+// placed by it (MessageLayer.processCh); up to 0.22.0 every character came out a character's
+// width right of its line, cut off by the line layer
+var KAGVerticalUprightKnown = void;
+// vertical text's punctuation, where the engine draws it upright (MessageLayer.processCh): the
+// characters at the top right of their cell, and those turned a quarter
+var KAGVerticalCorner = "、。，．";
+var KAGVerticalTurned = "「」『』（）()［］[]【】〈〉《》〔〕｛｝ー－—―‐-〜～…‥＝=：:";
+function KAGVerticalUpright(win)
+{
+	if (KAGVerticalUprightKnown !== void) return KAGVerticalUprightKnown;
+	var r = false;
+	try {
+		var l = new global.Layer(win, win.primaryLayer);
+		l.visible = false;
+		l.setImageSize(120, 120);
+		l.fillRect(0, 0, 120, 120, 0);
+		l.font.face = "@Roboto";
+		l.font.angle = 2700;
+		l.font.height = 40;
+		l.drawText(60, 20, "H", 0xffffff, 255, false);
+		var right = 0, left = 0;
+		for (var y = 0; y < 120; y += 2) for (var x = 0; x < 120; x += 2) if (l.getMaskPixel(x, y) > 0) { if (x >= 60) right++; else left++; }
+		r = right > left;
+		invalidate l;
+	} catch (e) {
+		dm("vertical text: " + e.message);
+	}
+	return KAGVerticalUprightKnown = r;
+}
+
 function KAGShrinkCopy(dst, dx, dy, dw, dh, src, sx, sy, sw, sh, type = stLinear)
 
 {

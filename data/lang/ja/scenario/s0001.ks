@@ -16,6 +16,8 @@
 
 [seladd text="ワールド拡張：アニメキャラクタ" storage=anim.ks]
 
+[seladd text="テキストの効果" storage=text.ks]
+
 [seladd text="クレジット" storage=credits.ks]
 [select]
 

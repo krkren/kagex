@@ -958,7 +958,7 @@ class AnimationLayer extends AffineLayer
 		with(font)
 		{
 			var face = elm.face === void ? Anim_defaultFontInfo.face : elm.face;
-			if(vertical) face = '@' + face;
+			if(vertical) face = KAGVerticalFace(face);
 			.face = face;
 			.height = elm.size === void ? Anim_defaultFontInfo.height : +elm.size;
 			.angle = elm.angle === void ? vertical ? 2700:0 : +elm.angle;

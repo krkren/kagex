@@ -214,16 +214,20 @@ They step apart for something in the middle...
 ; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
 ; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies).
 ; [memory] (macro.ks, since 0.22.0) gives it bars, a sepia edge and the memories' message window
-; ([env msgstyle=memory], the style AfterInit.tjs defines), which [env restore] takes away again
+; ([env msgstyle=memory], the style AfterInit.tjs defines), which [env restore] takes away again.
+; The changes go between [begintrans] and [endtrans trans=normal], so the memory fades in as one,
+; window included, and [env restore trans=normal] fades from the memory back to the street (0.23.0)
 [bgm01]
 [ai standard happy center]
 [pip standard neutral posright]
 Ai and Pip on the street, as they are now.
 [env keep]
+[begintrans]
 [pip hide]
-[ai posleft sad]
+[ai sad]
 [memory]
-[env grayscale=true trans=normal]
+[env grayscale=true]
+[endtrans trans=normal]
 A memory, in grey: Ai, long ago, on her own.
 [env restore trans=normal]
 And back to now, just as it was, with the music still playing.

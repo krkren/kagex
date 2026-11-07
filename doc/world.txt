@@ -1216,7 +1216,10 @@ keep it, and [env init] goes back to normal:
 
 The page on the screen takes the new frame at once, and is drawn again in it where its window
 records the page (a game with more than one language, or a window that follows the opacity), so
-a language switch or [env restore] doesn't bring the old frame back. KAGMessageStyleLayer says
+a language switch or [env restore] doesn't bring the old frame back. Behind a global transition
+([begintrans] ... [endtrans trans=...], [env restore trans=...]) the back page's window takes it
+first and the other one when the pages are exchanged, so the window changes with the scene, in
+the same transition (since 0.23.0). KAGMessageStyleLayer says
 which message window the styles are for (0: message0). KAGDefineMessageStyleOptions() makes the
 Config rows ("msgStyleTint:<style>": As Drawn, or Other… for the colour picker) and returns their
 names, for a page's column. The sample's flashback in the Character demo puts a sepia window
@@ -1234,14 +1237,24 @@ phone screen or a dream:
 
     [env keep]                    the stage and time, the characters (pose, outfit, face, place,
                                   level), the layers, the camera and the colour corrections
+    [begintrans]                  the flashback's changes, drawn behind one transition:
+    [pip hide][ai sad][memory]
+    [env grayscale=true]
+    [endtrans trans=normal]       ... into the memory
     ... the flashback ...
     [env restore trans=normal]    all of it back, while the music and looping sounds play on
+
+With a transition (trans=, fade= or a transition's name in the tag), or inside [begintrans],
+[env restore] is one transition from the screen as it is to the scene it brings back: the
+flashback stays on the front page, its objects' pictures with it until the transition ends, while
+the kept scene is drawn behind it (since 0.23.0; before, the screen went black at once and the
+scene faded in from black). Without one it comes back at once.
 
 [env keep=<name>] keeps a named copy, which [env restore=<name>] brings back as often as wanted
 until [env drop=<name>]; plain keep and restore are a stack (the last kept comes back first).
 With sound=true the copy has the music and sounds too, and restoring it plays them as they were.
 The copies are part of the World's state: saves, Back and compiled scenes keep them. The Character
-demo's "A Flashback" scene keeps the street, plays a memory in grey and comes back.
+demo's "A Flashback" scene keeps the street, fades into a memory in grey and fades back.
 
 
 

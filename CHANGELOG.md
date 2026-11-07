@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.23.0
+
+### Added
+
+- **A Text Effects demo**: the sample's demo menu has a ninth demo, a page each for what a message window does with its text: colour, size, weight and slant, another font, outlines and shadows, gradients, ruby, pictures in a line, alignment, letter and line spacing, indents, speed and pauses, characters that move and come in, a name shown as another, `[emb]`, the glossary's marks, a window style and vertical text (`text.ks`, in English and Japanese; Replay lists it under Effects).
+- **Characters that move**: `[font anim=shake|wave|pulse|rainbow animsize= animspeed=]` keeps the characters after it moving while the page shows, and `[font appear=fade|rise|drop|slide appeartime=]` brings each in as it's drawn (`[deffont]` for the window's default). Each is drawn on a small layer of its own; `[backlay]` copies them, Reduce Motion holds them still and skipping brings them in at once.
+
+### Fixed
+
+- **The quick menu's buttons showed over the TV static**: the strip was on the primary layer, over the whole fore page, so a World layer at `level=message` (the Effects demo's static) covered the message window but not its buttons. The strip is on the fore page now, at the first message window's level plus 100, with a picture of it on the back page so a transition doesn't fade it out, and a save's thumbnail leaves it out.
+- **Vertical text**: KAG put one `@` before the window's face, which is a list, and no font was found, so every character was an arrow 0 wide, drawn on the last; and the SDL engines draw a vertical face upright from the point given, where Windows draws it to the left, so the characters came out a character's width off their line. Each face gets its `@` (`KAGVerticalFace`), the characters are centred on the line, and the full stop and the comma go to the top right of their cell and brackets and dashes are turned a quarter, as vertical forms are.
+- **A `[style]` at the start of a line was lost in a line mode**, as a `[font]` was up to 0.22.0: it's kept through the clear before the line's text now (`kag.clearForLine`).
+- **A 。 after an `[emb]` could start a line in Japanese**: the line breaker planned the text after the `[emb]` on its own and broke before its 。; a character that may not start a line hangs into the margin in the middle of a line now.
+- **A script-drawn transition of the whole page** (zoomfade, rgbfade, book, multiripple, spin) showed the message window's inside black: the page's pictures kept the window's see-through alpha. They're opaque now.
+- **A compiled scene's title in the corner** showed in the source language whatever language was shown.
+- **The Character demo's flashback jumped into place and back**: Pip faded out first, then the bars, the sepia edge, the memory's window and Ai's move came at once; at its end the screen went black at once and the street faded in from black. The memory's changes now go between `[begintrans]` and `[endtrans trans=normal]`, so it comes in as one crossfade (Ai stays where she stands), and `[env restore]` with a transition (`trans=`, `fade=`, a transition's name, or inside `[begintrans]`) keeps the scene on the screen in front while it draws the kept one behind it, for one crossfade from the one to the other. A message window style set behind a global transition goes on the back page's window first and on the other once the pages are exchanged, so the window changes in the same crossfade.
+
 ## 0.22.0
 
 ### Added

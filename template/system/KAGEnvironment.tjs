@@ -350,14 +350,25 @@ class KAGEnvironment extends KAGEnvTrans {
 		messageStyle = name === void || name == "" || name == "normal" ? void : name;
 		applyMessageStyle();
 	}
-	// shown on the message window (not by the scene compiler's World)
+	// shown on the message window (not by the scene compiler's World); behind a global transition
+	// ([begintrans], [env restore trans=...]) on the back page's window only, and on the other
+	// one once the pages are exchanged (onExchangeForeBack), so the window changes with the scene
+	var styleAfterTrans = false;
 	function applyMessageStyle()
 	{
 		if (this instanceof "KAGEnvForParse" || typeof global.KAGApplyMessageStyle == "undefined") return;
-		global.KAGApplyMessageStyle(messageStyle);
+		if (transMode > 0 || restoringBehind) {
+			global.KAGApplyMessageStyle(messageStyle, "back");
+			styleAfterTrans = true;
+		} else {
+			global.KAGApplyMessageStyle(messageStyle);
+		}
 	}
 	var keptScenes = [];       //< [env keep]: the World as it was, last kept last (World state)
 	var keptNamed = %[];       //< [env keep=<name>]
+	var restoringBehind = false; //< [env restore] behind a global transition: the front page keeps the scene as it is
+	var restorePrepared = false; //< [env restore trans=...] made the transition's pages ready (beginEnvTrans doesn't again)
+	var transLeftovers = [];   //< the front page's pictures of objects a restore dropped, until the transition ends
 
     // Enable expression display simultaneously with standing sprites
     var bothFace;
@@ -1192,6 +1203,9 @@ class KAGEnvironment extends KAGEnvTrans {
 		faceWindowOff = false;
 		if (messageStyle !== void) { messageStyle = void; applyMessageStyle(); }
 
+		// behind a transition ([env restore trans=...]) the front page keeps showing them
+		keepForeLayers() if restoringBehind;
+
 		// Discard character info
 		var count = characterList.count;
 		for (var i=0;i<count;i++) {
@@ -1548,9 +1562,14 @@ class KAGEnvironment extends KAGEnvTrans {
 	 * For special global transition starts
 	 */
 	function beginEnvTrans(elm) {
-		kag.stopAllTransitions();
-		kag.backupLayer(EMPTY, true);
-		prepareTransition();
+		if (restorePrepared) {
+			// [env restore trans=...] made the pages ready before it restored the scene
+			restorePrepared = false;
+		} else {
+			kag.stopAllTransitions();
+			kag.backupLayer(EMPTY, true);
+			prepareTransition();
+		}
 		update(BACKBASE);
         return 0;
     }
@@ -1999,6 +2018,12 @@ class KAGEnvironment extends KAGEnvTrans {
 	 */
 	function breakTransition() {
 		//dm("Interrupting transition");
+		restorePrepared = false;
+		dropTransLeftovers();
+		if (styleAfterTrans) {
+			styleAfterTrans = false;
+			if (typeof global.KAGApplyMessageStyle != "undefined") global.KAGApplyMessageStyle(messageStyle);
+		}
 		stage.breakTransition();
 		event.breakTransition();
 @if (KAGENV_OVERLAYER)
@@ -2019,6 +2044,12 @@ class KAGEnvironment extends KAGEnvTrans {
 	 */
 	function onExchangeForeBack() {
 		//dm("After transition completion");
+		dropTransLeftovers();
+		if (styleAfterTrans) {
+			// the window that was in front takes the style the other one changed to
+			styleAfterTrans = false;
+			if (typeof global.KAGApplyMessageStyle != "undefined") global.KAGApplyMessageStyle(messageStyle, "back");
+		}
 		event.doneAllTransition();
 		stage.doneAllTransition();
 @if (KAGENV_OVERLAYER)
@@ -2592,13 +2623,64 @@ class KAGEnvironment extends KAGEnvTrans {
 			f = keptNamed[name];
 			if (f === void) { error("[env restore=" + name + "]: no scene kept by that name"); return; }
 		}
+		// with a transition in the tag (trans=, fade=, a transition's name) or inside [begintrans],
+		// the scene on screen stays there and the kept one is drawn behind it, for one transition
+		// from the one to the other (it went to black at once before, and faded in from there)
+		var behind = false;
+		if (!skipNoDisp) {
+			if (transMode > 0) behind = true;
+			else {
+				var tr = tagTransition(elm);
+				if (tr !== void && !(kag.effectspeed == 0 || (tr.method !== void && tr.time == 0))) {
+					kag.stopAllTransitions();
+					kag.backupLayer(EMPTY, true);
+					prepareTransition();
+					restorePrepared = behind = true;
+				}
+			}
+		}
 		// the copies outlive the restore, which takes the World back to what f had
-		var stack = [], named = %[];
+		var stack = [], named = %[], mode = transMode;
 		stack.assign(keptScenes);
 		(Dictionary.assign incontextof named)(keptNamed);
+		restoringBehind = behind;
 		onRestore(f, true, %[ keepsound:f.keptSilent ]);
+		restoringBehind = false;
+		transMode = mode;
 		keptScenes.assign(stack);
 		(Dictionary.assign incontextof keptNamed)(named);
+	}
+
+	// the transition a tag asks for (as checkTrans and setupTrans find it), or void
+	function tagTransition(elm) {
+		var names = [], tr;
+		names.assign(elm);
+		for (var i = 0; i < names.count; i += 2) {
+			var cmd = names[i], param = names[i + 1];
+			if (cmd == "tagname" || cmd == "taglist") continue;
+			var t = cmd == "trans" ? (typeof param == "Object" && param instanceof "Dictionary" ? param : getTrans(param, elm)) : getTrans(cmd, elm);
+			tr = t if t !== void;
+		}
+		if (tr === void && elm.fade) tr = %[ method:"crossfade", time:+elm.fade > 1 ? +elm.fade : 500 ];
+		return tr;
+	}
+
+	// a restore behind a transition: the dropped objects' front pictures stay until it ends
+	function keepForeLayers() {
+		for (var i = 0; i < characterList.count; i++) keepForeLayer(characterList[i]);
+		for (var i = 0; i < layerList.count; i++) keepForeLayer(layerList[i]);
+	}
+	function keepForeLayer(o) {
+		if (o.alltransLayer === void) return;
+		transLeftovers.add(o.alltransLayer);
+		o.alltransLayer = void;
+	}
+	function dropTransLeftovers() {
+		for (var i = 0; i < transLeftovers.count; i++) {
+			var l = transLeftovers[i];
+			invalidate l if l !== void && isvalid l;
+		}
+		transLeftovers.clear();
 	}
 
 	function dropScene(param) {

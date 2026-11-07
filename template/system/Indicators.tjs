@@ -241,7 +241,12 @@ class KAGIndicators extends KAGPlugin
 			var p = world_object.player, scene = p.curSceneName;
 			if (scene !== void && scene != lastScene) {
 				lastScene = scene;
+				// (in the language shown: up to 0.22.0 always the source language's)
 				var title = p.title;
+				if (typeof p.titles == "Object" && p.titles !== void && typeof global.KAGLanguage == "Object" && global.KAGLanguage !== void) {
+					var t = p.titles[global.KAGLanguage.current];
+					title = t if t !== void && t != "";
+				}
 				if (title !== void && title != "" && window.conductor === window.mainConductor) showChapter(title);
 			}
 		}

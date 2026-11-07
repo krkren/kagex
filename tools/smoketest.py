@@ -702,7 +702,7 @@ class WebEngine(Engine):
             self.console.close()
 
 
-DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks", "anim.ks"]
+DEMOS = ["layer.ks", "char.ks", "envlayer.ks", "transition.ks", "action.ks", "effect.ks", "anim.ks", "text.ks"]
 
 
 def collector():
@@ -3786,12 +3786,18 @@ def sample_steps(eng):
         eng.tjs(env + 'global.__smokeFlipObj = f; e.unknown("smokestatic", %[flipupdate:"true", staticfps:"10"]);'
                 ' e.unknown("smokestatic", %[grayscale:"true"]); return 1;')
         time.sleep(0.5)
+        # (the strip made if the game has one and it hasn't shown yet: it's made where it shows)
+        eng.tjs('var q = typeof kag.quickMenu == "Object" ? kag.quickMenu : void;'
+                ' if (q !== void && q.layer === void && typeof q.list != "undefined" && q.list().count > 0) q.build(); return 1;')
         r = str(eng.tjs(env + 'var m = kag.fore.messages; return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
                         ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0,'
                         ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0,'
-                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too
+                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too:
+                        # among the same layers (absolute orders siblings only: up to 0.22.0 the strip was on the
+                        # primary layer, over the whole fore page, and passed by its number alone)
                         ' typeof kag.quickMenu != "Object" || kag.quickMenu === void || kag.quickMenu.layer === void'
-                        '  || typeof kag.quickMenu.level == "undefined" || kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
+                        '  || typeof kag.quickMenu.level == "undefined"'
+                        '  || kag.quickMenu.layer.parent === t.parent && kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
         print("     on a World layer: %s" % r, flush=True)
         eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
         if r != "static,1,10,4,1,1,1":
@@ -4463,14 +4469,44 @@ def sample_steps(eng):
         eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
         eng.tjs('kag.process("char.ks", "*flashback"); return 1;')
         now = "ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01"
-        memory = "ai@-480:sad grey=true kept=1 bgm=bgm01"
+        memory = "ai@%s:sad grey=true kept=1 bgm=bgm01" % ("-480" if eng.tjs('return typeof world_object.env.transLeftovers != "undefined" ? 1 : 0;') != 1 else "0")
         line("the scene", now)
+        # since 0.23.0 the flashback comes and goes in one transition each: the window's style
+        # changes behind it (the back page's window first), and [env restore trans=normal] keeps
+        # the memory on the front page (transLeftovers) while the scene comes back behind it,
+        # where it went to black at once before
+        fades = eng.tjs('return typeof world_object.env.transLeftovers != "undefined" ? 1 : 0;') == 1
+        # the pages' layers, but for name boxes (a message layer makes one when a name first shows)
+        pages = ('(function() { var r = [], p = [kag.fore.base, kag.back.base];'
+                 ' for (var j = 0; j < 2; j++) { r.add(j ? "| back:" : "front:");'
+                 '  for (var i = 0; i < p[j].children.count; i++) { var c = p[j].children[i]; if (c.name.indexOf(":Name") < 0) r.add(c.name + (c.visible ? "" : "(hidden)")); } }'
+                 ' return r.join(" "); })()')
+        before = str(eng.tjs("return " + pages + ";"))
         eng.tjs("kag.onPrimaryClick(); return 1;")
+        if fades:
+            eng.wait("the flashback's transition, the memory's window behind it",
+                         '(kag.fore.base.inTransition && kag.back.messages[0].frameGraphic == "messagewindow_memory"'
+                         ' && kag.fore.messages[0].frameGraphic == "messagewindow") ? 1 : 0', timeout=10, interval=0.05)
+            print("     into the memory: one transition, the window's style with it", flush=True)
         line("[env keep], a grey flashback", memory)
         eng.tjs("kag.saveBookMark(5); return 1;")
         eng.wait("data5 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(5))", timeout=10)
         eng.tjs("kag.onPrimaryClick(); return 1;")
+        if fades:
+            eng.wait("[env restore]'s transition from the memory still on the front page",
+                     '(kag.fore.base.inTransition && world_object.env.transLeftovers.count > 0'
+                     ' && kag.fore.messages[0].frameGraphic == "messagewindow_memory" && kag.back.messages[0].frameGraphic == "messagewindow") ? 1 : 0', timeout=10, interval=0.05)
+            print("     back to now: one transition from the memory as it was", flush=True)
         line("[env restore]", now)
+        if fades:
+            eng.wait("the transition's end", "!kag.fore.base.inTransition && world_object.env.transLeftovers.count == 0", timeout=10)
+            after = str(eng.tjs("return " + pages + ";"))
+            print("     the pages' layers after the flashback, as before it: %s" % after, flush=True)
+            if after != before:
+                raise SmokeError("the flashback left the pages with other layers: %s before, %s after" % (before, after))
+            r = str(eng.tjs('return [kag.fore.messages[0].frameGraphic, kag.back.messages[0].frameGraphic].join(",");'))
+            if r != "messagewindow,messagewindow":
+                raise SmokeError("the window's style after the flashback: %s" % r)
         eng.tjs("kag.loadBookMark(5); return 1;")
         line("loaded in the flashback, the kept scene with it", memory)
         eng.tjs("kag.onPrimaryClick(); return 1;")
@@ -5491,6 +5527,79 @@ def sample_steps(eng):
         eng.wait("About to close", "kag.currentDialog === void", timeout=10)
         if "Noto Serif JP" not in about:
             raise SmokeError("About doesn't list the game's fonts: %r" % about)
+
+    @step("text effects: characters that move and come in ([font anim= appear=]), vertical text, a [style] before a line's text")
+    def _():
+        if eng.tjs('return typeof kag.fore.messages[0].animChars != "undefined" && typeof global.KAGVerticalFace != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before 0.23.0's text effects)", flush=True)
+            return
+        # the Text Effects demo's moving page: each moving character on a layer of its own, which
+        # moves while the page shows, holds still with Reduce Motion, and is copied by [backlay]
+        eng.tjs('kag.process("text.ks", "*moving"); return 1;')
+        eng.wait("the moving text", 'kag.conductor.curStorage == "text.ks" && kag.inStable && kag.fore.messages[0].animChars.count >= 40', timeout=40)
+        where = ('var m = kag.fore.messages[0], r = []; for (var i = 0; i < m.animChars.count; i++) { var a = m.animChars[i];'
+                 ' r.add(a.layer.left + ":" + a.layer.top + ":" + a.layer.opacity + ":" + a.layer.imageLeft + ":" + (a.fixed ? 1 : 0) + ":" + a.anim); } return r.join(" ");')
+        a = str(eng.tjs(where)).split()
+        time.sleep(0.4)
+        b = str(eng.tjs(where)).split()
+        kinds = {}
+        for x, y in zip(a, b):
+            k = x.split(":")[5]
+            kinds.setdefault(k, [0, 0])
+            kinds[k][0] += 1
+            if x.split(":")[:4] != y.split(":")[:4]: kinds[k][1] += 1
+        print("     moving characters, of each kind how many moved in 0.4 s: %s"
+              % ", ".join("%s %d of %d" % (k, v[1], v[0]) for k, v in sorted(kinds.items())), flush=True)
+        for k in ("shake", "wave", "pulse", "rainbow"):
+            if k not in kinds or kinds[k][1] * 2 < kinds[k][0]:
+                raise SmokeError("the %s characters didn't move: %s" % (k, kinds))
+        eng.tjs('tf.smokeRM2 = KAGOptionGet("reduceMotion"); KAGOptionSet("reduceMotion", true); return 1;')
+        time.sleep(0.15)
+        a = str(eng.tjs(where)).split()
+        time.sleep(0.4)
+        b = str(eng.tjs(where)).split()
+        eng.tjs('KAGOptionSet("reduceMotion", tf.smokeRM2); return 1;')
+        if a != b:
+            raise SmokeError("Reduce Motion didn't hold the moving characters still")
+        backed = str(eng.tjs('kag.tagHandlers.backlay(%[]); return kag.back.messages[0].animChars.count + "/" + kag.fore.messages[0].animChars.count;'))
+        print("     held still by Reduce Motion; [backlay] copied %s of them to the back page" % backed, flush=True)
+        if backed.split("/")[0] != backed.split("/")[1]:
+            raise SmokeError("[backlay] didn't copy the moving characters: %s" % backed)
+        # vertical text in a window of its own: the characters go down the line, a bracket turned
+        r = str(eng.tjs('var m = kag.fore.messages[1], st = m.store();'
+                        ' kag.tagHandlers.position(%[ layer:"message1", page:"fore", vertical:"true", left:"1440", top:"30", width:"420", height:"640",'
+                        '  frame:"", color:"0x1a1040", opacity:"210", marginl:"30", margint:"34", marginr:"30", marginb:"34", visible:"true" ]);'
+                        ' var y0 = m.y; m.processCh("縦"); m.processCh("書"); var y1 = m.y; m.processCh("「");'
+                        ' var ll = m.lineLayer, c = (int)m.lineLayerBase, top = 0, right = 0, ink = 0;'
+                        ' var p0 = m.lineLayerPos - m.fontSize;'
+                        ' for (var y = p0; y < p0 + m.fontSize; y++) for (var x = 0; x < ll.imageWidth; x++) if (ll.getMaskPixel(x, y) > 128) { ink++; if (y < p0 + (m.fontSize >> 2)) top++; if (x > c) right++; }'
+                        ' var face = ll.font.face; m.restore(st); m.visible = false;'
+                        ' return [y1 - y0, ink, top, right, face].join("|");')).split("|")
+        print("     vertical text: two characters went %s px down the line; the bracket's ink %s, %s right of the line's middle (turned); face %s"
+              % (r[0], r[1], r[3], r[4]), flush=True)
+        if int(r[0]) < 60 or int(r[1]) < 10 or int(r[3]) * 2 < int(r[1]) or ",@" not in r[4] and "," in r[4]:
+            raise SmokeError("vertical text isn't laid out (advance, ink, top, right, face): %s" % r)
+        # a [style] given before a line's text, like a [font], outlives the line mode's clear
+        st = str(eng.tjs('kag.tagHandlers.style(%[ align:"center" ]); kag.clearForLine(); var a = kag.current.align;'
+                         ' kag.tagHandlers.resetstyle(%[]); return a;'))
+        if st != "0":
+            raise SmokeError("a [style align=center] before the line's text was lost in its clear (align %s)" % st)
+        # a compiled scene's title in the corner is in the language shown (the source language's
+        # up to 0.22.0)
+        if eng.tjs('return typeof kag.indicators == "Object" && kag.indicators !== void && KAGLanguage.list.count > 1 ? 1 : 0;') == 1:
+            eng.tjs('kag.setLanguage("ja"); return 1;')
+            eng.wait("Japanese", 'KAGLanguage.current == "ja" && kag.inStable', timeout=30)
+            eng.tjs('kag.indicators.lastScene = void; kag.process("text.ks", "*names"); return 1;')
+            eng.wait("the names scene", 'kag.conductor.curStorage == "text.ks" && kag.inStable && kag.indicators.chapter != ""', timeout=40)
+            chapter = str(eng.tjs('return kag.indicators.chapter;'))
+            eng.tjs('kag.setLanguage("en"); return 1;')
+            eng.wait("English", 'KAGLanguage.current == "en" && kag.inStable', timeout=30)
+            print("     the scene's title in Japanese: %s" % chapter, flush=True)
+            if chapter != "名前と言葉":
+                raise SmokeError("a compiled scene's title shows in another language than the one shown: %s" % chapter)
+        eng.clicker(True, until="s0001.ks")
+        eng.wait("the demo menu", 'kag.conductor.curStorage == "s0001.ks"', timeout=120)
+        eng.clicker(False)
 
     @step("text settings: the player's outline, shadow and font reach the message windows, with a preview; the colour picker")
     def _():
