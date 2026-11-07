@@ -2555,11 +2555,17 @@ def sample_steps(eng):
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
         # while it plays (asking through the REPL is too slow on some targets). Pip's babble has
         # no lip track, so its mouth opens and shuts by loudness alone: no vowel mouths
-        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[];'
+        # with what the engine says at each sample: the clock since the voice started, its
+        # position (ms), samplePosition and rate, the level at samplePosition, and readVoice's
+        # last reading (printed below: what lip-sync from the level had to go by)
+        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[], global.__smokeLipRead = [];'
                 ' global.__smokeLipTimer = new Timer(function() {'
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
                 ' if (b !== void && b.status == "play") { global.__smokeLips.add(c.lipLevel); global.__smokeVoice.add(b.position);'
-                ' if (typeof c.lipVowel != "undefined" && c.lipVowel !== void) global.__smokeVowels[c.lipVowel] = 1; }'
+                ' if (typeof c.lipVowel != "undefined" && c.lipVowel !== void) global.__smokeVowels[c.lipVowel] = 1;'
+                ' var last = typeof c.lipReadings == "Object" && c.lipReadings !== void && c.lipReadings.last !== void ? "%.2f".sprintf(c.lipReadings.last[0]) : "-";'
+                ' var lv = typeof b.getSoundLevel != "undefined" ? "%.2f".sprintf(b.getSoundLevel(0).rms) : "-";'
+                ' global.__smokeLipRead.add([System.getTickCount() - c.lipTrackStart, b.position, b.samplePosition, lv, last].join(":")); }'
                 ' }, ""); __smokeLipTimer.interval = 20; __smokeLipTimer.enabled = true; return 1;')
         eng.tjs('kag.onPrimaryClick(); return 1;')
         end = time.time() + 6
@@ -2581,6 +2587,36 @@ def sample_steps(eng):
         print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
               % ("its lip track (%d marks)" % track if track > 0 else source or "(random)", len(levels),
                  " ".join(str(v) for v in levels[:60]), positions), flush=True)
+        reads = str(eng.tjs('var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                            ' return (b !== void ? (string)b.frequency : "-") + " Hz, " + __smokeLipRead.join(" ");'))
+        print("     ms:position:samplePosition:level there:readVoice's last, at %s" % reads[:1500], flush=True)
+        # The mouth changes once a frame at most, from the level at one moment of the voice. On a
+        # target that draws a few frames a second as a line starts (the iOS Simulator on the CI
+        # runners: 150 to 350 ms apart, six to nine readings in Pip's one-second babble, which is
+        # loud for less than half of it), one play can by chance read only its quiet moments, or
+        # only its loud ones: so a voice that doesn't show both is played again, up to three
+        # plays in all. A mouth that doesn't follow the voice shows one of them every time
+        def replay(voice, timeout):
+            eng.tjs('global.__smokeLipsR = [];'
+                    ' global.__smokeLipTimerR = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") global.__smokeLipsR.add(c.lipLevel);'
+                    ' }, ""); __smokeLipTimerR.interval = 20; __smokeLipTimerR.enabled = true;'
+                    ' world_object.env.characters["pip"].playVoice("%s"); return 1;' % voice)
+            end = time.time() + timeout
+            while time.time() < end:
+                time.sleep(0.5)
+                if eng.tjs('return __smokeLipsR.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimerR.enabled = false; invalidate __smokeLipTimerR; return __smokeLipsR.join(" ");'))
+            got = [int(v) for v in r.split()] if r.strip() else []
+            print("     played %s again: %d mouth samples (%s)" % (voice, len(got), " ".join(str(v) for v in got[:60])), flush=True)
+            return got
+        babble = str(eng.tjs('var c = world_object.env.characters["pip"]; return typeof c.lipTrackVoice != "undefined" && c.lipTrackVoice !== void ? c.lipTrackVoice : "";'))
+        for again in range(2):
+            if positions <= 1 or {0, 2} <= set(levels) or babble == "":
+                break
+            levels += replay(babble, 6)
         if positions <= 1:
             print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
         elif not {0, 2} <= set(levels):
@@ -2637,6 +2673,10 @@ def sample_steps(eng):
                             ' return [__smokeLips2.join(" "), c.lipTrack === void ? 1 : 0, c.lipReadings !== void && c.lipReadings.last !== void ? 1 : 0].join(",");')).split(",")
             levels2 = [int(v) for v in r[0].split()] if r[0].strip() else []
             print("     a voice with no lip track: %d mouth samples (%s)" % (len(levels2), " ".join(str(v) for v in levels2[:60])), flush=True)
+            for again in range(2):
+                if r[1] != "1" or r[2] != "1" or {0} < set(levels2):
+                    break
+                levels2 += replay("ai000001", 8)
             if r[1] != "1" or r[2] != "1" or not ({0} < set(levels2)):
                 raise SmokeError("Pip's mouth didn't follow a voice with no lip track (levels %s, no track %s, read %s)"
                                  % (sorted(set(levels2)), r[1], r[2]))
