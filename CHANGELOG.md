@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.22.0
+
+### Added
+
+- **The game's fonts, and one table of text styles**: `fonts.csv` lists the fonts a game uses, with the file it ships, its roles (message, interface, heading, number), the languages it covers, its name for the player and its licence; a role's face list follows from it (`KAGFontFace`), and About lists the licences. Text the framework and the sample draw on their own screens (About, the save slots, the CG and Replay tiles and tabs, Search's rows, the CG counts, the glossary) goes through named styles (`textstyles.tjs`, `KAGDefineTextStyle`, `KAGDrawStyledText`): size, weight, colour, alignment, lines, shrinking to fit, outline, shadow and gradient. The sample ships a second message font, Noto Serif JP cut down to its own characters (`tools/assets/make_fonts.py`).
+- **An outline with a shadow, and gradient text**: with `edgeWithShadow` (on in the sample and the template) a message window draws the shadow of the outlined text, then the outline, then the text, where KAG3 drew one or the other; `[selopt edgewithshadow=]` for the choices. `[font gradcolor= edgegradcolor= shadowgradcolor= graddir=]` (and `[deffont]`, `[selopt]`, a text style) shade the text, its outline and its shadow from their colour to another, down the line or along it.
+- **Text settings for the player, with a preview**: Config's new Text page (the sample's seventh) has the message font, an outline and a shadow with their colours, and the read text's colour, beside a small message window that types sample lines in the chosen look at the player's speed. The player's outline and shadow take the place of the game's defaults (a scenario's own `[font edge=]` still wins), and the page on the screen is drawn again in them at once (`TextSettings.tjs`).
+- **A colour picker**: a wheel, a brightness bar, the colour before and now, by mouse, touch, keys or a controller (`KAGPickColor`); options of kind `color`, and `Other…` on a choice of colours (the read text's colour now has one).
+- **Message window styles per scene, in colours the player picks**: `[env msgstyle=<name>]` gives the message window and its name box another frame and tint for a scene (`KAGDefineMessageStyle`; kept in saves, Back and compiled scenes, and on a page drawn again); a style with a label has a row on Config where the player keeps it as drawn or tints it. The Character demo's flashback has a sepia window between letterbox bars (`[memory]`, `[memoryend]`).
+- **A glossary of terms marked in the text**: `terms.csv` (a language's own in `lang/<code>/`) names the words the story explains; where the message window draws one it's in the glossary's colour and underlined, and a click or a tap shows its entry as a card without going on. The marks follow the text as drawn, so compiled scenes, translations, a page drawn again in another language and the backlog are marked; Config turns them off or picks their colour. The sample marks KAGEX, the World and Pip, and its Extras has a fifth tab, Glossary, listing the terms met (`Glossary.tjs`, `glossary.ks`).
+- **Face windows for Live2D and VRM characters**: a model character's `faceCrop` (in its picture at 100%, or fractions of it) is cut from the picture it has just drawn, and while it's the speaker the window follows the model a few times a second, so its blinks and its mouth show there too. Vee and Hiyori have one.
+- **kagex-release: web file names with `%`, `#` or `?`**: `check` lists them for a web build of loose files, which the web engine can't fetch ("xp3" web data avoids it).
+
+### Changed
+
+- The Extras tabs are narrower, to fit a fifth; the Japanese label fonts were cut again for its label.
+- `showTextDialog(lines)` shows lines of text in the About screen's frame (the glossary's cards); the framework's text styles add `dialog.text`, a paragraph.
+- kagex-release's README says it needs a vcpkg clone (Visual Studio's own vcpkg refuses a manifest without a baseline).
+
 ## 0.21.1
 
 ### Fixed
