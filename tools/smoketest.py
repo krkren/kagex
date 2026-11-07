@@ -2567,12 +2567,21 @@ def sample_steps(eng):
                 ' var lv = typeof b.getSoundLevel != "undefined" ? "%.2f".sprintf(b.getSoundLevel(0).rms) : "-";'
                 ' global.__smokeLipRead.add([System.getTickCount() - c.lipTrackStart, b.position, b.samplePosition, lv, last].join(":")); }'
                 ' }, ""); __smokeLipTimer.interval = 20; __smokeLipTimer.enabled = true; return 1;')
+        # (diagnostic: every readVoice call, with the time wanted and the engine's samplePosition)
+        eng.tjs('var c = world_object.env.characters["pip"]; global.__smokeRV = []; global.__smokeRVorig = c.readVoice;'
+                ' c.readVoice = (function(at, vowels) { var b = soundBuffer, sp = b.samplePosition, t = System.getTickCount();'
+                ' var r = global.__smokeRVorig(at, vowels);'
+                ' global.__smokeRV.add([t - lipTrackStart, (int)at, sp, b.samplePosition, b.position, "%.2f".sprintf(r[0])].join(":"));'
+                ' return r; } incontextof c); return 1;')
         eng.tjs('kag.onPrimaryClick(); return 1;')
         end = time.time() + 6
         while time.time() < end:
             time.sleep(0.5)
             if eng.tjs('return __smokeLips.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
                 break
+        print("     readVoice calls (tick:at:sp before:sp after:position:rms): %s"
+              % str(eng.tjs('var c = world_object.env.characters["pip"]; c.readVoice = global.__smokeRVorig;'
+                            ' return __smokeRV.join(" ");'))[:3000], flush=True)
         r = str(eng.tjs('__smokeLipTimer.enabled = false; invalidate __smokeLipTimer;'
                         ' var p = %[]; for (var i = 0; i < __smokeVoice.count; i++) p[__smokeVoice[i]] = 1;'
                         ' var n = []; n.assign(p); var v = []; v.assign(__smokeVowels); var vs = [];'
