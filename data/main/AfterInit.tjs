@@ -88,6 +88,13 @@ with (KAGQuickMenuOf(kag)) {
     .when = function { return !!f.quickMenu && !inSystemMenu(kag); };
 }
 
+// The message window's styles (MessageStyles.tjs, since 0.22.0): the window as [initscene] makes
+// it, and sepia for memories ([env msgstyle=memory], the [memory] macro); each gets a colour row
+// on Config's third page
+KAGDefineMessageStyle("normal", %[ frame:"messagewindow", nameframe:"namebox", label:"Message Window" ]);
+KAGDefineMessageStyle("memory", %[ frame:"messagewindow_memory", nameframe:"namebox_memory", label:"Memories' Window" ]);
+var configStyleOptions = KAGDefineMessageStyleOptions();
+
 // Movies have a volume of their own (Config's fifth page), not the music's
 kag.independentMovieAudioProperty = true;
 

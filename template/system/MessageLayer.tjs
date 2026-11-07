@@ -1638,7 +1638,14 @@ class NameLayer extends RelativeLayer
 	var valign = -1;
 
 	// Image drawn behind the name ([position nameframe=...]); the layer takes its size
+
 	var frameGraphic = "";
+
+	// a colour laid over it at frameTintOpacity, its alpha kept (-1: none; the message window's
+
+	// style, MessageStyles.tjs, since 0.22.0)
+
+	var frameTint = -1, frameTintOpacity = 150;
 	// A name too wide for the box ([position namefit=]): "squeeze" draws it narrower, "shrink" in
 	// a smaller size, "" lets it run past the box; namemargin keeps that much clear at each side
 	var fitMode = "";
@@ -1704,8 +1711,12 @@ class NameLayer extends RelativeLayer
 	}
 
 	function drawName(text) {
+
 		if (frameGraphic != "") {
+
 			loadImages(frameGraphic);
+
+			KAGTintLayer(this, frameTint, frameTintOpacity);
 			// as transparent as the player's window opacity, where the window follows it
 			var op = owner.followOpacity && typeof window.windowOpacity != "undefined" ? window.windowOpacity : 255;
 			if (op < 255) {
@@ -1828,6 +1839,9 @@ class NameLayer extends RelativeLayer
 		dic.align  = align;
 		dic.valign = valign;
 		dic.frameGraphic = frameGraphic;
+
+		dic.frameTint = frameTint, dic.frameTintOpacity = frameTintOpacity;
+
 		dic.fitMode = fitMode;
 		dic.margin = margin;
 		dic.fadeTime = fadeTime;
@@ -1842,6 +1856,10 @@ class NameLayer extends RelativeLayer
 		valign = dic.valign if (dic.valign !== void);
 
 		frameGraphic = dic.frameGraphic !== void ? dic.frameGraphic : ""; // saves from before nameframe have none
+
+		frameTint = dic.frameTint !== void ? +dic.frameTint : -1;
+
+		frameTintOpacity = dic.frameTintOpacity !== void ? +dic.frameTintOpacity : 150;
 		fitMode = dic.fitMode !== void ? dic.fitMode : "";
 		margin = dic.margin !== void ? +dic.margin : 0;
 		fadeTime = dic.fadeTime !== void ? +dic.fadeTime : 0;
@@ -2346,6 +2364,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 	var layerType = ltAddAlpha; // Layer type
 
 	/*CS*/var frameGraphic = ""; // Frame image filename
+
+	/*CS*/var frameTint = -1; // a colour laid over the frame image, its alpha kept (-1: none; the window's style, MessageStyles.tjs, since 0.22.0)
+
+	/*CS*/var frameTintOpacity = 150; // how strongly
 
 	/*CS*/var frameKey = clNone; // Frame image key
 
@@ -3470,6 +3492,8 @@ class MessageLayer extends AnimKAGLayerTransMove
                 loadImages(frameGraphic, frameKey, frameAnimCount, anim ? frameAnimTime : 0);
 
                 setSizeToImageSize();
+
+				KAGTintLayer(this, frameTint, frameTintOpacity);
 
 
 
@@ -10264,6 +10288,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		frameGraphic = src.frameGraphic;
 
+		frameTint = src.frameTint;
+
+		frameTintOpacity = src.frameTintOpacity;
+
 		frameKey = src.frameKey;
 
         frameAnimCount = src.frameAnimCount;
@@ -10656,6 +10684,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		dic.frameGraphic = frameGraphic;
 
+		dic.frameTint = frameTint;
+
+		dic.frameTintOpacity = frameTintOpacity;
+
 		dic.frameKey = frameKey;
 
         dic.frameAnimCount = frameAnimCount;
@@ -10787,6 +10819,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 		// [start_restore_vars]
 
 		frameGraphic = dic.frameGraphic if dic.frameGraphic !== void;
+
+		frameTint = dic.frameTint !== void ? +dic.frameTint : -1;
+
+		frameTintOpacity = dic.frameTintOpacity if dic.frameTintOpacity !== void;
 
 		frameKey = dic.frameKey if dic.frameKey !== void;
 
@@ -11072,6 +11108,17 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
+}
+// A colour laid over a layer's picture at opacity, its alpha kept (color -1: nothing)
+function KAGTintLayer(l, color, opacity)
+{
+	if (color === void || color < 0) return;
+	var hold = l.holdAlpha, face = l.face;
+	l.holdAlpha = true;
+	l.face = dfOpaque;
+	l.colorRect(0, 0, l.imageWidth, l.imageHeight, color & 0xffffff, opacity);
+	l.face = face;
+	l.holdAlpha = hold;
 }
 // Whether base (a message layer, or a style dictionary or layer borrowing its drawing) draws an
 // outline and a shadow together (edgeWithShadow, since 0.22.0)

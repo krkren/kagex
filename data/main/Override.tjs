@@ -372,12 +372,9 @@ function quickloadAction()
  * Quick save (Q.SAVE, Shift+S): into the next of the quick saves, which go round
  * (Config.tjs's quickSaveSlot and quickSaveSlots; kag.quickSave shows the notice)
  */
-function quicksaveAction(map=false)
+function quicksaveAction()
 {
     if (kag.quickSave() >= 0) {
-        if (global.qsavenotify_object !== void) {
-            global.qsavenotify_object.start(map);
-        }
         kag.setMenuAccessibleAll(); // Q.LOAD has something to load now
     }
 }
@@ -762,7 +759,7 @@ var configPages = [
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
-      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "msgStyleTint:normal", "msgStyleTint:memory" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage

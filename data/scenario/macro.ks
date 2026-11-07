@@ -89,6 +89,16 @@
 
 [macro name=undim][veil delete trans=normal][endmacro]
 
+; A memory (since 0.22.0): bars at the top and the bottom, a sepia edge and the memories' window
+; style (AfterInit.tjs, MessageStyles.tjs), shown with the next trans=; [memoryend] takes them off
+[macro name=letterbox][newlay name=letterbox file=letterbox level=6][endmacro]
+
+[macro name=memoryframe][newlay name=memoryframe file=memoryframe level=6][endmacro]
+
+[macro name=memory][letterbox][memoryframe][env msgstyle=memory][endmacro]
+
+[macro name=memoryend][letterbox delete][memoryframe delete][env msgstyle=normal][endmacro]
+
 [macro name=eyecatch]
 
 [newlay name=eyecatchcard file=eyecatch level=message trans=normal]

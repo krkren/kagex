@@ -220,6 +220,7 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [env keep]
 [pip hide]
 [ai posleft sad]
+[memory]
 [env grayscale=true trans=normal]
 灰色の思い出：ずっと前の、ひとりきりのあい。
 [env restore trans=normal]

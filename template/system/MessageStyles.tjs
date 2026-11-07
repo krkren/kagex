@@ -1,0 +1,109 @@
+/**
+ * Message window styles (since 0.22.0; doc/world.txt, "Message Window Styles"): a look the
+ * message window takes for a scene (a flashback, another character's view), set with
+ * [env msgstyle=<name>] ("normal", or nothing, for the game's own). It's World state, so a load,
+ * Back and compiled scenes keep it. A style (KAGDefineMessageStyle in AfterInit.tjs):
+ *
+ *   frame        the window's frame image (void: as [position] gave it)
+ *   nameframe    the name box's (void: as it is)
+ *   tint         a colour laid over both by default (-1: none), the frames' alpha kept; the
+ *                player picks their own on a Config page (KAGDefineMessageStyleOptions)
+ *   tintOpacity  how strongly (0-255; 150)
+ *   label        its name for the player (English, through tr())
+ *
+ * "normal" is the game's own window, which a game gives its frames so another style can go back
+ * to them. KAGMessageStyleLayer is the message window the styles are for (0: message0).
+ */
+var KAGMessageStyles = %[ "normal" => %[ label:"Message Window", tint:-1 ] ];
+var KAGMessageStyleLayer = 0;
+var KAGMessageStyleNow = "normal"; // the style shown
+
+function KAGDefineMessageStyle(name, d)
+{
+	var s = KAGMessageStyles[name];
+	s = KAGMessageStyles[name] = %[ tint:-1 ] if s === void;
+	(Dictionary.assign incontextof s)(d, false);
+}
+
+// the tint the player picked for a style, or its own
+function KAGMessageStyleTint(name)
+{
+	var t = kag.scflags.msgStyleTints;
+	if (typeof t == "Object" && t !== void && t[name] !== void) return +t[name];
+	var s = KAGMessageStyles[name];
+	return s !== void && s.tint !== void ? +s.tint : -1;
+}
+function KAGSetMessageStyleTint(name, v)
+{
+	if (typeof kag.scflags.msgStyleTints != "Object" || kag.scflags.msgStyleTints === void) kag.scflags.msgStyleTints = %[];
+	if (v === void) delete kag.scflags.msgStyleTints[name];
+	else kag.scflags.msgStyleTints[name] = v;
+	KAGApplyMessageStyle(KAGMessageStyleNow) if KAGMessageStyleNow == name || name == "normal" && KAGMessageStyleNow == "normal";
+}
+
+// the style on the message window (fore and back), drawn again now where the page is recorded
+function KAGApplyMessageStyle(name)
+{
+	name = "normal" if name === void || name == "";
+	var st = KAGMessageStyles[name];
+	if (st === void) {
+		dm("No message window style " + name + " (KAGDefineMessageStyle)");
+		name = "normal", st = KAGMessageStyles.normal;
+	}
+	KAGMessageStyleNow = name;
+	if (typeof global.kag != "Object" || kag === void) return;
+	var tint = KAGMessageStyleTint(name), op = st.tintOpacity !== void ? +st.tintOpacity : 150;
+	var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : void;
+	for (var p = 0; p < 2; p++) {
+		var m = (p ? kag.back : kag.fore).messages[KAGMessageStyleLayer];
+		if (m === void || typeof m.frameTint == "undefined") continue;
+		m.frameGraphic = st.frame if st.frame !== void;
+		m.frameTint = tint, m.frameTintOpacity = op;
+		var nl = m.nameLayer;
+		if (nl !== void && isvalid nl) {
+			nl.frameGraphic = st.nameframe if st.nameframe !== void;
+			nl.frameTint = tint, nl.frameTintOpacity = op;
+		}
+		// the page's record starts with the window as it was (a restore): it takes the style too,
+		// or drawing the page again would put the old frame back
+		var ops = m.redrawTextStates;
+		for (var i = 0; ops !== void && i < ops.count; i++) {
+			var o = ops[i];
+			if (o[0] != "restore" || typeof o[1] != "Object" || o[1] === void) continue;
+			var d = o[1];
+			d.frameGraphic = m.frameGraphic, d.frameTint = tint, d.frameTintOpacity = op;
+			if (typeof d.nameLayer == "Object" && d.nameLayer !== void && nl !== void && isvalid nl)
+				d.nameLayer.frameGraphic = nl.frameGraphic, d.nameLayer.frameTint = tint, d.nameLayer.frameTintOpacity = op;
+		}
+		if (m.redrawTextEnabled && m.numLinks == 0 && m.redrawTextStates.count > 0) {
+			m.imageModified = true;
+			m.redrawTextIn(lang);
+		}
+		else if (!m.visible) m.redrawFrame(true);
+		else m.imageModified = true;
+		nl.redraw() if nl !== void && isvalid nl && nl.visible;
+	}
+}
+
+// Config: a row for each labelled style, its tint the game's ("As Drawn") or the player's own
+// colour (Other…: the colour picker); the options are named "msgStyleTint:<style>"
+function KAGDefineMessageStyleOptions()
+{
+	var names = [];
+	names.assign(KAGMessageStyles);
+	var r = [];
+	for (var i = 0; i < names.count; i += 2) {
+		var name = names[i], st = names[i + 1];
+		if (st.label === void) continue;
+		var ctx = %[ style:name ];
+		// (functions whose this is a dictionary find no globals: named through global)
+		KAGDefineOption(%[ name:"msgStyleTint:" + name, label:st.label, kind:"choice",
+			values:[ [ "As Drawn", -1 ], [ "Other…", "pick" ] ],
+			getValue:function { return global.KAGMessageStyleTint(this.style); } incontextof ctx,
+			setValue:function(v) { global.KAGSetMessageStyleTint(this.style, v); } incontextof ctx,
+			reset:function { global.KAGSetMessageStyleTint(this.style, void); } incontextof ctx,
+			help:"The colour laid over this message window's frame" ]);
+		r.add("msgStyleTint:" + name);
+	}
+	return r;
+}

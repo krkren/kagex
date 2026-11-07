@@ -342,6 +342,20 @@ class KAGEnvironment extends KAGEnvTrans {
     // Fade specification for expressions
     var faceFadeTime;
 	var faceWindowOff = false; //< [env facewindow=off]: no face window in this scene (World state)
+	var messageStyle;          //< [env msgstyle=<name>]: the message window's style (MessageStyles.tjs; World state, since 0.22.0)
+
+	// the message window's style: void, "" or "normal" for the game's own
+	function setMessageStyle(name)
+	{
+		messageStyle = name === void || name == "" || name == "normal" ? void : name;
+		applyMessageStyle();
+	}
+	// shown on the message window (not by the scene compiler's World)
+	function applyMessageStyle()
+	{
+		if (this instanceof "KAGEnvForParse" || typeof global.KAGApplyMessageStyle == "undefined") return;
+		global.KAGApplyMessageStyle(messageStyle);
+	}
 	var keptScenes = [];       //< [env keep]: the World as it was, last kept last (World state)
 	var keptNamed = %[];       //< [env keep=<name>]
 
@@ -854,6 +868,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 		f.grayscale = _grayscale if _grayscale !== void;
 		f.faceWindowOff = true if faceWindowOff;
+		f.messageStyle = messageStyle if messageStyle !== void;
 		if (keptScenes.count > 0) { f.keptScenes = []; f.keptScenes.assign(keptScenes); }
 		if (Scripts.getObjectCount(keptNamed) > 0) { f.keptNamed = %[]; (Dictionary.assign incontextof f.keptNamed)(keptNamed); }
         f.rgamma    = _rgamma if _rgamma !== void;
@@ -939,6 +954,7 @@ class KAGEnvironment extends KAGEnvTrans {
         
 		_grayscale  = f.grayscale;
 		faceWindowOff = !!f.faceWindowOff;
+		if (f.messageStyle !== messageStyle) { messageStyle = f.messageStyle; applyMessageStyle(); }
 		keptScenes.clear();
 		keptScenes.assign(f.keptScenes) if f.keptScenes !== void;
 		(Dictionary.clear incontextof keptNamed)();
@@ -1174,6 +1190,7 @@ class KAGEnvironment extends KAGEnvTrans {
 @endif
 		
 		faceWindowOff = false;
+		if (messageStyle !== void) { messageStyle = void; applyMessageStyle(); }
 
 		// Discard character info
 		var count = characterList.count;
@@ -1846,6 +1863,7 @@ class KAGEnvironment extends KAGEnvTrans {
 	layout : function(param, elm) { layoutPlace(elm); } incontextof this,
 	makeroom : function(param, elm) { layoutMakeRoom(+param, elm); } incontextof this,
 	facewindow : function(param, elm) { faceWindowOff = param == "off" || param == "false" || param == "0"; redrawCurrentFace(faceFadeTime); } incontextof this,
+	msgstyle : function(param, elm) { setMessageStyle(param); } incontextof this,
 	rgamma : function(param, elm) { rgamma = param; } incontextof this,
 	ggamma : function(param, elm) { ggamma = param; } incontextof this,
 	bgamma : function(param, elm) { bgamma = param; } incontextof this,

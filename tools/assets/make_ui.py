@@ -663,6 +663,35 @@ def make_message():
     c.panel((0, 0, 292, 56), r=14, fill=VIOLET, border=WHITE, bw=4, shadow=8, shadow_color=NAVY)
     c.save(out("namebox.png", False))
 
+    # the "memory" window style (MessageStyles.tjs, AfterInit.tjs; [env msgstyle=memory]):
+    # the same shapes in sepia, for flashbacks
+    sepia_fill, sepia_border, sepia_dark = (238, 226, 204), (128, 96, 62), (84, 60, 34)
+    c = Canvas(w, h)
+    c.panel((0, 0, w - 12, h - 12), r=18, fill=rgba(sepia_dark, 214), border=sepia_border, bw=5, shadow=12,
+            shadow_color=sepia_dark)
+    c.gradient((5, 5, w - 17, 90), (255, 236, 200, 50), (255, 236, 200, 0), clip=((5, 5, w - 17, h - 17), 13))
+    c.save(out("messagewindow_memory.png", False))
+    c = Canvas(300, 64)
+    c.panel((0, 0, 292, 56), r=14, fill=sepia_border, border=sepia_fill, bw=4, shadow=8, shadow_color=sepia_dark)
+    c.save(out("namebox_memory.png", False))
+
+    # bars over the scene, for the [letterbox] macro (macro.ks): black, 110 px top and bottom
+    if LANG == "en":
+        img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle((0, 0, 1919, 109), fill=(0, 0, 0, 255))
+        d.rectangle((0, 970, 1919, 1079), fill=(0, 0, 0, 255))
+        img.save(out("letterbox.png", False))
+        # a soft sepia edge round the scene, for the [memoryframe] macro: clear in the middle
+        yy, xx = np.mgrid[0:1080, 0:1920].astype(np.float64)
+        dx, dy = (xx - 959.5) / 960, (yy - 539.5) / 540
+        r = np.sqrt(dx * dx * 0.85 + dy * dy)
+        a = np.clip((r - 0.62) / 0.5, 0, 1) ** 1.6 * 200
+        rgba_ = np.zeros((1080, 1920, 4), np.uint8)
+        rgba_[..., 0], rgba_[..., 1], rgba_[..., 2] = 74, 52, 28
+        rgba_[..., 3] = a.round().astype(np.uint8)
+        Image.fromarray(rgba_, "RGBA").save(out("memoryframe.png", False))
+
     for name in MSG_BUTTONS:
         for st in ("normal", "over"):
             button(100, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
