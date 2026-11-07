@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.24.0
+
+### Added
+
+- **A flowchart**: the scenes of a game's compiled scripts as a chart, a node for each scene with a title of its own and the jumps and choices between them, the ones the player has read drawn and the others a "?", a NEW badge on those reached since the chart last showed them and a pin on the story's place (`Flowchart.tjs`). The first time the story reaches a node the game keeps its flags, and a node played from the chart starts with them, so the scenes after it find the choices made; a scene after a choice is reached by playing its script from the start unseen, taking the choice that leads there. `flowchart.csv` gives the nodes captions, chapters, places and conditions that open them early; the chart takes drags, flicks, the wheel and pinches to move and zoom, the arrow keys (a controller's D-pad) to go from node to node, and screen readers. The sample's Extras has a Chart tab, its Character demo a choice whose two ways meet again, and its Extras tabs are narrower to make room for six.
+- **Scene previews**: Replay's tiles, Search's rows and the chart's nodes show a card beside what the pointer rests on or the keys are on, with the scene as it opens (the World at that line, from the compiled scene's saved state), its title and the line, in the language shown (`ScenePreview.tjs`; any scrolling list or chart with a `preview` function).
+- **Favourite voices**: the music room has Music, Voices and Favourites views. Every voiced line the player has heard is listed, a click plays it, its star keeps it with the favourites, and the favourites can be put in any order by dragging their handle or with Shift and the arrow keys (`Voices.tjs`). Any one-column scrolling list can be put in order this way (`KAGScrollList.reorder`), and can take keys on its focused item (`onItemKey`).
+- **The music room's player**: a record that turns while the music plays, the track's title, how far it has played of how long, and a bar that seeks by a click, a drag or the left and right keys (`MusicPlayer.tjs`, `KAGNowPlaying`).
+- **Title greetings**: Ai greets the player on the title screen in a speech bubble, by the time of day, the weekend, the date, the first start and a return after days away, with the player's name once they've given one (`Greetings.tjs`, `greetings.csv`; an optional voice for each line).
+- **Sprite Mode**: the CG screen's Characters button shows every character one at a time in any pose, outfit and face (Pip's and the 3D and Live2D characters' too, where they're drawn), over the street by day, in the evening or at night (`SpriteMode.tjs`, `spritemode.ks`).
+
+### Fixed
+
+- **Replay's Text Effects tile was in English in Japanese.**
+
 ## 0.23.1
 
 ### Fixed

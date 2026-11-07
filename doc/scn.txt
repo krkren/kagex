@@ -142,7 +142,10 @@ starts the next compiled script KAG goes to ([scenestart]) from its beginning wi
 anything (KAG's hidden skip, running every tag but [endrecollection] and [s]) until the text in
 that scene, then shows it: the screen is as playing gets there. The history starts at that
 text. With replay, the end of that scene ends the recollection (KAGWindow.startRecollection),
-which goes back to where it was started from.
+which goes back to where it was started from. A seek that meets a choice on its way (since
+0.24.0) takes the one that names its scene, else the one from which the script's scenes reach
+it (their nexts and links), else the first, running its exp=, so a scene after a choice can be
+played: the flowchart (doc/kagex.txt, "The Flowchart") starts its nodes this way.
 
 The sample's Replay screen (Extras) is made from data/main/replaylist.csv: a tile a line, on up
 to six tabs (the first column, which labels them), 16 tiles a page. A line's label * makes a
@@ -318,7 +321,8 @@ put back from the saved state when the skip ends) or most other tags. It still r
 https://github.com/krkren/scnfile describes in docs/format.md (Dictionaries are PSB objects,
 Arrays lists, void null). The root:
 
-    version     3 (2 up to KAGEX 0.9.3: no languages; 1 up to 0.9.2: no entry or exits)
+    version     4 (3 up to KAGEX 0.23.1: no titled or links; 2 up to 0.9.3: no languages; 1 up
+                to 0.9.2: no entry or exits)
     storage     the script
     hash        the key of what it was compiled from
     entry       the key of the World it starts from (none: an empty one)
@@ -343,6 +347,11 @@ A scene:
                 speech text, search text]
     lines       its steps, below
     nexts       where it goes when it ends, below (none: the story stops)
+    titled      1 where its label gave a title of its own (*label|Title), none where it took
+                the one before it (since version 4: the flowchart's nodes)
+    links       the jumps in it that may not happen ([jump cond=], a jump inside [if]),
+                %[type: 0, cond: 1, storage, target], none without (since version 4: the
+                flowchart's dashed lines)
 
 That is Wamsoft's layout for its multi-language games: an entry's length is its search text's,
 the speech text is the text as it's read out (each ruby in place of the characters it goes
