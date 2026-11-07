@@ -424,6 +424,11 @@ It uses krkrz_tools' libraries (xp3, audio, images) from krkrz_dev's submodule, 
 `KRKRZ_TOOLS_DIR` defaults to `../krkrz_dev/src/tools/krkrz_tools` next to this repository (or
 `$KRKRZ_BASE/krkrz_dev/...`). It needs CMake 3.21, Ninja and vcpkg (`VCPKG_ROOT`).
 
+vcpkg has to be a clone of https://github.com/microsoft/vcpkg (as the CI uses), with
+`VCPKG_ROOT` pointing at it: the vcpkg that comes with Visual Studio refuses a manifest without a
+`builtin-baseline`, and `vcpkg.json` has none, so the libraries follow the clone. vcpkg's first
+build also downloads its own CMake and PowerShell (about 165 MB) besides the libraries.
+
 ```bash
 cd tools/release
 cmake --preset linux                 # windows (Developer Command Prompt), macos (Apple Silicon)
