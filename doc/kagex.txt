@@ -3690,6 +3690,55 @@ the game's colour.
 The sample marks KAGEX, the World and Pip (and their Japanese), and its Extras has a fifth tab,
 Glossary (glossary.ks): the terms met, a "?" for the others, and the one chosen beside them.
 
+● Text Effects
+
+The sample's Text Effects demo (data/scenario/text.ks, since 0.23.0) shows, a page each, what a
+message window does with its text: colour, size, weight and slant, another font ([font face=]),
+outlines and shadows, gradients, ruby, pictures in a line ([graph char=false]: a picture as it is;
+char=true, the default, draws its shape in the text's colour), alignment, letter and line
+spacing ([style align= pitch= linespacing=]), indents, speed and pauses ([delay], [nowait],
+[wait], [l] in the middle of a line), characters that move and come in (below), a name shown as
+another for a line (【ai/A Voice】), [emb], the glossary's marks, a window style ([env
+msgstyle=]) and vertical text.
+
+Characters that move (since 0.23.0): the characters drawn after these keep moving while the page
+shows, until [resetfont]:
+
+    [font anim=wave]rolls like the sea[resetfont]
+    [font anim=shake animsize=6 color=0xff9090]Eek![resetfont]
+    [font appear=drop anim=wave]comes in, then keeps moving[resetfont]
+
+  anim         shake (each character jumps about), wave (a wave runs along them), pulse (they
+               fade and come back, one after another), rainbow (each runs through the colours);
+               none or "" stops (default: [deffont anim=]'s)
+  animsize     how far a shake or a wave goes, in px (default: a sixth of the size for a wave,
+               a fourteenth for a shake)
+  animspeed    how fast (1: the motion's own)
+  appear       how each character comes in as it's drawn: fade, rise (from below), drop (from
+               above), slide (from the right), over appeartime ms (400)
+
+[deffont anim= appear=] sets them for the window. Each such character is drawn on a small layer of
+its own over where it would have been drawn (a rainbow's once in each of its twelve colours,
+side by side, the layer showing one at a time); [backlay] copies them to the back page, so a
+transition keeps them. Reduce Motion (Config) holds them still and brings them in at once, and
+skipping brings them in at once. Vertical text doesn't move. The history shows the text plainly.
+
+Vertical text ([position vertical=true]): since 0.23.0 it lays out on the SDL engines too.
+KAG put one "@" before the window's face, which since 0.0.x is a list, and the engine found no
+font for "@Noto Sans JP,Roboto": every character was the icon font's arrow, 0 wide, drawn on the
+last. KAGVerticalFace(list) puts it before each face (KAGHorizontalFace takes it off again, for
+[hch]). The SDL engines draw a vertical face's characters upright from the point given, as
+horizontal text, not as Windows GDI does (left of it), which KAG was written for:
+KAGVerticalUpright(window) finds out which once, and on such an engine each character is centred
+on its line, the full stop and the comma go to the top right of their cell (KAGVerticalCorner)
+and brackets and dashes are drawn turned a quarter (KAGVerticalTurned), as vertical forms are.
+
+A [style] given before a line's text in a line mode outlives the clear before the text, as a
+[font] has since 0.22.0 (kag.clearForLine re-applies both). In Japanese and Chinese a character
+that may not start a line (。、」...) isn't broken before in the middle of a line: it hangs into
+the margin, as KAG's own wrap lets it (the text after an [emb] is a piece of its own, and the
+line breaker put its 。 at the start of the next line).
+
 ● The Name Box
 
 [position] takes these for its name window (since 0.17.0), besides nameleft and the rest:

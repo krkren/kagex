@@ -159,7 +159,7 @@ class HistoryLayer extends Layer
 		if(verticalView)
 		{
 			font.angle = 2700;
-			font.face = '@' + fontName;
+			font.face = KAGVerticalFace(fontName);
 		}
 		else
 		{

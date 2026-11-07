@@ -16,6 +16,8 @@
 
 [seladd text="World Extension: Animated Character" storage=anim.ks]
 
+[seladd text="Text Effects" storage=text.ks]
+
 [seladd text="Credits" storage=credits.ks]
 [select]
 

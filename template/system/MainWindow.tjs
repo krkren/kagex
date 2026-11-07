@@ -115,15 +115,19 @@ class KAGWindow extends Window
 	// them (MessageLayer.markTerm)
 	var glossKey = void, glossText = "", glossAt = 0, glossLastAt = 0, glossRanges = [];
 	var pendingFonts = []; // the [font]s given since the last character drawn (clearForLine)
+	var pendingStyles = []; // and the [style]s (since 0.23.0)
 	// The message window cleared before a line's text (the dispname tag, KAG's and the World's):
 	// a [font] given before the text, since the last character drawn, outlives the clear, which
 	// resets the font (since 0.22.0: [font color=...] at the start of a line in a line mode was lost)
 	function clearForLine() {
-		var fonts = [];
+		var fonts = [], styles = [];
 		fonts.assign(pendingFonts);
+		styles.assign(pendingStyles);
 		tagHandlers.er(%[]);
 		pendingFonts.clear();
+		pendingStyles.clear();
 		for (var i = 0; i < fonts.count; i++) tagHandlers.font(fonts[i]);
+		for (var i = 0; i < styles.count; i++) tagHandlers.style(styles[i]);
 	}
 	function glossaryTermFor(text, elm) {
 		if (typeof global.KAGGlossary != "Object" || !KAGGlossary.marking) return void;
@@ -180,6 +184,7 @@ class KAGWindow extends Window
 	// Forget the line the word wrap was in (internalRestoreFlags calls this on a load)
 	function resetWordWrap() {
 		pendingFonts.clear();
+		pendingStyles.clear();
 		wrapWidthFont = void;
 		wrapKey = wrapWordWidth = wrapWordWidthHist = wrapPlan = wrapPlanStyle = void;
 		wrapText = wrapDrawnWord = "";
@@ -510,6 +515,14 @@ class KAGWindow extends Window
 		if (!brk && wrapWords) {
 			if (wrapWordWidth === void) wrapWordWidth = msgTextWidth(wrapText.substring(wrapSegStart, wrapSegEnd() - wrapSegStart));
 			brk = wrapPos + wrapWordWidth >= cur.relinexpos && !wrapAtLineStart();
+		}
+		// In Japanese and Chinese a character that may not start a line (。、」...) isn't broken
+		// before in the middle of a line: it hangs into the margin, as KAG's own wrap lets it
+		// (since 0.23.0: the piece of text after an [emb] is planned on its own, and the plan
+		// put its 。 at the start of the next line)
+		if (brk && !wrapWords && !isSpace && !wrapAtLineStart()) {
+			var c0 = text.charAt(0);
+			if (cur.wwFollowing.indexOf(c0) >= 0 || "」』）】〉》〕］｝".indexOf(c0) >= 0) brk = false;
 		}
 		if (brk) {
 			wrapDropSpace = true;
@@ -17024,6 +17037,7 @@ class KAGWindow extends Window
 		// space counted twice would put the wrap one word out
 		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
 		pendingFonts.clear() if pendingFonts.count > 0;
+		pendingStyles.clear() if pendingStyles.count > 0;
 		var term = glossaryTermFor(text, elm);
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			glossaryMark(current, term, currentWithBack);
@@ -17246,6 +17260,12 @@ class KAGWindow extends Window
 		// Style settings
 		if(currentWithBack) current.comp.setStyle(elm);
 		current.setStyle(elm);
+		// (kept for the clear before the line's text, as [font]s are: clearForLine)
+		if (!skipNoDisp) {
+			var copy = %[];
+			(Dictionary.assign incontextof copy)(elm);
+			pendingStyles.add(copy);
+		}
 		return 0;
 	} incontextof this,
 
@@ -17262,6 +17282,7 @@ class KAGWindow extends Window
 		// Style reset
 		if(currentWithBack) current.comp.resetStyle();
 		current.resetStyle();
+		pendingStyles.clear();
 		return 0;
 	} incontextof this,
 
