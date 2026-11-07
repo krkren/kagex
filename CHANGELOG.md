@@ -16,7 +16,7 @@
 ### Fixed
 
 - **A `[font]` at the start of a line was lost in a line mode**: the page is cleared as a line's first character comes (the `dispname` tag, KAG's and the World's), and the clear reset the font, so `[font color=...]` or a gradient given before the line's text never showed. A `[font]` given since the last character drawn is now kept through that clear (`kag.clearForLine`).
-- **A word in a larger size broke in the middle**: after `[font size=]` in the middle of a line the word wrap measured the next words in the old size (the new one takes effect as a character is drawn), so a large word at the end of a line was split by KAG's character wrap. The size is settled before the words are measured.
+- **A word in a larger size broke in the middle**: after `[font size=]` in the middle of a line the word wrap measured the next words in the old size (the new one takes effect as a character is drawn), so a large word at the end of a line was split by KAG's character wrap. The size is settled before the words are measured, and a word measured before a font change is measured again in the new font.
 
 ### Changed
 
