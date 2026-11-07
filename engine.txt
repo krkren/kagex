@@ -1,0 +1,27 @@
+web engine key 982917f2b93a3848ca21e193bac66c377bb53dc01627bb96b25a6d137e7b59cf
+  kagex-platform-engine 1
+  platform web
+  pin ENGINE_SHA 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  pin XP3CRYPT_SHA 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
+  pin SCNFILE_SHA e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
+  pin KRKRZ_WEB_SHA 2fe46168acebc9ecf093d95e630a98f50a17efba
+  config web-config.json d8febde2a641bc29bb0039d5017ea87d06aaadf180dc67faa0707754c511a80e
+  file .github/workflows/platforms.yml 6a6572d590c9b4343c46c5862b24328558f52af16bbab9a04b2bdbb38c467f8e
+  file .github/platforms/setup.sh 3dec54421d4893fd2b14014687a0085d807d36ef2c97b555f557b0d8cbe90172
+  file .github/platforms/monocypher-kit.cmake 0caa80ab8b6a786c68b4db0399857d728db86a8e24e7c392108ffbb274e6b5d7
+  file .github/platforms/scnfile-monocypher-names.h d0f4f4a44be4bcc2345ce2d6765c4d9900aa65a9fa40dc22d4d26235b475a215
+  file .github/platforms/krkrthreepp-kit.cmake 99bbe095a7eb9d7d927b5ace2334630df59bf7c7b60644eb42782d3cf6e694a5
+  file .github/platforms/threepp-stb-names.h 6c562ac926f3fb420ab0f9f93f90c3cdeb953b72444cad360d8257841e494ac6
+  file .github/platforms/web-plugins.py 8a5e6446b412503705d36a7d1629dfb0b284230bc744431de006c85bffe5d49e
+  file .github/platforms/live2d-web-kit.cmake dad4cc2028f2a2d30dc60d13a048f3cd3152db3c44eda195abe9ff641f9e0899
+  file .github/platforms/krkreffekseer-kit.cmake 6abe874c4f606e5331fd66a1bf57d299f7ba74f26ca393d6930f677c05b475c2
+  file .github/platforms/krkreffekseer-webgl.cpp 837ce8ef435b31c0f221c3a5febfdd61739e7e6ede84773976d26ec84c6fbd95
+  file tools/live2d/build.py 9bac61757d6b9b5485f7962496391a2493e558e46ee8eaeb9923535c48c388c0
+  file tools/live2d/web/csm_web.cpp 4b5bb2db154fc821f4ab9fab9ed3a059c32accb18139d6cca43b8fbd3479ad6c
+  file tools/live2d/web/kit-web-xp3.patch 618eea0b2af742527cbc53dc089c81598c300fd747f30ab69a814f18861b7dd3
+  file tools/live2d/patches/krkrlive2d.patch 33d51bbadb7d59c3b2e012e3fa8f23944e45c6ff634518e939f4671fb0cca293
+  file tools/live2d/patches/live2d-CubismNativeFramework.patch 8d5aaaea8435f7b4c095f89f589f18c19065d00ee96b8835ea6c6e731b0bfd49
+  file tools/live2d/patches/live2d.patch 29caef51c361af7ae1356409ddde285eaaf604e6ea3757078697339a45830c15
+  file tools/live2d/driver/CMakeLists.txt 1deaf082714d16f6979713e127ab0da116e3c968b41411845f84d9b16419b798
+  file tools/release/scripts/engine-package.py 93b3298b9ad94cf6e538157709481e40a45a30e043183fd34f52750e7d732912
+reusing kagex_engine_web.zip of release 0.21.1: the engine isn't built
