@@ -727,7 +727,8 @@ jobs:
           path: kagex-ios-simulator.zip
           if-no-files-found: error
       - name: Smoke test in the Simulator
-        timeout-minutes: 30
+        # the whole suite: 16 to 25 minutes, 30 and more on a slow runner
+        timeout-minutes: 45
         run: |
           dev=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
