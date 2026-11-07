@@ -218,10 +218,12 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [pip standard neutral posright]
 いつもの通りにいる、あいとピップ。
 [env keep]
+[begintrans]
 [pip hide]
-[ai posleft sad]
+[ai sad]
 [memory]
-[env grayscale=true trans=normal]
+[env grayscale=true]
+[endtrans trans=normal]
 灰色の思い出：ずっと前の、ひとりきりのあい。
 [env restore trans=normal]
 そして今へ。音楽は流れたまま、何もかも元どおり。

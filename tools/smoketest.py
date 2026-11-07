@@ -4469,14 +4469,44 @@ def sample_steps(eng):
         eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
         eng.tjs('kag.process("char.ks", "*flashback"); return 1;')
         now = "ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01"
-        memory = "ai@-480:sad grey=true kept=1 bgm=bgm01"
+        memory = "ai@%s:sad grey=true kept=1 bgm=bgm01" % ("-480" if eng.tjs('return typeof world_object.env.transLeftovers != "undefined" ? 1 : 0;') != 1 else "0")
         line("the scene", now)
+        # since 0.23.0 the flashback comes and goes in one transition each: the window's style
+        # changes behind it (the back page's window first), and [env restore trans=normal] keeps
+        # the memory on the front page (transLeftovers) while the scene comes back behind it,
+        # where it went to black at once before
+        fades = eng.tjs('return typeof world_object.env.transLeftovers != "undefined" ? 1 : 0;') == 1
+        # the pages' layers, but for name boxes (a message layer makes one when a name first shows)
+        pages = ('(function() { var r = [], p = [kag.fore.base, kag.back.base];'
+                 ' for (var j = 0; j < 2; j++) { r.add(j ? "| back:" : "front:");'
+                 '  for (var i = 0; i < p[j].children.count; i++) { var c = p[j].children[i]; if (c.name.indexOf(":Name") < 0) r.add(c.name + (c.visible ? "" : "(hidden)")); } }'
+                 ' return r.join(" "); })()')
+        before = str(eng.tjs("return " + pages + ";"))
         eng.tjs("kag.onPrimaryClick(); return 1;")
+        if fades:
+            eng.wait("the flashback's transition, the memory's window behind it",
+                         '(kag.fore.base.inTransition && kag.back.messages[0].frameGraphic == "messagewindow_memory"'
+                         ' && kag.fore.messages[0].frameGraphic == "messagewindow") ? 1 : 0', timeout=10, interval=0.05)
+            print("     into the memory: one transition, the window's style with it", flush=True)
         line("[env keep], a grey flashback", memory)
         eng.tjs("kag.saveBookMark(5); return 1;")
         eng.wait("data5 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(5))", timeout=10)
         eng.tjs("kag.onPrimaryClick(); return 1;")
+        if fades:
+            eng.wait("[env restore]'s transition from the memory still on the front page",
+                     '(kag.fore.base.inTransition && world_object.env.transLeftovers.count > 0'
+                     ' && kag.fore.messages[0].frameGraphic == "messagewindow_memory" && kag.back.messages[0].frameGraphic == "messagewindow") ? 1 : 0', timeout=10, interval=0.05)
+            print("     back to now: one transition from the memory as it was", flush=True)
         line("[env restore]", now)
+        if fades:
+            eng.wait("the transition's end", "!kag.fore.base.inTransition && world_object.env.transLeftovers.count == 0", timeout=10)
+            after = str(eng.tjs("return " + pages + ";"))
+            print("     the pages' layers after the flashback, as before it: %s" % after, flush=True)
+            if after != before:
+                raise SmokeError("the flashback left the pages with other layers: %s before, %s after" % (before, after))
+            r = str(eng.tjs('return [kag.fore.messages[0].frameGraphic, kag.back.messages[0].frameGraphic].join(",");'))
+            if r != "messagewindow,messagewindow":
+                raise SmokeError("the window's style after the flashback: %s" % r)
         eng.tjs("kag.loadBookMark(5); return 1;")
         line("loaded in the flashback, the kept scene with it", memory)
         eng.tjs("kag.onPrimaryClick(); return 1;")

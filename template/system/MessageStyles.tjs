@@ -41,8 +41,10 @@ function KAGSetMessageStyleTint(name, v)
 	KAGApplyMessageStyle(KAGMessageStyleNow) if KAGMessageStyleNow == name || name == "normal" && KAGMessageStyleNow == "normal";
 }
 
-// the style on the message window (fore and back), drawn again now where the page is recorded
-function KAGApplyMessageStyle(name)
+// the style on the message window (fore and back), drawn again now where the page is recorded;
+// pages "back": the back page's window only (the World behind a global transition: the front
+// one takes it when the pages are exchanged, so the window changes with the scene)
+function KAGApplyMessageStyle(name, pages)
 {
 	name = "normal" if name === void || name == "";
 	var st = KAGMessageStyles[name];
@@ -54,7 +56,7 @@ function KAGApplyMessageStyle(name)
 	if (typeof global.kag != "Object" || kag === void) return;
 	var tint = KAGMessageStyleTint(name), op = st.tintOpacity !== void ? +st.tintOpacity : 150;
 	var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : void;
-	for (var p = 0; p < 2; p++) {
+	for (var p = pages == "back" ? 1 : 0; p < 2; p++) {
 		var m = (p ? kag.back : kag.fore).messages[KAGMessageStyleLayer];
 		if (m === void || typeof m.frameTint == "undefined") continue;
 		m.frameGraphic = st.frame if st.frame !== void;

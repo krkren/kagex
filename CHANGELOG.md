@@ -15,6 +15,7 @@
 - **A 。 after an `[emb]` could start a line in Japanese**: the line breaker planned the text after the `[emb]` on its own and broke before its 。; a character that may not start a line hangs into the margin in the middle of a line now.
 - **A script-drawn transition of the whole page** (zoomfade, rgbfade, book, multiripple, spin) showed the message window's inside black: the page's pictures kept the window's see-through alpha. They're opaque now.
 - **A compiled scene's title in the corner** showed in the source language whatever language was shown.
+- **The Character demo's flashback jumped into place and back**: Pip faded out first, then the bars, the sepia edge, the memory's window and Ai's move came at once; at its end the screen went black at once and the street faded in from black. The memory's changes now go between `[begintrans]` and `[endtrans trans=normal]`, so it comes in as one crossfade (Ai stays where she stands), and `[env restore]` with a transition (`trans=`, `fade=`, a transition's name, or inside `[begintrans]`) keeps the scene on the screen in front while it draws the kept one behind it, for one crossfade from the one to the other. A message window style set behind a global transition goes on the back page's window first and on the other once the pages are exchanged, so the window changes in the same crossfade.
 
 ## 0.22.0
 
