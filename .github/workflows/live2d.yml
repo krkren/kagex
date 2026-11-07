@@ -540,6 +540,8 @@ jobs:
       # sample built with kagex-release from it (its host engine, for compiling the scripts and
       # scenarios, from the release, headless)
       - name: A game's own engine package
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo timeout 600 apt-get install -y -q --no-install-recommends -o DPkg::Lock::Timeout=300 \
             libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri libgomp1 fontconfig >> results/apt.log 2>&1
@@ -559,6 +561,13 @@ jobs:
           tool="$RUNNER_TEMP/tool/kagex-release"
           chmod +x "$tool"
           "$tool" --version | tee results/game.txt
+          # the tool downloads its host engine from the release of its own version, which a push
+          # before that release (a version bump) doesn't have yet: there, the newest release's
+          if [ -z "$RELEASE_TAG" ] && ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/$version" --jq '.assets[].name' 2>/dev/null | grep -qx kagex_engine_linux.zip; then
+            newest=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name == "kagex_engine_linux.zip"))][0].tag_name')
+            echo "host engine from $newest: $version has no engine packages yet" | tee -a results/game.txt
+            export KAGEX_RELEASE_ENGINE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$newest/"
+          fi
           cd "$PROJECT_DIR"
           "$tool" --cli init . >> "$GITHUB_WORKSPACE/results/game.txt"
           python3 - <<'PY'
@@ -718,6 +727,8 @@ jobs:
       # for the Simulator (smoke-tested below: its REPL is a launch option) and for devices
       # (signed ad hoc with a stand-in profile, as tools/release/test/smoke.py does)
       - name: A game's own engine package
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version=$(python3 -c "import json; print(json.load(open('$PROJECT_DIR/linux-config.json'))['version'])")
           if python3 -I kirikiri/kagex/tools/release/scripts/ios-engine.py --device "$RUNNER_TEMP/ios-device.zip" --simulator "$RUNNER_TEMP/ios-simulator.zip" \
@@ -734,6 +745,13 @@ jobs:
           tool="$RUNNER_TEMP/tool/kagex-release"
           chmod +x "$tool"
           "$tool" --version | tee results/game.txt
+          # the tool downloads its host engine from the release of its own version, which a push
+          # before that release (a version bump) doesn't have yet: there, the newest release's
+          if [ -z "$RELEASE_TAG" ] && ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/$version" --jq '.assets[].name' 2>/dev/null | grep -qx kagex_engine_linux.zip; then
+            newest=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name == "kagex_engine_linux.zip"))][0].tag_name')
+            echo "host engine from $newest: $version has no engine packages yet" | tee -a results/game.txt
+            export KAGEX_RELEASE_ENGINE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$newest/"
+          fi
           cd "$PROJECT_DIR"
           "$tool" --cli init . >> "$GITHUB_WORKSPACE/results/game.txt"
           for target in simulator device; do
