@@ -5295,6 +5295,69 @@ def sample_steps(eng):
         eng.tjs("kag.goToStart(); return 1;")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the glossary: its words marked in the text, a click on one shows its entry, Extras lists them")
+    def _():
+        if eng.tjs('return typeof global.KAGGlossary == "Object" && KAGGlossary.entries().count > 0 ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the glossary, or no terms.csv)", flush=True)
+            return
+        eng.tjs('KAGGlossary.reload(); kag.sflags.glossaryMet = void; kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks's first line", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        # KAGEX and World on the first line: their characters in the glossary's colour, placed
+        marks = str(eng.tjs('var m = kag.fore.messages[0], r = %[];'
+                            ' for (var i = 0; i < m.termRects.count; i++) r[m.termRects[i][4]] = 1;'
+                            ' for (var i = 0; i < m.termRectsLine.count; i++) r[m.termRectsLine[i][4]] = 1;'
+                            ' var a = []; a.assign(r); var k = []; for (var i = 0; i < a.count; i += 2) k.add(a[i]); k.sort();'
+                            ' return k.join(",") + "|" + KAGGlossary.met("kagex") + KAGGlossary.met("world") + KAGGlossary.met("pip");'))
+        print("     marked on the line: %s (met kagex, world, pip: %s)" % tuple(marks.split("|")), flush=True)
+        if marks != "kagex,world|110":
+            raise SmokeError("the first line's glossary words weren't marked and met as expected: %s" % marks)
+        # a click on KAGEX shows its entry and doesn't go on (the pointer can be placed on the
+        # desktop; elsewhere the entry is opened as the click would)
+        at = str(eng.tjs('var m = kag.fore.messages[0], r, ox = 0, oy = 0;'
+                         ' if (m.termRects.count > 0) r = m.termRects[0];'
+                         ' else r = m.termRectsLine[0], ox = m.lineLayerOriginX + m.getLineLayerLeftOffset(), oy = m.lineLayerOriginY + m.getLineLayerTopOffset();'
+                         ' return (m.left + ox + r[0] + (r[2] >> 1)) + "," + (m.top + oy + r[1] + (r[3] >> 1));'))
+        line = eng.tjs("return world_object.player.historyNow();")
+        x, y = [int(v) for v in at.split(",")]
+        if isinstance(eng, DesktopEngine):
+            eng.tjs('kag.primaryLayer.setCursorPos(%d, %d); return 1;' % (x, y))
+            got = eng.tjs('var id = KAGGlossaryAtPointer(kag); return id === void ? "none" : id;')
+            if got != "kagex":
+                raise SmokeError("the pointer on KAGEX (%d, %d) finds %s" % (x, y, got))
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        else:
+            eng.tjs('KAGGlossary.show("kagex"); return 1;')
+        eng.wait("its entry", 'kag.currentDialog !== void', timeout=10)
+        lines = eng.tjs('return kag.currentDialog.a11yText;')
+        print("     the entry: %r" % lines, flush=True)
+        if "KAGEX" not in str(lines) or "Wamsoft" not in str(lines):
+            raise SmokeError("the entry card doesn't hold KAGEX's entry: %r" % lines)
+        eng.key("VK_ESCAPE")
+        eng.wait("the card to close", 'kag.currentDialog === void', timeout=10)
+        if eng.tjs("return world_object.player.historyNow();") != line:
+            raise SmokeError("the click on the term went on to the next line")
+        # the backlog colours them too (marksIn), and Plain turns the marks off
+        if eng.tjs('return KAGGlossary.marksIn("using KAGEX World Extension. Worlds").count;') != 2:
+            raise SmokeError("the backlog's marks don't find KAGEX and World (and not Worlds)")
+        eng.tjs('KAGOptionSet("glossaryMarks", false); return 1;')
+        off = eng.tjs('var m = kag.fore.messages[0]; return m.termRects.count + m.termRectsLine.count;')
+        eng.tjs('KAGOptionSet("glossaryMarks", true); return 1;')
+        if off != 0:
+            raise SmokeError("with the marks off the page was still marked (%s)" % off)
+        # Extras: the terms met, the others a "?"; one picked shows its entry
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.tjs('tf.glossarySel = void; sf.extramode = 5; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("glossary.ks", 'kag.conductor.curStorage == "glossary.ks" && kag.inStable', timeout=20)
+        got = str(eng.tjs('var l = kag.fore.messages[0].names.glossaryList; return l.itemCount + ":" + tf.glossarySel + ":" + glossaryItemName(2) + ":" + tf.glossaryStatus;'))
+        print("     the Glossary tab: %s" % got, flush=True)
+        if not got.startswith("3:0:Not met yet:"):
+            raise SmokeError("the Glossary tab doesn't list the three terms with KAGEX chosen and Pip not met: %s" % got)
+        eng.tjs("glossaryPick(1); return 1;")
+        eng.wait("World's entry", 'kag.conductor.curStorage == "glossary.ks" && kag.inStable && tf.glossarySel == 1', timeout=20)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("languages: F9 shows the title screen in Japanese, with its own images, then English again")
     def _():
         if not language_framework(eng):

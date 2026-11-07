@@ -175,6 +175,8 @@ var KAGTextStyles = %[
 	"dialog.title" => %[ size:40 ],
 	"dialog.line" => %[ size:32 ],
 	"dialog.small" => %[ size:22, lines:3, lineSpacing:6, edgeExtent:2 ],
+	// a paragraph (the glossary's entries, Glossary.tjs)
+	"dialog.text" => %[ size:30, lines:8, lineSpacing:8, align:"left", edgeExtent:2, minSize:20 ],
 ];
 var KAGTextStylesRead = false;
 var KAGTextStyleCache = %[];

@@ -1607,7 +1607,9 @@ class AboutDialogLayer extends DialogLayer
 
 {
 
-    function AboutDialogLayer() {
+    // given: [ [ text, text style ], ... ] in place of the game's details (showTextDialog)
+
+    function AboutDialogLayer(given = void) {
 
         super.DialogLayer(kag, kag.primaryLayer, "AboutDialog");
 
@@ -1615,27 +1617,9 @@ class AboutDialogLayer extends DialogLayer
 
         var lines = [];
 
-        var title = aboutText(sf.software_title);
+        if (given !== void) lines.assign(given);
 
-        lines.add([ title != "" ? title : System.title, "dialog.title" ]);
-
-        var version = aboutText(sf.software_version), maker = aboutText(sf.software_maker);
-
-        var year = aboutText(sf.software_year);
-
-        if (version != "") lines.add([ tr("Version %s").sprintf(version), "dialog.line" ]);
-
-        if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, "dialog.line" ]);
-
-        lines.add([ "Kirikiri Z " + System.versionString, "dialog.line" ]);
-
-        // the fonts the game ships, with their licences (fonts.csv)
-
-        var lic = typeof global.KAGFontLicences != "undefined" ? KAGFontLicences() : [], parts = [];
-
-        for (var i = 0; i < lic.count; i++) parts.add(lic[i].caption + " (" + tr(lic[i].licence) + ")");
-
-        if (parts.count > 0) lines.add([ tr("Fonts: %s").sprintf(parts.join(", ")), "dialog.small" ]);
+        else aboutLines(lines);
 
         // The smallest frame whose text area holds every line
 
@@ -1759,6 +1743,34 @@ class AboutDialogLayer extends DialogLayer
 
     }
 
+    // The About screen's lines: the game's title, version and maker, the engine, the fonts
+
+    function aboutLines(lines) {
+
+        var title = aboutText(sf.software_title);
+
+        lines.add([ title != "" ? title : System.title, "dialog.title" ]);
+
+        var version = aboutText(sf.software_version), maker = aboutText(sf.software_maker);
+
+        var year = aboutText(sf.software_year);
+
+        if (version != "") lines.add([ tr("Version %s").sprintf(version), "dialog.line" ]);
+
+        if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, "dialog.line" ]);
+
+        lines.add([ "Kirikiri Z " + System.versionString, "dialog.line" ]);
+
+        // the fonts the game ships, with their licences (fonts.csv)
+
+        var lic = typeof global.KAGFontLicences != "undefined" ? KAGFontLicences() : [], parts = [];
+
+        for (var i = 0; i < lic.count; i++) parts.add(lic[i].caption + " (" + tr(lic[i].licence) + ")");
+
+        if (parts.count > 0) lines.add([ tr("Fonts: %s").sprintf(parts.join(", ")), "dialog.small" ]);
+
+    }
+
     // A detail as text: "" when unset, so a number (a version of 1.2) shows too
 
     function aboutText(v) {
@@ -1786,6 +1798,32 @@ function showAbout()
     var dialog = new AboutDialogLayer();
 
     dialog.open();
+
+}
+
+
+
+/**
+
+ * Lines of text in the About screen's frame, with Close (the glossary's entries; since 0.22.0):
+
+ * [ [ text, text style (Fonts.tjs: "dialog.title", "dialog.line", "dialog.small") ], ... ].
+
+ * Whether it opened (not while another dialog is open)
+
+ */
+
+function showTextDialog(lines)
+
+{
+
+    if (!yesNoCanUseLayer() || kag.currentDialog !== void) return false;
+
+    var dialog = new AboutDialogLayer(lines);
+
+    dialog.open();
+
+    return true;
 
 }
 

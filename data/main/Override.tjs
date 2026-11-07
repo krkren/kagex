@@ -768,7 +768,8 @@ var configPages = [
     [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
     // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
-    [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ], [] ]
+    [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],
+      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
@@ -1943,6 +1944,90 @@ function searchItemName(index)
 {
     var info = searchFound[index];
     return info === void ? "" : (info.name != "" ? info.name + ": " : "") + info.text;
+}
+
+/**
+ * The glossary (glossary.ks, Extras' fifth tab; template/system/Glossary.tjs): the terms on the
+ * left, a "?" for one the story hasn't shown yet, and the one chosen on the right
+ */
+var glossaryRowPics = %[];
+var glossaryTrigger;
+function glossaryInit()
+{
+    sf.extramode = 5;
+    tf.recollect = 0;
+    tf.glossaryFade = 300;
+    tf.glossaryPosition = 0 if tf.glossaryPosition === void;
+    var list = KAGGlossary.entries();
+    // the first term met, unless one was chosen
+    if (tf.glossarySel === void || tf.glossarySel >= list.count) {
+        tf.glossarySel = -1;
+        for (var i = 0; i < list.count; i++) if (glossaryOpen(i)) { tf.glossarySel = i; break; }
+    }
+    var n = KAGGlossary.metCount();
+    tf.glossaryStatus = list.count == 0 ? tr("This game has no glossary") : tr("%d of %d terms met").sprintf(n, list.count);
+}
+// whether the player has met term i (or has seen the whole story)
+function glossaryOpen(i)
+{
+    var e = KAGGlossary.entries()[i];
+    return e !== void && (KAGGlossary.met(e.id) || tf.allseen);
+}
+function glossaryRowPicture(state)
+{
+    var name = "glossary_row_" + state, p = glossaryRowPics[name];
+    if (p !== void && isvalid p) return p;
+    p = new Layer(kag, kag.primaryLayer);
+    p.visible = false;
+    p.loadImages(name);
+    p.setSizeToImageSize();
+    return glossaryRowPics[name] = p;
+}
+function drawGlossaryItem(layer, index, w, h, state)
+{
+    var e = KAGGlossary.entries()[index];
+    if (e === void) return;
+    var over = state != "normal" || index == tf.glossarySel;
+    var p = glossaryRowPicture(over ? "over" : "normal");
+    layer.copyRect(0, 0, p, 0, 0, p.imageWidth, p.imageHeight);
+    var hold = layer.holdAlpha;
+    layer.holdAlpha = true;
+    KAGDrawStyledText(layer, "glossary.row", glossaryOpen(index) ? e.title : "?", 28, 0, w - 56, h, over ? %[ color:0xffffff ] : void);
+    layer.holdAlpha = hold;
+}
+function glossaryItemName(index)
+{
+    var e = KAGGlossary.entries()[index];
+    return e === void ? "" : glossaryOpen(index) ? e.title : tr("Not met yet");
+}
+// a term chosen: the screen again, quickly, with its entry
+function glossaryPick(index)
+{
+    if (!glossaryOpen(index)) return;
+    var l = kag.fore.messages[0].names.glossaryList;
+    tf.glossaryPosition = l.position if l !== void && isvalid l;
+    tf.glossarySel = index;
+    tf.glossaryFocus = index;
+    if (glossaryTrigger === void) glossaryTrigger = new AsyncTrigger(function { kag.process("glossary.ks", "*again"); }, "");
+    glossaryTrigger.trigger();
+}
+function glossaryList()
+{
+    var l = screenList("glossaryList", "Terms", 306, 230, 478, 712, 76, 1, 10, KAGGlossary.entries().count,
+        drawGlossaryItem, glossaryPick, glossaryItemName);
+    l.scrollTo(+tf.glossaryPosition);
+    l.focusIndex = tf.glossaryFocus !== void && tf.glossaryFocus < l.itemCount ? +tf.glossaryFocus : -1;
+}
+// the entry chosen, on the right panel
+function glossaryEntry()
+{
+    var e = KAGGlossary.entries()[tf.glossarySel];
+    if (e === void || !glossaryOpen(tf.glossarySel)) return;
+    var m = kag.current, hold = m.holdAlpha;
+    m.holdAlpha = true;
+    var t = KAGDrawStyledText(m, "glossary.title", e.title, 890, 250, 690, 64);
+    KAGDrawStyledText(m, "glossary.text", e.text, 890, 250 + t.height + 28, 690, 600);
+    m.holdAlpha = hold;
 }
 
 // The list of the lines found, on the screen's message layer (a link of it, so the keys and a

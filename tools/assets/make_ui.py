@@ -71,7 +71,7 @@ LABELS = {
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
-        "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG",
+        "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG", "Glossary": "用語集",
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
@@ -833,8 +833,8 @@ def make_config_pages():
     t.save(out("config_track.png", False))
 
 
-def nav_button(label, st, w=180):
-    return button(w, 64, label, st, size=28, weight="Black", r=12, shadow=6)
+def nav_button(label, st, w=180, size=28):
+    return button(w, 64, label, st, size=size, weight="Black", r=12, shadow=6)
 
 
 # --- save / load -----------------------------------------------------------------------
@@ -871,8 +871,10 @@ def make_saveload():
 
 
 # --- Extras ----------------------------------------------------------------------------
+# five tabs 144 wide, 10 apart, from x 680 (the screens' titles end before it; Return at 1450)
 EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music"),
-              ("extra_searchmode", "Search")]
+              ("extra_searchmode", "Search"), ("extra_glossary", "Glossary")]
+EXTRA_TAB_W = 144
 
 
 def make_extras():
@@ -914,9 +916,23 @@ def make_extras():
         c.rrect((3, 3, 1311, 73), 9, fill=fill)
         c.save(out("search_row_%s.png" % st, False))
 
+    # the glossary (glossary.ks): the terms on the left, 9 rows of 470x76 (230 + 82 y), the
+    # entry met on the right
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Glossary"))
+    c.panel((290, 206, 800, 960), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
+    c.panel((840, 206, 1630, 960))
+    c.save(out("glossary_base.png"), opaque=True)
+    for st, fill, border in (("normal", rgba(WHITE, 235), LAV), ("over", rgba(VIOLET), VIOLET)):
+        c = Canvas(470, 76)
+        c.rrect((0, 0, 470, 76), 12, fill=rgba(border))
+        c.rrect((3, 3, 467, 73), 9, fill=fill)
+        c.save(out("glossary_row_%s.png" % st, False))
+
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
-            nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
+            nav_button(L(label), st, w=EXTRA_TAB_W, size=26).save(out("%s_%s.png" % (name, st)))
     pages = ["Character 1", "Character 2", "Character 3", "Character 4", "Character 5", "Other"]
     for i, label in enumerate(pages):
         for st in ("normal", "over"):

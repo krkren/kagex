@@ -580,7 +580,8 @@ function KAGOptionColumn(layer, x, top, names)
 	for (var i = 0; i < names.count; i++) {
 		var o = names[i] !== void ? KAGOptions[names[i]] : void;
 		o = void if o !== void && o.available !== void && !o.available();
-		if (i > 0) {
+		// (no rule under a row left empty: something of the screen's own is there)
+		if (i > 0 && names[i - 1] !== void) {
 			var d = st.divider;
 			layer.colorRect(x + d.inset, y - 1, st.width - d.inset * 2, 2, d.color, d.opacity);
 		}

@@ -18,3 +18,8 @@ KAGDefineTextStyle("search.line", %[ size:26 ]);
 
 // the found/total counts on the CG pages' buttons
 KAGDefineTextStyle("count", %[ size:22, bold:true, align:"right", valign:"middle", color:0xffffff ]);
+
+// the glossary (glossary.ks): a term's row, then the entry chosen
+KAGDefineTextStyle("glossary.row", %[ size:30, bold:true, valign:"middle", color:0x24107a, minSize:18 ]);
+KAGDefineTextStyle("glossary.title", %[ size:48, bold:true, edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, minSize:24 ]);
+KAGDefineTextStyle("glossary.text", %[ size:32, lines:14, lineSpacing:12, edge:true, edgeColor:0x010062, edgeExtent:2, edgeEmphasis:255 ]);

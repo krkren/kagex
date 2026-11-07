@@ -3783,7 +3783,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		clearLayer(all);
 
-
+		termRects.clear(), termMark = void;
 
 		// Display position to initial position
 
@@ -3849,9 +3849,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// Called when message reaches the bottom and page waits then clears the layer.
 
-
-
 		clearLayer(all);
+
+		termRects.clear(), termMark = void;
 
 
 
@@ -4497,6 +4497,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		styledRun = void;
 
+		termRectsLine.clear();
+
 		resetLineSize();
 
 		lineLayerLinks.count = 0;
@@ -4873,7 +4875,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var lloy = lineLayerOriginY + getLineLayerTopOffset();
 
-
+		fixTermRects(llox, lloy);
 
 		var target =   hasTextLayer ? textLayer : this; // Drawing destination
 
@@ -5602,7 +5604,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-		var chColor = shownChColor; // read text in the player's colour
+		// read text in the player's colour, a glossary's word in the glossary's (markTerm)
+
+		var chColor = termMark !== void ? termMarkColor : shownChColor;
+
 		if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
 
 		else {
@@ -5618,6 +5623,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 			lastFill = [ ll, dx, dy, ch, chColor ];
 
 		}
+
+		if (termMark !== void) noteTermCh(ll, run, dx, dy, cw + pitch, chColor);
 
 
 
@@ -6198,10 +6205,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		styledRunCount++;
 
 		return styledRun = %[ layer:ll, x:x, y:y, next:x, style:rta.style, baseLine:rta.baseLine,
-
 			key:rta.appKey, app:rta.app.clone(), text:"", markup:"", extent:0, closed:false, dirty:false,
-
-			pad:pad, backX:bx, backWidth:bw, height:h, layerWidth:ll.imageWidth ];
+			pad:pad, backX:bx, backWidth:bw, height:h, layerWidth:ll.imageWidth, underlines:[] ];
 
 	}
 
@@ -6296,9 +6301,64 @@ class MessageLayer extends AnimKAGLayerTransMove
 		// "wrong context" (実行コンテキストが違います). Reading a property finds them
 
 		var attach = ll.useCache;
-
 		ll.drawStyledLayout(sl, r.x, r.y + r.baseLine + ascent);
+		for (var i = 0; i < r.underlines.count; i++) drawTermUnderline(ll, r.underlines[i]*);
+	}
 
+	// ---- the glossary's words (Glossary.tjs; since 0.22.0) ------------------------------------
+	// The ch handler marks the characters of a term as it draws them: they take the glossary's
+	// colour with an underline, and their places (termRects, on this layer; the line's own in
+	// termRectsLine until fixLineLayer places the line) let a click find the term (termAt)
+	var termMark;           // the term being drawn (its id), or void
+	var termRects = [];     // [ x, y, w, h, id ] on this layer
+	var termRectsLine = []; // the same for the line being drawn, on the line layer
+	property termMarkColor { getter() { return typeof global.KAGGlossary == "Object" ? global.KAGGlossary.color : chColor; } }
+	function markTerm(id) {
+		storeRedrawTextState("markTerm", id);
+		termMark = id;
+	}
+	function noteTermCh(ll, run, dx, dy, w, color) {
+		var h = fontSize;
+		if (vertical) termRectsLine.add([ dx - (fontSize >> 1), dy, fontSize, w, termMark ]);
+		else termRectsLine.add([ dx, dy, w, h, termMark ]);
+		if (vertical) return; // (no underline beside vertical text)
+		// the underline: with the run's glyphs, or now where the character is drawn alone
+		var u = [ dx, int(lineLayerBase) + Math.max(1, fontSize \ 16), w, Math.max(2, fontSize \ 18), color ];
+		if (run && styledRun !== void && !styledRun.closed) styledRun.underlines.add(u);
+		else drawTermUnderline(ll, u*);
+	}
+	function drawTermUnderline(ll, x, y, w, h, color) {
+		if (y + h > ll.imageHeight) y = ll.imageHeight - h;
+		ll.face = dfAuto;
+		ll.fillRect(x, y, w, h, 0xff000000 | color);
+	}
+	function fixTermRects(llox, lloy) {
+		for (var i = 0; i < termRectsLine.count; i++) {
+			var r = termRectsLine[i];
+			termRects.add([ r[0] + llox, r[1] + lloy, r[2], r[3], r[4] ]);
+		}
+		termRectsLine.clear();
+	}
+	// The term at x, y on this layer (void: none); a little room round it, for a finger
+	function termAt(x, y) {
+		var pad = 6;
+		for (var i = 0; i < termRects.count; i++) {
+			var r = termRects[i];
+			if (x >= r[0] - pad && x < r[0] + r[2] + pad && y >= r[1] - pad && y < r[1] + r[3] + pad) return r[4];
+		}
+		var llox = lineLayerOriginX + getLineLayerLeftOffset(), lloy = lineLayerOriginY + getLineLayerTopOffset();
+		for (var i = 0; i < termRectsLine.count; i++) {
+			var r = termRectsLine[i];
+			if (x >= r[0] + llox - pad && x < r[0] + llox + r[2] + pad && y >= r[1] + lloy - pad && y < r[1] + lloy + r[3] + pad) return r[4];
+		}
+	}
+	// Tooltips.tjs: a term's title at the pointer
+	function tipAt(x, y) {
+		if (!visible || typeof global.KAGGlossary != "Object") return "";
+		var id = termAt(x - imageLeft, y - imageTop);
+		if (id === void) return "";
+		var e = global.KAGGlossary.entry(id);
+		return e !== void ? e.title : "";
 	}
 
 
@@ -10054,9 +10114,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		focusable = src.focusable;
 
-
-
         eventTransparent = src.eventTransparent;
+
+		termRects.assignStruct(src.termRects), termRectsLine.assignStruct(src.termRectsLine), termMark = src.termMark;
 
         
 

@@ -108,6 +108,55 @@ class KAGWindow extends Window
 	var wrapDropSpace = false;     // the space the word wrap broke the line at is not drawn...
 	var wrapDropSpaceHist = false; // ...or stored in the history (the ch handler checks these)
 
+	// The glossary's words (Glossary.tjs; since 0.22.0): glossaryTermFor() follows the characters
+	// through the line being drawn as the word wrap does (its own index, since the wrap leaves
+	// lines without spaces alone), and says which term each one belongs to; the ch handler marks
+	// them (MessageLayer.markTerm)
+	var glossKey = void, glossText = "", glossAt = 0, glossLastAt = 0, glossRanges = [];
+	function glossaryTermFor(text, elm) {
+		if (typeof global.KAGGlossary != "Object" || !KAGGlossary.marking) return void;
+		var wrap = elm !== void ? elm.wrap : void, line, key;
+		if (wrap !== void) {
+			line = wrap.line, key = wrap.key;
+		} else {
+			line = conductor.curLineStr;
+			if (line === void || line == "") return void;
+			var c0 = line[0];
+			if (c0 == "*" || c0 == ";") return void;
+			key = conductor.curStorage + ":" + conductor.curLine;
+		}
+		if (key != glossKey) {
+			glossKey = key, glossAt = glossLastAt = 0;
+			glossText = wrap !== void ? line : wrapCleanLine(line);
+			var words = wrap !== void && wrap.wordWrap !== void ? +wrap.wordWrap : wrapLanguageWords();
+			glossRanges = KAGGlossary.find(glossText, words);
+		}
+		if (glossRanges.count == 0) return void;
+		var i = glossAt;
+		while (glossText.charAt(i) == "\n") i++;
+		if (glossText.substr(i, text.length) != text) return void; // text the line doesn't have
+		glossLastAt = glossAt, glossAt = i + text.length;
+		for (var j = 0; j < glossRanges.count; j++) {
+			var r = glossRanges[j];
+			if (i < r[0]) break;
+			if (i < r[1]) return r[2];
+		}
+	}
+	// The term (or none) the next characters drawn on layer (and its back page's) belong to
+	function glossaryMark(layer, id, withBack = false) {
+		if (layer.termMark !== id) layer.markTerm(id);
+		if (withBack && layer.comp.termMark !== id) layer.comp.markTerm(id);
+		if (id !== void && conductor == mainConductor && !skipNoDisp) KAGGlossary.meet(id);
+	}
+	function saveGlossaryState() { return [ glossKey, glossText, glossAt, glossLastAt, glossRanges ]; }
+	function restoreGlossaryState(s) { glossKey = s[0], glossText = s[1], glossAt = s[2], glossLastAt = s[3], glossRanges = s[4]; }
+	// A click on a term in a message window, while the game waits for one, shows its entry
+	function glossaryClick() {
+		if (typeof global.KAGGlossary != "Object" || currentDialog !== void || !inStable || messageLayerHiding) return false;
+		var id = global.KAGGlossaryAtPointer(this);
+		return id !== void && KAGGlossary.show(id);
+	}
+
 	// Word widths for the word wrap, measured the way the text is drawn (krkr_richtext
 	// advances when the message layer or the history uses it)
 	function msgTextWidth(text) {
@@ -13291,6 +13340,7 @@ class KAGWindow extends Window
 		if (!force && gestures !== void && gestures.holdClick()) return; // a touch screen's press: told at its release
 		if (!force && clickInterceptor !== void && clickInterceptor()) return;
 		if (!force && gestures !== void && gestures.swallowClick()) return; // a swipe's own click
+		if (!force && glossaryClick()) return; // a glossary's word: its entry
 		clickCount++ if (!force);
 		if(!force && showDramaticHidden()) return; // dramatic mode: a click shows the window first
 		if(force || !callHook(leftClickHook))
@@ -14678,7 +14728,7 @@ class KAGWindow extends Window
 		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items), wordWrap:KAGLanguage.wordWrap(lang)]];
 		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
 		var hist = historyWriteEnabled, tw = textWriteEnabled, cur = current;
-		var wrapState = saveWordWrap();
+		var wrapState = saveWordWrap(), glossState = saveGlossaryState();
 		historyWriteEnabled = false;
 		textWriteEnabled = true;
 		current = layer;
@@ -14694,7 +14744,11 @@ class KAGWindow extends Window
 				default:
 					var ch = it[1];
 					if (needsToBeWrapped(ch, w)) { i = items.count; break; } // the page is full
-					if (!(wrapDropSpace && ch == spaceChar) && layer.processCh(ch, 0)) i = items.count;
+					var term = glossaryTermFor(ch, w);
+					if (!(wrapDropSpace && ch == spaceChar)) {
+						if (layer.termMark !== term) layer.markTerm(term);
+						if (layer.processCh(ch, 0)) i = items.count;
+					}
 				}
 			}
 		} catch (e) {
@@ -14704,6 +14758,8 @@ class KAGWindow extends Window
 		textWriteEnabled = tw;
 		current = cur;
 		restoreWordWrap(wrapState);
+		restoreGlossaryState(glossState);
+		layer.markTerm(void) if layer.termMark !== void;
 		layer.endTextUnit();
 	}
 
@@ -16939,13 +16995,16 @@ class KAGWindow extends Window
 		// Word wrap after every early return above: -3 and -5 run this tag again, and a
 		// space counted twice would put the wrap one word out
 		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
+		var term = glossaryTermFor(text, elm);
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
+			glossaryMark(current, term, currentWithBack);
 			if(currentWithBack) current.comp.processCh(text);
 			autoCharCount += text.length; // auto mode's wait grows with the line (autoModeCharWait)
 			repage = current.processCh(text, chUserMode ? acs : 0);
 			if(repage)
 			{
 				wrapResume = true, wrapResumeDropHist = wrapDropSpaceHist; // this ch runs again on the next page
+				glossAt = glossLastAt; // (so does the glossary's)
 				return showPageBreakAndClear();
 			}
 		}

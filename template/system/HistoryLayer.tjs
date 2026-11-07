@@ -1364,9 +1364,33 @@ class HistoryLayer extends Layer
 
 	}
 
-	// Draws a horizontal line of history text with its top-left at x, y
+	// Draws a horizontal line of history text with its top-left at x, y; the glossary's words
+
+	// (Glossary.tjs) in its colour
 
 	function drawHistoryText(x, y, text, color) {
+
+		var marks = typeof global.KAGGlossary == "Object" && color == historyColor ? global.KAGGlossary.marksIn(text) : [];
+
+		var at = 0;
+
+		for (var i = 0; i < marks.count; i++) {
+
+			var m = marks[i];
+
+			if (m[0] > at) drawHistoryRun(x + textWidth(text.substring(0, at)), y, text.substring(at, m[0] - at), color);
+
+			drawHistoryRun(x + textWidth(text.substring(0, m[0])), y, text.substring(m[0], m[1] - m[0]), global.KAGGlossary.color);
+
+			at = m[1];
+
+		}
+
+		if (at < text.length) drawHistoryRun(x + (at > 0 ? textWidth(text.substring(0, at)) : 0), y, at > 0 ? text.substring(at) : text, color);
+
+	}
+
+	function drawHistoryRun(x, y, text, color) {
 
 		var rta = getRichTextApp();
 
