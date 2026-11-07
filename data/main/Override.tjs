@@ -461,13 +461,6 @@ function drawSaveSlot(target, savedatanum, name)
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = tr(kag.getBookMarkPageName(savedatanum)); // the scene's title, in the language shown (a compiled scene's own, or the strings')
-        target.font.height=36;
-        // Yu Gothic on Windows, else the bundled Noto Sans JP. The SDL engine draws an unknown
-        // face with an icon font (arrows), so list fonts it does register; it skips the others.
-        target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-        // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
-        while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
-            savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
 
         var thum = new global.Layer(kag, kag.fore.base);
         thum.loadImages(savefilename);
@@ -486,8 +479,9 @@ function drawSaveSlot(target, savedatanum, name)
                 target.operateRect(x + 9 + thum.imageWidth - 6 - thum2.imageWidth, 9 + thum.imageHeight - 6 - thum2.imageHeight,
                                    thum2, 0, 0, thum2.imageWidth, thum2.imageHeight, omPsNormal);
             }
-            target.drawText(x + tx, ty1, savedatatitle, 0x24107a, 255, true);
-            target.drawText(x + tx, ty2, savedatadate,  0x5c4cb4, 255, true);
+            // the styles (textstyles.tjs) shrink a long title to fit, then cut it (since 0.22.0)
+            KAGDrawStyledText(target, "slot.title", savedatatitle, x + tx, ty1, w - tx - 12, 44);
+            KAGDrawStyledText(target, "slot.date", savedatadate, x + tx, ty2, w - tx - 12, 40);
         }
 
         invalidate thum;
@@ -740,6 +734,7 @@ KAGOptionHook.add(function(name, v) { configUndoButtons(); } incontextof global)
 // Config closing: no more steps, and the music sample stops
 function configLeave()
 {
+    KAGTextPreviewClose();
     KAGOptionUndo.end();
     KAGVolumeSamples.stop(300);
 }
@@ -750,6 +745,7 @@ function configLeave()
 function setConfigPage(page)
 {
     if (tf.configPage == page) return;
+    KAGTextPreviewClose();
     tf.configPage = page;
     kag.process("", "*buttons");
 }
@@ -763,14 +759,17 @@ var configPages = [
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
-      [ "windowOpacity", "afterauto", "afterskip", "enterSkip" ] ],
+      [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "msgStyleTint:normal", "msgStyleTint:memory" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
     [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
-      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ]
+      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
+    // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
+    [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],
+      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
@@ -883,6 +882,15 @@ function configOptionsPage()
     var page = configPages[tf.configPage];
     if (tf.configPage == 5) page[0] = configVoiceOptions;
     KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
+    KAGTextPreviewClose();
+    if (tf.configPage == 7) {
+        // the text's look as you change it: a small message window typing sample lines
+        var lay = kag.current, f = lay.font, face = f.face, height = f.height, bold = f.bold;
+        setYesNoFont(lay, KAGOptionStyle.label.size);
+        drawYesNoString(lay, 990 + KAGOptionStyle.label.x, 206 + KAGOptionStyle.label.y, tr("Preview"), 0xffffff, yesnoTextBase);
+        f.face = face, f.height = height, f.bold = bold;
+        KAGTextPreviewOpen(lay, 1010, 266, 600, 380);
+    }
 }
 
 /**
@@ -1034,7 +1042,7 @@ function setCGImage(target, filename)
     target.holdAlpha = hold;
 
     if (tf.viewcgfilename) {
-	    target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+	    target.font.face = KAGFontFace("interface");
 	    target.font.height = 14;
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }
@@ -1077,13 +1085,9 @@ function setCgmodePageButton(work=void)
         if (button !== void && c !== void) {
             var text = "%d/%d".sprintf(c[0], c[1]);
             button.holdAlpha = true;
-            button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-            button.font.height = 22;
-            button.font.bold = true;
-            var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
             for (var st = 0; st < 3; st++) {
                 var color = st == 0 && i != tf.cgmodepage ? 0x8a74ff : 0xffffff;
-                button.drawText(button.width * st + button.width - w - 18, (button.height - h) \ 2, text, color, 255, true);
+                KAGDrawStyledText(button, "count", text, button.width * st + 10, 0, button.width - 28, button.height, %[ color:color ]);
             }
             button.holdAlpha = false;
         }
@@ -1249,7 +1253,7 @@ class CGViewer extends Layer
     var pinchZ = void;
     var closeTrigger, closed = false;
     var wheelHook, pinchHook;
-    var fontFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    var fontFace = KAGFontFace("interface");
 
     function CGViewer(win, list)
     {
@@ -1619,13 +1623,8 @@ function drawButtonLabel(button, text, colors, size = 30)
 {
     var hold = button.holdAlpha;
     button.holdAlpha = true;
-    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-    button.font.height = size;
-    button.font.bold = true;
-    var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
-    for (var st = 0; st < 3; st++) {
-        button.drawText(button.width * st + (button.width - w) \ 2, (button.height - h) \ 2, text, colors[st], 255, true);
-    }
+    for (var st = 0; st < 3; st++)
+        KAGDrawStyledText(button, "tab", text, button.width * st + 6, 0, button.width - 12, button.height, %[ color:colors[st], size:size ]);
     button.holdAlpha = hold;
 }
 
@@ -1695,17 +1694,12 @@ function drawReplayTile(button, info)
     var title = shownTitle(info);
     var hold = button.holdAlpha;
     button.holdAlpha = true;
-    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-    button.font.bold = true;
-    // smaller where the title doesn't fit
-    var band = 30, size = 20;
-    button.font.height = size;
-    while (size > 13 && button.font.getTextWidth(title) > pw - 12) button.font.height = --size;
-    var w = button.font.getTextWidth(title), th = button.font.getTextHeight(title);
+    // the title on a band, smaller where it doesn't fit ("tile", textstyles.tjs)
+    var band = 30;
     for (var st = 0; st < 3; st++) {
         var x = button.width * st + b;
         button.fillRect(x, b + ph - band, pw, band, st == 0 ? 0xc8010062 : 0xe85025ff);
-        button.drawText(x + (pw - w) \ 2, b + ph - band + (band - th) \ 2, title, 0xffffff, 255, true);
+        KAGDrawStyledText(button, "tile", title, x + 6, b + ph - band, pw - 12, band);
     }
     button.holdAlpha = hold;
 }
@@ -1885,7 +1879,6 @@ function drawSearchRow(layer, info, key, over)
     var hold = layer.holdAlpha;
     layer.holdAlpha = true;
     var f = layer.font;
-    f.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
     var left = 24, w = 1314 - left * 2;
     // the demo (replaylist.csv's title for its script) and the scene, then who speaks
     var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
@@ -1893,10 +1886,11 @@ function drawSearchRow(layer, info, key, over)
     head += "  ·  " + info.name if info.name != "";
     var m = info.text.toLowerCase().indexOf(key);
     var x0 = left;
-    f.height = 19;
-    f.bold = true;
-    layer.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
-    f.height = 26;
+    KAGDrawStyledText(layer, "search.head", head, x0, 8, w, 24, over ? %[ color:0xd6ccff ] : void);
+    // the line, its match picked out ("search.line": its face and size)
+    var ls = KAGTextStyle("search.line");
+    f.face = KAGFontFace(ls.role);
+    f.height = ls.size;
     f.bold = false;
     var fit = searchFit(f, info.text, m, w);
     var x = x0, y = 36;
@@ -1916,7 +1910,7 @@ function drawSearchRow(layer, info, key, over)
         if (t == "") continue;
         var mark = pieces[i][1];
         f.bold = mark;
-        layer.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
+        layer.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : ls.color), 255, true);
         x += f.getTextWidth(t);
     }
     f.bold = false;
@@ -1950,6 +1944,90 @@ function searchItemName(index)
 {
     var info = searchFound[index];
     return info === void ? "" : (info.name != "" ? info.name + ": " : "") + info.text;
+}
+
+/**
+ * The glossary (glossary.ks, Extras' fifth tab; template/system/Glossary.tjs): the terms on the
+ * left, a "?" for one the story hasn't shown yet, and the one chosen on the right
+ */
+var glossaryRowPics = %[];
+var glossaryTrigger;
+function glossaryInit()
+{
+    sf.extramode = 5;
+    tf.recollect = 0;
+    tf.glossaryFade = 300;
+    tf.glossaryPosition = 0 if tf.glossaryPosition === void;
+    var list = KAGGlossary.entries();
+    // the first term met, unless one was chosen
+    if (tf.glossarySel === void || tf.glossarySel >= list.count) {
+        tf.glossarySel = -1;
+        for (var i = 0; i < list.count; i++) if (glossaryOpen(i)) { tf.glossarySel = i; break; }
+    }
+    var n = KAGGlossary.metCount();
+    tf.glossaryStatus = list.count == 0 ? tr("This game has no glossary") : tr("%d of %d terms met").sprintf(n, list.count);
+}
+// whether the player has met term i (or has seen the whole story)
+function glossaryOpen(i)
+{
+    var e = KAGGlossary.entries()[i];
+    return e !== void && (KAGGlossary.met(e.id) || tf.allseen);
+}
+function glossaryRowPicture(state)
+{
+    var name = "glossary_row_" + state, p = glossaryRowPics[name];
+    if (p !== void && isvalid p) return p;
+    p = new Layer(kag, kag.primaryLayer);
+    p.visible = false;
+    p.loadImages(name);
+    p.setSizeToImageSize();
+    return glossaryRowPics[name] = p;
+}
+function drawGlossaryItem(layer, index, w, h, state)
+{
+    var e = KAGGlossary.entries()[index];
+    if (e === void) return;
+    var over = state != "normal" || index == tf.glossarySel;
+    var p = glossaryRowPicture(over ? "over" : "normal");
+    layer.copyRect(0, 0, p, 0, 0, p.imageWidth, p.imageHeight);
+    var hold = layer.holdAlpha;
+    layer.holdAlpha = true;
+    KAGDrawStyledText(layer, "glossary.row", glossaryOpen(index) ? e.title : "?", 28, 0, w - 56, h, over ? %[ color:0xffffff ] : void);
+    layer.holdAlpha = hold;
+}
+function glossaryItemName(index)
+{
+    var e = KAGGlossary.entries()[index];
+    return e === void ? "" : glossaryOpen(index) ? e.title : tr("Not met yet");
+}
+// a term chosen: the screen again, quickly, with its entry
+function glossaryPick(index)
+{
+    if (!glossaryOpen(index)) return;
+    var l = kag.fore.messages[0].names.glossaryList;
+    tf.glossaryPosition = l.position if l !== void && isvalid l;
+    tf.glossarySel = index;
+    tf.glossaryFocus = index;
+    if (glossaryTrigger === void) glossaryTrigger = new AsyncTrigger(function { kag.process("glossary.ks", "*again"); }, "");
+    glossaryTrigger.trigger();
+}
+function glossaryList()
+{
+    var l = screenList("glossaryList", "Terms", 306, 230, 478, 712, 76, 1, 10, KAGGlossary.entries().count,
+        drawGlossaryItem, glossaryPick, glossaryItemName);
+    l.scrollTo(+tf.glossaryPosition);
+    l.focusIndex = tf.glossaryFocus !== void && tf.glossaryFocus < l.itemCount ? +tf.glossaryFocus : -1;
+}
+// the entry chosen, on the right panel
+function glossaryEntry()
+{
+    var e = KAGGlossary.entries()[tf.glossarySel];
+    if (e === void || !glossaryOpen(tf.glossarySel)) return;
+    var m = kag.current, hold = m.holdAlpha;
+    m.holdAlpha = true;
+    var t = KAGDrawStyledText(m, "glossary.title", e.title, 890, 250, 690, 64);
+    KAGDrawStyledText(m, "glossary.text", e.text, 890, 250 + t.height + 28, 690, 600);
+    m.holdAlpha = hold;
 }
 
 // The list of the lines found, on the screen's message layer (a link of it, so the keys and a

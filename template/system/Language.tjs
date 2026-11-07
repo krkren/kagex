@@ -152,6 +152,8 @@ class KAGLanguageManager
 		// the previous language's folder (or none) gave would come back for the same name
 		if (generation > 0 && typeof System.clearGraphicCache != "undefined") System.clearGraphicCache();
 		loadTable();
+		// the fonts' roles and the text styles are per language (Fonts.tjs)
+		global.KAGFontsChanged() if typeof global.KAGFontsChanged != "undefined";
 		generation++;
 		dm("Language: " + current + (previous != current ? " (was " + previous + ")" : ""));
 		if (notify && previous != current) {

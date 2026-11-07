@@ -842,16 +842,11 @@ KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefine
 // instead: the engine finds a bundled font only in the exact style asked for, so text that was
 // bold when the font was first used (the [select] choices) fell back to the icon font, and every
 // text in that face came out as arrows. A loaded font is also found for bold and italic.
-if (typeof global.Font.registerFontFile != "undefined" && Storages.isExistentStorage("notosansjp-regular.otf")) {
-	try {
-		var notoPath = Storages.getPlacedPath("notosansjp-regular.otf");
-		if (typeof global.Font.getVarAxes != "undefined" && Font.getVarAxes("Noto Sans JP") !== void)
-			Font.addFont(notoPath);
-		else
-			Font.registerFontFile(notoPath, "Noto Sans JP");
-	}
-	catch (e) { dm("Could not register notosansjp-regular.otf (" + e.message + ")"); }
-}
+// Since 0.22.0 Fonts.tjs does it (KAGRegisterFontFile), and registers the other font files the
+// game's fonts.csv lists, which also gives each role its faces and About the fonts' licences
+KAGLoadScript("Fonts.tjs");
+KAGRegisterFontFile("notosansjp-regular.otf", "Noto Sans JP") if Storages.isExistentStorage("notosansjp-regular.otf");
+KAGReadFonts();
 
 
 
@@ -1160,6 +1155,9 @@ KAGLoadScript("Tooltips.tjs"); // a button's hint beside it, or on a help line (
 KAGLoadScript("ScrollList.tjs"); // lists that scroll by dragging, flicks, the wheel and the keys (since 0.19.0)
 
 KAGLoadScript("Display.tjs"); // the screen, controller and screenshot settings (since 0.19.0)
+KAGLoadScript("TextSettings.tjs"); // the message font, outline and shadow, with a preview (since 0.22.0)
+KAGLoadScript("MessageStyles.tjs"); // the message window's styles per scene, in the player's colours (since 0.22.0)
+KAGLoadScript("Glossary.tjs"); // the glossary: its words marked in the text, a click shows the entry (since 0.22.0)
 
 
 
@@ -1276,6 +1274,7 @@ KAGIndicatorsOf(kag);
 KAGTooltipsOf(kag); // tips (Tooltips.tjs)
 
 KAGApplyDisplayOptions(); // the screen and controller settings kept (Display.tjs)
+KAGApplyTextLook(); // the player's outline and shadow (TextSettings.tjs)
 
 kag.tagHandlers.chapter = KAGChapterTag;
 

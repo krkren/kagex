@@ -802,10 +802,19 @@ function MessageLayer_config()
 
 
 // ◆ Whether to draw an edge
-// Specify true if yes, false if no. From KAG3, it is no longer possible 
-// to draw an edge and a shadow at the same time. If an edge is specified, 
-// the edge takes precedence.
+// Specify true if yes, false if no. In KAG3 an edge and a shadow can't be
+// drawn at the same time, and the edge takes precedence; with edgeWithShadow
+// below, both are drawn.
 ;defaultEdge = false;  // Corresponds to the edge attribute of the deffont tag
+
+
+
+
+
+// ◆ Whether to draw an edge and a shadow together
+// Specify true if yes, false if no (an edge replaces the shadow, as in KAG3).
+// The shadow is then the outlined text's, under it.
+;edgeWithShadow = true;
 
 
 

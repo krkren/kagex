@@ -1,0 +1,351 @@
+/**
+ * The game's fonts and its text styles (since 0.22.0; doc/kagex.txt, "Fonts and Text Styles").
+ *
+ * fonts.csv lists the fonts a game uses, a font a line, its columns separated by tabs (the
+ * game's own in data/main takes the place of the framework's in template/system):
+ *   face       the name the face lists and the style table use
+ *   file       a font file the game ships, registered under face at start-up (empty: a font the
+ *              system or the engine has, used where it's there)
+ *   roles      what it's for, the file's order being the order of preference: message,
+ *              interface, heading, number (separated by spaces; * for all of them)
+ *   languages  the languages it covers (codes separated by spaces; * for all)
+ *   caption    its name for the player (Config's Text page lists the message fonts with one)
+ *   licence    its licence, which About lists (empty: nothing to show, a system font)
+ *
+ * KAGFontFace(role, lang): the face list for a role in a language (the one shown when void):
+ *   the fonts with the role that cover the language and are there, in the file's order, then
+ *   Roboto, which the engine always has.
+ * KAGFontChoices(role): [ %[ face, caption, faces ] ], the fonts with a caption the player can
+ *   choose for a role (faces: the face list with that font first).
+ * KAGFontLicences(): [ %[ caption, licence ] ] for About.
+ *
+ * The style table, KAGTextStyles (the game's own in textstyles.tjs, read on first use, which
+ * calls KAGDefineTextStyle). A style "a.b" starts from "default", then takes "a"'s settings,
+ * then its own; parent= names a style to start from in place of those:
+ *   role (interface), face (a face list in place of the role's), size (24), bold, italic,
+ *   color (0xffffff), align (left, center, right), valign (top, middle, bottom), lines (1),
+ *   lineSpacing (4), fit (true: the size shrinks down to minSize to fit), minSize (12),
+ *   ellipsis ("…": what ends a text cut to fit; "" for none), edge, edgeColor, edgeExtent,
+ *   shadow, shadowColor, shadowOffsetX, shadowOffsetY, gradColor, edgeGradColor,
+ *   shadowGradColor, gradDir (as [font]'s)
+ * KAGDrawStyledText(layer, style, text, x, y, w, h, changes): draws text within a rectangle of
+ *   layer in a style (its name, or a dictionary), aligned, wrapped and shrunk to fit; changes (a
+ *   dictionary) overrides some of the style's settings for this text (a hovered button's
+ *   colour). Returns %[ width, height, size, lines ].
+ * KAGStyledTextLayout(layer, style, text, w, h, changes): how it would be laid out, without
+ *   drawing: %[ width, height, size, lines, texts ] (layer's font is left set for it).
+ */
+
+// ---- fonts ------------------------------------------------------------------------------------
+
+var KAGFonts = [];              // fonts.csv: %[ face, file, roles, languages, caption, licence ]
+var KAGFontsRead = false;
+var KAGFontFaceCache = %[];     // "<role>/<language>" -> face list
+var KAGRegisteredFontFiles = %[]; // face -> true once registered here
+var KAGFallbackFaces = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"; // without fonts.csv
+
+// Registers a font file the game ships under face. Where the engine already has a font of that
+// name (the browser build bundles Noto Sans JP), the file is loaded instead: the engine finds a
+// bundled font only in the exact style asked for (Initialize.tjs, "The game font")
+function KAGRegisterFontFile(file, face)
+{
+	if (KAGRegisteredFontFiles[face] || typeof global.Font.registerFontFile == "undefined") return false;
+	if (!Storages.isExistentStorage(file)) { dm("Font file not found: " + file); return false; }
+	try {
+		var path = Storages.getPlacedPath(file);
+		if (typeof global.Font.getVarAxes != "undefined" && Font.getVarAxes(face) !== void)
+			Font.addFont(path);
+		else
+			Font.registerFontFile(path, face);
+		KAGRegisteredFontFiles[face] = true;
+		return true;
+	} catch (e) {
+		dm("Could not register " + file + " (" + e.message + ")");
+		return false;
+	}
+}
+
+// Reads fonts.csv and registers the files it lists
+function KAGReadFonts()
+{
+	if (KAGFontsRead) return;
+	KAGFontsRead = true;
+	if (!Storages.isExistentStorage("fonts.csv")) return;
+	var lines = [].load("fonts.csv");
+	for (var i = 0; i < lines.count; i++) {
+		var line = lines[i];
+		if (line == "" || line.charAt(0) == "#") continue;
+		var c = line.split("\t");
+		var face = c[0].trim();
+		if (face == "") continue;
+		var col = function(c, i) { return c.count > i ? c[i].trim() : ""; };
+		var f = %[ face:face, file:col(c, 1), roles:col(c, 2).split(" ", , true), languages:col(c, 3).split(" ", , true),
+			caption:col(c, 4), licence:col(c, 5) ];
+		f.roles = [ "*" ] if f.roles.count == 0;
+		f.languages = [ "*" ] if f.languages.count == 0;
+		KAGFonts.add(f);
+		if (f.file != "") KAGRegisterFontFile(f.file, face);
+	}
+}
+
+// Whether the engine draws with face here (a system font the computer lacks isn't)
+function KAGFontThere(face)
+{
+	if (KAGRegisteredFontFiles[face]) return true;
+	if (typeof global.Font.getVarAxes == "undefined") return true;
+	try { return Font.getVarAxes(face) !== void; } catch (e) { return false; }
+}
+
+function KAGFontHas(list, item) { return list.find("*") >= 0 || list.find(item) >= 0; }
+
+// The language shown (or "" before the languages are read)
+function KAGFontLanguage()
+{
+	return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
+}
+
+// The face list for a role in a language (the language shown when void)
+function KAGFontFace(role = "interface", lang = void)
+{
+	KAGReadFonts();
+	lang = KAGFontLanguage() if lang === void;
+	var key = role + "/" + lang, r = KAGFontFaceCache[key];
+	if (r !== void) return r;
+	if (KAGFonts.count == 0) return KAGFontFaceCache[key] = KAGFallbackFaces;
+	var faces = [];
+	for (var i = 0; i < KAGFonts.count; i++) {
+		var f = KAGFonts[i];
+		if (!KAGFontHas(f.roles, role) || (lang != "" && !KAGFontHas(f.languages, lang))) continue;
+		if (faces.find(f.face) < 0 && KAGFontThere(f.face)) faces.add(f.face);
+	}
+	faces.add("Roboto") if faces.find("Roboto") < 0;
+	return KAGFontFaceCache[key] = faces.join(",");
+}
+
+// The fonts the player can choose for a role: [ %[ face, caption, faces ] ]
+function KAGFontChoices(role = "message")
+{
+	KAGReadFonts();
+	var r = [], lang = KAGFontLanguage(), rest = KAGFontFace(role).split(",");
+	for (var i = 0; i < KAGFonts.count; i++) {
+		var f = KAGFonts[i];
+		if (f.caption == "" || !KAGFontHas(f.roles, role) || !KAGFontThere(f.face)) continue;
+		if (lang != "" && !KAGFontHas(f.languages, lang)) continue;
+		var dup = false;
+		for (var j = 0; j < r.count; j++) dup = true if r[j].caption == f.caption;
+		if (dup) continue;
+		var faces = [ f.face ];
+		for (var j = 0; j < rest.count; j++) faces.add(rest[j]) if rest[j] != f.face;
+		r.add(%[ face:f.face, caption:f.caption, faces:faces.join(",") ]);
+	}
+	return r;
+}
+
+// The fonts with a licence to show: [ %[ caption, licence ] ]
+function KAGFontLicences()
+{
+	KAGReadFonts();
+	var r = [];
+	for (var i = 0; i < KAGFonts.count; i++) {
+		var f = KAGFonts[i];
+		if (f.licence == "") continue;
+		var dup = false;
+		for (var j = 0; j < r.count; j++) dup = true if r[j].caption == (f.caption != "" ? f.caption : f.face);
+		if (!dup) r.add(%[ caption:f.caption != "" ? f.caption : f.face, licence:f.licence ]);
+	}
+	return r;
+}
+
+// The faces' cache is per language: a language switch reads them again
+function KAGFontsChanged()
+{
+	KAGFontFaceCache = %[];
+	KAGTextStyleCache = %[];
+}
+
+// ---- text styles -------------------------------------------------------------------------------
+
+var KAGTextStyles = %[
+	"default" => %[ role:"interface", size:24, bold:false, italic:false, color:0xffffff, align:"left", valign:"top",
+		lines:1, lineSpacing:4, fit:true, minSize:12, ellipsis:"…", edge:false, edgeColor:0x010062, edgeExtent:1,
+		edgeEmphasis:512, shadow:false, shadowColor:0x000000, shadowOffsetX:2, shadowOffsetY:2,
+		gradColor:-1, edgeGradColor:-1, shadowGradColor:-1, gradDir:"vertical" ],
+	// the framework's dialogs: About's lines (YesNoDialogLayer.tjs)
+	"dialog" => %[ bold:true, align:"center", edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255 ],
+	"dialog.title" => %[ size:40 ],
+	"dialog.line" => %[ size:32 ],
+	"dialog.small" => %[ size:22, lines:3, lineSpacing:6, edgeExtent:2 ],
+	// a paragraph (the glossary's entries, Glossary.tjs)
+	"dialog.text" => %[ size:30, lines:8, lineSpacing:8, align:"left", edgeExtent:2, minSize:20 ],
+];
+var KAGTextStylesRead = false;
+var KAGTextStyleCache = %[];
+
+// Adds settings to a style (made if new)
+function KAGDefineTextStyle(name, settings)
+{
+	var s = KAGTextStyles[name];
+	s = KAGTextStyles[name] = %[] if s === void;
+	(Dictionary.assign incontextof s)(settings, false);
+	KAGTextStyleCache = %[];
+}
+
+function KAGApplyTextStyle(st, name, depth)
+{
+	if (depth > 8) return;
+	var own = KAGTextStyles[name];
+	if (own !== void && own.parent !== void) {
+		KAGApplyTextStyle(st, own.parent, depth + 1);
+	} else {
+		(Dictionary.assign incontextof st)(KAGTextStyles["default"], false);
+		var parts = name.split("."), pre = "";
+		for (var i = 0; i < parts.count - 1; i++) {
+			pre += (i > 0 ? "." : "") + parts[i];
+			var s = KAGTextStyles[pre];
+			(Dictionary.assign incontextof st)(s, false) if s !== void;
+		}
+	}
+	(Dictionary.assign incontextof st)(own, false) if own !== void;
+	delete st.parent;
+}
+
+// A style's settings, resolved (a copy: change it freely)
+function KAGTextStyle(name)
+{
+	if (!KAGTextStylesRead) {
+		KAGTextStylesRead = true;
+		if (Storages.isExistentStorage("textstyles.tjs")) Scripts.execStorage("textstyles.tjs");
+	}
+	var c = KAGTextStyleCache[name];
+	if (c === void) {
+		c = %[];
+		KAGApplyTextStyle(c, name, 0);
+		KAGTextStyleCache[name] = c;
+	}
+	var r = %[];
+	(Dictionary.assign incontextof r)(c, false);
+	return r;
+}
+
+// The RichTextFontApp styled text is drawn with, where the message window draws with krkr_richtext
+var KAGStyleRichText;
+function KAGStyleRichTextFor(layer)
+{
+	if (typeof global.RichText == "undefined" || typeof global.kag != "Object" || kag === void) return;
+	var m = kag.fore.messages[0];
+	if (m === void || typeof m.useRichText == "undefined" || !m.useRichText) return;
+	if (KAGStyleRichText === void) KAGStyleRichText = new global.MessageLayer.RichTextFontApp();
+	return KAGStyleRichText.ready(layer.font) ? KAGStyleRichText : void;
+}
+
+// Characters a line doesn't start with, in text without spaces between words
+var KAGStyleNoStart = "、。，．・：；？！ー～…」』）］】〉》ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々,.!?:;)]}";
+
+function KAGStyleLatin(ch) { return #ch < 0x3000 && ch != " "; }
+
+// text broken into lines no wider than width (measure(text) gives a width); words: break
+// between words (a word wider than the line is broken anywhere)
+function KAGStyleWrap(text, width, measure, words)
+{
+	var out = [], paras = text.split("\n");
+	for (var p = 0; p < paras.count; p++) {
+		var para = paras[p], line = "";
+		if (words) {
+			var ws = para.split(" ");
+			for (var i = 0; i < ws.count; i++) {
+				var w = ws[i], t = line == "" ? w : line + " " + w;
+				if (measure(t) <= width || line == "" && measure(w) <= width) { line = t; continue; }
+				if (line != "") out.add(line), line = "";
+				// a word wider than the line, broken anywhere
+				while (measure(w) > width && w.length > 1) {
+					var n = w.length - 1;
+					while (n > 1 && measure(w.substr(0, n)) > width) n--;
+					out.add(w.substr(0, n)), w = w.substr(n);
+				}
+				line = w;
+			}
+		} else {
+			for (var i = 0; i < para.length; i++) {
+				var ch = para.charAt(i);
+				if (line != "" && measure(line + ch) > width && KAGStyleNoStart.indexOf(ch) < 0) {
+					// a Latin word stays whole: the line breaks before it (where it fits a line)
+					var k = line.length;
+					while (k > 0 && KAGStyleLatin(line.charAt(k - 1)) && KAGStyleLatin(ch)) k--;
+					if (k > 0 && k < line.length) out.add(line.substr(0, k)), line = line.substr(k);
+					else out.add(line), line = "";
+				}
+				line += ch;
+			}
+		}
+		out.add(line);
+	}
+	return out;
+}
+
+// How text would be laid out within w x h of layer in a style: %[ width, height, size, lines,
+// texts, style, measure, rta ], layer's font set for it
+function KAGStyledTextLayout(layer, style, text, w, h, changes = void)
+{
+	var st = typeof style == "String" ? KAGTextStyle(style) : style;
+	if (changes !== void) {
+		var c = %[];
+		(Dictionary.assign incontextof c)(st, false);
+		(Dictionary.assign incontextof c)(changes, false);
+		st = c;
+	}
+	text = (string)text;
+	var font = layer.font;
+	font.face = st.face !== void ? st.face : KAGFontFace(st.role);
+	font.bold = !!st.bold, font.italic = !!st.italic, font.angle = 0;
+	var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.current) : true;
+	var size = +st.size, maxLines = Math.max(1, +st.lines), gap = +st.lineSpacing, lines;
+	var rta, measure;
+	for (;;) {
+		font.height = size;
+		rta = KAGStyleRichTextFor(layer);
+		measure = rta !== void ? function(t) { return t == "" ? 0 : int(Math.ceil(this.measure(t))); } incontextof rta :
+			function(t) { return t == "" ? 0 : this.getTextWidth(t); } incontextof font;
+		lines = maxLines > 1 || text.indexOf("\n") >= 0 ? KAGStyleWrap(text, w, measure, words) : [ text ];
+		var tall = lines.count * size + (lines.count - 1) * gap, fits = lines.count <= maxLines && tall <= h;
+		for (var i = 0; fits && i < lines.count; i++) fits = measure(lines[i]) <= w;
+		if (fits || !st.fit || size <= +st.minSize) break;
+		size--;
+	}
+	// still too much: the lines it has room for, the last one cut with the ellipsis
+	var most = Math.max(1, Math.min(maxLines, (h + gap) \ (size + gap)));
+	if (lines.count > most || measure(lines[lines.count - 1]) > w) {
+		var cut = lines.count > most;
+		lines.count = most if lines.count > most;
+		var last = lines[most - 1], ell = st.ellipsis !== void ? st.ellipsis : "";
+		if (cut || measure(last) > w) {
+			while (last.length > 0 && measure(last + ell) > w) last = last.substr(0, last.length - 1);
+			lines[most - 1] = last + ell;
+		}
+		for (var i = 0; i < most - 1; i++) {
+			while (lines[i].length > 0 && measure(lines[i]) > w) lines[i] = lines[i].substr(0, lines[i].length - 1);
+		}
+	}
+	var widest = 0;
+	for (var i = 0; i < lines.count; i++) widest = Math.max(widest, measure(lines[i]));
+	return %[ width:widest, height:lines.count * size + (lines.count - 1) * gap, size:size, lines:lines.count,
+		texts:lines, style:st, measure:measure, rta:rta ];
+}
+
+// Draws text within x, y, w, h of layer in a style (a name or a dictionary), aligned, wrapped and
+// shrunk to fit; changes overrides some of the style's settings
+function KAGDrawStyledText(layer, style, text, x, y, w, h, changes = void)
+{
+	var lo = KAGStyledTextLayout(layer, style, text, w, h, changes), st = lo.style, lines = lo.texts;
+	var size = lo.size, gap = +st.lineSpacing, tall = lo.height, measure = lo.measure;
+	var top = st.valign == "middle" ? y + ((h - tall) >> 1) : st.valign == "bottom" ? y + h - tall : y;
+	var base = %[ edge:!!st.edge, edgeColor:+st.edgeColor, edgeExtent:+st.edgeExtent, edgeEmphasis:+st.edgeEmphasis,
+		shadow:!!st.shadow, shadowColor:+st.shadowColor, shadowWidth:0, shadowOffsetX:+st.shadowOffsetX,
+		shadowOffsetY:+st.shadowOffsetY, antialiased:true, vertical:false, richTextApp:lo.rta, edgeWithShadow:true,
+		chGradColor:+st.gradColor, edgeGradColor:+st.edgeGradColor, shadowGradColor:+st.shadowGradColor, gradDir:st.gradDir ];
+	for (var i = 0; i < lines.count; i++) {
+		var lw = measure(lines[i]);
+		var lx = st.align == "center" ? x + ((w - lw) >> 1) : st.align == "right" ? x + w - lw : x;
+		(global.MessageLayer.drawTextToLayer incontextof base)(layer, lx, top + i * (size + gap), lines[i], +st.color);
+	}
+	return %[ width:lo.width, height:tall, size:size, lines:lines.count ];
+}

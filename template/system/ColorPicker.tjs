@@ -1,0 +1,317 @@
+/**
+ * A colour picker (since 0.22.0): a panel over the screen with a colour wheel (hue round it,
+ * saturation out from the middle), a brightness bar, the colour before and the colour now; OK
+ * keeps the colour, and Cancel, Esc, the controller's B, a right-click or a click outside leave it
+ * as it was. The keys and the D-pad: up and down move between the hue, the saturation, the
+ * brightness and the buttons, left and right change the one picked, Return or A presses OK.
+ * Fingers drag on the wheel and the bar as the mouse does. The options table's "color" kind
+ * (Options.tjs) opens it.
+ *
+ * KAGPickColor(color, onDone, title, onChange, onCancel): opens it at color (0xRRGGBB);
+ *   onDone(color) runs when the player keeps a colour, onChange(color) as it changes (a
+ *   preview), and on Cancel onCancel(), or onChange(color before) without one. One at a time.
+ * KAGColorToHSV(color): [ hue 0-360, saturation 0-1, brightness 0-1 ]; KAGHSVToColor(h, s, v).
+ */
+var KAGColorPicker; // the picker open, or void
+
+function KAGColorToHSV(c)
+{
+	var r = ((c >> 16) & 0xff) / 255, g = ((c >> 8) & 0xff) / 255, b = (c & 0xff) / 255;
+	var mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, h = 0;
+	if (d > 0) {
+		if (mx == r) h = 60 * (((g - b) / d) % 6);
+		else if (mx == g) h = 60 * ((b - r) / d + 2);
+		else h = 60 * ((r - g) / d + 4);
+	}
+	h += 360 if h < 0;
+	return [ h, mx > 0 ? d / mx : 0, mx ];
+}
+
+function KAGHSVToColor(h, s, v)
+{
+	h = ((h % 360) + 360) % 360 / 60;
+	var i = int(Math.floor(h)) % 6, f = h - Math.floor(h);
+	var p = v * (1 - s), q = v * (1 - s * f), t = v * (1 - s * (1 - f)), r, g, b;
+	switch (i) {
+	case 0: r = v, g = t, b = p; break;
+	case 1: r = q, g = v, b = p; break;
+	case 2: r = p, g = v, b = t; break;
+	case 3: r = p, g = q, b = v; break;
+	case 4: r = t, g = p, b = v; break;
+	default: r = v, g = p, b = q; break;
+	}
+	return (int(r * 255 + 0.5) << 16) | (int(g * 255 + 0.5) << 8) | int(b * 255 + 0.5);
+}
+
+function KAGPickColor(color, onDone, title = "Colour", onChange = void, onCancel = void)
+{
+	if (typeof global.drawYesNoPanel == "undefined") KAGLoadScript("YesNoDialog.tjs");
+	KAGColorPicker.close() if KAGColorPicker !== void && isvalid KAGColorPicker;
+	KAGColorPicker = new KAGColorPickerLayer(kag, +color, onDone, title, onChange);
+	KAGColorPicker.onCancel = onCancel;
+	return KAGColorPicker;
+}
+
+class KAGColorPickerLayer extends Layer
+{
+	var onDone, onChange, onCancel, title, before, h, s, v;
+	var focus = 0;         // 0 hue, 1 saturation, 2 brightness, 3 OK, 4 Cancel
+	var drag = "";         // "wheel" or "bar" while held
+	var hover = -1;        // the button under the pointer (3 OK, 4 Cancel)
+	var veil, wheel, temp, closing = false;
+	var a11yHidden = true;
+	// the layout (the panel's own coordinates)
+	var W = 840, H = 540, wheelX = 52, wheelY = 112, wheelSize = 320, wheelRadius = 156;
+	var barX = 404, barY = 112, barW = 44, barH = 320;
+	var swX = 492, swY = 112, swW = 296, swH = 110;
+	var okX = 492, cancelX = 652, btnY = 452, btnW = 136, btnH = 56;
+
+	function KAGColorPickerLayer(win, color, done, t, change)
+	{
+		super.Layer(win, win.primaryLayer);
+		name = "Colour picker";
+		onDone = done, onChange = change, title = t, before = color & 0xffffff;
+		var hsv = KAGColorToHSV(before);
+		h = hsv[0], s = hsv[1], v = hsv[2];
+		setImageSize(W, H);
+		setSizeToImageSize();
+		setPos((win.primaryLayer.width - W) >> 1, (win.primaryLayer.height - H) >> 1);
+		absolute = 1999990000;
+		hitType = htMask;
+		hitThreshold = 0;
+		veil = new KAGColorPickerVeil(win, this);
+		veil.absolute = absolute - 1;
+		wheel = new global.Layer(win, this);
+		wheel.visible = false;
+		try { wheel.loadImages("color_wheel"); } catch (e) { wheel.setImageSize(wheelSize, wheelSize); wheel.fillRect(0, 0, wheelSize, wheelSize, 0); }
+		temp = new global.Layer(win, this);
+		temp.visible = false;
+		draw();
+		visible = true;
+		window.keyCapture = onKey;
+	}
+
+	function finalize()
+	{
+		window.keyCapture = void if (isvalid window && window.keyCapture === onKey);
+		invalidate veil if veil !== void && isvalid veil;
+		KAGColorPicker = void if KAGColorPicker === this;
+		super.finalize(...);
+	}
+
+	property color { getter { return KAGHSVToColor(h, s, v); } }
+
+	function draw()
+	{
+		face = dfAlpha;
+		fillRect(0, 0, W, H, 0);
+		drawYesNoPanel(this, 0, 0, W - 12, H - 12);
+		KAGDrawStyledText(this, "dialog.line", tr(title), wheelX, 36, W - wheelX * 2, 48, %[ align:"left" ]);
+		// the wheel, darkened for the brightness (its alpha kept: the corners stay clear)
+		temp.setImageSize(wheelSize, wheelSize);
+		temp.face = dfAlpha;
+		temp.copyRect(0, 0, wheel, 0, 0, wheelSize, wheelSize);
+		temp.holdAlpha = true;
+		temp.colorRect(0, 0, wheelSize, wheelSize, 0x000000, int((1 - v) * 255));
+		temp.holdAlpha = false;
+		operateRect(wheelX, wheelY, temp, 0, 0, wheelSize, wheelSize, omAlpha, 255);
+		// its marker
+		var a = h * Math.PI / 180, r = s * wheelRadius;
+		var mx = int(wheelX + wheelSize / 2 + Math.cos(a) * r), my = int(wheelY + wheelSize / 2 - Math.sin(a) * r);
+		mark(mx, my, 9);
+		// the brightness bar: the colour's hue and saturation from full brightness down to black
+		for (var y = 0; y < barH; y++) fillRect(barX, barY + y, barW, 1, 0xff000000 | KAGHSVToColor(h, s, 1 - y / (barH - 1)));
+		var by = barY + int((1 - v) * (barH - 1));
+		fillRect(barX - 6, by - 2, barW + 12, 5, 0xff010062);
+		fillRect(barX - 4, by - 1, barW + 8, 3, 0xffffffff);
+		// before and now
+		swatch(swX, swY, before, tr("Before"));
+		swatch(swX, swY + swH + 30, color, tr("Now"));
+		KAGDrawStyledText(this, "dialog.small", "#%06X".sprintf(color), swX, swY + swH * 2 + 38, swW, 30, %[ align:"left", lines:1 ]);
+		// the buttons
+		button(okX, 3, tr("OK"));
+		button(cancelX, 4, tr("Cancel"));
+		// the keys' place: a white frame round the control they change
+		var fx, fy, fw, fh;
+		switch (focus) {
+		case 0: case 1: fx = wheelX - 6, fy = wheelY - 6, fw = wheelSize + 12, fh = wheelSize + 12; break;
+		case 2: fx = barX - 10, fy = barY - 10, fw = barW + 20, fh = barH + 20; break;
+		case 3: fx = okX - 6, fy = btnY - 6, fw = btnW + 12, fh = btnH + 12; break;
+		default: fx = cancelX - 6, fy = btnY - 6, fw = btnW + 12, fh = btnH + 12; break;
+		}
+		if (focus <= 1) KAGDrawStyledText(this, "dialog.small", focus == 0 ? tr("Hue") : tr("Saturation"), wheelX, wheelY + wheelSize + 12, wheelSize, 30, %[ lines:1 ]);
+		frame(fx, fy, fw, fh);
+	}
+	function mark(x, y, r)
+	{
+		fillRect(x - r - 2, y - r - 2, (r + 2) * 2 + 1, (r + 2) * 2 + 1, 0xff010062);
+		fillRect(x - r, y - r, r * 2 + 1, r * 2 + 1, 0xffffffff);
+		fillRect(x - r + 3, y - r + 3, r * 2 - 5, r * 2 - 5, 0xff000000 | color);
+	}
+	function swatch(x, y, c, label)
+	{
+		fillRect(x, y, swW, swH, 0xff010062);
+		fillRect(x + 4, y + 4, swW - 8, swH - 8, 0xffffffff);
+		fillRect(x + 8, y + 8, 120, swH - 16, 0xff000000 | c);
+		KAGDrawStyledText(this, "dialog.line", label, x + 140, y, swW - 150, swH, %[ align:"left", valign:"middle", size:28 ]);
+	}
+	function button(x, which, label)
+	{
+		var lit = hover == which || focus == which;
+		drawYesNoNineSlice(this, x, btnY, btnW, btnH, lit ? "dialog_button_over" : "dialog_button_normal", yesnoButtonInsets);
+		KAGDrawStyledText(this, "dialog.line", label, x, btnY, btnW, btnH,
+			%[ size:26, valign:"middle", edge:false, color:lit ? 0xffffff : 0x5025ff ]);
+	}
+	function frame(x, y, w, hh)
+	{
+		fillRect(x, y, w, 3, 0xffffffff);
+		fillRect(x, y + hh - 3, w, 3, 0xffffffff);
+		fillRect(x, y, 3, hh, 0xffffffff);
+		fillRect(x + w - 3, y, 3, hh, 0xffffffff);
+	}
+
+	function changed()
+	{
+		draw();
+		onChange(color) if onChange !== void;
+	}
+
+	function fromWheel(x, y)
+	{
+		var dx = x - (wheelX + wheelSize / 2), dy = (wheelY + wheelSize / 2) - y;
+		var r = Math.sqrt(dx * dx + dy * dy);
+		h = Math.atan2(dy, dx) * 180 / Math.PI;
+		h += 360 if h < 0;
+		s = Math.min(1, r / wheelRadius);
+		v = 1 if v < 0.05; // a colour picked on a black wheel would stay black
+		changed();
+	}
+	function fromBar(y)
+	{
+		v = Math.max(0, Math.min(1, 1 - (y - barY) / (barH - 1)));
+		changed();
+	}
+	function at(x, y)
+	{
+		var dx = x - (wheelX + wheelSize / 2), dy = y - (wheelY + wheelSize / 2);
+		if (dx * dx + dy * dy <= (wheelRadius + 4) * (wheelRadius + 4)) return "wheel";
+		if (x >= barX - 8 && x < barX + barW + 8 && y >= barY - 8 && y < barY + barH + 8) return "bar";
+		if (y >= btnY && y < btnY + btnH) {
+			if (x >= okX && x < okX + btnW) return "ok";
+			if (x >= cancelX && x < cancelX + btnW) return "cancel";
+		}
+		return "";
+	}
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button == mbRight) { cancel(); return; }
+		if (button != mbLeft) return;
+		var w = at(x, y);
+		if (w == "wheel") drag = w, focus = s > 0 && focus == 1 ? 1 : 0, fromWheel(x, y);
+		else if (w == "bar") drag = w, focus = 2, fromBar(y);
+	}
+	function onMouseMove(x, y, shift)
+	{
+		if (drag == "wheel") fromWheel(x, y);
+		else if (drag == "bar") fromBar(y);
+		var w = at(x, y), hv = w == "ok" ? 3 : w == "cancel" ? 4 : -1;
+		if (hv != hover) hover = hv, draw();
+	}
+	function onMouseUp(x, y, button, shift)
+	{
+		if (button != mbLeft) return;
+		var held = drag;
+		drag = "";
+		if (held != "") return;
+		var w = at(x, y);
+		if (w == "ok") ok();
+		else if (w == "cancel") cancel();
+	}
+	function onMouseLeave() { if (hover != -1) hover = -1, draw(); }
+
+	function onKey(key, shift)
+	{
+		if (!isvalid this || closing) return;
+		switch (key) {
+		case VK_ESCAPE: case VK_BACK: case VK_PAD2: cancel(); return;
+		case VK_UP: case VK_PADUP: focus = (focus + 4) % 5; draw(); break;
+		case VK_DOWN: case VK_PADDOWN: focus = (focus + 1) % 5; draw(); break;
+		case VK_LEFT: case VK_PADLEFT: step(-1); break;
+		case VK_RIGHT: case VK_PADRIGHT: step(1); break;
+		case VK_RETURN: case VK_SPACE: case VK_PAD1:
+			if (focus == 4) { cancel(); return; }
+			ok(); return;
+		}
+		window.keyCapture = onKey if isvalid this && !closing;
+	}
+	function step(d)
+	{
+		switch (focus) {
+		case 0: h = (h + d * 6 + 360) % 360; s = 0.5 if s < 0.05; break;
+		case 1: s = Math.max(0, Math.min(1, s + d * 0.05)); break;
+		case 2: v = Math.max(0, Math.min(1, v + d * 0.05)); break;
+		default: focus = focus == 3 ? 4 : 3; draw(); return;
+		}
+		changed();
+	}
+
+	function ok()
+	{
+		var c = color, f = onDone;
+		close();
+		f(c) if f !== void;
+	}
+	function cancel()
+	{
+		if (onCancel !== void) onCancel();
+		else if (onChange !== void) onChange(before);
+		close();
+	}
+	// closed a moment later: it's often its own event that closes it
+	function close()
+	{
+		if (closing) return;
+		closing = true;
+		visible = false;
+		veil.visible = false if veil !== void && isvalid veil;
+		window.keyCapture = void if window.keyCapture === onKey;
+		KAGColorPicker = void if KAGColorPicker === this;
+		KAGColorPickerDrop(this);
+	}
+}
+
+// pickers closed, invalidated once the event that closed them is over
+var KAGColorPickerTrash = [], KAGColorPickerTrashTrigger;
+function KAGColorPickerDrop(p)
+{
+	KAGColorPickerTrash.add(p);
+	KAGColorPickerTrashTrigger = new AsyncTrigger(KAGColorPickerEmpty, "") if KAGColorPickerTrashTrigger === void;
+	KAGColorPickerTrashTrigger.trigger();
+}
+function KAGColorPickerEmpty()
+{
+	while (KAGColorPickerTrash.count > 0) {
+		var p = KAGColorPickerTrash.shift();
+		invalidate p if isvalid p;
+	}
+}
+
+// a click outside the picker: Cancel
+class KAGColorPickerVeil extends Layer
+{
+	var picker;
+	var a11yHidden = true;
+	function KAGColorPickerVeil(win, p)
+	{
+		super.Layer(win, win.primaryLayer);
+		picker = p;
+		name = "Colour picker's veil";
+		setImageSize(win.primaryLayer.width, win.primaryLayer.height);
+		setSizeToImageSize();
+		fillRect(0, 0, imageWidth, imageHeight, 0x60000000);
+		hitType = htMask;
+		hitThreshold = 0;
+		visible = true;
+	}
+	function onMouseDown(x, y, button, shift) { picker.cancel() if isvalid picker; }
+}

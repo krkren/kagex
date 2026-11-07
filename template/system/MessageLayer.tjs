@@ -1638,7 +1638,14 @@ class NameLayer extends RelativeLayer
 	var valign = -1;
 
 	// Image drawn behind the name ([position nameframe=...]); the layer takes its size
+
 	var frameGraphic = "";
+
+	// a colour laid over it at frameTintOpacity, its alpha kept (-1: none; the message window's
+
+	// style, MessageStyles.tjs, since 0.22.0)
+
+	var frameTint = -1, frameTintOpacity = 150;
 	// A name too wide for the box ([position namefit=]): "squeeze" draws it narrower, "shrink" in
 	// a smaller size, "" lets it run past the box; namemargin keeps that much clear at each side
 	var fitMode = "";
@@ -1704,8 +1711,12 @@ class NameLayer extends RelativeLayer
 	}
 
 	function drawName(text) {
+
 		if (frameGraphic != "") {
+
 			loadImages(frameGraphic);
+
+			KAGTintLayer(this, frameTint, frameTintOpacity);
 			// as transparent as the player's window opacity, where the window follows it
 			var op = owner.followOpacity && typeof window.windowOpacity != "undefined" ? window.windowOpacity : 255;
 			if (op < 255) {
@@ -1828,6 +1839,9 @@ class NameLayer extends RelativeLayer
 		dic.align  = align;
 		dic.valign = valign;
 		dic.frameGraphic = frameGraphic;
+
+		dic.frameTint = frameTint, dic.frameTintOpacity = frameTintOpacity;
+
 		dic.fitMode = fitMode;
 		dic.margin = margin;
 		dic.fadeTime = fadeTime;
@@ -1842,6 +1856,10 @@ class NameLayer extends RelativeLayer
 		valign = dic.valign if (dic.valign !== void);
 
 		frameGraphic = dic.frameGraphic !== void ? dic.frameGraphic : ""; // saves from before nameframe have none
+
+		frameTint = dic.frameTint !== void ? +dic.frameTint : -1;
+
+		frameTintOpacity = dic.frameTintOpacity !== void ? +dic.frameTintOpacity : 150;
 		fitMode = dic.fitMode !== void ? dic.fitMode : "";
 		margin = dic.margin !== void ? +dic.margin : 0;
 		fadeTime = dic.fadeTime !== void ? +dic.fadeTime : 0;
@@ -2347,6 +2365,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	/*CS*/var frameGraphic = ""; // Frame image filename
 
+	/*CS*/var frameTint = -1; // a colour laid over the frame image, its alpha kept (-1: none; the window's style, MessageStyles.tjs, since 0.22.0)
+
+	/*CS*/var frameTintOpacity = 150; // how strongly
+
 	/*CS*/var frameKey = clNone; // Frame image key
 
     var frameAnimCount;
@@ -2534,6 +2556,40 @@ class MessageLayer extends AnimKAGLayerTransMove
 	/*CS*/var shadowOffsetY = 2; // Shadow offset
 
 	/*CS*/var shadowWidth   = 0; // Shadow blur intensity
+
+	/*CS*/var edgeWithShadow = false; // an outline and a shadow together: the shadow of the outlined text under it (false: an outline replaces the shadow, as in KAG3; since 0.22.0)
+
+	/*CS*/var defaultChGradColor = -1; // the colour text shades to down its line, from its own (-1: none; [deffont gradcolor]; since 0.22.0)
+
+	/*C*/var chGradColor = -1; // the text's gradient colour ([font gradcolor])
+
+	/*CS*/var defaultEdgeGradColor = -1; // the outline's gradient colour by default ([deffont edgegradcolor])
+
+	/*C*/var edgeGradColor = -1; // the outline's gradient colour ([font edgegradcolor])
+
+	/*CS*/var defaultShadowGradColor = -1; // the shadow's gradient colour by default ([deffont shadowgradcolor])
+
+	/*C*/var shadowGradColor = -1; // the shadow's gradient colour ([font shadowgradcolor])
+
+	/*CS*/var defaultGradDir = "vertical"; // the gradients' direction by default: vertical (down the line) or horizontal (along the text)
+
+	/*C*/var gradDir = "vertical"; // the gradients' direction ([font graddir])
+
+	property hasTextGradient { getter { return chGradColor >= 0 || edgeGradColor >= 0 || shadowGradColor >= 0; } }
+
+	// the player's outline and shadow (Config's Text page, TextSettings.tjs; void: the game's
+
+	// defaults): in place of the defaults, though a scenario's own [font edge=...] still wins
+
+	/*C*/var playerEdge, playerEdgeColor, playerShadow, playerShadowColor;
+
+	property lookEdge { getter { return playerEdge !== void ? playerEdge : defaultEdge; } }
+
+	property lookEdgeColor { getter { return playerEdgeColor !== void ? playerEdgeColor : defaultEdgeColor; } }
+
+	property lookShadow { getter { return playerShadow !== void ? playerShadow : defaultShadow; } }
+
+	property lookShadowColor { getter { return playerShadowColor !== void ? playerShadowColor : defaultShadowColor; } }
 
 
 
@@ -3437,6 +3493,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
                 setSizeToImageSize();
 
+				KAGTintLayer(this, frameTint, frameTintOpacity);
+
 
 
 				// Apply frameOpacity
@@ -3725,7 +3783,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		clearLayer(all);
 
-
+		termRects.clear(), termMark = void;
 
 		// Display position to initial position
 
@@ -3791,9 +3849,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// Called when message reaches the bottom and page waits then clears the layer.
 
-
-
 		clearLayer(all);
+
+		termRects.clear(), termMark = void;
 
 
 
@@ -3899,15 +3957,21 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		_rubyOffset = defaultRubyOffset;
 
-		shadow = defaultShadow;
+		shadow = lookShadow;
 
-		edge = defaultEdge;
+		edge = lookEdge;
 
-		shadowColor = defaultShadowColor;
+		shadowColor = lookShadowColor;
 
-		edgeColor = defaultEdgeColor;
+		edgeColor = lookEdgeColor;
 
+		chGradColor = defaultChGradColor;
 
+		edgeGradColor = defaultEdgeGradColor;
+
+		shadowGradColor = defaultShadowGradColor;
+
+		gradDir = defaultGradDir;
 
 		// Calculate line break position
 
@@ -4097,7 +4161,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.shadow == 'default')
 
-			shadow = defaultShadow;
+			shadow = lookShadow;
 
 		else if(elm.shadow !== void)
 
@@ -4107,7 +4171,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.shadowcolor == 'default')
 
-			shadowColor = defaultShadowColor;
+			shadowColor = lookShadowColor;
 
 		else if(elm.shadowcolor !== void)
 
@@ -4117,7 +4181,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.edge == 'default')
 
-			edge = defaultEdge;
+			edge = lookEdge;
 
 		else if(elm.edge !== void)
 
@@ -4127,11 +4191,23 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.edgecolor == 'default')
 
-			edgeColor = defaultEdgeColor;
+			edgeColor = lookEdgeColor;
 
 		else if(elm.edgecolor !== void)
 
 			edgeColor = +elm.edgecolor;
+
+		// gradients (since 0.22.0): a colour, "default" or "none"
+
+		chGradColor = gradAttribute(elm.gradcolor, chGradColor, defaultChGradColor);
+
+		edgeGradColor = gradAttribute(elm.edgegradcolor, edgeGradColor, defaultEdgeGradColor);
+
+		shadowGradColor = gradAttribute(elm.shadowgradcolor, shadowGradColor, defaultShadowGradColor);
+
+		if (elm.graddir == 'default') gradDir = defaultGradDir;
+
+		else if (elm.graddir !== void) gradDir = elm.graddir;
 
 
 
@@ -4176,6 +4252,30 @@ class MessageLayer extends AnimKAGLayerTransMove
 		defaultEdge = +elm.edge if elm.edge !== void;
 
 		defaultEdgeColor = +elm.edgecolor if elm.edgecolor !== void;
+
+		defaultChGradColor = gradAttribute(elm.gradcolor, defaultChGradColor, -1);
+
+		defaultEdgeGradColor = gradAttribute(elm.edgegradcolor, defaultEdgeGradColor, -1);
+
+		defaultShadowGradColor = gradAttribute(elm.shadowgradcolor, defaultShadowGradColor, -1);
+
+		defaultGradDir = elm.graddir if elm.graddir !== void && elm.graddir != 'default';
+
+	}
+
+	// a gradient attribute: void keeps now, "default" the default, "none" (or -1) none
+
+	function gradAttribute(v, now, def)
+
+	{
+
+		if (v === void) return now;
+
+		if (v == 'default') return def;
+
+		if (v == 'none' || v == '') return -1;
+
+		return +v;
 
 	}
 
@@ -4396,6 +4496,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		var ll = lineLayer;
 
 		styledRun = void;
+
+		termRectsLine.clear();
 
 		resetLineSize();
 
@@ -4773,7 +4875,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		var lloy = lineLayerOriginY + getLineLayerTopOffset();
 
-
+		fixTermRects(llox, lloy);
 
 		var target =   hasTextLayer ? textLayer : this; // Drawing destination
 
@@ -5502,7 +5604,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 
-		var chColor = shownChColor; // read text in the player's colour
+		// read text in the player's colour, a glossary's word in the glossary's (markTerm)
+
+		var chColor = termMark !== void ? termMarkColor : shownChColor;
+
 		if (run) drawStyledRun(ll, rta, dx, dy, ch, chColor, cw + pitch, currentRuby != "");
 
 		else {
@@ -5513,7 +5618,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			drawTextToLayer(ll, dx, dy, ch, chColor);
 
+			if (edge && !vert) redrawLastFill(ll, dx, dy, chColor);
+
+			lastFill = [ ll, dx, dy, ch, chColor ];
+
 		}
+
+		if (termMark !== void) noteTermCh(ll, run, dx, dy, cw + pitch, chColor);
 
 
 
@@ -5651,6 +5762,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		}
 
+		// text that shades to another colour (since 0.22.0): drawn in passes, its shadow, its
+
+		// outline, then its fill (a style dictionary without gradient colours never has them)
+
+		if (typeof this.chGradColor != "undefined" && !vertical && (this.chGradColor >= 0 || this.edgeGradColor >= 0 || this.shadowGradColor >= 0)) {
+
+			global.KAGDrawTextPasses(this, lay, x, y, text, color); // (global: a dictionary context finds no globals)
+
+			return;
+
+		}
+
 		// SelectLayer also calls this function, in the context of a style dictionary that
 
 		// may carry a RichTextFontApp of its own (SelectLayer.getRichTextApp)
@@ -5678,6 +5801,18 @@ class MessageLayer extends AnimKAGLayerTransMove
 			lay[tag] = new global.MessageLayer.GdiPlusFontApp() if (typeof lay[tag] == "undefined");
 
 			lay[tag].drawText(this, lay, x, y, text, color);
+
+		}
+
+		else if(edge && shadow && typeof this.edgeWithShadow != "undefined" && this.edgeWithShadow) {
+
+			// an outline and a shadow together (since 0.22.0): the outlined text in the shadow's
+
+			// colour, offset, then the outlined text over it
+
+			dt(x + shadowOffsetX, y + shadowOffsetY, text, shadowColor, 255, antialiased, edgeEmphasis, shadowColor, edgeExtent, 0, 0);
+
+			dt(x, y, text, color, 255, antialiased, edgeEmphasis, edgeColor, edgeExtent, 0, 0);
 
 		}
 
@@ -5977,9 +6112,33 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	var styledRunTrigger; // AsyncTrigger: flushStyledRun once the conductor stops
 
+	// The character drawn before on this line, a character at a time: [ line layer, x, y, ch, colour ]
+
+	var lastFill;
+
+	// Its fill drawn again over the outline of the character just drawn at x, y, so a thick
+
+	// outline never covers the character before (since 0.22.0; a run draws its fills last anyway)
+
+	function redrawLastFill(ll, x, y, color) {
+
+		var f = lastFill;
+
+		if (f === void || f[0] !== ll || f[2] != y || f[1] >= x) return;
+
+		var e = edge, s = shadow, eg = edgeGradColor, sg = shadowGradColor;
+
+		edge = shadow = false, edgeGradColor = shadowGradColor = -1;
+
+		drawTextToLayer(ll, f[1], f[2], f[3], f[4]);
+
+		edge = e, shadow = s, edgeGradColor = eg, shadowGradColor = sg;
+
+	}
+
 	function styledRunUsable() {
 
-		return useStyledLayout && pitch == 0 && !hasChFadeLayer &&
+		return useStyledLayout && pitch == 0 && !hasChFadeLayer && !hasTextGradient &&
 
 			typeof global.RichText.StyledLayout != "undefined" && typeof lineLayer.drawStyledLayout != "undefined";
 
@@ -6046,10 +6205,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		styledRunCount++;
 
 		return styledRun = %[ layer:ll, x:x, y:y, next:x, style:rta.style, baseLine:rta.baseLine,
-
 			key:rta.appKey, app:rta.app.clone(), text:"", markup:"", extent:0, closed:false, dirty:false,
-
-			pad:pad, backX:bx, backWidth:bw, height:h, layerWidth:ll.imageWidth ];
+			pad:pad, backX:bx, backWidth:bw, height:h, layerWidth:ll.imageWidth, underlines:[] ];
 
 	}
 
@@ -6144,9 +6301,64 @@ class MessageLayer extends AnimKAGLayerTransMove
 		// "wrong context" (実行コンテキストが違います). Reading a property finds them
 
 		var attach = ll.useCache;
-
 		ll.drawStyledLayout(sl, r.x, r.y + r.baseLine + ascent);
+		for (var i = 0; i < r.underlines.count; i++) drawTermUnderline(ll, r.underlines[i]*);
+	}
 
+	// ---- the glossary's words (Glossary.tjs; since 0.22.0) ------------------------------------
+	// The ch handler marks the characters of a term as it draws them: they take the glossary's
+	// colour with an underline, and their places (termRects, on this layer; the line's own in
+	// termRectsLine until fixLineLayer places the line) let a click find the term (termAt)
+	var termMark;           // the term being drawn (its id), or void
+	var termRects = [];     // [ x, y, w, h, id ] on this layer
+	var termRectsLine = []; // the same for the line being drawn, on the line layer
+	property termMarkColor { getter() { return typeof global.KAGGlossary == "Object" ? global.KAGGlossary.color : chColor; } }
+	function markTerm(id) {
+		storeRedrawTextState("markTerm", id);
+		termMark = id;
+	}
+	function noteTermCh(ll, run, dx, dy, w, color) {
+		var h = fontSize;
+		if (vertical) termRectsLine.add([ dx - (fontSize >> 1), dy, fontSize, w, termMark ]);
+		else termRectsLine.add([ dx, dy, w, h, termMark ]);
+		if (vertical) return; // (no underline beside vertical text)
+		// the underline: with the run's glyphs, or now where the character is drawn alone
+		var u = [ dx, int(lineLayerBase) + Math.max(1, fontSize \ 16), w, Math.max(2, fontSize \ 18), color ];
+		if (run && styledRun !== void && !styledRun.closed) styledRun.underlines.add(u);
+		else drawTermUnderline(ll, u*);
+	}
+	function drawTermUnderline(ll, x, y, w, h, color) {
+		if (y + h > ll.imageHeight) y = ll.imageHeight - h;
+		ll.face = dfAuto;
+		ll.fillRect(x, y, w, h, 0xff000000 | color);
+	}
+	function fixTermRects(llox, lloy) {
+		for (var i = 0; i < termRectsLine.count; i++) {
+			var r = termRectsLine[i];
+			termRects.add([ r[0] + llox, r[1] + lloy, r[2], r[3], r[4] ]);
+		}
+		termRectsLine.clear();
+	}
+	// The term at x, y on this layer (void: none); a little room round it, for a finger
+	function termAt(x, y) {
+		var pad = 6;
+		for (var i = 0; i < termRects.count; i++) {
+			var r = termRects[i];
+			if (x >= r[0] - pad && x < r[0] + r[2] + pad && y >= r[1] - pad && y < r[1] + r[3] + pad) return r[4];
+		}
+		var llox = lineLayerOriginX + getLineLayerLeftOffset(), lloy = lineLayerOriginY + getLineLayerTopOffset();
+		for (var i = 0; i < termRectsLine.count; i++) {
+			var r = termRectsLine[i];
+			if (x >= r[0] + llox - pad && x < r[0] + llox + r[2] + pad && y >= r[1] + lloy - pad && y < r[1] + lloy + r[3] + pad) return r[4];
+		}
+	}
+	// Tooltips.tjs: a term's title at the pointer
+	function tipAt(x, y) {
+		if (!visible || typeof global.KAGGlossary != "Object") return "";
+		var id = termAt(x - imageLeft, y - imageTop);
+		if (id === void) return "";
+		var e = global.KAGGlossary.entry(id);
+		return e !== void ? e.title : "";
 	}
 
 
@@ -6213,7 +6425,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			var reach;
 
-			with (base) reach = .edge ? .edgeExtent * 2 : .shadow ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0;
+			with (base) reach = (.edge ? .edgeExtent * 2 : 0) + ((.shadow && (!.edge || KAGEdgeWithShadow(base))) ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0);
 
 			return int(Math.ceil(baseLine + layout.descent + reach - cellHeight)) + 1;
 
@@ -6331,7 +6543,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		// Fill, edge and shadow from the message layer settings. As in drawTextToLayer,
 
-		// an edge replaces the shadow. Layer.drawText draws both as a blurred copy of the
+		// an edge replaces the shadow, unless edgeWithShadow is set (since 0.22.0: then the
+
+		// shadow is the outlined text's, under it). Layer.drawText draws both as a blurred copy of the
 
 		// glyphs: the edge blurred by edgeExtent and strengthened by edgeEmphasis, the
 
@@ -6347,9 +6561,11 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		function updateApp(base, color) { with (base) {
 
+			var both = .edge && .shadow && KAGEdgeWithShadow(base);
+
 			var key = [ color, .edge, .edgeColor, .edgeExtent, .edgeEmphasis, .shadow, .shadowColor,
 
-						.shadowWidth, .shadowOffsetX, .shadowOffsetY ].join(",");
+						.shadowWidth, .shadowOffsetX, .shadowOffsetY, both ].join(",");
 
 			if (key == appKey) return;
 
@@ -6357,11 +6573,37 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			// How far the edge or shadow reaches past the glyphs
 
-			appPad = .edge ? .edgeExtent * 2 : .shadow ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0;
+			appPad = (.edge ? .edgeExtent * 2 : 0) + ((.shadow && (!.edge || both)) ? Math.max(Math.abs(.shadowOffsetX), Math.abs(.shadowOffsetY)) + .shadowWidth : 0);
 
 			app.clear();
 
-			if (.edge) {
+			if (both) {
+
+				// the outlined text's shadow, offset (blurred as below), then the outline
+
+				var sc = argb(.shadowColor), ox = .shadowOffsetX, oy = .shadowOffsetY, sw = +.shadowWidth, ew = .edgeExtent * 2;
+
+				var dark = sw > 0 ? argbLevel(sc, 115) : sc;
+
+				app.addStroke(dark, ew, ox, oy);
+
+				app.addShadow(dark, ox, oy);
+
+				if (sw > 0) {
+
+					var faint = argbLevel(sc, 31);
+
+					app.addStroke(faint, ew + sw * 2, ox, oy);
+
+					app.addStroke(faint, ew + sw * 4 / 3, ox, oy);
+
+					app.addStroke(faint, ew + sw * 2 / 3, ox, oy);
+
+				}
+
+				app.addStroke(argbLevel(.edgeColor, .edgeEmphasis === void ? 255 : +.edgeEmphasis), ew);
+
+			} else if (.edge) {
 
 				app.addStroke(argbLevel(.edgeColor, .edgeEmphasis === void ? 255 : +.edgeEmphasis), .edgeExtent * 2);
 
@@ -9872,9 +10114,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		focusable = src.focusable;
 
-
-
         eventTransparent = src.eventTransparent;
+
+		termRects.assignStruct(src.termRects), termRectsLine.assignStruct(src.termRectsLine), termMark = src.termMark;
 
         
 
@@ -10106,6 +10348,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		frameGraphic = src.frameGraphic;
 
+		frameTint = src.frameTint;
+
+		frameTintOpacity = src.frameTintOpacity;
+
 		frameKey = src.frameKey;
 
         frameAnimCount = src.frameAnimCount;
@@ -10237,6 +10483,32 @@ class MessageLayer extends AnimKAGLayerTransMove
 		shadowOffsetY = src.shadowOffsetY;
 
 		shadowWidth   = src.shadowWidth;
+
+		edgeWithShadow = src.edgeWithShadow;
+
+		playerEdge = src.playerEdge;
+
+		playerEdgeColor = src.playerEdgeColor;
+
+		playerShadow = src.playerShadow;
+
+		playerShadowColor = src.playerShadowColor;
+
+		defaultChGradColor = src.defaultChGradColor;
+
+		chGradColor = src.chGradColor;
+
+		defaultEdgeGradColor = src.defaultEdgeGradColor;
+
+		edgeGradColor = src.edgeGradColor;
+
+		defaultShadowGradColor = src.defaultShadowGradColor;
+
+		shadowGradColor = src.shadowGradColor;
+
+		defaultGradDir = src.defaultGradDir;
+
+		gradDir = src.gradDir;
 
 		sizeChanged = src.sizeChanged;
 
@@ -10472,6 +10744,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		dic.frameGraphic = frameGraphic;
 
+		dic.frameTint = frameTint;
+
+		dic.frameTintOpacity = frameTintOpacity;
+
 		dic.frameKey = frameKey;
 
         dic.frameAnimCount = frameAnimCount;
@@ -10538,6 +10814,16 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		dic.shadowWidth   = shadowWidth;
 
+		dic.edgeWithShadow = edgeWithShadow;
+
+		dic.defaultChGradColor = defaultChGradColor;
+
+		dic.defaultEdgeGradColor = defaultEdgeGradColor;
+
+		dic.defaultShadowGradColor = defaultShadowGradColor;
+
+		dic.defaultGradDir = defaultGradDir;
+
 		dic.defaultAutoReturn = defaultAutoReturn;
 
 		dic.lineBreakGlyph = lineBreakGlyph;
@@ -10593,6 +10879,10 @@ class MessageLayer extends AnimKAGLayerTransMove
 		// [start_restore_vars]
 
 		frameGraphic = dic.frameGraphic if dic.frameGraphic !== void;
+
+		frameTint = dic.frameTint !== void ? +dic.frameTint : -1;
+
+		frameTintOpacity = dic.frameTintOpacity if dic.frameTintOpacity !== void;
 
 		frameKey = dic.frameKey if dic.frameKey !== void;
 
@@ -10659,6 +10949,16 @@ class MessageLayer extends AnimKAGLayerTransMove
 		shadowOffsetY = dic.shadowOffsetY if dic.shadowOffsetY !== void;
 
 		shadowWidth   = dic.shadowWidth   if dic.shadowWidth   !== void;
+
+		edgeWithShadow = dic.edgeWithShadow if dic.edgeWithShadow !== void;
+
+		defaultChGradColor = dic.defaultChGradColor if dic.defaultChGradColor !== void;
+
+		defaultEdgeGradColor = dic.defaultEdgeGradColor if dic.defaultEdgeGradColor !== void;
+
+		defaultShadowGradColor = dic.defaultShadowGradColor if dic.defaultShadowGradColor !== void;
+
+		defaultGradDir = dic.defaultGradDir if dic.defaultGradDir !== void;
 
 		defaultAutoReturn = dic.defaultAutoReturn if dic.defaultAutoReturn !== void;
 
@@ -10869,11 +11169,100 @@ class MessageLayer extends AnimKAGLayerTransMove
 	}
 
 }
-
-
-
-
-
+// A colour laid over a layer's picture at opacity, its alpha kept (color -1: nothing)
+function KAGTintLayer(l, color, opacity)
+{
+	if (color === void || color < 0) return;
+	var hold = l.holdAlpha, face = l.face;
+	l.holdAlpha = true;
+	l.face = dfOpaque;
+	l.colorRect(0, 0, l.imageWidth, l.imageHeight, color & 0xffffff, opacity);
+	l.face = face;
+	l.holdAlpha = hold;
+}
+// Whether base (a message layer, or a style dictionary or layer borrowing its drawing) draws an
+// outline and a shadow together (edgeWithShadow, since 0.22.0)
+function KAGEdgeWithShadow(base)
+{
+	return typeof base.edgeWithShadow != "undefined" && base.edgeWithShadow;
+}
+// The layers KAGDrawTextPasses draws on: [ a pass, its gradient ], per window
+var KAGTextPassLayers = %[];
+function KAGTextPassLayer(win, i, w, h)
+{
+	var key = (string)win + ":" + i, l = KAGTextPassLayers[key];
+	if (l === void || !isvalid l) {
+		l = KAGTextPassLayers[key] = new global.Layer(win, win.primaryLayer);
+		l.name = "Text pass " + i;
+		l.visible = false;
+		l.hitType = htMask, l.hitThreshold = 256;
+		l.type = ltAlpha;
+	}
+	if (l.imageWidth < w || l.imageHeight < h) l.setImageSize(Math.max(l.imageWidth, w), Math.max(l.imageHeight, h));
+	l.face = dfAlpha;
+	l.fillRect(0, 0, w, h, 0);
+	return l;
+}
+// Draws text onto lay at x, y (the top left of its text cell, as drawTextToLayer) in passes:
+// its shadow, its outline, then its fill, each in a solid colour or shading from its own colour
+// to its gradient colour down the text cell (gradDir "vertical") or across the layer, left to
+// right ("horizontal": the line, so text drawn a character at a time shades as one). base: the message layer, or a dictionary with drawTextToLayer's settings and
+// chGradColor, edgeGradColor, shadowGradColor and gradDir. A pass is drawn on a layer of its
+// own; a gradient's colours are drawn on another and take the pass's alpha (since 0.22.0)
+function KAGDrawTextPasses(base, lay, x, y, text, color)
+{
+	if (text == "") return;
+	var win = lay.window, edge = base.edge, shadow = base.shadow;
+	var both = edge && shadow && KAGEdgeWithShadow(base);
+	if (edge && !both) shadow = false;
+	var lf = lay.font, fh = Math.abs(lf.height);
+	var ox = shadow ? +base.shadowOffsetX : 0, oy = shadow ? +base.shadowOffsetY : 0;
+	var pad = (edge ? +base.edgeExtent * 2 : 0) + (shadow ? +base.shadowWidth : 0) + fh \ 4 + 4;
+	var rta = typeof base.getRichTextApp != "undefined" ? base.getRichTextApp(lay) :
+		(typeof base.richTextApp == "Object" && base.richTextApp !== void && base.richTextApp.ready(lf)) ? base.richTextApp : void;
+	var tw = rta !== void ? int(Math.ceil(rta.measure(text))) : lf.getTextWidth(text);
+	var bx = pad + (ox < 0 ? -ox : 0), by = pad + (oy < 0 ? -oy : 0);
+	var w = tw + bx + pad + Math.abs(ox), h = fh + by + pad + Math.abs(oy);
+	var passes = [];
+	if (shadow) passes.add([ ox, oy, both, +base.shadowColor, typeof base.shadowGradColor != "undefined" ? +base.shadowGradColor : -1 ]);
+	if (edge) passes.add([ 0, 0, true, +base.edgeColor, typeof base.edgeGradColor != "undefined" ? +base.edgeGradColor : -1 ]);
+	passes.add([ 0, 0, false, +color, typeof base.chGradColor != "undefined" ? +base.chGradColor : -1 ]);
+	var horizontal = typeof base.gradDir != "undefined" && base.gradDir == "horizontal";
+	var p = %[ edge:false, shadow:false, edgeColor:0, edgeExtent:base.edgeExtent, edgeEmphasis:base.edgeEmphasis,
+		shadowColor:0, shadowWidth:0, shadowOffsetX:0, shadowOffsetY:0, antialiased:base.antialiased, vertical:false,
+		richTextApp:rta ];
+	for (var i = 0; i < passes.count; i++) {
+		var ps = passes[i], grad = ps[4];
+		var sil = KAGTextPassLayer(win, 0, w, h);
+		sil.font.face = lf.face, sil.font.height = lf.height, sil.font.bold = lf.bold, sil.font.italic = lf.italic, sil.font.angle = lf.angle;
+		p.edge = ps[2];
+		p.edgeColor = grad >= 0 ? 0xffffff : ps[3];
+		(global.MessageLayer.drawTextToLayer incontextof p)(sil, bx + ps[0], by + ps[1], text, grad >= 0 ? 0xffffff : ps[3]);
+		var src = sil;
+		if (grad >= 0) {
+			// the gradient's colours, given the pass's alpha
+			var gl = KAGTextPassLayer(win, 1, w, h), c0 = ps[3] & 0xffffff, c1 = grad & 0xffffff;
+			var n = horizontal ? lay.imageWidth : fh, start = horizontal ? bx - x : by + ps[1];
+			var count = horizontal ? w : h;
+			for (var k = 0; k < count; k++) {
+				var t = n > 1 ? (k - start) / (n - 1) : 0;
+				t = 0 if t < 0;
+				t = 1 if t > 1;
+				var c = 0xff000000;
+				for (var sh = 0; sh < 24; sh += 8) {
+					var a = (c0 >> sh) & 0xff, b = (c1 >> sh) & 0xff;
+					c |= (int(a + (b - a) * t + 0.5) & 0xff) << sh;
+				}
+				if (horizontal) gl.fillRect(k, 0, 1, h, c); else gl.fillRect(0, k, w, 1, c);
+			}
+			gl.face = dfMask;
+			gl.copyRect(0, 0, sil, 0, 0, w, h);
+			gl.face = dfAlpha;
+			src = gl;
+		}
+		lay.operateRect(x - bx, y - by, src, 0, 0, w, h, omAlpha, 255);
+	}
+}
 // TJS Script ends here
 
 "

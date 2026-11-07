@@ -10,6 +10,7 @@
 #include "Keys.h"
 #include "LipTracks.h"
 #include "Media.h"
+#include "Plan.h"
 #include "Scenes.h"
 #include "Sign.h"
 #include "Subprocess.h"
@@ -556,6 +557,22 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			const std::string url = str(s, base + "url"), preview = str(s, base + "preview");
 			if (!url.empty() && !std::regex_match(url, urlRe)) error(base + "url", "The site's address starts with https:// (like https://studio.example/game/)");
 			if (url.empty()) warn(base + "url", "Without the site's address, link previews (Discord, Slack, X) show no image");
+			// The web engine puts a loose file's name into its URL as it is (krkrz_dev's
+			// HttpStorageMedia, and the prefetch): a name with %, # or ? is never fetched, and a
+			// picture it can't fetch stops the game. Inside data.xp3 ("xp3") names don't matter
+			if (data == "files") {
+				std::vector<std::string> odd;
+				for (const auto& f : collectGameFiles(s, p))
+					if (f.name.find_first_of("%#?") != std::string::npos) odd.push_back(f.name);
+				if (!odd.empty()) {
+					std::string list;
+					for (size_t i = 0; i < odd.size() && i < 5; ++i) list += (i ? ", " : "") + odd[i];
+					if (odd.size() > 5) list += ", ...";
+					warn(base + "data", std::to_string(odd.size()) + (odd.size() == 1 ? " file name has" : " file names have") +
+						" %, # or ?, which the web engine can't fetch as a loose file (" + list +
+						"): choose \"xp3\" data for the web, or rename them along with the scripts that name them");
+				}
+			}
 			if (!preview.empty()) {
 				std::string ext = krt::fromPath(krt::toPath(preview).extension());
 				for (auto& c : ext) c = (char)std::tolower((unsigned char)c);

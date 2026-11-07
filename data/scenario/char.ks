@@ -212,7 +212,9 @@ They step apart for something in the middle...
 
 ; Keeping a scene (since 0.18.0): [env keep] puts the whole World away (stage, characters, layers,
 ; camera, colour), a flashback plays in grey, and [env restore] brings it all back as it was while
-; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies)
+; the music plays on ([env keep sound=true] keeps the sounds too; keep=<name> for named copies).
+; [memory] (macro.ks, since 0.22.0) gives it bars, a sepia edge and the memories' message window
+; ([env msgstyle=memory], the style AfterInit.tjs defines), which [env restore] takes away again
 [bgm01]
 [ai standard happy center]
 [pip standard neutral posright]
@@ -220,6 +222,7 @@ Ai and Pip on the street, as they are now.
 [env keep]
 [pip hide]
 [ai posleft sad]
+[memory]
 [env grayscale=true trans=normal]
 A memory, in grey: Ai, long ago, on her own.
 [env restore trans=normal]

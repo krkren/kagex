@@ -1,0 +1,266 @@
+/**
+ * The player's text settings, and a preview of them (since 0.22.0; doc/kagex.txt, "Text
+ * Settings"). Options (Options.tjs) for a Config page of the game's:
+ *
+ *   textFont          the message font: the game's message fonts with a caption (fonts.csv,
+ *                     KAGFontChoices); kag.chDefaultFace, kept with the system variables
+ *   textOutline       an outline round the text (on, off)
+ *   textOutlineColor  its colour (the colour picker)
+ *   textShadow        a shadow under it (on, off)
+ *   textShadowColor   its colour
+ *
+ * The outline and shadow are kept in kag.scflags.textLook and given to every message window as
+ * its player's look (MessageLayer.playerEdge ...), which takes the place of the game's
+ * [deffont] defaults; a scenario's own [font edge=...] still wins. The message on the screen is
+ * drawn again in the new look at once, where its window records its page (a game with more
+ * than one language, or a window that follows the opacity).
+ *
+ * KAGTextPreviewOpen(parent, x, y, w, h): a small message window, a child of parent, that types
+ * sample lines in the message windows' look, at the player's text speed, waiting between them
+ * as auto mode would; it follows the settings as they change. KAGTextPreviewClose() takes it
+ * away (a page change, leaving the screen).
+ */
+
+// the player's look, as kept: %[ edge, edgeColor, shadow, shadowColor ] (void: the game's)
+function KAGTextLook()
+{
+	if (typeof kag.scflags.textLook != "Object" || kag.scflags.textLook === void) kag.scflags.textLook = %[];
+	return kag.scflags.textLook;
+}
+
+// the look given to every message window, and the pages on the screen drawn again in it
+function KAGApplyTextLook()
+{
+	var look = KAGTextLook();
+	for (var p = 0; p < 2; p++) {
+		var msgs = (p ? kag.back : kag.fore).messages;
+		for (var i = 0; i < msgs.count; i++) {
+			var m = msgs[i];
+			if (typeof m.playerEdge == "undefined") continue;
+			m.playerEdge = look.edge, m.playerEdgeColor = look.edgeColor;
+			m.playerShadow = look.shadow, m.playerShadowColor = look.shadowColor;
+		}
+	}
+	KAGRedrawMessages();
+	KAGTextPreviewRestyle();
+}
+
+// the message windows' pages drawn again from what they recorded (new fonts, outline, shadow)
+function KAGRedrawMessages()
+{
+	var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : void;
+	for (var p = 0; p < 2; p++) {
+		var msgs = (p ? kag.back : kag.fore).messages;
+		for (var i = 0; i < msgs.count; i++) {
+			var m = msgs[i];
+			if (m.redrawTextEnabled && m.numLinks == 0 && m.redrawTextStates.count > 0) m.redrawTextIn(lang);
+		}
+	}
+}
+
+// the value the look has, the game's default where the player hasn't chosen
+function KAGTextLookValue(key)
+{
+	var v = KAGTextLook()[key];
+	if (v !== void) return v;
+	var m = kag.fore.messages[0];
+	switch (key) {
+	case "edge": return !!m.defaultEdge;
+	case "edgeColor": return m.defaultEdgeColor;
+	case "shadow": return !!m.defaultShadow;
+	case "shadowColor": return m.defaultShadowColor;
+	}
+}
+function KAGSetTextLook(key, v)
+{
+	KAGTextLook()[key] = v;
+	KAGApplyTextLook();
+}
+
+// the message font: the choice whose face leads chDefaultFace
+function KAGTextFontValue()
+{
+	var first = ((string)kag.chDefaultFace).split(",")[0].trim();
+	var cs = KAGFontChoices("message");
+	for (var i = 0; i < cs.count; i++) if (cs[i].face == first) return cs[i].face;
+	return cs.count > 0 ? cs[0].face : first;
+}
+function KAGSetTextFont(face)
+{
+	var cs = KAGFontChoices("message");
+	for (var i = 0; i < cs.count; i++) {
+		if (cs[i].face != face) continue;
+		kag.chBitmapFont = "";
+		kag.chDefaultFace = cs[i].faces;
+		kag.setMessageLayerUserFont();
+		break;
+	}
+	KAGRedrawMessages();
+	KAGTextPreviewRestyle();
+}
+function KAGTextFontValues()
+{
+	var cs = KAGFontChoices("message"), r = [];
+	for (var i = 0; i < cs.count && i < 4; i++) r.add([ cs[i].caption, cs[i].face ]);
+	return r;
+}
+
+KAGDefineOption(%[ name:"textFont", label:"Font", kind:"choice", values:KAGTextFontValues(),
+	getValue:function { return KAGTextFontValue(); },
+	setValue:function(v) { KAGSetTextFont(v); },
+	initial:KAGTextFontValues().count > 0 ? KAGTextFontValues()[0][1] : void,
+	available:function { return KAGFontChoices("message").count > 1; } ]);
+KAGDefineOption(%[ name:"textOutline", label:"Outline", kind:"toggle", values:[ ["On", true], ["Off", false] ],
+	getValue:function { return KAGTextLookValue("edge"); }, setValue:function(v) { KAGSetTextLook("edge", v); },
+	reset:function { KAGSetTextLook("edge", void); } ]);
+KAGDefineOption(%[ name:"textOutlineColor", label:"Outline Colour", kind:"color",
+	getValue:function { return KAGTextLookValue("edgeColor"); }, setValue:function(v) { KAGSetTextLook("edgeColor", v); },
+	reset:function { KAGSetTextLook("edgeColor", void); } ]);
+KAGDefineOption(%[ name:"textShadow", label:"Shadow", kind:"toggle", values:[ ["On", true], ["Off", false] ],
+	getValue:function { return KAGTextLookValue("shadow"); }, setValue:function(v) { KAGSetTextLook("shadow", v); },
+	reset:function { KAGSetTextLook("shadow", void); } ]);
+KAGDefineOption(%[ name:"textShadowColor", label:"Shadow Colour", kind:"color",
+	getValue:function { return KAGTextLookValue("shadowColor"); }, setValue:function(v) { KAGSetTextLook("shadowColor", v); },
+	reset:function { KAGSetTextLook("shadowColor", void); } ]);
+KAGOptionHelpTexts.textFont = "The font of the story's text";
+KAGOptionHelpTexts.textOutline = "An outline round the story's text";
+KAGOptionHelpTexts.textOutlineColor = "The outline's colour";
+KAGOptionHelpTexts.textShadow = "A shadow under the story's text";
+KAGOptionHelpTexts.textShadowColor = "The shadow's colour";
+
+// The settings back to the game's (Config's Default)
+function KAGResetTextLook()
+{
+	kag.scflags.textLook = %[];
+	KAGApplyTextLook();
+}
+
+// ---- the preview ------------------------------------------------------------------------------
+
+// the lines it types, in English for tr()
+var KAGTextPreviewLines = [
+	"This is how the story's text will look, at the speed you chose.",
+	"A font, an outline and a shadow: the colours open a wheel.",
+	"In auto mode, the next line comes after a pause like this one."
+	];
+
+var KAGTextPreviewLayer; // the preview open, or void
+
+function KAGTextPreviewOpen(parent, x, y, w, h)
+{
+	KAGTextPreviewClose();
+	KAGTextPreviewLayer = new KAGTextPreview(parent, x, y, w, h);
+	return KAGTextPreviewLayer;
+}
+function KAGTextPreviewClose()
+{
+	if (KAGTextPreviewLayer !== void && isvalid KAGTextPreviewLayer) invalidate KAGTextPreviewLayer;
+	KAGTextPreviewLayer = void;
+}
+function KAGTextPreviewRestyle()
+{
+	KAGTextPreviewLayer.restyle() if KAGTextPreviewLayer !== void && isvalid KAGTextPreviewLayer;
+}
+
+class KAGTextPreview
+{
+	var win, layer, timer;
+	var lines = [];        // the line typed, broken to the window's width
+	var line = 0, pos = 0; // where it is in it (lines[line], character pos)
+	var sample = 0;        // KAGTextPreviewLines[sample]
+	var nextAt = 0;        // when the next character (or the next line) goes
+	var waiting = false;   // the line typed, waiting as auto mode would
+
+	function KAGTextPreview(parent, x, y, w, h)
+	{
+		win = kag;
+		layer = new MessageLayer(win, parent, "text preview", 90, true);
+		layer.setPosition(%[ left:x, top:y, width:w, height:h, marginl:28, margint:24, marginr:28, marginb:20,
+			frame:"", color:0x010062, opacity:(int)(win.windowOpacity * 0.85) ]);
+		layer.hitThreshold = 256; // the screen's buttons stay clickable
+		layer.visible = true;
+		layer.absolute = 2000000;
+		timer = new Timer(onTimer, "");
+		timer.interval = 16;
+		restyle();
+		timer.enabled = true;
+	}
+	function finalize()
+	{
+		invalidate timer if timer !== void;
+		invalidate layer if layer !== void && isvalid layer;
+	}
+
+	// the message windows' look, and the line typed again from its start
+	function restyle()
+	{
+		var m = win.fore.messages[0];
+		layer.userFace = win.chDefaultFace;
+		layer.defaultFontSize = m.defaultFontSize;
+		layer.defaultBold = m.defaultBold;
+		layer.defaultChColor = m.defaultChColor;
+		layer.defaultEdge = m.defaultEdge, layer.defaultEdgeColor = m.defaultEdgeColor;
+		layer.defaultShadow = m.defaultShadow, layer.defaultShadowColor = m.defaultShadowColor;
+		layer.edgeWithShadow = m.edgeWithShadow, layer.edgeExtent = m.edgeExtent;
+		layer.shadowOffsetX = m.shadowOffsetX, layer.shadowOffsetY = m.shadowOffsetY;
+		layer.playerEdge = m.playerEdge, layer.playerEdgeColor = m.playerEdgeColor;
+		layer.playerShadow = m.playerShadow, layer.playerShadowColor = m.playerShadowColor;
+		layer.useRichText = m.useRichText;
+		layer.defaultLineSpacing = m.defaultLineSpacing;
+		startLine();
+	}
+
+	// the sample line, broken into the window's lines, typed from its start
+	function startLine()
+	{
+		layer.clear();
+		layer.resetFont();
+		layer.resetStyle();
+		var text = tr(KAGTextPreviewLines[sample % KAGTextPreviewLines.count]);
+		var ll = layer.lineLayer, f = ll.font, rta = layer.getRichTextApp(ll);
+		var measure = rta !== void ? function(t) { return t == "" ? 0 : int(Math.ceil(this.measure(t))); } incontextof rta :
+			function(t) { return t == "" ? 0 : this.getTextWidth(t); } incontextof f;
+		var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.current) : true;
+		lines = KAGStyleWrap(text, layer.relinexpos - layer.marginL - 8, measure, words);
+		line = 0, pos = 0, waiting = false;
+		nextAt = System.getTickCount() + 300;
+	}
+
+	function onTimer()
+	{
+		if (!isvalid layer) return;
+		var now = System.getTickCount();
+		if (now < nextAt) return;
+		if (waiting) {
+			// the pause over: the next sample line
+			sample++;
+			startLine();
+			return;
+		}
+		var speed = win.chSpeed > 0 ? win.chSpeed : 0;
+		var cur = win.current;
+		win.current = layer;
+		try {
+			// a character a step, or the rest of the line at once at the fastest speed
+			do {
+				if (line >= lines.count) break;
+				var l = lines[line];
+				if (pos >= l.length) {
+					line++, pos = 0;
+					layer.processReturn() if line < lines.count;
+					continue;
+				}
+				layer.processCh(l.charAt(pos), 0);
+				pos++;
+			} while (speed == 0);
+			layer.flushStyledRun() if typeof layer.flushStyledRun != "undefined";
+		} catch (e) {
+			dm("Text preview: " + e.message);
+		}
+		win.current = cur;
+		if (line >= lines.count) {
+			waiting = true;
+			nextAt = now + win.autoModePageWait + 1500;
+		} else nextAt = now + speed;
+	}
+}

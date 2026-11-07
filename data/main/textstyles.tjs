@@ -1,0 +1,25 @@
+// The sample's text styles (template/system/Fonts.tjs; doc/kagex.txt, "Fonts and Text Styles"):
+// the save slots, Replay's tiles and tabs, Search's rows and the CG pages' counts draw their words
+// through a style named here, so restyling or translating a screen is a change in this table. A
+// style "a.b" starts from "default", then takes "a"'s settings, then its own
+
+// the save and load screens' slots: the scene's title, then the date
+KAGDefineTextStyle("slot", %[ size:36, color:0x24107a, minSize:22 ]);
+KAGDefineTextStyle("slot.date", %[ size:32, color:0x5c4cb4 ]);
+
+// the title on a CG or Replay tile's band, and the Extras tabs' labels
+KAGDefineTextStyle("tile", %[ size:20, bold:true, minSize:13, align:"center", valign:"middle" ]);
+KAGDefineTextStyle("tab", %[ size:30, bold:true, minSize:18, align:"center", valign:"middle" ]);
+
+// Search's rows: the scene and its speaker, then the line found
+KAGDefineTextStyle("search", %[ color:0x24107a ]);
+KAGDefineTextStyle("search.head", %[ size:19, bold:true, color:0x5025ff ]);
+KAGDefineTextStyle("search.line", %[ size:26 ]);
+
+// the found/total counts on the CG pages' buttons
+KAGDefineTextStyle("count", %[ size:22, bold:true, align:"right", valign:"middle", color:0xffffff ]);
+
+// the glossary (glossary.ks): a term's row, then the entry chosen
+KAGDefineTextStyle("glossary.row", %[ size:30, bold:true, valign:"middle", color:0x24107a, minSize:18 ]);
+KAGDefineTextStyle("glossary.title", %[ size:48, bold:true, edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, minSize:24 ]);
+KAGDefineTextStyle("glossary.text", %[ size:32, lines:14, lineSpacing:12, edge:true, edgeColor:0x010062, edgeExtent:2, edgeEmphasis:255 ]);

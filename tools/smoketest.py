@@ -1243,6 +1243,7 @@ def live2d_steps(eng):
     time.sleep(1.0)
     if eng.tjs(hiyori + 'return c.lastDraw != global.__smokeL2DDraw ? 1 : 0;') != 1:
         raise SmokeError("Hiyori was drawn once, and not again as her model moved")
+    model_face_window(eng, hiyori, "Hiyori")
     # upright: a player of her model, with no motion, drawn with its eyes open and shut, differs
     # where her eyes are, in the top part of the picture (her head's)
     r = str(eng.tjs('var s = KAGLive2DOf(kag), file = s.findModel("hiyori"), p = s.newPlayer(file);'
@@ -1547,6 +1548,28 @@ def three_why(eng):
                        ' ? "no fgimage/vee.vrm (tools/assets/make_vrm.py)" : "";'))
 
 
+def model_face_window(eng, who, label):
+    """A model character's face window (0.22.0): its faceCrop cut from the picture as drawn, and
+    drawn again as the model moves while it's the speaker. who: TJS setting c to the character"""
+    if eng.tjs(who + 'return typeof c.faceCropOf != "undefined" && c.faceCropOf() !== void'
+               ' && kag.current.faceLayer !== void ? 1 : 0;') != 1:
+        print("     (no face window for %s: a framework from before 0.22.0, or no faceCrop)" % label, flush=True)
+        return
+    # the speaker now, its face drawn as a line of its would (redrawFace)
+    eng.tjs(who + 'world_object.env.currentNameTarget = c; world_object.env.redrawFace(c, false); return 1;')
+    time.sleep(0.8)
+    a = str(eng.tjs(who + 'var fl = kag.current.faceLayer, n = 0;'
+                    ' for (var y = 0; y < fl.imageHeight; y += 8) for (var x = 0; x < fl.imageWidth; x += 8) n++ if fl.getMaskPixel(x, y) > 0;'
+                    ' return [fl.visible ? 1 : 0, n, c.faceShownAt].join(",");')).split(",")
+    time.sleep(0.6)
+    b = eng.tjs(who + 'return c.faceShownAt;')
+    print("     %s's face window: shown %s, %s samples drawn, drawn again at %s then %s" % (label, a[0], a[1], a[2], b), flush=True)
+    if a[0] != "1" or int(a[1]) < 50:
+        raise SmokeError("%s's face window isn't drawn: %s" % (label, a))
+    if str(b) == a[2]:
+        raise SmokeError("%s's face window doesn't follow the model as it moves" % label)
+
+
 def vrm_steps(eng):
     """The Animated Character demo's VRM character, Vee (KAGEnvCharacterVRM.tjs, drawn by the
     krkrthreepp plugin; her model and motions are tools/assets/make_vrm.py's): her picture where
@@ -1597,6 +1620,7 @@ def vrm_steps(eng):
     time.sleep(1.0)
     if eng.tjs(vee + 'return c.lastDraw != global.__smokeVRMDraw ? 1 : 0;') != 1:
         raise SmokeError("Vee was drawn once, and not again as she moved")
+    model_face_window(eng, vee, "Vee")
     # blinking (eyeFlipFreq 1: a blink every frame or so) and open eyes between; a face that
     # fades in and reaches the avatar
     eng.tjs('global.__smokeVRM = %[ blinkMin : 9.0, blinkMax : 0.0, mouth : %[], samples : 0, after : 0 ];'
@@ -1889,7 +1913,8 @@ WRAP_TJS = r"""
 // global.__smokeWrap(texts, strategy, startX, lines, words): draws each text through the word wrap
 // on a message layer of its own, lines high (words: its language has spaces between words), and
 // returns what it drew as JSON
-global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1) {
+// sizeAt, size: a [font size=] before character sizeAt (-1: none)
+global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1, sizeAt = -1, size = 0) {
 	var lay = new MessageLayer(kag, kag.back.base, "smoke line breaking", 99, true);
 	var r = %[ lines:[], pages:0 ];
 	var cur = kag.current, saved = kag.saveWordWrap(), strat = kag.lineBreakStrategy;
@@ -1910,6 +1935,7 @@ global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1) {
 		var line = "", y = lay.y, x = lay.x;
 		for (var i = 0; i < text.length; i++) {
 			var ch = text[i];
+			lay.setFont(%[ size:size ]) if i == sizeAt;
 			if (ch == "\n") {
 				r.lines.add(%[ text:line, end:x ]), line = "";
 				if (lay.processReturn()) r.pages++, lay.clear();
@@ -5294,6 +5320,209 @@ def sample_steps(eng):
             raise SmokeError("Pip's mouth didn't move while he spoke (levels %s)" % lips)
         eng.tjs("kag.goToStart(); return 1;")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("the glossary: its words marked in the text, a click on one shows its entry, Extras lists them")
+    def _():
+        if eng.tjs('return typeof global.KAGGlossary == "Object" && KAGGlossary.entries().count > 0 ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the glossary, or no terms.csv)", flush=True)
+            return
+        eng.tjs('KAGGlossary.reload(); kag.sflags.glossaryMet = void; kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks's first line", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        # KAGEX and World on the first line: their characters in the glossary's colour, placed
+        marks = str(eng.tjs('var m = kag.fore.messages[0], r = %[];'
+                            ' for (var i = 0; i < m.termRects.count; i++) r[m.termRects[i][4]] = 1;'
+                            ' for (var i = 0; i < m.termRectsLine.count; i++) r[m.termRectsLine[i][4]] = 1;'
+                            ' var a = []; a.assign(r); var k = []; for (var i = 0; i < a.count; i += 2) k.add(a[i]); k.sort();'
+                            ' return k.join(",") + "|" + KAGGlossary.met("kagex") + KAGGlossary.met("world") + KAGGlossary.met("pip");'))
+        print("     marked on the line: %s (met kagex, world, pip: %s)" % tuple(marks.split("|")), flush=True)
+        if marks != "kagex,world|110":
+            raise SmokeError("the first line's glossary words weren't marked and met as expected: %s" % marks)
+        # a click on KAGEX shows its entry and doesn't go on (the pointer can be placed on the
+        # desktop; elsewhere the entry is opened as the click would)
+        at = str(eng.tjs('var m = kag.fore.messages[0], r, ox = 0, oy = 0;'
+                         ' if (m.termRects.count > 0) r = m.termRects[0];'
+                         ' else r = m.termRectsLine[0], ox = m.lineLayerOriginX + m.getLineLayerLeftOffset(), oy = m.lineLayerOriginY + m.getLineLayerTopOffset();'
+                         ' return (m.left + ox + r[0] + (r[2] >> 1)) + "," + (m.top + oy + r[1] + (r[3] >> 1));'))
+        line = eng.tjs("return world_object.player.historyNow();")
+        x, y = [int(v) for v in at.split(",")]
+        if isinstance(eng, DesktopEngine):
+            eng.tjs('kag.primaryLayer.setCursorPos(%d, %d); return 1;' % (x, y))
+            got = eng.tjs('var id = KAGGlossaryAtPointer(kag); return id === void ? "none" : id;')
+            if got != "kagex":
+                raise SmokeError("the pointer on KAGEX (%d, %d) finds %s" % (x, y, got))
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+        else:
+            eng.tjs('KAGGlossary.show("kagex"); return 1;')
+        eng.wait("its entry", 'kag.currentDialog !== void', timeout=10)
+        lines = eng.tjs('return kag.currentDialog.a11yText;')
+        print("     the entry: %r" % lines, flush=True)
+        if "KAGEX" not in str(lines) or "Wamsoft" not in str(lines):
+            raise SmokeError("the entry card doesn't hold KAGEX's entry: %r" % lines)
+        eng.key("VK_ESCAPE")
+        eng.wait("the card to close", 'kag.currentDialog === void', timeout=10)
+        if eng.tjs("return world_object.player.historyNow();") != line:
+            raise SmokeError("the click on the term went on to the next line")
+        # the backlog colours them too (marksIn), and Plain turns the marks off
+        if eng.tjs('return KAGGlossary.marksIn("using KAGEX World Extension. Worlds").count;') != 2:
+            raise SmokeError("the backlog's marks don't find KAGEX and World (and not Worlds)")
+        eng.tjs('KAGOptionSet("glossaryMarks", false); return 1;')
+        off = eng.tjs('var m = kag.fore.messages[0]; return m.termRects.count + m.termRectsLine.count;')
+        eng.tjs('KAGOptionSet("glossaryMarks", true); return 1;')
+        if off != 0:
+            raise SmokeError("with the marks off the page was still marked (%s)" % off)
+        # Extras: the terms met, the others a "?"; one picked shows its entry
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.tjs('tf.glossarySel = void; sf.extramode = 5; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("glossary.ks", 'kag.conductor.curStorage == "glossary.ks" && kag.inStable', timeout=20)
+        got = str(eng.tjs('var l = kag.fore.messages[0].names.glossaryList; return l.itemCount + ":" + tf.glossarySel + ":" + glossaryItemName(2) + ":" + tf.glossaryStatus;'))
+        print("     the Glossary tab: %s" % got, flush=True)
+        if not got.startswith("3:0:Not met yet:"):
+            raise SmokeError("the Glossary tab doesn't list the three terms with KAGEX chosen and Pip not met: %s" % got)
+        eng.tjs("glossaryPick(1); return 1;")
+        eng.wait("World's entry", 'kag.conductor.curStorage == "glossary.ks" && kag.inStable && tf.glossarySel == 1', timeout=20)
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("text: the game's fonts and text styles, an outline with a shadow, gradient text, About's fonts")
+    def _():
+        if eng.tjs('return typeof global.KAGFontChoices != "undefined" && typeof global.KAGDrawTextPasses != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before 0.22.0's fonts and text styles)", flush=True)
+            return
+        r = str(eng.tjs('var c = KAGFontChoices("message"), a = []; for (var i = 0; i < c.count; i++) a.add(c[i].caption);'
+                        ' var lic = KAGFontLicences(), l = []; for (var i = 0; i < lic.count; i++) l.add(lic[i].caption);'
+                        ' return a.join(",") + "|" + l.join(",") + "|" + KAGTextStyle("dialog.title").size + "|" + KAGTextStyle("slot").size'
+                        ' + "|" + kag.fore.messages[0].edgeWithShadow;')).split("|")
+        print("     message fonts to choose: %s; licences: %s; dialog.title %s, slot %s; edgeWithShadow %s" % tuple(r), flush=True)
+        if "Noto Sans JP" not in r[0].split(",") or "Noto Serif JP" not in r[1].split(",") or r[2] != "40" or r[3] != "36":
+            raise SmokeError("the sample's fonts.csv and textstyles.tjs weren't read: %s" % r)
+        # an outline with a shadow (both drawn, the shadow outlined too) and a vertical gradient
+        # from blue to red, on white
+        g = str(eng.tjs('var lay = new global.Layer(kag, kag.primaryLayer); lay.setImageSize(300, 180); lay.face = dfAlpha;'
+                        ' lay.fillRect(0, 0, 300, 180, 0xffffffff); lay.font.face = KAGFontFace("message"); lay.font.height = 110; lay.font.bold = true;'
+                        ' var base = %[ edge:true, shadow:true, edgeWithShadow:true, edgeColor:0x000080, shadowColor:0x00c000, edgeExtent:3,'
+                        ' edgeEmphasis:512, shadowOffsetX:10, shadowOffsetY:10, shadowWidth:0, chGradColor:0xff0000, edgeGradColor:-1,'
+                        ' shadowGradColor:-1, gradDir:"vertical", antialiased:true ];'
+                        ' KAGDrawTextPasses(base, lay, 60, 20, "IH", 0x0000ff);'
+                        ' var blueTop = 0, redLow = 0, green = 0, navy = 0;'
+                        ' for (var y = 0; y < 180; y += 2) for (var x = 0; x < 300; x += 2) {'
+                        '  var p = lay.getMainPixel(x, y), r = (p >> 16) & 255, gg = (p >> 8) & 255, b = p & 255;'
+                        '  if (b > 170 && r < 90 && gg < 60 && y < 70) blueTop++;'
+                        '  if (r > 170 && b < 90 && gg < 60 && y > 90) redLow++;'
+                        '  if (gg > 150 && r < 60 && b < 60) green++;'
+                        '  if (b > 90 && b < 170 && r < 40 && gg < 40) navy++; }'
+                        ' invalidate lay; return [blueTop, redLow, green, navy].join(",");')).split(",")
+        print("     outline, shadow and gradient: blue at the top %s, red at the bottom %s, shadow %s, outline %s" % tuple(g), flush=True)
+        if min(int(v) for v in g) < 3:
+            raise SmokeError("the text's gradient, shadow or outline is missing: %s" % g)
+        # a [font] before a line's text outlives the clear before it (clearForLine), though the
+        # conductor uses the tag's dictionary again
+        kept = eng.tjs('var e = %[ gradcolor:"0x123456" ]; kag.tagHandlers.font(e); (Dictionary.clear incontextof e)();'
+                       ' kag.clearForLine(); var c = kag.current.chGradColor; kag.tagHandlers.resetfont(%[]); return c;')
+        print("     a [font] before the line's text, after the clear: 0x%06x" % (int(kept) & 0xffffff), flush=True)
+        if int(kept) != 0x123456:
+            raise SmokeError("a [font] given before a line's text was lost in the clear before it: %s" % kept)
+        # a larger size from the middle of a line: its words are measured in it, so the line
+        # breaks between them (it measured them in the old size and broke one in the middle)
+        eng.tjs(WRAP_TJS + "return 1;")
+        words = ("Some words at the usual size come first on this line and then a few more of them follow "
+                 "before the big ones").split()
+        # (with krkr_richtext's plan where it draws, and with the greedy wrap the web build has)
+        bad = []
+        rich = eng.tjs("return kag.fore.messages[0].useRichText ? 1 : 0;")
+        for use in ([1, 0] if rich == 1 else [0]):
+            eng.tjs("kag.fore.messages[0].useRichText = %s; return 1;" % ("true" if use else "false"))
+            for k in range(12, len(words) + 1):
+                text = " ".join(words[:k]) + " Bigger words follow"
+                at = text.index("Bigger")
+                got = json.loads(str(eng.tjs('return __smokeWrap(%s, "quality", -1, 4, 1, %d, 72);' % (tjs_string(text), at))))
+                lines = [l["text"].strip() for l in got["lines"] if l["text"].strip() != ""]
+                if " ".join(lines) != text:
+                    bad.append(" / ".join(lines))
+        eng.tjs("kag.fore.messages[0].useRichText = %s; return 1;" % ("true" if rich == 1 else "false"))
+        print("     a size change mid-line: %d line lengths%s, %d broke inside a word"
+              % (len(words) - 11, " each way" if rich == 1 else "", len(bad)), flush=True)
+        if bad:
+            raise SmokeError("a line with a size change broke inside a word: %s" % bad[0])
+        eng.tjs("showAbout(); return 1;")
+        eng.wait("About", "kag.currentDialog !== void", timeout=10)
+        about = str(eng.tjs("return kag.currentDialog.a11yText;"))
+        eng.key("VK_ESCAPE")
+        eng.wait("About to close", "kag.currentDialog === void", timeout=10)
+        if "Noto Serif JP" not in about:
+            raise SmokeError("About doesn't list the game's fonts: %r" % about)
+
+    @step("text settings: the player's outline, shadow and font reach the message windows, with a preview; the colour picker")
+    def _():
+        if eng.tjs('KAGLoadScript("ColorPicker.tjs") if typeof global.KAGPickColor == "undefined" && Storages.isExistentStorage("ColorPicker.tjs");'
+                   ' return typeof global.KAGSetTextLook != "undefined" && typeof global.KAGPickColor != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before 0.22.0's text settings)", flush=True)
+            return
+        r = str(eng.tjs('var m = kag.fore.messages[0], a = [];'
+                        ' KAGSetTextLook("edge", true); KAGSetTextLook("edgeColor", 0x336699); a.add(m.playerEdge + ":" + m.lookEdgeColor);'
+                        ' KAGSetTextLook("shadow", false); a.add(m.playerShadow + ":" + m.lookShadow);'
+                        ' KAGResetTextLook(); a.add((m.playerEdge === void) + ":" + (m.lookShadow == m.defaultShadow));'
+                        ' var first = KAGTextFontValues()[0][1]; KAGSetTextFont("Noto Serif JP"); a.add(((string)kag.chDefaultFace).split(",")[0]);'
+                        ' KAGSetTextFont(first); a.add(((string)kag.chDefaultFace).split(",")[0] == first);'
+                        ' return a.join("|");')).split("|")
+        print("     outline set: %s; shadow off: %s; Default: %s; font: %s, back %s" % tuple(r), flush=True)
+        if r[0] != "1:%d" % 0x336699 or r[1] != "0:0" or r[2] != "1:1" or r[3] != "Noto Serif JP" or r[4] != "1":
+            raise SmokeError("the player's text settings didn't reach the message window: %s" % r)
+        # the preview types its sample lines at the player's speed
+        eng.tjs("KAGTextPreviewOpen(kag.fore.base, 100, 100, 600, 300); return 1;")
+        time.sleep(2.0)
+        typed = eng.tjs("var p = KAGTextPreviewLayer; return p !== void && isvalid p ? p.line * 1000 + p.pos : -1;")
+        eng.tjs("KAGTextPreviewClose(); return 1;")
+        print("     the preview typed up to line/position %s" % typed, flush=True)
+        if typed is None or int(typed) <= 0:
+            raise SmokeError("the text preview typed nothing")
+        # the colour picker: a step of the hue, then OK hands the colour back; Cancel puts it back
+        eng.tjs('global.__smokePicked = -2; KAGPickColor(0x336699, function(c) { global.__smokePicked = c; } incontextof global, "Test"); return 1;')
+        eng.wait("the picker", "KAGColorPicker !== void && kag.keyCapture !== void", timeout=10)
+        eng.tjs("kag.takeCapturedKey(VK_RIGHT, 0); return 1;")
+        eng.wait("the picker again", "kag.keyCapture !== void", timeout=5)
+        eng.tjs("kag.takeCapturedKey(VK_RETURN, 0); return 1;")
+        eng.wait("the picker to close", "KAGColorPicker === void", timeout=5)
+        picked = eng.tjs("return global.__smokePicked;")
+        print("     picked: 0x%06x from 0x336699" % (int(picked) & 0xffffff), flush=True)
+        if int(picked) < 0 or int(picked) == 0x336699:
+            raise SmokeError("the colour picker didn't hand back a new colour: %s" % picked)
+
+    @step("message window styles: a flashback's window, the player's tint, kept by a save")
+    def _():
+        if eng.tjs('return typeof global.KAGMessageStyles != "undefined" && KAGMessageStyles.memory !== void ? 1 : 0;') != 1:
+            print("     (skipped: a framework or sample from before 0.22.0's window styles)", flush=True)
+            return
+        # (the demo's start sets up its window: [initscene])
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        eng.tjs('kag.process("char.ks", "*flashback"); return 1;')
+        for i in range(8):
+            eng.wait("a line in the flashback", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+            if eng.tjs('return KAGMessageStyleNow == "memory" ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.6)
+        r = str(eng.tjs('var m = kag.fore.messages[0]; return [KAGMessageStyleNow, m.frameGraphic, m.nameLayer.frameGraphic].join(",");'))
+        print("     in the flashback: %s" % r, flush=True)
+        if r != "memory,messagewindow_memory,namebox_memory":
+            raise SmokeError("the flashback's window style isn't on: %s" % r)
+        eng.tjs('KAGOptionSet("msgStyleTint:memory", 0x3060ff); return 1;')
+        tint = eng.tjs("return kag.fore.messages[0].frameTint;")
+        n = eng.tjs("return kag.quickSave();")
+        eng.wait("the quick save", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(%d))" % int(n), timeout=10)
+        eng.tjs('KAGOptionSet("msgStyleTint:memory", -1); kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        if eng.tjs('return KAGMessageStyleNow == "normal" ? 1 : 0;') != 1:
+            raise SmokeError("the title kept the flashback's window style")
+        eng.tjs("loadFunction(%d); return 1;" % int(n))
+        eng.wait("the flashback again", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
+        after = eng.tjs("return KAGMessageStyleNow;")
+        print("     the player's tint: 0x%06x; after a load: %s" % (int(tint) & 0xffffff, after), flush=True)
+        if int(tint) != 0x3060ff or after != "memory":
+            raise SmokeError("the window style's tint or its load went wrong: 0x%x, %s" % (int(tint), after))
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
 
     @step("languages: F9 shows the title screen in Japanese, with its own images, then English again")
     def _():

@@ -3454,13 +3454,16 @@ by hand, and Default and saving follow from the table. A game declares its own i
   label     Its row's title, in English; it shows through tr() in the language being played.
             Or a dictionary by language code, for names (%[ "en" => "Ai", "ja" => ... ]).
   kind      toggle (two buttons), choice (two to four), slider, button (one button that runs
-            action), note (lines of text).
+            action), note (lines of text), color (a swatch and the colour picker; since 0.22.0,
+            "Text Settings and the Colour Picker" below).
   prop      A property of kag the option reads and sets (kag.windowOpacity ...); or getValue
             and setValue, functions; or save:true, which keeps it in scflags["option:<name>"].
   apply     A method of kag called after a change (applyWindowOpacity).
   values    [ [label, value] ... ] for a toggle or a choice.
   min, max, step, ends   A slider's range and the words at its two ends.
   initial   The value Default and the first start give it.
+  reset     A function Default runs where there's no initial: the game's own value (0.22.0).
+  available A function: whether this platform can do it; its row is left empty when not.
   button, action, enabled   A button's label, what it does, whether it can be pressed now.
   lines, rows   A note's lines, and the rows an option takes (1).
   preview   A slider's function(event, value), called as the slider is pointed at ("enter"),
@@ -3546,6 +3549,137 @@ These are kag's properties, kept in the system variables (scflags), with their o
 "Don't ask again": the Yes/No prompts named in yesnoSkippable (YesNoDialogLayer.tjs: overwriting
 and loading a save, a quick load, returning to the title) show a check box; a Yes with it ticked
 answers that prompt Yes from then on (sf.yesnoSkip). The askAgain option clears them.
+
+● Fonts and Text Styles
+
+Since 0.22.0 a game lists its fonts once, in fonts.csv (the framework's in template/system; a
+game's own in data/main takes its place), a font a line, its columns separated by tabs:
+
+    Noto Serif JP	notoserifjp-subset.otf	message heading	*	Noto Serif JP	SIL Open Font License 1.1
+
+  face       the name face lists use
+  file       a font file the game ships, registered under face at start-up (empty: a font the
+             system or the engine has, used where it's there)
+  roles      what it's for: message, interface, heading, number (separated by spaces; * all)
+  languages  the language codes it covers (* all)
+  caption    its name for the player: Config's Text page offers the message fonts with one
+  licence    its licence, which About lists (empty: a system font, nothing to show)
+
+A role's face list is the fonts with that role that cover the language shown and are there, in
+the file's order, then Roboto (the engine always has it): KAGFontFace(role, lang). The message
+windows' default face (Config.tjs's userFace) still wins where it's set; the Yes/No prompts and
+About use the interface role. KAGFontChoices(role) lists the fonts the player can pick, and
+KAGFontLicences() what About shows. The sample adds Noto Serif JP, cut down to the characters its
+text uses (tools/assets/make_fonts.py: run it again after adding text with new characters;
+--check lists the ones missing).
+
+Text the framework and a game draw on their own screens goes through one table of named styles,
+so restyling or translating a screen is a change in the table. The framework's are "default" and
+"dialog" ("dialog.title", "dialog.line", "dialog.small", "dialog.text"); a game adds its own in
+textstyles.tjs (data/main), read on first use:
+
+    KAGDefineTextStyle("slot", %[ size:36, color:0x24107a, minSize:22 ]);
+    KAGDefineTextStyle("slot.date", %[ size:32, color:0x5c4cb4 ]);
+
+A style "a.b" starts from "default", takes "a"'s settings, then its own (parent= names another to
+start from). Its settings: role (interface), face (a face list in place of the role's), size (24),
+bold, italic, color (0xffffff), align (left, center, right), valign (top, middle, bottom), lines
+(1), lineSpacing (4), fit (true: shrinks down to minSize (12) to fit), ellipsis ("…": what ends a
+text cut to fit), edge, edgeColor, edgeExtent, edgeEmphasis, shadow, shadowColor, shadowOffsetX,
+shadowOffsetY, gradColor, edgeGradColor, shadowGradColor, gradDir (as [font]'s, below).
+
+  KAGDrawStyledText(layer, style, text, x, y, w, h, changes)   Draws text inside a rectangle of
+                       layer in a style (its name or a dictionary), aligned, wrapped (Latin words
+                       kept whole in Japanese and Chinese) and shrunk to fit; changes (a
+                       dictionary) overrides some settings for this text (a hovered row's
+                       colour). Returns %[ width, height, size, lines ].
+  KAGStyledTextLayout(layer, style, text, w, h, changes)   The same, measured without drawing.
+  showTextDialog(lines)   Lines of text in the About screen's frame, with Close: [ [ text, style
+                       ], ... ] (the glossary's entries; Yes/No prompts' frames).
+
+The sample's save slots, CG and Replay tiles and tabs, Search's rows, the CG counts and the
+glossary draw through textstyles.tjs.
+
+● An Outline with a Shadow, and Gradient Text
+
+KAG3 draws an outline or a shadow; since 0.22.0 a message window with edgeWithShadow (its
+Config.tjs setting, on in the sample and the template) draws both: the shadow of the outlined
+text, then the outline, then the text, with krkr_richtext and without. [selopt edgewithshadow=]
+does it for the choices.
+
+Text, its outline and its shadow can each shade from their own colour to another, down the line
+or along it:
+
+    [font color=0xffffff gradcolor=0xffd75e]      white at the top of the line, gold at the bottom
+    [font edgegradcolor=0x5025ff shadowgradcolor=0x000000 graddir=horizontal]
+    [font gradcolor=-1]                           no gradient ("default": [deffont]'s)
+
+  gradcolor        the colour the text shades to (-1: none)
+  edgegradcolor    the outline's
+  shadowgradcolor  the shadow's
+  graddir          vertical (down the line, the default) or horizontal (along the window's width)
+
+[deffont] takes them as the window's defaults; [selopt] takes them for the choices, and a text
+style for its text. A line with a gradient is drawn a character at a time.
+
+● Text Settings and the Colour Picker
+
+Config's Text page (the sample's seventh; template/system/TextSettings.tjs) gives the player the
+message font (textFont: the message fonts with a caption, kept with the system variables as
+kag.chDefaultFace), an outline (textOutline) and its colour (textOutlineColor), and a shadow
+(textShadow) and its colour (textShadowColor). The outline and the shadow are the player's look
+(MessageLayer.playerEdge, playerEdgeColor, playerShadow, playerShadowColor, kept in
+scflags.textLook): they take the place of the game's [deffont] defaults, while a scenario's own
+[font edge=...] still wins; Default puts the game's back. The message on the screen is drawn
+again at once where its window records its page.
+
+  KAGTextPreviewOpen(parent, x, y, w, h)   A small message window, a child of parent, that types
+                       sample lines in the message windows' look at the player's text speed,
+                       waiting between them as auto mode would, and follows the settings as they
+                       change. KAGTextPreviewClose() takes it away.
+
+An option of kind "color" (Options.tjs) shows a swatch of its colour and a Change button that
+opens the colour picker; the value changes as it's picked, and goes back on Cancel. A choice
+whose values have [ "Other…", "pick" ] opens the picker for that value (the read text's colour, a
+window style's tint). An option's reset (a function) is what Default runs where it has no
+initial: the game's own value.
+
+  KAGPickColor(color, onDone, title, onChange, onCancel)   The colour picker over the screen: a
+                       colour wheel (hue and saturation), a brightness bar, the colour before and
+                       now, OK and Cancel; the arrows, a controller's D-pad, the mouse and touch
+                       work it. onDone(color) on OK, onChange(color) as it moves, onCancel().
+
+● The Glossary
+
+Since 0.22.0 the words the story explains (a place, a gadget, a piece of jargon) are marked where
+the message window draws them: in the glossary's colour, underlined. A click or a tap on one,
+while the game waits for a click, shows its entry as a card without going on, and a tip names it
+under the pointer. The table is terms.csv (data/main; a language's own in lang/<code>/), a term a
+line, separated by tabs (template/system/Glossary.tjs):
+
+    world	World|Worlds	The World	The part of KAGEX that keeps the scene ...
+
+  id      the term's name for scripts and the system variables, the same in every language
+  words   what marks it in the text, separated by |, as written (case too); in a language with
+          spaces between words, only whole words
+  title   its entry's title
+  text    the entry (\n: a new line)
+
+The marks follow the line as it's drawn, from the scenario (KAG's player) or the compiled text
+(the scene player), so a translation is marked by its own table and a page drawn again in another
+language by that language's; the backlog colours them too. A term drawn in the message window
+has been met (sf.glossaryMet), for a screen of the game's that lists them. The glossaryMarks
+option (Marked, Plain) and glossaryColor (the colour picker) are the player's; KAGGlossaryColor
+the game's colour.
+
+  KAGGlossary.entries(), entry(id)   The shown language's table (%[ id, words, title, text ]).
+  KAGGlossary.met(id), meet(id), metCount()   The terms met.
+  KAGGlossary.show(id)               Its card.
+  KAGGlossary.find(text, words)      Where the terms are in a text: [ start, end, id ] by start.
+  MessageLayer.termAt(x, y)          The term at a place in a message window.
+
+The sample marks KAGEX, the World and Pip (and their Japanese), and its Extras has a fifth tab,
+Glossary (glossary.ks): the terms met, a "?" for the others, and the one chosen beside them.
 
 ● The Name Box
 

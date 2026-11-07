@@ -71,7 +71,7 @@ LABELS = {
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
-        "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG",
+        "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG", "Glossary": "用語集",
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
@@ -663,6 +663,35 @@ def make_message():
     c.panel((0, 0, 292, 56), r=14, fill=VIOLET, border=WHITE, bw=4, shadow=8, shadow_color=NAVY)
     c.save(out("namebox.png", False))
 
+    # the "memory" window style (MessageStyles.tjs, AfterInit.tjs; [env msgstyle=memory]):
+    # the same shapes in sepia, for flashbacks
+    sepia_fill, sepia_border, sepia_dark = (238, 226, 204), (128, 96, 62), (84, 60, 34)
+    c = Canvas(w, h)
+    c.panel((0, 0, w - 12, h - 12), r=18, fill=rgba(sepia_dark, 214), border=sepia_border, bw=5, shadow=12,
+            shadow_color=sepia_dark)
+    c.gradient((5, 5, w - 17, 90), (255, 236, 200, 50), (255, 236, 200, 0), clip=((5, 5, w - 17, h - 17), 13))
+    c.save(out("messagewindow_memory.png", False))
+    c = Canvas(300, 64)
+    c.panel((0, 0, 292, 56), r=14, fill=sepia_border, border=sepia_fill, bw=4, shadow=8, shadow_color=sepia_dark)
+    c.save(out("namebox_memory.png", False))
+
+    # bars over the scene, for the [letterbox] macro (macro.ks): black, 110 px top and bottom
+    if LANG == "en":
+        img = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        d.rectangle((0, 0, 1919, 109), fill=(0, 0, 0, 255))
+        d.rectangle((0, 970, 1919, 1079), fill=(0, 0, 0, 255))
+        img.save(out("letterbox.png", False))
+        # a soft sepia edge round the scene, for the [memoryframe] macro: clear in the middle
+        yy, xx = np.mgrid[0:1080, 0:1920].astype(np.float64)
+        dx, dy = (xx - 959.5) / 960, (yy - 539.5) / 540
+        r = np.sqrt(dx * dx * 0.85 + dy * dy)
+        a = np.clip((r - 0.62) / 0.5, 0, 1) ** 1.6 * 200
+        rgba_ = np.zeros((1080, 1920, 4), np.uint8)
+        rgba_[..., 0], rgba_[..., 1], rgba_[..., 2] = 74, 52, 28
+        rgba_[..., 3] = a.round().astype(np.uint8)
+        Image.fromarray(rgba_, "RGBA").save(out("memoryframe.png", False))
+
     for name in MSG_BUTTONS:
         for st in ("normal", "over"):
             button(100, 42, L(MSG_LABELS.get(name, name.upper())), st, size=19, r=10, bw=3, tracking=1.5).save(
@@ -804,8 +833,8 @@ def make_config_pages():
     t.save(out("config_track.png", False))
 
 
-def nav_button(label, st, w=180):
-    return button(w, 64, label, st, size=28, weight="Black", r=12, shadow=6)
+def nav_button(label, st, w=180, size=28):
+    return button(w, 64, label, st, size=size, weight="Black", r=12, shadow=6)
 
 
 # --- save / load -----------------------------------------------------------------------
@@ -842,8 +871,10 @@ def make_saveload():
 
 
 # --- Extras ----------------------------------------------------------------------------
+# five tabs 144 wide, 10 apart, from x 680 (the screens' titles end before it; Return at 1450)
 EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music"),
-              ("extra_searchmode", "Search")]
+              ("extra_searchmode", "Search"), ("extra_glossary", "Glossary")]
+EXTRA_TAB_W = 144
 
 
 def make_extras():
@@ -885,9 +916,23 @@ def make_extras():
         c.rrect((3, 3, 1311, 73), 9, fill=fill)
         c.save(out("search_row_%s.png" % st, False))
 
+    # the glossary (glossary.ks): the terms on the left, 9 rows of 470x76 (230 + 82 y), the
+    # entry met on the right
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Glossary"))
+    c.panel((290, 206, 800, 960), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
+    c.panel((840, 206, 1630, 960))
+    c.save(out("glossary_base.png"), opaque=True)
+    for st, fill, border in (("normal", rgba(WHITE, 235), LAV), ("over", rgba(VIOLET), VIOLET)):
+        c = Canvas(470, 76)
+        c.rrect((0, 0, 470, 76), 12, fill=rgba(border))
+        c.rrect((3, 3, 467, 73), 9, fill=fill)
+        c.save(out("glossary_row_%s.png" % st, False))
+
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
-            nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
+            nav_button(L(label), st, w=EXTRA_TAB_W, size=26).save(out("%s_%s.png" % (name, st)))
     pages = ["Character 1", "Character 2", "Character 3", "Character 4", "Character 5", "Other"]
     for i, label in enumerate(pages):
         for st in ("normal", "over"):
@@ -1120,6 +1165,27 @@ def make_dialog():
             c.rrect((0, 0, 44, 44), 10, fill=rgba(WHITE, 110))
         c.rrect((4, 4, 40, 40), 8, fill=rgba(WHITE), outline=rgba(border), width=4)
         c.save(os.path.join(SYSTEM, "dialog_check_%s.png" % st))
+
+    # the colour picker's wheel (ColorPicker.tjs): hue round it from red at the right,
+    # counterclockwise, saturation from white at the middle to the full colour at the rim, at
+    # full brightness (the picker darkens it for a lower one); clear outside the circle
+    n, rad = 320, 156.0
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64) + 0.5
+    dx, dy = xx - n / 2, n / 2 - yy
+    r = np.hypot(dx, dy)
+    h = (np.degrees(np.arctan2(dy, dx)) % 360) / 60.0
+    sat = np.clip(r / rad, 0, 1)
+    i = np.floor(h).astype(int) % 6
+    f = h - np.floor(h)
+    p_, q, t = 1 - sat, 1 - sat * f, 1 - sat * (1 - f)
+    v = np.ones_like(sat)
+    rgb = np.zeros((n, n, 3))
+    for k, (rr, gg, bb) in enumerate(((v, t, p_), (q, v, p_), (p_, v, t), (p_, q, v), (t, p_, v), (v, p_, q))):
+        m = i == k
+        rgb[m, 0], rgb[m, 1], rgb[m, 2] = rr[m], gg[m], bb[m]
+    alpha = np.clip(rad - r + 0.5, 0, 1)
+    img = np.dstack([rgb * 255, alpha * 255]).round().astype(np.uint8)
+    Image.fromarray(img, "RGBA").save(os.path.join(SYSTEM, "color_wheel.png"))
 
 
 # --- the star in the World demo --------------------------------------------------------

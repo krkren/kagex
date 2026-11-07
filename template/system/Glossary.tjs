@@ -1,0 +1,188 @@
+/**
+ * The glossary (since 0.22.0; doc/kagex.txt, "The Glossary"): words the story uses that a player
+ * may want explained. Where the message window draws one it's in the glossary's colour and
+ * underlined, and a click or a tap on it, while the game waits for a click, shows its entry as a
+ * card (the About screen's frame). The player has met a term once the message window has drawn
+ * it (sf.glossaryMet), and a screen of the game's lists the entries met (the sample's Extras).
+ *
+ * The table is terms.csv (a game's in data/main; a language's own in lang/<code>/, which the
+ * language's path finds first), a term a line, its columns separated by tabs:
+ *
+ *   id      the term's name for scripts and the system variables, the same in every language
+ *   words   what marks it in the text, separated by | ("World|Worlds"), as written (case too);
+ *           in a language with spaces between words (KAGLanguage.wordWrap), only whole words
+ *   title   its entry's title, as shown
+ *   text    the entry (\n: a new line)
+ *
+ * Lines starting with # are comments. The marks follow the text as the message window draws it,
+ * from the scenario line (a conductor's) or the compiled text (the scene player's), so a
+ * language's text is marked by its own table, and a page drawn again in another language
+ * (MessageLayer.redrawTextIn) is marked again by that language's.
+ *
+ *   KAGGlossary.entries()   the entries, in the table's order (%[ id, words, title, text ])
+ *   KAGGlossary.entry(id)   one (void: none)
+ *   KAGGlossary.met(id)     whether the player has met it; .meet(id) records it
+ *   KAGGlossary.show(id)    its card (unless a dialog is open)
+ *   KAGGlossaryColor        the marks' colour (0xRRGGBB) a game gives; the player picks their own
+ *                           (the option glossaryColor), and turns the marks off (glossaryMarks)
+ */
+var KAGGlossaryFile = "terms.csv";
+var KAGGlossaryColor = 0xffd75e;
+
+class KAGGlossaryTable
+{
+	var tables = %[]; // language code -> [ entries, %[ id -> entry ] ]
+
+	function KAGGlossaryTable() {}
+
+	// the language shown ("" before the languages are read)
+	function language()
+	{
+		return typeof global.KAGLanguage == "Object" && global.KAGLanguage !== void ? global.KAGLanguage.current : "";
+	}
+
+	// the shown language's table, read once
+	function table()
+	{
+		var lang = language(), t = tables[lang];
+		if (t !== void) return t;
+		var list = [], byId = %[];
+		try {
+			if (Storages.isExistentStorage(KAGGlossaryFile)) {
+				var lines = [].load(KAGGlossaryFile);
+				for (var i = 0; i < lines.count; i++) {
+					var line = lines[i];
+					if (line == "" || line.charAt(0) == "#") continue;
+					var c = line.split("\t");
+					if (c.count < 3) continue;
+					var id = c[0].trim();
+					if (id == "") continue;
+					var words = [], w = c[1].split("|");
+					for (var j = 0; j < w.count; j++) {
+						var s = w[j].trim();
+						words.add(s) if s != "";
+					}
+					var text = c.count > 3 ? c[3].trim() : "";
+					text = text.replace(/\\n/g, "\n"); // (split() would take each character as a separator)
+					var e = %[ id:id, words:words, title:c[2].trim(), text:text ];
+					list.add(e);
+					byId[id] = e;
+				}
+			}
+		} catch (e) {
+			dm(KAGGlossaryFile + ": " + e.message);
+		}
+		return tables[lang] = [ list, byId ];
+	}
+	function entries() { return table()[0]; }
+	function entry(id) { return table()[1][id]; }
+	// the table again (a game that changes terms.csv while it runs, a patch)
+	function reload() { (Dictionary.clear incontextof tables)(); }
+
+	// Whether the marks are on (Config's glossaryMarks), and their colour
+	property marking { getter() { var v = KAGOptionGet("glossaryMarks"); return v === void || !!v; } }
+	property color {
+		getter() {
+			var v = kag.scflags["option:glossaryColor"];
+			return v !== void && v >= 0 ? +v : +global.KAGGlossaryColor;
+		}
+	}
+
+	// Where the terms are in text (as drawn: no tags), as [ start, end, id ] by start; words: a
+	// language with spaces between words, where only whole words count
+	function find(text, words = true)
+	{
+		var found = [], list = entries();
+		if (list.count == 0 || text == "") return found;
+		for (var i = 0; i < list.count; i++) {
+			var e = list[i];
+			for (var j = 0; j < e.words.count; j++) {
+				var w = e.words[j], at = 0;
+				while ((at = text.indexOf(w, at)) >= 0) {
+					var end = at + w.length;
+					if (!words || (!wordChar(text, at - 1) && !wordChar(text, end))) found.add([ at, end, e.id ]);
+					at = end;
+				}
+			}
+		}
+		// the earliest first, the longest of those that start together; none overlapping
+		found.sort(function(a, b) { return a[0] != b[0] ? a[0] < b[0] : a[1] > b[1]; });
+		var r = [], last = 0;
+		for (var i = 0; i < found.count; i++) {
+			if (found[i][0] < last) continue;
+			r.add(found[i]);
+			last = found[i][1];
+		}
+		return r;
+	}
+	// whether text has a letter or a digit at i (a word goes on)
+	function wordChar(text, i)
+	{
+		if (i < 0 || i >= text.length) return false;
+		var k = #text.charAt(i);
+		return (k >= 0x30 && k <= 0x39) || (k >= 0x41 && k <= 0x5a) || (k >= 0x61 && k <= 0x7a) || (k >= 0xc0 && k <= 0x24f);
+	}
+
+	// Where the terms are in a line of text as it's shown (the backlog's), [] with the marks off
+	function marksIn(text)
+	{
+		if (!marking) return [];
+		var lang = language();
+		return find(text, lang == "" || typeof global.KAGLanguage != "Object" ? true : global.KAGLanguage.wordWrap(lang));
+	}
+
+	// The terms the player has met (the system variables: every playthrough)
+	function met(id)
+	{
+		var m = kag.sflags.glossaryMet;
+		return typeof m == "Object" && m !== void && !!m[id];
+	}
+	function meet(id)
+	{
+		if (typeof kag.sflags.glossaryMet != "Object" || kag.sflags.glossaryMet === void) kag.sflags.glossaryMet = %[];
+		kag.sflags.glossaryMet[id] = true;
+	}
+	function metCount()
+	{
+		var list = entries(), n = 0;
+		for (var i = 0; i < list.count; i++) n++ if met(list[i].id);
+		return n;
+	}
+
+	// An entry's card: its title and its text, with Close (the About screen's frame)
+	function show(id)
+	{
+		var e = entry(id);
+		if (e === void) return false;
+		if (typeof global.showTextDialog == "undefined") KAGLoadScript("YesNoDialog.tjs");
+		var lines = [ [ e.title, "dialog.title" ] ];
+		var t = e.text.split("\n");
+		for (var i = 0; i < t.count; i++) lines.add([ t[i], "dialog.text" ]) if t[i] != "";
+		return global.showTextDialog(lines);
+	}
+}
+var KAGGlossary = new KAGGlossaryTable();
+
+// The term at the pointer in a message window on the screen (void: none), for a click on it
+function KAGGlossaryAtPointer(win)
+{
+	var ms = win.fore.messages;
+	for (var i = ms.count - 1; i >= 0; i--) {
+		var m = ms[i];
+		if (!m.visible || typeof m.termAt == "undefined") continue;
+		var id = m.termAt(m.cursorX - m.imageLeft, m.cursorY - m.imageTop);
+		if (id !== void) return id;
+	}
+}
+
+KAGDefineOption(%[ name:"glossaryMarks", label:"Glossary Words", kind:"toggle", save:true, initial:true,
+	values:[ ["Marked", true], ["Plain", false] ],
+	setValue:function(v) { kag.scflags["option:glossaryMarks"] = v; KAGRedrawMessages(); },
+	available:function { return KAGGlossary.entries().count > 0; } ]);
+KAGDefineOption(%[ name:"glossaryColor", label:"Their Colour", kind:"color",
+	getValue:function { return KAGGlossary.color; },
+	setValue:function(v) { kag.scflags["option:glossaryColor"] = v; KAGRedrawMessages(); },
+	reset:function { kag.scflags["option:glossaryColor"] = void; KAGRedrawMessages(); },
+	available:function { return KAGGlossary.entries().count > 0; } ]);
+KAGOptionHelpTexts.glossaryMarks = "Words the glossary explains, in their own colour: click one to read about it";
+KAGOptionHelpTexts.glossaryColor = "The colour of the words the glossary explains";

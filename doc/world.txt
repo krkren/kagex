@@ -1174,7 +1174,12 @@ are in that level's picture (Ai's ch_0_*), for a character drawn from layers in 
 level (Pip's pip_0.txt), and the part fills the face box, keeping its shape. Without faceCrop a
 picture character draws its own face picture at faceLevelName (its pose's msgImage, or the image
 pattern with LEVEL), and a layered one the face area its layers name (facezoom, facexoff and
-faceyoff in charinit.csv). A Live2D or VRM character has no face window.
+faceyoff in charinit.csv). A Live2D or VRM character (since 0.22.0) takes faceCrop without a
+level: left, top, width and height in its picture at 100% (the entry's "height" tall, as wide as
+its aspect makes it), or fractions of the picture when every value is at most 1. The face is cut
+from the picture the model has just drawn (one drawn then when it isn't on the stage), and while
+it's the speaker the window is drawn again from each new picture (faceWindowFrameTime, 66 ms), so
+its blinks and its mouth show there too. The sample's Vee and Hiyori have one.
 
     [env facewindow=off]      no faces in this scene, until facewindow=on or the next [env init]
                               (kept in saves and compiled scenes)
@@ -1183,6 +1188,40 @@ Config's Face Window (the faceWindow option, Options.tjs) turns them off for goo
 goes at once; on, it comes with the next speaker. The sample keeps room for the face by giving the
 message window a wider left margin (faceWindowMargin() in Override.tjs), and the Character demo's
 "Faces" scene shows each case.
+
+◇ Message Window Styles
+
+Since 0.22.0 the message window can take another look for a scene, a flashback or another
+character's point of view, and the player can tint each look a colour of their own. A style is
+defined once (AfterInit.tjs, template/system/MessageStyles.tjs):
+
+    KAGDefineMessageStyle("normal", %[ frame:"messagewindow", nameframe:"namebox" ]);
+    KAGDefineMessageStyle("memory", %[ frame:"messagewindow_memory", nameframe:"namebox_memory",
+        label:"Memories' Window" ]);
+
+  frame        the message window's frame image (void: as [position] gave it)
+  nameframe    the name box's frame image (void: as it is)
+  tint         a colour laid over both frames by default (0xRRGGBB, -1: none); the frames'
+               own transparency is kept
+  tintOpacity  how strongly (0 to 255; 150)
+  label        its name for the player (English, shown through tr()): a style with a label has
+               a row on Config, where the player keeps it as drawn or picks a colour
+
+"normal" is the game's own window: give it the frames [position] gives, so a scene can go back to
+them. The scenario changes the style with a World command, so a save, Back and a compiled scene
+keep it, and [env init] goes back to normal:
+
+    [env msgstyle=memory]     the flashback's window
+    [env msgstyle=normal]     (or msgstyle= with nothing) the game's own
+
+The page on the screen takes the new frame at once, and is drawn again in it where its window
+records the page (a game with more than one language, or a window that follows the opacity), so
+a language switch or [env restore] doesn't bring the old frame back. KAGMessageStyleLayer says
+which message window the styles are for (0: message0). KAGDefineMessageStyleOptions() makes the
+Config rows ("msgStyleTint:<style>": As Drawn, or Other… for the colour picker) and returns their
+names, for a page's column. The sample's flashback in the Character demo puts a sepia window
+between letterbox bars ([memory] and [memoryend] in macro.ks), and Config's third page has a row
+for each of its two styles.
 
 
 

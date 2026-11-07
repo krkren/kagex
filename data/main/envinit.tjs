@@ -810,6 +810,12 @@
 
 			"testVoices" => [ "hiyori000001" ],
 
+			// the face window (since 0.22.0): this part of her picture, in fractions of it (the
+
+			// model's canvas, 2976x4175), cut from the picture as it's drawn
+
+			"faceCrop" => %[ "left" => 0.30, "top" => 0.05, "width" => 0.40, "height" => 0.285 ],
+
 			"live2d" => %[
 
 				"model" => "hiyori",
@@ -881,6 +887,12 @@
 			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
 
 			"testVoices" => [ "vee000001" ],
+
+			// the face window (since 0.22.0): this part of her picture at 100% (832x1340), cut from
+
+			// the picture as it's drawn, so it blinks and talks there too
+
+			"faceCrop" => %[ "left" => 246, "top" => 70, "width" => 340, "height" => 340 ],
 
 			"vrm" => %[
 

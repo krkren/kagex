@@ -1,0 +1,10 @@
+# The game's fonts (template/system/Fonts.tjs; doc/kagex.txt, "Fonts and Text Styles"): its face
+# name, a font file the game ships (registered under that name), its roles (message, interface,
+# heading, number; * for all), the languages it covers (* for all), the name the player sees
+# (Config lists the message fonts with one) and its licence (About lists them), separated by tabs.
+# A role's faces are the fonts here that have it, in this order, that the computer has. A game's
+# own fonts.csv in data/main takes this one's place
+Yu Gothic Medium		message interface heading number	*	Yu Gothic	
+Yu Gothic		message interface heading number	*		
+Noto Sans JP	notosansjp-regular.otf	message interface heading number	*	Noto Sans JP	SIL Open Font License 1.1
+Roboto		*	*		Apache License 2.0

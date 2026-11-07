@@ -127,6 +127,20 @@ def cli_tests(exe, proj):
     step("check: reports a bad version and reserved names", code == 1 and "identity.version" in fields and "identity.appName" in fields, ", ".join(fields))
     bad_file.unlink()
 
+    # a web build of loose files lists the names the web engine can't fetch (%, #, ?)
+    odd = proj / "data" / "image" / "window@base%base.png"
+    odd.parent.mkdir(parents=True, exist_ok=True)
+    odd.write_bytes(b"\x89PNG\r\n\x1a\n")
+    web = dict(s)
+    web["platforms"] = dict(s.get("platforms", {}), web=dict(s.get("platforms", {}).get("web", {}), enabled=True, data="files"))
+    web_file = proj / "web.json"
+    web_file.write_text(json.dumps(web), encoding="utf-8")
+    code, out = run(exe, "--cli", "check", str(web_file), "--json")
+    msgs = [i["message"] for i in json.loads(out)["issues"] if i["field"] == "platforms.web.data"]
+    step("check: web file names with %, # or ? are listed", any("window@base%base.png" in m for m in msgs), "; ".join(msgs))
+    web_file.unlink()
+    odd.unlink()
+
     # Android's manifest additions: elements that close as they open, and nothing of their own
     # <manifest> or <application> (the tool adds them inside the engine's)
     t = json.loads(json.dumps(s))
