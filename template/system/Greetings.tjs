@@ -1,0 +1,121 @@
+/**
+ * Title greetings (since 0.24.0): a line for the title screen, picked by the time of day, the
+ * date, how long the player has been away and how far they've got, from greetings.csv. The
+ * sample's title draws it in a speech bubble beside Ai (Override.tjs, titleGreeting).
+ *
+ * greetings.csv: When,Text,Voice,Weight (# comments; a field with a comma in quotes)
+ *   When    conditions separated by spaces, which must all hold:
+ *           morning (5:00 to 11:59), afternoon (12:00 to 16:59), evening (17:00 to 20:59),
+ *           night (21:00 to 4:59), weekend, date:MM-DD (that day), first (the game's first start
+ *           in this save folder), back (back after 3 days away or more; back:N for N days),
+ *           any, and exp:<a TJS expression> (last: the rest of the field)
+ *   Text    the line, through tr() (a language's lang.json translates it); %name% is the
+ *           player's name (KAGGreetingNameOf), and a line with it is left out while there's none
+ *   Voice   a sound to play with it (optional)
+ *   Weight  how often it's picked among its equals (1)
+ * The lines that hold with the most conditions win (first, back and date: count ten times as
+ * much as the others), and one of them is picked at random; the same line stays for the rest of
+ * the run.
+ *
+ *   var g = KAGGreeting();        // %[ text, voice ], or void where none holds
+ *   KAGGreetingNameOf             a function giving the player's name (the framework's: f.name)
+ */
+
+var KAGGreetingNameOf = function { return kag.flags.name !== void ? (string)kag.flags.name : ""; };
+var KAGGreetingPicked;    // this run's line (KAGGreeting)
+var KAGGreetingAway = 0;  // the days since the last start (worked out once a run)
+var KAGGreetingFirst = false;
+
+function KAGGreetingFields(line)
+{
+	var out = [], cur = "", q = false;
+	for (var i = 0; i < line.length; i++) {
+		var ch = line.charAt(i);
+		if (q) {
+			if (ch == '"') { if (line.charAt(i + 1) == '"') { cur += '"'; i++; } else q = false; }
+			else cur += ch;
+		} else if (ch == '"') q = true;
+		else if (ch == ",") { out.add(cur.trim()); cur = ""; }
+		else cur += ch;
+	}
+	out.add(cur.trim());
+	while (out.count < 4) out.add("");
+	return out;
+}
+
+// how many of the line's conditions hold (-1: one doesn't)
+function KAGGreetingScore(when, d)
+{
+	var h = d.getHours(), score = 0;
+	var rest = when;
+	var e = rest.indexOf("exp:");
+	var exp = "";
+	if (e >= 0) { exp = rest.substring(e + 4).trim(); rest = rest.substring(0, e); }
+	var words = rest.split(" ", , true);
+	for (var i = 0; i < words.count; i++) {
+		var w = ((string)words[i]).trim().toLowerCase();
+		if (w == "" || w == "any") continue;
+		var ok = false;
+		if (w == "morning") ok = h >= 5 && h < 12;
+		else if (w == "afternoon") ok = h >= 12 && h < 17;
+		else if (w == "evening") ok = h >= 17 && h < 21;
+		else if (w == "night") ok = h >= 21 || h < 5;
+		else if (w == "weekend") ok = d.getDay() == 0 || d.getDay() == 6;
+		else if (w == "first") ok = KAGGreetingFirst;
+		else if (w == "back" || w.indexOf("back:") == 0) ok = !KAGGreetingFirst && KAGGreetingAway >= (w == "back" ? 3 : +w.substring(5));
+		else if (w.indexOf("date:") == 0) ok = w.substring(5) == "%02d-%02d".sprintf(d.getMonth() + 1, d.getDate());
+		else { dm("greetings.csv: unknown condition " + w); return -1; }
+		if (!ok) return -1;
+		// a day of its own counts above the time of day
+		score += w == "first" || w.indexOf("back") == 0 || w.indexOf("date:") == 0 ? 10 : 1;
+	}
+	if (exp != "") {
+		var ok = false;
+		try { ok = !!Scripts.eval(exp); } catch (ex) { dm("greetings.csv: " + exp + ": " + ex.message); }
+		if (!ok) return -1;
+		score++;
+	}
+	return score;
+}
+
+function KAGGreeting()
+{
+	if (KAGGreetingPicked !== void) return KAGGreetingPicked ? KAGGreetingPicked : void;
+	var now = new Date(), sf = kag.sflags;
+	// the visit: away since the last start
+	var last = sf.greetingLastTime;
+	KAGGreetingFirst = last === void;
+	KAGGreetingAway = last !== void ? (now.getTime() - +last) / 86400000 : 0;
+	sf.greetingLastTime = now.getTime();
+	KAGGreetingPicked = false;
+	if (!Storages.isExistentStorage("greetings.csv")) return;
+	var name = KAGBindToGlobal(KAGGreetingNameOf)();
+	var lines = [].load("greetings.csv"), best = -1, picks = [];
+	for (var i = 0; i < lines.count; i++) {
+		var line = (string)lines[i];
+		line = line.substring(1) if i == 0 && line != "" && #line.charAt(0) == 0xfeff;
+		if (line.trim() == "" || line.charAt(0) == "#") continue;
+		var c = KAGGreetingFields(line);
+		if (c[1] == "" || (c[1].indexOf("%name%") >= 0 && name == "")) continue;
+		var s = KAGGreetingScore(c[0], now);
+		if (s < 0 || s < best) continue;
+		if (s > best) { best = s; picks.clear(); }
+		var weight = c[3] != "" ? +c[3] : 1;
+		picks.add(%[ text:c[1], voice:c[2], weight:weight > 0 ? weight : 1 ]);
+	}
+	if (picks.count == 0) return;
+	var total = 0;
+	for (var i = 0; i < picks.count; i++) total += picks[i].weight;
+	var r = Math.random() * total, p = picks[picks.count - 1];
+	for (var i = 0; i < picks.count; i++) { r -= picks[i].weight; if (r < 0) { p = picks[i]; break; } }
+	KAGGreetingPicked = %[ text:p.text, voice:p.voice ];
+	return KAGGreetingPicked;
+}
+
+// the line as shown: translated, the name put in
+function KAGGreetingText(g)
+{
+	if (g === void) return "";
+	var t = tr(g.text), name = KAGBindToGlobal(KAGGreetingNameOf)();
+	return t.replace(/%name%/g, name);
+}

@@ -231,6 +231,22 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [pip hide]
 [ai hide]
 
+*crossroads|分かれ道
+
+[ai standard happy center]
+【ai】次へ行く前に、公園を通る？　それとも駅？
+[seladd text="公園を通る" target=*park exp="f.charRoute = 'park'"]
+[seladd text="駅を通る" target=*station exp="f.charRoute = 'station'"]
+[select]
+
+*park|公園で
+【ai】じゃあ公園ね。この季節の木はきれいなの。
+[jump target=*staging]
+
+*station|駅で
+【ai】じゃあ駅ね。ほら、電車の音！
+[jump target=*staging]
+
 *staging|演出キット
 
 ; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for

@@ -15,15 +15,17 @@
 [current layer=message0 page=back]
 
 ; Buttons for transition
-[locate x=680 y=78]
+[locate x=682 y=78]
 [button name="extra_cgmode" normal="extra_cgmode_over" disabled]
-[locate x=834 y=78]
+[locate x=810 y=78]
 [button name="extra_replaymode" storage="replay.ks"]
-[locate x=988 y=78]
+[locate x=938 y=78]
+[button name="extra_chart" storage="chart.ks"]
+[locate x=1066 y=78]
 [button name="extra_musicmode" storage="musicmode.ks"]
-[locate x=1142 y=78]
+[locate x=1194 y=78]
 [button name="extra_searchmode" storage="searchmode.ks"]
-[locate x=1296 y=78]
+[locate x=1322 y=78]
 [button name="extra_glossary" storage="glossary.ks"]
 [locate x=1450 y=78]
 [button name="return" target=*backtotitle]
@@ -41,6 +43,10 @@
 [button name="cgmode_page4" exp="tf.cgmodepage=4" target=*loop]
 [locate x=290 y=822]
 [button name="cgmode_page5" exp="tf.cgmodepage=5" target=*loop]
+; Sprite Mode (since 0.24.0): every character in any pose and face (spritemode.ks)
+[locate x=290 y=922]
+[button name="sprite_open" normal="sprite_open_normal" over="sprite_open_over" storage="spritemode.ks"]
+[eval exp='drawButtonLabel(kag.current.names.sprite_open, tr("Characters"), [0x5025ff, 0xffffff, 0xffffff])']
 
 ; The tab's pictures: a grid that scrolls with the wheel, by dragging (a flick coasts on), with
 ; its bar and with the keys or a controller's D-pad (cgList in Override.tjs, ScrollList.tjs)

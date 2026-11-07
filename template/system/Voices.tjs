@@ -1,0 +1,91 @@
+/**
+ * Favourite voices (since 0.24.0): the voiced lines the player has heard in the compiled scenes,
+ * to hear again, and the ones they mark as favourites, in an order of their own (kept in the
+ * system variables, sf.favouriteVoices). The sample's music room lists both (Override.tjs,
+ * voiceList); the favourites' list takes a drag to put them in order (KAGScrollList.reorder).
+ *
+ *   KAGHeardVoices()                    [%[storage, label, idx, voice, speaker, name, text]...]:
+ *                                       every voice heard once, in the scripts' order (name and
+ *                                       text as shown, in the language shown)
+ *   KAGFavouriteVoices.list()           the favourites: [%[voice, speaker, storage, label, idx]...]
+ *   KAGFavouriteVoices.has(voice), add(entry), remove(voice), toggle(entry), move(from, to)
+ *   KAGFavouriteVoices.shown(entry)     the entry with its name and text as shown now
+ *   KAGPlayVoiceLine(entry)             plays it as the backlog's voice mark does
+ */
+
+function KAGHeardVoices()
+{
+	if (typeof global.world_object == "undefined") return [];
+	world_object.initPlayer();
+	return world_object.player.voiceTexts(true);
+}
+
+function KAGPlayVoiceLine(e)
+{
+	if (e === void || typeof global.world_object == "undefined") return;
+	var exp = kag.getVoicePlayingScript([ %[ name:e.speaker, voice:e.voice, ext:"" ] ]);
+	if (exp != "") Scripts.eval(exp);
+}
+
+class KAGFavouriteVoicesClass
+{
+	function list()
+	{
+		var l = kag.sflags.favouriteVoices;
+		if (typeof l != "Object" || l === void || !(l instanceof "Array")) l = kag.sflags.favouriteVoices = [];
+		return l;
+	}
+
+	function indexOf(voice)
+	{
+		var l = list(), k = ((string)voice).toLowerCase();
+		for (var i = 0; i < l.count; i++) if (((string)l[i].voice).toLowerCase() == k) return i;
+		return -1;
+	}
+
+	function has(voice) { return indexOf(voice) >= 0; }
+
+	function add(e)
+	{
+		if (e === void || has(e.voice)) return;
+		list().add(%[ voice:(string)e.voice, speaker:(string)e.speaker, storage:(string)e.storage, label:(string)e.label, idx:+e.idx ]);
+	}
+
+	function remove(voice)
+	{
+		var i = indexOf(voice);
+		list().erase(i) if i >= 0;
+	}
+
+	// on or off; the new state
+	function toggle(e)
+	{
+		if (has(e.voice)) { remove(e.voice); return false; }
+		add(e);
+		return true;
+	}
+
+	function move(from, to)
+	{
+		var l = list();
+		if (from < 0 || from >= l.count || to < 0 || to >= l.count || from == to) return;
+		var e = l[from];
+		l.erase(from);
+		l.insert(to, e);
+	}
+
+	// an entry with its speaker's name and its words as shown now (the language shown)
+	function shown(e)
+	{
+		var r = %[];
+		(Dictionary.assign incontextof r)(e);
+		r.name = e.speaker, r.text = "";
+		if (typeof global.KAGSceneLine != "undefined") {
+			var line = KAGSceneLine(e.storage, e.label, e.idx);
+			r.name = line.name if line.name != "";
+			r.text = line.text;
+		}
+		return r;
+	}
+}
+var KAGFavouriteVoices = new KAGFavouriteVoicesClass();

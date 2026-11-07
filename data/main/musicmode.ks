@@ -44,23 +44,27 @@
 
 ; Navigation Buttons
 
-[locate x=680 y=78]
+[locate x=682 y=78]
 
 [button name="extra_cgmode" storage="cgmode.ks"]
 
-[locate x=834 y=78]
+[locate x=810 y=78]
 
 [button name="extra_replaymode" storage="replay.ks"]
 
-[locate x=988 y=78]
+[locate x=938 y=78]
+
+[button name="extra_chart" storage="chart.ks"]
+
+[locate x=1066 y=78]
 
 [button name="extra_musicmode" normal="extra_musicmode_over" disabled]
 
-[locate x=1142 y=78]
+[locate x=1194 y=78]
 
 [button name="extra_searchmode" storage="searchmode.ks"]
 
-[locate x=1296 y=78]
+[locate x=1322 y=78]
 
 [button name="extra_glossary" storage="glossary.ks"]
 
@@ -94,9 +98,36 @@
 
 
 
+; The music playing (since 0.24.0): the record turns, the track's title, and a bar that seeks
+; (a click or a drag, or the left and right keys; nowPlaying in Override.tjs)
+
+[eval exp='nowPlaying()']
+
+
+
+; What the list shows (since 0.24.0): the music, the voices heard, or the favourite voices
+; (musicView in Override.tjs: the buttons' labels are drawn on them)
+
+[locate x=840 y=192]
+
+[button name="music_view0" normal="music_view_normal" over="music_view_over" exp="musicView(0)" target=*loop]
+
+[locate x=1030 y=192]
+
+[button name="music_view1" normal="music_view_normal" over="music_view_over" exp="musicView(1)" target=*loop]
+
+[locate x=1220 y=192]
+
+[button name="music_view2" normal="music_view_normal" over="music_view_over" exp="musicView(2)" target=*loop]
+
+[eval exp='musicViewTabs()']
+
+
+
 ; The tracks: a list that scrolls with the wheel, by dragging, with its bar and with the keys or a
-; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs)
-[eval exp='musicTrackList()']
+; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs); or the voices
+; (voiceList: a click plays one, its star keeps it, the favourites' handle puts them in order)
+[eval exp='musicViewList()']
 [eval exp='setRepeat()']
 
 [eval exp='setButtonOver("musicmode_title", keepTitleMusic())']

@@ -1,4 +1,4 @@
-// The sample's text styles (template/system/Fonts.tjs; doc/kagex.txt, "Fonts and Text Styles"):
+﻿// The sample's text styles (template/system/Fonts.tjs; doc/kagex.txt, "Fonts and Text Styles"):
 // the save slots, Replay's tiles and tabs, Search's rows and the CG pages' counts draw their words
 // through a style named here, so restyling or translating a screen is a change in this table. A
 // style "a.b" starts from "default", then takes "a"'s settings, then its own
@@ -23,3 +23,15 @@ KAGDefineTextStyle("count", %[ size:22, bold:true, align:"right", valign:"middle
 KAGDefineTextStyle("glossary.row", %[ size:30, bold:true, valign:"middle", color:0x24107a, minSize:18 ]);
 KAGDefineTextStyle("glossary.title", %[ size:48, bold:true, edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, minSize:24 ]);
 KAGDefineTextStyle("glossary.text", %[ size:32, lines:14, lineSpacing:12, edge:true, edgeColor:0x010062, edgeExtent:2, edgeEmphasis:255 ]);
+
+// the music room's voices (musicmode.ks, voiceList): who speaks, then the line
+KAGDefineTextStyle("voices.name", %[ size:24, bold:true, valign:"middle", color:0x5025ff, minSize:16 ]);
+KAGDefineTextStyle("voices.text", %[ size:24, valign:"middle", color:0x24107a, minSize:22 ]);
+
+// the title's greeting, in its speech bubble (titleGreeting)
+KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, lines:3, lineSpacing:6, minSize:20 ]);
+
+// Sprite Mode's rows (spritemode.ks): a row's name, what it shows, how many it has
+KAGDefineTextStyle("sprite.row", %[ size:26, bold:true, valign:"bottom", color:0x5025ff ]);
+KAGDefineTextStyle("sprite.value", %[ size:34, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:20 ]);
+KAGDefineTextStyle("sprite.count", %[ size:20, align:"center", valign:"top", color:0x8070b8 ]);

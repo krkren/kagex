@@ -235,6 +235,24 @@ And back to now, just as it was, with the music still playing.
 [pip hide]
 [ai hide]
 
+*crossroads|A Choice
+
+; A choice that parts the demo for a moment (since 0.24.0): the flowchart (Extras) draws both
+; ways and where they meet again, and plays either one from its start with the choice made
+[ai standard happy center]
+【ai】Before the next part: shall we go by the park, or by the station?
+[seladd text="By the park" target=*park exp="f.charRoute = 'park'"]
+[seladd text="By the station" target=*station exp="f.charRoute = 'station'"]
+[select]
+
+*park|By the Park
+【ai】The park it is. The trees are lovely at this time of year.
+[jump target=*staging]
+
+*station|By the Station
+【ai】The station, then. Just listen to the trains!
+[jump target=*staging]
+
 *staging|Staging Kit
 
 ; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for

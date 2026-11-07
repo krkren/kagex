@@ -3739,6 +3739,124 @@ that may not start a line (。、」...) isn't broken before in the middle of a 
 the margin, as KAG's own wrap lets it (the text after an [emb] is a piece of its own, and the
 line breaker put its 。 at the start of the next line).
 
+● The Flowchart
+
+Since 0.24.0 the framework draws a game's compiled scenes as a chart: a node for each scene with
+a title of its own (*label|Title; a scene without one belongs to the node before it), lines for
+what the compiler found each goes on to (a jump, the next scene, a choice, and dashed, a jump that
+may not happen: [jump cond=], a jump inside [if]), and a mark beside a node for a jump back to
+one on the way there (a demo going back to its menu). The scenes the player has read are drawn
+and can be played; the others are "?". The first time the story enters a node (not while a seek
+or a replay plays its way there) the game keeps a copy of its flags (f) in sf.chartFlags, marks
+it new and notes it as the story's place; playing a node from the chart puts those flags back
+first, so a later scene finds the choices made (template/system/Flowchart.tjs).
+
+flowchart.csv (optional: data/main in the sample) names and places them, a line each:
+
+    Script,Label,Caption,Chapter,Column,Row,Unlock
+    s0001,start,Demo Menu
+    char,,,Characters
+
+  Script, Label  the scene (Label empty: every node of the script, for a Chapter)
+  Caption        what the node says in place of its scene's title (through tr())
+  Chapter        a name drawn over the first node of it
+  Column, Row    where the node goes on the grid (empty: laid out by the chart, a branch to a row)
+  Unlock         a TJS expression: while it's true the node plays before it's been read
+
+  KAGChartData()            the chart: nodes (id, storage, label, title, caption, chapter, x, y,
+                            keys, back), edges (from, to, kind: next, choice, cond)
+  KAGChartState(node)       "seen", "open" (Unlock) or "locked"; KAGChartIsNew, KAGChartCurrent
+  KAGChartGo(node, before)  the story from the node's start, its flags put back; before(node)
+                            runs once they're back (the sample's runs loadinit.ks)
+  KAGChartView              the chart on a layer: a drag moves it (a flick coasts), the wheel or a
+                            pinch zooms, the arrow keys (a controller's D-pad) go to the nearest
+                            node that way, Home to the story's place, Return or a click plays
+                            (onPick); drawNode for a game's own look; a message layer's link
+
+A compiled scene played from its start reaches the node by playing its script from the top
+without showing it (KAGEnvPlayer.seek), as Replay does; since 0.24.0 a seek that meets a choice
+takes the one that leads to its scene. Compiled files say which labels have titles of their own
+from format 4 (doc/scn.txt). The sample's Extras has a Chart tab (chart.ks), and its Character
+demo a choice whose two ways meet again.
+
+● Scene Previews
+
+A KAGScrollList (ScrollList.tjs) or a KAGChartView whose preview function names a compiled scene
+shows it on a card beside the item the pointer rests on (after hoverDelay, 350 ms) or the keys
+are on (at once): the World as the scene is at that text, from its saved state, its title and
+the line in the language shown (template/system/ScenePreview.tjs, since 0.24.0):
+
+    list.preview = function(index) { return %[ storage:"char.ks", label:"*park", text:1 ]; };
+
+  KAGScenePicture(storage, label, text, w, h)   the picture (kept; void where the World shows
+                                                nothing there)
+  KAGSceneLine(storage, label, text)            %[ title, name, text ] as shown
+  KAGScenePreview                               the card (showFor, hide; the text styles
+                                                preview.title, preview.name, preview.text)
+
+The sample's Replay tiles, Search rows and chart nodes have one.
+
+● Favourite Voices, and Lists Put in Order
+
+The voiced lines the player has heard in the compiled scenes, each voice once, and the player's
+favourites in an order of their own (sf.favouriteVoices; template/system/Voices.tjs, since
+0.24.0):
+
+  KAGHeardVoices()                 [%[ storage, label, idx, voice, speaker, name, text ]...]
+  KAGFavouriteVoices.list(), has(voice), add(entry), remove(voice), toggle(entry), move(from, to)
+  KAGFavouriteVoices.shown(entry)  its name and line in the language shown
+  KAGPlayVoiceLine(entry)          plays it, as the backlog's voice mark does
+
+A KAGScrollList of one column with a reorder function lets its items be put in another order: a
+press on an item's right end (reorderHandle px, where the game draws a handle) or a long press
+elsewhere (holdTime ms) lifts it, a drag moves it (the list scrolls on near its ends), letting go
+puts it there, and Shift with the up and down keys moves the focused one; onItemKey(index, key,
+shift) takes a key on the focused item first. The sample's music room has Music, Voices and
+Favourites views: a click plays a voice, its star (or F) keeps it, the favourites' handle moves
+them.
+
+● The Music Playing
+
+KAGNowPlaying (template/system/MusicPlayer.tjs, since 0.24.0) is a panel for a music room: a
+picture that turns while the music plays (picture: a record; still with Reduce Motion), the
+track's title (titleOf), how far it has played of how long, and a bar that seeks: a click or a
+drag on it, or the left and right keys five seconds at a time. bufferOf gives the sound buffer
+(kag.bgm's by default); on a message layer, addLinkLayer makes it a link. It reads a buffer's
+times only while it plays or is paused: an empty buffer's times kill the engine (UPSTREAM.md 49).
+
+● Title Greetings
+
+greetings.csv gives the title a line for the moment (template/system/Greetings.tjs, since
+0.24.0), a line each, When,Text,Voice,Weight:
+
+    morning,"Good morning, %name%! Shall we look at some layers before breakfast?"
+    back,"Welcome back! It's been a while."
+    date:12-25,Merry Christmas!
+
+  When    conditions separated by spaces, all true: morning (5:00 to 11:59), afternoon (to
+          16:59), evening (to 20:59), night, weekend, date:MM-DD, first (the first start in this
+          save folder), back (after 3 days away or more; back:N), any, exp:<a TJS expression>
+          (last: the rest of the field)
+  Text    the line, through tr(); %name% is KAGGreetingNameOf()'s (f.name; the sample's: the name
+          the player gave), and a line with it is left out while there's none
+  Voice   a sound with it (optional); Weight how often among its equals (1)
+
+The lines that hold with the most conditions win (first, back and a date count ten times as
+much), one of them at random, the same for the rest of the run: KAGGreeting() gives %[ text,
+voice ], KAGGreetingText(g) the text as shown. The sample's Ai says it in a bubble on the title.
+
+● Sprite Mode
+
+Template/system/SpriteMode.tjs (since 0.24.0) is what a character viewer needs: the World's
+characters that can be drawn here (a Live2D or VRM one only where its plugin draws it,
+KAGSpriteCharacters), their "pose", "dress" and "face" names (KAGSpriteChoices; a pose's own
+outfits and faces once it's shown), every stage at every time of day (KAGSpriteBackgrounds),
+their commands run as their tags would, without their own transitions (KAGSpriteShow,
+KAGSpriteStage, then KAGSpriteUpdate), and the World cleared (KAGSpriteClear). The sample's Sprite
+Mode (spritemode.ks, the CG screen's Characters button) changes them between [begintrans] and
+[endtrans], so its panel and the World fade in as one; envinit.tjs's spriteview position puts
+the character right of the panel.
+
 ● The Name Box
 
 [position] takes these for its name window (since 0.17.0), besides nameleft and the rest:
