@@ -2590,6 +2590,33 @@ def sample_steps(eng):
         reads = str(eng.tjs('var c = world_object.env.characters["pip"], b = c.soundBuffer;'
                             ' return (b !== void ? (string)b.frequency : "-") + " Hz, " + __smokeLipRead.join(" ");'))
         print("     ms:position:samplePosition:level there:readVoice's last, at %s" % reads[:1500], flush=True)
+        # The mouth changes once a frame at most, from the level at one moment of the voice. On a
+        # target that draws a few frames a second as a line starts (the iOS Simulator on the CI
+        # runners: 150 to 350 ms apart, six to nine readings in Pip's one-second babble, which is
+        # loud for less than half of it), one play can by chance read only its quiet moments, or
+        # only its loud ones: so a voice that doesn't show both is played again, up to three
+        # plays in all. A mouth that doesn't follow the voice shows one of them every time
+        def replay(voice, timeout):
+            eng.tjs('global.__smokeLipsR = [];'
+                    ' global.__smokeLipTimerR = new Timer(function() {'
+                    ' var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                    ' if (b !== void && b.status == "play") global.__smokeLipsR.add(c.lipLevel);'
+                    ' }, ""); __smokeLipTimerR.interval = 20; __smokeLipTimerR.enabled = true;'
+                    ' world_object.env.characters["pip"].playVoice("%s"); return 1;' % voice)
+            end = time.time() + timeout
+            while time.time() < end:
+                time.sleep(0.5)
+                if eng.tjs('return __smokeLipsR.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
+                    break
+            r = str(eng.tjs('__smokeLipTimerR.enabled = false; invalidate __smokeLipTimerR; return __smokeLipsR.join(" ");'))
+            got = [int(v) for v in r.split()] if r.strip() else []
+            print("     played %s again: %d mouth samples (%s)" % (voice, len(got), " ".join(str(v) for v in got[:60])), flush=True)
+            return got
+        babble = str(eng.tjs('var c = world_object.env.characters["pip"]; return typeof c.lipTrackVoice != "undefined" && c.lipTrackVoice !== void ? c.lipTrackVoice : "";'))
+        for again in range(2):
+            if positions <= 1 or {0, 2} <= set(levels) or babble == "":
+                break
+            levels += replay(babble, 6)
         if positions <= 1:
             print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
         elif not {0, 2} <= set(levels):
@@ -2646,6 +2673,10 @@ def sample_steps(eng):
                             ' return [__smokeLips2.join(" "), c.lipTrack === void ? 1 : 0, c.lipReadings !== void && c.lipReadings.last !== void ? 1 : 0].join(",");')).split(",")
             levels2 = [int(v) for v in r[0].split()] if r[0].strip() else []
             print("     a voice with no lip track: %d mouth samples (%s)" % (len(levels2), " ".join(str(v) for v in levels2[:60])), flush=True)
+            for again in range(2):
+                if r[1] != "1" or r[2] != "1" or {0} < set(levels2):
+                    break
+                levels2 += replay("ai000001", 8)
             if r[1] != "1" or r[2] != "1" or not ({0} < set(levels2)):
                 raise SmokeError("Pip's mouth didn't follow a voice with no lip track (levels %s, no track %s, read %s)"
                                  % (sorted(set(levels2)), r[1], r[2]))
