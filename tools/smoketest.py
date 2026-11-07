@@ -5565,6 +5565,44 @@ def sample_steps(eng):
         print("     held still by Reduce Motion; [backlay] copied %s of them to the back page" % backed, flush=True)
         if backed.split("/")[0] != backed.split("/")[1]:
             raise SmokeError("[backlay] didn't copy the moving characters: %s" % backed)
+        # characters that come in ([font appear=]) show one after another while the line types:
+        # up to 0.23.0's first build each character typed set the animation timer's enabled
+        # again, which started its interval again, so it fired only once the line was done and
+        # the line came in all at once. A game Timer counts, every 20 ms, the line's characters
+        # drawn and those showing, through the page's third line (the appear line)
+        place = 'var p = world_object.player; return p !== void && p.working ? p.curLabel + ":" + p.curTextId : "-";'
+        def advance():
+            w = str(eng.tjs(place))
+            for i in range(10):
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                for k in range(40):
+                    time.sleep(0.1)
+                    if str(eng.tjs(place)) != w:
+                        return
+                    if eng.tjs("return kag.inStable ? 1 : 0;") == 1:
+                        break
+            raise SmokeError("the text effects page didn't go on to its next line (at %s)" % w)
+        advance()
+        eng.wait("the moving page's second line", "kag.inStable", timeout=30)
+        eng.tjs('global.__smokeAp = []; global.__smokeApT = new Timer(function { var m = kag.fore.messages[0], d = 0, n = 0;'
+                ' for (var i = 0; i < m.animChars.count; i++) { var a = m.animChars[i]; if (a.appear == "") continue; d++; if (a.layer.opacity > 0) n++; }'
+                ' global.__smokeAp.add(d + "/" + n); } incontextof global, ""); __smokeApT.interval = 20; __smokeApT.enabled = true; return 1;')
+        advance()
+        eng.wait("the appear line", "kag.inStable", timeout=30)
+        time.sleep(0.6)
+        samples = [tuple(int(v) for v in x.split("/")) for x in str(eng.tjs('__smokeApT.enabled = false; invalidate __smokeApT; return __smokeAp.join(" ");')).split()]
+        total = max([d for d, n in samples] + [0])
+        typing = [(d, n) for d, n in samples if 5 <= d < total]
+        shown = [n for d, n in typing if n > 0]
+        print("     coming in: %d characters, %d samples while the line typed, %d of them with characters showing; at the end %s"
+              % (total, len(typing), len(shown), "%d/%d" % samples[-1] if samples else "-"), flush=True)
+        if total < 20:
+            raise SmokeError("the appear line drew %d characters that come in" % total)
+        if typing and not shown:
+            raise SmokeError("no character came in while the line typed: it came in all at once (%s)"
+                             % " ".join("%d/%d" % s for s in samples))
+        if samples and samples[-1][1] != samples[-1][0]:
+            raise SmokeError("not every character came in: %d of %d showing" % (samples[-1][1], samples[-1][0]))
         # vertical text in a window of its own: the characters go down the line, a bracket turned
         r = str(eng.tjs('var m = kag.fore.messages[1], st = m.store();'
                         ' kag.tagHandlers.position(%[ layer:"message1", page:"fore", vertical:"true", left:"1440", top:"30", width:"420", height:"640",'

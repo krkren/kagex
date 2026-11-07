@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1
+
+### Fixed
+
+- **Characters that come in (`[font appear=]`) came in all at once**, as the Text Effects demo's appear line showed on Android (and elsewhere): every character typed set the animation timer's `enabled` again, which starts its interval again, so while the text typed faster than the timer's 33 ms it never fired; when the line was done most of its characters were already past their 400 ms and showed at once, and moving characters stood still until then too. The timer is armed once now, and a character that comes in starts at the first frame it's shown, no sooner than the text's own speed after the one before, so characters drawn together (a slow phone catching up) still come in one after another. The smoke test counts the characters showing while the line types.
+
 ## 0.23.0
 
 ### Added
