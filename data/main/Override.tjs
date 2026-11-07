@@ -1743,6 +1743,13 @@ function replayItemName(index)
     var info = tf.replaylist[index];
     return info !== void ? shownTitle(info) : tr("Not reached yet");
 }
+// a compiled scene's opening on a card beside its tile (template/system/ScenePreview.tjs)
+function replayPreview(index)
+{
+    var info = tf.replaylist[index];
+    if (info === void || info.movie !== void || !info.compiled) return;
+    return %[ storage:info.storage, label:info.label != "" ? "*" + info.label : "", text:1, title:shownTitle(info) ];
+}
 function replayPick(index)
 {
     if (tf.replaylist[index] === void) return;
@@ -1754,6 +1761,7 @@ function replayPick(index)
 function replayList()
 {
     var l = screenList("replayList", "Scenes", 681, 322, 967, 585, 123, 4, 31, tf.replaytiles.count, drawReplayItem, replayPick, replayItemName);
+    l.preview = replayPreview;
     l.scrollTo(tf.replayPosition !== void && tf.replayPositionTab == tf.replayTab ? +tf.replayPosition : 0);
     tf.replayPositionTab = tf.replayTab;
 }
@@ -2051,6 +2059,7 @@ function chartView()
     v.name = "chartView";
     v.a11yName = "Flowchart";
     v.onPick = chartPick;
+    v.preview = chartPreview;
     v.zoom = 0.8;
     v.setPos(300, 216);
     v.setSize(1320, 714);
@@ -2071,6 +2080,12 @@ function chartHere()
 {
     var v = chartViewNow();
     v.home() if v !== void;
+}
+// a scene seen (or opened), on a card beside it (template/system/ScenePreview.tjs)
+function chartPreview(n)
+{
+    if (KAGChartState(n) == "locked") return;
+    return %[ storage:n.storage, label:n.label, text:1, title:KAGChartName(n) ];
 }
 // a scene picked: one seen plays from its start, after asking
 function chartPick(n)
@@ -2100,6 +2115,7 @@ function searchList()
     l.drawItem = drawSearchItem;
     l.onPick = searchPlay;
     l.itemName = searchItemName;
+    l.preview = searchPreview;
     l.setPos(316, 318);
     l.itemCount = searchFound.count;
     l.setSize(1332, 604);
@@ -2112,6 +2128,13 @@ function searchList()
  * Plays from a found line to the end of its scene, and comes back to Search: the line's
  * script played from its start without showing it, up to the line (KAGEnvPlayer.seek)
  */
+// the scene at the line found, on a card beside its row (template/system/ScenePreview.tjs)
+function searchPreview(index)
+{
+    var info = searchFound[index];
+    if (info === void) return;
+    return %[ storage:info.storage, label:info.label, text:info.idx, title:info.shownTitle ];
+}
 function searchPlay(index)
 {
     var info = searchFound[index];

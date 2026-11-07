@@ -5456,6 +5456,17 @@ def sample_steps(eng):
         print("     the keys: %s" % keys, flush=True)
         if keys != "char.ks*park char.ks*station char.ks*staging smaller":
             raise SmokeError("the arrow keys or the zoom button don't move on the chart: %s" % keys)
+        # a scene seen gets its preview card at once with the keys (ScenePreview.tjs): the
+        # World as the scene opens, opaque, and its first line; none for one not reached
+        card = str(eng.tjs('''var v = chartViewNow(), r = [];
+            v.moveFocus(KAGChartData().byId["char.ks*flashback"]); var c = v.previewCard;
+            r.add(c !== void && c.visible ? "shown" : "none");
+            if (c !== void) r.add(c.getMaskPixel(c.pad + 200, c.pad + 117)), r.add(KAGSceneLine("char.ks", "*flashback", 1).text);
+            v.moveFocus(KAGChartData().byId["char.ks*station"]); r.add(c !== void && c.visible ? "shown" : "none");
+            return r.join("|");''')).split("|")
+        print("     the preview card: %s" % card, flush=True)
+        if card[0] != "shown" or card[1] != "255" or not card[2].startswith("Ai and Pip") or card[3] != "none":
+            raise SmokeError("the chart's preview card isn't shown for a scene seen, opaque with its line, and hidden for one not reached: %s" % card)
         # a scene not reached asks nothing; one seen asks first (Esc: No)
         eng.tjs('chartPick(KAGChartData().byId["char.ks*station"]); return 1;')
         time.sleep(0.5)

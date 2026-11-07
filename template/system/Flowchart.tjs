@@ -363,6 +363,7 @@ class KAGChartView extends Layer
 	var samples = [], vx = 0.0, vy = 0.0, timer, lastTick = 0, dragThreshold = 10;
 	var wheelHook, pinchHook, pinchZoom;
 	var a11yHidden = true, linkNum;
+	var preview, previewCard;                    // function(node): the scene to preview (ScenePreview.tjs)
 
 	function KAGChartView(win, par)
 	{
@@ -390,6 +391,7 @@ class KAGChartView extends Layer
 		}
 		invalidate timer;
 		invalidate content if content !== void && isvalid content;
+		invalidate previewCard if previewCard !== void && isvalid previewCard;
 		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
 		super.finalize(...);
 	}
@@ -609,6 +611,21 @@ class KAGChartView extends Layer
 		clamp();
 	}
 
+	// the node's scene on a card beside it (ScenePreview.tjs): after a moment for the pointer, at
+	// once for the keys
+	function updatePreview(id, keyed)
+	{
+		if (preview === void || typeof global.KAGScenePreview == "undefined" || data === void) return;
+		var n = id !== void ? data.byId[id] : void;
+		var spec = n !== void && !dragging ? KAGBindToGlobal(preview)(n) : void;
+		if (spec === void) { hidePreview(); return; }
+		previewCard = new global.KAGScenePreview(window, parent) if previewCard === void;
+		var x = (nodeX(n) - viewX) * zoom, y = (nodeY(n) - viewY) * zoom;
+		previewCard.showFor(spec, left + x, top + y, nodeW * zoom, nodeH * zoom, keyed ? 0 : void);
+	}
+
+	function hidePreview() { previewCard.hide() if previewCard !== void; }
+
 	function redraw()
 	{
 		if (content === void) return;
@@ -655,6 +672,7 @@ class KAGChartView extends Layer
 		z = minZoom if z < minZoom;
 		z = maxZoom if z > maxZoom;
 		var cx = viewX + px / zoom, cy = viewY + py / zoom;
+		hidePreview();
 		zoom = z;
 		viewX = cx - px / zoom, viewY = cy - py / zoom;
 		clamp();
@@ -678,6 +696,7 @@ class KAGChartView extends Layer
 		if (pressed) {
 			if (!dragging && (Math.abs(x - pressX) > dragThreshold || Math.abs(y - pressY) > dragThreshold)) dragging = true;
 			if (dragging) {
+				hidePreview();
 				var now = System.getTickCount();
 				samples.add([ now, x, y ]);
 				while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
@@ -688,7 +707,7 @@ class KAGChartView extends Layer
 			return;
 		}
 		var n = nodeAt(x, y), id = n !== void ? n.id : void;
-		if (id != hoverId) { hoverId = id; redraw(); }
+		if (id != hoverId) { hoverId = id; redraw(); updatePreview(id, false); }
 		super.onMouseMove(...);
 	}
 
@@ -713,6 +732,7 @@ class KAGChartView extends Layer
 	function onMouseLeave()
 	{
 		if (hoverId !== void) { hoverId = void; redraw(); }
+		hidePreview();
 		super.onMouseLeave(...);
 	}
 
@@ -763,6 +783,7 @@ class KAGChartView extends Layer
 	// ---- the keys (a controller's D-pad sends the arrows) ----
 	function pick(n)
 	{
+		hidePreview();
 		focusId = n.id;
 		if (KAGChartIsNew(n)) { KAGChartNoticed(n); drawContent(); }
 		redraw();
@@ -778,6 +799,7 @@ class KAGChartView extends Layer
 		reveal(n);
 		redraw();
 		pushA11y();
+		updatePreview(n.id, true);
 	}
 
 	// the nearest node that way, by the grid
@@ -835,6 +857,7 @@ class KAGChartView extends Layer
 	{
 		super.onBlur(...);
 		redraw();
+		hidePreview();
 	}
 
 	// a tip for the node under the pointer (Tooltips.tjs)
@@ -869,7 +892,7 @@ class KAGChartView extends Layer
 		var l = new global.KAGChartView(win, par);
 		l.name = name;
 		l.cellW = cellW, l.cellH = cellH, l.nodeW = nodeW, l.nodeH = nodeH, l.pad = pad, l.chapterH = chapterH;
-		l.onPick = onPick, l.drawNode = drawNode, l.a11yName = a11yName, l.background = background;
+		l.onPick = onPick, l.drawNode = drawNode, l.a11yName = a11yName, l.background = background, l.preview = preview;
 		l.setPos(left, top);
 		l.setSize(width, height);
 		l.visible = visible;

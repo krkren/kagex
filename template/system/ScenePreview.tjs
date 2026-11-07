@@ -1,0 +1,234 @@
+/**
+ * Scene previews (since 0.24.0): a card with a compiled scene as it opens, beside what the
+ * pointer or the keys are on in a list of scenes: its picture (the World at the text, from the
+ * compiled scene's state at that point), its title and the line, in the language shown. A
+ * KAGScrollList (ScrollList.tjs) or a KAGChartView (Flowchart.tjs) whose preview function
+ * names a scene shows one; the sample's Replay, Search and flowchart do.
+ *
+ *   list.preview = function(index) {
+ *       return %[ storage:"char.ks", label:"*park", text:1 ];   // void: no card
+ *   };
+ *   (text: the scene's text, 1 for its first; title: in place of the scene's own)
+ *
+ * A card of one's own:
+ *   var card = new KAGScenePreview(kag, kag.fore.messages[0]);
+ *   card.showFor(spec, x, y, w, h, delay);   // beside the rectangle x, y, w, h (in the card's
+ *                                            // parent's coordinates), after delay ms (void:
+ *                                            // hoverDelay; 0: at once, for the keys)
+ *   card.hide();
+ *
+ * The card fades in (at once with Reduce Motion), takes no clicks, and keeps the last pictures
+ * it drew (KAGScenePicture). Its look: the text styles preview.title, preview.name and
+ * preview.text (KAGDefineTextStyle, a game's textstyles.tjs) and the card's colours.
+ */
+
+var KAGScenePictureCache = %[], KAGScenePictureKeys = [];
+
+// The World as the scene is at a text, w x h (a hidden layer, kept), or void where the World
+// shows nothing there (a scene on KAG's own layers) or the scene isn't compiled
+function KAGScenePicture(storage, label, text, w, h)
+{
+	var key = ("%s%s:%d:%dx%d").sprintf(storage, label, +text, w, h).toLowerCase();
+	var p = KAGScenePictureCache[key];
+	if (p !== void) return p ? p : void;
+	var pic;
+	try {
+		if (typeof global.world_object != "undefined" && typeof global.scnFindCompiled != "undefined" && scnFindCompiled(storage) !== void) {
+			world_object.initPlayer();
+			var data = new StorageData(storage);
+			var t = data.getText(label, +text > 0 ? +text : 1);
+			var state = t !== void ? t.state : void;
+			if (state !== void) {
+				var shot = new global.Layer(kag, kag.fore.base);
+				world_object.player.getSnapshot(shot, state);
+				// shows anything: some of it isn't transparent
+				var seen = false;
+				for (var y = 0; y < 8 && !seen; y++)
+					for (var x = 0; x < 8 && !seen; x++)
+						seen = shot.getMaskPixel(shot.imageWidth * (x * 2 + 1) \ 16, shot.imageHeight * (y * 2 + 1) \ 16) > 0;
+				if (seen) {
+					pic = new global.Layer(kag, kag.fore.base);
+					pic.setImageSize(w, h);
+					pic.setSize(w, h);
+					pic.fillRect(0, 0, w, h, 0xff000000);
+					var copy = new global.Layer(kag, kag.fore.base);
+					copy.setImageSize(shot.imageWidth, shot.imageHeight);
+					copy.fillRect(0, 0, copy.imageWidth, copy.imageHeight, 0xff000000);
+					copy.operateRect(0, 0, shot, 0, 0, shot.imageWidth, shot.imageHeight, omAlpha, 255);
+					KAGShrinkCopy(pic, 0, 0, w, h, copy, 0, 0, copy.imageWidth, copy.imageHeight, stLinear);
+					invalidate copy;
+					// opaque: what the layers leave in the alpha channel means nothing here
+					pic.face = dfMask;
+					pic.fillRect(0, 0, w, h, 255);
+					pic.face = dfAlpha;
+				}
+				invalidate shot;
+			}
+			invalidate data;
+		}
+	} catch (e) {
+		dm("Scene preview: no picture for " + storage + label + ": " + e.message);
+	}
+	KAGScenePictureCache[key] = pic !== void ? pic : false;
+	KAGScenePictureKeys.add(key);
+	// the last 24 kept
+	while (KAGScenePictureKeys.count > 24) {
+		var old = KAGScenePictureKeys[0], l = KAGScenePictureCache[old];
+		KAGScenePictureKeys.erase(0);
+		delete KAGScenePictureCache[old];
+		invalidate l if l && isvalid l;
+	}
+	return pic;
+}
+
+// The scene's title and a text's speaker and words as shown (the language shown), for a card
+function KAGSceneLine(storage, label, text)
+{
+	var ret = %[ title:"", name:"", text:"" ];
+	try {
+		if (typeof global.world_object == "undefined" || typeof global.scnFindCompiled == "undefined" || scnFindCompiled(storage) === void) return ret;
+		world_object.initPlayer();
+		var p = world_object.player, data = new StorageData(storage);
+		var t = data.getText(label, +text > 0 ? +text : 1, true);
+		if (t !== void) {
+			var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : void;
+			ret.title = t.titles !== void && lang !== void && typeof t.titles[lang] == "String" ? t.titles[lang] : (string)t.title;
+			var s = p.changeAlias(scnTextIn(t, lang));
+			ret.name = s.disp !== void ? (string)s.disp : s.name !== void ? (string)s.name : "";
+			ret.text = s.text !== void ? p.plainText((string)s.text).trim() : "";
+		}
+		invalidate data;
+	} catch (e) {
+		dm("Scene preview: no line for " + storage + label + ": " + e.message);
+	}
+	return ret;
+}
+
+KAGDefineTextStyle("preview.title", %[ size:22, bold:true, color:0x24107a, minSize:14 ]);
+KAGDefineTextStyle("preview.name", %[ size:18, bold:true, color:0x5025ff, minSize:12 ]);
+KAGDefineTextStyle("preview.text", %[ size:19, color:0x302060, lines:3, lineSpacing:6, minSize:14 ]);
+
+class KAGScenePreview extends Layer
+{
+	var window;
+	var cardW = 440, pad = 12, picH = 234, shadow = 6, gapX = 14;
+	var border = 0xff5025ff, fill = 0xf8ffffff, shadowColor = 0xffa690ff, empty = 0xff2a1a66;
+	var hoverDelay = 350, fadeTime = 120;
+	var timer, fadeTimer, fadeStart, shownKey, pending;
+
+	function KAGScenePreview(win, par)
+	{
+		super.Layer(win, par);
+		window = win;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 256; // takes no clicks
+		visible = false;
+		absolute = 900000;
+		timer = new Timer(onDelay, "");
+		fadeTimer = new Timer(onFade, "");
+		fadeTimer.interval = 16;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		invalidate fadeTimer;
+		super.finalize(...);
+	}
+
+	// spec beside the rectangle (the parent's coordinates)
+	function showFor(spec, x, y, w, h, delay = void)
+	{
+		if (spec === void) { hide(); return; }
+		var key = ("%s%s:%d").sprintf(spec.storage, spec.label, +spec.text) + (spec.title !== void ? ":" + spec.title : "");
+		pending = %[ spec:spec, key:key, x:x, y:y, w:w, h:h ];
+		if (visible && key == shownKey) { place(pending); return; }
+		delay = hoverDelay if delay === void;
+		timer.enabled = false;
+		if (delay <= 0) onDelay();
+		else { timer.interval = delay; timer.enabled = true; }
+	}
+
+	function hide()
+	{
+		timer.enabled = false;
+		fadeTimer.enabled = false;
+		pending = void;
+		shownKey = void;
+		visible = false;
+	}
+
+	function onDelay()
+	{
+		timer.enabled = false;
+		if (!isvalid this || pending === void) return;
+		var p = pending;
+		draw(p.spec);
+		shownKey = p.key;
+		place(p);
+		var still = typeof global.KAGOptionGet != "undefined" && !!KAGOptionGet("reduceMotion");
+		if (still || fadeTime <= 0) { opacity = 255; visible = true; return; }
+		opacity = 0;
+		visible = true;
+		fadeStart = System.getTickCount();
+		fadeTimer.enabled = true;
+	}
+
+	function onFade()
+	{
+		if (!isvalid this) return;
+		var k = (System.getTickCount() - fadeStart) / fadeTime;
+		if (k >= 1) { opacity = 255; fadeTimer.enabled = false; return; }
+		opacity = (int)(255 * k);
+	}
+
+	// right of the rectangle where there's room, else left; level with it, kept on the parent
+	function place(p)
+	{
+		var pw = parent.width, ph = parent.height;
+		var x = p.x + p.w + gapX;
+		if (x + width > pw - 8) x = p.x - gapX - width;
+		x = 8 if x < 8;
+		var y = p.y + (p.h - height) \ 2;
+		y = ph - height - 8 if y + height > ph - 8;
+		y = 8 if y < 8;
+		setPos(x, y);
+	}
+
+	function draw(spec)
+	{
+		var line = KAGSceneLine(spec.storage, spec.label, spec.text);
+		var title = spec.title !== void && spec.title != "" ? spec.title : line.title;
+		var picW = cardW - pad * 2, textH = 0, most = 3 * 19 + 2 * 6 + 4;
+		if (line.text != "") {
+			textH = KAGStyledTextLayout(this, "preview.text", line.text, picW, most).height + 4;
+			textH = most if textH > most;
+		}
+		var h = pad + picH + 10 + 28 + 4 + (line.name != "" ? 24 : 0) + textH + pad;
+		var w = cardW;
+		setImageSize(w + shadow, h + shadow);
+		setSize(w + shadow, h + shadow);
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		// (krkr_richtext draws a layer's pixels only once something has read them)
+		if (typeof useCache != "undefined") useCache;
+		fillRect(shadow, shadow, w, h, shadowColor);
+		fillRect(0, 0, w, h, border);
+		fillRect(3, 3, w - 6, h - 6, fill);
+		var pic = KAGScenePicture(spec.storage, spec.label, spec.text, picW, picH);
+		if (pic !== void) {
+			copyRect(pad, pad, pic, 0, 0, picW, picH);
+			if (typeof useCache != "undefined") useCache; // (again, after the copy)
+		} else {
+			// nothing of the World to show: the title on a dark panel
+			fillRect(pad, pad, picW, picH, empty);
+			KAGDrawStyledText(this, "preview.title", title, pad + 16, pad, picW - 32, picH, %[ align:"center", valign:"middle", color:0xffffff, lines:3 ]);
+		}
+		var y = pad + picH + 10;
+		KAGDrawStyledText(this, "preview.title", title, pad, y, picW, 28);
+		y += 32;
+		if (line.name != "") { KAGDrawStyledText(this, "preview.name", line.name, pad, y, picW, 22); y += 24; }
+		if (line.text != "") KAGDrawStyledText(this, "preview.text", line.text, pad, y, picW, textH);
+	}
+}

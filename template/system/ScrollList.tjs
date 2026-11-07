@@ -56,6 +56,8 @@ class KAGScrollList extends Layer
 
 	var a11yHidden = true;     // the list gives its own nodes (pushA11y)
 	var linkNum;               // its link number on a message layer (addLinkLayer)
+	var preview;               // function(index): the scene to preview beside it (ScenePreview.tjs)
+	var previewCard;
 
 	function KAGScrollList(win, par)
 	{
@@ -77,6 +79,7 @@ class KAGScrollList extends Layer
 	{
 		window.removeHook("onMouseWheelHook", wheelHook) if isvalid window;
 		invalidate timer;
+		invalidate previewCard if previewCard !== void && isvalid previewCard;
 		dropCache();
 		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
 		super.finalize(...);
@@ -138,6 +141,7 @@ class KAGScrollList extends Layer
 		if (n == position) return;
 		position = n;
 		redraw();
+		previewCard.hide() if previewCard !== void;
 	}
 
 	// the item at (x, y) on the list, or -1
@@ -370,11 +374,26 @@ class KAGScrollList extends Layer
 		if (i == hoverIndex) return;
 		hoverIndex = i;
 		redraw();
+		updatePreview(i, false);
+	}
+
+	// the scene an item names, on a card beside it (ScenePreview.tjs): after a moment for the
+	// pointer, at once for the keys
+	function updatePreview(i, keyed)
+	{
+		if (preview === void || typeof global.KAGScenePreview == "undefined") return;
+		var spec = i >= 0 && i < itemCount && !dragging ? KAGBindToGlobal(preview)(i) : void;
+		if (spec === void) { previewCard.hide() if previewCard !== void; return; }
+		previewCard = new global.KAGScenePreview(window, parent) if previewCard === void;
+		var row = i \ columns, col = i % columns;
+		var y = row * rowStride - (target !== void ? target : position);
+		previewCard.showFor(spec, left + col * (itemWidth + gap), top + y, itemWidth, itemHeight, keyed ? 0 : void);
 	}
 
 	function pick(i)
 	{
 		if (i < 0 || i >= itemCount) return;
+		previewCard.hide() if previewCard !== void;
 		focusIndex = i;
 		redraw();
 		pushA11y();
@@ -392,6 +411,7 @@ class KAGScrollList extends Layer
 		show(i);
 		redraw();
 		pushA11y();
+		updatePreview(i, true);
 	}
 
 	function onKeyDown(key, shift, process = true)
@@ -441,6 +461,7 @@ class KAGScrollList extends Layer
 	{
 		super.onBlur(...);
 		redraw();
+		previewCard.hide() if previewCard !== void;
 	}
 
 	// as a message layer's link (addLinkLayer)
@@ -476,7 +497,7 @@ class KAGScrollList extends Layer
 		l.setPos(left, top);
 		l.itemCount = itemCount;
 		l.setSize(width, height);
-		l.position = position, l.focusIndex = focusIndex;
+		l.position = position, l.focusIndex = focusIndex, l.preview = preview;
 		l.visible = visible;
 		l.refresh();
 	}
