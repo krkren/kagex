@@ -2415,9 +2415,14 @@ class KAGEnvironment extends KAGEnvTrans {
 			}
 		}
 
-		// Message window erasure process
+		// Message window erasure process (keeping a [font] given before the line's text, since 0.22.0)
+
 		if (!kag.erAfterPage) {
-			kag.tagHandlers.er(%[]);
+
+			if (typeof kag.clearForLine != "undefined") kag.clearForLine();
+
+			else kag.tagHandlers.er(%[]);
+
 		}
 
 		// For voice playback

@@ -113,6 +113,17 @@ class KAGWindow extends Window
 	// lines without spaces alone), and says which term each one belongs to; the ch handler marks
 	// them (MessageLayer.markTerm)
 	var glossKey = void, glossText = "", glossAt = 0, glossLastAt = 0, glossRanges = [];
+	var pendingFonts = []; // the [font]s given since the last character drawn (clearForLine)
+	// The message window cleared before a line's text (the dispname tag, KAG's and the World's):
+	// a [font] given before the text, since the last character drawn, outlives the clear, which
+	// resets the font (since 0.22.0: [font color=...] at the start of a line in a line mode was lost)
+	function clearForLine() {
+		var fonts = [];
+		fonts.assign(pendingFonts);
+		tagHandlers.er(%[]);
+		pendingFonts.clear();
+		for (var i = 0; i < fonts.count; i++) tagHandlers.font(fonts[i]);
+	}
 	function glossaryTermFor(text, elm) {
 		if (typeof global.KAGGlossary != "Object" || !KAGGlossary.marking) return void;
 		var wrap = elm !== void ? elm.wrap : void, line, key;
@@ -167,6 +178,7 @@ class KAGWindow extends Window
 	}
 	// Forget the line the word wrap was in (internalRestoreFlags calls this on a load)
 	function resetWordWrap() {
+		pendingFonts.clear();
 		wrapKey = wrapWordWidth = wrapWordWidthHist = wrapPlan = wrapPlanStyle = void;
 		wrapText = wrapDrawnWord = "";
 		wrapAt = wrapLastAt = wrapBreakWrap = 0;
@@ -392,6 +404,10 @@ class KAGWindow extends Window
 		if (wrapBreakWrap) return false;
 
 		var cur = current, resumed = wrapResume, i;
+		// a size change [font] made takes effect as the next character is drawn (processCh): the
+		// line's font has the old size until then, and the words were measured in it, so a word
+		// in a larger size ran past the line and broke in the middle (since 0.22.0)
+		cur.changeLineSize() if (textWriteEnabled && cur.sizeChanged);
 		if (resumed) {
 			// The conductor runs this ch again after a page break (-3/-5 re-queue the tag):
 			// it is where the first run found it, now on a new page
@@ -16995,6 +17011,7 @@ class KAGWindow extends Window
 		// Word wrap after every early return above: -3 and -5 run this tag again, and a
 		// space counted twice would put the wrap one word out
 		if (needsToBeWrapped(text, elm)) return showPageBreakAndClear();
+		pendingFonts.clear() if pendingFonts.count > 0;
 		var term = glossaryTermFor(text, elm);
 		if (textWriteEnabled && !(wrapDropSpace && text == spaceChar)) {
 			glossaryMark(current, term, currentWithBack);
@@ -17055,9 +17072,9 @@ class KAGWindow extends Window
 			return -3;
 		}
 
-		// Message window clear process
+		// Message window clear process (keeping a [font] given before the line's text)
 		if (!erAfterPage) {
-			tagHandlers.er(%[]);
+			clearForLine();
 		}
 		
 		if (elm !== void) {
@@ -17185,6 +17202,13 @@ class KAGWindow extends Window
 		// Font settings
 		if(currentWithBack) current.comp.setFont(elm);
 		current.setFont(elm);
+		// (kept for the clear before the line's text, clearForLine: a copy, since the conductor
+		// uses the tag's dictionary again)
+		if (!skipNoDisp) {
+			var copy = %[];
+			(Dictionary.assign incontextof copy)(elm);
+			pendingFonts.add(copy);
+		}
 		return 0;
 	} incontextof this,
 
@@ -17201,6 +17225,7 @@ class KAGWindow extends Window
 		// Font reset
 		if(currentWithBack) current.comp.resetFont();
 		current.resetFont();
+		pendingFonts.clear();
 		return 0;
 	} incontextof this,
 

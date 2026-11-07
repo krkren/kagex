@@ -13,6 +13,11 @@
 - **Face windows for Live2D and VRM characters**: a model character's `faceCrop` (in its picture at 100%, or fractions of it) is cut from the picture it has just drawn, and while it's the speaker the window follows the model a few times a second, so its blinks and its mouth show there too. Vee and Hiyori have one.
 - **kagex-release: web file names with `%`, `#` or `?`**: `check` lists them for a web build of loose files, which the web engine can't fetch ("xp3" web data avoids it).
 
+### Fixed
+
+- **A `[font]` at the start of a line was lost in a line mode**: the page is cleared as a line's first character comes (the `dispname` tag, KAG's and the World's), and the clear reset the font, so `[font color=...]` or a gradient given before the line's text never showed. A `[font]` given since the last character drawn is now kept through that clear (`kag.clearForLine`).
+- **A word in a larger size broke in the middle**: after `[font size=]` in the middle of a line the word wrap measured the next words in the old size (the new one takes effect as a character is drawn), so a large word at the end of a line was split by KAG's character wrap. The size is settled before the words are measured.
+
 ### Changed
 
 - The Extras tabs are narrower, to fit a fifth; the Japanese label fonts were cut again for its label.

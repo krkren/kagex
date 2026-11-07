@@ -1913,7 +1913,8 @@ WRAP_TJS = r"""
 // global.__smokeWrap(texts, strategy, startX, lines, words): draws each text through the word wrap
 // on a message layer of its own, lines high (words: its language has spaces between words), and
 // returns what it drew as JSON
-global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1) {
+// sizeAt, size: a [font size=] before character sizeAt (-1: none)
+global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1, sizeAt = -1, size = 0) {
 	var lay = new MessageLayer(kag, kag.back.base, "smoke line breaking", 99, true);
 	var r = %[ lines:[], pages:0 ];
 	var cur = kag.current, saved = kag.saveWordWrap(), strat = kag.lineBreakStrategy;
@@ -1934,6 +1935,7 @@ global.__smokeWrap = function(text, strategy, startX, lineCount, words = 1) {
 		var line = "", y = lay.y, x = lay.x;
 		for (var i = 0; i < text.length; i++) {
 			var ch = text[i];
+			lay.setFont(%[ size:size ]) if i == sizeAt;
 			if (ch == "\n") {
 				r.lines.add(%[ text:line, end:x ]), line = "";
 				if (lay.processReturn()) r.pages++, lay.clear();
@@ -5413,6 +5415,29 @@ def sample_steps(eng):
         print("     outline, shadow and gradient: blue at the top %s, red at the bottom %s, shadow %s, outline %s" % tuple(g), flush=True)
         if min(int(v) for v in g) < 3:
             raise SmokeError("the text's gradient, shadow or outline is missing: %s" % g)
+        # a [font] before a line's text outlives the clear before it (clearForLine), though the
+        # conductor uses the tag's dictionary again
+        kept = eng.tjs('var e = %[ gradcolor:"0x123456" ]; kag.tagHandlers.font(e); (Dictionary.clear incontextof e)();'
+                       ' kag.clearForLine(); var c = kag.current.chGradColor; kag.tagHandlers.resetfont(%[]); return c;')
+        print("     a [font] before the line's text, after the clear: 0x%06x" % (int(kept) & 0xffffff), flush=True)
+        if int(kept) != 0x123456:
+            raise SmokeError("a [font] given before a line's text was lost in the clear before it: %s" % kept)
+        # a larger size from the middle of a line: its words are measured in it, so the line
+        # breaks between them (it measured them in the old size and broke one in the middle)
+        eng.tjs(WRAP_TJS + "return 1;")
+        words = ("Some words at the usual size come first on this line and then a few more of them follow "
+                 "before the big ones").split()
+        bad = []
+        for k in range(12, len(words) + 1):
+            text = " ".join(words[:k]) + " Bigger words follow"
+            at = text.index("Bigger")
+            got = json.loads(str(eng.tjs('return __smokeWrap(%s, "quality", -1, 4, 1, %d, 72);' % (tjs_string(text), at))))
+            lines = [l["text"].strip() for l in got["lines"] if l["text"].strip() != ""]
+            if " ".join(lines) != text:
+                bad.append(" / ".join(lines))
+        print("     a size change mid-line: %d line lengths, %d broke inside a word" % (len(words) - 11, len(bad)), flush=True)
+        if bad:
+            raise SmokeError("a line with a size change broke inside a word: %s" % bad[0])
         eng.tjs("showAbout(); return 1;")
         eng.wait("About", "kag.currentDialog !== void", timeout=10)
         about = str(eng.tjs("return kag.currentDialog.a11yText;"))
