@@ -6413,7 +6413,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 			t.font.angle = 0;
 			var v = vertical;
 			vertical = false;
-			t.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun)
+			if (typeof t.useCache != "undefined") t.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun; no member without the plugin, as on the web)
 			try { drawTextToLayer(t, pad, pad, ch, color); } catch (e) { vertical = v; throw e; }
 			vertical = v;
 			// a quarter turn clockwise: (x, y) -> (-y + E, x + F), the picture's centre on the cell's
@@ -6462,7 +6462,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 				.angle = ll.font.angle;
 			}
 		}
-		lay.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun)
+		if (typeof lay.useCache != "undefined") lay.useCache; // (krkr_richtext's drawing finds the layer's pixels only through this: flushStyledRun; no member without the plugin, as on the web)
 		for (var i = 0; i < cells; i++) drawTextToLayer(lay, pad + w * i, dy, ch, rainbow ? animHue(i / cells) : color);
 		var a = %[ layer:lay, lx:dx - pad, ly:0, ox:0, oy:0, fixed:false, anim:textAnim, speed:textAnimSpeed,
 			appear:textAppear, time:window.skipMode ? 0 : (textAppearTime > 0 ? textAppearTime : 400),
