@@ -2555,11 +2555,17 @@ def sample_steps(eng):
         # lip-sync: its first line plays a voice. A timer in the game notes the mouth every 20 ms
         # while it plays (asking through the REPL is too slow on some targets). Pip's babble has
         # no lip track, so its mouth opens and shuts by loudness alone: no vowel mouths
-        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[];'
+        # with what the engine says at each sample: the clock since the voice started, its
+        # position (ms), samplePosition and rate, the level at samplePosition, and readVoice's
+        # last reading (printed below: what lip-sync from the level had to go by)
+        eng.tjs('global.__smokeLips = [], global.__smokeVoice = [], global.__smokeVowels = %[], global.__smokeLipRead = [];'
                 ' global.__smokeLipTimer = new Timer(function() {'
                 ' var c = world_object.env.characters["pip"], b = c !== void ? c.soundBuffer : void;'
                 ' if (b !== void && b.status == "play") { global.__smokeLips.add(c.lipLevel); global.__smokeVoice.add(b.position);'
-                ' if (typeof c.lipVowel != "undefined" && c.lipVowel !== void) global.__smokeVowels[c.lipVowel] = 1; }'
+                ' if (typeof c.lipVowel != "undefined" && c.lipVowel !== void) global.__smokeVowels[c.lipVowel] = 1;'
+                ' var last = typeof c.lipReadings == "Object" && c.lipReadings !== void && c.lipReadings.last !== void ? "%.2f".sprintf(c.lipReadings.last[0]) : "-";'
+                ' var lv = typeof b.getSoundLevel != "undefined" ? "%.2f".sprintf(b.getSoundLevel(0).rms) : "-";'
+                ' global.__smokeLipRead.add([System.getTickCount() - c.lipTrackStart, b.position, b.samplePosition, lv, last].join(":")); }'
                 ' }, ""); __smokeLipTimer.interval = 20; __smokeLipTimer.enabled = true; return 1;')
         eng.tjs('kag.onPrimaryClick(); return 1;')
         end = time.time() + 6
@@ -2581,6 +2587,9 @@ def sample_steps(eng):
         print("     lip-sync from %s: %d mouth samples while the voice played (%s), at %d positions"
               % ("its lip track (%d marks)" % track if track > 0 else source or "(random)", len(levels),
                  " ".join(str(v) for v in levels[:60]), positions), flush=True)
+        reads = str(eng.tjs('var c = world_object.env.characters["pip"], b = c.soundBuffer;'
+                            ' return (b !== void ? (string)b.frequency : "-") + " Hz, " + __smokeLipRead.join(" ");'))
+        print("     ms:position:samplePosition:level there:readVoice's last, at %s" % reads[:1500], flush=True)
         if positions <= 1:
             print("     (the voice doesn't play here, so the mouth isn't checked)", flush=True)
         elif not {0, 2} <= set(levels):
