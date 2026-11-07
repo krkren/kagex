@@ -1,0 +1,333 @@
+== sample (data, android)
+ok   start-up reaches the title screen                               17.3s
+     the system's language here: en (System.uiLanguage "en-US", candidates en,ja)
+ok   the sample is in English for the steps that read its text (KAGLanguageList)   0.1s
+ok   Extras start locked                                              0.0s
+     8 compiled to .scn, 0 warning(s)
+ok   the scripts in !scnlist.txt compile, so the demos play compiled  14.3s
+     (skipped: the save folder isn't a script folder here)
+ok   a compiled script starts from the World the script that goes to it leaves   0.1s
+ok   demo layer.ks plays to the end                                  24.2s
+ok   demo char.ks plays to the end                                   40.2s
+ok   demo envlayer.ks plays to the end                                3.4s
+ok   demo transition.ks plays to the end                              9.7s
+ok   demo action.ks plays to the end                                  3.1s
+ok   demo effect.ks plays to the end                                  9.4s
+ok   demo anim.ks plays to the end                                   21.6s
+ok   finishing every demo unlocks Extras                              0.0s
+ok   compiled text gets the word wrap                                 3.1s
+     greedy from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from x 900, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 6 lines, 0 page(s), planned by krkr_richtext
+     quality from x 600, 3 lines a page: 14 lines, 4 page(s), planned by krkr_richtext
+ok   English lines break between words, where krkr_richtext draws as its line breaker plans them   2.1s
+     'あ。あ。あ。'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'あ「い」あ「'... from the line's start: 3 lines (41, 40, 39), planned by krkr_richtext
+     'きゃきゃきゃ'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'ああああああ'... from the line's start: 3 lines (45, 45, 16), planned by krkr_richtext
+     'ああああああ'... from x 900: 3 lines (19, 49, 38), planned by krkr_richtext
+ok   Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese   0.8s
+     1 run(s); ink to x 1036 (2154568) together, 1036 (2236566) a character at a time
+ok   krkr_richtext draws a line's characters together, where KAG put them   0.2s
+     saved at char.ks*start,6,5,1
+ok   a compiled scene saves in the middle and loads where it was      5.0s
+     text, history, backlog marks, Ai shown: 6,6,6,1, then BACK: 5,5,5,1
+ok   BACK goes back a message, and the backlog's marks go back to theirs   6.5s
+ok   a demo chosen from the menu: BACK goes back to the menu, and another choice plays   6.1s
+     layer 0 at *label2,1,1,255,154, after BACK *label1,1,1,200,110 (label, text, visible, opacity, pen y)
+     the pen at Start and Translucent while playing: 66,110
+     loaded there: *label1,1,1,200,110, 1 line(s) "Start" in the backlog
+ok   BACK in a scene on KAG's own layers brings them back as they were   3.6s
+     Pip: 959 of its samples drawn, from y 10 to 747
+     lip-sync from level: 57 mouth samples while the voice played (0 0 0 0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0), at 31 positions
+     ms:position:samplePosition:level there:readVoice's last, at 44100 Hz, 61:60:2646:0.00:- 61:60:2646:0.00:- 62:60:2646:0.00:- 62:60:2646:0.00:- 62:60:2646:0.00:- 62:60:2646:0.00:- 142:140:6174:0.19:0.08 143:140:6174:0.19:0.08 143:140:6174:0.19:0.08 143:140:6174:0.19:0.08 143:140:6174:0.19:0.08 217:220:9702:0.01:0.01 217:220:9702:0.01:0.01 217:220:9702:0.01:0.01 217:220:9702:0.01:0.01 292:300:13230:0.05:0.01 292:300:13230:0.05:0.01 293:300:13230:0.05:0.01 293:300:13230:0.05:0.01 376:360:15876:0.32:0.32 376:360:15876:0.32:0.32 376:360:15876:0.32:0.32 378:380:16758:0.35:0.32 482:480:21168:0.00:0.32 482:480:21168:0.00:0.32 482:480:21168:0.00:0.32 490:480:21168:0.00:0.32 490:480:21168:0.00:0.32 490:480:21168:0.00:0.32 505:500:22050:0.00:0.32 528:520:22932:0.04:0.22 547:540:23814:0.08:0.22 563:560:24696:0.06:0.22 585:580:25578:0.22:0.22 604:600:26460:0.26:0.22 623:620:27342:0.27:0.22 644:640:28224:0.26:0.21 665:660:29106:0.24:0.21 685:680:29988:0.22:0.21 716:700:30870:0.21:0.21 725:720:31752:0.21:0.21 744:740:32634:0.21:0.21 781:780:34398:0.06:0.00 788:780:34398:0.06:0.00 806:800:35280:0.00:0.00 845:840:37044:0.00:0.00 845:840:37044:0.00:0.00 862:860:37926:0.00:0.00 901:900:39690:0.00:0.00 904:900:39690:0.00:0.00 930:920:40572:0.00:0.00 945:940:41454:0.00:0.00 963:960:42336:0.00:0.00 985:980:43218:0.00:0.00 1003:981:43292:0.00:0.00 1028:0:0:0.00:0.00 1048:0:0:0.00:0.00
+     its synthesized line: a lip track of 111 marks; vowel mouths shown: a e i
+     a voice with no lip track: 104 mouth samples (0 0 0 0 0 2 2 2 2 2 2 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 1)
+ok   the animated character blinks, and its mouth follows its voice  30.2s
+     Live2D: the krkrlive2d plugin and Hiyori's model
+     an error through the plugin: caught: Cannot convert the variable type ((int)1 to Object)
+     first use (ms): draw 1008, shaders 65, model hiyori.l2d 17, device 18
+     Hiyori: 1351 of her picture's samples drawn, 1176x1650 at (372, 15)
+     Hiyori's face window: shown 1, 522 samples drawn, drawn again at 223436 then 224071
+     upright: shutting her eyes changes 72 samples, 18% of the way down
+     the World's parameters: 15; her copy is off by at most 0
+     blinking: the eyes from 1 down to +0.0; the smile face: ParamEyeLSmile 0.5 halfway through its fade, then 1
+     lip-sync: the mouth open up to 1.00, vowels e u a o i, mouth forms 0.2 0.4 1.0; after it 0.00 (the face's 0.00)
+     over 592 samples: her copy off by at most +0.0
+     idle5: Hiyori_m06
+     m03: Hiyori_m03
+     with effects off: face surprised, off the face's values by at most +0.0, the eyes' target +0.0
+     after a load: pose, face, shown: standard,normal,1,1
+     on a KAG layer: l2d, 805 of its samples drawn in 480x640, 19 frames, motion Hiyori_m03
+     l2donce: TapBody played once, the idle motions went on, and a missing motion ended at once
+     l2dlip: the mouth open up to 1.00 over 38 positions of the sound, then +0.0
+     restored: hiyori.l2d,480,640,F01,ParamCheek:0.5,1,1
+     on a World layer: 450x600, l2donce through flipupdate, the same flip after a redraw: 1,1
+ok   a Live2D character draws, moves, blinks and lip-syncs (--live2d required), or does with the stand-in plugin  80.7s
+     first use (ms): draw 6, model vee.vrm 148, model star3d.glb 3, renderer 41; MSAA 4
+     Vee: 5655 of her picture's samples drawn, 832x1340 at (545, 60); 1448 in its top quarter, 740 in its bottom one
+     Vee's face window: shown 1, 830 samples drawn, drawn again at 305908 then 306641
+     blinking: blink from +0.0 up to 1; laugh: happy 0.5 halfway through its fade, then 1 (the avatar's 1)
+     lip-sync: the mouth's expressions at most ou:1.00 oh:0.50 aa:1.00 ih:1.00 ee:1.00; after the voice +0.0; a lip track of 88 marks
+     wave: a VRM animation of 2.59999990463257 s, faded in from the pose: 1
+     think: the pose's VRM animation changed
+     after a load: pose, shown: standard,1,1
+ok   a VRM character draws, moves, blinks and lip-syncs (--three required)  44.7s
+     a VRM avatar on a KAG layer: 3d vrm, 1315 of its samples drawn in 400x640, 11 frames, happy 1, its motion 4 s
+     3donce: vee_wave played once, the idle motion went on, a missing one ended at once
+     3dlip: the mouth open up to 1.00 (aa 1.00) over 36 positions of the sound, then +0.0
+     restored: vee.vrm,400,640,vee_idle,-0.03,1.47,1,1
+     a glTF model: gltf, 185 samples drawn, 10 frames, a clip playing 1, clips 2 (spin first)
+     glTF: hop played once, spin went on, a missing clip ended at once
+     a scene built in script: scene, 696 samples drawn, 10 frames, 0.31 s played
+     the scene: 3donce=jump through its script, an unknown one ended at once
+     on a World layer: 300x480, 3donce through flipupdate, the same flip after a redraw: 1,1
+ok   3D on layers: a VRM avatar, a glTF model and a scene built in script (the 3d flip)  18.8s
+     (skipped: it writes a PSD beside a desktop engine's save data)
+ok   a character's layers read from a PSD match its layer structure, vowel mouths included   0.0s
+ok   extrans's and extNagano's transitions are there, not crossfades   0.0s
+     multiripple: canvases 1920x1080 (the screen: 1920x1080); going at half a second: transCount 1; after it: transCount, canvases, points unlike the back page's: 0,,0
+     rgbfade: canvases 1920x1080 1920x1080 (the screen: 1920x1080); going at half a second: transCount 1; after it: transCount, canvases, points unlike the back page's: 0,,0
+     zoomfade: canvases 1920x1080 (the screen: 1920x1080); going at half a second: transCount 1; after it: transCount, canvases, points unlike the back page's: 0,,0
+     spin: canvases 1920x1080 (the screen: 1920x1080); going at half a second: transCount 1; after it: transCount, canvases, points unlike the back page's: 0,,0
+     book going: transCount, canvases 1,1920x1080; stopped: transCount, canvases, points unlike the back page's: 0,,0
+ok   book, multiripple, rgbfade, zoomfade and spin, drawn by kagex itself, cover the screen, end on time and can be stopped  14.5s
+ok   a movie named without its extension is found as .webm, the format the engine plays   0.0s
+     the slot after a movie played and stopped: new,layer,layer 0
+     layer 0 after the movie stopped: 1920x1080 (the screen 1920x1080)
+ok   a video slot that played and was stopped gets a new movie object, with its layer, before its next movie, which plays   0.4s
+     Effekseer: available
+ok   an Effekseer effect draws (--effekseer required), or the build says why not   2.2s
+     plain: 2083 opaque samples, average red 144, blue 249
+     zoomed: 8330 opaque samples, average red 144, blue 250
+     turned: 2073 opaque samples, average red 144, blue 249
+ok   an SVG image draws, zoomed and turned too (--vector required), or the build says why not   1.7s
+     from emblem.clip, through clipfile
+     badge: 2085 opaque samples
+     star: 257 opaque samples
+     star by id, turned: 257 opaque samples
+ok   a CLIP STUDIO PAINT layer loads through clip:// and turns (--clip required)   1.8s
+     xp3crypt: built in, filter installed; scnfile: reads what it writes
+ok   encryption: xp3crypt is in the engine and scnfile reads compiled scenarios (--encryption required)   0.0s
+     AlphaMovie: there
+ok   AlphaMovie: the plugin behind the amv flip type (movies with transparency) is in the engine   0.0s
+     DLC zip in the save folder: zz_zipcheck.tjs ran: True
+ok   zip patches: the ones in the save folder were mounted at start, and DLC mounts later   0.0s
+ok   the demo menu's choices are drawn in a text font                 0.0s
+ok   screen readers: the demo menu's choices are a list, one picked through it plays, and its text is read   3.1s
+ok   save and load a bookmark                                         5.6s
+ok   the save.ks screen opens from the game and closes with Esc       1.9s
+ok   the load.ks screen opens from the game and closes with Esc       1.8s
+ok   the config.ks screen opens from the game and closes with Esc     1.6s
+     the save list: 90,2,650 (slots, columns, a slot's width)
+     the load list's slot 88: Slot 88: Start 2026/11/07 12:45
+ok   the save and load screens show every slot in one scrolling list: a pick saves, the page buttons scroll to their ten, the load screen lists the save   4.4s
+     left with a tap: the history, Config, save, load, a Yes/No prompt, About, the controller test, the controls list, Change Controls, a quick menu panel
+ok   every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel  11.0s
+ok   controller: Y switches auto mode, X shows the history, B closes it   1.1s
+ok   controller: START opens config.ks and B closes it                1.2s
+ok   controller: BACK opens save.ks and B closes it                   1.7s
+ok   controller: L1 opens load.ks and B closes it                     1.7s
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.4s
+ok   the About screen opens in the game window and closes             0.4s
+ok   screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers   0.2s
+     (skipped: checked on the desktop engines)
+ok   in a window the menu bar sits above the game: F10 and a click on a title drop its menus down, Help > Controls works, and full screen has no bar   0.0s
+     (skipped: checked on the desktop engines)
+ok   the controls list reads the window's key and controller bindings, and opens and closes   0.0s
+     B (VK_PAD2) pressed: still open, named, the pad's name: 1,B,B
+ok   the controller test: a button pressed is named and lit without closing it, Esc closes it; the controls list hands over to it and to Change Controls   0.3s
+     (skipped: checked on the desktop engines, with a framework that has it)
+ok   F12 saves the screen as a PNG and says so                        0.0s
+     (skipped: checked on the desktop engines, with a framework that has it)
+ok   screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings   0.0s
+     (a held press: skipped, the pointer can't be moved here)
+     the mouse's back and forward buttons: back,next,1 (and the clicks forward made)
+     (skipped: checked on the desktop engines)
+ok   actions: keys, controller buttons and gestures run one table; Change Controls binds a key, the binding is kept, and Reset puts the game's back   7.4s
+     buttons (- dimmed, + lit): prevScene- prevChoice- rewind- back- auto skip nextScene quickSave quickLoad- save load backlog screenshot config
+     (the fade and the handle: skipped, the pointer can't be moved here)
+     width at 100% and 140% (at most the screen's), opacity at 50%, Config left out (has, back), the screen: 956,1337,127,0,1,1920
+     inside the window's bottom under the text at 100% and 140%, just over the window: 1,1,1
+ok   the quick menu: the window's buttons as a strip, dimmed and lit by their actions; a click runs one; unpinned it fades and its handle brings it back   0.8s
+     the handle at [1158, 1010] (game), [378, 297] (screen): the strip came and went again
+ok   Android: with the quick menu near the pointer, a real tap on its handle brings it, and it goes again though the finger's pointer rests on it   8.0s
+     the volume panel: rows, the music before, after Left, after a click halfway: 4,80,79,50; clicks that went on: 0
+     the quick saves panel's rows | the quick saves: note|
+     (Pointing at It: skipped, the pointer can't be moved here)
+     the strip's nodes for screen readers: 15
+ok   the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip   1.8s
+     the save panel: save:new:5 save:save:87 save:save:0 save:save:4 (the first empty slot 5)
+     the load panel: save:load:5 save:load:87 save:load:0
+     the wheel over the volume panel (pointer on it, the music before, a notch down, a notch up): 1,80,75,80
+     (the fading buttons: not checked, the pointer can't be moved here)
+ok   the quick menu's save and load panels: a new save in one click, the newest saves first; the wheel over the volume panel; a message window's own buttons fade away from the pointer (buttonsfade=)   0.6s
+     (skipped: the pointer can't be moved here)
+ok   tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line   0.2s
+     (skipped: checked on the desktop engines)
+ok   the controls list has the sample's own keys and buttons (AfterInit.tjs)   0.0s
+     x: far left -2.20, far right 2.20, xpos=0 0.00, unplaced off
+ok   positional sound: an SE placed at the stage's far left or right is panned there (World pos=, xpos=)   0.1s
+     the music at 44100 Hz, then 44100 Hz (moving), then 22050,-80000,50,-80
+     a sound at 44100 Hz, with pitch=150 pan=60 at 66150 Hz and pan 60 (saved 150, 60), centred when it stops: 0
+ok   World sound: pitch= and pan= move the music and a sound over time=, a play starts as recorded, a save keeps them   1.6s
+     on a KAG layer: 5 frames in 0.6 s, mean 113, 1402 of 1410 samples changed, opaque 1
+     on a World layer: static,1,10,4,1,1,1
+ok   TV static: the static flip draws new static every frame, on a KAG layer and a World layer, and a save keeps it   3.3s
+     (skipped: the pointer can't be moved here)
+ok   help lines: Config, the save screen and Extras say what the pointer is on at their bottom, from helptexts.csv and the options' help, and what the screen is for   0.3s
+     page 2: 11 options, 35 controls
+     page 3: 12 options, 34 controls
+     page 6: 10 options, 32 controls
+     read colour and mark picked, then Default: 11841736,1,none,-1,0
+     the movie volume at 40, the music's as it was: 40,1
+ok   Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back   5.7s
+     the window's frame: alpha 228, at opacity 100 89, back 228
+     text fade 400 ms: 1,400, 7 layers taking turns, off: 0,0
+ok   reading settings: window opacity, text that fades in, dramatic mode, the pause after a voice, Don't ask again   8.0s
+ok   the name box: a long name squeezed into it, crossfades between speakers, fades away, follows the window's opacity   6.8s
+     skipping: Skipping,36; then Skipping stopped
+     the voice bar: 0.00 0.07 0.18 0.26 0.32 0.43 0.51 0.58
+ok   indicators: a compiled scene's title and the music's title show in the corners, auto mode's mark, the voice bar, [chapter stay=true] kept in saves   6.8s
+     Search finds Alex in 1 lines
+ok   naming the hero: the name screen refuses and trims names, the name shows in the text and the name box, and Search finds it  17.1s
+ok   typing on a phone: a tap on an [edit] field opens a box with its text, typing shows in the field, Cancel puts it back and OK keeps it and runs enter=   3.8s
+     (skipped: only in a phone's browser, --target web --touch)
+ok   a swipe in a phone's browser: up shows the message history, and the swipe's own click doesn't go on to the next text   0.0s
+     (skipped: only in a phone's browser, --target web --touch)
+ok   typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=   0.0s
+ok   writers' shorthands: a code sets a pose and a face, and presets move a character back or forward at once   3.3s
+     level:face:picture:width:zoom 1:happy:ch_1_0_1:324:60 1:angry:ch_1_0_2:324:60 1:sad:ch_1_0_3:324:60 0:happy:ch_0_0_1:540:100 0:angry:ch_0_0_2:540:100 0:sad:ch_0_0_3:540:100 2:happy:ch_2_0_1:810:150 2:angry:ch_2_0_2:810:150 2:sad:ch_2_0_3:810:150
+     a level without pictures: ch_0_0_3:323:60
+ok   a character has the right size at every level with every face, and a level without the picture draws another level's, scaled  10.5s
+ok   [vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too   0.3s
+     25 lines and pictures, 1717 px, over 78550 ms
+     from rollfrom to rollto (6 s to 84.55 s into bgm01): 78550 ms
+ok   the credits roll over the music between two places in it, keep their place in a save, and send rollend when seen to the end  10.0s
+     the opening seen at start: 1
+     the movie on the screen: 1080 of its samples not the black backdrop
+     the movie's sound from its own file (file, the movie's volume, the file's status, the movie's and the file's ms): opening.opus,0,play,2320,2280
+     the smaller movie: opening_sd,4, shown at 1920,1080
+     a movie whose picture stopped ended 4306 ms later
+ok   [movie]: the opening was noted as seen, its subtitles come from opening.vtt, a seen movie skips with a click, Replay's Movies tab plays it, its smaller version fills the screen, and a movie whose picture stops ends  16.7s
+     Ai speaks: ai,105,1
+     Ai, cross: ai,105,1
+     Pip, a face only (not on stage): pip,99,1
+     narration: -,0,1
+     Ai over a CG: ai,0,1
+     [env facewindow=off]: ai,0,1
+     [env facewindow=on]: ai,105,1
+     Config's Face Window off: ai,0,1
+     loaded at Ai's cross line: ai,105,1
+ok   face windows: the speaker's face cut from the sprite, a face-only speaker, none for narration, a CG or a scene that turns them off, Config's switch, a load  12.7s
+     Ai alone: ai@0
+     [pip join]: ai@-420 pip@420
+     [ai2 join=middle]: ai@-660 ai2@0 pip@660
+     [ai leave]: ai2@-420 pip@420
+     [env makeroom=0]: ai2@-840 pip@840
+ok   layouts: a character joining at the right and in the middle, one leaving, [env makeroom], everyone evenly spaced on the screen  11.9s
+     the scene: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+     [env keep], a grey flashback: ai@-480:sad grey=true kept=1 bgm=bgm01
+     [env restore]: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+     loaded in the flashback, the kept scene with it: ai@-480:sad grey=true kept=1 bgm=bgm01
+     [env restore] after the load: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+ok   keeping a scene: [env keep], a grey flashback, a save and a load in it, [env restore] back to the scene as it was with the music playing on  18.3s
+     the screen shakes, the camera back where it was
+     [closeup]: the camera at 140% and the background blurred
+     [dim]: a black veil
+     [whiten]: a white veil
+     Pip slid in (showslide)
+     [eyecatch]: the card came and a click took it away
+ok   the staging kit: twenty gestures ending where they began, the screen shakes, a close-up, a dim and a white veil, an eyecatch card  52.7s
+     the petals: a still picture, 1920x1080, no effect playing
+     the petals: the effect when the option went off, the still when it came on
+     the static: still, moving when the option went off, still again when it came on
+     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running (then with the option off, on): 300,0,0,1,0
+ok   Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes  10.7s
+     previous scene: back at the scene's first line
+     rewind: a line at a time, back to the scene's first line
+     previous choice: the demo menu again
+     next scene: char.ks*voices
+     a read scene: the offer to skip it, and Yes skips
+ok   moving through the story: the scene's start, a rewind, the last choice again, the next scene, and the offer to skip a scene read before  38.4s
+     faces: 210 samples; the preview: 480/480 of its samples not black
+     the last line at 184, the scene before at 101, dragged down three lines: 98
+     flicked four lines up: at line 3 when let go, then 15 (the last step 78 ms after the one before, 96 ms in all)
+ok   the backlog: the speakers' faces, a picture of the scene at a message's mark, the scene buttons, dragging to scroll  22.0s
+     dragged two lines and a half: 21 px into a line, 105 px from the end (lines 42 px)
+     pulled past the newest line: 210,1,Let go to close
+     Back closed the history
+     the title asked whether to quit, and No left it with 7 buttons
+ok   the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit  28.5s
+     the wheel: zoom 1.520 at 1110,457; a drag to 979,392; a pinch to 2; a click to variation 1
+ok   the CG viewer: a CG full screen, zoomed by the wheel about the pointer and by a pinch, moved by dragging, the next one on a click, the bar fading at rest, Esc back to the CGs   3.9s
+     bgm01, hiyori000001, pip000009, pip000001, se_chime's kind: -4,2.5,5,+0.0,se
+     ai000001's level: 0.235, with +6 dB 0.426
+     the engine's last gain query: ai000001.ogg,6
+ok   loudness: loudness.csv's gains by kind, speaker and file, and a gain heard as a voice is decoded   3.0s
+     title.start.click, config.config_title.click, config.config_window.click, dialog.open, save.page3.click, message.msg_save.enter, menu.cancel: ui_ok,ui_click,ui_toggle,-,ui_page,ui_hover,-
+     the title's Start and Exit: KAGInterfaceSounds.play("title.start.click") | KAGInterfaceSounds.play("title.exit.click"),(kag.close())
+     the prompt answered No with Esc played dialog.no.enter,dialog.no.click;play
+     a sound started twice in debug mode was noted 1 time(s); a hover straight after played 0
+ok   interface sounds: uisounds.csv's sounds by wildcard, weight and alias, the title's buttons, a prompt's No, a sound played twice logged   0.5s
+     at the start 80,100,0,1,0 (volumes, skip mode, recording, can undo); after the changes ['25', '55', '1', '3', 'bgm01', 'sound:se_chime']
+     Undo: skip mode back 1, the sound 55 then 100; Revert: the music 80, can undo 0, changed 0
+     Pip's volume 40, then undone 100; the samples: voice:pip000009 voice:ai000001
+     the movies' slider at 60: its sample playing, its volume and the movies' at 60, the music waiting, the samples: 1,60000,60000,1,movie:bgm01
+ok   Config: a volume plays a sample as it's set, each character's voice has a volume and a Test, Undo and Revert take changes back   3.2s
+     CG screen (playing, Stop button, pictures, on page 1): 1,1,3,1
+ok   Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title   8.0s
+     four quick saves went to 90,91,92,90; the newest 90, newest first 90,92,91
+     the quick save's card: 539x212
+ok   quick saves go round their bookmarks, and quick load asks, then loads the newest   6.0s
+ok   the continue save: kept as the game goes, and the title offers to carry on from it   3.9s
+     cut: 1,play,1,0,1,play,1
+     Ai at x -1.00, Pip at x 1.00; pan=-100 vol=50: -100000,50; centred: 0
+ok   voices: a cut voice fades out on a track of its own, voices come from where their speakers stand, and vol= makes a line quieter  10.1s
+ok   back to the title through the Yes/No prompt                      1.1s
+     Effect Speed Normal: Config pressed at transCount 1, opened
+     Effect Speed Skip: Config pressed at transCount 1, opened
+ok   a title button pressed during the title's own crossfade opens its screen, with Effect Speed at Skip too   3.3s
+ok   Extras: cgmode.ks opens and returns to the title                 1.7s
+ok   Extras: replay.ks opens and returns to the title                 1.9s
+ok   Extras: musicmode.ks opens and returns to the title              2.1s
+ok   a Replay tile plays its scene from the script's start, and comes back to Replay   4.8s
+     Return opened the box to type in, with "layer": OK
+     "layer": 19 lines
+     the list: 19 lines, 1020 px to scroll, a link of the window: 1
+     dragged 160 px: at 160 when let go, then 768,349,1020,22 (position, speed, end, the last step's ms)
+     End, then Home and Down: 18,1,1
+     the list back as it was: 120,1
+ok   Search finds a word typed in the lines read, and plays from one  13.9s
+     eye levels ['2', '1', '0'], mouth levels while the voice played ['2', '1', '0']
+ok   after a search jump into Pip's scene he still blinks and lip-syncs   9.5s
+     marked on the line: kagex,world (met kagex, world, pip: 110)
+     the entry: "KAGEX\nWamsoft's extension of KAG3, the Kirikiri engine's visual novel framework: layers that turn and zoom, layers ordered by level, actions that move them, and the World."
+     the Glossary tab: 3:0:Not met yet:2 of 3 terms met
+ok   the glossary: its words marked in the text, a click on one shows its entry, Extras lists them   7.1s
+     message fonts to choose: Noto Sans JP,Noto Serif JP; licences: Noto Sans JP,Noto Serif JP,Roboto; dialog.title 40, slot 36; edgeWithShadow 1
+     outline, shadow and gradient: blue at the top 284, red at the bottom 254, shadow 570, outline 9
+     a [font] before the line's text, after the clear: 0x123456
+     a size change mid-line: 12 line lengths each way, 0 broke inside a word
+ok   text: the game's fonts and text styles, an outline with a shadow, gradient text, About's fonts   3.0s
+     outline set: 1:3368601; shadow off: 0:0; Default: 1:1; font: Noto Serif JP, back 1
+     the preview typed up to line/position 2003
+     picked: 0x335c99 from 0x336699
+ok   text settings: the player's outline, shadow and font reach the message windows, with a preview; the colour picker   2.5s
+     in the flashback: memory,messagewindow_memory,namebox_memory
+     the player's tint: 0x3060ff; after a load: memory
+ok   message window styles: a flashback's window, the player's tint, kept by a save  14.2s
+     Japanese: start_normal from file://./data/user/0/io.github.krkren.kagex/files/assets/data/lang/ja/start_normal.png, 0 samples unlike it
+ok   languages: F9 shows the title screen in Japanese, with its own images, then English again   1.8s
+     English: [Ai] Name display, text display, and key input wait are automaticallyperformed in the prescribed format.
+     Japanese: [あい] 規定の書式で自動的に名前表示・テキスト表示・キー入力待ちが行われます
+     next: [？？？] 表示名を変更する場合はスラッシュにつづけて表示名を記載すればＯＫです
+ok   languages: the line on screen is drawn again in the other language, and the backlog keeps what was shown  13.4s
+     KAGEX 拡張レイヤ, ワールド拡張：キャラクタ, ワールド拡張：レイヤ
+ok   languages: the demo menu's choices are drawn again in the other language   2.2s
+     chosen, saved, config_base: 1|ja|file://./data/user/0/io.github.krkren.kagex/files/assets/data/lang/ja/config_base.png
+ok   languages: Config's buttons choose one, the screen is drawn in it, and the choice is saved   4.3s
+kept /tmp/kagex-smoke-zhsad44d
+smoke test: passed
