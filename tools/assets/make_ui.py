@@ -1121,6 +1121,27 @@ def make_dialog():
         c.rrect((4, 4, 40, 40), 8, fill=rgba(WHITE), outline=rgba(border), width=4)
         c.save(os.path.join(SYSTEM, "dialog_check_%s.png" % st))
 
+    # the colour picker's wheel (ColorPicker.tjs): hue round it from red at the right,
+    # counterclockwise, saturation from white at the middle to the full colour at the rim, at
+    # full brightness (the picker darkens it for a lower one); clear outside the circle
+    n, rad = 320, 156.0
+    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64) + 0.5
+    dx, dy = xx - n / 2, n / 2 - yy
+    r = np.hypot(dx, dy)
+    h = (np.degrees(np.arctan2(dy, dx)) % 360) / 60.0
+    sat = np.clip(r / rad, 0, 1)
+    i = np.floor(h).astype(int) % 6
+    f = h - np.floor(h)
+    p_, q, t = 1 - sat, 1 - sat * f, 1 - sat * (1 - f)
+    v = np.ones_like(sat)
+    rgb = np.zeros((n, n, 3))
+    for k, (rr, gg, bb) in enumerate(((v, t, p_), (q, v, p_), (p_, v, t), (p_, q, v), (t, p_, v), (v, p_, q))):
+        m = i == k
+        rgb[m, 0], rgb[m, 1], rgb[m, 2] = rr[m], gg[m], bb[m]
+    alpha = np.clip(rad - r + 0.5, 0, 1)
+    img = np.dstack([rgb * 255, alpha * 255]).round().astype(np.uint8)
+    Image.fromarray(img, "RGBA").save(os.path.join(SYSTEM, "color_wheel.png"))
+
 
 # --- the star in the World demo --------------------------------------------------------
 def make_star():

@@ -104,7 +104,11 @@ function drawYesNoString(layer, x, y, text, color, base)
 
 /**
 
- * The face list: an empty or unknown face draws as arrows on the SDL engine
+ * The face list: an empty or unknown face draws as arrows on the SDL engine. The interface's
+
+ * faces (fonts.csv's "interface" role, since 0.22.0), so a message font the player picks
+
+ * doesn't change the screens' labels
 
  */
 
@@ -114,7 +118,7 @@ function setYesNoFont(layer, size)
 
     var font = layer.font;
 
-    font.face = kag.chDefaultFace;
+    font.face = typeof global.KAGFontFace != "undefined" ? KAGFontFace("interface") : kag.chDefaultFace;
 
     font.height = size;
 

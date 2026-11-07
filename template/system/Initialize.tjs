@@ -1155,6 +1155,7 @@ KAGLoadScript("Tooltips.tjs"); // a button's hint beside it, or on a help line (
 KAGLoadScript("ScrollList.tjs"); // lists that scroll by dragging, flicks, the wheel and the keys (since 0.19.0)
 
 KAGLoadScript("Display.tjs"); // the screen, controller and screenshot settings (since 0.19.0)
+KAGLoadScript("TextSettings.tjs"); // the message font, outline and shadow, with a preview (since 0.22.0)
 
 
 
@@ -1271,6 +1272,7 @@ KAGIndicatorsOf(kag);
 KAGTooltipsOf(kag); // tips (Tooltips.tjs)
 
 KAGApplyDisplayOptions(); // the screen and controller settings kept (Display.tjs)
+KAGApplyTextLook(); // the player's outline and shadow (TextSettings.tjs)
 
 kag.tagHandlers.chapter = KAGChapterTag;
 

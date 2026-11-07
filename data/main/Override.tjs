@@ -737,6 +737,7 @@ KAGOptionHook.add(function(name, v) { configUndoButtons(); } incontextof global)
 // Config closing: no more steps, and the music sample stops
 function configLeave()
 {
+    KAGTextPreviewClose();
     KAGOptionUndo.end();
     KAGVolumeSamples.stop(300);
 }
@@ -747,6 +748,7 @@ function configLeave()
 function setConfigPage(page)
 {
     if (tf.configPage == page) return;
+    KAGTextPreviewClose();
     tf.configPage = page;
     kag.process("", "*buttons");
 }
@@ -767,7 +769,9 @@ var configPages = [
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
     [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
-      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ]
+      [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
+    // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
+    [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ], [] ]
     ];
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
@@ -880,6 +884,15 @@ function configOptionsPage()
     var page = configPages[tf.configPage];
     if (tf.configPage == 5) page[0] = configVoiceOptions;
     KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
+    KAGTextPreviewClose();
+    if (tf.configPage == 7) {
+        // the text's look as you change it: a small message window typing sample lines
+        var lay = kag.current, f = lay.font, face = f.face, height = f.height, bold = f.bold;
+        setYesNoFont(lay, KAGOptionStyle.label.size);
+        drawYesNoString(lay, 990 + KAGOptionStyle.label.x, 206 + KAGOptionStyle.label.y, tr("Preview"), 0xffffff, yesnoTextBase);
+        f.face = face, f.height = height, f.bold = bold;
+        KAGTextPreviewOpen(lay, 1010, 266, 600, 380);
+    }
 }
 
 /**

@@ -8,7 +8,9 @@
  *   name      what scripts call it
  *   label     its row's title, in English (tr() shows it in the language of the game)
  *   kind      "toggle" (two buttons), "choice" (two to four buttons), "slider", "button" (one
- *             button that runs action), "note" (lines of text, rows: how many rows they take)
+ *             button that runs action), "note" (lines of text, rows: how many rows they take),
+ *             "color" (a swatch of the colour, 0xRRGGBB, whose button opens the colour picker,
+ *             ColorPicker.tjs; the value changes as it's picked, and back on Cancel; 0.22.0)
  *   prop      a property of kag it reads and sets, or getValue/setValue functions
  *   apply     a method of kag called after a change (applyWindowOpacity ...)
  *   values    [ [label, value], ... ] for a toggle or a choice
@@ -21,6 +23,7 @@
  *             held ("drag"), let go ("change") and left ("leave"): a volume's sample (0.18.0)
  *   test      a function a Test button after the slider runs (a character's line, 0.18.0)
  *   available a function: whether this platform can do it (its row is left empty when not, 0.19.0)
+ *   reset     a function Default runs in place of setting initial: the game's own value (0.22.0)
  *
  * A label can be a dictionary by language code (%[ "en" => "Ai", "ja" => <the Japanese name> ]), for names.
  * While a Config screen is open, KAGOptionUndo keeps what each change replaced (Undo, Revert).
@@ -33,7 +36,7 @@ function KAGDefineOption(o)
 	// a function written in the table has no object of its own, so called as the option's member
 	// it would run with the option as this, where kag and every global are void: the global
 	// object instead (as KAGWindow.keyBindingFunction does)
-	var keys = [ "getValue", "setValue", "action", "enabled", "preview", "test", "available" ];
+	var keys = [ "getValue", "setValue", "action", "enabled", "preview", "test", "available", "reset" ];
 	for (var i = 0; i < keys.count; i++) {
 		var f = o[keys[i]];
 		if (typeof f == "Object" && f !== void && typeof Scripts.getObjectContext != "undefined" &&
@@ -187,13 +190,20 @@ function KAGResetOptions(names)
 	for (var i = 0; i < names.count; i++) {
 		var o = KAGOptions[names[i]];
 		if (o !== void && o.initial !== void) KAGOptionSet(o.name, o.initial);
+		else if (o !== void && o.reset !== void) o.reset(); // back to the game's own (0.22.0)
 	}
 }
 
-// The value index of a toggle or a choice (the nearest value, for numbers)
+// The value index of a toggle or a choice (the nearest value, for numbers; a colour no button
+// has, the button whose value is "pick", which opens the colour picker: since 0.22.0)
 function KAGOptionIndex(o, v)
 {
 	var best = 0, d;
+	for (var i = 0; i < o.values.count; i++) if (o.values[i][1] === "pick" && typeof v == "Integer") {
+		var exact = false;
+		for (var j = 0; j < o.values.count; j++) exact = true if o.values[j][1] === v;
+		if (!exact) return i;
+	}
 	for (var i = 0; i < o.values.count; i++) {
 		var w = o.values[i][1];
 		if (w === v || (typeof w == typeof v && w == v)) return i;
@@ -248,7 +258,7 @@ KAGDefineOption(%[ name:"autoCharWait", label:"Auto Wait per Character", kind:"s
 KAGDefineOption(%[ name:"textFade", label:"Text Fades In", kind:"slider", prop:"textFadeTime", apply:"applyTextFade", initial:0,
 	min:0, max:800, step:50, ends:[ "Off", "Slow" ] ]);
 KAGDefineOption(%[ name:"readColor", label:"Colour of Read Text", kind:"choice", prop:"readTextColor", initial:-1,
-	values:[ ["As Written", -1], ["Grey", 0xb4b0c8], ["Blue", 0x9cd0ff] ] ]);
+	values:[ ["As Written", -1], ["Grey", 0xb4b0c8], ["Blue", 0x9cd0ff], ["Other…", "pick"] ] ]);
 KAGDefineOption(%[ name:"readMark", label:"Mark Read Text", kind:"toggle", prop:"readMark", initial:false,
 	values:[ ["On", true], ["Off", false] ] ]);
 KAGDefineOption(%[ name:"windowOpacity", label:"Window Opacity", kind:"slider", prop:"windowOpacity", apply:"applyWindowOpacity", initial:255,
@@ -586,6 +596,9 @@ function KAGOptionColumn(layer, x, top, names)
 		case "slider":
 			KAGOptionSlider(layer, o, x, y);
 			break;
+		case "color":
+			KAGOptionColor(layer, o, x, y);
+			break;
 		case "note":
 			setYesNoFont(layer, st.note.size);
 			for (var j = 0; j < o.lines.count; j++)
@@ -772,6 +785,9 @@ function KAGOptionPick(name, i)
 	if (o === void) return;
 	if (o.kind == "button") {
 		o.action() if o.action !== void;
+	} else if (o.values[i][1] === "pick") {
+		KAGOptionPickColor(name); // a colour of the player's own (the picker)
+		return;
 	} else KAGOptionSet(name, o.values[i][1]);
 	KAGOptionRefresh(kag.current);
 }
@@ -799,6 +815,61 @@ function KAGOptionRefresh(layer)
 				if (typeof c.slider.setPositionQuietly != "undefined") c.slider.setPositionQuietly(v);
 				else c.slider.position = v;
 			}
-		} else KAGOptionDrawButtons(o, c);
+		} else if (c.kind == "color") KAGOptionDrawColor(o, c);
+		else KAGOptionDrawButtons(o, c);
 	}
+}
+
+// A colour's row: its swatch on a button that opens the colour picker (since 0.22.0)
+function KAGOptionColor(layer, o, x, y)
+{
+	var st = KAGOptionStyle.button, w = st.widths[0];
+	layer.locate(x + st.x, y + st.y);
+	layer.addButton(%[ name:"option_" + o.name + "_0", normal:st.prefix + w + "_normal", over:st.prefix + w + "_over",
+		exp:"KAGOptionPickColor('" + o.name + "')" ]);
+	var b = layer.names["option_" + o.name + "_0"];
+	var c = %[ kind:"color", buttons:[ b ], width:w ];
+	KAGOptionControls(layer)[o.name] = c;
+	b.hint = KAGOptionHelp(o) if b !== void;
+	KAGOptionDrawColor(o, c);
+}
+function KAGOptionDrawColor(o, c)
+{
+	var b = c.buttons[0];
+	if (b === void || !isvalid b) return;
+	var st = KAGOptionStyle.button, base = st.prefix + c.width;
+	b.loadButtons(base + "_normal", base + "_over", base + "_over");
+	var col = KAGOptionGet(o.name);
+	col = 0xffffff if col === void;
+	var bw = b.width, bh = b.height, hold = b.holdAlpha;
+	b.holdAlpha = true;
+	for (var s = 0; s < 3; s++) {
+		var x = bw * s + 12;
+		b.fillRect(x, 10, 64, bh - 20, 0xff010062);
+		b.fillRect(x + 3, 13, 58, bh - 26, 0xff000000 | (col & 0xffffff));
+	}
+	b.holdAlpha = hold;
+	var text = tr("Change"), size = st.size, tw;
+	do { setYesNoFont(b, size); tw = measureYesNoText(b, text); } while (tw > bw - 104 && --size > 14);
+	var th = b.font.getTextHeight(text);
+	b.holdAlpha = true;
+	for (var s = 0; s < 3; s++)
+		drawYesNoString(b, bw * s + 88 + ((bw - 100 - tw) >> 1), (bh - th) >> 1, text, s > 0 ? st.overColor : st.color, yesnoLabelBase);
+	b.holdAlpha = hold;
+}
+// a colour's button pressed: the picker, the option changing as the colour does (a preview), back
+// on Cancel, and kept on OK
+function KAGOptionPickColor(name)
+{
+	var o = KAGOptions[name];
+	if (o === void) return;
+	if (typeof global.KAGPickColor == "undefined") KAGLoadScript("ColorPicker.tjs");
+	var ctx = %[ name:name, original:KAGOptionGet(name) ];
+	// (a function whose this is a dictionary finds no globals: they're named through global)
+	var now = KAGOptionGet(name);
+	KAGPickColor(typeof now == "Integer" && now >= 0 ? now : 0xffffff,
+		function(c) { global.KAGOptionSet(this.name, c); global.KAGOptionRefresh(global.kag.current); } incontextof ctx,
+		KAGOptionLabel(o),
+		function(c) { global.KAGOptionSet(this.name, c, false); } incontextof ctx,
+		function { global.KAGOptionSet(this.name, this.original, false); global.KAGOptionRefresh(global.kag.current); } incontextof ctx);
 }

@@ -2555,6 +2555,20 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	property hasTextGradient { getter { return chGradColor >= 0 || edgeGradColor >= 0 || shadowGradColor >= 0; } }
 
+	// the player's outline and shadow (Config's Text page, TextSettings.tjs; void: the game's
+
+	// defaults): in place of the defaults, though a scenario's own [font edge=...] still wins
+
+	/*C*/var playerEdge, playerEdgeColor, playerShadow, playerShadowColor;
+
+	property lookEdge { getter { return playerEdge !== void ? playerEdge : defaultEdge; } }
+
+	property lookEdgeColor { getter { return playerEdgeColor !== void ? playerEdgeColor : defaultEdgeColor; } }
+
+	property lookShadow { getter { return playerShadow !== void ? playerShadow : defaultShadow; } }
+
+	property lookShadowColor { getter { return playerShadowColor !== void ? playerShadowColor : defaultShadowColor; } }
+
 
 
 	/*C*/var sizeChanged = false; // True when font size is changed
@@ -3919,13 +3933,13 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		_rubyOffset = defaultRubyOffset;
 
-		shadow = defaultShadow;
+		shadow = lookShadow;
 
-		edge = defaultEdge;
+		edge = lookEdge;
 
-		shadowColor = defaultShadowColor;
+		shadowColor = lookShadowColor;
 
-		edgeColor = defaultEdgeColor;
+		edgeColor = lookEdgeColor;
 
 		chGradColor = defaultChGradColor;
 
@@ -4123,7 +4137,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.shadow == 'default')
 
-			shadow = defaultShadow;
+			shadow = lookShadow;
 
 		else if(elm.shadow !== void)
 
@@ -4133,7 +4147,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.shadowcolor == 'default')
 
-			shadowColor = defaultShadowColor;
+			shadowColor = lookShadowColor;
 
 		else if(elm.shadowcolor !== void)
 
@@ -4143,7 +4157,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.edge == 'default')
 
-			edge = defaultEdge;
+			edge = lookEdge;
 
 		else if(elm.edge !== void)
 
@@ -4153,7 +4167,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if(elm.edgecolor == 'default')
 
-			edgeColor = defaultEdgeColor;
+			edgeColor = lookEdgeColor;
 
 		else if(elm.edgecolor !== void)
 
@@ -5723,7 +5737,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		if (typeof this.chGradColor != "undefined" && !vertical && (this.chGradColor >= 0 || this.edgeGradColor >= 0 || this.shadowGradColor >= 0)) {
 
-			KAGDrawTextPasses(this, lay, x, y, text, color);
+			global.KAGDrawTextPasses(this, lay, x, y, text, color); // (global: a dictionary context finds no globals)
 
 			return;
 
@@ -10383,6 +10397,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 		shadowWidth   = src.shadowWidth;
 
 		edgeWithShadow = src.edgeWithShadow;
+
+		playerEdge = src.playerEdge;
+
+		playerEdgeColor = src.playerEdgeColor;
+
+		playerShadow = src.playerShadow;
+
+		playerShadowColor = src.playerShadowColor;
 
 		defaultChGradColor = src.defaultChGradColor;
 
