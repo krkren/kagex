@@ -923,14 +923,18 @@ def make_extras():
     header(c, L("Music"))
     c.panel((290, 262, 800, 960))
     c.panel((840, 262, 1630, 960), fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
-    # a record, above the player buttons
-    cx, cy = 545, 500
-    c.ellipse((cx - 170, cy - 170, cx + 170, cy + 170), fill=rgba(VIOLET))
-    for r in (150, 128, 106):
-        c.ellipse((cx - r, cy - r, cx + r, cy + r), outline=rgba(WHITE, 40), width=2)
-    c.ellipse((cx - 70, cy - 70, cx + 70, cy + 70), fill=rgba(WHITE))
-    ic_note(c, cx, cy, 80, rgba(VIOLET))
     c.save(out("musicmode_base.png"), opaque=True)
+    # the record, above the player buttons: a picture of its own, which turns while the music
+    # plays (KAGNowPlaying, template/system/MusicPlayer.tjs; a mark on its label shows it turn)
+    c = Canvas(260, 260)
+    cx, cy = 130, 130
+    c.ellipse((cx - 128, cy - 128, cx + 128, cy + 128), fill=rgba(VIOLET))
+    for r in (112, 96, 80):
+        c.ellipse((cx - r, cy - r, cx + r, cy + r), outline=rgba(WHITE, 40), width=2)
+    c.ellipse((cx - 54, cy - 54, cx + 54, cy + 54), fill=rgba(WHITE))
+    ic_note(c, cx, cy, 60, rgba(VIOLET))
+    c.ellipse((cx - 7, cy - 46, cx + 7, cy - 32), fill=rgba(LAV))
+    c.save(out("musicmode_record.png", False))
 
     # Search: the field (searchmode.ks puts an [edit] in it), its button, and the results'
     # panel with 7 rows of 1314x76 (316 + 86 y) and the replay arrows beside them

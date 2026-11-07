@@ -1,0 +1,265 @@
+/**
+ * The music playing (since 0.24.0): a panel with a picture that turns while the music plays (a
+ * record), the track's title, how far it has played of how long, and a bar that seeks: a click
+ * or a drag on it, or the left and right keys (a controller's D-pad) five seconds at a time. The
+ * sample's music room has one (musicmode.ks, Override.tjs nowPlaying).
+ *
+ *   var p = new KAGNowPlaying(kag, kag.fore.messages[0]);
+ *   p.setPos(310, 284); p.setSize(470, 420);
+ *   p.picture = "musicmode_record";        // turns while the music plays (none: "")
+ *   p.titleOf = function { return "..."; }; // the title shown (void: the file's name)
+ *   p.bufferOf = function { return kag.bgm.currentBuffer; };  // void: kag.bgm's
+ *   kag.fore.messages[0].addLinkLayer(p);  // the keys reach it; [backlay] copies it
+ *
+ * The picture holds still with Reduce Motion. Its look: the text styles nowplaying.title and
+ * nowplaying.time, and the bar's colours.
+ */
+
+KAGDefineTextStyle("nowplaying.title", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:18 ]);
+KAGDefineTextStyle("nowplaying.time", %[ size:22, bold:true, align:"center", valign:"middle", color:0x5c4cb4 ]);
+
+// a time in ms as m:ss
+function KAGMinSec(ms)
+{
+	var s = (int)(+ms / 1000);
+	s = 0 if s < 0;
+	return "%d:%02d".sprintf(s \ 60, s % 60);
+}
+
+class KAGNowPlaying extends Layer
+{
+	var window;
+	var picture = "", titleOf, bufferOf, a11yName = "Now playing";
+	var pic, picSize = 260, angle = 0.0, turnSpeed = 60.0;  // degrees a second
+	var barH = 12, barMargin = 30, trackColor = 0xffd8cfff, fillColor = 0xff5025ff, knobColor = 0xff5025ff;
+	var timer, lastTick, seeking = false, lastText = "";
+	var a11yHidden = true, linkNum;
+
+	function KAGNowPlaying(win, par)
+	{
+		super.Layer(win, par);
+		window = win;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 0;
+		focusable = true;
+		visible = true;
+		timer = new Timer(onTick, "");
+		timer.interval = 33;
+		timer.enabled = true;
+		lastTick = System.getTickCount();
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+		invalidate pic if pic !== void && isvalid pic;
+		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
+		super.finalize(...);
+	}
+
+	function setSize(w, h)
+	{
+		super.setSize(w, h);
+		setImageSize(w, h);
+		redraw();
+	}
+
+	property buffer
+	{
+		getter {
+			var b;
+			try { b = bufferOf !== void ? KAGBindToGlobal(bufferOf)() : (typeof window.bgm == "Object" && window.bgm !== void ? window.bgm.currentBuffer : void); } catch { b = void; }
+			return b !== void && isvalid b ? b : void;
+		}
+	}
+
+	// a buffer whose times can be read: one playing or paused (an empty buffer's times kill
+	// the engine, UPSTREAM.md 49)
+	function loaded(b) { return b !== void && (b.status == "play" || b.status == "pause"); }
+
+	// the music playing (a buffer that plays), not a fade to silence
+	property playing
+	{
+		getter { var b = buffer; return b !== void && b.status == "play" && !b.inFadeAndStop; }
+	}
+
+	property barY { getter { return picSize + 86; } }
+
+	function onTick()
+	{
+		if (!isvalid this) return;
+		var now = System.getTickCount(), dt = (now - lastTick) / 1000.0;
+		lastTick = now;
+		var still = typeof global.KAGOptionGet != "undefined" && !!KAGOptionGet("reduceMotion");
+		if (playing && !still && picture != "") angle = (angle + turnSpeed * dt) % 360;
+		redraw();
+	}
+
+	function loadPicture()
+	{
+		if (picture == "" || pic !== void) return;
+		pic = new global.Layer(window, this);
+		pic.visible = false;
+		try { pic.loadImages(picture); } catch (e) { dm("now playing: " + e.message); invalidate pic; pic = void; picture = ""; }
+	}
+
+	function redraw()
+	{
+		if (!isvalid this) return;
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		// (krkr_richtext draws a layer's pixels only once something has read them)
+		if (typeof useCache != "undefined") useCache;
+		loadPicture();
+		if (pic !== void) {
+			// turned about its centre, into the top of the panel
+			var r = angle * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+			var pw = pic.imageWidth, ph = pic.imageHeight, dx = width / 2, dy = picSize / 2;
+			var E = dx - (c * pw / 2 - s * ph / 2), F = dy - (s * pw / 2 + c * ph / 2);
+			affineCopy(pic, 0, 0, pw, ph, true, c, s, -s, c, E, F, stFastLinear, false);
+			if (typeof useCache != "undefined") useCache; // (again, after the copy)
+		}
+		var b = buffer, title = "", pos = 0, total = 0;
+		if (loaded(b)) {
+			try { pos = +b.position; total = +b.totalTime; } catch {}
+			title = titleOf !== void ? KAGBindToGlobal(titleOf)() : Storages.extractStorageName(b.storage);
+		}
+		var y = picSize + 16;
+		KAGDrawStyledText(this, "nowplaying.title", title != "" ? title : "—", 10, y, width - 20, 40);
+		// the bar, filled as far as it has played, and the times under it
+		var bx = barMargin, bw = width - barMargin * 2, by = barY;
+		fillRect(bx, by, bw, barH, trackColor);
+		var k = total > 0 ? pos / total : 0;
+		k = 0 if k < 0;
+		k = 1 if k > 1;
+		var fw = (int)(bw * k);
+		fillRect(bx, by, fw, barH, fillColor) if fw > 0;
+		var kx = bx + fw;
+		for (var dy = -11; dy <= 11; dy++) {
+			var dxk = (int)Math.sqrt(121 - dy * dy);
+			fillRect(kx - dxk, by + barH / 2 + dy, dxk * 2 + 1, 1, focused ? 0xffffb020 : knobColor);
+		}
+		var text = total > 0 ? KAGMinSec(pos) + " / " + KAGMinSec(total) : "";
+		KAGDrawStyledText(this, "nowplaying.time", text, 10, by + barH + 12, width - 20, 30);
+		update();
+		var said = title + "|" + text + "|" + focused;
+		if (said != lastText) pushA11y(title, text);
+		lastText = said;
+	}
+
+	// seeking: a click or a drag on the bar
+	function seekAt(x)
+	{
+		var b = buffer;
+		if (!loaded(b)) return;
+		var total = +b.totalTime;
+		if (total <= 0) return;
+		var k = (x - barMargin) / (width - barMargin * 2);
+		k = 0 if k < 0;
+		k = 0.999 if k > 0.999;
+		try { b.position = (int)(total * k); } catch (e) { dm("now playing: " + e.message); }
+		redraw();
+	}
+
+	function onBar(y) { return y >= barY - 16 && y <= barY + barH + 16; }
+
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button != mbLeft || !onBar(y)) { super.onMouseDown(...); return; }
+		focus() if focusable && !focused;
+		seeking = true;
+		seekAt(x);
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (seeking) { seekAt(x); return; }
+		cursor = onBar(y) ? window.cursorPointed : window.cursorDefault;
+		super.onMouseMove(...);
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (seeking && button == mbLeft) { seeking = false; return; }
+		super.onMouseUp(...);
+	}
+
+	function seekBy(ms)
+	{
+		var b = buffer;
+		if (!loaded(b)) return;
+		var total = +b.totalTime, p = +b.position + ms;
+		p = 0 if p < 0;
+		p = total - 500 if p > total - 500;
+		try { b.position = (int)p; } catch (e) { dm("now playing: " + e.message); }
+		redraw();
+	}
+
+	function onKeyDown(key, shift, process = true)
+	{
+		switch (key) {
+		case VK_LEFT:  seekBy(-5000); return;
+		case VK_RIGHT: seekBy(5000); return;
+		case VK_HOME:  seekBy(-0x7fffffff); return;
+		}
+		if ((key == VK_UP || key == VK_DOWN) && linkNum !== void) {
+			// on to the message layer's other links
+			parent.keyLink = linkNum;
+			super.onKeyDown(key, shift, process);
+			if (isvalid this && focused && parent.keyLink != linkNum) parent.focus();
+			return;
+		}
+		super.onKeyDown(key, shift, process);
+	}
+
+	function onFocus(prevfocused, direction)
+	{
+		parent.keyLink = linkNum if linkNum !== void;
+		super.onFocus(...);
+		redraw();
+	}
+
+	function onBlur(nextfocused)
+	{
+		super.onBlur(...);
+		redraw();
+	}
+
+	// as a message layer's link (addLinkLayer)
+	function commit() {}
+
+	function onSearchPrevFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findPrevFocusable != "undefined") layer = parent.findPrevFocusable(this, layer);
+		super.onSearchPrevFocusable(layer);
+	}
+
+	function onSearchNextFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findNextFocusable != "undefined") layer = parent.findNextFocusable(this, layer);
+		super.onSearchNextFocusable(layer);
+	}
+
+	function cloneFor(win, par)
+	{
+		var l = new global.KAGNowPlaying(win, par);
+		l.name = name;
+		l.picture = picture, l.titleOf = titleOf, l.bufferOf = bufferOf, l.a11yName = a11yName;
+		l.picSize = picSize, l.turnSpeed = turnSpeed, l.angle = angle;
+		l.setPos(left, top);
+		l.setSize(width, height);
+		l.visible = visible;
+		return l;
+	}
+
+	// screen readers: a slider with the title and the time
+	function pushA11y(title, text)
+	{
+		if (typeof global.KAGA11y != "Object" || KAGA11y === void || !KAGA11y.available) return;
+		var name = tr(a11yName) + (title != "" ? ": " + title : "") + (text != "" ? ", " + text : "");
+		var states = [ "focusable" ];
+		states.add("focused") if focused;
+		KAGA11y.updateNodes(this, [ %[ id:"np", role:"slider", name:name, states:states, rect:KAGA11y.rectOf(this) ] ], focused ? "np" : void);
+	}
+}

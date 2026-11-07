@@ -5548,6 +5548,41 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the title's greeting by the visit and the day, and the music room's player: its record turns, a click on its bar seeks")
+    def _():
+        if eng.tjs('return typeof global.KAGGreeting != "undefined" && typeof global.nowPlaying != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework or game from before the greetings and the player)", flush=True)
+            return
+        got = str(eng.tjs('''var r = [], keep = [sf.heroNamed, sf.heroName, sf.greetingLastTime];
+            sf.greetingLastTime = void; KAGGreetingPicked = void; r.add(KAGGreetingText(KAGGreeting()));
+            sf.heroNamed = true; sf.heroName = "Sam"; sf.greetingLastTime = (new Date()).getTime() - 5 * 86400000;
+            KAGGreetingPicked = void; r.add(KAGGreetingText(KAGGreeting()));
+            var d = new Date(); r.add(KAGGreetingScore("date:%02d-%02d".sprintf(d.getMonth() + 1, d.getDate()), d));
+            r.add(KAGGreetingScore("date:%02d-%02d".sprintf((d.getMonth() + 6) % 12 + 1, d.getDate()), d));
+            sf.heroNamed = keep[0], sf.heroName = keep[1], sf.greetingLastTime = keep[2]; KAGGreetingPicked = void;
+            return r.join("|");''')).split("|")
+        print("     greetings: first %r, back %r, today's date %s, another's %s" % tuple(got), flush=True)
+        if not got[0].startswith("Welcome to the KAGEX sample") or not got[1].startswith("Welcome back") or \
+                got[2] != "10" or got[3] != "-1":
+            raise SmokeError("the greetings weren't picked by the visit and the day: %s" % got)
+        eng.tjs('tf.musicView = 0; sf.extramode = 3; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("the music room", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.nowPlaying !== void', timeout=30)
+        eng.tjs('playBgm(0); return 1;')
+        eng.wait("the music", 'kag.fore.messages[0].names.nowPlaying.playing', timeout=15)
+        time.sleep(1.0)
+        got = str(eng.tjs('''var p = kag.fore.messages[0].names.nowPlaying, b = p.buffer, r = [];
+            r.add(p.angle > 0 ? "turns" : "still"); r.add(nowPlayingTitle() == trackItemName(0) ? "titled" : nowPlayingTitle());
+            p.onMouseDown(p.width / 2, p.barY + 4, mbLeft, 0); p.onMouseUp(p.width / 2, p.barY + 4, mbLeft, 0);
+            var half = b.position / b.totalTime; r.add("%.2f".sprintf(half));
+            var a = b.position; p.onKeyDown(VK_RIGHT, 0); r.add(b.position - a >= 4000 ? "on" : "stuck " + (b.position - a));
+            return r.join(",");''')).split(",")
+        print("     the player: %s" % got, flush=True)
+        if got[0] != "turns" or got[1] != "titled" or abs(float(got[2]) - 0.5) > 0.05 or got[3] != "on":
+            raise SmokeError("the music room's player didn't turn, name the track, seek to its middle or seek on: %s" % got)
+        eng.tjs("stopBgm(); return 1;")
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("the glossary: its words marked in the text, a click on one shows its entry, Extras lists them")
     def _():
         if eng.tjs('return typeof global.KAGGlossary == "Object" && KAGGlossary.entries().count > 0 ? 1 : 0;') != 1:

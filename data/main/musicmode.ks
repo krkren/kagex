@@ -98,6 +98,13 @@
 
 
 
+; The music playing (since 0.24.0): the record turns, the track's title, and a bar that seeks
+; (a click or a drag, or the left and right keys; nowPlaying in Override.tjs)
+
+[eval exp='nowPlaying()']
+
+
+
 ; What the list shows (since 0.24.0): the music, the voices heard, or the favourite voices
 ; (musicView in Override.tjs: the buttons' labels are drawn on them)
 

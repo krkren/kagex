@@ -138,11 +138,20 @@
 
 
 
+; Ai's greeting in a bubble beside her: by the time of day, the date, the visit (since 0.24.0;
+; titleGreeting in Override.tjs, greetings.csv)
+
+[eval exp="titleGreeting()"]
+
 [trans method=crossfade time=300]
 
 [wt]
 
 [current layer=message0 page=fore]
+
+; the greeting's voice, where greetings.csv gives one (since 0.24.0)
+
+[eval exp="titleGreetingVoice()"]
 
 ; The first time in a run, offer to carry on where the game left off (Override.tjs)
 

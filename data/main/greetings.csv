@@ -1,0 +1,21 @@
+﻿# The title's greetings (template/system/Greetings.tjs; Override.tjs, titleGreeting)
+# When,Text,Voice,Weight
+#   When: morning afternoon evening night weekend date:MM-DD first back back:N any exp:<TJS>,
+#   every one of them true; the lines with the most that hold win. %name% is the player's name
+#   (a line with it is left out until they give one). The text is translated through lang.json
+first,Welcome to the KAGEX sample! Press Start to see what it can do.
+back,"Welcome back! It's been a while."
+back,"Welcome back, %name%! It's been a while.",,2
+morning,"Good morning! You're up early."
+morning,"Good morning, %name%! Shall we look at some layers before breakfast?"
+afternoon,Good afternoon! The demos are waiting.
+afternoon,"Good afternoon, %name%!"
+evening,"Good evening! The street lights are coming on."
+evening exp:sf.clear,"Good evening! Have you seen the title at dusk? Try the arrows."
+night,"It's late... one more demo, then bed?"
+night,"Still up, %name%? Don't stay too late!"
+weekend morning,"A weekend morning! Plenty of time for every demo."
+date:12-25,"Merry Christmas, %name%!"
+date:12-25,Merry Christmas!
+date:01-01,"Happy New Year, %name%!"
+date:01-01,Happy New Year!

@@ -2329,6 +2329,58 @@ function titlePictures()
     return list;
 }
 
+// ---- the title's greeting (since 0.24.0; template/system/Greetings.tjs, greetings.csv) ----
+// the player's name in a greeting: the one they gave on the name screen
+KAGGreetingNameOf = function { return sf.heroNamed ? (string)sf.heroName : ""; };
+// a speech bubble beside Ai, drawn on the title's page (so it comes and goes with it)
+function titleGreeting()
+{
+    if (typeof global.KAGGreeting == "undefined") return;
+    var g = KAGGreeting(), text = KAGGreetingText(g);
+    if (text == "") return;
+    var m = kag.current, hold = m.holdAlpha;
+    var bx = 900, by = 452, bw = 400, bh = 138, tipX = 1352, tipY = 404;
+    m.holdAlpha = true;
+    // the tail, up from the bubble's top towards her mouth (its border, then its inside)
+    greetingTail(m, bx + bw - 110, by + 4, bx + bw - 30, by + 4, tipX, tipY, 0xff5025ff);
+    m.fillRect(bx + 6, by + 6, bw, bh, 0xffa690ff);
+    m.fillRect(bx, by, bw, bh, 0xff5025ff);
+    m.fillRect(bx + 4, by + 4, bw - 8, bh - 8, 0xfffcfaff);
+    greetingTail(m, bx + bw - 101, by + 4, bx + bw - 37, by + 4, tipX - 8, tipY + 8, 0xfffcfaff);
+    KAGDrawStyledText(m, "greeting", text, bx + 18, by + 10, bw - 36, bh - 20);
+    m.holdAlpha = hold;
+}
+// the greeting's voice (greetings.csv's Voice: Ai's), once a run, after the title has shown
+function titleGreetingVoice()
+{
+    if (tf.greetingSaid || typeof global.KAGGreeting == "undefined") return;
+    var g = KAGGreeting();
+    if (g === void || g.voice == "") return;
+    tf.greetingSaid = true;
+    KAGPlayVoiceLine(%[ speaker:"ai", voice:g.voice ]);
+}
+function greetingTail(l, x1, y1, x2, y2, x3, y3, color)
+{
+    var top = y3 < y1 ? y3 : y1, bottom = y1 > y2 ? y1 : y2;
+    bottom = y3 if y3 > bottom;
+    for (var y = top; y <= bottom; y++) {
+        // where the row crosses the triangle's edges
+        var xs = [];
+        var edges = [ [x1, y1, x3, y3], [x2, y2, x3, y3], [x1, y1, x2, y2] ];
+        for (var i = 0; i < 3; i++) {
+            var e = edges[i];
+            if (e[1] == e[3]) continue;
+            var lo = e[1] < e[3] ? e[1] : e[3], hi = e[1] < e[3] ? e[3] : e[1];
+            if (y < lo || y > hi) continue;
+            xs.add(e[0] + (e[2] - e[0]) * (y - e[1]) / (e[3] - e[1]));
+        }
+        if (xs.count < 2) continue;
+        var a = xs[0], b = xs[0];
+        for (var i = 1; i < xs.count; i++) { a = xs[i] if xs[i] < a; b = xs[i] if xs[i] > b; }
+        l.fillRect((int)a, y, (int)(b - a) + 1, 1, color);
+    }
+}
+
 /**
  * The picture the title shows (title.ks): the one picked with its arrows, if it's unlocked
  */
@@ -2391,6 +2443,25 @@ function trackPick(index)
 function musicTrackList()
 {
     screenList("musicList", "Tracks", 870, 291, 748, 640, 46, 1, 8, tf.musicmodelist.count, drawTrackItem, trackPick, trackItemName);
+}
+
+// ---- the music playing (since 0.24.0; template/system/MusicPlayer.tjs) ----
+function nowPlaying()
+{
+    var m = kag.current;
+    var p = new KAGNowPlaying(kag, m);
+    p.name = "nowPlaying";
+    p.picture = "musicmode_record";
+    p.titleOf = nowPlayingTitle;
+    p.setPos(310, 272);
+    p.setSize(470, 432);
+    m.addLinkLayer(p);
+}
+// the title of the track playing, as the list names it
+function nowPlayingTitle()
+{
+    var i = musicIndexOf(kag.bgm.playingStorage);
+    return i >= 0 ? trackItemName(i) : Storages.extractStorageName(kag.bgm.playingStorage);
 }
 
 // ---- the music room's voices (since 0.24.0; template/system/Voices.tjs) ----

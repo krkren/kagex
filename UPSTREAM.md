@@ -293,3 +293,9 @@ Script features that need these log the missing plugin and carry on without the 
 - **Where:** `SDL3WindowForm`'s constructor (`sdl3/environ/form.cpp`): on Android, iOS and the consoles the window is full screen and the drawing surface is fixed at the size it asks for, 1920x1080 (`mFixedSurfaceWidth`/`Height`), scaled to the screen. Nothing reads the game's own size, and the window's inner size stays 1920x1080 whatever the game sets.
 - **What it costs:** a game made at another size (1280x720, or a 4:3 1920x1440 primary layer) is drawn shrunk or in part on phones: a commercial game moved to KAGEX's engines drew at three quarters, at the top of the phone. kagex's framework only warns at start (`Initialize.tjs`), and `doc/kagex.txt` ("Games on Phones and in the Browser") says to make phone builds at 1920x1080.
 - **Fix:** take the surface's size from an option (`-surfacewidth`/`-surfaceheight` in `config.cf`, which kagex-release writes from the game's `scWidth`/`scHeight`), or from the primary layer's size when the game makes it.
+
+## 49. Asking an empty sound buffer for its times kills the engine
+
+- **Where:** `WaveSoundBuffer.totalTime` and `position` (and so `samplePosition`'s conversions) on a buffer with nothing open (`status` "unload"): the time in ms comes from a sample count divided by the format's sample rate, which is 0 until a file is opened, and the integer division raises SIGFPE (exit code -8 here, no message, no log line).
+- **What it costs:** any script that shows a buffer's time without checking its status first: 0.24.0's music room panel (`KAGNowPlaying`, `MusicPlayer.tjs`) took the engine down the moment it opened, since KAG's BGM object keeps an unloaded second buffer. The framework reads the times only while a buffer plays or is paused.
+- **Fix:** return 0 for both while no file is open (the sample rate is 0).
