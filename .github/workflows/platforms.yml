@@ -739,10 +739,10 @@ jobs:
           s=0
           # (diagnostic branch: Pip's lip-sync step alone, eight times, then the whole test once)
           bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
-          for i in 1 2 3 4 5 6 7 8; do
+          for i in 1 2 3 4; do
             xcrun simctl terminate "$dev" "$bundle" 2>/dev/null || true
             xcrun simctl uninstall "$dev" "$bundle" 2>/dev/null || true
-            if [ "$i" -le 5 ]; then steps="demo anim.ks|the animated character blinks"; else steps="demo |the animated character blinks"; fi
+            steps="Extras start|demo |finishing|compiled text|a compiled script starts|English lines|Japanese lines|krkr_richtext draws|a compiled scene saves|BACK goes back|a demo chosen|BACK in a scene|the animated character blinks"
             echo "[$i] steps: $steps"
             python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --steps "$steps" > "results/lip-$i.log" 2>&1 || s=$((s+1))
             grep -E "^(ok|FAIL)|lip-sync from|ms:position|readVoice calls|didn't|timed out" "results/lip-$i.log" | sed "s/^/[$i] /" | cut -c1-2500
