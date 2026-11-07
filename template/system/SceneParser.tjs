@@ -34,8 +34,9 @@ var SCN_TEXTFLAG_NOTEXT = 0x20;
 var SCN_TEXTFLAG_CONT   = 0x40;
 
 // Compiled format version, part of every compiled file's source key (2: exits and entry; 3: a
-// game's other languages in its texts, choices and titles)
-var SCN_FORMAT_VERSION = 3;
+// game's other languages in its texts, choices and titles; 4: a scene's own title marked
+// (titled) and its jumps that may not happen (links), for the flowchart)
+var SCN_FORMAT_VERSION = 4;
 
 // FNV-1a over a string, as 8 hex digits
 function scnHashString(s)
@@ -1179,6 +1180,10 @@ class SceneParser
 			var d = %[ label:s.label, title:s.title, firstLine:s.firstLine, startLine:s.firstLine,
 					   lastLine:s.lastLine, spCount:s.pointCount - 1, texts:s.texts, lines:s.lines ];
 			d.nexts = s.nexts if s.nexts.count > 0;
+			// the flowchart's (Flowchart.tjs): a label with a title of its own, and the jumps
+			// that may not happen, which are steps of the scene rather than nexts
+			d.titled = 1 if s.titled;
+			d.links = s.links if s.links.count > 0;
 			root.scenes.add(d);
 		}
 		return root;
@@ -1188,8 +1193,8 @@ class SceneParser
 	// Scenes
 	// ------------------------------------------------------------------
 
-	function beginScene(label, title, line) {
-		scene = %[ label:label, title:title, firstLine:line, lastLine:line, lines:[], texts:[], nexts:[],
+	function beginScene(label, title, line, titled = false) {
+		scene = %[ label:label, title:title, titled:titled, links:[], firstLine:line, lastLine:line, lines:[], texts:[], nexts:[],
 				   choices:[], pointCount:0, stateMap:%[], sflagSeen:%[], prevStageKey:"", prevEventKey:"",
 				   closed:false, pendingPoint:void, linePoint:void ];
 		emitSavePoint(line);
@@ -1209,10 +1214,11 @@ class SceneParser
 	function onScnLabel(label, page, line) {
 		cline = line;
 		if (ifStack.count > 0) error("a label can't be inside [if]...[endif] in a compiled scenario");
-		var title = (page !== void && page != "") ? page : scene.title;
+		var titled = page !== void && page != "";
+		var title = titled ? page : scene.title;
 		scene.lastLine = line - 1;
 		finishScene(label);
-		beginScene(label, title, line);
+		beginScene(label, title, line, titled);
 		dead = false;
 		deadNest = 0;
 	}
@@ -1887,7 +1893,12 @@ class SceneParser
 		}
 		addExit(next.storage, next.target);
 		if (elm.__cond !== void || ifStack.count > 0) {
-			// a jump that may not happen, or one inside [if]: a step of its own
+			// a jump that may not happen, or one inside [if]: a step of its own (and a link the
+			// flowchart draws)
+			var link = %[ type:0, cond:1 ];
+			link.storage = next.storage if next.storage !== void;
+			link.target = next.target if next.target !== void;
+			scene.links.add(link);
 			var step = [ "next", 0 ];
 			step.push("storage", next.storage) if next.storage !== void;
 			step.push("target", next.target) if next.target !== void;

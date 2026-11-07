@@ -136,7 +136,8 @@ class Engine:
         clicking stops by itself once the game gets there, so it can't click on into whatever
         that screen shows (the demo menu's choices). The clicks go to KAG's click handler
         (onPrimaryClick, what a left click on the game calls): Agent.click takes window
-        coordinates, and the game's position in the window differs on every platform."""
+        coordinates, and the game's position in the window differs on every platform. A choice
+        (but the demo menu's) gets its first option."""
         if on:
             self.tjs("""
                 global.__smokeStopAt = "%s";
@@ -144,6 +145,13 @@ class Engine:
                     global.__smokeClicker = new Timer(function() {
                         if (global.__smokeStopAt != "" && kag.conductor.curStorage == global.__smokeStopAt) {
                             global.__smokeClicker.enabled = false;
+                            return;
+                        }
+                        // a choice in a demo (char.ks's, since 0.24.0): the first, as a
+                        // player clicking on would; not the demo menu's
+                        if (kag.selectShowing && kag.inStable && kag.conductor.curStorage != "s0001.ks" &&
+                            kag._selectLayer !== void && kag._selectLayer.selects.count > 0) {
+                            kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]);
                             return;
                         }
                         kag.onPrimaryClick();
@@ -5396,6 +5404,100 @@ def sample_steps(eng):
             raise SmokeError("Pip's mouth didn't move while he spoke (levels %s)" % lips)
         eng.tjs("kag.goToStart(); return 1;")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("the flowchart: the demos' scenes and the choice between them, the route taken, a scene"
+          " played from its start with the choices made on the way there")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.KAGChartData != "undefined"'
+                                       ' && typeof global.chartInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework or game from before the flowchart)", flush=True)
+            return
+        # the chart, from the compiled scripts: the demo menu first, a row for each demo, the
+        # Character demo's choice with its two ways meeting again, every demo back to the menu
+        shape = str(eng.tjs('''KAGChartReset(); var c = KAGChartData(), r = [], b = c.byId;
+            r.add(c.root.id + "@" + c.root.x + "," + c.root.y + "=" + KAGChartName(c.root));
+            var ways = [];
+            for (var i = 0; i < c.edges.count; i++) { var e = c.edges[i]; if (e.from == "char.ks*crossroads" || e.to == "char.ks*staging") ways.add(e.from + ">" + e.to + ":" + e.kind); }
+            ways.sort(); r.add(ways.join(" "));
+            var back = 0; for (var i = 0; i < c.nodes.count; i++) back++ if c.nodes[i].back.find("s0001.ks*start") >= 0;
+            r.add(back);
+            r.add(b["char.ks*park"].y == b["char.ks*crossroads"].y && b["char.ks*station"].y > b["char.ks*park"].y && b["char.ks*station"].x == b["char.ks*park"].x ? "placed" : "misplaced");
+            r.add(b["char.ks*start"].chapter);
+            return r.join("|");''')).split("|")
+        print("     the chart: %s" % shape, flush=True)
+        if shape[0] != "s0001.ks*start@0,0=Demo Menu":
+            raise SmokeError("the chart doesn't start at the demo menu (flowchart.csv's caption): %s" % shape[0])
+        want = ("char.ks*crossroads>char.ks*park:choice char.ks*crossroads>char.ks*station:choice"
+                " char.ks*park>char.ks*staging:next char.ks*station>char.ks*staging:next")
+        if shape[1] != want:
+            raise SmokeError("the Character demo's choice isn't drawn as two ways meeting again: %s" % shape[1])
+        if int(shape[2]) < 8 or shape[3] != "placed" or shape[4] != "Characters":
+            raise SmokeError("the demos don't go back to the menu, the choice's ways aren't side by side, or no chapter: %s" % shape)
+        # the demos played took the choice's first way: the park seen, the station not; the
+        # flags kept as the story first got to each scene
+        route = str(eng.tjs('''var b = KAGChartData().byId, f = sf.chartFlags;
+            return [KAGChartState(b["char.ks*park"]), KAGChartState(b["char.ks*station"]),
+                f !== void && f["char.ks*staging"] !== void ? f["char.ks*staging"].charRoute : "-",
+                f !== void && f["char.ks*crossroads"] !== void ? f["char.ks*crossroads"].charRoute : "-"].join(",");'''))
+        print("     the route: %s" % route, flush=True)
+        if route != "seen,locked,park,":
+            raise SmokeError("the route isn't the park's (park, station, staging's and the choice's flags): %s" % route)
+        # the screen: the chart on Extras' Chart tab, the keys going from scene to scene
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.tjs('sf.extramode = 6; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("chart.ks", 'kag.conductor.curStorage == "chart.ks" && kag.inStable && chartViewNow() !== void', timeout=20)
+        keys = str(eng.tjs('''var v = chartViewNow(), r = [];
+            v.moveFocus(KAGChartData().byId["char.ks*park"]); r.add(v.focusId);
+            v.onKeyDown(VK_DOWN, 0); r.add(v.focusId);
+            v.onKeyDown(VK_RIGHT, 0); r.add(v.focusId);
+            var z = v.zoom; chartZoom(-1); r.add(v.zoom < z ? "smaller" : "same");
+            return r.join(" ");'''))
+        print("     the keys: %s" % keys, flush=True)
+        if keys != "char.ks*park char.ks*station char.ks*staging smaller":
+            raise SmokeError("the arrow keys or the zoom button don't move on the chart: %s" % keys)
+        # a scene not reached asks nothing; one seen asks first (Esc: No)
+        eng.tjs('chartPick(KAGChartData().byId["char.ks*station"]); return 1;')
+        time.sleep(0.5)
+        if eng.tjs("return kag.currentDialog === void ? 1 : 0;") != 1:
+            raise SmokeError("a scene not reached yet asked to be played")
+        eng.tjs('chartPick(KAGChartData().byId["char.ks*crossroads"]); return 1;')
+        eng.wait("the prompt", 'typeof kag.currentDialog == "Object" && kag.currentDialog !== void', timeout=10)
+        eng.key("VK_ESCAPE")
+        eng.wait("the prompt to close", "kag.currentDialog === void && kag.conductor.curStorage == \"chart.ks\"", timeout=10)
+        # played from the choice: its flags as they were, the other way taken this time
+        eng.tjs('chartPlay(KAGChartData().byId["char.ks*crossroads"]); return 1;')
+        eng.wait("the choice's scene", 'world_object.player !== void && world_object.player.curSceneName == "char.ks*crossroads"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        # (clicks on to the choice, the scene's second line)
+        for i in range(40):
+            if eng.tjs('return kag.selectShowing && kag.inStable && kag._selectLayer !== void && kag._selectLayer.selects.count == 2 ? 1 : 0;') == 1:
+                break
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.4)
+        else:
+            raise SmokeError("the choice didn't show after the scene played from the chart")
+        before = str(eng.tjs('return "" + f.charRoute;'))
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
+        eng.wait("the station", 'world_object.player.curSceneName == "char.ks*station" && kag.inStable', timeout=30)
+        got = str(eng.tjs('''return [f.charRoute, sf.chartLast, sf.chartFlags["char.ks*station"].charRoute,
+            KAGChartIsNew(KAGChartData().byId["char.ks*station"]) ? "new" : "old"].join(",");'''))
+        print("     from the chart's choice: before it %s; after it %s" % (before, got), flush=True)
+        if before != "" or got != "station,char.ks*station,station,new":
+            raise SmokeError("playing from the choice didn't start with its flags, or the station wasn't recorded: %s / %s" % (before, got))
+        # played from the park: the seek takes the park's way through the choice, and the flags
+        # are the park's
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+        eng.tjs('chartPlay(KAGChartData().byId["char.ks*park"]); return 1;')
+        eng.wait("the park", 'world_object.player !== void && world_object.player.curSceneName == "char.ks*park"'
+                 ' && !kag.skipNoDisp && kag.inStable', timeout=60)
+        got = str(eng.tjs('return [f.charRoute, world_object.player.seeking ? "seeking" : "there", sf.chartLast].join(",");'))
+        print("     from the park: %s" % got, flush=True)
+        if got != "park,there,char.ks*park":
+            raise SmokeError("playing from the park didn't bring its flags back: %s" % got)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
 
     @step("the glossary: its words marked in the text, a click on one shows its entry, Extras lists them")
     def _():

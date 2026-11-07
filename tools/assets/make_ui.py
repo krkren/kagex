@@ -72,6 +72,7 @@ LABELS = {
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
         "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG", "Glossary": "用語集",
+        "Chart": "チャート",
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
@@ -518,6 +519,26 @@ def ic_close(c, cx, cy, s, col):
     c.stroke([(cx - r, cy + r), (cx + r, cy - r)], s * 0.14, col)
 
 
+def ic_plus(c, cx, cy, s, col):
+    r = s * 0.38
+    c.stroke([(cx - r, cy), (cx + r, cy)], s * 0.14, col)
+    c.stroke([(cx, cy - r), (cx, cy + r)], s * 0.14, col)
+
+
+def ic_minus(c, cx, cy, s, col):
+    r = s * 0.38
+    c.stroke([(cx - r, cy), (cx + r, cy)], s * 0.14, col)
+
+
+def ic_here(c, cx, cy, s, col):
+    """a ring round a dot, with ticks: where the story is"""
+    r = s * 0.3
+    c.ellipse((cx - r, cy - r, cx + r, cy + r), outline=col, width=s * 0.1)
+    c.ellipse((cx - s * 0.11, cy - s * 0.11, cx + s * 0.11, cy + s * 0.11), fill=col)
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        c.stroke([(cx + dx * s * 0.34, cy + dy * s * 0.34), (cx + dx * s * 0.5, cy + dy * s * 0.5)], s * 0.1, col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -871,10 +892,21 @@ def make_saveload():
 
 
 # --- Extras ----------------------------------------------------------------------------
-# five tabs 144 wide, 10 apart, from x 680 (the screens' titles end before it; Return at 1450)
-EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_musicmode", "Music"),
-              ("extra_searchmode", "Search"), ("extra_glossary", "Glossary")]
-EXTRA_TAB_W = 144
+# six tabs 120 wide, 8 apart, from x 682 (the screens' titles end before it; Return at 1450:
+# the screens' .ks files put them at 682, 810, 938, 1066, 1194, 1322); every label in one size,
+# the largest at which each fits
+EXTRA_TABS = [("extra_cgmode", "CG"), ("extra_replaymode", "Replay"), ("extra_chart", "Chart"),
+              ("extra_musicmode", "Music"), ("extra_searchmode", "Search"), ("extra_glossary", "Glossary")]
+EXTRA_TAB_W = 120
+
+
+def extra_tab_size():
+    probe = Canvas(8, 8)
+    room = EXTRA_TAB_W - 6 - 2 * 4 - 2 * 6  # the shadow, the border, a margin
+    size = 26
+    while size > 14 and max(probe.text_width(L(t), font("Black", size), 0) for _, t in EXTRA_TABS) > room:
+        size -= 1
+    return size
 
 
 def make_extras():
@@ -930,9 +962,26 @@ def make_extras():
         c.rrect((3, 3, 467, 73), 9, fill=fill)
         c.save(out("glossary_row_%s.png" % st, False))
 
+    # the flowchart (chart.ks, template/system/Flowchart.tjs): the chart in a panel, the zoom
+    # buttons and the one that goes back to the story's place under it
+    c = Canvas(1920, 1080)
+    screen_bg(c)
+    header(c, L("Chart"))
+    c.panel((290, 206, 1630, 940), r=18, fill=rgba(WHITE, 170), border=LAV, bw=4, shadow=0)
+    c.save(out("chart_base.png"), opaque=True)
+    for name, icon in (("chart_zoomout", ic_minus), ("chart_zoomin", ic_plus), ("chart_here", ic_here)):
+        for st in ("normal", "over"):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            icon(b, 32, 32, 34, rgba(fg))
+            b.save(out("%s_%s.png" % (name, st), False))
+
+    size = extra_tab_size()
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):
-            nav_button(L(label), st, w=EXTRA_TAB_W, size=26).save(out("%s_%s.png" % (name, st)))
+            nav_button(L(label), st, w=EXTRA_TAB_W, size=size).save(out("%s_%s.png" % (name, st)))
     pages = ["Character 1", "Character 2", "Character 3", "Character 4", "Character 5", "Other"]
     for i, label in enumerate(pages):
         for st in ("normal", "over"):

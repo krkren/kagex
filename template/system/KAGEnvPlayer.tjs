@@ -1174,6 +1174,9 @@ class KAGEnvPlayer
 		if (scenario) {
 			// the scene by its own label ("" finds the first one)
 			curSceneName = curStorage + scenario.label;
+			// the route the flowchart shows (Flowchart.tjs): not the scenes a seek passes, but
+			// the one it stops in (finishSeek)
+			chartEnter() if seekScene === void;
 		}
 		checkSceneSkipStop();
 	}
@@ -2877,6 +2880,12 @@ class KAGEnvPlayer
 		kag.cancelSkip();
 		kag._clearMessageLayerNumOnSkipNoDispChanged = clearNum;
 		jumped();
+		chartEnter();
+	}
+
+	function chartEnter() {
+		if (typeof global.KAGChartEnter != "undefined" && scenario !== void)
+			KAGChartEnter(curSceneName, scenario, scnStorage !== void && scnStorage.root !== void ? +scnStorage.root.version : 0);
 	}
 
 	/**
@@ -2937,8 +2946,65 @@ class KAGEnvPlayer
 		return ret;
 	}
 
+	// A seek that meets a choice takes the one that leads to the scene it goes to (the
+	// flowchart's node after a choice, a replay of a scene after one): the choice that names it,
+	// else the one from which this script's scenes reach it, else the first
+	function seekChoice(sellist) {
+		var cur = curStorage, keys = [];
+		for (var i = 0; i < sellist.count; i++) {
+			var sel = sellist[i];
+			var st = sel.storage !== void && sel.storage != "" ? Storages.extractStorageName(sel.storage) : cur;
+			var label = sel.target !== void ? (string)sel.target : "";
+			var key = (st + label).toLowerCase();
+			if (label == "") {
+				if (st.toLowerCase() != cur.toLowerCase()) key = void;
+				else if (scnStorage !== void && scnStorage.root !== void && scnStorage.root.scenes.count > 0)
+					key = (st + scnStorage.root.scenes[0].label).toLowerCase();
+			}
+			if (key == seekScene) return sel;
+			keys.add(key);
+		}
+		for (var i = 0; i < sellist.count; i++)
+			if (keys[i] !== void && keys[i].indexOf(cur.toLowerCase() + "*") == 0 && seekReaches(keys[i].substr(cur.length))) return sellist[i];
+		return sellist[0];
+	}
+
+	// whether the scene at label goes on, in this script, to the scene the seek goes to
+	function seekReaches(label) {
+		if (scnStorage === void || scnStorage.root === void) return false;
+		var cur = curStorage.toLowerCase(), seen = %[], todo = [ label.toLowerCase() ];
+		var scenes = scnStorage.root.scenes, byLabel = %[];
+		for (var i = 0; i < scenes.count; i++) byLabel[((string)scenes[i].label).toLowerCase()] = i;
+		while (todo.count > 0) {
+			var l = todo.pop();
+			if (seen[l]) continue;
+			seen[l] = true;
+			if (cur + l == seekScene) return true;
+			var i = byLabel[l];
+			if (i === void) continue;
+			var sc = scenes[i];
+			var lists = [ sc.nexts, sc.links ];
+			for (var k = 0; k < lists.count; k++) {
+				var ns = lists[k];
+				for (var j = 0; ns !== void && j < ns.count; j++) {
+					var n = ns[j];
+					if (n.storage !== void && n.storage != "" && Storages.extractStorageName(n.storage).toLowerCase() != cur) continue;
+					if (n.target !== void && n.target != "") todo.add(((string)n.target).toLowerCase());
+				}
+			}
+		}
+		return false;
+	}
+
 	function extractSelect(seltype, sellist) {
 		var c = sellist.count;
+		if (c > 0 && seeking) {
+			// nothing is shown while seeking: on along the way to the seek's scene
+			var sel = seekChoice(sellist);
+			addTag(%[tagname:"next", storage:sel.storage, target:sel.target, exp:sel.exp, eval:sel.eval]);
+			sellist.clear();
+			return;
+		}
 		if (c > 0) {
 			//dm("Choice expansion:" + seltype);
 			var text = "";

@@ -166,6 +166,8 @@
 
 *extra
 
+[jump storage="chart.ks" cond='sf.extramode == 6']
+
 [jump storage="glossary.ks" cond='sf.extramode == 5']
 
 [jump storage="searchmode.ks" cond='sf.extramode == 4']

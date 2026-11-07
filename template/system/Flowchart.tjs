@@ -1,0 +1,912 @@
+/**
+ * The flowchart (since 0.24.0): the scenes of a game's compiled scripts (!scnlist.txt) as a
+ * chart of nodes and the jumps and choices between them, with the scenes the player has seen,
+ * the ones new since the chart last showed them and the one the story is at; a node seen (or
+ * one a condition opens) plays from its start, with the choices that led there made.
+ *
+ * Nodes: every scene with a title of its own (*label|Title) is one; a scene without one belongs
+ * to the node before it (SceneParser.tjs marks titles in compiled files from format 4, titled;
+ * before that a title that changes starts a node). Lines: what the compiler found each scene goes
+ * on to (its nexts: a jump, the next scene, a choice) and the jumps that may not happen ([jump
+ * cond=], a jump inside [if]: links). A jump back to a node on the way there (a demo going back
+ * to its menu) is drawn as a mark beside the node, not a line.
+ *
+ * The route: the read marks (KAGEnvPlayer's) say which scenes have been seen. The first time the
+ * story enters a scene with a title (KAGEnvPlayer.loadScene calls KAGChartEnter, not while a
+ * hidden skip seeks or a replay plays), the game keeps a copy of its flags (f) in sf.chartFlags,
+ * marks the node new (sf.chartNew) and notes it as the story's place (sf.chartLast). Playing a
+ * node puts those flags back first (KAGChartGo), so a later scene finds the choices made.
+ *
+ * flowchart.csv (optional; Script,Label,Caption,Chapter,Column,Row,Unlock, # for comments):
+ *   a row with no Label gives every node of its script the Chapter (and, with Column/Row, where
+ *   the script's first node goes)
+ *   Caption      what a node says in place of its scene's title
+ *   Chapter      the chapter's name, shown over the first node of each run of it
+ *   Column, Row  where the node goes on the chart's grid (cells, from 0); empty: laid out by the
+ *                chart (each branch on a row of its own, a join where its first way in put it)
+ *   Unlock       a TJS expression: while it's true the node plays before it's been seen (a
+ *                side story only the chart opens)
+ *
+ *   var chart = KAGChartData();     // built once (KAGChartReset() after scripts change)
+ *   chart.nodes  %[ id (its first scene: storage + label, lower case), storage, label, title,
+ *                titles, caption, chapter, unlock, keys (its scenes), x, y (cells), back (ids it
+ *                goes back to) ]
+ *   chart.edges  %[ from, to, kind ("next", "choice", "cond") ], chart.columns, chart.rows
+ *   KAGChartState(node)    "seen", "open" (Unlock, not seen) or "locked"
+ *   KAGChartIsNew(node), KAGChartNoticed(node), KAGChartCurrent() (the node the story is at)
+ *   KAGChartGo(node, before)  the story from the node; before(node) runs once the flags are
+ *                          back (the sample's runs loadinit.ks, which sets up the window)
+ *
+ *   var view = new KAGChartView(kag, kag.fore.messages[0]);   // the chart on a screen
+ *   view.setPos(...); view.setSize(w, h); view.onPick = function(node) { ... };
+ *   view.build();   // draws it, centred on the story's place (or the first node)
+ *   A drag moves it (a flick coasts), the wheel or a pinch zooms about the pointer, the arrow
+ *   keys (a controller's D-pad) go to the nearest node that way, + and - zoom, Home goes to
+ *   the story's place, Return (A) or a click or tap picks the node. drawNode(layer, node, x, y,
+ *   w, h, state, isNew, current) draws a node in a game's own look (states as KAGChartState).
+ *   On a message layer, addLinkLayer(view) makes it one of its links (the keys go to it), and
+ *   [backlay] copies it.
+ */
+
+// the scripts the chart reads: !scnlist.txt's, in its order
+function KAGChartScripts()
+{
+	var list = [], name = "!scnlist.txt";
+	if (!Storages.isExistentStorage(name)) return list;
+	var lines = [].load(name);
+	for (var i = 0; i < lines.count; i++) {
+		var s = ((string)lines[i]).trim();
+		if (s == "" || s.charAt(0) == "#" || s.indexOf(":") >= 0) continue;
+		list.add(Storages.extractStorageName(s));
+	}
+	return list;
+}
+
+var KAGChartCache;
+function KAGChartData()
+{
+	if (KAGChartCache === void) KAGChartCache = new KAGChart();
+	return KAGChartCache;
+}
+function KAGChartReset()
+{
+	invalidate KAGChartCache if KAGChartCache !== void;
+	KAGChartCache = void;
+}
+
+class KAGChart
+{
+	var nodes = [], byId = %[], sceneNode = %[], firstScene = %[], edges = [];
+	var columns = 0, rows = 0, root;
+	var pending = [];   // [ from node, storage it's in, %[ type, storage, target, cond ] ]
+	var outs = %[], visited = %[], onStack = %[];
+
+	function KAGChart()
+	{
+		var load = global.KAGEnvPlayer; // (its script: StorageData, scnFindCompiled)
+		var scripts = KAGChartScripts();
+		for (var f = 0; f < scripts.count; f++) readScript(scripts[f]);
+		for (var i = 0; i < pending.count; i++) addEdge(pending[i]*);
+		pending.clear();
+		readTable();
+		layout();
+	}
+
+	function finalize() {}
+
+	function readScript(storage)
+	{
+		if (typeof global.scnFindCompiled == "undefined" || scnFindCompiled(storage) === void) return;
+		var data = new StorageData(storage);
+		var root = data.root, scenes = root !== void ? root.scenes : void;
+		var marked = root !== void && +root.version >= 4, cur;
+		for (var i = 0; scenes !== void && i < scenes.count; i++) {
+			var sc = scenes[i], key = (storage + sc.label).toLowerCase();
+			firstScene[storage.toLowerCase()] = key if firstScene[storage.toLowerCase()] === void;
+			var starts = cur === void || (marked ? +sc.titled : sc.title != cur.title);
+			if (starts) {
+				var titles = %[];
+				var t = scnTitles(sc);
+				if (typeof t == "Object" && t !== void) (Dictionary.assign incontextof titles)(t);
+				cur = %[ id:key, storage:storage, label:(string)sc.label, title:(string)sc.title, titles:titles,
+					caption:"", chapter:"", unlock:"", keys:[ key ], x:-1, y:-1, back:[] ];
+				nodes.add(cur);
+				byId[key] = cur;
+			} else {
+				cur.keys.add(key);
+			}
+			sceneNode[key] = cur;
+			// (copies: the compiled file goes with data)
+			for (var j = 0; sc.nexts !== void && j < sc.nexts.count; j++) pending.add([ cur, storage, copyNext(sc.nexts[j]) ]);
+			for (var j = 0; sc.links !== void && j < sc.links.count; j++) pending.add([ cur, storage, copyNext(sc.links[j]) ]);
+		}
+		invalidate data;
+	}
+
+	function copyNext(n)
+	{
+		var c = %[ type:+n.type, cond:+n.cond ];
+		c.storage = (string)n.storage if n.storage !== void;
+		c.target = (string)n.target if n.target !== void;
+		return c;
+	}
+
+	function addEdge(from, storage, n)
+	{
+		var ts = n.storage !== void && n.storage != "" ? Storages.extractStorageName(n.storage) : storage;
+		var key = n.target !== void && n.target != "" ? (ts + n.target).toLowerCase() : firstScene[ts.toLowerCase()];
+		if (key === void) return;
+		var to = sceneNode[key];
+		if (to === void) return;
+		var kind = n.type == 0 ? (n.cond ? "cond" : "next") : "choice";
+		if (to === from) return; // a scene of the node going on to the next one
+		for (var i = 0; i < edges.count; i++) {
+			var e = edges[i];
+			if (e.from == from.id && e.to == to.id) { e.kind = kind if e.kind == "cond" && kind != "cond"; return; }
+		}
+		var e = %[ from:from.id, to:to.id, kind:kind ];
+		edges.add(e);
+		if (outs[from.id] === void) outs[from.id] = [];
+		outs[from.id].add(e);
+	}
+
+	// flowchart.csv: captions, chapters, places and what opens a node
+	function readTable()
+	{
+		var name = "flowchart.csv";
+		if (!Storages.isExistentStorage(name)) return;
+		var lines = [].load(name);
+		for (var i = 0; i < lines.count; i++) {
+			var line = (string)lines[i];
+			line = line.substring(1) if i == 0 && line != "" && #line.charAt(0) == 0xfeff;
+			if (line.trim() == "" || line.charAt(0) == "#") continue;
+			var c = KAGChartSplit(line);
+			var storage = c[0] != "" ? Storages.extractStorageName(c[0]) : "", label = c[1];
+			if (storage == "") continue;
+			storage += ".ks" if storage.indexOf(".") < 0;
+			var list = [];
+			if (label == "") {
+				for (var j = 0; j < nodes.count; j++) if (nodes[j].storage.toLowerCase() == storage.toLowerCase()) list.add(nodes[j]);
+			} else {
+				label = "*" + label if label.charAt(0) != "*";
+				var n = sceneNode[(storage + label).toLowerCase()];
+				list.add(n) if n !== void;
+			}
+			for (var j = 0; j < list.count; j++) {
+				var n = list[j];
+				n.caption = c[2] if c[2] != "" && label != "";
+				n.chapter = c[3] if c[3] != "";
+				n.unlock = c[6] if c[6] != "";
+				// a script's row places its first node; a scene's row places that node
+				if ((label != "" || j == 0) && c[4] != "" && c[5] != "") n.fixX = +c[4], n.fixY = +c[5];
+			}
+		}
+	}
+
+	// each branch on a row of its own, from the first node: the first way on stays on the row,
+	// the others start rows below what's placed; a join stays where its first way in put it
+	function layout()
+	{
+		for (var i = 0; i < nodes.count; i++) if (nodes[i].fixX !== void) nodes[i].x = nodes[i].fixX, nodes[i].y = nodes[i].fixY;
+		root = nodes.count > 0 ? nodes[0] : void;
+		if (root !== void) place(root, root.x >= 0 ? root.x : 0, root.y >= 0 ? root.y : 0);
+		for (var i = 0; i < nodes.count; i++) {
+			var n = nodes[i];
+			if (visited[n.id]) continue;
+			place(n, n.x >= 0 ? n.x : 0, n.y >= 0 ? n.y : rows);
+		}
+		// the jumps back to a node on the way there: marks, not lines
+		for (var i = edges.count - 1; i >= 0; i--) {
+			var e = edges[i];
+			if (!e.back) continue;
+			byId[e.from].back.add(e.to);
+			edges.erase(i);
+		}
+		columns = 0, rows = 0;
+		for (var i = 0; i < nodes.count; i++) {
+			columns = nodes[i].x + 1 if nodes[i].x + 1 > columns;
+			rows = nodes[i].y + 1 if nodes[i].y + 1 > rows;
+		}
+		(Dictionary.clear incontextof visited)();
+		(Dictionary.clear incontextof onStack)();
+	}
+
+	function place(n, col, row)
+	{
+		if (n.fixX === void) n.x = col, n.y = row;
+		visited[n.id] = true;
+		onStack[n.id] = true;
+		rows = n.y + 1 if n.y + 1 > rows;
+		var es = outs[n.id], first = true;
+		for (var i = 0; es !== void && i < es.count; i++) {
+			var e = es[i], t = byId[e.to];
+			if (onStack[t.id]) { e.back = true; continue; }
+			if (visited[t.id]) continue;
+			place(t, n.x + 1, first ? n.y : rows);
+			first = false;
+		}
+		delete onStack[n.id];
+	}
+
+	function nodeOfScene(key) { return key !== void ? sceneNode[((string)key).toLowerCase()] : void; }
+}
+
+// a CSV line's fields (quotes allowed)
+function KAGChartSplit(line)
+{
+	var out = [], cur = "", q = false;
+	for (var i = 0; i < line.length; i++) {
+		var ch = line.charAt(i);
+		if (q) {
+			if (ch == '"') { if (line.charAt(i + 1) == '"') { cur += '"'; i++; } else q = false; }
+			else cur += ch;
+		} else if (ch == '"') q = true;
+		else if (ch == ",") { out.add(cur.trim()); cur = ""; }
+		else cur += ch;
+	}
+	out.add(cur.trim());
+	while (out.count < 7) out.add("");
+	return out;
+}
+
+// the node's name as shown: its caption, or its scene's title in the language shown
+function KAGChartName(n)
+{
+	var s = n.caption != "" ? n.caption : n.title;
+	if (n.caption == "" && typeof global.KAGLanguage == "Object" && KAGLanguage !== void && n.titles[KAGLanguage.current] !== void)
+		s = n.titles[KAGLanguage.current];
+	if (n.caption != "") s = tr(s);
+	return s;
+}
+
+function KAGChartSeen(n)
+{
+	var r = kag.sflags.envPlayerSceneReaded;
+	if (typeof r != "Object" || r === void) return false;
+	for (var i = 0; i < n.keys.count; i++) if (+r[n.keys[i]] > 0) return true;
+	return false;
+}
+
+function KAGChartState(n)
+{
+	if (KAGChartSeen(n)) return "seen";
+	if (n.unlock != "") {
+		var open = false;
+		try { open = !!Scripts.eval(n.unlock); } catch (e) { dm("flowchart.csv: " + n.unlock + ": " + e.message); }
+		if (open) return "open";
+	}
+	return "locked";
+}
+
+function KAGChartIsNew(n)
+{
+	var m = kag.sflags.chartNew;
+	return typeof m == "Object" && m !== void && m[n.id] !== void;
+}
+
+// the player has seen it on the chart: no longer new
+function KAGChartNoticed(n)
+{
+	var m = kag.sflags.chartNew;
+	delete m[n.id] if typeof m == "Object" && m !== void && m[n.id] !== void;
+}
+
+function KAGChartCurrent()
+{
+	return KAGChartData().nodeOfScene(kag.sflags.chartLast);
+}
+
+// the scene player enters a scene (KAGEnvPlayer.loadScene): the route
+function KAGChartEnter(name, scene, version)
+{
+	if (kag.skipNoDisp || kag.isRecollection) return; // a seek's hidden skip, a replay
+	var key = ((string)name).toLowerCase(), sf = kag.sflags;
+	sf.chartLast = key;
+	// only where a node starts (a scene with a title of its own, from compiled format 4)
+	if (+version >= 4 && !(+scene.titled)) return;
+	sf.chartFlags = %[] if typeof sf.chartFlags != "Object" || sf.chartFlags === void;
+	sf.chartNew = %[] if typeof sf.chartNew != "Object" || sf.chartNew === void;
+	if (sf.chartFlags[key] !== void) return;
+	var f = %[];
+	(Dictionary.assignStruct incontextof f)(kag.flags);
+	sf.chartFlags[key] = f;
+	sf.chartNew[key] = 1;
+}
+
+// the story from a node's start, its route's flags put back (as the story first got there; none
+// for a node it hasn't reached yet); before(node), when given, runs once they're back and before
+// the story goes on (the sample's runs loadinit.ks, which sets up the message window)
+function KAGChartGo(n, before = void)
+{
+	if (n === void) return false;
+	var all = kag.sflags.chartFlags, flags = typeof all == "Object" && all !== void ? all[n.id] : void;
+	(Dictionary.clear incontextof kag.flags)();
+	(Dictionary.assignStruct incontextof kag.flags)(flags) if flags !== void;
+	KAGChartNoticed(n);
+	KAGBindToGlobal(before)(n) if before !== void;
+	kag.sflags.chartLast = n.id;
+	var compiled = typeof global.world_object != "undefined" && world_object.scenePlayEnabled &&
+		typeof global.scnFindCompiled != "undefined" && scnFindCompiled(n.storage) !== void;
+	if (compiled) {
+		// a compiled scene is reached by playing its script there without showing it (the
+		// World's state on the way)
+		world_object.initPlayer();
+		world_object.player.seek(n.storage, n.label, 1, false);
+		kag.process(n.storage, "");
+	} else {
+		kag.process(n.storage, n.label);
+	}
+	return true;
+}
+
+// the framework's look for a chart's text (a game's textstyles.tjs changes it)
+KAGDefineTextStyle("chart.title", %[ size:20, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:12, lines:2 ]);
+KAGDefineTextStyle("chart.chapter", %[ size:18, bold:true, valign:"bottom", color:0x5025ff, minSize:12 ]);
+KAGDefineTextStyle("chart.badge", %[ size:14, bold:true, align:"center", valign:"middle", color:0xffffff ]);
+KAGDefineTextStyle("chart.back", %[ size:16, bold:true, valign:"middle", color:0x8070b8, minSize:11 ]);
+
+// ---------------------------------------------------------------------------------------
+// The chart on a screen
+// ---------------------------------------------------------------------------------------
+
+class KAGChartView extends Layer
+{
+	var window, data;
+	var cellW = 236, cellH = 92, nodeW = 196, nodeH = 60, pad = 40, chapterH = 24;
+	var minZoom = 0.35, maxZoom = 1.6;
+	var zoom = 1.0, viewX = 0.0, viewY = 0.0;     // the content's point at the view's top left
+	var focusId, hoverId;
+	var onPick, drawNode, a11yName = "Flowchart";
+	var background = 0;                          // filled behind the chart (0: clear)
+	var content;                                 // the whole chart at zoom 1 (a hidden layer)
+	var pressed = false, dragging = false, pressX, pressY, pressVX, pressVY;
+	var samples = [], vx = 0.0, vy = 0.0, timer, lastTick = 0, dragThreshold = 10;
+	var wheelHook, pinchHook, pinchZoom;
+	var a11yHidden = true, linkNum;
+
+	function KAGChartView(win, par)
+	{
+		super.Layer(win, par);
+		window = win;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 0;
+		focusable = true;
+		visible = true;
+		timer = new Timer(onTick, "");
+		timer.interval = 16;
+		wheelHook = onWheelHook;
+		pinchHook = onPinchHook;
+		window.addHook("onMouseWheelHook", wheelHook);
+		window.addHook("onTouchScalingHook", pinchHook);
+	}
+
+	function finalize()
+	{
+		if (isvalid window) {
+			window.removeHook("onMouseWheelHook", wheelHook);
+			window.removeHook("onTouchScalingHook", pinchHook);
+		}
+		invalidate timer;
+		invalidate content if content !== void && isvalid content;
+		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
+		super.finalize(...);
+	}
+
+	function setSize(w, h)
+	{
+		super.setSize(w, h);
+		setImageSize(w, h);
+		redraw() if data !== void;
+	}
+
+	// the chart drawn once at zoom 1, then shown at any zoom
+	function build(chart = void)
+	{
+		data = chart !== void ? chart : KAGChartData();
+		drawContent();
+		minZoom = fitZoom() if fitZoom() < minZoom && fitZoom() > 0.15;
+		var n = KAGChartCurrent();
+		n = data.root if n === void;
+		focusId = n !== void ? n.id : void;
+		center(n, false);
+		redraw();
+		pushA11y();
+	}
+
+	// the chart at zoom 1 (again, once a node's look changes)
+	function drawContent()
+	{
+		// (a cell more on the right for the last column's back marks)
+		var cw = (data.columns + 1) * cellW + pad * 2, ch = data.rows * cellH + pad * 2 + chapterH;
+		cw = 64 if cw < 64;
+		ch = 64 if ch < 64;
+		content = new global.Layer(window, this) if content === void;
+		with (content) {
+			.visible = false;
+			.type = ltAlpha;
+			.face = dfAlpha;
+			.setImageSize(cw, ch);
+			.setSize(cw, ch);
+			.fillRect(0, 0, cw, ch, 0);
+			// (krkr_richtext draws a layer's pixels only once something has read them)
+			if (typeof .useCache != "undefined") .useCache;
+		}
+		for (var i = 0; i < data.edges.count; i++) drawEdge(data.edges[i]);
+		for (var i = 0; i < data.nodes.count; i++) paintNode(data.nodes[i]);
+	}
+
+	// where a node is drawn in the content
+	function nodeX(n) { return pad + n.x * cellW; }
+	function nodeY(n) { return pad + chapterH + n.y * cellH + ((cellH - nodeH) >> 1); }
+
+	function paintNode(n)
+	{
+		var x = nodeX(n), y = nodeY(n), st = KAGChartState(n), isNew = st == "seen" && KAGChartIsNew(n);
+		var cur = KAGChartCurrent() === n;
+		if (drawNode !== void) KAGBindToGlobal(drawNode)(content, n, x, y, nodeW, nodeH, st, isNew, cur);
+		else defaultNode(content, n, x, y, nodeW, nodeH, st, isNew, cur);
+		// a chapter's name over the first node of it (the ones the way in comes from another)
+		if (n.chapter != "" && !chapterBefore(n)) KAGDrawStyledText(content, "chart.chapter", tr(n.chapter), x, y - chapterH - 6, cellW * 2 - 20, chapterH);
+		// where it goes back to (a demo, back to its menu): a hooked arrow and the name, out to
+		// the next node on the row
+		var room = roomRight(n);
+		for (var i = 0; i < n.back.count; i++) {
+			var t = data.byId[n.back[i]];
+			if (t === void) continue;
+			var bx = x + nodeW + 8, by = y + (nodeH >> 1) - 12 + i * 26, col = 0xff8070b8;
+			content.fillRect(bx + 17, by + 4, 3, 10, col);      // down from the top...
+			content.fillRect(bx + 6, by + 11, 14, 3, col);      // ...and back to the left
+			for (var k = 0; k < 6; k++) content.fillRect(bx + k, by + 12 - k, 1, k * 2 + 1, col);
+			KAGDrawStyledText(content, "chart.back", KAGChartName(t), bx + 26, by, room - 34, 24);
+		}
+	}
+
+	// how far right of a node its row is free (a back mark's name goes there)
+	function roomRight(n)
+	{
+		var next;
+		for (var i = 0; i < data.nodes.count; i++) {
+			var m = data.nodes[i];
+			if (m.y == n.y && m.x > n.x && (next === void || m.x < next)) next = m.x;
+		}
+		return next !== void ? (next - n.x) * cellW - nodeW - 12 : cellW * 2;
+	}
+
+	// whether a way into the node comes from one of the same chapter
+	function chapterBefore(n)
+	{
+		for (var i = 0; i < data.edges.count; i++) {
+			var e = data.edges[i];
+			if (e.to != n.id) continue;
+			var f = data.byId[e.from];
+			if (f !== void && f.chapter == n.chapter) return true;
+		}
+		return false;
+	}
+
+	function defaultNode(l, n, x, y, w, h, st, isNew, cur)
+	{
+		var border = st == "seen" ? 0xff5025ff : st == "open" ? 0xff8c78e0 : 0xffb8acd8;
+		var fill = cur ? 0xffe2dbff : st == "locked" ? 0xffeae6f5 : 0xffffffff;
+		var b = cur ? 5 : 3;
+		l.fillRect(x, y, w, h, border);
+		l.fillRect(x + b, y + b, w - b * 2, h - b * 2, fill);
+		var label = st == "locked" ? "?" : KAGChartName(n);
+		KAGDrawStyledText(l, "chart.title", label, x + 10, y + 4, w - 20, h - 8,
+			st == "locked" ? %[ color:0x9a90c0 ] : void);
+		if (isNew) {
+			l.fillRect(x + w - 46, y - 10, 50, 22, 0xffffb020);
+			KAGDrawStyledText(l, "chart.badge", tr("NEW"), x + w - 46, y - 10, 50, 22);
+		}
+		if (cur) {
+			// the story's place: a pin on its top left corner
+			disc(l, x + 2, y + 2, 13, 0xff5025ff);
+			disc(l, x + 2, y + 2, 9, 0xffffffff);
+			disc(l, x + 2, y + 2, 5, 0xff5025ff);
+		}
+	}
+
+	// a filled circle (rows of rects)
+	function disc(l, cx, cy, r, col)
+	{
+		for (var dy = -r; dy <= r; dy++) {
+			var dx = (int)Math.sqrt(r * r - dy * dy + 0.5);
+			l.fillRect(cx - dx, cy + dy, dx * 2 + 1, 1, col);
+		}
+	}
+
+	// a line between two nodes: right from the one, across the gap, up or down, into the other
+	function drawEdge(e)
+	{
+		var a = data.byId[e.from], b = data.byId[e.to];
+		if (a === void || b === void) return;
+		var seen = KAGChartSeen(a) && KAGChartSeen(b);
+		var col = seen ? 0xff5025ff : 0xffb8acd8, t = 3;
+		var x1 = nodeX(a) + nodeW, y1 = nodeY(a) + (nodeH >> 1);
+		var x2 = nodeX(b), y2 = nodeY(b) + (nodeH >> 1);
+		var dash = e.kind == "cond";
+		if (b.x > a.x) {
+			var mx = x2 - ((cellW - nodeW) >> 1);
+			hline(x1, mx, y1, t, col, dash);
+			vline(mx, y1, y2, t, col, dash);
+			hline(mx, x2 - 8, y2, t, col, dash);
+		} else {
+			// to a column before (or the same): out right, round below the rows, in from the left
+			var below = (a.y > b.y ? nodeY(a) : nodeY(b)) + nodeH + ((cellH - nodeH) >> 1) - 4;
+			var ox = x1 + 12, ix = x2 - 14;
+			hline(x1, ox, y1, t, col, dash);
+			vline(ox, y1, below, t, col, dash);
+			hline(ix, ox, below, t, col, dash);
+			vline(ix, below, y2, t, col, dash);
+			hline(ix, x2 - 8, y2, t, col, dash);
+		}
+		// the arrowhead
+		for (var i = 0; i < 8; i++) content.fillRect(x2 - 8 + i, y2 - 7 + i, 1, 15 - i * 2, col);
+	}
+
+	function hline(xa, xb, y, t, col, dash)
+	{
+		var x0 = xa < xb ? xa : xb, x1 = xa < xb ? xb : xa;
+		if (!dash) { content.fillRect(x0, y - (t >> 1), x1 - x0 + t, t, col); return; }
+		for (var x = x0; x < x1; x += 12) content.fillRect(x, y - (t >> 1), (x + 7 < x1 ? 7 : x1 - x), t, col);
+	}
+
+	function vline(x, ya, yb, t, col, dash)
+	{
+		var y0 = ya < yb ? ya : yb, y1 = ya < yb ? yb : ya;
+		if (!dash) { content.fillRect(x - (t >> 1), y0, t, y1 - y0 + t, col); return; }
+		for (var y = y0; y < y1; y += 12) content.fillRect(x - (t >> 1), y, t, (y + 7 < y1 ? 7 : y1 - y), col);
+	}
+
+	// ---- showing it ----
+	function fitZoom()
+	{
+		if (content === void || content.imageWidth == 0) return 1.0;
+		var zx = width / content.imageWidth, zy = height / content.imageHeight;
+		return zx < zy ? zx : zy;
+	}
+
+	function clamp()
+	{
+		if (content === void) return;
+		var cw = content.imageWidth, ch = content.imageHeight, vw = width / zoom, vh = height / zoom;
+		viewX = cw <= vw ? (cw - vw) / 2 : (viewX < 0 ? 0 : viewX > cw - vw ? cw - vw : viewX);
+		viewY = ch <= vh ? (ch - vh) / 2 : (viewY < 0 ? 0 : viewY > ch - vh ? ch - vh : viewY);
+	}
+
+	function center(n, smooth = true)
+	{
+		if (n === void) { clamp(); return; }
+		viewX = nodeX(n) + nodeW / 2 - width / zoom / 2;
+		viewY = nodeY(n) + nodeH / 2 - height / zoom / 2;
+		clamp();
+	}
+
+	// back to the story's place (or the first node), the focus on it
+	function home()
+	{
+		if (data === void) return;
+		var n = KAGChartCurrent();
+		n = data.root if n === void;
+		if (n === void) return;
+		focusId = n.id;
+		center(n);
+		redraw();
+		pushA11y();
+	}
+
+	// a node out of view comes into it
+	function reveal(n)
+	{
+		var x = nodeX(n), y = nodeY(n), m = 30;
+		var vw = width / zoom, vh = height / zoom;
+		viewX = x - m if x - m < viewX;
+		viewX = x + nodeW + m - vw if x + nodeW + m > viewX + vw;
+		viewY = y - m - chapterH if y - m - chapterH < viewY;
+		viewY = y + nodeH + m - vh if y + nodeH + m > viewY + vh;
+		clamp();
+	}
+
+	function redraw()
+	{
+		if (content === void) return;
+		face = dfAlpha;
+		fillRect(0, 0, width, height, background);
+		var sx = viewX, sy = viewY, sw = width / zoom, sh = height / zoom;
+		// the part of the chart in view (the view may be wider than the chart: centred)
+		var dx = 0, dy = 0, dw = width, dh = height;
+		if (sx < 0) { dx = -sx * zoom; dw -= dx * 2; sw = content.imageWidth; sx = 0; }
+		if (sy < 0) { dy = -sy * zoom; dh -= dy * 2; sh = content.imageHeight; sy = 0; }
+		operateStretch((int)dx, (int)dy, (int)dw, (int)dh, content, (int)sx, (int)sy, (int)sw, (int)sh, omAlpha, 255, stLinear);
+		frameNode(hoverId, 0x808c78e0, 3) if hoverId !== void && hoverId != focusId;
+		frameNode(focusId, 0xffffb020, 4) if focusId !== void && (focused || window.focusedLayer === parent);
+		update();
+	}
+
+	function frameNode(id, color, t)
+	{
+		var n = data.byId[id];
+		if (n === void) return;
+		var x = (nodeX(n) - viewX) * zoom - 5, y = (nodeY(n) - viewY) * zoom - 5;
+		var w = nodeW * zoom + 10, h = nodeH * zoom + 10;
+		colorRect(x, y, w, t, color & 0xffffff, color >>> 24);
+		colorRect(x, y + h - t, w, t, color & 0xffffff, color >>> 24);
+		colorRect(x, y + t, t, h - t * 2, color & 0xffffff, color >>> 24);
+		colorRect(x + w - t, y + t, t, h - t * 2, color & 0xffffff, color >>> 24);
+	}
+
+	// the node at a point in the view
+	function nodeAt(x, y)
+	{
+		if (data === void) return;
+		var cx = viewX + x / zoom, cy = viewY + y / zoom;
+		for (var i = 0; i < data.nodes.count; i++) {
+			var n = data.nodes[i], nx = nodeX(n), ny = nodeY(n);
+			if (cx >= nx && cx < nx + nodeW && cy >= ny && cy < ny + nodeH) return n;
+		}
+	}
+
+	function zoomTo(z, px = void, py = void)
+	{
+		px = width / 2 if px === void;
+		py = height / 2 if py === void;
+		z = minZoom if z < minZoom;
+		z = maxZoom if z > maxZoom;
+		var cx = viewX + px / zoom, cy = viewY + py / zoom;
+		zoom = z;
+		viewX = cx - px / zoom, viewY = cy - py / zoom;
+		clamp();
+		redraw();
+		pushA11y();
+	}
+
+	// ---- the pointer, a finger ----
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button != mbLeft) { super.onMouseDown(...); return; }
+		focus() if focusable && !focused;
+		window.gestures.cancel() if typeof window.gestures == "Object" && window.gestures !== void && typeof window.gestures.cancel != "undefined";
+		pressed = true, dragging = false, pressX = x, pressY = y, pressVX = viewX, pressVY = viewY;
+		vx = vy = 0, timer.enabled = false;
+		samples = [ [ System.getTickCount(), x, y ] ];
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (pressed) {
+			if (!dragging && (Math.abs(x - pressX) > dragThreshold || Math.abs(y - pressY) > dragThreshold)) dragging = true;
+			if (dragging) {
+				var now = System.getTickCount();
+				samples.add([ now, x, y ]);
+				while (samples.count > 2 && now - samples[0][0] > 100) samples.erase(0);
+				viewX = pressVX - (x - pressX) / zoom, viewY = pressVY - (y - pressY) / zoom;
+				clamp();
+				redraw();
+			}
+			return;
+		}
+		var n = nodeAt(x, y), id = n !== void ? n.id : void;
+		if (id != hoverId) { hoverId = id; redraw(); }
+		super.onMouseMove(...);
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (button != mbLeft || !pressed) { super.onMouseUp(...); return; }
+		pressed = false;
+		if (dragging) {
+			dragging = false;
+			var now = System.getTickCount(), s = samples[0], dt = now - s[0];
+			if (dt > 0 && dt < 150) {
+				vx = -(x - s[1]) * 1000.0 / dt / zoom, vy = -(y - s[2]) * 1000.0 / dt / zoom;
+				if (Math.abs(vx) + Math.abs(vy) > 80) { lastTick = now; timer.enabled = true; }
+			}
+			pushA11y();
+			return;
+		}
+		var n = nodeAt(x, y);
+		if (n !== void && n === nodeAt(pressX, pressY)) pick(n);
+	}
+
+	function onMouseLeave()
+	{
+		if (hoverId !== void) { hoverId = void; redraw(); }
+		super.onMouseLeave(...);
+	}
+
+	function onTick()
+	{
+		if (!isvalid this) return;
+		var now = System.getTickCount(), dt = (now - lastTick) / 1000.0;
+		lastTick = now;
+		dt = 0.05 if dt > 0.05;
+		viewX += vx * dt, viewY += vy * dt;
+		var k = Math.pow(0.05, dt);
+		vx *= k, vy *= k;
+		clamp();
+		redraw();
+		if (Math.abs(vx) + Math.abs(vy) < 20) { timer.enabled = false; pushA11y(); }
+	}
+
+	function onMouseWheel(shift, delta, x, y) {}
+
+	function over()
+	{
+		if (!isvalid this || window.currentDialog !== void) return false;
+		for (var l = this; l !== null && l !== void; l = l.parent) if (!l.visible) return false;
+		return true;
+	}
+
+	function onWheelHook(shift, delta, x, y)
+	{
+		if (!over()) return false;
+		var cx = cursorX, cy = cursorY;
+		if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
+		zoomTo(zoom * Math.pow(1.15, delta / 120), cx, cy);
+		return true;
+	}
+
+	function onPinchHook(start, current, px, py, flag)
+	{
+		if (!over() || start <= 0) return false;
+		var cx = cursorX, cy = cursorY;
+		if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
+		pinchZoom = zoom if pinchZoom === void || (flag & 1);
+		pressed = dragging = false;
+		zoomTo(pinchZoom * current / start, cx, cy);
+		pinchZoom = void if (flag & 2);
+		return true;
+	}
+
+	// ---- the keys (a controller's D-pad sends the arrows) ----
+	function pick(n)
+	{
+		focusId = n.id;
+		if (KAGChartIsNew(n)) { KAGChartNoticed(n); drawContent(); }
+		redraw();
+		pushA11y();
+		if (onPick !== void) KAGBindToGlobal(onPick)(n);
+	}
+
+	function moveFocus(n)
+	{
+		if (n === void) return;
+		focusId = n.id;
+		if (KAGChartIsNew(n)) { KAGChartNoticed(n); drawContent(); }
+		reveal(n);
+		redraw();
+		pushA11y();
+	}
+
+	// the nearest node that way, by the grid
+	function nearest(from, dx, dy)
+	{
+		var best, score;
+		for (var i = 0; i < data.nodes.count; i++) {
+			var n = data.nodes[i];
+			if (n === from) continue;
+			var ex = n.x - from.x, ey = n.y - from.y;
+			if (dx != 0 && ex * dx <= 0) continue;
+			if (dy != 0 && ey * dy <= 0) continue;
+			var s = dx != 0 ? Math.abs(ex) + Math.abs(ey) * 3 : Math.abs(ey) + Math.abs(ex) * 3;
+			if (best === void || s < score) best = n, score = s;
+		}
+		return best;
+	}
+
+	function onKeyDown(key, shift, process = true)
+	{
+		var from = data !== void && focusId !== void ? data.byId[focusId] : void, handled = true;
+		if (from === void && data !== void) from = data.root;
+		var to;
+		switch (key) {
+		case VK_LEFT:  to = nearest(from, -1, 0); break;
+		case VK_RIGHT: to = nearest(from, 1, 0); break;
+		case VK_UP:    to = nearest(from, 0, -1); break;
+		case VK_DOWN:  to = nearest(from, 0, 1); break;
+		case VK_HOME:  home(); return;
+		case VK_ADD: case 187: zoomTo(zoom * 1.25); return;
+		case VK_SUBTRACT: case 189: zoomTo(zoom / 1.25); return;
+		case VK_RETURN: case VK_SPACE: if (from !== void) pick(from); return;
+		default: handled = false;
+		}
+		if (to !== void) { moveFocus(to); return; }
+		if (handled && from !== void && (key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN) && linkNum !== void) {
+			// nothing that way: on to the message layer's other links
+			parent.keyLink = linkNum;
+			super.onKeyDown(key, shift, process);
+			if (isvalid this && focused && parent.keyLink != linkNum) parent.focus();
+			return;
+		}
+		if (!handled) super.onKeyDown(key, shift, process);
+	}
+
+	function onFocus(prevfocused, direction)
+	{
+		parent.keyLink = linkNum if linkNum !== void;
+		super.onFocus(...);
+		redraw();
+		pushA11y();
+	}
+
+	function onBlur(nextfocused)
+	{
+		super.onBlur(...);
+		redraw();
+	}
+
+	// a tip for the node under the pointer (Tooltips.tjs)
+	function tipAt(x, y)
+	{
+		var n = nodeAt(x, y);
+		if (n === void) return "";
+		var st = KAGChartState(n);
+		if (st == "locked") return tr("Not reached yet");
+		var s = KAGChartName(n);
+		s = tr(n.chapter) + ": " + s if n.chapter != "";
+		return s + (st == "open" ? "\n" + tr("Not played yet") : "");
+	}
+
+	// as a message layer's link (addLinkLayer)
+	function commit() {}
+
+	function onSearchPrevFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findPrevFocusable != "undefined") layer = parent.findPrevFocusable(this, layer);
+		super.onSearchPrevFocusable(layer);
+	}
+
+	function onSearchNextFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findNextFocusable != "undefined") layer = parent.findNextFocusable(this, layer);
+		super.onSearchNextFocusable(layer);
+	}
+
+	function cloneFor(win, par)
+	{
+		var l = new global.KAGChartView(win, par);
+		l.name = name;
+		l.cellW = cellW, l.cellH = cellH, l.nodeW = nodeW, l.nodeH = nodeH, l.pad = pad, l.chapterH = chapterH;
+		l.onPick = onPick, l.drawNode = drawNode, l.a11yName = a11yName, l.background = background;
+		l.setPos(left, top);
+		l.setSize(width, height);
+		l.visible = visible;
+		if (data !== void) {
+			l.build(data);
+			l.zoom = zoom, l.viewX = viewX, l.viewY = viewY, l.focusId = focusId;
+			l.redraw();
+		}
+		return l;
+	}
+
+	// screen readers: the chart and the nodes in view
+	function pushA11y()
+	{
+		if (typeof global.KAGA11y != "Object" || KAGA11y === void || !KAGA11y.available || data === void) return;
+		var nodes = [ %[ id:"chart", role:"list", name:tr(a11yName) ] ], focus;
+		for (var i = 0; i < data.nodes.count; i++) {
+			var n = data.nodes[i];
+			var x = (nodeX(n) - viewX) * zoom, y = (nodeY(n) - viewY) * zoom, w = nodeW * zoom, h = nodeH * zoom;
+			if (x + w < 0 || y + h < 0 || x > width || y > height) continue;
+			var states = [ "focusable" ];
+			if (n.id == focusId) states.add("selected"), focus = "n" + i;
+			var st = KAGChartState(n);
+			var name = st == "locked" ? tr("Not reached yet") : KAGChartName(n);
+			name = tr(n.chapter) + ": " + name if n.chapter != "" && st != "locked";
+			nodes.add(%[ id:"n" + i, role:"list_item", parent:"chart", states:states, name:name,
+				rect:KAGA11y.rectOf(this, (int)x, (int)y, (int)w, (int)h) ]);
+		}
+		KAGA11y.updateNodes(this, nodes, focus);
+	}
+
+	function onA11yAction(id, action, arg)
+	{
+		if (id.charAt(0) != "n" || data === void) return;
+		var n = data.nodes[+id.substring(1)];
+		if (n === void) return;
+		if (action == "focus") moveFocus(n);
+		else if (action == "click") pick(n);
+	}
+}

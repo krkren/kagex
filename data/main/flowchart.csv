@@ -1,0 +1,15 @@
+﻿# The flowchart's names (Extras' Chart tab; template/system/Flowchart.tjs)
+# Script,Label,Caption,Chapter,Column,Row,Unlock
+#   a row with no Label: every scene of the script gets the Chapter
+#   Caption    what the scene's box says in place of its title; Chapter: the name over its row
+#   Column,Row where it goes on the chart's grid (empty: laid out by the chart)
+#   Unlock     a TJS expression: while it's true the scene plays before it's been seen
+s0001,start,Demo Menu
+layer,,,Extended Layer
+char,,,Characters
+envlayer,,,World Layers
+transition,,,Transitions
+action,,,Extended Action
+effect,,,Effekseer Effects
+anim,,,Animated Character
+text,,,Text Effects

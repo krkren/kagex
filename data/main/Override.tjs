@@ -2030,6 +2030,63 @@ function glossaryEntry()
     m.holdAlpha = hold;
 }
 
+/**
+ * The flowchart (chart.ks, Extras' Chart tab; template/system/Flowchart.tjs): every demo's
+ * scenes and the ways between them, from the demo menu; a scene seen plays from its start, with
+ * the choices made on the way there (flowchart.csv names the demos)
+ */
+function chartInit()
+{
+    sf.extramode = 6;
+    tf.recollect = 0;
+    var c = KAGChartData(), seen = 0;
+    for (var i = 0; i < c.nodes.count; i++) seen++ if KAGChartSeen(c.nodes[i]);
+    tf.chartStatus = c.nodes.count == 0 ? tr("This game has no flowchart") : tr("%d of %d scenes seen").sprintf(seen, c.nodes.count);
+}
+// the chart, in the screen's panel (a link of the message layer, so the keys reach it)
+function chartView()
+{
+    var m = kag.current;
+    var v = new KAGChartView(kag, m);
+    v.name = "chartView";
+    v.a11yName = "Flowchart";
+    v.onPick = chartPick;
+    v.zoom = 0.8;
+    v.setPos(300, 216);
+    v.setSize(1320, 714);
+    v.build();
+    m.addLinkLayer(v);
+}
+function chartViewNow()
+{
+    var v = kag.fore.messages[0].names.chartView;
+    return v !== void && isvalid v ? v : void;
+}
+function chartZoom(dir)
+{
+    var v = chartViewNow();
+    v.zoomTo(dir > 0 ? v.zoom * 1.25 : v.zoom / 1.25) if v !== void;
+}
+function chartHere()
+{
+    var v = chartViewNow();
+    v.home() if v !== void;
+}
+// a scene picked: one seen plays from its start, after asking
+function chartPick(n)
+{
+    if (KAGChartState(n) == "locked") return;
+    askYesNo(tr("Play from “%s”?").sprintf(KAGChartName(n)), "Confirmation", chartPlay, void, n);
+}
+function chartPlay(n)
+{
+    extrasLeave();
+    stopBgm();
+    tf.recollect = 0;
+    // the flags as the story first got there, then the screen as a load sets it up
+    KAGChartGo(n, function(n) { kag.process("loadinit.ks", "", true, true); heroFromSf(); });
+}
+
 // The list of the lines found, on the screen's message layer (a link of it, so the keys and a
 // controller's D-pad reach it from the field and the buttons)
 function searchList()
