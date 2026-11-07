@@ -1,0 +1,24 @@
+Cubism Core 6.0.1 at /Users/runner/work/_temp/live2d/sdk/CubismSdkForNative-5-r.5/Core
+fetching krkrlive2d at 8edeb8e
++ git -C /Users/runner/work/_temp/live2d/src/krkrlive2d apply --whitespace=nowarn /Users/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/patches/krkrlive2d.patch
+fetching live2d at 58c4c66
+fetching live2d's submodules
++ git -c core.autocrlf=false -C /Users/runner/work/_temp/live2d/src/live2d submodule update --init --force --depth 1
+Submodule 'CubismNativeFramework' (https://github.com/wtnbgo/CubismNativeFramework.git) registered for path 'external/CubismNativeFramework'
+Submodule 'CubismNativeSamples' (https://github.com/wtnbgo/CubismNativeSamples.git) registered for path 'external/CubismNativeSamples'
+Submodule 'KTX-Software' (https://github.com/wtnbgo/KTX-Software.git) registered for path 'external/KTX-Software'
+Cloning into '/Users/runner/work/_temp/live2d/src/live2d/external/CubismNativeFramework'...
+Cloning into '/Users/runner/work/_temp/live2d/src/live2d/external/CubismNativeSamples'...
+Cloning into '/Users/runner/work/_temp/live2d/src/live2d/external/KTX-Software'...
+Submodule path 'external/CubismNativeFramework': checked out 'a1bd031712ae29c9f1a7b72e0dcebaf514c3a6f9'
+From https://github.com/wtnbgo/CubismNativeSamples
+ * branch            f4be00e964bd54aefa95e95ee33e03af243284e5 -> FETCH_HEAD
+Submodule path 'external/CubismNativeSamples': checked out 'f4be00e964bd54aefa95e95ee33e03af243284e5'
+From https://github.com/wtnbgo/KTX-Software
+ * branch            7c771f80dabf8c0411f07ceee248ed1a31a15f65 -> FETCH_HEAD
+Submodule path 'external/KTX-Software': checked out '7c771f80dabf8c0411f07ceee248ed1a31a15f65'
++ git -C /Users/runner/work/_temp/live2d/src/live2d apply --whitespace=nowarn /Users/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/patches/live2d.patch
++ git -C /Users/runner/work/_temp/live2d/src/live2d/external/CubismNativeFramework apply --whitespace=nowarn /Users/runner/work/kagex/kagex/kirikiri/kagex/tools/live2d/patches/live2d-CubismNativeFramework.patch
+fetching tp_stub at 35ef31a
+fetching ncbind at 256502b
+/Users/runner/work/kagex/kagex/kirikiri/kagex/ios-config.json: krkrlive2d from /Users/runner/work/_temp/live2d/src; the kit's build needs the environment in /Users/runner/work/_temp/live2d/kit.env
