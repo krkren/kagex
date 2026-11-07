@@ -1,0 +1,50 @@
+== sample (data, ios-sim)
+ok   start-up reaches the title screen                               28.0s
+     the system's language here: en (System.uiLanguage "en-US", candidates en,ja)
+ok   the sample is in English for the steps that read its text (KAGLanguageList)   0.2s
+ok   Extras start locked                                              0.0s
+     8 compiled to .scn, 0 warning(s)
+ok   the scripts in !scnlist.txt compile, so the demos play compiled   4.6s
+     (skipped: the save folder isn't a script folder here)
+ok   a compiled script starts from the World the script that goes to it leaves   0.1s
+ok   demo layer.ks plays to the end                                  80.8s
+ok   demo char.ks plays to the end                                   39.7s
+ok   demo envlayer.ks plays to the end                                6.1s
+ok   demo transition.ks plays to the end                             12.2s
+ok   demo action.ks plays to the end                                  3.3s
+ok   demo effect.ks plays to the end                                  6.1s
+ok   demo anim.ks plays to the end                                   68.7s
+ok   finishing every demo unlocks Extras                              0.0s
+ok   compiled text gets the word wrap                                 3.3s
+     greedy from the line's start, 20 lines a page: 3 lines, 0 page(s), a word at a time
+     quality from the line's start, 20 lines a page: 3 lines, 0 page(s), a word at a time
+     balanced from the line's start, 20 lines a page: 3 lines, 0 page(s), a word at a time
+     quality from x 900, 20 lines a page: 4 lines, 0 page(s), a word at a time
+     balanced from the line's start, 20 lines a page: 6 lines, 0 page(s), a word at a time
+     quality from x 600, 3 lines a page: 15 lines, 4 page(s), a word at a time
+ok   English lines break between words, where krkr_richtext draws as its line breaker plans them   1.3s
+     'あ。あ。あ。'... from the line's start: 3 lines (40, 40, 40), KAG's character wrap
+     'あ「い」あ「'... from the line's start: 3 lines (40, 40, 40), KAG's character wrap
+     'きゃきゃきゃ'... from the line's start: 3 lines (40, 40, 40), KAG's character wrap
+     'ああああああ'... from the line's start: 3 lines (44, 48, 14), KAG's character wrap
+     'ああああああ'... from x 900: 3 lines (19, 49, 38), KAG's character wrap
+ok   Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese   0.6s
+     (skipped: krkr_richtext doesn't draw here)
+ok   krkr_richtext draws a line's characters together, where KAG put them   0.1s
+     saved at char.ks*start,6,5,1
+ok   a compiled scene saves in the middle and loads where it was      6.2s
+     text, history, backlog marks, Ai shown: 6,6,6,1, then BACK: 5,5,5,1
+ok   BACK goes back a message, and the backlog's marks go back to theirs   7.5s
+ok   a demo chosen from the menu: BACK goes back to the menu, and another choice plays   6.8s
+     layer 0 at *label2,1,1,255,154, after BACK *label1,1,1,200,110 (label, text, visible, opacity, pen y)
+     the pen at Start and Translucent while playing: 66,110
+     loaded there: *label1,1,1,200,110, 1 line(s) "Start" in the backlog
+ok   BACK in a scene on KAG's own layers brings them back as they were   4.4s
+     Pip: 959 of its samples drawn, from y 10 to 747
+     readVoice calls (tick:at:sp before:sp after:position:rms:volume:volume2:use3D:fading:filters:other track): 178:238:8467:8467:191:0.00:100000:100000:1:0:0:- 355:415:15993:15993:362:0.15:100000:100000:1:0:0:- 703:763:31046:31046:703:0.17:100000:100000:1:0:0:- 787:847:34809:34809:789:0.00:100000:100000:1:0:0:- 897:957:40454:40454:917:0.00:100000:100000:1:0:0:- 1017:1077:0:0:0:0.00:100000:100000:1:0:0:-
+     lip-sync from level: 39 mouth samples while the voice played (0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0), at 8 positions
+     ms:position:samplePosition:level there:readVoice's last, at 44100 Hz, 150:170:7526:0.21:- 150:170:7526:0.21:- 150:170:7526:0.21:- 150:170:7526:0.21:- 150:170:7526:0.21:- 150:170:7526:0.21:- 333:341:15052:0.15:0.00 334:341:15052:0.15:0.00 334:341:15052:0.15:0.00 334:341:15052:0.15:0.00 334:341:15052:0.15:0.00 335:341:15052:0.15:0.00 613:618:27283:0.27:0.15 613:618:27283:0.27:0.15 613:618:27283:0.27:0.15 613:618:27283:0.27:0.15 613:618:27283:0.27:0.15 613:618:27283:0.27:0.15 701:703:31046:0.21:0.15 701:703:31046:0.21:0.15 701:703:31046:0.21:0.15 701:703:31046:0.21:0.15 702:703:31046:0.21:0.15 785:789:34809:0.02:0.17 785:789:34809:0.02:0.17 785:789:34809:0.02:0.17 785:789:34809:0.02:0.17 878:895:39513:0.00:0.00 878:895:39513:0.00:0.00 878:895:39513:0.00:0.00 878:895:39513:0.00:0.00 878:895:39513:0.00:0.00 878:895:39513:0.00:0.00 954:960:42336:0.00:0.00 955:960:42336:0.00:0.00 955:960:42336:0.00:0.00 1016:0:0:0.00:0.00 1016:0:0:0.00:0.00 1016:0:0:0.00:0.00
+     its synthesized line: a lip track of 111 marks; vowel mouths shown: a e i u
+     a voice with no lip track: 100 mouth samples (0 1 1 1 1 1 1 2 2 2 2 2 2 0 0 0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2)
+ok   the animated character blinks, and its mouth follows its voice  78.2s
+smoke test: passed

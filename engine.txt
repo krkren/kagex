@@ -1,0 +1,18 @@
+ios engine key 2593c4378217f0afc2b68db4d2602dd5d4749123fc076a3656d1c9ea8303a0eb
+  kagex-platform-engine 1
+  platform ios
+  pin ENGINE_SHA 21d20e9745e13c9ffe68ae2eb012548afe73aaa8
+  pin XP3CRYPT_SHA 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
+  pin SCNFILE_SHA e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
+  pin KRKRZ_IOS_SHA 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
+  config ios-config.json 8ed19d55c167cc79cd4896f6e81ac0ce8ad53122f97019e2dac2a93166fabed0
+  file .github/workflows/platforms.yml a135f94c0c008a059ff60a199c7dbe569da8591751b8400f0caf791f477384cf
+  file .github/platforms/setup.sh 3dec54421d4893fd2b14014687a0085d807d36ef2c97b555f557b0d8cbe90172
+  file .github/platforms/monocypher-kit.cmake 0caa80ab8b6a786c68b4db0399857d728db86a8e24e7c392108ffbb274e6b5d7
+  file .github/platforms/scnfile-monocypher-names.h d0f4f4a44be4bcc2345ce2d6765c4d9900aa65a9fa40dc22d4d26235b475a215
+  file .github/platforms/krkrthreepp-kit.cmake 99bbe095a7eb9d7d927b5ace2334630df59bf7c7b60644eb42782d3cf6e694a5
+  file .github/platforms/threepp-stb-names.h 6c562ac926f3fb420ab0f9f93f90c3cdeb953b72444cad360d8257841e494ac6
+  file platform/icon-1024.png 691ff5d02e840705449f2cd9cb2bcdc51c390cf141b9f2b5ef130c9dc8b72dc1
+  file tools/release/scripts/ios-engine.py 868a1845297419bd21825b1a54ed830df9835723265baeaae34fd247de846ba9
+REUSE_FROM: 0.22.0's kagex_engine_ios.zip, whatever its key (a test of the reuse steps)
+reusing kagex_engine_ios.zip of release 0.22.0: the engine isn't built
