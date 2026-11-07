@@ -7958,7 +7958,12 @@ class KAGWindow extends Window
 
 			else hide = false;
 
+			// (the quick menu is on the fore page: not in the scene's picture)
+			var qm = typeof this.quickMenu == "Object" && quickMenu !== void ? quickMenu.hideForCopy() : void;
+
 			.piledCopy(0, 0, fore.base, 0, 0, w, h);
+
+			quickMenu.showAfterCopy(qm) if qm !== void;
 
 			if (hide) setMessageLayerHiddenState(false);
 

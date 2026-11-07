@@ -130,6 +130,14 @@ class KAGScriptTransition
 		var cw = lw < w ? lw : w, ch = lh < h ? lh : h;
 		try { p.piledCopy(0, 0, l, 0, 0, cw, ch); } catch (e) { l.visible = v; throw e; }
 		l.visible = v;
+		// a page's base is the bottom of the screen and opaque, but the copy keeps the alpha of the
+		// see-through layers on it (the message window): over nothing they came out black, the
+		// window's inside dark through the whole transition (since 0.23.0: opaque)
+		if (l instanceof "BaseLayer") {
+			p.face = dfMask;
+			p.fillRect(0, 0, cw, ch, 255);
+			p.face = dfAlpha;
+		}
 		return p;
 	}
 

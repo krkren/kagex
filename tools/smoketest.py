@@ -3786,12 +3786,18 @@ def sample_steps(eng):
         eng.tjs(env + 'global.__smokeFlipObj = f; e.unknown("smokestatic", %[flipupdate:"true", staticfps:"10"]);'
                 ' e.unknown("smokestatic", %[grayscale:"true"]); return 1;')
         time.sleep(0.5)
+        # (the strip made if the game has one and it hasn't shown yet: it's made where it shows)
+        eng.tjs('var q = typeof kag.quickMenu == "Object" ? kag.quickMenu : void;'
+                ' if (q !== void && q.layer === void && typeof q.list != "undefined" && q.list().count > 0) q.build(); return 1;')
         r = str(eng.tjs(env + 'var m = kag.fore.messages; return [t.flipType, f === global.__smokeFlipObj ? 1 : 0, f.options.staticfps, f.grainSize,'
                         ' f.canvasWidth == kag.primaryLayer.width ? 1 : 0,'
                         ' t.absolute > m[0].absolute && (m.count < 2 || t.absolute < m[1].absolute) && t.hitThreshold == 256 ? 1 : 0,'
-                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too
+                        # the quick menu's strip (0.20.0 on) stacks under it, so the static covers its buttons too:
+                        # among the same layers (absolute orders siblings only: up to 0.22.0 the strip was on the
+                        # primary layer, over the whole fore page, and passed by its number alone)
                         ' typeof kag.quickMenu != "Object" || kag.quickMenu === void || kag.quickMenu.layer === void'
-                        '  || typeof kag.quickMenu.level == "undefined" || kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
+                        '  || typeof kag.quickMenu.level == "undefined"'
+                        '  || kag.quickMenu.layer.parent === t.parent && kag.quickMenu.layer.absolute < t.absolute ? 1 : 0].join(",");'))
         print("     on a World layer: %s" % r, flush=True)
         eng.tjs('global.__smokeFlipObj = void; world_object.env.delLayer(%[name:"smokestatic"]); world_object.env.destroy(); return 1;')
         if r != "static,1,10,4,1,1,1":
