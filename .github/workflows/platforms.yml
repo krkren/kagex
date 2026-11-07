@@ -727,7 +727,7 @@ jobs:
           path: kagex-ios-simulator.zip
           if-no-files-found: error
       - name: Smoke test in the Simulator
-        timeout-minutes: 30
+        timeout-minutes: 75
         run: |
           dev=$(xcrun simctl list devices available -j | python3 -c "
           import json, sys
@@ -737,7 +737,14 @@ jobs:
           xcrun simctl boot "$dev" || true
           xcrun simctl bootstatus "$dev" -b > /dev/null
           s=0
-          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --three required --alphamovie required --vector required --zip required --clip required --encryption required || s=$?
+          # (diagnostic branch: Pip's lip-sync step alone, eight times, then the whole test once)
+          for i in 1 2 3 4 5 6 7 8; do
+            python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --steps "the animated character blinks" > "results/lip-$i.log" 2>&1 || s=$((s+1))
+            grep -E "^(ok|FAIL)|lip-sync from|ms:position|didn't" "results/lip-$i.log" | sed "s/^/[$i] /" | cut -c1-2500
+          done
+          echo "step-only runs failed: $s"
+          kirikiri/kagex/.github/platforms/run-logged.sh smoke python3 -B kirikiri/kagex/tools/smoketest.py --target ios-sim --app "$APP" --device "$dev" --keep --three required --alphamovie required --vector required --zip required --clip required --encryption required || s=$((s+100))
+          grep -E "lip-sync from|ms:position|didn't" results/smoke.log | cut -c1-2500 || true
           cp "${TMPDIR:-/tmp}"/kagex-smoke-*/simulator.log "${TMPDIR:-/tmp}"/kagex-smoke-*/*.png results/ 2>/dev/null || true
           exit $s
       # kagex-release's iOS engine: an unsigned Release build for devices (the developer's
