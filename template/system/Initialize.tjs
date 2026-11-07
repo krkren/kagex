@@ -842,16 +842,11 @@ KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefine
 // instead: the engine finds a bundled font only in the exact style asked for, so text that was
 // bold when the font was first used (the [select] choices) fell back to the icon font, and every
 // text in that face came out as arrows. A loaded font is also found for bold and italic.
-if (typeof global.Font.registerFontFile != "undefined" && Storages.isExistentStorage("notosansjp-regular.otf")) {
-	try {
-		var notoPath = Storages.getPlacedPath("notosansjp-regular.otf");
-		if (typeof global.Font.getVarAxes != "undefined" && Font.getVarAxes("Noto Sans JP") !== void)
-			Font.addFont(notoPath);
-		else
-			Font.registerFontFile(notoPath, "Noto Sans JP");
-	}
-	catch (e) { dm("Could not register notosansjp-regular.otf (" + e.message + ")"); }
-}
+// Since 0.22.0 Fonts.tjs does it (KAGRegisterFontFile), and registers the other font files the
+// game's fonts.csv lists, which also gives each role its faces and About the fonts' licences
+KAGLoadScript("Fonts.tjs");
+KAGRegisterFontFile("notosansjp-regular.otf", "Noto Sans JP") if Storages.isExistentStorage("notosansjp-regular.otf");
+KAGReadFonts();
 
 
 

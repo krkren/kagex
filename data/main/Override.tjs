@@ -464,13 +464,6 @@ function drawSaveSlot(target, savedatanum, name)
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = tr(kag.getBookMarkPageName(savedatanum)); // the scene's title, in the language shown (a compiled scene's own, or the strings')
-        target.font.height=36;
-        // Yu Gothic on Windows, else the bundled Noto Sans JP. The SDL engine draws an unknown
-        // face with an icon font (arrows), so list fonts it does register; it skips the others.
-        target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-        // Cut the page name to the text area's width (a fixed 9 characters cut English names short)
-        while (target.font.getTextWidth(savedatatitle) > w - 260 - 8)
-            savedatatitle = savedatatitle.substring(0, savedatatitle.length - 1);
 
         var thum = new global.Layer(kag, kag.fore.base);
         thum.loadImages(savefilename);
@@ -489,8 +482,9 @@ function drawSaveSlot(target, savedatanum, name)
                 target.operateRect(x + 9 + thum.imageWidth - 6 - thum2.imageWidth, 9 + thum.imageHeight - 6 - thum2.imageHeight,
                                    thum2, 0, 0, thum2.imageWidth, thum2.imageHeight, omPsNormal);
             }
-            target.drawText(x + tx, ty1, savedatatitle, 0x24107a, 255, true);
-            target.drawText(x + tx, ty2, savedatadate,  0x5c4cb4, 255, true);
+            // the styles (textstyles.tjs) shrink a long title to fit, then cut it (since 0.22.0)
+            KAGDrawStyledText(target, "slot.title", savedatatitle, x + tx, ty1, w - tx - 12, 44);
+            KAGDrawStyledText(target, "slot.date", savedatadate, x + tx, ty2, w - tx - 12, 40);
         }
 
         invalidate thum;
@@ -1037,7 +1031,7 @@ function setCGImage(target, filename)
     target.holdAlpha = hold;
 
     if (tf.viewcgfilename) {
-	    target.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+	    target.font.face = KAGFontFace("interface");
 	    target.font.height = 14;
 	    target.drawText(2,2,filename,0x000000,255,true,255,0x000000,2,2);
     }
@@ -1080,13 +1074,9 @@ function setCgmodePageButton(work=void)
         if (button !== void && c !== void) {
             var text = "%d/%d".sprintf(c[0], c[1]);
             button.holdAlpha = true;
-            button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-            button.font.height = 22;
-            button.font.bold = true;
-            var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
             for (var st = 0; st < 3; st++) {
                 var color = st == 0 && i != tf.cgmodepage ? 0x8a74ff : 0xffffff;
-                button.drawText(button.width * st + button.width - w - 18, (button.height - h) \ 2, text, color, 255, true);
+                KAGDrawStyledText(button, "count", text, button.width * st + 10, 0, button.width - 28, button.height, %[ color:color ]);
             }
             button.holdAlpha = false;
         }
@@ -1252,7 +1242,7 @@ class CGViewer extends Layer
     var pinchZ = void;
     var closeTrigger, closed = false;
     var wheelHook, pinchHook;
-    var fontFace = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
+    var fontFace = KAGFontFace("interface");
 
     function CGViewer(win, list)
     {
@@ -1622,13 +1612,8 @@ function drawButtonLabel(button, text, colors, size = 30)
 {
     var hold = button.holdAlpha;
     button.holdAlpha = true;
-    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-    button.font.height = size;
-    button.font.bold = true;
-    var w = button.font.getTextWidth(text), h = button.font.getTextHeight(text);
-    for (var st = 0; st < 3; st++) {
-        button.drawText(button.width * st + (button.width - w) \ 2, (button.height - h) \ 2, text, colors[st], 255, true);
-    }
+    for (var st = 0; st < 3; st++)
+        KAGDrawStyledText(button, "tab", text, button.width * st + 6, 0, button.width - 12, button.height, %[ color:colors[st], size:size ]);
     button.holdAlpha = hold;
 }
 
@@ -1698,17 +1683,12 @@ function drawReplayTile(button, info)
     var title = shownTitle(info);
     var hold = button.holdAlpha;
     button.holdAlpha = true;
-    button.font.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
-    button.font.bold = true;
-    // smaller where the title doesn't fit
-    var band = 30, size = 20;
-    button.font.height = size;
-    while (size > 13 && button.font.getTextWidth(title) > pw - 12) button.font.height = --size;
-    var w = button.font.getTextWidth(title), th = button.font.getTextHeight(title);
+    // the title on a band, smaller where it doesn't fit ("tile", textstyles.tjs)
+    var band = 30;
     for (var st = 0; st < 3; st++) {
         var x = button.width * st + b;
         button.fillRect(x, b + ph - band, pw, band, st == 0 ? 0xc8010062 : 0xe85025ff);
-        button.drawText(x + (pw - w) \ 2, b + ph - band + (band - th) \ 2, title, 0xffffff, 255, true);
+        KAGDrawStyledText(button, "tile", title, x + 6, b + ph - band, pw - 12, band);
     }
     button.holdAlpha = hold;
 }
@@ -1888,7 +1868,6 @@ function drawSearchRow(layer, info, key, over)
     var hold = layer.holdAlpha;
     layer.holdAlpha = true;
     var f = layer.font;
-    f.face = "Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto";
     var left = 24, w = 1314 - left * 2;
     // the demo (replaylist.csv's title for its script) and the scene, then who speaks
     var script = searchNames !== void ? searchNames[info.storage.toLowerCase()] : void;
@@ -1896,10 +1875,11 @@ function drawSearchRow(layer, info, key, over)
     head += "  ·  " + info.name if info.name != "";
     var m = info.text.toLowerCase().indexOf(key);
     var x0 = left;
-    f.height = 19;
-    f.bold = true;
-    layer.drawText(x0, 8, head, over ? 0xd6ccff : 0x5025ff, 255, true);
-    f.height = 26;
+    KAGDrawStyledText(layer, "search.head", head, x0, 8, w, 24, over ? %[ color:0xd6ccff ] : void);
+    // the line, its match picked out ("search.line": its face and size)
+    var ls = KAGTextStyle("search.line");
+    f.face = KAGFontFace(ls.role);
+    f.height = ls.size;
     f.bold = false;
     var fit = searchFit(f, info.text, m, w);
     var x = x0, y = 36;
@@ -1919,7 +1899,7 @@ function drawSearchRow(layer, info, key, over)
         if (t == "") continue;
         var mark = pieces[i][1];
         f.bold = mark;
-        layer.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : 0x24107a), 255, true);
+        layer.drawText(x, y, t, mark ? (over ? 0xffe14d : 0x5025ff) : (over ? 0xffffff : ls.color), 255, true);
         x += f.getTextWidth(t);
     }
     f.bold = false;

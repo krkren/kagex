@@ -955,9 +955,20 @@ function MessageLayer_config()
 
 
 // ◆ Draw Edge?
-// In KAG3, edge and shadow cannot be drawn simultaneously. Edge takes priority.
+// In KAG3, edge and shadow cannot be drawn simultaneously, and edge takes
+// priority; with edgeWithShadow below, both are drawn.
 
 ;defaultEdge = false;  // Equivalent to 'edge' attribute in [deffont] tag
+
+
+
+
+
+// ◆ Draw Edge and Shadow Together?
+// true: both (the shadow is the outlined text's, under it); false: an edge
+// replaces the shadow, as in KAG3.
+
+;edgeWithShadow = true;
 
 
 

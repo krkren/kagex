@@ -1607,39 +1607,53 @@ class AboutDialogLayer extends DialogLayer
 
         super.DialogLayer(kag, kag.primaryLayer, "AboutDialog");
 
+        // each line in a text style (Fonts.tjs: "dialog.title", "dialog.line", "dialog.small"; since 0.22.0)
+
         var lines = [];
 
         var title = aboutText(sf.software_title);
 
-        lines.add([ title != "" ? title : System.title, yesnoFontSize ]);
+        lines.add([ title != "" ? title : System.title, "dialog.title" ]);
 
         var version = aboutText(sf.software_version), maker = aboutText(sf.software_maker);
 
         var year = aboutText(sf.software_year);
 
-        if (version != "") lines.add([ tr("Version %s").sprintf(version), yesnoLabelSize ]);
+        if (version != "") lines.add([ tr("Version %s").sprintf(version), "dialog.line" ]);
 
-        if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, yesnoLabelSize ]);
+        if (maker != "") lines.add([ "(c) " + (year != "" ? year + " " : "") + maker, "dialog.line" ]);
 
-        lines.add([ "Kirikiri Z " + System.versionString, yesnoLabelSize ]);
+        lines.add([ "Kirikiri Z " + System.versionString, "dialog.line" ]);
+
+        // the fonts the game ships, with their licences (fonts.csv)
+
+        var lic = typeof global.KAGFontLicences != "undefined" ? KAGFontLicences() : [], parts = [];
+
+        for (var i = 0; i < lic.count; i++) parts.add(lic[i].caption + " (" + tr(lic[i].licence) + ")");
+
+        if (parts.count > 0) lines.add([ tr("Fonts: %s").sprintf(parts.join(", ")), "dialog.small" ]);
 
         // The smallest frame whose text area holds every line
 
-        var total = -yesnoLineGap;
+        var frame, tall = [], total;
 
-        for (var i = 0; i < lines.count; i++) {
+        for (var f = 0; f < yesnoFrames.count; f++) {
 
-            setYesNoFont(this, lines[i][1]);
+            frame = yesnoFrames[f];
 
-            total += font.getTextHeight("Ag") + yesnoLineGap;
+            total = -yesnoLineGap;
 
-        }
+            tall = [];
 
-        var frame;
+            for (var i = 0; i < lines.count; i++) {
 
-        for (var i = 0; i < yesnoFrames.count; i++) {
+                var lo = KAGStyledTextLayout(this, lines[i][1], lines[i][0], frame.textWidth, frame.textBottom - frame.textTop);
 
-            frame = yesnoFrames[i];
+                tall.add(lo.height);
+
+                total += lo.height + yesnoLineGap;
+
+            }
 
             if (total <= frame.textBottom - frame.textTop) break;
 
@@ -1657,13 +1671,9 @@ class AboutDialogLayer extends DialogLayer
 
         for (var i = 0; i < lines.count; i++) {
 
-            setYesNoFont(this, lines[i][1]);
+            KAGDrawStyledText(this, lines[i][1], lines[i][0], fx + frame.centerX - (frame.textWidth >> 1), y, frame.textWidth, tall[i]);
 
-            var w = measureYesNoText(this, lines[i][0]);
-
-            drawYesNoString(this, fx + frame.centerX - (w >> 1), y, lines[i][0], 0xffffff, yesnoTextBase);
-
-            y += font.getTextHeight("Ag") + yesnoLineGap;
+            y += tall[i] + yesnoLineGap;
 
         }
 

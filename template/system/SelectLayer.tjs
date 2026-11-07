@@ -488,6 +488,10 @@ class SelectLayer {
 
     var fontEdgeExtent = 0;
 
+	var fontEdgeWithShadow;   // an outline and a shadow together (void: as the message window; since 0.22.0)
+
+	var fontGradColor = -1, fontEdgeGradColor = -1, fontShadowGradColor = -1, fontGradDir = "vertical"; // gradients ([selopt gradcolor=...])
+
 	// Values when changing font color on selection (if void, do not change)
 
 	var otherFontColors       = %[];
@@ -529,6 +533,18 @@ class SelectLayer {
     var closesebuf;
 
     
+
+	// a gradient colour from [selopt]: void keeps now, "none" (or -1) none
+
+	function selGradAttribute(v, now) {
+
+		if (v === void) return now;
+
+		if (v == 'none' || v == '' || v == 'default') return -1;
+
+		return +v;
+
+	}
 
 	function setOptions(elm) {
 
@@ -603,6 +619,16 @@ class SelectLayer {
 		fontEdgeEmphasis = +elm.edgeemphasis if elm.edgeemphasis !== void;
 
 		fontEdgeExtent = +elm.edgeextent if elm.edgeextent !== void;
+
+		fontEdgeWithShadow = +elm.edgewithshadow if elm.edgewithshadow !== void;
+
+		fontGradColor = selGradAttribute(elm.gradcolor, fontGradColor);
+
+		fontEdgeGradColor = selGradAttribute(elm.edgegradcolor, fontEdgeGradColor);
+
+		fontShadowGradColor = selGradAttribute(elm.shadowgradcolor, fontShadowGradColor);
+
+		fontGradDir = elm.graddir if elm.graddir !== void;
 
 
 
@@ -793,6 +819,16 @@ class SelectLayer {
 			shadowOffsetX: fontShadowOffsetX,
 
 			shadowOffsetY: fontShadowOffsetY,
+
+			edgeWithShadow: fontEdgeWithShadow !== void ? fontEdgeWithShadow : (typeof window.fore.messages[0].edgeWithShadow != "undefined" && window.fore.messages[0].edgeWithShadow),
+
+			chGradColor:   fontGradColor,
+
+			edgeGradColor: fontEdgeGradColor,
+
+			shadowGradColor: fontShadowGradColor,
+
+			gradDir:       fontGradDir,
 
 				]);
 
