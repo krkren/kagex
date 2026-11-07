@@ -43,6 +43,10 @@
 [button name="cgmode_page4" exp="tf.cgmodepage=4" target=*loop]
 [locate x=290 y=822]
 [button name="cgmode_page5" exp="tf.cgmodepage=5" target=*loop]
+; Sprite Mode (since 0.24.0): every character in any pose and face (spritemode.ks)
+[locate x=290 y=922]
+[button name="sprite_open" normal="sprite_open_normal" over="sprite_open_over" storage="spritemode.ks"]
+[eval exp='drawButtonLabel(kag.current.names.sprite_open, tr("Characters"), [0x5025ff, 0xffffff, 0xffffff])']
 
 ; The tab's pictures: a grid that scrolls with the wheel, by dragging (a flick coasts on), with
 ; its bar and with the keys or a controller's D-pad (cgList in Override.tjs, ScrollList.tjs)

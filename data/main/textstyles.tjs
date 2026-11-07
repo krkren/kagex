@@ -30,3 +30,8 @@ KAGDefineTextStyle("voices.text", %[ size:24, valign:"middle", color:0x24107a, m
 
 // the title's greeting, in its speech bubble (titleGreeting)
 KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, lines:3, lineSpacing:6, minSize:20 ]);
+
+// Sprite Mode's rows (spritemode.ks): a row's name, what it shows, how many it has
+KAGDefineTextStyle("sprite.row", %[ size:26, bold:true, valign:"bottom", color:0x5025ff ]);
+KAGDefineTextStyle("sprite.value", %[ size:34, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:20 ]);
+KAGDefineTextStyle("sprite.count", %[ size:20, align:"center", valign:"top", color:0x8070b8 ]);

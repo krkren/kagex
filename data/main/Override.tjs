@@ -2039,6 +2039,106 @@ function glossaryEntry()
 }
 
 /**
+ * Sprite Mode (spritemode.ks, the CG screen's Characters button; template/system/SpriteMode.tjs):
+ * a character at a time over the street, any pose, outfit and face, the street at any time of
+ * day; the rows' arrows go through them
+ */
+var spriteNames = [ "ai", "pip", "hiyori", "vee" ];
+var spriteRowNames = [ "Character", "Pose", "Outfit", "Face", "Background" ];
+function spriteInit()
+{
+    tf.recollect = 0;
+    tf.spriteFade = 300;
+    tf.spriteChars = KAGSpriteCharacters(spriteNames);
+    tf.spriteBgs = KAGSpriteBackgrounds();
+    tf.spriteAt = [ 0, 0, 0, 0, 0 ] if tf.spriteAt === void;
+    KAGSpriteClear();
+}
+// the World as the rows say: the stage, the character (the others away), its pose first, then
+// the outfit and face that pose has
+function spriteApply()
+{
+    var at = tf.spriteAt, bg = tf.spriteBgs[at[4] % (tf.spriteBgs.count > 0 ? tf.spriteBgs.count : 1)];
+    if (bg !== void) KAGSpriteStage(bg.stage, bg.time);
+    var name = tf.spriteChars[at[0]];
+    for (var i = 0; i < tf.spriteChars.count; i++) {
+        var other = tf.spriteChars[i];
+        if (other != name && world_object.env.characters[other] !== void) KAGSpriteShow(other, %[ hide:true ]);
+    }
+    if (name === void) { KAGSpriteUpdate(); return; }
+    var poses = KAGSpriteChoices(name, "pose");
+    var e = %[ pos:"spriteview" ];
+    if (poses.count > 0) { at[1] = at[1] % poses.count; e.pose = poses[at[1]]; }
+    KAGSpriteShow(name, e);
+    var dresses = KAGSpriteChoices(name, "dress"), faces = KAGSpriteChoices(name, "face");
+    var e2 = %[];
+    if (dresses.count > 0) { at[2] = at[2] % dresses.count; e2.dress = dresses[at[2]]; }
+    if (faces.count > 0) { at[3] = at[3] % faces.count; e2.face = faces[at[3]]; }
+    KAGSpriteShow(name, e2) if dresses.count > 0 || faces.count > 0;
+    KAGSpriteUpdate();
+}
+// what row r shows now, and how many it has
+function spriteRowValues(r)
+{
+    var name = tf.spriteChars[tf.spriteAt[0]];
+    switch (r) {
+    case 0: {
+        var l = [];
+        for (var i = 0; i < tf.spriteChars.count; i++) {
+            var n = tf.spriteChars[i], ch = world_object.env.getCharacter(n);
+            l.add(ch !== void ? world_object.env.nameAliasOf(ch) : n);
+        }
+        return l;
+    }
+    case 1: return name !== void ? KAGSpriteChoices(name, "pose") : [];
+    case 2: return name !== void ? KAGSpriteChoices(name, "dress") : [];
+    case 3: return name !== void ? KAGSpriteChoices(name, "face") : [];
+    case 4: {
+        var l = [];
+        for (var i = 0; i < tf.spriteBgs.count; i++) l.add(tr(spriteWord(tf.spriteBgs[i].stage)) + " (" + tr(spriteWord(tf.spriteBgs[i].time)) + ")");
+        return l;
+    }
+    }
+    return [];
+}
+// a name from envinit.tjs as words: "road" Road, "posleft" Posleft (the game's own names)
+function spriteWord(s)
+{
+    s = (string)s;
+    return s == "" ? s : s.charAt(0).toUpperCase() + s.substring(1);
+}
+function spriteStep(r, dir)
+{
+    var n = spriteRowValues(r).count;
+    if (n <= 0) return;
+    var at = tf.spriteAt;
+    at[r] = ((at[r] + dir) % n + n) % n;
+    // another character or pose starts from its first pose, outfit and face
+    if (r == 0) at[1] = at[2] = at[3] = 0;
+    else if (r == 1) at[2] = at[3] = 0;
+}
+// the rows' names and what each shows, on the panel
+function spriteRows()
+{
+    var m = kag.current, hold = m.holdAlpha;
+    m.holdAlpha = true;
+    for (var r = 0; r < 5; r++) {
+        var y = 262 + r * 130, l = spriteRowValues(r), v = l.count > 0 ? spriteWord(l[tf.spriteAt[r] % l.count]) : "—";
+        KAGDrawStyledText(m, "sprite.row", tr(spriteRowNames[r]), 60, y - 46, 560, 40);
+        KAGDrawStyledText(m, "sprite.value", r == 0 || r == 4 ? v : tr(v), 132, y, 416, 64);
+        if (l.count > 1) KAGDrawStyledText(m, "sprite.count", "%d / %d".sprintf(tf.spriteAt[r] % l.count + 1, l.count), 132, y + 64, 416, 28);
+        var on = l.count > 1;
+        var p = m.names["sprite_prev" + r], q = m.names["sprite_next" + r];
+        p.enabled = q.enabled = on if p !== void && q !== void;
+    }
+    m.holdAlpha = hold;
+}
+function spriteLeave()
+{
+    KAGSpriteClear();
+}
+
+/**
  * The flowchart (chart.ks, Extras' Chart tab; template/system/Flowchart.tjs): every demo's
  * scenes and the ways between them, from the demo menu; a scene seen plays from its start, with
  * the choices made on the way there (flowchart.csv names the demos)

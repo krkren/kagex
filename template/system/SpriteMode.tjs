@@ -1,0 +1,95 @@
+/**
+ * Sprite Mode (since 0.24.0): the World's characters one at a time, in any of their poses,
+ * outfits and faces, over any stage at any time of day, for a game's character viewer (the
+ * sample's: Extras, the CG screen's Characters button, spritemode.ks and Override.tjs).
+ *
+ *   KAGSpriteCharacters(names)        the names that can be drawn here (a Live2D or VRM
+ *                                     character only where its plugin draws it)
+ *   KAGSpriteChoices(name, what)      the character's "pose", "dress" or "face" names (for its
+ *                                     current pose: show the pose first)
+ *   KAGSpriteBackgrounds()            [%[ stage, time ]...]: every stage at every time of day
+ *   KAGSpriteShow(name, elm)          the character's World command (elm: pose, dress, face,
+ *                                     xpos, ...), as its tag in a script would run it
+ *   KAGSpriteStage(stage, time)       the stage at the time of day
+ *   KAGSpriteUpdate()                 the World drawn as the commands left it
+ *   KAGSpriteClear()                  every character and the stage gone
+ */
+
+function KAGSpriteCharacters(names)
+{
+	var ret = [];
+	if (typeof global.world_object == "undefined") return ret;
+	var env = world_object.env;
+	for (var i = 0; i < names.count; i++) {
+		var n = names[i], init = env.characterInits[n];
+		if (init === void) continue;
+		if (init.live2d !== void && !(typeof global.KAGLive2DCanDraw != "undefined" && KAGLive2DCanDraw(n))) continue;
+		if (init.vrm !== void && !(typeof global.KAGVRMCanDraw != "undefined" && KAGVRMCanDraw(n))) continue;
+		ret.add(n);
+	}
+	return ret;
+}
+
+function KAGSpriteChoices(name, what)
+{
+	var ch = world_object.env.getCharacter(name), ret = [];
+	if (ch === void) return ret;
+	var list;
+	try {
+		switch (what) {
+		case "pose":  list = ch.getPoseNames(); break;
+		case "dress": list = ch.getDressNames(); break;
+		case "face":  list = ch.getFaceNames(); break;
+		}
+	} catch (e) {
+		dm("Sprite Mode: " + name + "'s " + what + " names: " + e.message);
+	}
+	for (var i = 0; list !== void && i < list.count; i++) ret.add((string)list[i]) if ret.find((string)list[i]) < 0;
+	return ret;
+}
+
+function KAGSpriteBackgrounds()
+{
+	var env = world_object.env, ret = [], stages = KAGSpriteKeys(env.stages), times = KAGSpriteKeys(env.times);
+	for (var s = 0; s < stages.count; s++)
+		for (var t = 0; t < times.count; t++) ret.add(%[ stage:stages[s], time:times[t] ]);
+	return ret;
+}
+
+// a dictionary's names, in alphabetical order
+function KAGSpriteKeys(d)
+{
+	var a = [], ret = [];
+	a.assign(d) if d !== void;
+	for (var i = 0; i < a.count; i += 2) ret.add((string)a[i]);
+	ret.sort();
+	return ret;
+}
+
+function KAGSpriteShow(name, elm)
+{
+	// at once (a character's own transition would draw it on the back page, which a screen's
+	// [backlay] copies over), unless the game gives one
+	elm.notrans = true if elm.trans === void;
+	world_object.env.unknown(name, elm);
+}
+
+// the World's layers drawn as the commands left it (after KAGSpriteShow and KAGSpriteStage)
+function KAGSpriteUpdate()
+{
+	world_object.env.updateAll();
+}
+
+function KAGSpriteStage(stage, time)
+{
+	var env = world_object.env;
+	env.unknown(time, %[ notrans:true ]) if time !== void && time != "";
+	env.unknown(stage, %[ notrans:true ]) if stage !== void && stage != "";
+}
+
+function KAGSpriteClear()
+{
+	var env = world_object.env;
+	env.initEnv();
+	env.updateAll() if typeof env.updateAll != "undefined";
+}

@@ -180,6 +180,11 @@ class Engine:
         pass
 
 
+def spritefirst(eng):
+    """Pip's first face in Sprite Mode's list"""
+    return str(eng.tjs('return KAGSpriteChoices("pip", "face")[0];'))
+
+
 def storage_name(path):
     """A local path as the engine names it: file://./home/... or file://./c/Users/..."""
     path = os.path.abspath(path).replace("\\", "/")
@@ -5580,6 +5585,31 @@ def sample_steps(eng):
         if got[0] != "turns" or got[1] != "titled" or abs(float(got[2]) - 0.5) > 0.05 or got[3] != "on":
             raise SmokeError("the music room's player didn't turn, name the track, seek to its middle or seek on: %s" % got)
         eng.tjs("stopBgm(); return 1;")
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("Sprite Mode: a character at a time in its poses, outfits and faces, over the street at any time of day")
+    def _():
+        if eng.tjs('return typeof global.KAGSpriteShow != "undefined" && typeof global.spriteInit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework or game from before Sprite Mode)", flush=True)
+            return
+        state = ('(function() { var e = world_object.env, r = [], at = tf.spriteAt;'
+                 ' for (var i = 0; i < tf.spriteChars.count; i++) { var c = e.characters[tf.spriteChars[i]]; if (c !== void && c.isShowBU()) r.add(tf.spriteChars[i] + ":" + c.face); }'
+                 ' return r.join(",") + "|" + e.stage.time + "|" + spriteRowValues(3).count; })()')
+        eng.tjs('tf.spriteAt = void; sf.extramode = 1; kag.process("spritemode.ks"); return 1;')
+        eng.wait("Sprite Mode", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        first = str(eng.tjs("return " + state + ";"))
+        eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 2); kag.process("spritemode.ks", "*again"); return 1;')
+        time.sleep(0.5)
+        eng.wait("Sprite Mode again", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        second = str(eng.tjs("return " + state + ";"))
+        print("     %s, then %s (who's shown:face|time|faces)" % (first, second), flush=True)
+        f, s2 = first.split("|"), second.split("|")
+        if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or not s2[0].startswith("pip:") or "," in s2[0] or \
+                s2[0] == "pip:" + spritefirst(eng) or s2[1] != "night" or int(s2[2]) < 2:
+            raise SmokeError("Sprite Mode didn't show Ai by day, then only Pip with his next face at night: %s / %s" % (first, second))
+        eng.key("VK_ESCAPE")
+        eng.wait("the CG screen", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 

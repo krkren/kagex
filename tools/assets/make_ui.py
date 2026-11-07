@@ -72,7 +72,7 @@ LABELS = {
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
         # Extras
         "CG Mode": "CG モード", "Replay": "回想", "Music": "音楽", "Search": "検索", "CG": "CG", "Glossary": "用語集",
-        "Chart": "チャート",
+        "Chart": "チャート", "Characters": "キャラクタ",
         "Character 1": "キャラクタ 1", "Character 2": "キャラクタ 2", "Character 3": "キャラクタ 3",
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
@@ -1002,6 +1002,25 @@ def make_extras():
     for y in (14, 21, 28):
         c.rrect((9, y, 35, y + 3), 1.5, fill=rgba(LAV_SOFT))
     c.save(out("voice_handle.png", False))
+
+    # Sprite Mode (spritemode.ks, from the CG screen's Characters button): a panel on the left
+    # with its title, the rest clear for the World's stage and character; its rows' arrows
+    c = Canvas(1920, 1080)
+    c.rrect((0, 0, 680, 1080), 0, fill=rgba(LAV_PALE))
+    c.pattern((0, 0, 680, 1080), 36, 2.2, rgba(LAV, 90))
+    c.rrect((674, 0, 680, 1080), 0, fill=rgba(VIOLET))
+    c.text((60, 150), L("Characters"), font("Black", 84), rgba(VIOLET), anchor="ls", shadow=(6, 6, rgba(LAV)))
+    c.rrect((60, 170, 620, 176), 3, fill=rgba(VIOLET))
+    c.save(out("sprite_base.png"))
+    for st in ("normal", "over"):
+        for name, sign in (("sprite_prev", -1), ("sprite_next", 1)):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            b.stroke([(32 - sign * 6, 18), (32 + sign * 8, 32), (32 - sign * 6, 46)], 7, rgba(fg))
+            b.save(out("%s_%s.png" % (name, st), False))
+        button(330, 80, "", st, size=30, r=12).save(out("sprite_open_%s.png" % st, False))
 
     size = extra_tab_size()
     for name, label in EXTRA_TABS:
