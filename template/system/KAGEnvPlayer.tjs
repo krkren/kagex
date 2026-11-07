@@ -2699,6 +2699,48 @@ class KAGEnvPlayer
 	}
 
 	/**
+	 * The voiced texts of the compiled scripts in !scnlist.txt, each voice once (since 0.24.0:
+	 * the music room's voices, Voices.tjs)
+	 * @param readOnly only texts that have been read (the read marks)
+	 * @return [%[storage, label, idx, voice (its file, with its extension), speaker (the
+	 * character's name), name (as shown), text (as shown)]...], in the list's and the scripts'
+	 * order
+	 */
+	function voiceTexts(readOnly = true, max = 2000) {
+		var ret = [], seen = %[];
+		var list = getFileList();
+		var r = readed;
+		for (var f = 0; f < list.count && ret.count < max; f++) {
+			var storage = list[f];
+			if (scnFindCompiled(storage) === void) continue;
+			var data = new StorageData(storage);
+			var scenes = data.root !== void ? data.root.scenes : void;
+			for (var j = 0; scenes !== void && j < scenes.count && ret.count < max; j++) {
+				var scene = scenes[j];
+				var texts = scene.texts;
+				if (texts === void) continue;
+				var read = +r[(storage + scene.label).toLowerCase()];
+				for (var i = 0; i < texts.count && ret.count < max; i++) {
+					if (readOnly && read < i + 1) break;
+					var raw = convertSceneText(texts[i], scene.languages);
+					if (raw.voice === void || raw.voice.count == 0) continue;
+					var vs = [];
+					env.extractVoice(raw.voice, vs);
+					if (vs.count == 0) continue;
+					var v = vs[0], file = (string)v.voice + (v.ext !== void ? (string)v.ext : "");
+					if (seen[file.toLowerCase()]) continue;
+					seen[file.toLowerCase()] = true;
+					var t = changeAlias(scnTextIn(raw));
+					ret.add(%[storage:storage, label:(string)scene.label, idx:i + 1, voice:file, speaker:(string)v.name,
+						name:t.disp != "" ? (string)t.disp : (string)t.name, text:plainText((string)t.text).trim()]);
+				}
+			}
+			invalidate data;
+		}
+		return ret;
+	}
+
+	/**
 	 * Execute search process: searchTexts, for getSearchData and goToSearch
 	 */
 	function doSearch(text, readOnly = true) {

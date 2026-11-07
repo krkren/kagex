@@ -5510,6 +5510,44 @@ def sample_steps(eng):
         eng.tjs("kag.goToStart(); return 1;")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
 
+    @step("the music room's voices: the voices heard, a star keeps one, the favourites put in order by a drag, a click plays one")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.KAGHeardVoices != "undefined" && typeof global.voiceList != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework or game from before the voices)", flush=True)
+            return
+        eng.tjs('kag.sflags.favouriteVoices = []; tf.musicView = 1; tf.voicePosition = 0; sf.extramode = 3; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("the voices", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.voiceList !== void', timeout=30)
+        heard = str(eng.tjs('var r = []; for (var i = 0; i < tf.voiceRows.count; i++) r.add(tf.voiceRows[i].voice); return r.join(",");')).split(",")
+        print("     %d voices heard: %s..." % (len(heard), ",".join(heard[:4])), flush=True)
+        # the demos played speak pip000001 and ai000001 at least
+        if "pip000001.ogg" not in heard or "ai000001.ogg" not in heard:
+            raise SmokeError("the voices heard don't list the demos' lines: %s" % heard)
+        # stars on three (a click on the star), then the favourites' view
+        eng.tjs('''var l = kag.fore.messages[0].names.voiceList;
+            for (var i = 0; i < 3; i++) { l.focusIndex = i; l.onKeyDown(#'F', 0); } return 1;''')
+        eng.tjs('musicView(2); kag.process("musicmode.ks", "*loop"); return 1;')
+        eng.wait("the favourites", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.voiceList !== void'
+                 ' && kag.fore.messages[0].names.voiceList.itemCount == 3', timeout=30)
+        before = str(eng.tjs('var r = [], f = KAGFavouriteVoices.list(); for (var i = 0; i < f.count; i++) r.add(f[i].voice); return r.join(",");')).split(",")
+        # the first dragged by its handle below the third; Shift+Up moves it back one
+        moved = str(eng.tjs('''var l = kag.fore.messages[0].names.voiceList, w = l.itemWidth, s = l.rowStride;
+            l.onMouseDown(w - 20, 20, mbLeft, 0); l.onMouseMove(w - 20, 20 + s, 0); l.onMouseMove(w - 20, 20 + s * 2, 0);
+            var lifted = l.lifted; l.onMouseUp(w - 20, 20 + s * 2, mbLeft, 0);
+            var r = [], f = KAGFavouriteVoices.list(); for (var i = 0; i < f.count; i++) r.add(f[i].voice);
+            var a = r.join(","); l.onKeyDown(VK_UP, ssShift); r = []; for (var i = 0; i < f.count; i++) r.add(f[i].voice);
+            return lifted + "|" + a + "|" + r.join(",");''')).split("|")
+        print("     favourites %s; dragged %s; Shift+Up %s" % (before, moved[1], moved[2]), flush=True)
+        want = [before[1], before[2], before[0]]
+        if moved[0] != "0" or moved[1].split(",") != want or moved[2].split(",") != [before[1], before[0], before[2]]:
+            raise SmokeError("the favourites didn't move as dragged and then with Shift+Up: %s" % moved)
+        # a click on a row plays its voice
+        eng.tjs('var l = kag.fore.messages[0].names.voiceList; KAGPlayVoiceLine(tf.voiceRows[0]); return 1;')
+        eng.wait("the voice to play", '(function() { var c = world_object.env.characters[KAGFavouriteVoices.list()[0].speaker];'
+                 ' return c !== void && c.soundBuffer !== void && c.soundBuffer.status == "play"; })()', timeout=10)
+        eng.tjs('world_object.env.stopAllVoice(); musicView(0); return 1;')
+        eng.key("VK_ESCAPE")
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("the glossary: its words marked in the text, a click on one shows its entry, Extras lists them")
     def _():
         if eng.tjs('return typeof global.KAGGlossary == "Object" && KAGGlossary.entries().count > 0 ? 1 : 0;') != 1:

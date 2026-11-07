@@ -978,6 +978,27 @@ def make_extras():
             icon(b, 32, 32, 34, rgba(fg))
             b.save(out("%s_%s.png" % (name, st), False))
 
+    # the music room's views (Music, Voices, Favourites: labelled at run time) and the voice
+    # rows' star and handle (Override.tjs, voiceList)
+    for st in ("normal", "over"):
+        button(180, 56, "", st, size=26, weight="Black", r=12, shadow=6).save(out("music_view_%s.png" % st, False))
+    for name, on in (("voice_star_on", True), ("voice_star_off", False)):
+        c = Canvas(44, 44)
+        pts = []
+        for k in range(10):
+            a = math.pi / 2 + k * math.pi / 5
+            r = 19 if k % 2 == 0 else 8
+            pts.append((22 + r * math.cos(a), 23 - r * math.sin(a)))
+        if on:
+            c.polygon(pts, rgba((255, 176, 32)))
+        else:
+            c.stroke(pts, 3, rgba(LAV_SOFT), closed=True)
+        c.save(out("%s.png" % name, False))
+    c = Canvas(44, 44)
+    for y in (14, 21, 28):
+        c.rrect((9, y, 35, y + 3), 1.5, fill=rgba(LAV_SOFT))
+    c.save(out("voice_handle.png", False))
+
     size = extra_tab_size()
     for name, label in EXTRA_TABS:
         for st in ("normal", "over"):

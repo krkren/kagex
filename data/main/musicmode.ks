@@ -98,9 +98,29 @@
 
 
 
+; What the list shows (since 0.24.0): the music, the voices heard, or the favourite voices
+; (musicView in Override.tjs: the buttons' labels are drawn on them)
+
+[locate x=840 y=192]
+
+[button name="music_view0" normal="music_view_normal" over="music_view_over" exp="musicView(0)" target=*loop]
+
+[locate x=1030 y=192]
+
+[button name="music_view1" normal="music_view_normal" over="music_view_over" exp="musicView(1)" target=*loop]
+
+[locate x=1220 y=192]
+
+[button name="music_view2" normal="music_view_normal" over="music_view_over" exp="musicView(2)" target=*loop]
+
+[eval exp='musicViewTabs()']
+
+
+
 ; The tracks: a list that scrolls with the wheel, by dragging, with its bar and with the keys or a
-; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs)
-[eval exp='musicTrackList()']
+; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs); or the voices
+; (voiceList: a click plays one, its star keeps it, the favourites' handle puts them in order)
+[eval exp='musicViewList()']
 [eval exp='setRepeat()']
 
 [eval exp='setButtonOver("musicmode_title", keepTitleMusic())']

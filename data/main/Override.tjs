@@ -2393,6 +2393,131 @@ function musicTrackList()
     screenList("musicList", "Tracks", 870, 291, 748, 640, 46, 1, 8, tf.musicmodelist.count, drawTrackItem, trackPick, trackItemName);
 }
 
+// ---- the music room's voices (since 0.24.0; template/system/Voices.tjs) ----
+// tf.musicView: 0 the music, 1 the voices heard, 2 the favourite voices
+var musicViewNames = [ "Music", "Voices", "Favourites" ];
+function musicView(n)
+{
+    tf.musicView = n;
+    tf.voicePosition = 0;
+    tf.voiceFocus = void;
+}
+function musicViewTabs()
+{
+    var v = +tf.musicView;
+    for (var i = 0; i < 3; i++) {
+        var b = kag.current.names["music_view" + i];
+        if (b === void) continue;
+        b.loadButtons(i == v ? "music_view_over" : "music_view_normal", "music_view_over");
+        drawButtonLabel(b, tr(musicViewNames[i]), i == v ? [0xffffff, 0xffffff, 0xffffff] : [0x5025ff, 0xffffff, 0xffffff], 26);
+    }
+}
+function musicViewList()
+{
+    if (+tf.musicView == 0) { musicTrackList(); return; }
+    voiceList();
+}
+// the rows the list shows: the voices heard, or the favourites (their name and line as shown)
+function voiceRows()
+{
+    if (+tf.musicView == 2) {
+        var l = KAGFavouriteVoices.list(), rows = [];
+        for (var i = 0; i < l.count; i++) rows.add(KAGFavouriteVoices.shown(l[i]));
+        return rows;
+    }
+    return KAGHeardVoices();
+}
+function voiceList()
+{
+    tf.voiceRows = voiceRows();
+    var fav = +tf.musicView == 2;
+    var l = screenList("voiceList", fav ? "Favourite voices" : "Voices", 870, 291, 748, 640, 64, 1, 8, tf.voiceRows.count,
+        drawVoiceItem, voicePick, voiceItemName);
+    l.onItemKey = voiceKey;
+    l.reorder = fav ? voiceReorder : void;
+    l.reorderHandle = 60;
+    l.scrollTo(+tf.voicePosition);
+    l.focusIndex = tf.voiceFocus !== void && tf.voiceFocus < l.itemCount ? +tf.voiceFocus : -1;
+    if (tf.voiceRows.count == 0) {
+        var m = kag.current, hold = m.holdAlpha;
+        m.holdAlpha = true;
+        KAGDrawStyledText(m, "voices.text", fav ? tr("Mark a voice with its star to keep it here") : tr("No voices heard yet"),
+            890, 300, 708, 64, %[ align:"center" ]);
+        m.holdAlpha = hold;
+    }
+}
+// a voice's row: who speaks and the line, its star, and in the favourites a handle to drag it by
+function drawVoiceItem(layer, index, w, h, state)
+{
+    var e = tf.voiceRows[index];
+    if (e === void) return;
+    var over = state != "normal", fav = +tf.musicView == 2;
+    layer.fillRect(0, 0, w, h, over ? 0xff5025ff : 0xffa690ff);
+    layer.fillRect(3, 3, w - 6, h - 6, over ? 0xff6a45ff : 0xf0ffffff);
+    var right = fav ? 112 : 56;
+    KAGDrawStyledText(layer, "voices.name", e.name, 16, 0, 150, h, over ? %[ color:0xffffff ] : void);
+    KAGDrawStyledText(layer, "voices.text", e.text, 176, 0, w - 176 - right - 8, h, over ? %[ color:0xffffff ] : void);
+    var star = KAGFavouriteVoices.has(e.voice) ? "voice_star_on" : "voice_star_off";
+    var pic = new global.Layer(kag, layer);
+    try {
+        pic.loadImages(star);
+        layer.operateRect(w - right + 6, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
+        if (fav) {
+            pic.loadImages("voice_handle");
+            layer.operateRect(w - 56 + 6, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
+        }
+    } catch (ex) {
+        dm("voice row: " + ex.message);
+    }
+    invalidate pic;
+}
+function voiceItemName(index)
+{
+    var e = tf.voiceRows[index];
+    if (e === void) return "";
+    return e.name + ": " + e.text + (KAGFavouriteVoices.has(e.voice) ? " (" + tr("Favourite") + ")" : "");
+}
+// a click on a row plays its voice; on its star, keeps it or lets it go
+function voicePick(index)
+{
+    var e = tf.voiceRows[index], l = kag.current.names.voiceList;
+    if (e === void) return;
+    var fav = +tf.musicView == 2, right = fav ? 112 : 56;
+    if (l !== void && isvalid l && l.cursorX >= l.itemWidth - right && l.cursorX < l.itemWidth - (fav ? 56 : 0) &&
+        l.cursorY >= 0 && l.cursorY < l.height) {
+        voiceStar(index);
+        return;
+    }
+    KAGPlayVoiceLine(e);
+}
+// F (or a controller's Y, through the keys) keeps the focused voice or lets it go
+function voiceKey(index, key, shift)
+{
+    if (key != #'F') return false;
+    voiceStar(index);
+    return true;
+}
+function voiceStar(index)
+{
+    var e = tf.voiceRows[index], l = kag.current.names.voiceList;
+    if (e === void) return;
+    KAGFavouriteVoices.toggle(e);
+    if (+tf.musicView == 2) {
+        // gone from the favourites: the list again
+        tf.voiceRows = voiceRows();
+        if (l !== void && isvalid l) { l.itemCount = tf.voiceRows.count; l.refresh(); }
+        return;
+    }
+    l.refresh() if l !== void && isvalid l;
+}
+// the favourites put in order by a drag (or Shift and the arrows)
+function voiceReorder(from, to)
+{
+    KAGFavouriteVoices.move(from, to);
+    tf.voiceRows = voiceRows();
+    tf.voiceFocus = to;
+}
+
 /**
  * Update BGM state
  */
