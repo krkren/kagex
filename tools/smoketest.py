@@ -2571,7 +2571,9 @@ def sample_steps(eng):
         eng.tjs('var c = world_object.env.characters["pip"]; global.__smokeRV = []; global.__smokeRVorig = c.readVoice;'
                 ' c.readVoice = (function(at, vowels) { var b = soundBuffer, sp = b.samplePosition, t = System.getTickCount();'
                 ' var r = global.__smokeRVorig(at, vowels);'
-                ' global.__smokeRV.add([t - lipTrackStart, (int)at, sp, b.samplePosition, b.position, "%.2f".sprintf(r[0])].join(":"));'
+                ' global.__smokeRV.add([t - lipTrackStart, (int)at, sp, b.samplePosition, b.position, "%.2f".sprintf(r[0]), b.volume, b.volume2,'
+                ' typeof b.use3D != "undefined" ? (b.use3D ? 1 : 0) : "-", b.fading ? 1 : 0, b.filters.count,'
+                ' fadingVoice !== void ? fadingVoice.status : "-"].join(":"));'
                 ' return r; } incontextof c); return 1;')
         eng.tjs('kag.onPrimaryClick(); return 1;')
         end = time.time() + 6
@@ -2579,7 +2581,7 @@ def sample_steps(eng):
             time.sleep(0.5)
             if eng.tjs('return __smokeLips.count > 0 && world_object.env.characters["pip"].soundBuffer.status != "play" ? 1 : 0;') == 1:
                 break
-        print("     readVoice calls (tick:at:sp before:sp after:position:rms): %s"
+        print("     readVoice calls (tick:at:sp before:sp after:position:rms:volume:volume2:use3D:fading:filters:other track): %s"
               % str(eng.tjs('var c = world_object.env.characters["pip"]; c.readVoice = global.__smokeRVorig;'
                             ' return __smokeRV.join(" ");'))[:3000], flush=True)
         r = str(eng.tjs('__smokeLipTimer.enabled = false; invalidate __smokeLipTimer;'
