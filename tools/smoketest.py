@@ -5427,15 +5427,21 @@ def sample_steps(eng):
         eng.tjs(WRAP_TJS + "return 1;")
         words = ("Some words at the usual size come first on this line and then a few more of them follow "
                  "before the big ones").split()
+        # (with krkr_richtext's plan where it draws, and with the greedy wrap the web build has)
         bad = []
-        for k in range(12, len(words) + 1):
-            text = " ".join(words[:k]) + " Bigger words follow"
-            at = text.index("Bigger")
-            got = json.loads(str(eng.tjs('return __smokeWrap(%s, "quality", -1, 4, 1, %d, 72);' % (tjs_string(text), at))))
-            lines = [l["text"].strip() for l in got["lines"] if l["text"].strip() != ""]
-            if " ".join(lines) != text:
-                bad.append(" / ".join(lines))
-        print("     a size change mid-line: %d line lengths, %d broke inside a word" % (len(words) - 11, len(bad)), flush=True)
+        rich = eng.tjs("return kag.fore.messages[0].useRichText ? 1 : 0;")
+        for use in ([1, 0] if rich == 1 else [0]):
+            eng.tjs("kag.fore.messages[0].useRichText = %s; return 1;" % ("true" if use else "false"))
+            for k in range(12, len(words) + 1):
+                text = " ".join(words[:k]) + " Bigger words follow"
+                at = text.index("Bigger")
+                got = json.loads(str(eng.tjs('return __smokeWrap(%s, "quality", -1, 4, 1, %d, 72);' % (tjs_string(text), at))))
+                lines = [l["text"].strip() for l in got["lines"] if l["text"].strip() != ""]
+                if " ".join(lines) != text:
+                    bad.append(" / ".join(lines))
+        eng.tjs("kag.fore.messages[0].useRichText = %s; return 1;" % ("true" if rich == 1 else "false"))
+        print("     a size change mid-line: %d line lengths%s, %d broke inside a word"
+              % (len(words) - 11, " each way" if rich == 1 else "", len(bad)), flush=True)
         if bad:
             raise SmokeError("a line with a size change broke inside a word: %s" % bad[0])
         eng.tjs("showAbout(); return 1;")

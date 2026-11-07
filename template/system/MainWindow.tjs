@@ -92,6 +92,7 @@ class KAGWindow extends Window
 	var wrapPosLine = 0;            // and the line it is on (wrapLineOf)
 	var wrapPosHist = 0;            // history line width where the current word starts
 	var wrapWordWidth = void;       // msgTextWidth() of the piece, cached
+	var wrapWidthFont = void;       // the line's font it was measured in
 	var wrapWordWidthHist = void;   // histTextWidth() of the word, cached
 	var wrapResume = false;         // a page break returned from this ch: the conductor runs it again on the new page
 	var wrapResumeDropHist = false; // whether the history line was broken at that ch
@@ -179,6 +180,7 @@ class KAGWindow extends Window
 	// Forget the line the word wrap was in (internalRestoreFlags calls this on a load)
 	function resetWordWrap() {
 		pendingFonts.clear();
+		wrapWidthFont = void;
 		wrapKey = wrapWordWidth = wrapWordWidthHist = wrapPlan = wrapPlanStyle = void;
 		wrapText = wrapDrawnWord = "";
 		wrapAt = wrapLastAt = wrapBreakWrap = 0;
@@ -193,6 +195,7 @@ class KAGWindow extends Window
 			wrapDrawnWord, wrapWords ];
 	}
 	function restoreWordWrap(s) {
+		wrapWidthFont = void; // (its widths measured again)
 		wrapKey = s[0], wrapText = s[1], wrapAt = s[2], wrapLastAt = s[3], wrapBreakWrap = s[4];
 		wrapWordStart = s[5], wrapSegStart = s[6], wrapPos = s[7], wrapPosHist = s[8];
 		wrapWordWidth = s[9], wrapWordWidthHist = s[10], wrapResume = s[11], wrapResumeDropHist = s[12];
@@ -408,6 +411,10 @@ class KAGWindow extends Window
 		// line's font has the old size until then, and the words were measured in it, so a word
 		// in a larger size ran past the line and broke in the middle (since 0.22.0)
 		cur.changeLineSize() if (textWriteEnabled && cur.sizeChanged);
+		// and a word's width measured before the font changed (at the space before it) is
+		// measured again in the new one
+		var lf = cur.lineLayer.font, fontKey = lf.face + "/" + lf.height + "/" + lf.bold + "/" + lf.italic;
+		if (fontKey != wrapWidthFont) wrapWordWidth = void, wrapWidthFont = fontKey;
 		if (resumed) {
 			// The conductor runs this ch again after a page break (-3/-5 re-queue the tag):
 			// it is where the first run found it, now on a new page
