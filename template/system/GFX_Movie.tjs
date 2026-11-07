@@ -171,6 +171,8 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		onceStartTick = System.getTickCount();
 
+		onceLastTick = 0, onceGap = 0;
+
 		if (once && onceEarly > 0) {
 
 			if (onceTimer === void) onceTimer = new Timer(onOnceTimer, "");
@@ -459,7 +461,7 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 	// event, which the engine posts from its update of the player
 
 	var once = false, ended = false, stopped = false, playedOut = false, onceTrigger, onceTimer;
-	var onceEarly = 0, onceStartTick = 0;
+	var onceEarly = 0, onceStartTick = 0, onceLastTick = 0, onceGap = 0;
 
 	function onPeriod(reason) {
 
@@ -495,7 +497,25 @@ class MovieControlLayer extends GenericFlip, VideoOverlay
 
 		if (total <= 0) return;
 
-		if (pos < total - onceEarly && System.getTickCount() - onceStartTick < total - onceEarly) return;
+		// and the margin grows with the longest wait between two of these checks: where the
+
+		// device draws a frame in half a second (0.23.1's first release run, on the emulator) a
+
+		// check comes that late, and 300 ms before the end the movie had already ended and
+
+		// looped back, which hung the game as it was stopped
+
+		var now = System.getTickCount();
+
+		if (onceLastTick > 0 && now - onceLastTick > onceGap) onceGap = now - onceLastTick;
+
+		onceLastTick = now;
+
+		var early = onceEarly + onceGap * 2;
+
+		early = 1500 if early > 1500;
+
+		if (pos < total - early && now - onceStartTick < total - early) return;
 
 		ended = true;
 
