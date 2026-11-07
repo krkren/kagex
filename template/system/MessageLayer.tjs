@@ -5692,7 +5692,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 			if (styledRun !== void) flushStyledRun(), styledRun = void;
 
-			drawAnimChar(lineLayer, dx, dy, ch, chColor, cw);
+			drawAnimChar(lineLayer, dx, dy, ch, chColor, cw, steptime);
 
 			lastFill = void;
 
@@ -6439,7 +6439,12 @@ class MessageLayer extends AnimKAGLayerTransMove
 	var animSerial = 0;     // each character's place in the page (a wave runs along them)
 	var animTimer;
 	var animHues = 12;      // a rainbow's colours
-	function drawAnimChar(ll, dx, dy, ch, color, cw) {
+	var animNextBorn = 0;   // the earliest a character coming in may start (the one before's start and its wait)
+	// A character coming in starts at the first frame after it's drawn (onAnimTimer), and no
+	// sooner than its wait (steptime, the text's speed) after the one before: where the engine
+	// draws several characters between two frames (a slow phone catching up), they still come
+	// in one after another; until then it isn't shown (born void)
+	function drawAnimChar(ll, dx, dy, ch, color, cw, steptime = 0) {
 		var pad = (fontSize >> 1) + 8; // room for the outline, the shadow and an italic's lean
 		var w = cw + pad * 2, h = ll.imageHeight;
 		var rainbow = textAnim == "rainbow";
@@ -6466,13 +6471,16 @@ class MessageLayer extends AnimKAGLayerTransMove
 		for (var i = 0; i < cells; i++) drawTextToLayer(lay, pad + w * i, dy, ch, rainbow ? animHue(i / cells) : color);
 		var a = %[ layer:lay, lx:dx - pad, ly:0, ox:0, oy:0, fixed:false, anim:textAnim, speed:textAnimSpeed,
 			appear:textAppear, time:window.skipMode ? 0 : (textAppearTime > 0 ? textAppearTime : 400),
-			born:System.getTickCount(), index:animSerial++, cells:cells, cellW:w ];
+			born:System.getTickCount(), step:steptime, index:animSerial++, cells:cells, cellW:w ];
+		if (a.appear != "" && a.time > 0) a.born = void;
 		a.size = textAnimSize > 0 ? textAnimSize : animDefaultSize(textAnim);
 		animChars.add(a);
 		placeAnimChar(a, a.born);
 		lay.visible = true;
 		if (animTimer === void) { animTimer = new Timer(onAnimTimer, ""); animTimer.interval = 33; }
-		animTimer.enabled = true;
+		// (setting enabled starts the interval again: set at every character typed faster than
+		// it, the timer didn't fire until the line was done, and the line came in all at once)
+		animTimer.enabled = true if !animTimer.enabled;
 	}
 	function animDefaultSize(kind) {
 		if (kind == "shake") return Math.max(2, fontSize \ 14);
@@ -6499,9 +6507,9 @@ class MessageLayer extends AnimKAGLayerTransMove
 		var bx = a.fixed ? a.ox : lineLayer.left, by = a.fixed ? a.oy : lineLayer.top;
 		var x = 0, y = 0, op = 255;
 		var still = typeof global.KAGReduceMotion != "undefined" && global.KAGReduceMotion();
-		var t = now - a.born, sec = now * a.speed / 1000;
+		var t = a.born === void ? 0 : now - a.born, sec = now * a.speed / 1000;
 		if (!still && a.appear != "" && a.time > 0 && t < a.time) {
-			var k = t / a.time, e = 1 - (1 - k) * (1 - k) * (1 - k), d = 1 - e;
+			var k = t > 0 ? t / a.time : 0, e = 1 - (1 - k) * (1 - k) * (1 - k), d = 1 - e;
 			switch (a.appear) {
 			case "rise":  y = (int)(d * fontSize * 0.7); break;
 			case "drop":  y = -(int)(d * fontSize * 0.9); break;
@@ -6534,7 +6542,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 		if (animChars.count == 0) { animTimer.enabled = false; return; }
 		if (!visible) return;
 		var now = System.getTickCount();
-		for (var i = 0; i < animChars.count; i++) placeAnimChar(animChars[i], now);
+		for (var i = 0; i < animChars.count; i++) {
+			var a = animChars[i];
+			if (a.born === void) {
+				a.born = now > animNextBorn ? now : animNextBorn;
+				animNextBorn = a.born + a.step;
+			}
+			placeAnimChar(a, now);
+		}
 	}
 	// the line's characters go where fixLineLayer puts the line
 	function fixAnimChars(llox, lloy) {
@@ -6558,6 +6573,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		for (var i = 0; i < animChars.count; i++) invalidate animChars[i].layer if isvalid animChars[i].layer;
 		animChars.clear();
 		animSerial = 0;
+		animNextBorn = 0;
 		animTimer.enabled = false if animTimer !== void;
 	}
 	// the other page's copy ([backlay], [forelay]): the same characters, moving the same way
@@ -6584,6 +6600,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 			animChars.add(a);
 		}
 		animSerial = src.animSerial;
+		animNextBorn = src.animNextBorn;
 		if (animChars.count > 0) {
 			if (animTimer === void) { animTimer = new Timer(onAnimTimer, ""); animTimer.interval = 33; }
 			animTimer.enabled = true;
