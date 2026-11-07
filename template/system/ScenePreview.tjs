@@ -212,14 +212,14 @@ class KAGScenePreview extends Layer
 		setSize(w + shadow, h + shadow);
 		fillRect(0, 0, imageWidth, imageHeight, 0);
 		// (krkr_richtext draws a layer's pixels only once something has read them)
-		if (typeof useCache != "undefined") useCache;
+		if (typeof this.useCache != "undefined") this.useCache;
 		fillRect(shadow, shadow, w, h, shadowColor);
 		fillRect(0, 0, w, h, border);
 		fillRect(3, 3, w - 6, h - 6, fill);
 		var pic = KAGScenePicture(spec.storage, spec.label, spec.text, picW, picH);
 		if (pic !== void) {
 			copyRect(pad, pad, pic, 0, 0, picW, picH);
-			if (typeof useCache != "undefined") useCache; // (again, after the copy)
+			if (typeof this.useCache != "undefined") this.useCache; // (again, after the copy)
 		} else {
 			// nothing of the World to show: the title on a dark panel
 			fillRect(pad, pad, picW, picH, empty);

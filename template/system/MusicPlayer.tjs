@@ -110,7 +110,7 @@ class KAGNowPlaying extends Layer
 		if (!isvalid this) return;
 		fillRect(0, 0, imageWidth, imageHeight, 0);
 		// (krkr_richtext draws a layer's pixels only once something has read them)
-		if (typeof useCache != "undefined") useCache;
+		if (typeof this.useCache != "undefined") this.useCache;
 		loadPicture();
 		if (pic !== void) {
 			// turned about its centre, into the top of the panel
@@ -118,7 +118,7 @@ class KAGNowPlaying extends Layer
 			var pw = pic.imageWidth, ph = pic.imageHeight, dx = width / 2, dy = picSize / 2;
 			var E = dx - (c * pw / 2 - s * ph / 2), F = dy - (s * pw / 2 + c * ph / 2);
 			affineCopy(pic, 0, 0, pw, ph, true, c, s, -s, c, E, F, stFastLinear, false);
-			if (typeof useCache != "undefined") useCache; // (again, after the copy)
+			if (typeof this.useCache != "undefined") this.useCache; // (again, after the copy)
 		}
 		var b = buffer, title = "", pos = 0, total = 0;
 		if (loaded(b)) {

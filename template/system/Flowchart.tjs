@@ -865,6 +865,8 @@ class KAGChartView extends Layer
 	{
 		var n = nodeAt(x, y);
 		if (n === void) return "";
+		// (a node with a preview card says it there)
+		if (preview !== void && typeof global.KAGScenePreview != "undefined" && KAGBindToGlobal(preview)(n) !== void) return "";
 		var st = KAGChartState(n);
 		if (st == "locked") return tr("Not reached yet");
 		var s = KAGChartName(n);
