@@ -73,6 +73,10 @@ jobs:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v4
+        with:
+          # the site takes Pages about ten minutes to sync, deploy-pages's own limit: three of
+          # six deploys up to 0.23.1's timed out while Pages was still syncing its files
+          timeout: 1800000
 
   # The deployed site in headless Chrome, as a first-time visitor: a fresh browser, so the
   # page goes through coi-serviceworker's reload and loads every file from Pages
