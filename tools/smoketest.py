@@ -1243,6 +1243,7 @@ def live2d_steps(eng):
     time.sleep(1.0)
     if eng.tjs(hiyori + 'return c.lastDraw != global.__smokeL2DDraw ? 1 : 0;') != 1:
         raise SmokeError("Hiyori was drawn once, and not again as her model moved")
+    model_face_window(eng, hiyori, "Hiyori")
     # upright: a player of her model, with no motion, drawn with its eyes open and shut, differs
     # where her eyes are, in the top part of the picture (her head's)
     r = str(eng.tjs('var s = KAGLive2DOf(kag), file = s.findModel("hiyori"), p = s.newPlayer(file);'
@@ -1547,6 +1548,28 @@ def three_why(eng):
                        ' ? "no fgimage/vee.vrm (tools/assets/make_vrm.py)" : "";'))
 
 
+def model_face_window(eng, who, label):
+    """A model character's face window (0.22.0): its faceCrop cut from the picture as drawn, and
+    drawn again as the model moves while it's the speaker. who: TJS setting c to the character"""
+    if eng.tjs(who + 'return typeof c.faceCropOf != "undefined" && c.faceCropOf() !== void'
+               ' && kag.current.faceLayer !== void ? 1 : 0;') != 1:
+        print("     (no face window for %s: a framework from before 0.22.0, or no faceCrop)" % label, flush=True)
+        return
+    # the speaker now, its face drawn as a line of its would (redrawFace)
+    eng.tjs(who + 'world_object.env.currentNameTarget = c; world_object.env.redrawFace(c, false); return 1;')
+    time.sleep(0.8)
+    a = str(eng.tjs(who + 'var fl = kag.current.faceLayer, n = 0;'
+                    ' for (var y = 0; y < fl.imageHeight; y += 8) for (var x = 0; x < fl.imageWidth; x += 8) n++ if fl.getMaskPixel(x, y) > 0;'
+                    ' return [fl.visible ? 1 : 0, n, c.faceShownAt].join(",");')).split(",")
+    time.sleep(0.6)
+    b = eng.tjs(who + 'return c.faceShownAt;')
+    print("     %s's face window: shown %s, %s samples drawn, drawn again at %s then %s" % (label, a[0], a[1], a[2], b), flush=True)
+    if a[0] != "1" or int(a[1]) < 50:
+        raise SmokeError("%s's face window isn't drawn: %s" % (label, a))
+    if str(b) == a[2]:
+        raise SmokeError("%s's face window doesn't follow the model as it moves" % label)
+
+
 def vrm_steps(eng):
     """The Animated Character demo's VRM character, Vee (KAGEnvCharacterVRM.tjs, drawn by the
     krkrthreepp plugin; her model and motions are tools/assets/make_vrm.py's): her picture where
@@ -1597,6 +1620,7 @@ def vrm_steps(eng):
     time.sleep(1.0)
     if eng.tjs(vee + 'return c.lastDraw != global.__smokeVRMDraw ? 1 : 0;') != 1:
         raise SmokeError("Vee was drawn once, and not again as she moved")
+    model_face_window(eng, vee, "Vee")
     # blinking (eyeFlipFreq 1: a blink every frame or so) and open eyes between; a face that
     # fades in and reaches the avatar
     eng.tjs('global.__smokeVRM = %[ blinkMin : 9.0, blinkMax : 0.0, mouth : %[], samples : 0, after : 0 ];'

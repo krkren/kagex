@@ -537,6 +537,7 @@ class KAGEnvCharacterModel extends KAGEnvCharacterEyeLip {
 			}
 			lastDraw = tick;
 			layer.assignImages(renderLayer);
+			try { updateFaceWindow(tick); } catch (e) { dm(@"${kind} character ${name}'s face window: ${e.message}"); faceCropBroken = true; }
 		} else if (env.skipNoDisp && modelReady() && renderLayer !== void) {
 			// a skip that shows nothing: the picture as it was
 			layer.assignImages(renderLayer);
@@ -577,10 +578,55 @@ class KAGEnvCharacterModel extends KAGEnvCharacterEyeLip {
 	}
 
 	/**
-	 * No face window (facewin) for a model
+	 * The face window (since 0.22.0): the part of the picture the entry's faceCrop names, cut
+	 * from the picture just drawn (one drawn now when the character isn't on the screen), and
+	 * kept moving while the character is the speaker (updateFaceWindow: its blinks and its
+	 * mouth). faceCrop is %[ left, top, width, height ] in the picture at 100% (the entry's
+	 * height tall), or fractions of the picture when every value is at most 1
 	 */
+	function faceCropOf() {
+		var c = init.faceCrop;
+		return typeof c == "Object" && c !== void ? c : void;
+	}
+	function faceCropIn(pic) {
+		var c = faceCropOf();
+		var l = +c.left, t = +c.top, w = +c.width, h = +c.height;
+		var sx, sy;
+		if (l <= 1 && t <= 1 && w <= 1 && h <= 1) {
+			sx = pic.imageWidth, sy = pic.imageHeight;
+		} else {
+			var height = config.height !== void ? +config.height : kag.scHeight;
+			sx = sy = pic.imageHeight / height;
+		}
+		return %[ left:l * sx, top:t * sy, width:w * sx, height:h * sy ];
+	}
 	function drawFace(layer) {
-		return false;
+		if (faceCropOf() === void) return false;
+		if (renderLayer === void || lastDraw === void || !isShowBU()) {
+			// off the screen: its picture drawn now
+			try { drawPose(env.faceWorkLayer, void, pose); } catch (e) { dm(@"${kind} character ${name}'s face: ${e.message}"); }
+		}
+		var pic = renderLayer;
+		if (pic === void || pic.imageWidth <= 1 || pic.imageHeight <= 1) return false;
+		KAGFaceCropInto(layer, pic, faceCropIn(pic));
+		// (the window crossfades to it: drawn again once that's over)
+		faceShownAt = System.getTickCount() + (int)(+env.faceFadeTime * kag.effectspeed) + 50;
+		return true;
+	}
+	// The face window follows the picture while this character is the speaker
+	var faceShownAt;
+	var faceWindowFrameTime = 66; // how often (ms)
+	var faceCropBroken = false;
+	function updateFaceWindow(tick) {
+		if (faceCropBroken || env.currentNameTarget !== this || faceCropOf() === void || renderLayer === void) return;
+		if (faceShownAt !== void && tick - faceShownAt < faceWindowFrameTime) return;
+		if (!env.faceWindowShows() || !isShowFace()) return;
+		var m = kag.current, fl = m.faceLayer;
+		if (fl === void || !fl.visible) return;
+		faceShownAt = tick;
+		KAGFaceCropInto(fl, renderLayer, faceCropIn(renderLayer));
+		var back = m.comp.faceLayer;
+		back.assignImages(fl, true) if back !== void;
 	}
 
 	// the model moves on its own: draw it again every frameTime while it shows
