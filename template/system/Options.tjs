@@ -877,7 +877,7 @@ function KAGOptionPickColor(name)
 
 // ---------------------------------------------------------------------------------------
 // The languages (Language.tjs, since 0.26.0): the menus' own, and a second one shown under the
-// story's. Their buttons are "Story's" (the menus follow the story) or "None", then each language
+// story's. Default leaves them as they are, as it leaves the story's language. Their buttons are "Story's" (the menus follow the story) or "None", then each language
 // by its own name.
 
 function KAGLanguageOptionValues(first)
@@ -888,16 +888,14 @@ function KAGLanguageOptionValues(first)
 	return v;
 }
 
-KAGDefineOption(%[ name:"menuLanguage", label:"Menu Language", kind:"choice", initial:"",
+KAGDefineOption(%[ name:"menuLanguage", label:"Menu Language", kind:"choice",
 	values:KAGLanguageOptionValues("Story's"),
 	available:function { return kag.languageAvailable; },
 	getValue:function { var m = KAGLanguage.menuLanguage; return m === void ? "" : m; },
-	setValue:function(v) { kag.setMenuLanguage(v); },
-	reset:function { kag.setMenuLanguage(""); } ]);
+	setValue:function(v) { kag.setMenuLanguage(v); } ]);
 
-KAGDefineOption(%[ name:"secondLanguage", label:"Second Language", kind:"choice", initial:"",
+KAGDefineOption(%[ name:"secondLanguage", label:"Second Language", kind:"choice",
 	values:KAGLanguageOptionValues("None"),
 	available:function { return kag.languageAvailable; },
 	getValue:function { var s = KAGLanguage.second; return s === void ? "" : s; },
-	setValue:function(v) { kag.setSecondLanguage(v); },
-	reset:function { kag.setSecondLanguage(""); } ]);
+	setValue:function(v) { kag.setSecondLanguage(v); } ]);

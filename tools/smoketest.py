@@ -3700,7 +3700,9 @@ def sample_steps(eng):
         if not elements_screens(eng):
             return
         sections = controls_list(eng)
-        for key, action in (("F1", "About"), ("F2", "Save"), ("F3", "Load"), ("F4", "Config"),
+        # F1 is the manual since 0.26.0 (About before); a sample from before the manual still says About
+        f1 = "Manual" if eng.tjs('return typeof global.KAGShowManual != "undefined" ? 1 : 0;') == 1 else "About"
+        for key, action in (("F1", f1), ("F2", "Save"), ("F3", "Load"), ("F4", "Config"),
                             ("F6", "Skip to the next choice or unread text"), ("F7", "Message history"), ("F8", "Auto mode on or off")):
             got = controls_action(sections, "Keyboard", key)
             if got != action:
@@ -4862,8 +4864,9 @@ def sample_steps(eng):
                            ' KAGFontLanguage("message"), KAGFontLanguage("interface")].join(",");'))
         eng.tjs('kag.setMenuLanguage(""); return 1;')
         eng.wait("the menus as the story", 'KAGLanguage.menuCode == "en"', timeout=10)
-        report = str(eng.tjs('var p = world_object.player.parser, s = p !== void ? p.languageStats.ja : void;'
-                             ' return s !== void ? [s.texts, s.untranslated, s.places.count].join(",") : "none";'))
+        # the compiler's report: char.ks compiled again, its Japanese texts counted
+        report = str(eng.tjs('var pl = world_object.player; if (pl.parser === void) return "none"; pl.compileList(["char.ks"], true);'
+                             ' var s = pl.parser.languageStats.ja; return s !== void ? [s.texts, s.untranslated, s.places.count].join(",") : "none";', timeout=120))
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
         print("     the message's end and second-language records (off, on): %s / %s; swapped: %s; menus (story, menus, Yes, picture, fonts): %s;"
@@ -4875,7 +4878,7 @@ def sample_steps(eng):
             raise SmokeError("swapLanguages didn't swap them: %s" % swapped)
         if menu != "en,ja,はい,1,en,ja":
             raise SmokeError("the menus didn't take their own language: %s" % menu)
-        if report != "none" and (int(report.split(",")[0]) < 100 or int(report.split(",")[2]) != int(report.split(",")[1])):
+        if report != "none" and (int(report.split(",")[0]) < 60 or int(report.split(",")[2]) != int(report.split(",")[1])):
             raise SmokeError("the compiler's count of Japanese texts is off: %s" % report)
 
     @step("debug helpers: the script's lines page and a go-to from it, the flags page and a flag set, the tag trace, the layer and World dumps, a bug report, and the route runner taking a choice")
@@ -4913,8 +4916,9 @@ def sample_steps(eng):
         dumps = str(eng.tjs('KAGDebugTrace(false); var a = KAGDebugLayers([]), b = KAGDebugWorld([]); var f = KAGDebugBugReport();'
                             ' return [a.count, b.count, Storages.isExistentStorage(f) ? 1 : 0, Storages.isExistentStorage(f.replace(/\\.txt$/, ".png")) ? 1 : 0, f].join("|");'))
         traced = "tag char.ks(" in eng.output()
-        # the route runner: the choice in char.ks, its second option, on to the demo menu
-        eng.tjs('kag.flags.charRoute = void; KAGPlaytest.start(%[ storage:"char.ks", label:"*crossroads", choices:[1], until:"s0001.ks", stuck:20000 ]); return 1;')
+        # the route runner: the choice in char.ks, its first option (the second would leave the
+        # station's scene read, which the flowchart's step later wants unread), on to the demo menu
+        eng.tjs('kag.flags.charRoute = void; KAGPlaytest.start(%[ storage:"char.ks", label:"*crossroads", choices:[0], until:"s0001.ks", stuck:20000 ]); return 1;')
         eng.wait("the route to end", 'KAGPlaytest.status != "running"', timeout=120)
         route = str(eng.tjs('return KAGPlaytest.report() + "|" + kag.flags.charRoute;'))
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
@@ -4931,7 +4935,7 @@ def sample_steps(eng):
         if int(d[0]) < 5 or int(d[1]) < 2 or d[2:4] != ["1", "1"] or not traced:
             raise SmokeError("a dump, the bug report or the trace is missing: %s, traced %s" % (dumps, traced))
         r = route.split("|")
-        if r[0] != "done" or r[2] != "1/2" or r[-1] != "station":
+        if r[0] != "done" or r[2] != "0/2" or r[-1] != "park":
             raise SmokeError("the route runner didn't take the choice and get to the menu: %s" % route)
 
     @step("full screen filled part way: the zoom from the bars to filling the screen by a percentage, and the Screen menu's window sizes")

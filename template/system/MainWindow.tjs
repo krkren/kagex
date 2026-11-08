@@ -14800,6 +14800,8 @@ class KAGWindow extends Window
 	function setMenuLanguage(code)
 	{
 		if (!languageAvailable || currentDialog !== void) return false;
+		var c = code === void || code == "" ? void : KAGLanguage.match(code);
+		if (c === KAGLanguage.menuLanguage) return true; // (as it is)
 		menuLanguagePending = code === void ? "" : (string)code;
 		if (languageTrigger === void) languageTrigger = new AsyncTrigger(applyPendingLanguage, "");
 		languageTrigger.trigger() if inStable;
@@ -14812,8 +14814,9 @@ class KAGWindow extends Window
 	{
 		if (!languageAvailable) return false;
 		var c = code === void || code == "" ? void : KAGLanguage.match(code);
+		if (c === KAGLanguage.second) return true; // (as it is)
 		KAGLanguage.second = c;
-		onLanguageChange(KAGLanguage.current, KAGLanguage.current);
+		redrawLanguageMessages(KAGLanguage.current);
 		try { saveSystemVariables(); } catch (e) { dm("Language: system variables not saved: " + e.message); }
 		return true;
 	}
@@ -14899,6 +14902,17 @@ class KAGWindow extends Window
 	// draws the screen on show again)
 	function onLanguageChange(code, previous)
 	{
+		redrawLanguageMessages(code);
+		if (selectShowing && _selectLayer !== void) selectLayer.relabel();
+		setMenuAccessibleAll();
+		updateMenuBar(); // the menu bar's titles in the new language
+		callHook(languageChangeHook, code, previous);
+	}
+
+	// The message layers' pages drawn again in a language (with the second language under them as
+	// it is now), and the click glyph where the text now ends
+	function redrawLanguageMessages(code)
+	{
 		// every message layer showing scenario text (a screen opened over the game is on
 		// another layer, and the game's page waits under it), but none with buttons or links,
 		// which redrawing clears
@@ -14919,10 +14933,6 @@ class KAGWindow extends Window
 			if (lastClickGlyphWhich == "page") glyphLayer.showPageBreakGlyph(pageBreak);
 			else glyphLayer.showLineBreakGlyph(lineBreak);
 		}
-		if (selectShowing && _selectLayer !== void) selectLayer.relabel();
-		setMenuAccessibleAll();
-		updateMenuBar(); // the menu bar's titles in the new language
-		callHook(languageChangeHook, code, previous);
 	}
 
 	function hasTextUnits(layer)
