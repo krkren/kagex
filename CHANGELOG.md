@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.26.0
+
+### Added
+
+- **Objects that move with others**: a World layer or character can be attached to another (`attach=`: it moves, zooms, turns and fades with it, `attachbehind=` puts it behind, `attachkeep=` keeps it when the other leaves), follow another's picture as drawn (`follow=`: a reflection, a shadow, a copy that blinks with it), be drawn only where another is (`clipto=`), or be placed once beside one (`relative=name,dx,dy`); `detach` lets go. They're World state, so compiled scenes, saves and Back keep them, and the attached ones leave with the other (`KAGEnvLinks.tjs`). The Character demo has a speech bubble on Pip, a light clipped to Ai and a mirrored copy following her.
+- **Pictures and outfits an earlier choice changes**: `imagenamemap.txt` and `dressnamemap.txt` (Wamsoft's tables of a name, its replacement and a condition) are decided as a picture is drawn, so a flag changed later changes it the next time it's drawn, for event pictures, stages and both kinds of characters. In the Character demo the park route gives Pip his beret later on.
+- **CG variations from one layered file**: `cgvariations.txt` names pictures that are one layered file's layers shown in different ways (a layer shown with its folders, shown alone in its folder, hidden, everything hidden first; a variation can start from another's), put together as they're shown from the split file kagex-release makes of a `.psd` or `.clip` (or the file itself through its plugin), so a game ships the file once. KAG and World layers, stages, the gallery and its viewer take the names, and the gallery unlocks each by its own (`CGVariations.tjs`). The Animated Character demo shows four of Pip's CG, one tile in the gallery.
+- **A manual inside the game**: Help > Contents, F1 and Config's Manual button open pages of help in the game window on every platform, with links between them, Back, Forward and Contents, the keys, the controller, the mouse, touch and screen readers. Links can set an option there and then (with a box showing the one in use), close the manual and open a screen, or copy an address or a path; pages say which keys do what as the player has set them. The framework has ten pages in English and Japanese (the controls, saving, the settings, a slow game, a stretched or blurry picture, sound, movies, accessibility, getting help), which a game adds to or replaces by name (`Manual.tjs`); the sample adds a page about its demos and its own support page.
+- **A menu language of its own, and a second language under the story's**: the menus, screens and interface fonts can be in another language than the story (Config's Menu Language), and a second language can show each message again under it, smaller (Second Language; Shift+F9 swaps the two), for language learners or two players. The sample's Config has a Languages page.
+- **Checks for translators**: the scene compiler warns about a translated text left empty and a speaker shown by another name in one language only, and `-scncompile` ends with a report for each language of the texts still as written in the script's language and where they are.
+- **A playthrough tester**: `tools/playtest.py` plays a game's routes on their own, each in a headless game with its own save folder and log, taking the choices given or every branch in turn, several at once, and reports each route done, stuck, or the first script error with its file, line, tag and trace (`KAGPlaytest` in `DebugTools.tjs`).
+- **Debug helpers**: the Debug menu restarts the script, lists its lines to go to any of them, shows the flags to read and set (`flaglist.txt` says what they are), copies the voice's file name or where the game is, writes a bug report with a screenshot, traces every tag into the log and dumps the layers and the World. `-allseen=yes` counts everything as seen for a run; `-instance=` gives a run a lock of its own.
+- **Full screen filled part way**: Full Screen Fit's Part Way and How Far to Fill zoom the game from the size that shows all of it with bars to the size that fills the screen, by a percentage. The Screen menu lists the window sizes that fit the screen.
+
+### Fixed
+
+- **The Japanese staging-kit lines were punctuated in English** (`char.ks`'s gestures), which the new translator report found.
+- **The smoke test's Sprite Mode check failed on Windows**, whose engine lists file names in lower case.
+
 ## 0.25.0
 
 ### Added

@@ -6257,7 +6257,8 @@ def sample_steps(eng):
                 return [c.flipx, st.speaker, st.line, world_object.env.stage.stage, tf.spriteBgs[tf.spriteBgs.count - 1].name].join("|");'''))
             print("     turned round and saying a line: %s" % said, flush=True)
             sd = said.split("|")
-            if sd[0] != "1" or sd[1] != "Ai" or sd[2] != "Hello from the stage." or (own and (sd[3] != "spriteown0" or sd[4] != "My Picture")):
+            # (the Windows engine lists file names in lower case: the picture's name may be "my picture")
+            if sd[0] != "1" or sd[1] != "Ai" or sd[2] != "Hello from the stage." or (own and (sd[3] != "spriteown0" or sd[4].lower() != "my picture")):
                 raise SmokeError("Ai wasn't turned round, saying the line, over the player's own picture: %s" % said)
             # the camera: the stage without the panel, saved as F12 saves one, then the panel again
             before = len([n for n in os.listdir(eng.savedir) if n.startswith("screenshot")]) if isinstance(eng, DesktopEngine) else 0
