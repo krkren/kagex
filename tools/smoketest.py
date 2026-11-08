@@ -2661,6 +2661,77 @@ def sample_steps(eng):
         if after != before:
             raise SmokeError("loaded at %s, saved at %s" % (after, before))
 
+    @step("a save made before a patch of its script loads at the text it was made at: the save point and the history found again by their texts, or the top of the scene when the text is gone")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.scnTextPrint != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before saves that outlast a patch)", flush=True)
+            return
+        # where the last step left the game: char.ks's sixth text, loaded from bookmark 1. A patch
+        # is played by the save itself: another script hash, its point and its last history
+        # block's text moved on, as a patch that adds lines before them would have them
+        state = 'var p = world_object.player; return [p.curSceneName, p.curTextId, p.curPoint].join(",");'
+        before = str(eng.tjs(state))
+        info = str(eng.tjs('''var p = kag.pcflags.scenePlayer;
+            if (p === void || p.at === void || p.histories === void) { var k = []; if (p !== void) k.assign(p); return "none: " + (p === void ? "no scenePlayer" : k.join(" ")); }
+            var h = p.histories[p.histories.count - 1];
+            return [p.at.count, p.at[0].length > 0 ? 1 : 0, h.print !== void ? 1 : 0, h.idx, p.histories.count].join(",");'''))
+        print("     at %s; the save's texts, its own text, the last block's print and text, blocks: %s" % (before, info), flush=True)
+        if info.startswith("none") or not info.startswith("3,1,1,"):
+            raise SmokeError("the save doesn't note the texts it was made at, or the history its first text: %s" % info)
+        point, last_idx = before.split(",")[2], info.split(",")[3]
+
+        def patched(slot, edit):
+            eng.tjs('''var p = kag.pcflags.scenePlayer; global.__smokeKeep = %%[]; (Dictionary.assignStruct incontextof __smokeKeep)(p);
+                p.hash = "patched"; p.point += 9; var h = p.histories[p.histories.count - 1]; h.idx += 2; %s
+                kag.saveBookMark(%d); (Dictionary.assignStruct incontextof p)(__smokeKeep); global.__smokeKeep = void; return 1;''' % (edit, slot))
+            eng.wait("the save to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(%d))" % slot, timeout=10)
+            eng.tjs("kag.goToStart(); return 1;")
+            eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+            eng.tjs("loadFunction(%d); return 1;" % slot)
+            eng.wait("the save to load", "world_object.player.working && kag.inStable && world_object.player.curSceneName == %s"
+                     % tjs_string(before.split(",")[0]), timeout=30)
+            time.sleep(0.3)
+            return str(eng.tjs('var p = world_object.player, hs = p.histories;'
+                               ' return [p.curSceneName, p.curTextId, p.curPoint, hs.count > 0 ? hs[hs.count - 1].idx : "-", p.getHistoryCount()].join(",");'))
+
+        moved = patched(6, "")
+        same_text = patched(7, 'p.at[0] = "nobody\\tno such line";')
+        gone = patched(8, 'p.at = [ "nobody\\tno such line", "nor\\tthis", "nor\\tthat" ]; h.print = "nobody\\tno such line";')
+        print("     moved: %s; its text changed: %s; nothing found: %s" % (moved, same_text, gone), flush=True)
+        m, t, g = moved.split(","), same_text.split(","), gone.split(",")
+        b = before.split(",")
+        # back where the last step left it, for the steps after (before any failure is told)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs("loadFunction(1); return 1;")
+        eng.wait("the save to load", "world_object.player.working && world_object.player.curTextId == %s && kag.inStable" % b[1], timeout=30)
+        if m[1] != b[1] or m[2] != point or m[3] != last_idx:
+            raise SmokeError("a save whose point and history a patch moved didn't load at its text: %s (saved at %s, block %s)" % (moved, before, last_idx))
+        if t[1] != b[1] or t[3] != last_idx:
+            raise SmokeError("a save whose own text a patch changed didn't find its place by the texts before: %s" % same_text)
+        # (the history is the first text's alone: the block the save had is left out)
+        if g[1] != "1" or g[4] != "1":
+            raise SmokeError("a save whose texts are gone didn't start from the top of its scene, or kept the block it can't find: %s" % gone)
+
+    @step("a compile tells the texts it made new and the ones gone since the script was last compiled, as the player finds them")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof world_object.player.parser == "Object" && typeof world_object.player.parser.reportTextChanges != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiler here, or one from before the report)", flush=True)
+            return
+        got = str(eng.tjs('''var p = world_object.player.parser, t = function(n, s) { return [ n, [ [ void, s ] ], void, 0, void ]; };
+            var before = %[ "*a" => [ p.textPrint(t("ai", "one")), p.textPrint(t("ai", "two")), p.textPrint(t("pip", "three")) ],
+                            "*gone" => [ p.textPrint(t("ai", "four")) ] ];
+            var root = %[ scenes: [ %[ label: "*a", texts: [ t("ai", "one"), t("pip", "three"), t("pip", "new") ] ], %[ label: "*b", texts: [ t("ai", "five") ] ] ] ];
+            var same = p.reportTextChanges("smoke.ks", %[ "*a" => before["*a"] ], %[ scenes: [ %[ label: "*a", texts: [ t("ai", "one"), t("ai", "two"), t("pip", "three") ] ] ] ]);
+            var shown = world_object.player.getText(1), mine = scnTextPrint(shown);
+            return [ p.reportTextChanges("smoke.ks", before, root), same === void ? "nothing" : same, mine == p.textPrint(world_object.player.scenario.texts[0]) ? "alike" : mine ].join("|");'''))
+        print("     " + got.replace("|", "\n     "), flush=True)
+        report, same, alike = got.split("|")
+        if "2 texts are new and 1 gone" not in report or "*a: 1 new, 1 gone" not in report or "scenes gone: *gone" not in report:
+            raise SmokeError("the compile's report didn't count the texts new and gone: %s" % report)
+        if same != "nothing" or alike != "alike":
+            raise SmokeError("the report spoke of an unchanged script, or the compiler and the player see a text differently: %s, %s" % (same, alike))
+
     @step("BACK goes back a message, and the backlog's marks go back to theirs")
     def _():
         if not eng.compiled or eng.tjs('return typeof global.rollBack != "undefined" ? 1 : 0;') != 1:

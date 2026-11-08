@@ -1058,6 +1058,7 @@ class SceneParser
 		var out = outputPath(storage);
 		if (out === void) throw new Exception(storage + ": its folder isn't writable, so it can't be compiled");
 		var t = System.getTickCount();
+		var before = compiledTexts(out);   // the texts as last compiled, for the report after
 		var root = compile(storage, entryFor(storage));
 		if (writesPsb) SCNFile.save(root, out);
 		else Scripts.saveJSON(out, root, true, 1);
@@ -1074,7 +1075,86 @@ class SceneParser
 		for (var i = 0; i < root.scenes.count; i++) ntexts += root.scenes[i].texts.count;
 		dm("%s: %d scenes, %d texts, %d warnings (%d ms) -> %s".sprintf(storage, root.scenes.count, ntexts,
 			cwarnings, System.getTickCount() - t, out));
+		reportTextChanges(storage, before, root);
 		return root;
+	}
+
+	// ------------------------------------------------------------------
+	// What a compile changed (since 0.27.0): a save made before it finds its text again by what
+	// the text says (KAGEnvPlayer.mapPoint), so the developer is told which texts are new or gone
+	// ------------------------------------------------------------------
+
+	// a compiled text as the player finds it again (scnTextPrint): its speaker and its text in
+	// the script's language
+	function textPrint(e) {
+		if (typeof e != "Object" || e === null) return "";
+		var langs = e[1], text;
+		if (typeof langs == "Object" && langs !== null && langs instanceof "Array") text = langs[0] !== void ? langs[0][1] : "";
+		else text = e[2];
+		var s = (e[0] !== void ? (string)e[0] : "") + "\t" + (text !== void ? (string)text : "");
+		return s.length > 160 ? s.substring(0, 160) : s;
+	}
+
+	// the texts of a compiled file, by scene label (void: none, or it can't be read)
+	function compiledTexts(path) {
+		if (path === void || !Storages.isExistentStorage(path)) return;
+		try {
+			var root = readCompiled(path), r = %[];
+			if (root === void || root.scenes === void) return;
+			for (var i = 0; i < root.scenes.count; i++) {
+				var sc = root.scenes[i], texts = [];
+				if (sc.texts !== void) for (var j = 0; j < sc.texts.count; j++) texts.add(textPrint(sc.texts[j]));
+				r[sc.label !== void ? (string)sc.label : ""] = texts;
+			}
+			return r;
+		} catch (e) {
+			return;
+		}
+	}
+
+	// how many of a's texts are in b in the same order (the longest common subsequence)
+	function textsKept(a, b) {
+		if (a.count * b.count > 250000) {
+			// too many to compare in order: the ones both have
+			var have = %[], n = 0;
+			for (var i = 0; i < b.count; i++) have[b[i]] = (have[b[i]] !== void ? have[b[i]] : 0) + 1;
+			for (var i = 0; i < a.count; i++) if (have[a[i]] > 0) have[a[i]]--, n++;
+			return n;
+		}
+		var prev = [], cur = [];
+		for (var j = 0; j <= b.count; j++) prev[j] = 0;
+		for (var i = 1; i <= a.count; i++) {
+			cur[0] = 0;
+			for (var j = 1; j <= b.count; j++)
+				cur[j] = a[i - 1] == b[j - 1] ? prev[j - 1] + 1 : (prev[j] > cur[j - 1] ? prev[j] : cur[j - 1]);
+			var t = prev; prev = cur; cur = t;
+		}
+		return prev[b.count];
+	}
+
+	function reportTextChanges(storage, before, root) {
+		if (before === void) return;
+		var lines = [], added = 0, gone = 0, scenesGone = [];
+		var now = %[];
+		for (var i = 0; i < root.scenes.count; i++) {
+			var sc = root.scenes[i], texts = [];
+			if (sc.texts !== void) for (var j = 0; j < sc.texts.count; j++) texts.add(textPrint(sc.texts[j]));
+			var label = sc.label !== void ? (string)sc.label : "";
+			now[label] = true;
+			var old = before[label];
+			if (old === void) { added += texts.count; continue; }
+			var kept = textsKept(old, texts);
+			if (kept == old.count && kept == texts.count) continue;
+			added += texts.count - kept;
+			gone += old.count - kept;
+			lines.add("%s: %d new, %d gone".sprintf(label == "" ? "(start)" : label, texts.count - kept, old.count - kept));
+		}
+		foreach(before, function(label, texts, d, now, gone) { gone.add(label) if now[label] === void; }, now, scenesGone);
+		if (added == 0 && gone == 0 && scenesGone.count == 0) return;
+		var msg = "%s: since it was last compiled, %d texts are new and %d gone (%s)%s. A save made at a text that's gone finds its place by the two before it, else starts its scene again".sprintf(
+			storage, added, gone, lines.join("; "), scenesGone.count > 0 ? "; scenes gone: " + scenesGone.join(", ") : "");
+		dm(msg);
+		return msg;
 	}
 
 	function getCurrentInfo() {

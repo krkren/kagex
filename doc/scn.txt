@@ -80,10 +80,19 @@ To play every script from the script itself, start with -scnplay=no (-scnplay=ye
 compiled whatever the game has saved). The setting the game keeps is the World's
 playerExecMode (scflags.playerExecMode), on unless turned off.
 
-Saves made while playing compiled resume at the save point they were made at. A script
-compiled again since then (its hash changed) resumes at the top of the scene instead. Saves
-made with compiled play on and off don't mix: one made reading the script can't be loaded
-into the compiled script, or the other way round.
+Saves made while playing compiled resume at the save point they were made at. A save also
+keeps what its text says (the speaker and the text in the script's language) and the two
+different texts before it, and each block of its history its first text's (since 0.27.0), so
+when its script was compiled again since then (its hash changed: a patch, a new envinit.tjs)
+it resumes at the save point with those texts, wherever lines added or taken out have moved it:
+the point's own text first, then the two before it, which find the place of a text the patch
+changed, and of points that fit as well the nearest to the old one. The history's blocks are
+moved to their texts too, and a block whose text is gone is left out. A save whose texts are all
+gone, or one made before 0.27.0, resumes at the top of the scene. A compile tells in the log how
+many texts of each scene are new and how many gone since the script was last compiled, and the
+scenes gone, so a patch's author sees which saves will start their scene again. Saves made with
+compiled play on and off don't mix: one made reading the script can't be loaded into the
+compiled script, or the other way round.
 
 ◇ Going back
 
