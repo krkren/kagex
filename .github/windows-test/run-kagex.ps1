@@ -28,14 +28,18 @@ $script:steps  = [System.Collections.Generic.List[object]]::new()
 # The REPL file channel pretty-prints a result on its own thread, and a TJS string or object
 # handled there races the main thread's reference counts: engine 2.6.5 aborted with "double free
 # or corruption" in about one run in five (UPSTREAM.md). So the main thread writes the result to
-# ci-chan/result.txt (a type letter, then the value) and the REPL only gets the number 0 back.
-function Invoke-Tjs([string]$Code, [int]$TimeoutSec = 30) {
-    if ($script:proc.HasExited) { throw "engine has exited (code $($script:proc.ExitCode))" }
+# ci-chan/result.txt (the command's number, then a type letter and the value) and the REPL only
+# gets the number 0 back. The file is written over, never deleted: the engine rebuilds its whole
+# auto path table whenever a script makes a new file, and deleting it before every command made
+# each poll cost the game that. The writer is defined once (__ciSave, again in an engine started
+# since): the engine keeps every block it compiles that has a function in it, so wrapping each
+# command in a function of its own grew the script heap with every poll.
+$script:seq = 0
+$ciSaver = "(global.__ciSave = function(r, seq) { var t = typeof r; var a = [ '#' + seq, t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ]; a.save(System.exePath + 'ci-chan/result.txt'); return 0; }, 0)"
+
+function Send-Repl([string]$Text, [int]$TimeoutSec, [string]$Code) {
     $tmp = Join-Path $chan 'cmd.tmp'; $cmd = Join-Path $chan 'cmd'; $resp = Join-Path $chan 'resp'
-    $out = Join-Path $chan 'result.txt'
-    Remove-Item -Force $out -ErrorAction SilentlyContinue
-    $wrapped = "(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ]; a.save(System.exePath + 'ci-chan/result.txt'); return 0; })(($Code))"
-    [IO.File]::WriteAllText($tmp, $wrapped, [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($tmp, $Text, [Text.UTF8Encoding]::new($false))
     Move-Item -Force $tmp $cmd
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while (-not (Test-Path $resp)) {
@@ -48,10 +52,27 @@ function Invoke-Tjs([string]$Code, [int]$TimeoutSec = 30) {
         try { $txt = [IO.File]::ReadAllText($resp, [Text.Encoding]::UTF8); Remove-Item -Force $resp }
         catch { $txt = $null; Start-Sleep -Milliseconds 25 }
     }
-    $r = $txt | ConvertFrom-Json
+    return $txt | ConvertFrom-Json
+}
+
+function Invoke-Tjs([string]$Code, [int]$TimeoutSec = 30) {
+    if ($script:proc.HasExited) { throw "engine has exited (code $($script:proc.ExitCode))" }
+    $out = Join-Path $chan 'result.txt'
+    $script:seq++
+    $call = "__ciSave(($Code), $($script:seq))"
+    $r = Send-Repl $call $TimeoutSec $Code
+    if (-not $r.ok -and "$($r.error)" -match '__ciSave') {
+        $d = Send-Repl $ciSaver 30 '(the result writer)'
+        if (-not $d.ok) { throw "TJS: $($d.error)" }
+        $r = Send-Repl $call $TimeoutSec $Code
+    }
     if (-not $r.ok) { throw "TJS: $($r.error)" }
-    # UTF-16 with a BOM, one line per element: the value, then a line end
-    $v = [IO.File]::ReadAllText($out)
+    # UTF-16 with a BOM, one line per element: the number, the value, each with a line end
+    $v = if (Test-Path $out) { [IO.File]::ReadAllText($out) } else { '' }
+    $nl = $v.IndexOf("`n")
+    $head = if ($nl -ge 0) { $v.Substring(0, $nl).TrimEnd("`r") } else { $v }
+    if ($head -ne "#$($script:seq)") { throw "no result from: $($Code.Substring(0, [Math]::Min(80, $Code.Length)))" }
+    $v = $v.Substring($nl + 1)
     if ($v.EndsWith("`n")) { $v = $v.Substring(0, $v.Length - 1) }
     if ($v.EndsWith("`r")) { $v = $v.Substring(0, $v.Length - 1) }
     if ($v.Length -eq 0) { throw "no result from: $($Code.Substring(0, [Math]::Min(80, $Code.Length)))" }
