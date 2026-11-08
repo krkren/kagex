@@ -119,9 +119,11 @@ class Engine:
     # one keeps under 1 KB. TJS that makes a function (a Timer's, a hook) goes the old way: a
     # function belongs to the block it was compiled in, the REPL keeps its blocks, and
     # Scripts.exec lets its block go as it returns, which leaves such a function invalid
-    # ("object already invalidated" at its next call)
+    # ("object already invalidated" at its next call). And a var at the top of a script
+    # Scripts.exec runs is a global (a step's var f took KAG's flags' name), so the TJS goes in a
+    # block, where they are its own
     MAKES_FUNCTIONS = re.compile(r"\b(function|class|property)\b")
-    RUNNER = ("(global.__smokeHex = function(src) { var r = Scripts.exec(src); if (typeof r != 'String') return r;"
+    RUNNER = ("(global.__smokeHex = function(src) { var r = Scripts.exec('{\\n' + src + '\\n}'); if (typeof r != 'String') return r;"
               " var a = []; for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
               " return 'S:' + a.join(''); }, 0)")
     runner_ready = False
@@ -277,7 +279,7 @@ class FileChannel(Engine):
     """The REPL file channel (-replfile=<dir>): TJS in cmd, the answer in resp. A native modal
     dialog shows up as a modal file; it is answered and counted as a failure."""
     chan = None
-    RUNNER = ("(global.__smokeSave = function(src, out) { var r = Scripts.exec(src); var t = typeof r;"
+    RUNNER = ("(global.__smokeSave = function(src, out) { var r = Scripts.exec('{\\n' + src + '\\n}'); var t = typeof r;"
               " var a = [ t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
               " a.save(out); return 0; }, 0)")
 
