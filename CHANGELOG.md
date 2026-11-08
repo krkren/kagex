@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.25.0
+
+### Added
+
+- **Previews that play the scene**: the card beside a Replay tile, a Search row or a chart node now plays the scene's opening lines in it, as the story would show them (the World as each line leaves it, the speaker's name and the line, the waits by the line's length), with a bar for how far it has gone, "End of the scene" at its end and its last picture kept. Ctrl (a controller's R2) hurries it. The branches of an `[if]` follow the route's flags (`ScenePreview.tjs`). On a touch screen a long press on a tile, a row or a node shows the card, which a mouse shows by resting on it.
+- **Sprite Mode: a stage of the player's own**: several characters at once, each dragged into place, turned round, zoomed by the wheel or the buttons and taken on or off the stage; a row for each pose's variations (Pip's arms); a line typed in and shown in a message window, as in the story, with the picked character's name; the panel put away (a right-click brings it back); a screenshot without the panel; and, on a desktop, the player's own pictures from the save folder's `backgrounds/` as backdrops (`SpriteMode.tjs`).
+- **Favourite voices from the story**: V (the `favouriteVoice` action) keeps the voiced line on screen with the favourites, and the backlog's star does the same for any line in it. The music room's voices have three playlists besides the favourites, a lock that keeps a line in its list, the speaker's face at the line, a jump to the scene the line came from, and Play all, which plays a list's voices one after another (`Voices.tjs`).
+- **The music room's player**: Play turns into Pause (a click on the record, Space or Return does it too), a level meter moves with the music, the tracks play once, in order or shuffled, and three playlists of tracks can be put in order by dragging (`MusicPlayer.tjs`).
+- **Spoken greetings, and a choice of greeter**: Config's Title Greeting picks who greets the player on the title (Ai, Pip or no one); Pip greets in his own babble, with his own picture, and a greeting's line can have a voice (`greetings.csv`'s Who column, `KAGGreetingGreeter`).
+- **The quick menu's buttons put in order by dragging**: Change Controls has a strip of the quick menu's buttons, each dragged to its place (`KAGQuickOrderStrip`); its rows shrink to fit the screen.
+- **Scene moves in KAG's own player**: back to the start of the scene, back to the last choice, rewind and on to the next scene work for scripts KAG plays itself (scripts not in `!scnlist.txt`, or `-scnplay=no`), from the label titles they pass, as they do for compiled scenes.
+- **Screen readers read the screens drawn on message layers**: Config, save and load and Extras give each button, link, text box, check box and slider to the screen reader, named by its label or its help line, with the screen's help line as its description; the focus follows the keys, and the screen reader can press them. A scrolling list on such a screen (the music room's tracks) is read with it (`KAGMessageNodes`, `KAGA11yScreenNames`).
+
+### Fixed
+
+- **The music room's progress bar was jittery**: the engine reports where a sound is in steps of 21 or 43 ms, and for half a second after a seek or a loop a buffer ahead, so the bar jumped back and forth. The bar and the time now follow a clock set from the music, set again only when the music really jumps.
+
 ## 0.24.0
 
 ### Added
