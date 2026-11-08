@@ -3790,9 +3790,23 @@ the line in the language shown (template/system/ScenePreview.tjs, since 0.24.0):
 
   KAGScenePicture(storage, label, text, w, h)   the picture (kept; void where the World shows
                                                 nothing there)
-  KAGSceneLine(storage, label, text)            %[ title, name, text ] as shown
+  KAGSceneLine(storage, label, text)            %[ title, name, text, flag ] as shown
+  KAGSceneSteps(data, label, text, flags)       the scene's messages from that text, in order:
+                                                [[text, ...]...] (a text and those that carry
+                                                its window on), its [if]s taken with flags
   KAGScenePreview                               the card (showFor, hide; the text styles
-                                                preview.title, preview.name, preview.text)
+                                                preview.title, preview.name, preview.text,
+                                                preview.note)
+
+The card plays the scene (since 0.25.0): once a line has been read (waitBase + waitPerChar a
+character, from waitMin to waitMax ms) the next comes with its picture, silently, a bar under
+the picture showing how far it has come, to the scene's end, where the last message stays with
+a note ("End of the scene"). Ctrl, or a controller's R2, hurries it (hurry, 8 times). A message
+whose World shows nothing keeps the picture before it. The scene's [if]s go as they did on the
+player's route: the flags the flowchart kept where the scene starts (sf.chartFlags), or none
+for a scene it hasn't reached. A spec with play:false stays on its text. On a touch screen,
+which has no pointer resting on an item, a long press (holdTime, 450 ms) on an item or a chart
+node shows its card, picks nothing, and the card stays until the next press.
 
 The sample's Replay tiles, Search rows and chart nodes have one.
 

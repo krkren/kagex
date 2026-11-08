@@ -31,7 +31,9 @@
  *   onItemKey        function(index, key, shift): a key on the focused item, before the list's
  *                    own (true: taken; since 0.24.0)
  *   preview          function(index): a scene to show on a card beside the item the pointer or
- *                    the keys are on (ScenePreview.tjs, since 0.24.0)
+ *                    the keys are on (ScenePreview.tjs, since 0.24.0), or a long press (holdTime
+ *                    ms; since 0.25.0: a touch screen has no pointer resting on an item), which
+ *                    picks nothing; the card stays until the next press
  *
  * Functions written outside any object are run with the global object as this (KAGBindToGlobal,
  * Actions.tjs). A drag on the list doesn't make a swipe (the window's gestures), and the wheel
@@ -72,6 +74,7 @@ class KAGScrollList extends Layer
 	var onItemKey;             // function(index, key, shift): a key on the focused item (since 0.24.0)
 	var reorderHandle = 64, holdTime = 450;
 	var lifted = -1, liftTo = -1, liftY = 0, liftGrab = 0, pressIndex = -1, holdTimer;
+	var previewIndex = -1, previewHeld = false; // a long press showing an item's card (touch)
 	var liftColor = 0xff5025ff;  // the frame round a lifted item
 
 	function KAGScrollList(win, par)
@@ -300,8 +303,14 @@ class KAGScrollList extends Layer
 	function onHold()
 	{
 		holdTimer.enabled = false;
-		if (!isvalid this || !pressed || dragging || lifted >= 0 || pressIndex < 0) return;
-		lift(pressIndex, pressY);
+		if (!isvalid this || !pressed || dragging || lifted >= 0) return;
+		if (pressIndex >= 0) { lift(pressIndex, pressY); return; }
+		// a long press on an item with a card (no hover on a touch screen): the card at once,
+		// and the press picks nothing
+		if (previewIndex >= 0) {
+			previewHeld = true;
+			updatePreview(previewIndex, true);
+		}
 	}
 
 	function moveLifted(y)
@@ -384,6 +393,11 @@ class KAGScrollList extends Layer
 		if (pressIndex >= 0) {
 			if (x >= itemWidth - reorderHandle) lift(pressIndex, y);
 			else { holdTimer.interval = holdTime; holdTimer.enabled = true; }
+		} else if (preview !== void) {
+			// a card a long press showed goes with the next press
+			if (previewHeld) { previewHeld = false; previewCard.hide() if previewCard !== void; }
+			previewIndex = itemAt(x, y);
+			if (previewIndex >= 0) { holdTimer.interval = holdTime; holdTimer.enabled = true; }
 		}
 	}
 
@@ -422,6 +436,8 @@ class KAGScrollList extends Layer
 		pressed = false;
 		holdTimer.enabled = false;
 		if (barDrag) { barDrag = false; return; }
+		// the long press showed a card: it stays, and nothing is picked
+		if (previewHeld) { dragging = false; return; }
 		if (lifted >= 0) {
 			var from = lifted, to = liftTo;
 			lifted = liftTo = -1;

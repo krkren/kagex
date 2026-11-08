@@ -5476,6 +5476,35 @@ def sample_steps(eng):
         print("     the preview card: %s" % card, flush=True)
         if card[0] != "shown" or card[1] != "255" or not card[2].startswith("Ai and Pip") or card[3] != "none":
             raise SmokeError("the chart's preview card isn't shown for a scene seen, opaque with its line, and hidden for one not reached: %s" % card)
+        # the card plays the scene (since 0.25.0): its messages one after another, hurried here as
+        # Ctrl would, to its end, where the last stays with a note
+        eng.tjs('''var v = chartViewNow(); v.moveFocus(KAGChartData().byId["char.ks*flashback"]);
+            var c = v.previewCard; c.hurried = function { return true; }; global.__pvSteps = [];
+            global.__pvTimer = new Timer(function { var c = chartViewNow().previewCard; __pvSteps.add(c.shownStep) if __pvSteps.count == 0 || __pvSteps[__pvSteps.count - 1] != c.shownStep; }, "");
+            __pvTimer.interval = 50; __pvTimer.enabled = true; return 1;''')
+        for i in range(60):
+            if eng.tjs("return chartViewNow().previewCard.playing ? 0 : 1;") == 1:
+                break
+            time.sleep(0.5)
+        played = str(eng.tjs('''__pvTimer.enabled = false; var c = chartViewNow().previewCard;
+            var r = [c.stepCount, c.shownStep, c.ended, c.visible, __pvSteps.join(" ")]; invalidate __pvTimer; return r.join("|");''')).split("|")
+        print("     the card playing: %s" % played, flush=True)
+        if int(played[0]) < 2 or played[1] != str(int(played[0]) - 1) or played[2] != "1" or played[3] != "1" or \
+                played[4] != " ".join(str(i) for i in range(int(played[0]))):
+            raise SmokeError("the preview card didn't play the scene's messages in order to its end: %s" % played)
+        # a long press on a node shows its card (a touch screen), and picks nothing
+        at = str(eng.tjs('''var v = chartViewNow(), n = KAGChartData().byId["char.ks*flashback"]; v.hidePreview();
+            return "" + (int)((v.nodeX(n) - v.viewX) * v.zoom + 20) + " " + (int)((v.nodeY(n) - v.viewY) * v.zoom + 20);''')).split(" ")
+        eng.tjs("chartViewNow().onMouseDown(%s, %s, mbLeft, 0); return 1;" % (at[0], at[1]))
+        time.sleep(0.8)
+        eng.tjs("chartViewNow().onMouseUp(%s, %s, mbLeft, 0); return 1;" % (at[0], at[1]))
+        time.sleep(0.4)
+        held = str(eng.tjs('''var c = chartViewNow().previewCard;
+            return (c.visible ? "shown" : "none") + " " + (kag.currentDialog === void ? "no-prompt" : "prompt");'''))
+        print("     a long press: %s" % held, flush=True)
+        if held != "shown no-prompt":
+            raise SmokeError("a long press on a chart node didn't show its card, or picked it: %s" % held)
+        eng.tjs("chartViewNow().hidePreview(); return 1;")
         # a scene not reached asks nothing; one seen asks first (Esc: No)
         eng.tjs('chartPick(KAGChartData().byId["char.ks*station"]); return 1;')
         time.sleep(0.5)
