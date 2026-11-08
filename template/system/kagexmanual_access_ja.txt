@@ -1,0 +1,15 @@
+﻿# 見やすく、聞きやすく、遊びやすくする
+## スクリーンリーダー
+ゲームは文章、選択肢、ボタンをシステムのスクリーンリーダーに渡します。Windows のナレーター、Mac の VoiceOver、Linux の Orca です。ゲームより先にスクリーンリーダーを起動してください。
+## 見る
+- [動きを減らす](option:reduceMotion=true)と、動き続ける効果が止まります。
+- メッセージウィンドウの背景を[不透明](option:windowOpacity=255)にできます。
+- 文字の速さ：[遅い](option:textSpeed=3) [最速](option:textSpeed=10)。フォント、縁取り、影はコンフィグで変えられます。
+- [ヒント](option:tooltips=true)を表示すると、ボタンにポインターを置いたときに何をするボタンか表示されます。
+## 聞く
+- ムービーの[字幕](option:subtitles=true)。
+- [ボイスを話す人の位置から](option:voicePlacement=true)、または[すべて中央から](option:voicePlacement=false)。
+- ボイスを[ゆっくり](option:voiceSpeed=0.8)、[録音のまま](option:voiceSpeed=1.0)、[速く](option:voiceSpeed=1.25)。
+## 遊ぶ
+- どの動作にも好きなキーを割り当てられます：[操作の一覧](action:controls)。
+- [オートモード](action:auto)で自動的に進みます。速さはコンフィグで変えられます。

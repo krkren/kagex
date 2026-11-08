@@ -4762,6 +4762,76 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("the manual: F1's action opens its index, the keys follow a link, Back and Forward, a click, the wheel, a link that sets an option, the Japanese pages, screen readers' nodes, and a link that closes it and opens About")
+    def _():
+        if eng.tjs('return typeof global.KAGShowManual != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the manual)", flush=True)
+            return
+        m = "kag.currentDialog"
+        isman = 'kag.currentDialog !== void && kag.currentDialog instanceof "KAGManualLayer"'
+        eng.tjs('KAGRunAction("manual"); return 1;')
+        eng.wait("the manual", isman + " && kag.currentDialog.opened", timeout=10)
+        first = str(eng.tjs('var m = %s, t = []; for (var i = 0; i < m.links.count; i++) t.add(m.links[i].target);'
+                            ' return [m.doc.title, m.links.count, t.join("|")].join(",");' % m))
+        # the keys: down to the first link, Return follows it; left back, right forward
+        def key(k):
+            eng.tjs('kag.takeCapturedKey(%s, 0); return 1;' % k)
+        key("VK_DOWN"); key("VK_RETURN")
+        followed = str(eng.tjs('var m = %s; return [m.pageName, m.history.count].join(",");' % m))
+        key("VK_LEFT")
+        back = str(eng.tjs('return %s.pageName;' % m))
+        key("VK_RIGHT")
+        fwd = str(eng.tjs('return %s.pageName;' % m))
+        key("VK_HOME")
+        # a click on the settings link, then the wheel down the page
+        click = str(eng.tjs('''var m = %s, n = -1;
+            for (var i = 0; i < m.links.count; i++) if (m.links[i].target == "settings") n = i;
+            var r = m.links[n].rects[0], x = m.BX + r[0] + r[2] \\ 2, y = m.BY + r[1] - m.scroll + r[3] \\ 2;
+            m.onMouseDown(x, y, mbLeft, 0); m.onMouseUp(x, y, mbLeft, 0);
+            m.processWheel(0, -240, 900, 600); return [m.pageName, m.scroll, m.pageH > m.BH ? 1 : 0].join(",");''' % m))
+        # a link that sets an option, its box filled after; then the other way back
+        opt = str(eng.tjs('''var m = %s, r = [];
+            var find = function(m, t) { for (var i = 0; i < m.links.count; i++) if (m.links[i].target == t) return i; return -1; };
+            var before = KAGOptionGet("reduceMotion");
+            m.follow(find(m, "option:reduceMotion=true")); r.add(KAGOptionGet("reduceMotion") ? 1 : 0);
+            r.add(m.links[find(m, "option:reduceMotion=true")].on ? 1 : 0);
+            m.follow(find(m, "option:reduceMotion=false")); r.add(KAGOptionGet("reduceMotion") ? 1 : 0);
+            KAGOptionSet("reduceMotion", before); return r.join(",");''' % m))
+        a11y = str(eng.tjs('''var n = -1, link = 0;
+            if (KAGA11y.available) for (var i = 0; i < KAGA11y.owners.count; i++) if (KAGA11y.owners[i].owner === kag.currentDialog) {
+                var ns = KAGA11y.owners[i].nodes; n = ns.count;
+                for (var j = 0; j < ns.count; j++) link++ if ns[j].role == "link" || ns[j].role == "checkbox"; }
+            return n + "/" + link;'''))
+        key("VK_ESCAPE")
+        eng.wait("the manual to close", "kag.currentDialog === void", timeout=10)
+        # the pages in Japanese: the sample's index, the framework's own
+        ja = str(eng.tjs('''KAGLanguage.set("ja"); var a = KAGManualRead("index").title, b = KAGManualRead("slow").title, c = KAGManualFile("slow");
+            KAGLanguage.set("en"); return [a, b, c].join(",");'''))
+        # a link that closes the manual and does an action: About
+        eng.tjs('KAGShowManual("support"); return 1;')
+        eng.wait("the support page", isman + " && kag.currentDialog.opened && kag.currentDialog.pageName == \"support\"", timeout=10)
+        eng.tjs('var m = %s; for (var i = 0; i < m.links.count; i++) if (m.links[i].target == "action:about") { m.follow(i); break; } return 1;' % m)
+        eng.wait("About in its place", 'kag.currentDialog !== void && !(kag.currentDialog instanceof "KAGManualLayer")', timeout=10)
+        eng.key("VK_RETURN")
+        eng.wait("About to close", "kag.currentDialog === void", timeout=10)
+        print("     index (title, links): %s" % first[:160], flush=True)
+        print("     keys: %s, back %s, forward %s; a click and the wheel: %s; an option link (set, box, other way): %s;"
+              " screen readers' nodes/links: %s; Japanese: %s" % (followed, back, fwd, click, opt, a11y, ja), flush=True)
+        f = first.split(",")
+        if f[0] != "Help" or int(f[1]) < 9 or "demos" not in first or "support" not in first:
+            raise SmokeError("the manual's index isn't the sample's: %s" % first)
+        if followed != "demos,1" or back != "index" or fwd != "demos":
+            raise SmokeError("the keys didn't follow a link, go back or forward: %s %s %s" % (followed, back, fwd))
+        c = click.split(",")
+        if c[0] != "settings" or (c[2] == "1" and int(c[1]) <= 0):
+            raise SmokeError("a click didn't follow the link, or the wheel didn't scroll: %s" % click)
+        if opt != "1,1,0":
+            raise SmokeError("an option link didn't set the option: %s" % opt)
+        if a11y != "-1/0" and (int(a11y.split("/")[0]) < 10 or int(a11y.split("/")[1]) < 8):
+            raise SmokeError("screen readers didn't get the page: %s" % a11y)
+        if not ja.startswith("ヘルプ,ゲームが重い") or "kagexmanual_slow_ja" not in ja:
+            raise SmokeError("the Japanese pages weren't found: %s" % ja)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:

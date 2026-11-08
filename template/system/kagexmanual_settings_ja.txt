@@ -1,0 +1,16 @@
+﻿# 設定
+リンクを選ぶと、その場で設定が変わります。塗りつぶされた四角が今の設定です。すべての設定はコンフィグにあります。
+## 文章
+- 文字の速さ：[遅い](option:textSpeed=3) [ふつう](option:textSpeed=6) [速い](option:textSpeed=9) [最速](option:textSpeed=10)
+- スキップする文章：[読んだ文章だけ](option:allSkip=false) [すべて](option:allSkip=true)
+- 読んだ文章の印：[付ける](option:readMark=true) [付けない](option:readMark=false)
+## 音
+- BGM：[なし](option:bgmVolume=0) [小さめ](option:bgmVolume=40) [大きめ](option:bgmVolume=80) [最大](option:bgmVolume=100)
+- ボイス：[なし](option:voiceVolume=0) [小さめ](option:voiceVolume=40) [大きめ](option:voiceVolume=80) [最大](option:voiceVolume=100)
+- 話している途中でクリックすると：[ボイスを止める](option:voiceCut=stop) [フェードアウト](option:voiceCut=fade) [最後まで流す](option:voiceCut=keep)
+## 画面
+- [ウィンドウ](option:fullScreen=false) [フルスクリーン](option:fullScreen=true)
+- 画面の切り替え効果：[そのまま](option:noEffect=false) [省略する](option:noEffect=true)
+- [動きを減らす](option:reduceMotion=true)、または[すべて動かす](option:reduceMotion=false)
+## そのほか
+すべての設定は[コンフィグを開いて](action:config)、キーの変更は[操作の一覧](action:controls)から。

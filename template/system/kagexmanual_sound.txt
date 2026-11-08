@@ -1,0 +1,14 @@
+﻿# Sound
+## No sound at all
+- Is the game's sound on? [Sound on](option:soundOn=true)
+- Turn the music, sounds and voices up: [music](option:bgmVolume=80) [sounds](option:seVolume=80) [voices](option:voiceVolume=80).
+- Check the computer's own volume, and that its sound goes where you're listening (speakers or headphones).
+> In a web browser, sound starts only after you've clicked or pressed a key in the page: click the game once.
+## Too loud or too quiet
+Each kind of sound has its own volume:
+- Music: [quiet](option:bgmVolume=40) [loud](option:bgmVolume=80)
+- Sounds: [quiet](option:seVolume=40) [loud](option:seVolume=80)
+- Voices: [quiet](option:voiceVolume=40) [loud](option:voiceVolume=80)
+- Movies: [quiet](option:movieVolume=40) [loud](option:movieVolume=80)
+## Voices cut off
+When you click while someone speaks, the voice [stops](option:voiceCut=stop), [fades out](option:voiceCut=fade) or [goes on to the end](option:voiceCut=keep). {key:voiceReplay} plays the line's voice again.

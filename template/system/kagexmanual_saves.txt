@@ -1,0 +1,11 @@
+﻿# Saving and Loading
+- Save: {key:save}. Load: {key:load}.
+- Quick save: {key:quickSave}, and quick load: {key:quickLoad}. Quick saves take turns in a few slots of their own, so the newest never writes over the one before.
+- The game also keeps your place when you close it: [carry on where you left off when it starts](option:continueOn=true), or [don't](option:continueOn=false).
+## Where they are
+Your saves and settings are kept in {savefolder}. [Copy the folder's path](copy:{savefolder})
+
+Screenshots ({key:screenshot}) go to {screenshots}.
+
+To take your saves to another computer, copy that folder's files into the same folder there while the game isn't running.
+> In a web browser, the saves are kept by the browser for this site: clearing the site's data, or a private window when it closes, takes them away.

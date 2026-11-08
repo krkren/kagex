@@ -218,13 +218,13 @@ function KAGWindow_createMenus()
 
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
-		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)", 0,
+		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)\tF1", 0,
 			onHelpIndexMenuItemClick, false));
 
 		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
 			showControls, false));
 
-		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...\tF1", 0,
+		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 		onHelpAboutMenuItemClick, false));
 
 	menu.add(this.debugMenu = new KAGMenuItem(this, "Debug(&D)", 0, void, false));

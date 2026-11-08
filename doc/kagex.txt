@@ -4017,6 +4017,62 @@ The sample's Animated Character demo shows four, pipcg_day, pipcg_laugh, pipcg_e
 pipcg_night, made of data/evimage/pipcg.txt and its pictures (tools/assets/make_pip.py cg), which
 are one tile in the gallery.
 
+● The Manual
+
+Template/system/Manual.tjs (since 0.26.0) shows a manual in the game window, on every platform:
+pages of help with links between them, Back and Forward, and links that change a setting there
+and then or open a screen. Help > Contents opens it, as do the action "manual" (F1, unless the
+game binds F1 to something else) and KAGShowManual(page) from a script or a button
+(exp="KAGShowManual()"). Every game gets the framework's pages (template/system/kagexmanual_*.txt,
+in English and Japanese): an index, the controls, saving and loading, the settings, and answers
+for a game that's slow, a picture stretched or blurry, no sound, movies that don't play, and
+making the game easier to see, hear and play, and getting help. KAGManualEnabled = false turns
+it off (Help > Contents then opens helpFile, as before).
+
+A page is a text file found by its name: the game's manual_<page>.txt (a language's own in
+data/lang/<code>/, as its pictures), else the framework's kagexmanual_<page>_<language>.txt,
+then kagexmanual_<page>.txt. So a game adds pages, and puts its own in place of the framework's
+(manual_index.txt for its first page, manual_support.txt with its own address). A page's lines:
+
+  # The page's title             its first line
+  ## A heading
+  A paragraph: lines that follow each other make one; a blank line ends it.
+  - an item of a list
+  > a note, in a box
+  ---                            a rule across the page
+  ; a comment
+
+and in the text:
+
+  [what it says](where it goes)  a link:
+      <page>, page:<page>          another page
+      option:<name>=<value>        an option (Options.tjs) set there and then, with a box before
+                                   it that's filled while the option has that value: rows of
+                                   them work as Config's buttons do
+      action:<name>                the manual closes and the action is done: one of Actions.tjs,
+                                   an option's button by its name (padTest), controls or about
+      url:<address>                opened in the browser where the engine can, else copied
+      copy:<text>                  copied to the clipboard
+  {title} {version}              the game's title and version (sf.software_title, _version)
+  {engine} {platform}            the engine's version, and Windows, Linux, macOS, Android, iOS or
+                                 a web browser
+  {savefolder} {screenshots}     where the saves and the screenshots go
+  {key:<action>}                 the keys, controller buttons and gestures that do an action now
+  {option:<name>}                an option's value now, as Config shows it
+  \[ \] \{ \} \\                 the character itself
+
+A link this platform can't follow (an option it hasn't, a screen the game hasn't) shows as text.
+
+The keys: up and down move between the links and scroll, Return or A follows one, left or
+Backspace goes back, right forward, Page Up and Page Down scroll, Home goes to the index, Esc or
+B closes it. The wheel, a drag and the scroll bar scroll; a click follows a link; a right-click
+goes back, or closes it on its first page. Screen readers get the page as headings, paragraphs
+and links (an option's as a checkbox). Its colours are KAGManualTheme's, its text styles
+"manual.title", "manual.heading", "manual.text" and "manual.button" (Fonts.tjs).
+
+The sample's manual adds a page about its demos and its own support page, and Config has a Manual
+button under its panels.
+
 ● The Name Box
 
 [position] takes these for its name window (since 0.17.0), besides nameleft and the rest:

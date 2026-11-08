@@ -113,9 +113,13 @@
 [locate x=984 y=78]
 [button name="page7" exp="setConfigPage(7)" hint="How Text Looks"]
 
-; Under the panels: Controls, the list of what each key and button does (Controls.tjs), where
-; the engine can show it; Undo (the last change) and Revert (every change since the screen
-; opened)
+; Under the panels: the manual (Manual.tjs, since 0.26.0), Controls, the list of what each key and
+; button does (Controls.tjs), where the engine can show it; Undo (the last change) and Revert
+; (every change since the screen opened)
+[if exp="KAGManualAvailable()"]
+[locate x=880 y=1002]
+[button name="config_manual" exp="KAGShowManual()"]
+[endif]
 [if exp="KAGElementsScreenAvailable()"]
 [locate x=1070 y=1002]
 [button name="config_controls" exp="kag.showControls()"]

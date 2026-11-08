@@ -1,0 +1,14 @@
+﻿# 音
+## まったく音が出ない
+- ゲームの音はオンですか？ [音を出す](option:soundOn=true)
+- BGM、効果音、ボイスの音量を上げる：[BGM](option:bgmVolume=80) [効果音](option:seVolume=80) [ボイス](option:voiceVolume=80)。
+- コンピューター自体の音量と、音の出力先（スピーカーかヘッドホンか）を確かめてください。
+> ウェブブラウザーでは、ページの中で一度クリックするかキーを押すまで音が出ません。ゲームを一度クリックしてください。
+## 大きすぎる、小さすぎる
+音の種類ごとに音量があります。
+- BGM：[小さめ](option:bgmVolume=40) [大きめ](option:bgmVolume=80)
+- 効果音：[小さめ](option:seVolume=40) [大きめ](option:seVolume=80)
+- ボイス：[小さめ](option:voiceVolume=40) [大きめ](option:voiceVolume=80)
+- ムービー：[小さめ](option:movieVolume=40) [大きめ](option:movieVolume=80)
+## ボイスが途中で切れる
+話している途中でクリックしたとき、ボイスを[止める](option:voiceCut=stop)、[フェードアウトする](option:voiceCut=fade)、[最後まで流す](option:voiceCut=keep)から選べます。{key:voiceReplay} でそのセリフのボイスをもう一度聞けます。

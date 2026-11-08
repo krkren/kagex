@@ -5330,7 +5330,9 @@ class KAGWindow extends Window
 
 	{
 
-		// Open help file
+		// the manual in the game window (Manual.tjs, since 0.26.0), else the help file
+
+		if (typeof global.KAGShowManual != "undefined" && KAGManualAvailable()) { KAGShowManual(); return; }
 
 		System.shellExecute(Storages.getLocalName(System.exePath) + helpFile);
 
@@ -13853,6 +13855,7 @@ class KAGWindow extends Window
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
 			bindKey(VK_F10, 0, "@menu", void, false);
 			bindKey(VK_F12, 0, "@screenshot", void, false);
+			bindKey(VK_F1, 0, "@manual", void, false) if (typeof global.KAGActions != "undefined" && KAGActions.manual !== void); // (Manual.tjs)
 			bindKey(#'V', void, "@favouriteVoice", void, false);
 			// the mouse's side buttons (since 0.20.0): back a line, and on
 			bindKey(VK_XBUTTON1, 0, "@back", void, false) if (typeof global.VK_XBUTTON1 != "undefined");
@@ -14046,7 +14049,8 @@ class KAGWindow extends Window
 	function menuShows(item)
 	{
 		if (typeof this.helpIndexMenuItem != "undefined" && item === helpIndexMenuItem)
-			return typeof global.helpFile == "undefined" || Storages.isExistentStorage(System.exePath + helpFile);
+			return typeof global.KAGManualAvailable != "undefined" && KAGManualAvailable() ||
+				typeof global.helpFile == "undefined" || Storages.isExistentStorage(System.exePath + helpFile);
 		return true;
 	}
 

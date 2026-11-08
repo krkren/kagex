@@ -1,0 +1,16 @@
+﻿# The Settings
+These links change a setting at once; a filled box shows the one in use. Config has them all.
+## Text
+- Text speed: [slow](option:textSpeed=3) [medium](option:textSpeed=6) [fast](option:textSpeed=9) [fastest](option:textSpeed=10)
+- Skipping skips: [read text only](option:allSkip=false) [all text](option:allSkip=true)
+- Read text marked: [yes](option:readMark=true) [no](option:readMark=false)
+## Sound
+- Music: [off](option:bgmVolume=0) [quiet](option:bgmVolume=40) [loud](option:bgmVolume=80) [full](option:bgmVolume=100)
+- Voices: [off](option:voiceVolume=0) [quiet](option:voiceVolume=40) [loud](option:voiceVolume=80) [full](option:voiceVolume=100)
+- A click while someone speaks: [stops the voice](option:voiceCut=stop) [fades it out](option:voiceCut=fade) [lets it finish](option:voiceCut=keep)
+## The screen
+- [Window](option:fullScreen=false) [Full screen](option:fullScreen=true)
+- Transitions between pictures: [as they are](option:noEffect=false) [skipped](option:noEffect=true)
+- [Reduce Motion](option:reduceMotion=true), or [everything moves](option:reduceMotion=false)
+## More
+[Open Config](action:config) for every setting, and [the controls](action:controls) to change the keys.

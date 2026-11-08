@@ -39,6 +39,13 @@ function KAGWindowSizeValues()
 	return list;
 }
 
+// a window or the whole screen (since 0.26.0, for the manual's links: Config screens have their own buttons)
+KAGDefineOption(%[ name:"fullScreen", label:"Screen", kind:"toggle",
+	values:[ ["Window", false], ["Full Screen", true] ],
+	available:function { return KAGIsDesktop() && typeof kag.changeFullScreenOrWindow != "undefined"; },
+	getValue:function { return !!kag.fullScreened; },
+	setValue:function(v) { kag.changeFullScreenOrWindow(!!v); } ]);
+
 KAGDefineOption(%[ name:"windowSize", label:"Window Size", kind:"choice", initial:100,
 	values:[ ["50%", 50], ["75%", 75], ["100%", 100] ], // the sizes that fit, at start (KAGApplyDisplayOptions)
 	available:function { return KAGIsDesktop() && typeof kag.setZoom != "undefined"; },

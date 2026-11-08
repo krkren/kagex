@@ -66,7 +66,7 @@ LABELS = {
         "Ai": "あい", "Pip": "ピップ", "Hiyori": "ひより", "Vee": "ヴィー", "Undo": "前に戻す", "Revert": "すべて戻す",
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ",
-        "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
+        "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法", "Manual": "マニュアル",
         "Your Name": "名前",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
@@ -879,7 +879,8 @@ def make_config():
         button(180, 60, L(name), "muted", size=26, icon=ic_ring, icon_size=14).save(
             out("config_voice%d_off.png" % i))
     for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return"),
-                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert")):
+                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert"),
+                        ("config_manual", "Manual")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
     make_config_pages()
