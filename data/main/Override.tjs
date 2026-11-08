@@ -2752,8 +2752,9 @@ function setMusicmodePageButton()
     var l = kag.current.names.musicList;
     l.refresh() if l !== void && isvalid l;
 
-    // Playback state
-    setButtonOver("musicmode_play", tf.musicplaying);
+    // Playback state: Play, or Pause while a track plays (setButtonOver's lit Play had replaced
+    // the Pause picture whenever the screen was drawn again)
+    setPlayButton();
 }
 
 // A track's row: its picture (trackNN), lit while it plays, faint while it's locked

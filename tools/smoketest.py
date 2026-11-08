@@ -5750,6 +5750,24 @@ def sample_steps(eng):
             if peak < 0.05 or not a.startswith("1,") or a.split(",")[:3] != b.split(",")[:3] or not c.startswith("0,1,") \
                     or int(c.split(",")[2]) <= int(a.split(",")[1]):
                 raise SmokeError("the meter didn't move, or Pause didn't hold the music still and Play play it on: %.2f / %s / %s / %s" % (peak, a, b, c))
+            # the screen drawn again while it plays (another list, a tab) keeps Pause on the button
+            eng.tjs('kag.process("musicmode.ks", "*loop"); return 1;')
+            time.sleep(0.5)
+            eng.wait("the music room again", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable'
+                     ' && kag.fore.messages[0].names.nowPlaying !== void', timeout=30)
+            shows = str(eng.tjs('''var b = kag.fore.messages[0].names.musicmode_play, r = [];
+                var names = [ "musicmode_pause_normal", "musicmode_play_normal", "musicmode_play_over" ];
+                for (var i = 0; i < names.count; i++) {
+                    var t = new global.Layer(kag, kag.primaryLayer), n = 0, k = 0;
+                    t.loadImages(names[i]);
+                    for (var x = 4; x < t.imageWidth && x < b.width; x += 5) { k++; n++ if b.getMainPixel(x, b.height \\ 2) == t.getMainPixel(x, t.imageHeight \\ 2); }
+                    invalidate t;
+                    r.add(k > 0 && n == k ? names[i] : "");
+                }
+                return r.join(",");'''))
+            print("     drawn again while it plays, the button: %s" % shows, flush=True)
+            if not shows.startswith("musicmode_pause_normal,"):
+                raise SmokeError("drawn again while the music plays, the button lost its Pause: %s" % shows)
             # shuffle, and a playlist (a track in it, then out)
             modes = str(eng.tjs('''setRepeat("shuffle"); var r = [tf.musicmode, tf.musicrepeat];
                 musicTogglePlaylist(0, 2); r.add(musicRows(2).join(",")); musicTogglePlaylist(0, 2); r.add(musicRows(2).count);
