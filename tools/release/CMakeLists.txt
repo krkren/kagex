@@ -70,6 +70,7 @@ add_library(kagex_release_core STATIC
     src/Build.cpp
     src/Encrypt.cpp
     src/Media.cpp
+    src/Loudness.cpp
     src/Layered.cpp
     src/Keys.cpp
     src/Sign.cpp

@@ -201,6 +201,13 @@ Json defaultSettings(const Project& p)
 		}) },
 		{ "references", Json("keep") },
 	}));
+	// the sounds' loudness (since 0.27.0): measured into a report, and with targets for kinds, the
+	// files far from them brought there in the staged loudness.csv (Loudness.h)
+	s.set("loudness", obj({
+		{ "measure", Json(false) },
+		{ "targets", Json::object() },
+		{ "tolerance", Json(1.0) },
+	}));
 	// compiled when the game lists scripts to compile and its framework compiles them
 	s.set("scenes", obj({
 		{ "compile", Json(!p.sceneList.empty() && p.frameworkCompiles) },
@@ -459,6 +466,13 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			      "and with images converted to TLG or JPEG its buttons wouldn't highlight. Convert images to PNG or keep them, "
 			      "or update it from KAGEX 0.3.1's template/system");
 	}
+	// the loudness targets (since 0.27.0): kinds loudness.csv knows, LUFS a sound can reach
+	for (const auto& [k, v] : at(s, "loudness.targets").members()) {
+		if (!oneOf(k, { "voice", "bgm", "se" })) error("loudness.targets", "A target is for voice, bgm or se (not \"" + k + "\")");
+		else if (!v.isNum() || v.asReal() < -60 || v.asReal() > -5) error("loudness.targets", "A target is between -60 and -5 LUFS (" + k + ")");
+	}
+	if (at(s, "loudness.tolerance").asReal(1.0) < 0 || at(s, "loudness.tolerance").asReal(1.0) > 20)
+		error("loudness.tolerance", "The tolerance is 0 to 20 LU");
 	const long long jq = at(s, "media.images.jpegQuality").asInt(90);
 	if (jq < 1 || jq > 100) error("media.images.jpegQuality", "The JPEG quality is 1 to 100");
 	if (!oneOf(str(s, "media.references"), { "keep", "rewrite" })) error("media.references", "references is \"keep\" or \"rewrite\"");

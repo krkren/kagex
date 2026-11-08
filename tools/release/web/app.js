@@ -64,6 +64,9 @@ const SECTIONS = [
 			{ path: 'media.images.alpha', label: 'Transparent images become', type: 'select', options: [['tlg6', 'TLG6 (recommended)'], ['tlg5', 'TLG5 (decodes faster)'], ['png', 'PNG'], ['jpeg-mask', 'JPEG and a mask image (lossy)'], ['keep', 'Kept as they are']] },
 			{ path: 'media.images.jpegQuality', label: 'JPEG quality', type: 'number', min: 1, max: 100, showIf: (s) => s.media.images.opaque === 'jpeg' || s.media.images.alpha === 'jpeg-mask' },
 			{ path: 'media.references', label: 'Names with extensions', type: 'select', options: [['keep', 'Keep those files unconverted'], ['rewrite', 'Convert them and rewrite the scripts']], help: 'Scripts usually name files without an extension. Where one is written out (bgm01.wav), the file is kept as it is, or converted with the name in the script changed' },
+			{ path: 'loudness.measure', label: 'Loudness', type: 'check', text: 'Measure every sound (EBU R128) into a report beside the packages', help: '<name>-<version>-loudness.csv: each sound\'s loudness, as loudness.csv makes it play' },
+			{ path: 'loudness.targets', label: 'Loudness targets', type: 'targets', help: 'For a kind with a target, each sound further than the tolerance from it gets a line in the release\'s loudness.csv that brings it there; a line of your own wins. WAV sounds play without a gain' },
+			{ path: 'loudness.tolerance', label: 'Tolerance (LU)', type: 'number', min: 0, max: 20, showIf: (s) => Object.keys((s.loudness && s.loudness.targets) || {}).length > 0 },
 		],
 	},
 	{
@@ -228,6 +231,26 @@ function input(f, path, value, onChange) {
 				oninput: (e) => onChange(e.target.value.split('\n').map((x) => x.trim()).filter((x) => x)) });
 			t.value = (value || []).join('\n');
 			return t;
+		}
+		case 'targets': {
+			// loudness targets by kind (LUFS); empty: no target
+			const kinds = [['voice', 'Voices'], ['bgm', 'Music'], ['se', 'Sound effects']];
+			const table = el('table', { class: 'kv' });
+			const emit = () => {
+				const out = {};
+				for (const tr of table.querySelectorAll('tr[data-kind]')) {
+					const v = parseFloat(tr.querySelector('input').value);
+					if (!Number.isNaN(v)) out[tr.dataset.kind] = v;
+				}
+				onChange(out);
+			};
+			for (const [k, t] of kinds) {
+				const v = value && value[k] !== undefined ? value[k] : '';
+				table.append(el('tr', { 'data-kind': k },
+					el('td', {}, t),
+					el('td', {}, el('input', { type: 'number', value: v, min: -60, max: -5, step: 0.5, placeholder: 'none', oninput: emit }), ' LUFS')));
+			}
+			return table;
 		}
 		case 'kbps': {
 			const rows = Object.entries(value || {});

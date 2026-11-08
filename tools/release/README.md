@@ -281,6 +281,23 @@ Before packing, lossless media in the staged data are converted (the sources are
 Results are cached by content and settings (in the cache folder below), so a later build only
 converts what changed.
 
+**Loudness** (since 0.27.0): with *Measure every sound* (`loudness.measure`) a build measures the
+staged sounds' loudness (EBU R128 integrated loudness, as the engine plays them: an Opus file's
+header gain included) into `<name>-<version>-loudness.csv` beside the packages: each sound's LUFS,
+how loud it plays with the game's `loudness.csv` (the framework's table of gains: doc/kagex.txt,
+"Loudness"), and notes. With targets for kinds (`loudness.targets`: `voice`, `bgm`, `se`, each a
+LUFS value; a sound's kind is the folder it's in, as the framework has it), each sound of those
+kinds further than `loudness.tolerance` (1 LU) from its target gets a line in the release's
+`loudness.csv` (the staged copy; the game's own file is left as it is) that brings it there. A
+line the game has for that file wins; a speaker's line (`voice:<name>`) doesn't, since the tool
+doesn't know whose a voice is. WAV files play without a gain (the engine applies one only as it
+decodes Ogg Vorbis and Opus), so a far one is only noted: convert it or level it by hand. A sound
+shorter than a 400 ms block is measured as one block (ffmpeg's `ebur128` gives such sounds no
+value); longer ones measure as ffmpeg does (0.5 LU at most apart on a second-long sound, where a
+few samples' difference in decoding moves the blocks). `kagex-release --cli loudness [<path>]`
+prints the same measurements of the project's `data/` without building; measurements are cached
+by content.
+
 ### Photoshop and CLIP STUDIO PAINT files
 
 A game can keep layers in the files they're drawn in: a character's poses as `.psd` or `.clip`

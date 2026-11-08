@@ -15,6 +15,7 @@
 #include "Icons.h"
 #include "Keys.h"
 #include "Layered.h"
+#include "Loudness.h"
 #include "Media.h"
 #include "Plan.h"
 #include "Sign.h"
@@ -381,6 +382,7 @@ public:
 			stage(PartProgress(pr_, 0.0, 0.05));
 			layered(PartProgress(pr_, 0.05, 0.08));   // before media: the pictures it writes are converted with the rest
 			media(PartProgress(pr_, 0.08, 0.2));
+			loudness(PartProgress(pr_, 0.2, 0.2));   // the sounds as they'll ship, before the file list
 			scenes(PartProgress(pr_, 0.2, 0.21));   // before signStage: a compiling run of a signed game would refuse its options
 			signStage();   // write the public key and the self-test into the data (before it is compiled/hashed/packed)
 			if (flag(s_, "contents.compileScripts")) scripts(PartProgress(pr_, 0.21, 0.22));
@@ -444,6 +446,7 @@ public:
 		result.set("outputs", std::move(outputs));
 		result.set("notes", Json::array(notes_));
 		if (media_.isObj()) result.set("media", media_);
+		if (loudness_.isObj()) result.set("loudness", loudness_);
 		if (layered_.isObj()) result.set("layered", layered_);
 		if (scripts_.isObj()) result.set("scripts", scripts_);
 		{
@@ -629,6 +632,60 @@ private:
 	{
 		const size_t n = std::strlen(tail);
 		return s.size() >= n && s.compare(s.size() - n, n, tail) == 0;
+	}
+
+	// The sounds' loudness (Loudness.h, since 0.27.0): with loudness.measure, every staged sound
+	// measured into <exe>-<version>-loudness.csv beside the packages; with loudness.targets, a
+	// line in the staged loudness.csv for each sound of those kinds further than the tolerance from
+	// its target that has no line of its own (the developer's lines win), and a note for a WAV
+	// one, which the engine plays without a gain
+	void loudness(krt::Progress&& pr)
+	{
+		std::map<std::string, double> targets;
+		for (const auto& [k, v] : at(s_, "loudness.targets").members()) targets[k] = v.asReal();
+		if (!flag(s_, "loudness.measure") && targets.empty()) return;
+		pr.progress(-1, "Measuring the sounds' loudness");
+		fs::path csv = findLoudnessTable(stage_);
+		std::string text;
+		if (!csv.empty()) krt::readFile(csv, text);
+		const auto report = loudnessReport(stage_, readLoudnessTable(text), targets, at(s_, "loudness.tolerance").asReal(1.0),
+		                                   cacheDir() / "loudness", [&]() { return pr_.canceled(); });
+		if (pr_.canceled()) throw Failure{ "Canceled" };
+		writeText(out_ / krt::toPath(str(s_, "identity.exeName") + "-" + str(s_, "identity.version") + "-loudness.csv"), loudnessReportText(report));
+		std::string added;
+		int brought = 0, wav = 0, measured = 0;
+		char buf[96];
+		for (const auto& e : report) {
+			if (e.measured) ++measured;
+			if (!e.far) continue;
+			if (!e.gainApplies) { ++wav; continue; }
+			if (e.ownLine) continue;
+			std::snprintf(buf, sizeof(buf), "%s\t%+.1f\n", e.name.c_str(), e.newGain);
+			added += buf;
+			++brought;
+		}
+		if (!added.empty()) {
+			if (csv.empty()) csv = stage_ / "loudness.csv";
+			if (!text.empty() && text.back() != '\n') text += "\n";
+			text += "# kagex-release " KAGEX_RELEASE_VERSION ": each to its kind's target (loudness.targets)\n" + added;
+			std::error_code ec;
+			fs::remove(csv, ec);   // the stage holds hard links: replaced, never written to
+			writeText(csv, text);
+		}
+		std::string note = "Loudness: " + std::to_string(measured) + " sounds measured";
+		if (!targets.empty()) note += ", " + std::to_string(brought) + " brought to their kind's target in loudness.csv";
+		pr.log(note);
+		if (wav > 0) {
+			const std::string w = std::to_string(wav) + " WAV sound" + (wav == 1 ? " is" : "s are") + " far from " + (wav == 1 ? "its" : "their") +
+			                      " kind's target, but the engine plays WAV without a gain: convert " + (wav == 1 ? "it" : "them") + " (media.audio.convert) or level " +
+			                      (wav == 1 ? "it" : "them") + " by hand";
+			pr.log(w);
+			notes_.push_back(w);
+		}
+		loudness_ = Json::object();
+		loudness_.set("measured", Json(measured));
+		loudness_.set("brought", Json(brought));
+		loudness_.set("wavFar", Json(wav));
 	}
 
 	void scenes(krt::Progress&& pr)
@@ -2455,7 +2512,7 @@ private:
 	std::map<std::string, fs::path> built_;
 	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
 	bool patchFailed_ = false;
-	Json media_, scripts_, layered_;
+	Json media_, scripts_, layered_, loudness_;
 	// signing
 	bool signing_ = false;
 	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)

@@ -1211,6 +1211,70 @@ def scenes_tests(exe, proj, args):
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
 
 
+def loudness_tests(exe, proj):
+    """The sounds' loudness (0.27.0): --cli loudness measures the project's sounds (EBU R128) with
+    what loudness.csv makes of them; a build with loudness.measure writes the report beside the
+    packages, and with loudness.targets adds a line to the staged loudness.csv for each sound
+    further than the tolerance from its kind's target (a line of the game's own wins). Engine-free:
+    a patch build"""
+    code, out = run(exe, "--cli", "loudness", str(proj / "release.json"), "--json")
+    try:
+        sounds = {x["file"]: x for x in json.loads(out[out.index("{"):])["sounds"]}
+    except ValueError:
+        step("loudness: --cli loudness lists the sounds", False, out[-500:])
+        return
+    v = sounds.get("voice/ai000001.ogg", {})
+    b = sounds.get("bgm/bgm01.ogg", {})
+    # ffmpeg's ebur128 measures them at -15.9 and -16.3 LUFS; pip000009 has its own line (+5)
+    step("loudness: --cli loudness measures the sounds as ffmpeg does, with loudness.csv's gains",
+         abs(v.get("lufs", 0) + 15.9) < 0.15 and abs(b.get("lufs", 0) + 16.3) < 0.15 and b.get("gain") == -4
+         and sounds.get("voice/pip000009.ogg", {}).get("gain") == 5 and len(sounds) >= 30,
+         "ai000001 %s, bgm01 %s (%d sounds)" % (v.get("lufs"), b.get("lufs"), len(sounds)))
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        s = json.loads(saved.decode("utf-8"))
+        for p in s["platforms"]:
+            s["platforms"][p]["enabled"] = False
+        s["output"]["check"] = False
+        s["contents"]["compileScripts"] = False
+        s["scenes"] = {"compile": False, "encrypt": False}
+        s["identity"]["version"] = "3.0.0"
+        s["loudness"] = {"measure": True, "targets": {"voice": -16, "lufs": -3}, "tolerance": 1.0}
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, errs, warns = check_issues(exe, proj, s)
+        step("loudness: check refuses a target for a kind there isn't", "lufs" in " ".join(errs.get("loudness.targets", [])), str(errs))
+        s["loudness"]["targets"] = {"voice": -16}
+        out = proj / "release"
+        out.mkdir(exist_ok=True)
+        (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+        s["output"]["patchFrom"] = "release/nothing-files.json"
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, text = run(exe, "--cli", "build", str(rel), "--json")
+        try:
+            r = json.loads(text[text.index("{"):])
+        except ValueError:
+            r = {"ok": False, "error": text[-1500:]}
+        report = out / "kagex-sample-3.0.0-loudness.csv"
+        step("loudness: a build writes the report", r.get("ok") and report.exists(), r.get("error", ""))
+        if not report.exists():
+            return
+        rows = {l.split("\t")[0]: l.split("\t") for l in report.read_text(encoding="utf-8").splitlines() if not l.startswith("#")}
+        z = zipfile.ZipFile(out / "kagex-sample-3.0.0-patch" / "patch.zip")
+        table = z.read("main/loudness.csv").decode("utf-8")
+        lines = {l.split("\t")[0]: l.split("\t")[1] for l in table.splitlines() if l and not l.startswith("#")}
+        # pip000008 plays at -13.5, 2.5 over the target: its line brings it there; ai000001
+        # (-15.9) is within the tolerance; pip000009's own line stays
+        step("loudness: the staged loudness.csv brings the far voices to the target, keeps the game's lines",
+             lines.get("pip000008.ogg") == "-2.5" and "ai000001.ogg" not in lines and lines.get("pip000009") == "+5"
+             and lines.get("bgm") == "-4" and "bgm01.ogg" not in lines,
+             " ".join("%s=%s" % kv for kv in sorted(lines.items())))
+        step("loudness: the report notes what the table does", "brought to its target" in rows.get("voice/pip000008.ogg", [""])[-1]
+             and "its own line" in rows.get("voice/pip000009.ogg", [""])[-1], str(rows.get("voice/pip000008.ogg")))
+    finally:
+        rel.write_bytes(saved)
+
+
 def patch_tests(exe, proj):
     """A build with output.patchFrom: the file list each build writes, then patch.zip of what
     changed since an earlier list. A patch alone needs no platform (and so no engines)"""
@@ -2186,7 +2250,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -2229,6 +2293,8 @@ def main():
                 scenes_tests(exe, proj, args)
         if want("patch"):
             patch_tests(exe, proj)
+        if want("loudness"):
+            loudness_tests(exe, proj)
         if want("layered"):
             layered_tests(exe, Path(t), args)
     print("%d failed" % len(failures) if failures else "all passed")
