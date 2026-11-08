@@ -7066,6 +7066,14 @@ def run_steps(eng, steps):
         try:
             fn()
             print("ok   %-62s %5.1fs" % (name, time.time() - t), flush=True)
+            # a dialog a step leaves open swallows the next steps' clicks and keys
+            try:
+                left = str(eng.tjs('var d = typeof global.kag == "Object" && kag !== void ? kag.currentDialog : void;'
+                                   ' return d === void ? "" : Scripts.getClassNames(d)[0];', 5))
+                if left:
+                    print("     (a dialog is open after it: %s)" % left, flush=True)
+            except SmokeError:
+                pass
             mem = eng.memory()
             if mem:
                 print("     memory (MB): " + mem, flush=True)
