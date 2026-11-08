@@ -271,7 +271,9 @@ function KAGCGPiecesLoad()
 		if (line == "" || line.charAt(0) == "#") continue;
 		var c = line.split(/\t/);
 		if (c.count < 4) continue;
-		KAGCGPieces[c[0].trim().toLowerCase()] = %[ base: c[1].trim(), x: (int)+c[2].trim(), y: (int)+c[3].trim() ];
+		var name = c[0].trim().toLowerCase(), base = c[1].trim();
+		if (name == "" || base == "" || base.toLowerCase() == name) continue;   // a picture isn't its own base
+		KAGCGPieces[name] = %[ base: base, x: (int)+c[2].trim(), y: (int)+c[3].trim() ];
 	}
 }
 
