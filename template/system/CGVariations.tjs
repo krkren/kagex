@@ -22,13 +22,16 @@
  *
  * The picture is put together when a layer loads it (BitmapAffineSourceLayer.loadImages, so KAG
  * and World layers alike) or through KAGLoadPicture(layer, name) for a plain Layer (the gallery's
- * tiles, its viewer, a stage's background); each file is read once and kept (the last few)
+ * tiles, its viewer, a stage's background); the file last read is kept until a few seconds after
+ * the last picture drawn from it (KAGCGVariationLinger), so a gallery's tiles and its viewer read
+ * it once without holding its layers for the rest of the game
  */
 
 var KAGCGVariations;                 // name (lower case) => %[ name, file, layers ]
 var KAGCGVariationFiles = %[];       // placed file (lower case) => PSDInfo
 var KAGCGVariationFileOrder = [];    // the files kept, the one used last at the end
-var KAGCGVariationKeep = 4;
+var KAGCGVariationKeep = 1;          // files kept at once
+var KAGCGVariationLinger = 10000;    // ms after the last picture drawn before they go (0: kept)
 var KAGCGVariationOwner;             // the KAG plugin that lets them go with the window
 var KAGCGVariationExtensions = [ ".txt", ".psd", ".clip" ];
 
@@ -151,8 +154,27 @@ function KAGCGVariationRelease()
 
 class KAGCGVariationFilesOwner extends KAGPlugin
 {
-	function KAGCGVariationFilesOwner() { super.KAGPlugin(); }
-	function finalize() { KAGCGVariationRelease(); super.finalize(...); }
+	var timer;
+	function KAGCGVariationFilesOwner() { super.KAGPlugin(); timer = new Timer(onTimer, ""); timer.enabled = false; }
+	function finalize()
+	{
+		invalidate timer if timer !== void && isvalid timer;
+		KAGCGVariationRelease();
+		super.finalize(...);
+	}
+	// a picture was drawn: the files go KAGCGVariationLinger ms from now
+	function touch()
+	{
+		timer.enabled = false;
+		if (KAGCGVariationLinger <= 0) return;
+		timer.interval = KAGCGVariationLinger;
+		timer.enabled = true;
+	}
+	function onTimer()
+	{
+		timer.enabled = false;
+		KAGCGVariationRelease();
+	}
 }
 
 // the layers and folders outside any folder
@@ -220,9 +242,11 @@ function KAGCGVariationDraw(target, name)
 		target.setSizeToImageSize();
 	} catch (e) {
 		invalidate pl;
+		KAGCGVariationOwner.touch() if KAGCGVariationOwner !== void && isvalid KAGCGVariationOwner;
 		throw e;
 	}
 	invalidate pl;
+	KAGCGVariationOwner.touch() if KAGCGVariationOwner !== void && isvalid KAGCGVariationOwner;
 	return true;
 }
 

@@ -18,6 +18,8 @@
 
 - **The Japanese staging-kit lines were punctuated in English** (`char.ks`'s gestures), which the new translator report found.
 - **The smoke test's Sprite Mode check failed on Windows**, whose engine lists file names in lower case.
+- **A CG made from a layered file kept the file's layers for the rest of the game** (the last four files): now only the last file, until ten seconds after the last picture drawn from it (`KAGCGVariationLinger`). The browser build has 2 GB in all and ran out of memory late in its smoke test with them kept.
+- **The smoke test logs the engine's memory after each step** (pictures, files, sound, scripts and the process, from the REPL's `.mem`, where the platform's REPL has it), so a run that runs out shows how it got there.
 
 ## 0.25.0
 

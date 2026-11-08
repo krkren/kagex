@@ -4046,8 +4046,10 @@ changes after. The changes, in order, separated by commas:
 
 Everything else keeps the file's own visibility. A name the file has no layer or folder for is
 an error that names it. The picture is put together when a layer loads it (KAG and World layers
-alike), in some tens of milliseconds for a 1920x1080 picture of thirty layers; each file is read
-once, the last four kept. Scripts load one into a plain Layer through
+alike), in some tens of milliseconds for a 1920x1080 picture of thirty layers. The file's layers
+are kept for ten seconds after the last picture drawn from it (KAGCGVariationLinger, in ms; 0
+keeps them), so a gallery's tiles and its viewer read it once, and the layers don't stay in
+memory for the rest of the game. Scripts load one into a plain Layer through
 
   KAGLoadPicture(layer, name)     a variation, or the image of that name (loadImages)
   KAGCGVariation(name)            the variation of that name, %[ name, file, layers ], or void
