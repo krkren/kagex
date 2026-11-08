@@ -3,7 +3,7 @@
  * date, how long the player has been away and how far they've got, from greetings.csv. The
  * sample's title draws it in a speech bubble beside Ai (Override.tjs, titleGreeting).
  *
- * greetings.csv: When,Text,Voice,Weight (# comments; a field with a comma in quotes)
+ * greetings.csv: When,Text,Voice,Weight,Who (# comments; a field with a comma in quotes)
  *   When    conditions separated by spaces, which must all hold:
  *           morning (5:00 to 11:59), afternoon (12:00 to 16:59), evening (17:00 to 20:59),
  *           night (21:00 to 4:59), weekend, date:MM-DD (that day), first (the game's first start
@@ -13,15 +13,21 @@
  *           player's name (KAGGreetingNameOf), and a line with it is left out while there's none
  *   Voice   a sound to play with it (optional)
  *   Weight  how often it's picked among its equals (1)
+ *   Who     who says it (since 0.25.0; a character's name): only while they greet
+ *           (KAGGreetingGreeter), and it wins over a line anyone says with as many conditions;
+ *           empty: anyone
  * The lines that hold with the most conditions win (first, back and date: count ten times as
  * much as the others), and one of them is picked at random; the same line stays for the rest of
  * the run.
  *
- *   var g = KAGGreeting();        // %[ text, voice ], or void where none holds
+ *   var g = KAGGreeting();        // %[ text, voice, who ], or void where none holds
  *   KAGGreetingNameOf             a function giving the player's name (the framework's: f.name)
+ *   KAGGreetingGreeter            a function giving who greets ("": anyone; since 0.25.0)
+ *   KAGGreetingAgain()            the line picked again (after the greeter changes)
  */
 
 var KAGGreetingNameOf = function { return kag.flags.name !== void ? (string)kag.flags.name : ""; };
+var KAGGreetingGreeter = function { return ""; };
 var KAGGreetingPicked;    // this run's line (KAGGreeting)
 var KAGGreetingAway = 0;  // the days since the last start (worked out once a run)
 var KAGGreetingFirst = false;
@@ -39,7 +45,7 @@ function KAGGreetingFields(line)
 		else cur += ch;
 	}
 	out.add(cur.trim());
-	while (out.count < 4) out.add("");
+	while (out.count < 5) out.add("");
 	return out;
 }
 
@@ -89,7 +95,7 @@ function KAGGreeting()
 	sf.greetingLastTime = now.getTime();
 	KAGGreetingPicked = false;
 	if (!Storages.isExistentStorage("greetings.csv")) return;
-	var name = KAGBindToGlobal(KAGGreetingNameOf)();
+	var name = KAGBindToGlobal(KAGGreetingNameOf)(), who = (string)KAGBindToGlobal(KAGGreetingGreeter)();
 	var lines = [].load("greetings.csv"), best = -1, picks = [];
 	for (var i = 0; i < lines.count; i++) {
 		var line = (string)lines[i];
@@ -97,19 +103,38 @@ function KAGGreeting()
 		if (line.trim() == "" || line.charAt(0) == "#") continue;
 		var c = KAGGreetingFields(line);
 		if (c[1] == "" || (c[1].indexOf("%name%") >= 0 && name == "")) continue;
+		// another's line, while someone else greets
+		var by = c[4].toLowerCase();
+		if (by != "" && by != who.toLowerCase()) continue;
 		var s = KAGGreetingScore(c[0], now);
-		if (s < 0 || s < best) continue;
+		if (s < 0) continue;
+		// the greeter's own line wins over anyone's with as many conditions
+		s += 0.5 if by != "";
+		if (s < best) continue;
 		if (s > best) { best = s; picks.clear(); }
 		var weight = c[3] != "" ? +c[3] : 1;
-		picks.add(%[ text:c[1], voice:c[2], weight:weight > 0 ? weight : 1 ]);
+		picks.add(%[ text:c[1], voice:c[2], weight:weight > 0 ? weight : 1, who:by ]);
 	}
 	if (picks.count == 0) return;
 	var total = 0;
 	for (var i = 0; i < picks.count; i++) total += picks[i].weight;
 	var r = Math.random() * total, p = picks[picks.count - 1];
 	for (var i = 0; i < picks.count; i++) { r -= picks[i].weight; if (r < 0) { p = picks[i]; break; } }
-	KAGGreetingPicked = %[ text:p.text, voice:p.voice ];
+	KAGGreetingPicked = %[ text:p.text, voice:p.voice, who:p.who ];
 	return KAGGreetingPicked;
+}
+
+// the line picked again (the greeter changed); the visit isn't counted again
+function KAGGreetingAgain()
+{
+	if (KAGGreetingPicked === void) return KAGGreeting();
+	var keep = kag.sflags.greetingLastTime, first = KAGGreetingFirst, away = KAGGreetingAway;
+	kag.sflags.greetingLastTime = KAGGreetingFirst ? void : (new Date()).getTime() - KAGGreetingAway * 86400000;
+	KAGGreetingPicked = void;
+	var g = KAGGreeting();
+	kag.sflags.greetingLastTime = keep;
+	KAGGreetingFirst = first, KAGGreetingAway = away;
+	return g;
 }
 
 // the line as shown: translated, the name put in

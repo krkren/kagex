@@ -78,7 +78,7 @@
 
 [locate x=558 y=800]
 
-[button name="musicmode_play"      exp="startBgm()"]
+[button name="musicmode_play"      exp="playOrPause()"]
 
 [locate x=322 y=800]
 
@@ -86,11 +86,15 @@
 
 [locate x=322 y=876]
 
-[button name="musicmode_repeat"    exp='setRepeat(true)']
+[button name="musicmode_repeat"    exp='setRepeat("one")']
 
-[locate x=558 y=876]
+[locate x=476 y=876]
 
-[button name="musicmode_allrepeat" exp='setRepeat(false)']
+[button name="musicmode_allrepeat" exp='setRepeat("all")']
+
+[locate x=630 y=876]
+
+[button name="musicmode_shuffle"   exp='setRepeat("shuffle")']
 
 [locate x=322 y=714]
 
@@ -127,6 +131,13 @@
 ; The tracks: a list that scrolls with the wheel, by dragging, with its bar and with the keys or a
 ; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs); or the voices
 ; (voiceList: a click plays one, its star keeps it, the favourites' handle puts them in order)
+; The tracks' list picker (every track, the playlists; since 0.25.0)
+[if exp="+tf.musicView == 0"]
+[locate x=870 y=291]
+[button name="music_listprev" normal="sprite_prev_normal" over="sprite_prev_over" exp="musicListStep(-1)" target=*loop]
+[locate x=1554 y=291]
+[button name="music_listnext" normal="sprite_next_normal" over="sprite_next_over" exp="musicListStep(1)" target=*loop]
+[endif]
 ; The favourites' list picker (the favourites, the playlists) and Play all (since 0.25.0)
 [if exp="+tf.musicView == 2"]
 [locate x=870 y=291]
@@ -138,6 +149,7 @@
 [endif]
 [eval exp='musicViewList()']
 [eval exp='setRepeat()']
+[eval exp='setPlayButton()']
 
 [eval exp='setButtonOver("musicmode_title", keepTitleMusic())']
 

@@ -30,6 +30,8 @@ KAGDefineTextStyle("voices.text", %[ size:24, valign:"middle", color:0x24107a, m
 // the favourites' list picked, and which list the voices' stars keep them in (since 0.25.0)
 KAGDefineTextStyle("voices.list", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:18 ]);
 KAGDefineTextStyle("voices.note", %[ size:24, align:"center", valign:"middle", color:0x5c4cb4, minSize:16 ]);
+// a track's playlists, 1 2 3 on its row (since 0.25.0)
+KAGDefineTextStyle("track.mark", %[ size:20, bold:true, align:"center", valign:"middle" ]);
 
 // the title's greeting, in its speech bubble (titleGreeting)
 KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, lines:3, lineSpacing:6, minSize:20 ]);

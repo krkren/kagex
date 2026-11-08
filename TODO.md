@@ -52,7 +52,6 @@ Found building a game for every platform with kagex-release, and still there at 
 
 ## Extras
 
-- [ ] **The music room's pause, shuffle, playlists and meter, and spoken greetings**: since 0.24.0 the music room has a player (`MusicPlayer.tjs`, `KAGNowPlaying`: a record that turns, the track's title and time, a bar that seeks) and the title a greeting by the time of day, the date and the visit (`Greetings.tjs`, `greetings.csv`, Ai's bubble). What's left: pause, shuffle, playlists and a level meter (`WaveSoundBuffer.getSoundLevel` and the visualization buffer, as Pip's lip-sync reads them; only while a buffer plays, `UPSTREAM.md` 49); greetings spoken (Pip's in a babble from `make_pip.py`, new lines that leave the old ones as they are) and the player choosing who greets them. Every platform.
 
 ## The World and staging
 

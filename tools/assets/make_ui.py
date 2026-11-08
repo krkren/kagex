@@ -77,6 +77,7 @@ LABELS = {
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
         "Repeat All": "全曲リピート", "Keep on Title": "タイトルでも流す",
+        "One": "1曲", "In Order": "全曲", "Shuffle": "ランダム", "Pause": "一時停止",
     },
 }
 
@@ -410,6 +411,21 @@ def ic_stop(c, cx, cy, s, col):
 
 def ic_note(c, cx, cy, s, col):
     c.text((cx, cy + s * 0.05), "♪", font("Black", s * 1.15), col, anchor="mm")
+
+
+def ic_pause(c, cx, cy, s, col):
+    for dx in (-0.22, 0.22):
+        c.rrect((cx + s * (dx - 0.12), cy - s * 0.38, cx + s * (dx + 0.12), cy + s * 0.38), s * 0.05, fill=col)
+
+
+def ic_shuffle(c, cx, cy, s, col):
+    """two crossing arrows: tracks in no order"""
+    x0, x1 = cx - s * 0.5, cx + s * 0.3
+    for y0, y1 in ((-0.3, 0.3), (0.3, -0.3)):
+        pts = [(x0 + (x1 - x0) * t, cy + s * (y0 + (y1 - y0) * (3 * t * t - 2 * t * t * t))) for t in np.linspace(0, 1, 16)]
+        c.stroke(pts, s * 0.1, col)
+        ey = cy + s * y1
+        c.polygon([(x1 - s * 0.04, ey - s * 0.17), (x1 + s * 0.22, ey), (x1 - s * 0.04, ey + s * 0.17)], col)
 
 
 def ic_repeat_one(c, cx, cy, s, col):
@@ -1133,10 +1149,16 @@ def make_extras():
         for st in ("normal", "over"):
             button(730, 46, L("Track %02d") % (i + 1), st, size=24, r=10, bw=3, icon=ic_note, icon_size=24).save(
                 out("track%02d_%s.png" % (i + 1, st)))
-    for name, label, icon in (("stop", "Stop", ic_stop), ("play", "Play", ic_play), ("repeat", "Repeat", ic_repeat_one),
-                              ("allrepeat", "Repeat All", ic_repeat)):
+    for name, label, icon in (("stop", "Stop", ic_stop), ("play", "Play", ic_play), ("pause", "Pause", ic_pause)):
         for st in ("normal", "over"):
             button(210, 60, L(label), st, size=26, icon=icon, icon_size=24).save(
+                out("musicmode_%s_%s.png" % (name, st)))
+    # what comes after a track (since 0.25.0, three in the row the two repeats had): the track
+    # again, every track in turn, or any other at random
+    for name, label, icon in (("repeat", "One", ic_repeat_one), ("allrepeat", "In Order", ic_repeat),
+                              ("shuffle", "Shuffle", ic_shuffle)):
+        for st in ("normal", "over"):
+            button(140, 60, L(label), st, size=24, icon=icon, icon_size=22).save(
                 out("musicmode_%s_%s.png" % (name, st)))
     # a switch: the track playing stays as the title's music (Override.tjs, setTitleMusic)
     for st in ("normal", "over"):

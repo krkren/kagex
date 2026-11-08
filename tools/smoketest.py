@@ -5658,7 +5658,7 @@ def sample_steps(eng):
         eng.wait("the music", 'kag.fore.messages[0].names.nowPlaying.playing', timeout=15)
         time.sleep(1.0)
         got = str(eng.tjs('''var p = kag.fore.messages[0].names.nowPlaying, b = p.buffer, r = [];
-            r.add(p.angle > 0 ? "turns" : "still"); r.add(nowPlayingTitle() == trackItemName(0) ? "titled" : nowPlayingTitle());
+            r.add(p.angle > 0 ? "turns" : "still"); r.add(nowPlayingTitle() == tr(tf.musicmodelist[0].title) ? "titled" : nowPlayingTitle());
             p.onMouseDown(p.width / 2, p.barY + 4, mbLeft, 0); p.onMouseUp(p.width / 2, p.barY + 4, mbLeft, 0);
             var half = b.position / b.totalTime; r.add("%.2f".sprintf(half));
             var a = b.position; p.onKeyDown(VK_RIGHT, 0); r.add(b.position - a >= 4000 ? "on" : "stuck " + (b.position - a));
@@ -5666,6 +5666,38 @@ def sample_steps(eng):
         print("     the player: %s" % got, flush=True)
         if got[0] != "turns" or got[1] != "titled" or abs(float(got[2]) - 0.5) > 0.05 or got[3] != "on":
             raise SmokeError("the music room's player didn't turn, name the track, seek to its middle or seek on: %s" % got)
+        if eng.tjs('return typeof global.setPlayButton != "undefined" ? 1 : 0;') == 1:
+            # (since 0.25.0) the meter moves while the music plays; Pause holds the record and the
+            # time still, and Play plays it on
+            np = "kag.fore.messages[0].names.nowPlaying"
+            peak = float(eng.tjs('return "%%f".sprintf(%s.meterPeak);' % np))
+            eng.tjs("playOrPause(); return 1;")
+            time.sleep(0.8)
+            a = str(eng.tjs('var p = %s; return [p.paused, (int)p.shownPos, (int)p.angle].join(",");' % np))
+            time.sleep(0.8)
+            b = str(eng.tjs('var p = %s; return [p.paused, (int)p.shownPos, (int)p.angle].join(",");' % np))
+            eng.tjs("playOrPause(); return 1;")
+            time.sleep(0.8)
+            c = str(eng.tjs('var p = %s; return [p.paused, p.playing, (int)p.shownPos].join(",");' % np))
+            print("     the meter's peak %.2f; paused %s, then %s; played on %s" % (peak, a, b, c), flush=True)
+            if peak < 0.05 or not a.startswith("1,") or a.split(",")[:3] != b.split(",")[:3] or not c.startswith("0,1,") \
+                    or int(c.split(",")[2]) <= int(a.split(",")[1]):
+                raise SmokeError("the meter didn't move, or Pause didn't hold the music still and Play play it on: %.2f / %s / %s / %s" % (peak, a, b, c))
+            # shuffle, and a playlist (a track in it, then out)
+            modes = str(eng.tjs('''setRepeat("shuffle"); var r = [tf.musicmode, tf.musicrepeat];
+                musicTogglePlaylist(0, 2); r.add(musicRows(2).join(",")); musicTogglePlaylist(0, 2); r.add(musicRows(2).count);
+                setRepeat("one"); return r.join("|");'''))
+            print("     shuffle and a playlist: %s" % modes, flush=True)
+            if modes != "shuffle|0|0|0":
+                raise SmokeError("the shuffle mode or a playlist didn't work: %s" % modes)
+            # Pip greets (Config's Title Greeting): his own line, spoken
+            pip = str(eng.tjs('''var keep = sf.greetingLastTime; sf.greetingLastTime = void; KAGGreetingPicked = void;
+                KAGOptionSet("titleGreeter", "pip"); var g = KAGGreeting(); var r = [g.who, g.voice, KAGGreetingText(g)];
+                KAGOptionSet("titleGreeter", "ai"); sf.greetingLastTime = keep; KAGGreetingPicked = void; tf.greetingRepick = false;
+                return r.join("|");''')).split("|")
+            print("     Pip's greeting: %s" % pip, flush=True)
+            if pip[0] != "pip" or pip[1] != "pipgreet01" or not pip[2].startswith("Hi! I'm Pip"):
+                raise SmokeError("Pip didn't greet with his own line and voice: %s" % pip)
         eng.tjs("stopBgm(); return 1;")
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)

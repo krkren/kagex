@@ -3865,10 +3865,25 @@ drag on it, or the left and right keys five seconds at a time. bufferOf gives th
 (kag.bgm's by default); on a message layer, addLinkLayer makes it a link. It reads a buffer's
 times only while it plays or is paused: an empty buffer's times kill the engine (UPSTREAM.md 49).
 
+Since 0.25.0 the bar and the time follow a clock set from the buffer's position (the engine's
+position moves in blocks of samples, and is a buffer ahead for about half a second after a seek
+or a loop, which made the knob shake): set again when the track, the buffer or its pausing
+changes, at a jump, or when the two stay apart (driftLimit, driftTime). A click on the picture,
+Space or Return pauses the music and plays it on (togglePause, paused; onPause(paused) tells the
+game), with a pause mark over the picture; a level meter under the times (meter,
+meterSegments) reads WaveSoundBuffer.getSoundLevel while the music plays.
+
+The sample's music room: Play turns to Pause while a track plays; One (the track again), In
+Order (the list's tracks in turn) and Shuffle (any other at random) say what comes next. Its
+Music view shows every track or a playlist (three, sf.musicPlaylists, picked with the arrows
+above the list): with every track shown, a row's 1, 2 and 3 put the track in those playlists
+(or the keys 1, 2, 3); in a playlist, a handle puts its tracks in order. A track plays on
+through the list it was picked from.
+
 ● Title Greetings
 
 greetings.csv gives the title a line for the moment (template/system/Greetings.tjs, since
-0.24.0), a line each, When,Text,Voice,Weight:
+0.24.0), a line each, When,Text,Voice,Weight,Who:
 
     morning,"Good morning, %name%! Shall we look at some layers before breakfast?"
     back,"Welcome back! It's been a while."
@@ -3881,10 +3896,15 @@ greetings.csv gives the title a line for the moment (template/system/Greetings.t
   Text    the line, through tr(); %name% is KAGGreetingNameOf()'s (f.name; the sample's: the name
           the player gave), and a line with it is left out while there's none
   Voice   a sound with it (optional); Weight how often among its equals (1)
+  Who     who says it (since 0.25.0): only while KAGGreetingGreeter() names them; empty, anyone
 
 The lines that hold with the most conditions win (first, back and a date count ten times as
-much), one of them at random, the same for the rest of the run: KAGGreeting() gives %[ text,
-voice ], KAGGreetingText(g) the text as shown. The sample's Ai says it in a bubble on the title.
+much; the greeter's own lines win over anyone's with as many), one of them at random, the same
+for the rest of the run: KAGGreeting() gives %[ text, voice, who ], KAGGreetingText(g) the text
+as shown, KAGGreetingAgain() picks again (after the greeter changes, without counting the visit
+again). The sample's greeter is Config's Title Greeting: Ai, in a bubble beside her, Pip, on the
+road below his bubble with his lines spoken (babble: tools/assets/make_pip.py greet and title,
+data/voice/pipgreet*.ogg, data/image/title_pip.png), or no one.
 
 ● Sprite Mode
 

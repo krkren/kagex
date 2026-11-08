@@ -14,6 +14,12 @@
  * The picture holds still with Reduce Motion. Its look: the text styles nowplaying.title and
  * nowplaying.time, and the bar's colours.
  *
+ * Since 0.25.0: a click on the picture (or Space, Return, a controller's A) pauses the music and
+ * plays it on (togglePause; paused; onPause(paused) tells the game, which can change its Play
+ * button), a pause mark over the picture while it's paused, and a level meter under the times
+ * (meter, true by default; meterSegments; read from the buffer's visualization data with
+ * WaveSoundBuffer.getSoundLevel, only while it plays).
+ *
  * The bar and the time follow a clock started from the buffer's position (since 0.25.0): the
  * engine's position moves in steps (a block of samples at a time), and for about half a second
  * after a seek or a loop it is a buffer (half a second) ahead, which made the knob shake and jump
@@ -43,6 +49,8 @@ class KAGNowPlaying extends Layer
 	var timer, lastTick, seeking = false, lastText = "";
 	var clockBuffer, clockStorage, clockPos, clockTick, clockStatus, driftSince, clockHold = 0, settleUntil = 0;
 	var driftLimit = 200, driftTime = 800, jumpLimit = 1500, settleTime = 1000, shownPos = 0;
+	var onPause, meter = true, meterSegments = 20, meterLevel = 0.0, meterPeak = 0.0, meterH = 10;
+	var meterOn = 0xff5025ff, meterOff = 0xffe2dbff, meterHot = 0xffffb020;
 	var a11yHidden = true, linkNum;
 
 	function KAGNowPlaying(win, par)
@@ -89,10 +97,25 @@ class KAGNowPlaying extends Layer
 	// the engine, UPSTREAM.md 49)
 	function loaded(b) { return b !== void && (b.status == "play" || b.status == "pause"); }
 
-	// the music playing (a buffer that plays), not a fade to silence
+	// the music playing (a buffer that plays), not a fade to silence, nor paused
 	property playing
 	{
-		getter { var b = buffer; return b !== void && b.status == "play" && !b.inFadeAndStop; }
+		getter { var b = buffer; return b !== void && b.status == "play" && !b.paused && !b.inFadeAndStop; }
+	}
+
+	property paused
+	{
+		getter { var b = buffer; return loaded(b) && !!b.paused; }
+	}
+
+	// the music paused, or played on from where it was
+	function togglePause()
+	{
+		var b = buffer;
+		if (!loaded(b)) return;
+		b.paused = !b.paused;
+		redraw();
+		KAGBindToGlobal(onPause)(!!b.paused) if onPause !== void;
 	}
 
 	property barY { getter { return picSize + 86; } }
@@ -110,8 +133,9 @@ class KAGNowPlaying extends Layer
 	// the buffer's place as shown: a clock from the last position it was set from
 	function shownPosition(b, total)
 	{
-		var now = System.getTickCount(), raw = +b.position, st = b.status;
+		var now = System.getTickCount(), raw = +b.position, st = b.status + (b.paused ? ":paused" : "");
 		if (clockBuffer !== b || clockStorage != storageOf(b) || clockStatus != st || st != "play") {
+			// (paused: the buffer's place, which holds still)
 			setClock(b, raw, now);
 			settleUntil = now + settleTime;
 			return raw;
@@ -150,7 +174,7 @@ class KAGNowPlaying extends Layer
 
 	function setClock(b, pos, now = System.getTickCount())
 	{
-		clockBuffer = b, clockStorage = storageOf(b), clockStatus = b !== void ? b.status : void;
+		clockBuffer = b, clockStorage = storageOf(b), clockStatus = b !== void ? b.status + (b.paused ? ":paused" : "") : void;
 		clockPos = pos, clockTick = now, driftSince = void, clockHold = 0;
 	}
 
@@ -195,6 +219,7 @@ class KAGNowPlaying extends Layer
 			affineCopy(pic, 0, 0, pw, ph, true, c, s, -s, c, E, F, stFastLinear, false);
 			if (typeof this.useCache != "undefined") this.useCache; // (again, after the copy)
 		}
+		if (paused) drawPauseMark(width \ 2, picSize \ 2);
 		var b = buffer, title = "", pos = 0, total = 0;
 		if (loaded(b)) {
 			try { total = +b.totalTime; pos = shownPosition(b, total); } catch {}
@@ -218,10 +243,46 @@ class KAGNowPlaying extends Layer
 		}
 		var text = total > 0 ? KAGMinSec(pos) + " / " + KAGMinSec(total) : "";
 		KAGDrawStyledText(this, "nowplaying.time", text, 10, by + barH + 12, width - 20, 30);
+		if (meter) drawMeter(bx, by + barH + 46, bw, meterH);
 		update();
-		var said = title + "|" + text + "|" + focused;
+		var said = title + "|" + text + "|" + focused + "|" + paused;
 		if (said != lastText) pushA11y(title, text);
 		lastText = said;
+	}
+
+	// paused: a dark disc with two bars over the picture
+	function drawPauseMark(cx, cy)
+	{
+		var r = 46;
+		for (var dy = -r; dy <= r; dy++) {
+			var dx = (int)Math.sqrt(r * r - dy * dy);
+			colorRect(cx - dx, cy + dy, dx * 2 + 1, 1, 0x101040, 150);
+		}
+		fillRect(cx - 18, cy - 22, 12, 44, 0xffffffff);
+		fillRect(cx + 6, cy - 22, 12, 44, 0xffffffff);
+	}
+
+	// the level meter: how loud the music is now (segments lit from the left, the loudest a
+	// moment ago marked), read only while it plays (UPSTREAM.md 49)
+	function drawMeter(x, y, w, h)
+	{
+		var b = buffer, level = 0.0;
+		if (playing && typeof b.getSoundLevel != "undefined") {
+			try {
+				// the level is read from the visualization data, which fills as the sound is decoded
+				b.useVisBuffer = true if !b.useVisBuffer;
+				level = Math.sqrt(+b.getSoundLevel(0).rms / 0.3);
+			} catch { level = 0.0; }
+		}
+		level = 1.0 if level > 1.0;
+		meterLevel = level > meterLevel ? level : meterLevel * 0.82;
+		meterPeak = meterLevel > meterPeak ? meterLevel : meterPeak * 0.97;
+		var n = meterSegments, gap = 3, sw = (w - gap * (n - 1)) / n;
+		var lit = (int)(meterLevel * n + 0.5), peak = (int)(meterPeak * n + 0.5) - 1;
+		for (var i = 0; i < n; i++) {
+			var sx = x + (int)(i * (sw + gap));
+			fillRect(sx, y, (int)sw, h, i < lit ? (i >= n * 4 \ 5 ? meterHot : meterOn) : i == peak ? meterHot : meterOff);
+		}
 	}
 
 	// seeking: a click or a drag on the bar
@@ -242,6 +303,12 @@ class KAGNowPlaying extends Layer
 
 	function onMouseDown(x, y, button, shift)
 	{
+		// a click on the picture pauses the music, or plays it on
+		if (button == mbLeft && pic !== void && y < picSize && Math.abs(x - width / 2) < picSize / 2) {
+			focus() if focusable && !focused;
+			togglePause();
+			return;
+		}
 		if (button != mbLeft || !onBar(y)) { super.onMouseDown(...); return; }
 		focus() if focusable && !focused;
 		seeking = true;
@@ -275,6 +342,8 @@ class KAGNowPlaying extends Layer
 	function onKeyDown(key, shift, process = true)
 	{
 		switch (key) {
+		case VK_SPACE:
+		case VK_RETURN: togglePause(); return;
 		case VK_LEFT:  seekBy(-5000); return;
 		case VK_RIGHT: seekBy(5000); return;
 		case VK_HOME:  seekBy(-0x7fffffff); return;
@@ -322,6 +391,7 @@ class KAGNowPlaying extends Layer
 		var l = new global.KAGNowPlaying(win, par);
 		l.name = name;
 		l.picture = picture, l.titleOf = titleOf, l.bufferOf = bufferOf, l.a11yName = a11yName;
+		l.onPause = onPause, l.meter = meter, l.meterSegments = meterSegments;
 		l.picSize = picSize, l.turnSpeed = turnSpeed, l.angle = angle;
 		l.setPos(left, top);
 		l.setSize(width, height);
@@ -333,7 +403,7 @@ class KAGNowPlaying extends Layer
 	function pushA11y(title, text)
 	{
 		if (typeof global.KAGA11y != "Object" || KAGA11y === void || !KAGA11y.available) return;
-		var name = tr(a11yName) + (title != "" ? ": " + title : "") + (text != "" ? ", " + text : "");
+		var name = tr(a11yName) + (title != "" ? ": " + title : "") + (text != "" ? ", " + text : "") + (paused ? ", " + tr("paused") : "");
 		var states = [ "focusable" ];
 		states.add("focused") if focused;
 		KAGA11y.updateNodes(this, [ %[ id:"np", role:"slider", name:name, states:states, rect:KAGA11y.rectOf(this) ] ], focused ? "np" : void);
