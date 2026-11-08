@@ -4946,10 +4946,12 @@ def sample_steps(eng):
         eng.tjs('kag.setSecondLanguage(""); return 1;')
         eng.tjs('kag.setLanguage("en"); return 1;')
         eng.wait("English again", 'KAGLanguage.current == "en"', timeout=10)
-        # the menus in Japanese, the story in English
+        # the menus in Japanese, the story in English (the picture found as the game finds it: a
+        # release may have made config_normal.png a .tlg, and 0.26.0's first release-tool run stopped
+        # on the .png name)
         eng.tjs('kag.setMenuLanguage("ja"); return 1;')
         eng.wait("the menus in Japanese", 'KAGLanguage.menuCode == "ja"', timeout=10)
-        menu = str(eng.tjs('return [KAGLanguage.current, KAGLanguage.menuCode, tr("Yes"), Storages.getPlacedPath("config_normal.png").indexOf("lang/ja") >= 0 ? 1 : 0,'
+        menu = str(eng.tjs('return [KAGLanguage.current, KAGLanguage.menuCode, tr("Yes"), Storages.getPlacedPath(getExistImageName("config_normal")).indexOf("lang/ja") >= 0 ? 1 : 0,'
                            ' KAGFontLanguage("message"), KAGFontLanguage("interface")].join(",");'))
         eng.tjs('kag.setMenuLanguage(""); return 1;')
         eng.wait("the menus as the story", 'KAGLanguage.menuCode == "en"', timeout=10)
