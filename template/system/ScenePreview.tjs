@@ -5,10 +5,17 @@
  * KAGScrollList (ScrollList.tjs) or a KAGChartView (Flowchart.tjs) whose preview function
  * names a scene shows one; the sample's Replay, Search and flowchart do.
  *
+ * Since 0.25.0 the card plays the scene: after the line has been read (by its length), the
+ * next one comes with its picture, silently, to the scene's end, where a note says so. Ctrl
+ * (a controller's R2) hurries it. The [if]s go as they went on the player's route (the
+ * flowchart's copy of the flags where the scene starts, sf.chartFlags; a scene it hasn't
+ * reached: none). On a touch screen a long press on an item shows the card.
+ *
  *   list.preview = function(index) {
  *       return %[ storage:"char.ks", label:"*park", text:1 ];   // void: no card
  *   };
- *   (text: the scene's text, 1 for its first; title: in place of the scene's own)
+ *   (text: the scene's text, 1 for its first; title: in place of the scene's own; play: false,
+ *    the card stays on that text)
  *
  * A card of one's own:
  *   var card = new KAGScenePreview(kag, kag.fore.messages[0]);
@@ -18,24 +25,27 @@
  *   card.hide();
  *
  * The card fades in (at once with Reduce Motion), takes no clicks, and keeps the last pictures
- * it drew (KAGScenePicture). Its look: the text styles preview.title, preview.name and
- * preview.text (KAGDefineTextStyle, a game's textstyles.tjs) and the card's colours.
+ * it drew (KAGScenePicture). Its look: the text styles preview.title, preview.name, preview.text
+ * and preview.note (KAGDefineTextStyle, a game's textstyles.tjs) and the card's colours; its
+ * pace: waitBase, waitPerChar, waitMin, waitMax (ms) and hurry.
  */
 
 var KAGScenePictureCache = %[], KAGScenePictureKeys = [];
 
 // The World as the scene is at a text, w x h (a hidden layer, kept), or void where the World
-// shows nothing there (a scene on KAG's own layers) or the scene isn't compiled
-function KAGScenePicture(storage, label, text, w, h)
+// shows nothing there (a scene on KAG's own layers) or the scene isn't compiled. data: the
+// scene's file, open already (StorageData), or void
+function KAGScenePicture(storage, label, text, w, h, data = void)
 {
 	var key = ("%s%s:%d:%dx%d").sprintf(storage, label, +text, w, h).toLowerCase();
 	var p = KAGScenePictureCache[key];
 	if (p !== void) return p ? p : void;
 	var pic;
 	try {
-		if (typeof global.world_object != "undefined" && typeof global.scnFindCompiled != "undefined" && scnFindCompiled(storage) !== void) {
+		if (typeof global.world_object != "undefined" && typeof global.scnFindCompiled != "undefined" && (data !== void || scnFindCompiled(storage) !== void)) {
 			world_object.initPlayer();
-			var data = new StorageData(storage);
+			var own = data === void;
+			data = new StorageData(storage) if own;
 			var t = data.getText(label, +text > 0 ? +text : 1);
 			var state = t !== void ? t.state : void;
 			if (state !== void) {
@@ -64,7 +74,7 @@ function KAGScenePicture(storage, label, text, w, h)
 				}
 				invalidate shot;
 			}
-			invalidate data;
+			invalidate data if own;
 		}
 	} catch (e) {
 		dm("Scene preview: no picture for " + storage + label + ": " + e.message);
@@ -81,14 +91,18 @@ function KAGScenePicture(storage, label, text, w, h)
 	return pic;
 }
 
-// The scene's title and a text's speaker and words as shown (the language shown), for a card
-function KAGSceneLine(storage, label, text)
+// The scene's title and a text's speaker and words as shown (the language shown), for a card.
+// data: the scene's file, open already, or void
+function KAGSceneLine(storage, label, text, data = void)
 {
-	var ret = %[ title:"", name:"", text:"" ];
+	var ret = %[ title:"", name:"", text:"", flag:0 ];
 	try {
-		if (typeof global.world_object == "undefined" || typeof global.scnFindCompiled == "undefined" || scnFindCompiled(storage) === void) return ret;
+		if (typeof global.world_object == "undefined" || typeof global.scnFindCompiled == "undefined") return ret;
+		if (data === void && scnFindCompiled(storage) === void) return ret;
 		world_object.initPlayer();
-		var p = world_object.player, data = new StorageData(storage);
+		var own = data === void;
+		var p = world_object.player;
+		data = new StorageData(storage) if own;
 		var t = data.getText(label, +text > 0 ? +text : 1, true);
 		if (t !== void) {
 			var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : void;
@@ -96,25 +110,145 @@ function KAGSceneLine(storage, label, text)
 			var s = p.changeAlias(scnTextIn(t, lang));
 			ret.name = s.disp !== void ? (string)s.disp : s.name !== void ? (string)s.name : "";
 			ret.text = s.text !== void ? p.plainText((string)s.text).trim() : "";
+			ret.flag = t.flag !== void ? +t.flag : 0;
 		}
-		invalidate data;
+		invalidate data if own;
 	} catch (e) {
 		dm("Scene preview: no line for " + storage + label + ": " + e.message);
 	}
 	return ret;
 }
 
+// Two pieces of one message (a text that carries the window on), as one line: a space between
+// Latin words
+function KAGSceneJoin(a, b)
+{
+	if (a == "") return b;
+	if (b == "") return a;
+	return #a.charAt(a.length - 1) < 0x2e80 && #b.charAt(0) < 0x2e80 ? a + " " + b : a + b;
+}
+
+/**
+ * What a scene shows in order, from its text `text` (1: the first) to its end: [[text, ...]...],
+ * one entry a message (a text and the texts that carry its window on, TEXTFLAG_CONT). Its [if]s
+ * are taken with flags (a dictionary: f while they're worked out; void: f as it is)
+ */
+function KAGSceneSteps(data, label, text, flags = void)
+{
+	var ret = [];
+	var scene = data !== void ? data.findScene(label) : void;
+	if (scene === void || scene.lines === void) return ret;
+	var saved;
+	if (flags !== void) {
+		saved = %[];
+		(Dictionary.assignStruct incontextof saved)(kag.flags);
+		(Dictionary.clear incontextof kag.flags)();
+		(Dictionary.assignStruct incontextof kag.flags)(flags);
+	}
+	try {
+		var lines = scene.lines, n = lines.count, i = 0, from = +text > 0 ? +text : 1;
+		while (i < n && ret.count < 500) {
+			var obj = lines[i++];
+			if (typeof obj == "Integer") {
+				if (obj < from) continue;
+				var t = data.getText(label, obj);
+				var cont = t !== void && t.flag !== void && (+t.flag & 0x40) != 0; // TEXTFLAG_CONT
+				if (cont && ret.count > 0) ret[ret.count - 1].add(obj);
+				else ret.add([ obj ]);
+			} else if (typeof obj == "Object" && obj !== null && typeof obj[0] == "String") {
+				switch (obj[0]) {
+				case "*if":
+					if (!KAGSceneStepTrue(obj)) i = KAGSceneSkipBranch(lines, i);
+					break;
+				case "*elsif":
+				case "*else":
+					i = KAGSceneSkipEnd(lines, i);
+					break;
+				}
+			}
+		}
+	} catch (e) {
+		dm("Scene preview: the steps of " + data.storage + label + ": " + e.message);
+	}
+	if (saved !== void) {
+		(Dictionary.clear incontextof kag.flags)();
+		(Dictionary.assignStruct incontextof kag.flags)(saved);
+	}
+	return ret;
+}
+
+// an [if]'s or an [elsif]'s condition (false where it can't be worked out)
+function KAGSceneStepTrue(obj)
+{
+	var a = %[], count = obj.count, i = 1;
+	while (i < count && obj[i] !== 0) i++;
+	for (i++; i < count; i += 2) a[obj[i]] = obj[i + 1];
+	if (a.exp === void) return false;
+	var prev = global.mp_override, ok = false;
+	global.mp_override = a["*mp"] if a["*mp"] !== void;
+	try { ok = !!Scripts.eval(a.exp); } catch { ok = false; }
+	global.mp_override = prev;
+	return ok;
+}
+
+// after a condition that failed: on to the next branch that holds, or past [endif]
+function KAGSceneSkipBranch(lines, i)
+{
+	var depth = 0, n = lines.count;
+	while (i < n) {
+		var obj = lines[i++];
+		if (typeof obj != "Object" || obj === null || typeof obj[0] != "String") continue;
+		switch (obj[0]) {
+		case "*if": depth++; break;
+		case "*endif": if (depth-- == 0) return i; break;
+		case "*else": if (depth == 0) return i; break;
+		case "*elsif": if (depth == 0 && KAGSceneStepTrue(obj)) return i; break;
+		}
+	}
+	return i;
+}
+
+// after a branch that ran: past [endif]
+function KAGSceneSkipEnd(lines, i)
+{
+	var depth = 0, n = lines.count;
+	while (i < n) {
+		var obj = lines[i++];
+		if (typeof obj != "Object" || obj === null || typeof obj[0] != "String") continue;
+		switch (obj[0]) {
+		case "*if": depth++; break;
+		case "*endif": if (depth-- == 0) return i; break;
+		}
+	}
+	return i;
+}
+
+// the flags the player's route had where a scene starts (the flowchart's), or void
+function KAGSceneRouteFlags(storage, label)
+{
+	var all = kag.sflags.chartFlags;
+	if (typeof all != "Object" || all === void) return void;
+	var f = all[(storage + label).toLowerCase()];
+	return typeof f == "Object" ? f : void;
+}
+
 KAGDefineTextStyle("preview.title", %[ size:22, bold:true, color:0x24107a, minSize:14 ]);
 KAGDefineTextStyle("preview.name", %[ size:18, bold:true, color:0x5025ff, minSize:12 ]);
 KAGDefineTextStyle("preview.text", %[ size:19, color:0x302060, lines:3, lineSpacing:6, minSize:14 ]);
+KAGDefineTextStyle("preview.note", %[ size:17, bold:true, color:0xffffff, align:"center", valign:"middle", minSize:12 ]);
 
 class KAGScenePreview extends Layer
 {
 	var window;
 	var cardW = 440, pad = 12, picH = 234, shadow = 6, gapX = 14;
-	var border = 0xff5025ff, fill = 0xf8ffffff, shadowColor = 0xffa690ff, empty = 0xff2a1a66;
+	var border = 0xff5025ff, fill = 0xf8ffffff, shadowColor = 0xffa690ff, empty = 0xff2a1a66, noteColor = 0xd0240e6a;
 	var hoverDelay = 350, fadeTime = 120;
-	var timer, fadeTimer, fadeStart, shownKey, pending;
+	var waitBase = 900, waitPerChar = 45, waitMin = 1600, waitMax = 6000, hurry = 8, progressColor = 0xff5025ff;
+	var endNote = "End of the scene";
+	var timer, fadeTimer, fadeStart, shownKey, pending, placed;
+	// playing: the scene's file, its messages, the one shown, how long it's been read, the last tick
+	var playTimer, playData, steps, stepAt = 0, stepWait = 0, stepRead = 0, playTick, playSpec, ended = false;
+	var picText; // the text whose picture the card shows (a message whose World shows nothing keeps it)
 
 	function KAGScenePreview(win, par)
 	{
@@ -129,12 +263,16 @@ class KAGScenePreview extends Layer
 		timer = new Timer(onDelay, "");
 		fadeTimer = new Timer(onFade, "");
 		fadeTimer.interval = 16;
+		playTimer = new Timer(onPlay, "");
+		playTimer.interval = 50;
 	}
 
 	function finalize()
 	{
+		stopPlay();
 		invalidate timer;
 		invalidate fadeTimer;
+		invalidate playTimer;
 		super.finalize(...);
 	}
 
@@ -144,7 +282,7 @@ class KAGScenePreview extends Layer
 		if (spec === void) { hide(); return; }
 		var key = ("%s%s:%d").sprintf(spec.storage, spec.label, +spec.text) + (spec.title !== void ? ":" + spec.title : "");
 		pending = %[ spec:spec, key:key, x:x, y:y, w:w, h:h ];
-		if (visible && key == shownKey) { place(pending); return; }
+		if (visible && key == shownKey) { placed = pending; place(pending); return; }
 		delay = hoverDelay if delay === void;
 		timer.enabled = false;
 		if (delay <= 0) onDelay();
@@ -155,18 +293,25 @@ class KAGScenePreview extends Layer
 	{
 		timer.enabled = false;
 		fadeTimer.enabled = false;
+		stopPlay();
 		pending = void;
 		shownKey = void;
 		visible = false;
 	}
+
+	// what's on the card: the message shown and whether the scene has more (for tests)
+	property playing { getter { return playTimer !== void && playTimer.enabled; } }
+	property shownStep { getter { return stepAt; } }
+	property stepCount { getter { return steps !== void ? steps.count : 0; } }
 
 	function onDelay()
 	{
 		timer.enabled = false;
 		if (!isvalid this || pending === void) return;
 		var p = pending;
-		draw(p.spec);
+		startPlay(p.spec);
 		shownKey = p.key;
+		placed = p;
 		place(p);
 		var still = typeof global.KAGOptionGet != "undefined" && !!KAGOptionGet("reduceMotion");
 		if (still || fadeTime <= 0) { opacity = 255; visible = true; return; }
@@ -197,16 +342,110 @@ class KAGScenePreview extends Layer
 		setPos(x, y);
 	}
 
-	function draw(spec)
+	// the scene from the spec's text: its messages, then the first drawn
+	function startPlay(spec)
 	{
-		var line = KAGSceneLine(spec.storage, spec.label, spec.text);
+		stopPlay();
+		playSpec = spec, ended = false, stepAt = 0, stepRead = 0, picText = void;
+		var compiled = typeof global.world_object != "undefined" && typeof global.scnFindCompiled != "undefined" && scnFindCompiled(spec.storage) !== void;
+		if (compiled) {
+			try {
+				world_object.initPlayer();
+				playData = new StorageData(spec.storage);
+				steps = KAGSceneSteps(playData, spec.label, +spec.text > 0 ? +spec.text : 1, KAGSceneRouteFlags(spec.storage, spec.label));
+			} catch (e) {
+				dm("Scene preview: " + spec.storage + spec.label + ": " + e.message);
+				steps = [];
+			}
+		}
+		if (steps === void || steps.count == 0) steps = [ [ +spec.text > 0 ? +spec.text : 1 ] ];
+		var line = drawStep();
+		if (spec.play !== false && steps.count > 1) {
+			stepWait = waitFor(line.text);
+			playTick = System.getTickCount();
+			playTimer.enabled = true;
+		} else releaseData();
+	}
+
+	function stopPlay()
+	{
+		playTimer.enabled = false if playTimer !== void;
+		releaseData();
+		steps = void;
+	}
+
+	function releaseData()
+	{
+		invalidate playData if playData !== void && isvalid playData;
+		playData = void;
+	}
+
+	// how long a line is read (ms)
+	function waitFor(text)
+	{
+		var w = waitBase + waitPerChar * text.length;
+		w = waitMin if w < waitMin;
+		w = waitMax if w > waitMax;
+		return w;
+	}
+
+	function hurried()
+	{
+		try {
+			return typeof window.getKeyState != "undefined" ? window.getKeyState(VK_CONTROL) : System.getKeyState(VK_CONTROL);
+		} catch { return false; }
+	}
+
+	function onPlay()
+	{
+		if (!isvalid this) return;
+		var now = System.getTickCount(), dt = now - playTick;
+		playTick = now;
+		dt = 200 if dt > 200;
+		stepRead += hurried() ? dt * hurry : dt;
+		if (stepRead < stepWait) { drawProgress(); return; }
+		stepRead = 0;
+		stepAt++;
+		if (stepAt >= steps.count) {
+			// the scene's end: its last message stays, with the note
+			stepAt = steps.count - 1;
+			ended = true;
+			playTimer.enabled = false;
+			drawStep();
+			releaseData();
+			return;
+		}
+		var line = drawStep();
+		stepWait = waitFor(line.text);
+		place(placed) if placed !== void;
+	}
+
+	// the message steps[stepAt] on the card: %[ name, text ]
+	function drawStep()
+	{
+		var spec = playSpec, step = steps[stepAt], line = %[ title:"", name:"", text:"" ];
+		for (var i = 0; i < step.count; i++) {
+			var l = KAGSceneLine(spec.storage, spec.label, step[i], playData);
+			if (i == 0) line.title = l.title, line.name = l.name;
+			line.text = KAGSceneJoin(line.text, l.text);
+		}
+		draw(spec, step[0], line, steps.count > 1);
+		return line;
+	}
+
+	// the card: the picture at text, the title, the speaker and the line; full: room for any
+	// speaker and three lines, so a playing card keeps its size
+	function draw(spec, text, line, full)
+	{
 		var title = spec.title !== void && spec.title != "" ? spec.title : line.title;
 		var picW = cardW - pad * 2, textH = 0, most = 3 * 19 + 2 * 6 + 4;
-		if (line.text != "") {
+		if (full) textH = most;
+		else if (line.text != "") {
 			textH = KAGStyledTextLayout(this, "preview.text", line.text, picW, most).height + 4;
 			textH = most if textH > most;
 		}
-		var h = pad + picH + 10 + 28 + 4 + (line.name != "" ? 24 : 0) + textH + pad;
+		var nameH = full || line.name != "" ? 24 : 0;
+		var h = pad + picH + 10 + 28 + 4 + nameH + textH + pad;
 		var w = cardW;
 		setImageSize(w + shadow, h + shadow);
 		setSize(w + shadow, h + shadow);
@@ -216,7 +455,9 @@ class KAGScenePreview extends Layer
 		fillRect(shadow, shadow, w, h, shadowColor);
 		fillRect(0, 0, w, h, border);
 		fillRect(3, 3, w - 6, h - 6, fill);
-		var pic = KAGScenePicture(spec.storage, spec.label, spec.text, picW, picH);
+		var pic = KAGScenePicture(spec.storage, spec.label, text, picW, picH, playData);
+		if (pic === void && picText !== void) pic = KAGScenePicture(spec.storage, spec.label, picText, picW, picH, playData);
+		else if (pic !== void) picText = text;
 		if (pic !== void) {
 			copyRect(pad, pad, pic, 0, 0, picW, picH);
 			if (typeof this.useCache != "undefined") this.useCache; // (again, after the copy)
@@ -225,10 +466,28 @@ class KAGScenePreview extends Layer
 			fillRect(pad, pad, picW, picH, empty);
 			KAGDrawStyledText(this, "preview.title", title, pad + 16, pad, picW - 32, picH, %[ align:"center", valign:"middle", color:0xffffff, lines:3 ]);
 		}
+		if (ended) {
+			// the scene's end, on a band at the bottom of the picture
+			colorRect(pad, pad + picH - 36, picW, 36, noteColor & 0xffffff, noteColor >>> 24);
+			KAGDrawStyledText(this, "preview.note", tr(endNote), pad, pad + picH - 36, picW, 36);
+		}
 		var y = pad + picH + 10;
 		KAGDrawStyledText(this, "preview.title", title, pad, y, picW, 28);
 		y += 32;
-		if (line.name != "") { KAGDrawStyledText(this, "preview.name", line.name, pad, y, picW, 22); y += 24; }
+		if (line.name != "") KAGDrawStyledText(this, "preview.name", line.name, pad, y, picW, 22);
+		y += nameH;
 		if (line.text != "") KAGDrawStyledText(this, "preview.text", line.text, pad, y, picW, textH);
+		drawProgress();
+	}
+
+	// how far the scene has come: a bar under the picture
+	function drawProgress()
+	{
+		if (steps === void || steps.count < 2) return;
+		var picW = cardW - pad * 2, y = pad + picH + 3;
+		var k = ended ? 1 : (stepAt + (stepWait > 0 ? stepRead / stepWait : 0)) / steps.count;
+		k = 1 if k > 1;
+		fillRect(pad, y, picW, 4, fill);
+		fillRect(pad, y, (int)(picW * k), 4, progressColor);
 	}
 }

@@ -7486,6 +7486,82 @@ class KAGWindow extends Window
 
 
 
+	// ---- scene moves in KAG's own player (since 0.25.0) ----
+	// Scripts KAG plays itself (not compiled, or -scnplay=no) go back only to save points: its
+	// titled labels, whose states as they start kagMoveHistory keeps (the newest first: each label
+	// passed before the one playing, whose is kagLabelStart; kagMoveHistoryMax of them, in memory
+	// only, cleared by a load), whatever the game's Back keeps (historyOfStore,
+	// recordHistoryOfStore; with autoLabelMode pflags is a line's state, not its label's). A scene
+	// is a run of labels with one title (kagScenePage: the last title passed since the start anchor
+	// or a load; untitled labels begin none); a choice shown marks its label's state
+	// (core.kagChoiceHere). Each kept state's scene is its .scene.
+	var kagMoveHistory = [], kagMoveHistoryMax = 100, kagLabelStart, kagScenePage = "";
+	var kagSkipToSceneFrom;       // the scene a skip to the next one started in
+	var kagMovedSinceLabel = false; // a click since the last titled label (so its start is behind)
+	var kagNoPush = false;        // the label played again after a move or a load: no state before it
+
+	// where the start of the scene on screen is: -1 its label (the one playing), k kagMoveHistory[k],
+	// void none; at that start already, the scene before's
+	function kagScenePoint()
+	{
+		var page = kagScenePage, k = -1;
+		var h = kagMoveHistory;
+		if (page == "" || kagLabelStart === void) return;
+		if (kagMovedSinceLabel) {
+			while (k + 1 < h.count && h[k + 1].scene == page) k++;
+			return k;
+		}
+		// at its start: the scene before's start
+		if (h.count == 0) return;
+		k = 0, page = h[0].scene;
+		while (k + 1 < h.count && h[k + 1].scene == page) k++;
+		return k;
+	}
+
+	// the label of the last choice: -1 the one playing (its choice was made in it), k
+	// kagMoveHistory[k], void none; the choice on screen is the one before
+	function kagChoicePoint()
+	{
+		if (kagLabelStart !== void && kagLabelStart.core.kagChoiceHere && !selectShowing && kagMovedSinceLabel) return -1;
+		for (var k = 0; k < kagMoveHistory.count; k++) if (kagMoveHistory[k].core.kagChoiceHere) return k;
+	}
+
+	// back to point k (kagScenePoint, kagChoicePoint): its label played again from its start
+	function kagGoBackTo(k)
+	{
+		if (k === void) return false;
+		kagSkipToSceneFrom = void;
+		cancelSkip() if skipMode != SKIP_NONE;
+		// the label's state as it started again, and the ones after it gone
+		var dic = k < 0 ? kagLabelStart : kagMoveHistory[k];
+		if (dic === void) return false;
+		for (var i = 0; i <= k; i++) kagMoveHistory.shift();
+		(Dictionary.assignStruct incontextof pflags )(dic.user);
+		(Dictionary.assignStruct incontextof pcflags)(dic.core);
+		if (historyWriteEnabled) { historyLayer.clearAction(); historyLayer.reline(); historyLayer.repage(true); }
+		kagNoPush = true;
+		restoreFlags();
+		kagMovedSinceLabel = false;
+		return true;
+	}
+	function kagPrevScene() { return kagGoBackTo(kagScenePoint()); }
+	function kagPrevChoice() { return kagGoBackTo(kagChoicePoint()); }
+	// the newer of the scene's start and the last choice
+	function kagRewind()
+	{
+		var a = kagScenePoint(), b = kagChoicePoint();
+		return kagGoBackTo(a === void ? b : b === void ? a : a < b ? a : b);
+	}
+	// on to the next titled label with another title: skipping, which unread text or a choice
+	// stops as any skip
+	function kagNextScene()
+	{
+		if (selectShowing || kagScenePage == "") return false; // (a choice stops it)
+		kagSkipToSceneFrom = kagScenePage;
+		skipToStop();
+		return true;
+	}
+
 	function pushHistoryOfStore()
 
 	{
@@ -8678,6 +8754,7 @@ class KAGWindow extends Window
 			historyOfStore = data.history;
 
 			historyOfStore = [] if historyOfStore === void;
+			kagMoveHistory.clear(), kagMovedSinceLabel = false, kagNoPush = true, kagLabelStart = void, kagScenePage = ""; // (the moves' past is this run's)
 
 		}
 
@@ -9078,6 +9155,9 @@ class KAGWindow extends Window
 		startAnchorEnabled = enabled;
 
 		if(enabled) {
+
+			// (the start, the title: the scene moves of KAG's own player don't go back past it)
+			kagMoveHistory.clear(), kagLabelStart = void, kagScenePage = "";
 
 			saveBookMarkToFile(getBookMarkFileNameBySystem("anchor"), false);
 
@@ -9647,6 +9727,11 @@ class KAGWindow extends Window
 
 	{
 
+		// KAG's own player: the choice's label marked, for the last choice (kagChoicePoint); a skip to
+		// the next scene stops at it
+		if (!usingExtraConductor && kagLabelStart !== void && !(typeof global.KAGActionPlayer != "undefined" && KAGActionPlayer() !== void))
+			kagLabelStart.core.kagChoiceHere = 1;
+		if (kagSkipToSceneFrom !== void) cancelSkip();
 		callHook("onShowSelectHook", f.selectInfos);
 
 		selectLayer.clearButtons();
@@ -10530,6 +10615,13 @@ class KAGWindow extends Window
 
 			if(page[0] == '&') page = Scripts.eval((page.substring(1)));
 
+			// a skip to the next scene (kagNextScene) stops at a title of another scene
+			if (kagSkipToSceneFrom !== void && page != "" && page != kagSkipToSceneFrom && !usingExtraConductor) {
+				kagSkipToSceneFrom = void;
+				cancelSkip();
+			}
+
+
 			currentPageName = page;
 
 			_currentPageNames = void;
@@ -10539,6 +10631,16 @@ class KAGWindow extends Window
 		if(page !== void)
 
 		{
+
+			// the label before's start kept for the scene moves (kagScenePoint); this one's below
+			if (!usingExtraConductor) {
+				if (kagNoPush) kagNoPush = false;
+				else if (kagLabelStart !== void && kagLabelStart.scene != "") {
+					kagMoveHistory.unshift(kagLabelStart);
+					kagMoveHistory.count = kagMoveHistoryMax if kagMoveHistory.count > kagMoveHistoryMax;
+				}
+				kagMovedSinceLabel = false;
+			}
 
 			pushHistoryOfStore();
 
@@ -10553,6 +10655,12 @@ class KAGWindow extends Window
 			if(usingExtraConductor) throw new Exception("Saveable labels cannot be written within right-click subroutines / extraConductor subroutines");
 
 			storeFlags(), storeLabelPassed = true, setMenuAccessibleAll();
+			if (!usingExtraConductor) {
+				// the scene moves' start of this label, and its scene (a titled label's own)
+				kagScenePage = page if page != "";
+				kagLabelStart = copyHistoryOfStore();
+				kagLabelStart.scene = kagScenePage;
+			}
 
 			storeLabelPassedLastStorage = conductor.curStorage;
 
@@ -12180,6 +12288,7 @@ class KAGWindow extends Window
 		back = tmp;
 		current = (currentPage?back:fore).messages[currentNum]; // Re-set current
 		forEachEventHook('onExchangeForeBack');
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined"; // (screen readers: the screen now in front)
 
         // Restore choices
         if (selectShowing) {
@@ -12924,6 +13033,7 @@ class KAGWindow extends Window
 		if (skipMode == SKIP_FAST) skipKeyRepressed = false;
 		skipMode = SKIP_NONE;
 		_tempAllskip = void;
+		kagSkipToSceneFrom = void;
 		callHook("onCancelSkip");
 		setMenuAccessibleAll();
 	}
@@ -13383,6 +13493,7 @@ class KAGWindow extends Window
 		if (!force && gestures !== void && gestures.swallowClick()) return; // a swipe's own click
 		if (!force && glossaryClick()) return; // a glossary's word: its entry
 		clickCount++ if (!force);
+		kagMovedSinceLabel = true if !usingExtraConductor; // (KAG's own scene moves: past the label's start)
 		if(!force && showDramaticHidden()) return; // dramatic mode: a click shows the window first
 		if(force || !callHook(leftClickHook))
 		{
@@ -13742,6 +13853,7 @@ class KAGWindow extends Window
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
 			bindKey(VK_F10, 0, "@menu", void, false);
 			bindKey(VK_F12, 0, "@screenshot", void, false);
+			bindKey(#'V', void, "@favouriteVoice", void, false);
 			// the mouse's side buttons (since 0.20.0): back a line, and on
 			bindKey(VK_XBUTTON1, 0, "@back", void, false) if (typeof global.VK_XBUTTON1 != "undefined");
 			bindKey(VK_XBUTTON2, 0, "@next", void, false) if (typeof global.VK_XBUTTON2 != "undefined");

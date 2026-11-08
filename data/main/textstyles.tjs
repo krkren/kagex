@@ -27,6 +27,11 @@ KAGDefineTextStyle("glossary.text", %[ size:32, lines:14, lineSpacing:12, edge:t
 // the music room's voices (musicmode.ks, voiceList): who speaks, then the line
 KAGDefineTextStyle("voices.name", %[ size:24, bold:true, valign:"middle", color:0x5025ff, minSize:16 ]);
 KAGDefineTextStyle("voices.text", %[ size:24, valign:"middle", color:0x24107a, minSize:22 ]);
+// the favourites' list picked, and which list the voices' stars keep them in (since 0.25.0)
+KAGDefineTextStyle("voices.list", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:18 ]);
+KAGDefineTextStyle("voices.note", %[ size:24, align:"center", valign:"middle", color:0x5c4cb4, minSize:16 ]);
+// a track's playlists, 1 2 3 on its row (since 0.25.0)
+KAGDefineTextStyle("track.mark", %[ size:20, bold:true, align:"center", valign:"middle" ]);
 
 // the title's greeting, in its speech bubble (titleGreeting)
 KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, lines:3, lineSpacing:6, minSize:20 ]);
@@ -34,4 +39,4 @@ KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"mi
 // Sprite Mode's rows (spritemode.ks): a row's name, what it shows, how many it has
 KAGDefineTextStyle("sprite.row", %[ size:26, bold:true, valign:"bottom", color:0x5025ff ]);
 KAGDefineTextStyle("sprite.value", %[ size:34, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:20 ]);
-KAGDefineTextStyle("sprite.count", %[ size:20, align:"center", valign:"top", color:0x8070b8 ]);
+KAGDefineTextStyle("sprite.count", %[ size:20, align:"right", valign:"bottom", color:0x8070b8 ]);

@@ -414,11 +414,14 @@ function KAGActionBindings(win, name)
 class KAGBindingsPanel extends KAGElementsScreen
 {
 	var rowWidth = 1480, rowHeight = 44, rowSize = 24, labelWidth = 560, keysWidth = 400, padsWidth = 230;
+	var fullRowHeight = 44, fullRowSize = 24; // (rows shrink to fit the screen: rowHeight, rowSize)
 	var gestureWidth = 230, padding = 44, titleSize = 40;
 	var quickWidth = 0;   // the quick menu's column (QuickMenu.tjs): whether it shows the action's button
 	var moveWidth = 52;   // its buttons moving the action's button earlier or later in the strip
 	var waiting = "";     // the action waiting for a key
 	var message = "";     // the line under the title
+	var strip;            // the quick menu's buttons in their order, a drag putting them in another (since 0.25.0)
+	var stripH = 64;
 
 	function KAGBindingsPanel(win)
 	{
@@ -429,6 +432,7 @@ class KAGBindingsPanel extends KAGElementsScreen
 	function finalize()
 	{
 		window.keyCapture = void if isvalid window && waiting != "";
+		invalidate strip if strip !== void && isvalid strip;
 		super.finalize(...);
 	}
 
@@ -449,6 +453,18 @@ class KAGBindingsPanel extends KAGElementsScreen
 	function build()
 	{
 		newAtlas();
+		// the rows a line high, or less where they'd run off the screen (the quick menu's strip
+		// takes room too)
+		var hasQuick = quickMenu() !== void;
+		rowHeight = fullRowHeight, rowSize = fullRowSize;
+		var fixedH = padding * 2 + textHeight(titleSize) + 8 + 16 + textHeight(rowSize) + 8 + 16 +
+			(hasQuick ? 16 + textHeight(rowSize) + 8 + 4 + stripH : 0) + 24 + 60 + 24;
+		var fit = (height - fixedH) \ (actions().count + 1);
+		if (fit < rowHeight) {
+			rowHeight = fit < 30 ? 30 : fit;
+			rowSize = rowHeight * fullRowSize \ fullRowHeight;
+			rowSize = 17 if rowSize < 17;
+		}
 		var title = tr("Change Controls");
 		var titlePiece = addPiece(textWidth(title, titleSize) + 8, textHeight(titleSize) + 8, %[ kind:"title", text:title ]);
 		var messagePiece = addPiece(rowWidth, textHeight(rowSize) + 8, %[ kind:"message", text:message ]);
@@ -488,12 +504,15 @@ class KAGBindingsPanel extends KAGElementsScreen
 			}
 			rows.add(r);
 		}
+		var dragLine = tr("Drag the quick menu's buttons into the order you want:");
+		var dragPiece = qm !== void ? addPiece(rowWidth + quickWidth, textHeight(rowSize) + 8, %[ kind:"message", text:dragLine ]) : void;
 		var panelPiece = addPiece(yesNoImage(yesnoPanelImage).imageWidth, yesNoImage(yesnoPanelImage).imageHeight, %[ kind:"panel" ]);
 		var atlasPath = buildAtlas();
 
 		var shadow = yesnoPanelInsets[2] - yesnoPanelInsets[0];
 		var pw = padding * 2 + rowWidth + quickWidth, headerH = titlePiece.h + 16 + messagePiece.h + 16;
-		var ph = padding * 2 + headerH + rowHeight * (rows.count + 1) + 24 + 60;
+		var stripSpace = qm !== void ? 16 + dragPiece.h + 4 + stripH : 0;
+		var ph = padding * 2 + headerH + rowHeight * (rows.count + 1) + stripSpace + 24 + 60;
 		var sw = width, sh = height, px = (sw - pw - shadow) >> 1, py = (sh - ph - shadow) >> 1;
 		var x0 = px + padding, y = py + padding;
 		var children = [];
@@ -533,6 +552,15 @@ class KAGBindingsPanel extends KAGElementsScreen
 					"a11y" => %[ "label" => tr("Later in the quick menu") ] ]);
 			}
 		}
+		var stripY = void;
+		if (qm !== void) {
+			y += 16;
+			children.add(%[ "type" => "atlas_image", "atlas" => "ui", "rect" => rect(dragPiece),
+				"at" => [ x0, y, dragPiece.w, dragPiece.h ], "a11y" => %[ "hidden" => 1 ] ]);
+			y += dragPiece.h + 4;
+			stripY = y;
+			y += stripH;
+		}
 		y += 24;
 		for (var i = 0; i < buttons.count; i++)
 			children.add(%[ "type" => "atlas_button", "atlas" => "ui", "id" => buttonIds[i],
@@ -547,6 +575,21 @@ class KAGBindingsPanel extends KAGElementsScreen
 			"a11y" => %[ "title" => title ],
 			"content" => %[ "type" => "canvas", "width" => sw, "height" => sh, "children" => children ]
 		]);
+		// the strip over the panel, where its line leaves room
+		invalidate strip if strip !== void && isvalid strip;
+		strip = void;
+		if (qm !== void) {
+			strip = new KAGQuickOrderStrip(window, this, qm, onStripMoved);
+			strip.setPos(x0, stripY);
+			strip.setSize(rowWidth + quickWidth, stripH);
+		}
+	}
+
+	// a button dropped in another place in the strip
+	function onStripMoved(name, to)
+	{
+		message = KAGActionLabel(name) + ": " + tr("the quick menu in its new order");
+		defer(build);
 	}
 
 	function drawPiece(p, layer, x, y)
@@ -663,5 +706,122 @@ class KAGBindingsPanel extends KAGElementsScreen
 		if (now + 1 < order.count) window.rebindGesture(order[now + 1], name);
 		message = KAGActionLabel(name);
 		defer(build);
+	}
+}
+
+/**
+ * The quick menu's buttons in their order (the player's: scflags.quickMenuOrder), as Change
+ * Controls shows them under its rows (since 0.25.0): a press on one lifts it, a drag moves it
+ * along (the others making room), letting go puts it there; the ones left out of the strip show
+ * dimmed. onMoved(name, index) after a move.
+ */
+class KAGQuickOrderStrip extends Layer
+{
+	var window, menu, onMoved;
+	var cell = 60, size = 48, names = [], lifted = -1, liftX = 0, grabDX = 0, target = -1;
+
+	function KAGQuickOrderStrip(win, par, qm, moved)
+	{
+		super.Layer(win, par);
+		window = win, menu = qm, onMoved = moved;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 0;
+		visible = true;
+		absolute = 1000;
+	}
+
+	function setSize(w, h)
+	{
+		super.setSize(w, h);
+		setImageSize(w, h);
+		redraw();
+	}
+
+	function buttons()
+	{
+		var l = menu.orderedList(menu.list());
+		names.clear();
+		for (var i = 0; i < l.count; i++) names.add(l[i].action);
+		return l;
+	}
+
+	// where a button's place starts, and the place a point is nearest
+	function placeX(i) { return i * cell; }
+	function placeAt(x) { var i = (int)Math.round((x - (cell - size) / 2) / cell); return i < 0 ? 0 : i >= names.count ? names.count - 1 : i; }
+
+	function redraw()
+	{
+		if (!isvalid this) return;
+		var l = buttons();
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		fillRect(0, 2, l.count * cell, imageHeight - 4, 0x30ffffff);
+		for (var i = 0, slot = 0; i < l.count; i++) {
+			if (i == lifted) continue;
+			// the others move aside for the lifted one's place
+			if (lifted >= 0 && slot == target) slot++;
+			drawButton(l[i], placeX(slot) + (cell - size) / 2, (imageHeight - size) / 2, false);
+			slot++;
+		}
+		if (lifted >= 0) {
+			fillRect(placeX(target) + 4, 4, cell - 8, imageHeight - 8, 0x60ffffff);
+			drawButton(l[lifted], liftX - grabDX, (imageHeight - size) / 2 - 4, true);
+		}
+		update();
+	}
+
+	function drawButton(b, x, y, up)
+	{
+		var p = b.image !== void ? menu.picture(b.image + "_normal") : void;
+		var dim = menu.hidden(b.action) ? 110 : 255;
+		if (up) fillRect(x - 3, y - 3, size + 6, size + 6, 0xffffb020);
+		if (p !== void) operateStretch(x, y, size, size, p, 0, 0, p.imageWidth, p.imageHeight, omAlpha, dim, stLinear);
+		else {
+			// a button without a picture: the start of its label in the dialogs' violet
+			fillRect(x, y, size, size, 0xffffffff);
+			fillRect(x + 3, y + 3, size - 6, size - 6, 0xff5025ff);
+			font.height = 14;
+			var t = KAGActionLabel(b.action);
+			t = t.substring(0, 4) if font.getTextWidth(t) > size - 6;
+			drawText(x + (size - font.getTextWidth(t)) / 2, y + (size - 14) / 2, t, 0xffffff, dim);
+		}
+	}
+
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button != mbLeft) { super.onMouseDown(...); return; }
+		buttons();
+		var i = (int)(x / cell);
+		if (i < 0 || i >= names.count) return;
+		lifted = target = i;
+		grabDX = x - placeX(i) - (cell - size) / 2;
+		liftX = x;
+		redraw();
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (lifted < 0) { cursor = x < names.count * cell ? window.cursorPointed : window.cursorDefault; super.onMouseMove(...); return; }
+		liftX = x;
+		target = placeAt(x - grabDX);
+		redraw();
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (button != mbLeft || lifted < 0) { super.onMouseUp(...); return; }
+		var from = lifted, to = target, name = names[from];
+		lifted = target = -1;
+		if (from != to) {
+			names.erase(from);
+			names.insert(to, name);
+			var order = [];
+			order.assign(names);
+			window.scflags.quickMenuOrder = order;
+			menu.stateKey = "";
+			KAGBindToGlobal(onMoved)(name, to) if onMoved !== void;
+		}
+		redraw();
 	}
 }

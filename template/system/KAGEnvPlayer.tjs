@@ -1916,7 +1916,13 @@ class KAGEnvPlayer
 		if (d === void || d.name === void || d.name == "") return;
 		var o = historyState(pos);
 		if (o === void) return;
+		return faceIconOf(o, d.name, size);
+	}
+
+	// name's face in the World state o (onStore's), size px square, kept by speaker and face
+	function faceIconOf(o, name, size) {
 		parseEnv.onRestore(o,,,false);
+		var d = %[ name:name ];
 		var ch = parseEnv.characters[d.name];
 		if (ch === void || !ch.isShowFace()) return;
 		var key = [d.name, ch.pose, ch.dress, ch.face, size].join("/");
@@ -2722,22 +2728,81 @@ class KAGEnvPlayer
 				var read = +r[(storage + scene.label).toLowerCase()];
 				for (var i = 0; i < texts.count && ret.count < max; i++) {
 					if (readOnly && read < i + 1) break;
-					var raw = convertSceneText(texts[i], scene.languages);
-					if (raw.voice === void || raw.voice.count == 0) continue;
-					var vs = [];
-					env.extractVoice(raw.voice, vs);
-					if (vs.count == 0) continue;
-					var v = vs[0], file = (string)v.voice + (v.ext !== void ? (string)v.ext : "");
-					if (seen[file.toLowerCase()]) continue;
-					seen[file.toLowerCase()] = true;
-					var t = changeAlias(scnTextIn(raw));
-					ret.add(%[storage:storage, label:(string)scene.label, idx:i + 1, voice:file, speaker:(string)v.name,
-						name:t.disp != "" ? (string)t.disp : (string)t.name, text:plainText((string)t.text).trim()]);
+					var e = voiceEntryOf(storage, scene, i + 1);
+					if (e === void || seen[e.voice.toLowerCase()]) continue;
+					seen[e.voice.toLowerCase()] = true;
+					ret.add(e);
 				}
 			}
 			invalidate data;
 		}
 		return ret;
+	}
+
+	// a scene's text idx (from 1) as a voiced line: %[storage, label, idx, voice, speaker, name,
+	// text] (name and text as shown, in the language shown), or void where it has no voice
+	function voiceEntryOf(storage, scene, idx) {
+		var texts = scene !== void ? scene.texts : void;
+		if (texts === void || idx < 1 || idx > texts.count) return;
+		var raw = convertSceneText(texts[idx - 1], scene.languages);
+		if (raw === void || raw.voice === void || raw.voice.count == 0) return;
+		var vs = [];
+		env.extractVoice(raw.voice, vs);
+		if (vs.count == 0) return;
+		var v = vs[0], file = (string)v.voice + (v.ext !== void ? (string)v.ext : "");
+		var t = changeAlias(scnTextIn(raw));
+		return %[storage:storage, label:(string)scene.label, idx:idx, voice:file, speaker:(string)v.name,
+			name:t.disp != "" ? (string)t.disp : (string)t.name, text:plainText((string)t.text).trim()];
+	}
+
+	// the voiced line at a text of a compiled script (void: none, or not compiled)
+	function voiceEntryAt(storage, label, idx) {
+		if (scnFindCompiled(storage) === void) return;
+		var data = new StorageData(storage), ret;
+		try {
+			ret = voiceEntryOf(storage, data.findScene(label), +idx);
+		} catch (e) {
+			dm("voice entry: " + storage + label + ":" + idx + ": " + e.message);
+		}
+		invalidate data;
+		return ret;
+	}
+
+	// the voiced line at a history position (a message's first text; void: none, a choice)
+	function voiceEntryAtHistory(pos) {
+		var i = historyBlockIndex(pos);
+		if (i < 0) return;
+		var h = histories[i];
+		if (h.text !== void) return;
+		return voiceEntryAt(getStorage(h.scene), getLabel(h.scene), h.idx + pos - h.startNo);
+	}
+
+	// the voiced line on screen (its message's first text)
+	function voiceEntryNow() {
+		if (!working || getHistoryCount() == 0) return;
+		return voiceEntryAtHistory(historyNow());
+	}
+
+	// the speaker's face at a compiled text, as the face window would draw it (envinit's
+	// faceCrop), size px square, kept by speaker and face; void where there's none
+	function faceIconAt(storage, label, idx, name, size) {
+		if (name === void || name == "" || scnFindCompiled(storage) === void) return;
+		var data = new StorageData(storage), o;
+		try {
+			var t = data.getText(label, +idx), guard = 0;
+			o = t !== void ? t.state : void;
+			while (typeof o == "Integer" && guard++ < 16) {
+				var t2 = data.getText(label, o);
+				o = t2 !== void ? t2.state : void;
+			}
+			if (typeof o == "Octet") o = (typeof global.SCNFile != "undefined" ? new SCNFile(o) : new PSBFile(o)).root;
+		} catch (e) {
+			dm("face icon: " + storage + label + ":" + idx + ": " + e.message);
+			o = void;
+		}
+		invalidate data;
+		if (typeof o != "Object" || o === void) return;
+		return faceIconOf(o, name, size);
 	}
 
 	/**

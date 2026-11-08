@@ -3058,6 +3058,11 @@ engine guide's "Accessibility"):
   ・The menu bar's titles, its menus and the controls list are read as they are (Elements
     screens).
   ・Saving a screenshot is announced.
+  ・The screens drawn on the message layers (since 0.25.0: the sample's Config, save and load,
+    Extras) are read: each button, link, text box, check box and slider, named by its label or
+    its help line, with the screen's help line as the screen's description; the focus follows
+    the keys, and the screen reader can press them. A scrolling list or another layer on the
+    screen that shows its own nodes (the music room's tracks, the player) is merged in.
 
 
 Where the engine has no such interface (the browser build; the Android and iOS builds are made
@@ -3077,6 +3082,28 @@ without it) all of this does nothing. A game shows its own UI drawn on layers th
   KAGA11y.removeNodes(owner)            Takes them away; the ones behind come back.
   KAGA11y.rectOf(layer)                 A layer's place on the screen, for a node's rect.
   kag.a11yReadText                      false: the messages aren't read out.
+
+A message layer's links (since 0.25.0) become nodes by themselves, as soon as the layer shows
+them and whenever they change:
+
+  the screen                            A group named by KAGA11yScreenNames[<the screen's
+                                        scenario, without .ks>] (through tr(); otherwise the
+                                        name as words), its description the screen's help line
+                                        (helptexts.csv's "<screen>._").
+  a link's name                         Its button's a11yLabel (the sample's drawButtonLabel
+                                        sets it to the label it draws), else its help line
+                                        (helptexts.csv, hint=), else its name as words
+                                        ("extra_cgmode": "Extra cgmode"). The help line is its
+                                        description when the name isn't it already.
+  KAGMessageA11yLater()                 The fore message layers' nodes again, in a moment: the
+                                        framework calls it as links are added or cleared, the
+                                        focus moves or the pages are exchanged; a game calls it
+                                        after changing a link's picture or state itself.
+
+An owner of KAGA11y.setNodes whose layer is inside another owner's (a KAGScrollList on a
+screen's message layer) is shown with it: the outer owner's nodes come with the inner ones'
+merged in, whichever of them called last, and the screen reader's actions go back to the one
+each node came from (onA11yAction gets the owner's own id).
 
 
 To check without a screen reader, run the engine with a REPL and read Agent.a11yLog() (roughly
@@ -3200,7 +3227,10 @@ is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickM
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
 kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a
 button earlier or later, kept in kag.scflags.quickMenuOrder, and the strip then puts them one
-after another, gap px apart; Reset puts the game's back). A button's picture is drawn at the
+after another, gap px apart; Reset puts the game's back). Since 0.25.0 Change Controls also
+shows the buttons in their order under its rows (KAGQuickOrderStrip, Controls.tjs), where a drag
+puts one in another place, the others making room; the rows shrink to fit the screen with it.
+A button's picture is drawn at the
 strip's size; a labelled one
 in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
 When it can show again (the story starting, the window back) an unpinned strip peeks out for
@@ -3790,9 +3820,23 @@ the line in the language shown (template/system/ScenePreview.tjs, since 0.24.0):
 
   KAGScenePicture(storage, label, text, w, h)   the picture (kept; void where the World shows
                                                 nothing there)
-  KAGSceneLine(storage, label, text)            %[ title, name, text ] as shown
+  KAGSceneLine(storage, label, text)            %[ title, name, text, flag ] as shown
+  KAGSceneSteps(data, label, text, flags)       the scene's messages from that text, in order:
+                                                [[text, ...]...] (a text and those that carry
+                                                its window on), its [if]s taken with flags
   KAGScenePreview                               the card (showFor, hide; the text styles
-                                                preview.title, preview.name, preview.text)
+                                                preview.title, preview.name, preview.text,
+                                                preview.note)
+
+The card plays the scene (since 0.25.0): once a line has been read (waitBase + waitPerChar a
+character, from waitMin to waitMax ms) the next comes with its picture, silently, a bar under
+the picture showing how far it has come, to the scene's end, where the last message stays with
+a note ("End of the scene"). Ctrl, or a controller's R2, hurries it (hurry, 8 times). A message
+whose World shows nothing keeps the picture before it. The scene's [if]s go as they did on the
+player's route: the flags the flowchart kept where the scene starts (sf.chartFlags), or none
+for a scene it hasn't reached. A spec with play:false stays on its text. On a touch screen,
+which has no pointer resting on an item, a long press (holdTime, 450 ms) on an item or a chart
+node shows its card, picks nothing, and the card stays until the next press.
 
 The sample's Replay tiles, Search rows and chart nodes have one.
 
@@ -3803,17 +3847,44 @@ favourites in an order of their own (sf.favouriteVoices; template/system/Voices.
 0.24.0):
 
   KAGHeardVoices()                 [%[ storage, label, idx, voice, speaker, name, text ]...]
-  KAGFavouriteVoices.list(), has(voice), add(entry), remove(voice), toggle(entry), move(from, to)
+  KAGFavouriteVoices.list(n), has(voice, n), add(entry, n), remove(voice, n), toggle(entry, n),
+                     move(from, to, n)
   KAGFavouriteVoices.shown(entry)  its name and line in the language shown
   KAGPlayVoiceLine(entry)          plays it, as the backlog's voice mark does
+
+Since 0.25.0 there are playlists besides the favourites (KAGFavouriteVoices.playlists, 3, in
+sf.voicePlaylists): n is 0 for the favourites, 1 and on for the playlists, and void for the list
+picked (KAGFavouriteVoices.at, kept in sf.voiceListAt; names() and shownName(n) name them). And:
+
+  KAGFavouriteVoices.protect(voice, on, n), isProtected(voice, n)
+                                   a protected line stays in its list (remove and toggle leave
+                                   it) until it's unprotected
+  KAGVoiceNow()                    the voiced line on screen (compiled scenes; the first text of
+                                   the message shown), void where there's none
+  KAGKeepVoiceNow()                it kept with the favourites, or let go, with a notice: the
+                                   favouriteVoice action, which V runs ("Keep this voice with
+                                   your favourites"; enabled while a voiced line is shown)
+  KAGVoiceFace(entry, size)        the speaker's face at the line, as the face window would draw
+                                   it (envinit's faceCrop of the World at that text), size px
+                                   square, kept by speaker and face (KAGEnvPlayer.faceIconAt)
+  KAGVoiceListPlayer               a list's voices one after another (play(entries, from), stop(),
+                                   playing, index; onEntry(index), onEnd())
+
+The player gives the entries: KAGEnvPlayer.voiceEntryAt(storage, label, idx),
+voiceEntryAtHistory(pos) and voiceEntryNow(). A line plays from its place to its scene's end
+with KAGEnvPlayer.seek, as Search plays a line found.
 
 A KAGScrollList of one column with a reorder function lets its items be put in another order: a
 press on an item's right end (reorderHandle px, where the game draws a handle) or a long press
 elsewhere (holdTime ms) lifts it, a drag moves it (the list scrolls on near its ends), letting go
 puts it there, and Shift with the up and down keys moves the focused one; onItemKey(index, key,
 shift) takes a key on the focused item first. The sample's music room has Music, Voices and
-Favourites views: a click plays a voice, its star (or F) keeps it, the favourites' handle moves
-them.
+Favourites views: a click plays a voice, the speaker's face beside it; its star (F) keeps it in
+the list picked (on Favourites, whose arrows go through the favourites and the playlists), its
+lock (P) protects it, its arrow (J) plays its scene and comes back, and a handle moves it; Play
+all plays the list. The sample's backlog has a star right of a voiced message's voice mark
+(MyHistoryLayer.tjs; marginL 270 makes room for it), which keeps the voice with the favourites
+or lets it go.
 
 ● The Music Playing
 
@@ -3824,10 +3895,25 @@ drag on it, or the left and right keys five seconds at a time. bufferOf gives th
 (kag.bgm's by default); on a message layer, addLinkLayer makes it a link. It reads a buffer's
 times only while it plays or is paused: an empty buffer's times kill the engine (UPSTREAM.md 49).
 
+Since 0.25.0 the bar and the time follow a clock set from the buffer's position (the engine's
+position moves in blocks of samples, and is a buffer ahead for about half a second after a seek
+or a loop, which made the knob shake): set again when the track, the buffer or its pausing
+changes, at a jump, or when the two stay apart (driftLimit, driftTime). A click on the picture,
+Space or Return pauses the music and plays it on (togglePause, paused; onPause(paused) tells the
+game), with a pause mark over the picture; a level meter under the times (meter,
+meterSegments) reads WaveSoundBuffer.getSoundLevel while the music plays.
+
+The sample's music room: Play turns to Pause while a track plays; One (the track again), In
+Order (the list's tracks in turn) and Shuffle (any other at random) say what comes next. Its
+Music view shows every track or a playlist (three, sf.musicPlaylists, picked with the arrows
+above the list): with every track shown, a row's 1, 2 and 3 put the track in those playlists
+(or the keys 1, 2, 3); in a playlist, a handle puts its tracks in order. A track plays on
+through the list it was picked from.
+
 ● Title Greetings
 
 greetings.csv gives the title a line for the moment (template/system/Greetings.tjs, since
-0.24.0), a line each, When,Text,Voice,Weight:
+0.24.0), a line each, When,Text,Voice,Weight,Who:
 
     morning,"Good morning, %name%! Shall we look at some layers before breakfast?"
     back,"Welcome back! It's been a while."
@@ -3840,22 +3926,54 @@ greetings.csv gives the title a line for the moment (template/system/Greetings.t
   Text    the line, through tr(); %name% is KAGGreetingNameOf()'s (f.name; the sample's: the name
           the player gave), and a line with it is left out while there's none
   Voice   a sound with it (optional); Weight how often among its equals (1)
+  Who     who says it (since 0.25.0): only while KAGGreetingGreeter() names them; empty, anyone
 
 The lines that hold with the most conditions win (first, back and a date count ten times as
-much), one of them at random, the same for the rest of the run: KAGGreeting() gives %[ text,
-voice ], KAGGreetingText(g) the text as shown. The sample's Ai says it in a bubble on the title.
+much; the greeter's own lines win over anyone's with as many), one of them at random, the same
+for the rest of the run: KAGGreeting() gives %[ text, voice, who ], KAGGreetingText(g) the text
+as shown, KAGGreetingAgain() picks again (after the greeter changes, without counting the visit
+again). The sample's greeter is Config's Title Greeting: Ai, in a bubble beside her, Pip, on the
+road below his bubble with his lines spoken (babble: tools/assets/make_pip.py greet and title,
+data/voice/pipgreet*.ogg, data/image/title_pip.png), or no one.
 
 ● Sprite Mode
 
 Template/system/SpriteMode.tjs (since 0.24.0) is what a character viewer needs: the World's
 characters that can be drawn here (a Live2D or VRM one only where its plugin draws it,
-KAGSpriteCharacters), their "pose", "dress" and "face" names (KAGSpriteChoices; a pose's own
-outfits and faces once it's shown), every stage at every time of day (KAGSpriteBackgrounds),
-their commands run as their tags would, without their own transitions (KAGSpriteShow,
-KAGSpriteStage, then KAGSpriteUpdate), and the World cleared (KAGSpriteClear). The sample's Sprite
-Mode (spritemode.ks, the CG screen's Characters button) changes them between [begintrans] and
-[endtrans], so its panel and the World fade in as one; envinit.tjs's spriteview position puts
-the character right of the panel.
+KAGSpriteCharacters), their "pose", "dress", "face" and "diff" names (KAGSpriteChoices; a pose's
+own outfits and faces once it's shown; diffs are a layered character's variations for its
+outfit, from its _info.txt, since 0.25.0), every stage at every time of day
+(KAGSpriteBackgrounds), their commands run as their tags would (KAGSpriteShow, KAGSpriteStage,
+then KAGSpriteUpdate; between [begintrans] and [endtrans] without their own transitions), and
+the World cleared (KAGSpriteClear). Since 0.25.0 also:
+
+  KAGSpriteBackgroundFolder()     the folder for the player's own backgrounds: backgrounds/ in
+                                  the save folder (void on the web and phones, whose save folder
+                                  isn't one the player can put files in)
+  KAGSpriteOwnBackgrounds()       the pictures there (PNG, JPEG, BMP, TLG, WebP), in name order,
+                                  each made a stage of the World (spriteown0, spriteown1...)
+                                  that fills the screen: [%[ stage, time, file, name ]...]
+  KAGSpriteHit(name, x, y)        whether the character draws something at a point of the screen
+                                  (its picture's pixels, not its rectangle)
+  KAGSpriteStageLayer             a message layer's link over the stage: a press on a character
+                                  and a drag (names, onPick, onMove), the wheel over one (onZoom),
+                                  and a line in a window drawn as the story's (setLine, lineRect;
+                                  the text styles sprite.line and sprite.name)
+
+A character's place, size and turn are the World's own attributes (xpos, ypos, zoom, flipx), so
+a drag runs [<name> xpos= ypos=] at once, outside a transition (with notrans there the World
+would leave the character's new layer hidden: KAGSpriteShow adds notrans only inside one).
+
+The sample's Sprite Mode (spritemode.ks, the CG screen's Characters button) has a panel on the
+left: rows for the character, its pose, outfit, face and variation (Pip's arms), and the
+background (the street at each time of day, then the player's own pictures), a line to type,
+and tools: the character onto the stage or off it, turned round, smaller and larger, the camera,
+the panel away. Several characters stand on the stage at once; the rows edit the one picked (the
+first row, or a click on one on the stage), which a drag moves and the wheel zooms. A line typed
+(Enter) is said by the one picked, in a message window like the story's. The camera draws the
+screen again without the panel and takes a screenshot as F12 does; with the panel away the whole
+stage shows, and a right-click or the button in the corner brings it back. The panel and the
+World change between [begintrans] and [endtrans], so they fade in as one.
 
 ● The Name Box
 

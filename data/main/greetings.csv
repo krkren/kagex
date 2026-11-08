@@ -1,8 +1,10 @@
 ﻿# The title's greetings (template/system/Greetings.tjs; Override.tjs, titleGreeting)
-# When,Text,Voice,Weight
+# When,Text,Voice,Weight,Who
 #   When: morning afternoon evening night weekend date:MM-DD first back back:N any exp:<TJS>,
 #   every one of them true; the lines with the most that hold win. %name% is the player's name
 #   (a line with it is left out until they give one). The text is translated through lang.json
+#   Who: who says it (Config's Title Greeting: ai or pip), or anyone; the greeter's own lines
+#   win over anyone's. Pip's are spoken (tools/assets/make_pip.py greet: data/voice/pipgreet*)
 first,Welcome to the KAGEX sample! Press Start to see what it can do.
 back,"Welcome back! It's been a while."
 back,"Welcome back, %name%! It's been a while.",,2
@@ -19,3 +21,12 @@ date:12-25,"Merry Christmas, %name%!"
 date:12-25,Merry Christmas!
 date:01-01,"Happy New Year, %name%!"
 date:01-01,Happy New Year!
+# Pip's
+first,"Hi! I'm Pip! Press Start and I'll show you around!",pipgreet01,,pip
+back,"You came back! I missed you!",pipgreet02,,pip
+back,"Welcome back, %name%! I missed you!",pipgreet08,2,pip
+morning,"Morning! Is it breakfast time yet?",pipgreet03,,pip
+afternoon,"Good afternoon! Let's play a demo!",pipgreet04,,pip
+evening,"Evening already? The street lights look so pretty.",pipgreet05,,pip
+night,"Yawn... it's late. Just one more demo?",pipgreet06,,pip
+any,"Hello, hello! Ready for more?",pipgreet07,,pip

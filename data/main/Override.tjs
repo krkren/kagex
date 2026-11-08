@@ -760,7 +760,7 @@ var configPages = [
       [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "msgStyleTint:normal", "msgStyleTint:memory" ] ],
-    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow" ],
+    [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow", "titleGreeter" ],
       [ "heroName", "subtitles", "movieSkipping", "movieRightClick", "movieQuality", "reduceMotion" ] ],
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
@@ -1618,9 +1618,15 @@ function replayUnlocked(info)
     return sf[flagname] !== void && +sf[flagname] > 0;
 }
 
+// what screen readers call the sample's screens (Accessibility.tjs)
+KAGA11yScreenNames = %[ "config" => "Config", "save" => "Save", "load" => "Load", "cgmode" => "CG", "replay" => "Replay",
+    "musicmode" => "Music", "searchmode" => "Search", "glossary" => "Glossary", "chart" => "Chart",
+    "spritemode" => "Characters", "title" => "Title", "namescreen" => "Your Name" ];
+
 // A label drawn on each state of a button: the replay tabs' labels
 function drawButtonLabel(button, text, colors, size = 30)
 {
+    button.a11yLabel = text; // (what a screen reader calls it: Accessibility.tjs)
     var hold = button.holdAlpha;
     button.holdAlpha = true;
     for (var st = 0; st < 3; st++)
@@ -2040,66 +2046,115 @@ function glossaryEntry()
 
 /**
  * Sprite Mode (spritemode.ks, the CG screen's Characters button; template/system/SpriteMode.tjs):
- * a character at a time over the street, any pose, outfit and face, the street at any time of
- * day; the rows' arrows go through them
+ * the characters over the street, any pose, outfit, face and (Pip's) arms, the street at any time
+ * of day or a picture of the player's own; the rows edit the character picked (the rows' first,
+ * or a click on one on the stage), which a drag moves and the wheel zooms; a line typed under
+ * them is said by the one picked; the camera takes the stage without the panel
  */
 var spriteNames = [ "ai", "pip", "hiyori", "vee" ];
-var spriteRowNames = [ "Character", "Pose", "Outfit", "Face", "Background" ];
+var spriteRowNames = [ "Character", "Pose", "Outfit", "Face", "Variation", "Background" ];
+var spriteRowY = 230, spriteRowStep = 96;
+// the places across the stage new arrivals take, the first one free
+var spriteSpots = [ 340, 40, 640, -260, 940 ];
 function spriteInit()
 {
     tf.recollect = 0;
     tf.spriteFade = 300;
+    tf.spritePanel = true;
+    tf.spriteShot = false;
     tf.spriteChars = KAGSpriteCharacters(spriteNames);
-    tf.spriteBgs = KAGSpriteBackgrounds();
-    tf.spriteAt = [ 0, 0, 0, 0, 0 ] if tf.spriteAt === void;
+    spriteBackgroundsRead();
+    tf.spriteSel = 0 if tf.spriteSel === void || tf.spriteSel >= tf.spriteChars.count;
+    tf.spriteBgAt = 0 if tf.spriteBgAt === void;
+    tf.spriteLine = "" if tf.spriteLine === void;
+    if (tf.spriteSet === void) {
+        tf.spriteSet = %[];
+        // the first character on the stage, where it stood before (one at a time, 0.24.0)
+        var first = tf.spriteChars[0];
+        if (first !== void) { var s = spriteSetOf(first); s.on = true; s.x = spriteSpots[0]; }
+    }
     KAGSpriteClear();
 }
-// the World as the rows say: the stage, the character (the others away), its pose first, then
-// the outfit and face that pose has
+// the stage's backgrounds: the World's stages at each time of day, then the player's own pictures
+function spriteBackgroundsRead()
+{
+    var l = KAGSpriteBackgrounds(), own = KAGSpriteOwnBackgrounds();
+    for (var i = 0; i < own.count; i++) l.add(own[i]);
+    tf.spriteBgs = l;
+}
+// a character's settings (made on first use): its pose, outfit, face and variation, whether it's
+// on the stage, where (xpos, ypos), its zoom and whether it's turned round
+function spriteSetOf(name)
+{
+    var s = tf.spriteSet[name];
+    if (s === void) s = tf.spriteSet[name] = %[ at:[ 0, 0, 0, 0 ], on:false, x:void, y:0, zoom:100, flip:false ];
+    return s;
+}
+function spriteName() { return tf.spriteChars[tf.spriteSel]; }
+// the World as the settings say: the stage, then each character on it (the others away), its pose
+// first, then the outfit, face and variation that pose has
 function spriteApply()
 {
-    var at = tf.spriteAt, bg = tf.spriteBgs[at[4] % (tf.spriteBgs.count > 0 ? tf.spriteBgs.count : 1)];
+    var bgs = tf.spriteBgs, bg = bgs.count > 0 ? bgs[tf.spriteBgAt % bgs.count] : void;
     if (bg !== void) KAGSpriteStage(bg.stage, bg.time);
-    var name = tf.spriteChars[at[0]];
     for (var i = 0; i < tf.spriteChars.count; i++) {
-        var other = tf.spriteChars[i];
-        if (other != name && world_object.env.characters[other] !== void) KAGSpriteShow(other, %[ hide:true ]);
+        var name = tf.spriteChars[i], s = spriteSetOf(name);
+        if (!s.on) {
+            KAGSpriteShow(name, %[ hide:true ]) if world_object.env.characters[name] !== void;
+            continue;
+        }
+        var e = spritePlace(s), poses = KAGSpriteChoices(name, "pose");
+        if (poses.count > 0) { s.at[0] = s.at[0] % poses.count; e.pose = poses[s.at[0]]; }
+        KAGSpriteShow(name, e);
+        var e2 = spritePlace(s), lists = [ KAGSpriteChoices(name, "dress"), KAGSpriteChoices(name, "face"), KAGSpriteChoices(name, "diff") ];
+        var keys = [ "dress", "face", "diff" ];
+        for (var k = 0; k < 3; k++) if (lists[k].count > 0) { s.at[k + 1] = s.at[k + 1] % lists[k].count; e2[keys[k]] = lists[k][s.at[k + 1]]; }
+        KAGSpriteShow(name, e2);
     }
-    if (name === void) { KAGSpriteUpdate(); return; }
-    var poses = KAGSpriteChoices(name, "pose");
-    var e = %[ pos:"spriteview" ];
-    if (poses.count > 0) { at[1] = at[1] % poses.count; e.pose = poses[at[1]]; }
-    KAGSpriteShow(name, e);
-    var dresses = KAGSpriteChoices(name, "dress"), faces = KAGSpriteChoices(name, "face");
-    var e2 = %[];
-    if (dresses.count > 0) { at[2] = at[2] % dresses.count; e2.dress = dresses[at[2]]; }
-    if (faces.count > 0) { at[3] = at[3] % faces.count; e2.face = faces[at[3]]; }
-    KAGSpriteShow(name, e2) if dresses.count > 0 || faces.count > 0;
     KAGSpriteUpdate();
+}
+// where a character stands, as a World command's attributes
+function spritePlace(s)
+{
+    return %[ xpos:(int)s.x, ypos:(int)s.y, zoom:(int)s.zoom, flipx:s.flip ? 1 : 0 ];
 }
 // what row r shows now, and how many it has
 function spriteRowValues(r)
 {
-    var name = tf.spriteChars[tf.spriteAt[0]];
+    var name = spriteName();
     switch (r) {
     case 0: {
         var l = [];
-        for (var i = 0; i < tf.spriteChars.count; i++) {
-            var n = tf.spriteChars[i], ch = world_object.env.getCharacter(n);
-            l.add(ch !== void ? world_object.env.nameAliasOf(ch) : n);
-        }
+        for (var i = 0; i < tf.spriteChars.count; i++) l.add(spriteDisplayName(tf.spriteChars[i]));
         return l;
     }
     case 1: return name !== void ? KAGSpriteChoices(name, "pose") : [];
     case 2: return name !== void ? KAGSpriteChoices(name, "dress") : [];
     case 3: return name !== void ? KAGSpriteChoices(name, "face") : [];
-    case 4: {
+    case 4: return name !== void ? KAGSpriteChoices(name, "diff") : [];
+    case 5: {
         var l = [];
-        for (var i = 0; i < tf.spriteBgs.count; i++) l.add(tr(spriteWord(tf.spriteBgs[i].stage)) + " (" + tr(spriteWord(tf.spriteBgs[i].time)) + ")");
+        for (var i = 0; i < tf.spriteBgs.count; i++) {
+            var b = tf.spriteBgs[i];
+            l.add(b.file !== void ? b.name : tr(spriteWord(b.stage)) + " (" + tr(spriteWord(b.time)) + ")");
+        }
         return l;
     }
     }
     return [];
+}
+// the row's place in what it lists
+function spriteRowAt(r)
+{
+    if (r == 0) return tf.spriteSel;
+    if (r == 5) return tf.spriteBgAt;
+    var name = spriteName();
+    return name !== void ? spriteSetOf(name).at[r - 1] : 0;
+}
+function spriteDisplayName(n)
+{
+    var ch = world_object.env.getCharacter(n);
+    return ch !== void ? world_object.env.nameAliasOf(ch) : n;
 }
 // a name from envinit.tjs as words: "road" Road, "posleft" Posleft (the game's own names)
 function spriteWord(s)
@@ -2111,27 +2166,156 @@ function spriteStep(r, dir)
 {
     var n = spriteRowValues(r).count;
     if (n <= 0) return;
-    var at = tf.spriteAt;
-    at[r] = ((at[r] + dir) % n + n) % n;
-    // another character or pose starts from its first pose, outfit and face
-    if (r == 0) at[1] = at[2] = at[3] = 0;
-    else if (r == 1) at[2] = at[3] = 0;
+    var at = (spriteRowAt(r) + dir) % n;
+    at += n if at < 0;
+    if (r == 0) { tf.spriteSel = at; return; }
+    if (r == 5) { tf.spriteBgAt = at; return; }
+    var s = spriteSetOf(spriteName());
+    s.at[r - 1] = at;
+    // another pose starts from its first outfit, face and variation
+    if (r == 1) s.at[1] = s.at[2] = s.at[3] = 0;
+    // what's changed is seen: the character comes onto the stage
+    spriteOnStage(spriteName(), true);
 }
-// the rows' names and what each shows, on the panel
+// a character onto the stage (at the first place free) or off it
+function spriteOnStage(name, on)
+{
+    var s = spriteSetOf(name);
+    if (on && !s.on && s.x === void) {
+        s.x = spriteSpots[0];
+        for (var k = 0; k < spriteSpots.count; k++) {
+            var free = true;
+            for (var i = 0; i < tf.spriteChars.count; i++) {
+                var o = spriteSetOf(tf.spriteChars[i]);
+                free = false if o.on && o.x !== void && Math.abs(o.x - spriteSpots[k]) < 200;
+            }
+            if (free) { s.x = spriteSpots[k]; break; }
+        }
+    }
+    s.on = on;
+}
+// the button that puts the character picked onto the stage, or takes it off when it's there
+function spriteToggleImage(state)
+{
+    var n = spriteName();
+    return (n !== void && spriteSetOf(n).on ? "sprite_remove_" : "sprite_add_") + state;
+}
+function spriteToggle() { var n = spriteName(); spriteOnStage(n, !spriteSetOf(n).on) if n !== void; }
+function spriteFlip() { var n = spriteName(); if (n !== void) { var s = spriteSetOf(n); s.flip = !s.flip; spriteOnStage(n, true); } }
+function spriteZoomBy(steps)
+{
+    var n = spriteName();
+    if (n === void) return;
+    var s = spriteSetOf(n);
+    s.zoom = s.zoom + steps * 10;
+    s.zoom = 40 if s.zoom < 40;
+    s.zoom = 250 if s.zoom > 250;
+    spriteOnStage(n, true);
+}
+// the rows' names and what each shows, the line's name, on the panel
 function spriteRows()
 {
     var m = kag.current, hold = m.holdAlpha;
     m.holdAlpha = true;
-    for (var r = 0; r < 5; r++) {
-        var y = 262 + r * 130, l = spriteRowValues(r), v = l.count > 0 ? spriteWord(l[tf.spriteAt[r] % l.count]) : "—";
-        KAGDrawStyledText(m, "sprite.row", tr(spriteRowNames[r]), 60, y - 46, 560, 40);
-        KAGDrawStyledText(m, "sprite.value", r == 0 || r == 4 ? v : tr(v), 132, y, 416, 64);
-        if (l.count > 1) KAGDrawStyledText(m, "sprite.count", "%d / %d".sprintf(tf.spriteAt[r] % l.count + 1, l.count), 132, y + 64, 416, 28);
+    for (var r = 0; r < 6; r++) {
+        var y = spriteRowY + r * spriteRowStep, l = spriteRowValues(r), at = spriteRowAt(r);
+        var v = l.count > 0 ? spriteWord(l[at % l.count]) : "—";
+        KAGDrawStyledText(m, "sprite.row", tr(spriteRowNames[r]), 60, y - 34, 400, 32);
+        KAGDrawStyledText(m, "sprite.value", r == 0 || r == 5 ? v : tr(v), 132, y, 416, 64);
+        if (l.count > 1) KAGDrawStyledText(m, "sprite.count", "%d / %d".sprintf(at % l.count + 1, l.count), 420, y - 34, 200, 32);
         var on = l.count > 1;
         var p = m.names["sprite_prev" + r], q = m.names["sprite_next" + r];
         p.enabled = q.enabled = on if p !== void && q !== void;
     }
+    KAGDrawStyledText(m, "sprite.row", tr("Line"), 60, 794, 400, 32);
     m.holdAlpha = hold;
+}
+// the stage: drags and the wheel on the characters, the line in its window; over the part the
+// panel leaves (all of it without the panel)
+function spriteStage()
+{
+    var m = kag.current, full = !tf.spritePanel || tf.spriteShot;
+    var st = new KAGSpriteStageLayer(kag, m);
+    st.name = "spriteStage";
+    st.names = spriteFront;
+    st.onPick = spritePick;
+    st.onMove = spriteMove;
+    st.onZoom = spriteWheel;
+    st.setPos(full ? 0 : 680, 0);
+    st.setSize(full ? 1920 : 1240, 1080);
+    // the story's window (macro.ks, [initscene]); beside the panel, the part of the stage it leaves
+    st.lineRect = full ? [ 60, 714, 1800, 330 ] : [ 704, 714, 1192, 330 ];
+    var n = spriteName();
+    st.setLine(tf.spriteLine != "" && n !== void ? spriteDisplayName(n) : "", tf.spriteLine);
+    m.addLinkLayer(st);
+}
+// the characters on the stage, the one picked first (it's checked first for a click)
+function spriteFront()
+{
+    var l = [], n = spriteName();
+    l.add(n) if n !== void && spriteSetOf(n).on;
+    for (var i = tf.spriteChars.count - 1; i >= 0; i--) {
+        var c = tf.spriteChars[i];
+        l.add(c) if c != n && spriteSetOf(c).on;
+    }
+    return l;
+}
+// a character clicked or dragged: the rows edit it (the panel drawn again a moment later)
+function spritePick(name)
+{
+    if (name === void || name == spriteName()) return;
+    var i = tf.spriteChars.find(name);
+    if (i < 0) return;
+    tf.spriteSel = i;
+    tf.spriteFade = 100;
+    spriteAgainLater();
+}
+var spriteAgainTrigger;
+function spriteAgainLater()
+{
+    spriteAgainTrigger = new AsyncTrigger(function { if (kag.conductor.curStorage == "spritemode.ks") kag.process("spritemode.ks", "*again"); }, "") if spriteAgainTrigger === void;
+    spriteAgainTrigger.trigger();
+}
+// dragged: it moves with the pointer (the World drawn at once, without a transition)
+function spriteMove(name, dx, dy, done)
+{
+    var s = spriteSetOf(name);
+    if (s.from === void) s.from = [ s.x !== void ? s.x : 0, s.y ];
+    s.x = (int)(s.from[0] + dx), s.y = (int)(s.from[1] + dy);
+    KAGSpriteShow(name, %[ xpos:s.x, ypos:s.y ]);
+    KAGSpriteUpdate();
+    delete s.from if done;
+}
+// the wheel over a character: it zooms, the World drawn at once
+function spriteWheel(name, steps)
+{
+    var s = spriteSetOf(name);
+    s.zoom = (int)(s.zoom + steps * 5);
+    s.zoom = 40 if s.zoom < 40;
+    s.zoom = 250 if s.zoom > 250;
+    KAGSpriteShow(name, %[ zoom:s.zoom ]);
+    KAGSpriteUpdate();
+}
+// the line typed (Enter): said by the character picked
+function spriteLineSet()
+{
+    tf.spriteFade = 100;
+    spriteAgainLater();
+}
+// the panel away (true: back); whether it changed
+function spritePanelShow(on)
+{
+    if (tf.spritePanel == on) return false;
+    tf.spritePanel = on;
+    tf.spriteFade = 150;
+    return true;
+}
+// the camera: the screen drawn without the panel, then this (the screenshot, as F12 takes one)
+function spriteShot()
+{
+    tf.spriteShot = false;
+    tf.spriteFade = 150;
+    kag.saveScreenshot();
 }
 function spriteLeave()
 {
@@ -2351,6 +2535,7 @@ function musicInit()
  */
 function musicEnd()
 {
+    voiceListStop();
     kag.bgm.setLoop(true);
     kag.clearBgmStop();
 }
@@ -2433,31 +2618,60 @@ function titlePictures()
 // the player's name in a greeting: the one they gave on the name screen
 KAGGreetingNameOf = function { return sf.heroNamed ? (string)sf.heroName : ""; };
 // a speech bubble beside Ai, drawn on the title's page (so it comes and goes with it)
+// who greets on the title (Config's Title Greeting, since 0.25.0): Ai beside her bubble, Pip (his
+// lines spoken: greetings.csv's Who) on the road below his, or no one
+KAGDefineOption(%[ name:"titleGreeter", label:"Title Greeting", kind:"choice", save:true, initial:"ai",
+    values:[ ["Ai", "ai"], ["Pip", "pip"], ["Off", "off"] ],
+    // (the line is picked again for the new greeter as the title draws it, once the option has
+    // its new value)
+    setValue:function(v) { tf.greetingRepick = true; tf.greetingSaid = false; } ]);
+KAGGreetingGreeter = function { var g = KAGOptionGet("titleGreeter"); return g == "pip" ? "pip" : "ai"; };
 function titleGreeting()
 {
-    if (typeof global.KAGGreeting == "undefined") return;
+    if (typeof global.KAGGreeting == "undefined" || KAGOptionGet("titleGreeter") == "off") return;
+    if (tf.greetingRepick) { tf.greetingRepick = false; KAGGreetingAgain() if KAGGreetingPicked !== void; }
     var g = KAGGreeting(), text = KAGGreetingText(g);
     if (text == "") return;
-    var m = kag.current, hold = m.holdAlpha;
-    var bx = 900, by = 452, bw = 400, bh = 138, tipX = 1352, tipY = 404;
+    var m = kag.current, hold = m.holdAlpha, pip = KAGOptionGet("titleGreeter") == "pip";
     m.holdAlpha = true;
-    // the tail, up from the bubble's top towards her mouth (its border, then its inside)
-    greetingTail(m, bx + bw - 110, by + 4, bx + bw - 30, by + 4, tipX, tipY, 0xff5025ff);
-    m.fillRect(bx + 6, by + 6, bw, bh, 0xffa690ff);
-    m.fillRect(bx, by, bw, bh, 0xff5025ff);
-    m.fillRect(bx + 4, by + 4, bw - 8, bh - 8, 0xfffcfaff);
-    greetingTail(m, bx + bw - 101, by + 4, bx + bw - 37, by + 4, tipX - 8, tipY + 8, 0xfffcfaff);
-    KAGDrawStyledText(m, "greeting", text, bx + 18, by + 10, bw - 36, bh - 20);
+    if (pip) {
+        // Pip on the road, the bubble above him, its tail down to his head
+        var px = 690, py = 650;
+        var pic = new global.Layer(kag, m);
+        try {
+            pic.loadImages("title_pip");
+            m.operateRect(px, py, pic, 0, 0, pic.imageWidth, pic.imageHeight, omAlpha, 255);
+        } catch (e) { dm("title greeting: " + e.message); }
+        invalidate pic;
+        greetingBubble(m, 610, 444, 400, 138, [ 760, 830, 820, 655 ]);
+        KAGDrawStyledText(m, "greeting", text, 610 + 18, 444 + 10, 400 - 36, 138 - 20);
+    } else {
+        // the tail, up from the bubble's top towards her mouth
+        greetingBubble(m, 900, 452, 400, 138, [ 1190, 1270, 1352, 404 ]);
+        KAGDrawStyledText(m, "greeting", text, 900 + 18, 452 + 10, 400 - 36, 138 - 20);
+    }
     m.holdAlpha = hold;
 }
-// the greeting's voice (greetings.csv's Voice: Ai's), once a run, after the title has shown
+// a bubble at x, y, w x h with a tail from x1..x2 on its edge nearer the tip to the tip: its
+// border and shadow, then its inside
+function greetingBubble(m, x, y, w, h, tail)
+{
+    var up = tail[3] < y, ey = up ? y + 4 : y + h - 4, inset = up ? 8 : -8;
+    greetingTail(m, tail[0], ey, tail[1], ey, tail[2], tail[3], 0xff5025ff);
+    m.fillRect(x + 6, y + 6, w, h, 0xffa690ff);
+    m.fillRect(x, y, w, h, 0xff5025ff);
+    m.fillRect(x + 4, y + 4, w - 8, h - 8, 0xfffcfaff);
+    var mid = (tail[0] + tail[1]) / 2, k = (tail[1] - tail[0]) / 2 - 9;
+    greetingTail(m, (int)(mid - k), ey, (int)(mid + k), ey, tail[2] + (tail[2] > mid ? -8 : 8), tail[3] + inset, 0xfffcfaff);
+}
+// the greeting's voice (greetings.csv's Voice: Pip's lines), once a run, after the title has shown
 function titleGreetingVoice()
 {
-    if (tf.greetingSaid || typeof global.KAGGreeting == "undefined") return;
+    if (tf.greetingSaid || typeof global.KAGGreeting == "undefined" || KAGOptionGet("titleGreeter") == "off") return;
     var g = KAGGreeting();
     if (g === void || g.voice == "") return;
     tf.greetingSaid = true;
-    KAGPlayVoiceLine(%[ speaker:"ai", voice:g.voice ]);
+    KAGPlayVoiceLine(%[ speaker:g.who != "" ? g.who : KAGBindToGlobal(KAGGreetingGreeter)(), voice:g.voice ]);
 }
 function greetingTail(l, x1, y1, x2, y2, x3, y3, color)
 {
@@ -2499,12 +2713,34 @@ function nextTitlePicture(step)
 /**
  * Repeat button process
  */
+// what comes after a track: "one" (the track again), "all" (the list's next) or "shuffle" (any
+// other in the list, at random); true and false are one and all (before 0.25.0)
 function setRepeat(work=void)
 {
-    tf.musicrepeat = work if work !== void;
-    setButtonOver("musicmode_repeat",    tf.musicrepeat);
-    setButtonOver("musicmode_allrepeat", !tf.musicrepeat);
+    if (work === true) work = "one";
+    else if (work === false) work = "all";
+    if (work !== void) tf.musicmode = work;
+    tf.musicmode = tf.musicrepeat === false ? "all" : "one" if tf.musicmode === void;
+    tf.musicrepeat = tf.musicmode == "one";
+    setButtonOver("musicmode_repeat",    tf.musicmode == "one");
+    setButtonOver("musicmode_allrepeat", tf.musicmode == "all");
+    setButtonOver("musicmode_shuffle",   tf.musicmode == "shuffle");
     kag.bgm.setLoop(tf.musicrepeat);
+}
+
+// Play: the track picked, or the one paused played on; Pause while one plays (since 0.25.0)
+function playOrPause()
+{
+    var p = kag.current.names.nowPlaying;
+    if (p !== void && isvalid p && (p.paused || roomMusicPlaying())) { p.togglePause(); setPlayButton(); return; }
+    startBgm();
+}
+function setPlayButton()
+{
+    var b = kag.current.names.musicmode_play, p = kag.current.names.nowPlaying;
+    if (b === void || !isvalid b) return;
+    var pause = p !== void && isvalid p && !p.paused && roomMusicPlaying();
+    b.loadButtons(pause ? "musicmode_pause_normal" : "musicmode_play_normal", pause ? "musicmode_pause_over" : "musicmode_play_over");
 }
 
 /**
@@ -2516,33 +2752,93 @@ function setMusicmodePageButton()
     var l = kag.current.names.musicList;
     l.refresh() if l !== void && isvalid l;
 
-    // Playback state
-    setButtonOver("musicmode_play", tf.musicplaying);
+    // Playback state: Play, or Pause while a track plays (setButtonOver's lit Play had replaced
+    // the Pause picture whenever the screen was drawn again)
+    setPlayButton();
 }
 
 // A track's row: its picture (trackNN), lit while it plays, faint while it's locked
+// a track's row: its picture (lit while it plays); with every track shown, its playlists' 1 2 3
+// on the right (filled: in it), and in a playlist a handle to move it by
+var musicMarkW = 42, musicMarkRight = 18; // (the row's picture is 730 wide in a 748 list)
 function drawTrackItem(layer, index, w, h, state)
 {
-    var name = "track%02d_normal".sprintf(index + 1);
+    var track = tf.musicRows[index];
+    if (track === void) return;
+    var name = "track%02d_normal".sprintf(track + 1);
     if (getExistImageName(name) == "") name = "track01_normal";
-    var lit = tf.musicplaying && tf.playbgmnum !== void && index == tf.playbgmnum;
-    if (!tf.bgmplayflag[index]) listTile(layer, w, h, "normal", name, void, void, 96);
-    else listTile(layer, w, h, lit ? "over" : state, name);
+    var lit = tf.musicplaying && tf.playbgmnum !== void && track == tf.playbgmnum;
+    if (!tf.bgmplayflag[track]) { listTile(layer, w, h, "normal", name, void, void, 96); return; }
+    listTile(layer, w, h, lit ? "over" : state, name);
+    var on = lit || state != "normal";
+    if (+sf.musicListAt <= 0) {
+        for (var k = 1; k <= musicPlaylistCount; k++) {
+            var x = w - musicMarkRight - (musicPlaylistCount - k + 1) * musicMarkW + 4, y = (h - 32) \ 2, inside = musicInPlaylist(track, k);
+            var edge = on ? 0xffffffff : 0xff5025ff;
+            layer.fillRect(x, y, 32, 32, edge);
+            layer.fillRect(x + 3, y + 3, 26, 26, inside ? edge : on ? 0xff5025ff : 0xffffffff);
+            KAGDrawStyledText(layer, "track.mark", "%d".sprintf(k), x, y, 32, 32,
+                %[ color:inside ? (on ? 0x5025ff : 0xffffff) : (on ? 0xffffff : 0x5025ff) ]);
+        }
+    } else {
+        var pic = new global.Layer(kag, layer);
+        try {
+            pic.loadImages("voice_handle");
+            layer.operateRect(w - musicMarkRight - musicMarkW, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
+        } catch (ex) { dm("track row: " + ex.message); }
+        invalidate pic;
+    }
 }
 function trackItemName(index)
 {
-    if (!tf.bgmplayflag[index]) return tr("Not heard yet");
-    var info = tf.musicmodelist[index];
-    return info.title !== void && info.title != "" ? tr(info.title) : info.filename;
+    var track = tf.musicRows[index];
+    if (track === void || !tf.bgmplayflag[track]) return tr("Not heard yet");
+    var info = tf.musicmodelist[track];
+    var r = info.title !== void && info.title != "" ? tr(info.title) : info.filename;
+    if (+sf.musicListAt <= 0) for (var k = 1; k <= musicPlaylistCount; k++) r += ", " + tr("Playlist %d").sprintf(k) if musicInPlaylist(track, k);
+    return r;
 }
+// a click plays the track (on through the list shown); on 1 2 3, puts it in that playlist or
+// takes it out
 function trackPick(index)
 {
-    if (tf.bgmplayflag[index]) playBgm(index);
+    var track = tf.musicRows[index], l = kag.current.names.musicList;
+    if (track === void || !tf.bgmplayflag[track]) return;
+    if (+sf.musicListAt <= 0 && l !== void && isvalid l && l.cursorY >= 0 && l.cursorY < l.height) {
+        var right = l.itemWidth - musicMarkRight, k = musicPlaylistCount - (right - l.cursorX) \ musicMarkW;
+        if (l.cursorX < right && k >= 1 && k <= musicPlaylistCount) { musicTogglePlaylist(track, k); l.refresh(); return; }
+    }
+    if (+sf.musicListAt > 0 && l !== void && isvalid l && l.cursorX >= l.itemWidth - musicMarkW) return; // the handle
+    tf.musicPlayingList = +sf.musicListAt;
+    playBgm(track);
 }
-// the music room's tracks (musicmode.ks): a list, as many as musiclist.csv has
+// 1, 2 or 3 puts the focused track in that playlist (every track shown)
+function trackKey(index, key, shift)
+{
+    var track = tf.musicRows[index];
+    if (track === void || +sf.musicListAt > 0 || !tf.bgmplayflag[track]) return false;
+    var k = key - #'0';
+    if (k < 1 || k > musicPlaylistCount) return false;
+    musicTogglePlaylist(track, k);
+    kag.current.names.musicList.refresh();
+    return true;
+}
+// the music room's tracks (musicmode.ks): a list of every track (as many as musiclist.csv has)
+// or a playlist's, under its name and the arrows that go through the lists
 function musicTrackList()
 {
-    screenList("musicList", "Tracks", 870, 291, 748, 640, 46, 1, 8, tf.musicmodelist.count, drawTrackItem, trackPick, trackItemName);
+    tf.musicRows = musicRows();
+    var playlist = +sf.musicListAt > 0, m = kag.current;
+    var l = screenList("musicList", "Tracks", 870, 367, 748, 564, 46, 1, 8, tf.musicRows.count, drawTrackItem, trackPick, trackItemName);
+    l.onItemKey = trackKey;
+    l.reorder = playlist ? musicReorder : void;
+    l.reorderHandle = musicMarkW;
+    var hold = m.holdAlpha;
+    m.holdAlpha = true;
+    KAGDrawStyledText(m, "voices.list", musicListName(), 946, 291, 596, 64);
+    if (tf.musicRows.count == 0)
+        KAGDrawStyledText(m, "voices.text", tr("Add a track with its 1, 2 or 3 under All tracks"), 890, 377, 708, 64, %[ align:"center" ]);
+    m.holdAlpha = hold;
 }
 
 // ---- the music playing (since 0.24.0; template/system/MusicPlayer.tjs) ----
@@ -2553,6 +2849,7 @@ function nowPlaying()
     p.name = "nowPlaying";
     p.picture = "musicmode_record";
     p.titleOf = nowPlayingTitle;
+    p.onPause = function { setPlayButton(); };
     p.setPos(310, 272);
     p.setSize(470, 432);
     m.addLinkLayer(p);
@@ -2561,11 +2858,14 @@ function nowPlaying()
 function nowPlayingTitle()
 {
     var i = musicIndexOf(kag.bgm.playingStorage);
-    return i >= 0 ? trackItemName(i) : Storages.extractStorageName(kag.bgm.playingStorage);
+    if (i < 0) return Storages.extractStorageName(kag.bgm.playingStorage);
+    var info = tf.musicmodelist[i];
+    return !tf.bgmplayflag[i] ? tr("Not heard yet") : info.title !== void && info.title != "" ? tr(info.title) : info.filename;
 }
 
 // ---- the music room's voices (since 0.24.0; template/system/Voices.tjs) ----
-// tf.musicView: 0 the music, 1 the voices heard, 2 the favourite voices
+// tf.musicView: 0 the music, 1 the voices heard, 2 the favourite voices and the playlists (since
+// 0.25.0: the list picked, KAGFavouriteVoices.at, which the voices' stars fill too)
 var musicViewNames = [ "Music", "Voices", "Favourites" ];
 function musicView(n)
 {
@@ -2588,7 +2888,7 @@ function musicViewList()
     if (+tf.musicView == 0) { musicTrackList(); return; }
     voiceList();
 }
-// the rows the list shows: the voices heard, or the favourites (their name and line as shown)
+// the rows the list shows: the voices heard, or the list picked (their name and line as shown)
 function voiceRows()
 {
     if (+tf.musicView == 2) {
@@ -2598,44 +2898,69 @@ function voiceRows()
     }
     return KAGHeardVoices();
 }
+// the list under a header row: the favourites' list picker and Play all, or which list the
+// voices' stars keep them in
+var voiceListTop = 367, voiceFaceSize = 56;
 function voiceList()
 {
     tf.voiceRows = voiceRows();
-    var fav = +tf.musicView == 2;
-    var l = screenList("voiceList", fav ? "Favourite voices" : "Voices", 870, 291, 748, 640, 64, 1, 8, tf.voiceRows.count,
+    var fav = +tf.musicView == 2, m = kag.current;
+    var l = screenList("voiceList", fav ? "Favourite voices" : "Voices", 870, voiceListTop, 748, 931 - voiceListTop, 64, 1, 8, tf.voiceRows.count,
         drawVoiceItem, voicePick, voiceItemName);
     l.onItemKey = voiceKey;
     l.reorder = fav ? voiceReorder : void;
-    l.reorderHandle = 60;
+    l.reorderHandle = 56;
     l.scrollTo(+tf.voicePosition);
     l.focusIndex = tf.voiceFocus !== void && tf.voiceFocus < l.itemCount ? +tf.voiceFocus : -1;
-    if (tf.voiceRows.count == 0) {
-        var m = kag.current, hold = m.holdAlpha;
-        m.holdAlpha = true;
-        KAGDrawStyledText(m, "voices.text", fav ? tr("Mark a voice with its star to keep it here") : tr("No voices heard yet"),
-            890, 300, 708, 64, %[ align:"center" ]);
-        m.holdAlpha = hold;
+    var hold = m.holdAlpha;
+    m.holdAlpha = true;
+    if (fav) {
+        KAGDrawStyledText(m, "voices.list", KAGFavouriteVoices.shownName(), 946, 291, 360, 64);
+        voicePlayLabel(m);
+    } else {
+        KAGDrawStyledText(m, "voices.note", tr("A star keeps a voice in: %s").sprintf(KAGFavouriteVoices.shownName()), 880, 291, 728, 64);
     }
+    if (tf.voiceRows.count == 0) {
+        KAGDrawStyledText(m, "voices.text", fav ? tr("Mark a voice with its star to keep it here") : tr("No voices heard yet"),
+            890, voiceListTop + 10, 708, 64, %[ align:"center" ]);
+    }
+    m.holdAlpha = hold;
 }
-// a voice's row: who speaks and the line, its star, and in the favourites a handle to drag it by
+// the marks right of a row, from the right: (the favourites) a handle, the star, (the
+// favourites) the lock, and the jump to the line's scene; 52 px each
+function voiceMarks(fav) { return fav ? [ "handle", "star", "lock", "jump" ] : [ "star", "jump" ]; }
+function voiceMarkAt(x, w, fav)
+{
+    var marks = voiceMarks(fav), k = (w - x) \ 52;
+    return x < w && k >= 0 && k < marks.count ? marks[k] : void;
+}
+// a voice's row: the speaker's face at the line, who speaks and the line, its marks
 function drawVoiceItem(layer, index, w, h, state)
 {
     var e = tf.voiceRows[index];
     if (e === void) return;
-    var over = state != "normal", fav = +tf.musicView == 2;
+    var over = state != "normal", fav = +tf.musicView == 2, marks = voiceMarks(fav);
     layer.fillRect(0, 0, w, h, over ? 0xff5025ff : 0xffa690ff);
     layer.fillRect(3, 3, w - 6, h - 6, over ? 0xff6a45ff : 0xf0ffffff);
-    var right = fav ? 112 : 56;
-    KAGDrawStyledText(layer, "voices.name", e.name, 16, 0, 150, h, over ? %[ color:0xffffff ] : void);
-    KAGDrawStyledText(layer, "voices.text", e.text, 176, 0, w - 176 - right - 8, h, over ? %[ color:0xffffff ] : void);
-    var star = KAGFavouriteVoices.has(e.voice) ? "voice_star_on" : "voice_star_off";
+    var face = KAGVoiceFace(e, voiceFaceSize), x = 12;
+    if (face !== void) layer.operateRect(6, (h - voiceFaceSize) \ 2, face, 0, 0, voiceFaceSize, voiceFaceSize);
+    x = 6 + voiceFaceSize + 8;
+    var right = marks.count * 52;
+    KAGDrawStyledText(layer, "voices.name", e.name, x, 0, 112, h, over ? %[ color:0xffffff ] : void);
+    KAGDrawStyledText(layer, "voices.text", e.text, x + 118, 0, w - x - 118 - right - 8, h, over ? %[ color:0xffffff ] : void);
+    var list = KAGFavouriteVoices.at;
     var pic = new global.Layer(kag, layer);
     try {
-        pic.loadImages(star);
-        layer.operateRect(w - right + 6, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
-        if (fav) {
-            pic.loadImages("voice_handle");
-            layer.operateRect(w - 56 + 6, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
+        for (var k = 0; k < marks.count; k++) {
+            var name;
+            switch (marks[k]) {
+            case "handle": name = "voice_handle"; break;
+            case "star":   name = KAGFavouriteVoices.has(e.voice, list) ? "voice_star_on" : "voice_star_off"; break;
+            case "lock":   name = KAGFavouriteVoices.isProtected(e.voice, list) ? "voice_lock_on" : "voice_lock_off"; break;
+            case "jump":   name = "voice_jump"; break;
+            }
+            pic.loadImages(name);
+            layer.operateRect(w - (k + 1) * 52 + 4, (h - pic.imageHeight) \ 2, pic, 0, 0, pic.imageWidth, pic.imageHeight);
         }
     } catch (ex) {
         dm("voice row: " + ex.message);
@@ -2646,39 +2971,60 @@ function voiceItemName(index)
 {
     var e = tf.voiceRows[index];
     if (e === void) return "";
-    return e.name + ": " + e.text + (KAGFavouriteVoices.has(e.voice) ? " (" + tr("Favourite") + ")" : "");
+    var r = e.name + ": " + e.text;
+    r += " (" + tr("Favourite") + ")" if KAGFavouriteVoices.has(e.voice);
+    r += " (" + tr("Protected") + ")" if +tf.musicView == 2 && KAGFavouriteVoices.isProtected(e.voice);
+    return r;
 }
-// a click on a row plays its voice; on its star, keeps it or lets it go
+// a click on a row plays its voice; on one of its marks, what the mark does
 function voicePick(index)
 {
     var e = tf.voiceRows[index], l = kag.current.names.voiceList;
     if (e === void) return;
-    var fav = +tf.musicView == 2, right = fav ? 112 : 56;
-    if (l !== void && isvalid l && l.cursorX >= l.itemWidth - right && l.cursorX < l.itemWidth - (fav ? 56 : 0) &&
-        l.cursorY >= 0 && l.cursorY < l.height) {
-        voiceStar(index);
-        return;
+    var fav = +tf.musicView == 2, mark;
+    if (l !== void && isvalid l && l.cursorY >= 0 && l.cursorY < l.height) mark = voiceMarkAt(l.cursorX, l.itemWidth, fav);
+    switch (mark) {
+    case "star": voiceStar(index); return;
+    case "lock": voiceLock(index); return;
+    case "jump": voicePlayScene(index); return;
+    case "handle": return;
     }
+    voiceListStop();
     KAGPlayVoiceLine(e);
 }
-// F (or a controller's Y, through the keys) keeps the focused voice or lets it go
+// F (or a controller's Y, through the keys) keeps the focused voice or lets it go; P protects it
+// (the favourites), J plays its scene
 function voiceKey(index, key, shift)
 {
-    if (key != #'F') return false;
-    voiceStar(index);
-    return true;
+    if (key == #'F') { voiceStar(index); return true; }
+    if (key == #'P' && +tf.musicView == 2) { voiceLock(index); return true; }
+    if (key == #'J') { voicePlayScene(index); return true; }
+    return false;
 }
 function voiceStar(index)
 {
     var e = tf.voiceRows[index], l = kag.current.names.voiceList;
     if (e === void) return;
-    KAGFavouriteVoices.toggle(e);
+    var had = KAGFavouriteVoices.has(e.voice), on = KAGFavouriteVoices.toggle(e);
+    if (had && on) {
+        // protected: it stays
+        kag.showScreenshotNotice(tr("Protected: unlock it to take it away"));
+        return;
+    }
     if (+tf.musicView == 2) {
-        // gone from the favourites: the list again
+        // gone from the list: the list again
         tf.voiceRows = voiceRows();
         if (l !== void && isvalid l) { l.itemCount = tf.voiceRows.count; l.refresh(); }
         return;
     }
+    l.refresh() if l !== void && isvalid l;
+}
+// a favourite protected (it stays until it's unlocked), or not
+function voiceLock(index)
+{
+    var e = tf.voiceRows[index], l = kag.current.names.voiceList;
+    if (e === void || +tf.musicView != 2) return;
+    KAGFavouriteVoices.protect(e.voice, !KAGFavouriteVoices.isProtected(e.voice));
     l.refresh() if l !== void && isvalid l;
 }
 // the favourites put in order by a drag (or Shift and the arrows)
@@ -2687,6 +3033,63 @@ function voiceReorder(from, to)
     KAGFavouriteVoices.move(from, to);
     tf.voiceRows = voiceRows();
     tf.voiceFocus = to;
+}
+// the next or the previous list (the favourites, the playlists)
+function voiceListStep(dir)
+{
+    var n = KAGFavouriteVoices.playlists + 1;
+    KAGFavouriteVoices.at = ((KAGFavouriteVoices.at + dir) % n + n) % n;
+    tf.voicePosition = 0;
+    tf.voiceFocus = void;
+    voiceListStop();
+}
+// Play all: the list's voices one after another, the row playing focused; again: stop
+var voiceListPlayer;
+function voiceListPlaying() { return voiceListPlayer !== void && voiceListPlayer.playing; }
+function voiceListPlay()
+{
+    if (voiceListPlaying()) { voiceListStop(); voicePlayLabel(); return; }
+    if (tf.voiceRows === void || tf.voiceRows.count == 0) return;
+    if (voiceListPlayer === void) {
+        voiceListPlayer = new KAGVoiceListPlayer();
+        voiceListPlayer.onEntry = voiceListAt;
+        voiceListPlayer.onEnd = voicePlayLabel;
+    }
+    voiceListPlayer.play(tf.voiceRows, 0);
+    voicePlayLabel();
+}
+function voiceListStop() { voiceListPlayer.stop() if voiceListPlaying(); }
+function voiceListAt(i)
+{
+    var l = kag.current.names.voiceList;
+    if (l === void || !isvalid l) return;
+    l.focusIndex = i;
+    l.show(i, true);
+    l.redraw();
+}
+// Play all's label (Stop while the list plays), on the button's pictures loaded again
+function voicePlayLabel(m = kag.current)
+{
+    var p = m.names.voice_play;
+    if (p === void || !isvalid p) return;
+    p.loadButtons("music_view_normal", "music_view_over");
+    drawButtonLabel(p, voiceListPlaying() ? tr("Stop") : tr("Play all"), [0x5025ff, 0xffffff, 0xffffff], 26);
+}
+// a line's scene played from the line to the scene's end, and back to the music room (as
+// Search plays a line found)
+function voicePlayScene(index)
+{
+    var e = tf.voiceRows[index];
+    if (e === void || typeof global.world_object == "undefined") return;
+    voiceListStop();
+    var l = kag.fore.messages[0].names.voiceList;
+    if (l !== void && isvalid l) tf.voicePosition = l.position, tf.voiceFocus = index;
+    stopBgm() if tf.musicplaying;
+    tf.recollect = 1;
+    kag.process('loadinit.ks', '', true, true);
+    world_object.initPlayer();
+    world_object.player.seek(e.storage, e.label, e.idx, true);
+    kag.startRecollection(%[storage:e.storage, target:"", doneStorage:"musicmode.ks", doneTarget:""]);
 }
 
 /**
@@ -2705,6 +3108,7 @@ function updateBgm()
         kag.bgm.fadeOut(%[ time:1000]);
     }
     setMusicmodePageButton();
+    setPlayButton() if kag.conductor.curStorage == "musicmode.ks";
     tf.beforemusic = tf.playbgmnum;
 }
 
@@ -2731,16 +3135,67 @@ function playBgm(work)
  */
 function playNext()
 {
-    if (!tf.musicrepeat) {
-        do {
-            tf.playbgmnum++;
-            if (tf.playbgmnum >=  tf.musicmodelist.count) {
-                tf.playbgmnum = 0;
-            }
-        } while (!tf.bgmplayflag[tf.playbgmnum]);
-        updateBgm();
+    if (tf.musicrepeat) { stopBgm(); return; }
+    // the list the track was picked from (every track, or a playlist), the tracks heard
+    var rows = musicRows(tf.musicPlayingList), heard = [];
+    for (var i = 0; i < rows.count; i++) heard.add(rows[i]) if tf.bgmplayflag[rows[i]];
+    if (heard.count == 0) { stopBgm(); return; }
+    var at = heard.find(tf.playbgmnum);
+    if (tf.musicmode == "shuffle" && heard.count > 1) {
+        // any other, at random
+        var k = (int)(Math.random() * (heard.count - 1));
+        k++ if at >= 0 && k >= at;
+        tf.playbgmnum = heard[k];
     } else {
-        stopBgm();
+        tf.playbgmnum = heard[(at + 1) % heard.count];
     }
+    updateBgm();
+}
+
+// ---- the tracks' playlists (since 0.25.0): sf.musicPlaylists, three lists of track files; the
+// Music view shows every track (sf.musicListAt 0, whose rows' 1 2 3 put a track in a playlist)
+// or a playlist (its handle puts its tracks in order), and a track plays on through its list
+var musicPlaylistCount = 3;
+function musicPlaylist(n)
+{
+    var p = sf.musicPlaylists;
+    if (typeof p != "Object" || p === void || !(p instanceof "Array")) p = sf.musicPlaylists = [];
+    while (p.count < n) p.add([]);
+    return p[n - 1];
+}
+// the track numbers a list shows (0: every track)
+function musicRows(n = void)
+{
+    n = +sf.musicListAt if n === void;
+    var r = [];
+    if (n <= 0) { for (var i = 0; i < tf.musicmodelist.count; i++) r.add(i); return r; }
+    var l = musicPlaylist(n);
+    for (var i = 0; i < l.count; i++) { var k = musicIndexOf(l[i]); r.add(k) if k >= 0 && r.find(k) < 0; }
+    return r;
+}
+function musicListName(n = void)
+{
+    n = +sf.musicListAt if n === void;
+    return n <= 0 ? tr("All tracks") : tr("Playlist %d").sprintf(n);
+}
+function musicListStep(dir)
+{
+    var n = musicPlaylistCount + 1;
+    sf.musicListAt = ((+sf.musicListAt + dir) % n + n) % n;
+}
+function musicInPlaylist(track, n) { return musicPlaylist(n).find(tf.musicmodelist[track].filename) >= 0; }
+function musicTogglePlaylist(track, n)
+{
+    var l = musicPlaylist(n), f = tf.musicmodelist[track].filename, i = l.find(f);
+    if (i >= 0) l.erase(i); else l.add(f);
+}
+function musicReorder(from, to)
+{
+    var l = musicPlaylist(+sf.musicListAt);
+    if (from < 0 || from >= l.count || to < 0 || to >= l.count) return;
+    var e = l[from];
+    l.erase(from);
+    l.insert(to, e);
+    tf.musicRows = musicRows();
 }
 

@@ -77,6 +77,7 @@ LABELS = {
         "Character 4": "キャラクタ 4", "Character 5": "キャラクタ 5", "Other": "その他",
         "Track %02d": "トラック %02d", "Stop": "停止", "Play": "再生", "Repeat": "リピート",
         "Repeat All": "全曲リピート", "Keep on Title": "タイトルでも流す",
+        "One": "1曲", "In Order": "全曲", "Shuffle": "ランダム", "Pause": "一時停止",
     },
 }
 
@@ -412,6 +413,21 @@ def ic_note(c, cx, cy, s, col):
     c.text((cx, cy + s * 0.05), "♪", font("Black", s * 1.15), col, anchor="mm")
 
 
+def ic_pause(c, cx, cy, s, col):
+    for dx in (-0.22, 0.22):
+        c.rrect((cx + s * (dx - 0.12), cy - s * 0.38, cx + s * (dx + 0.12), cy + s * 0.38), s * 0.05, fill=col)
+
+
+def ic_shuffle(c, cx, cy, s, col):
+    """two crossing arrows: tracks in no order"""
+    x0, x1 = cx - s * 0.5, cx + s * 0.3
+    for y0, y1 in ((-0.3, 0.3), (0.3, -0.3)):
+        pts = [(x0 + (x1 - x0) * t, cy + s * (y0 + (y1 - y0) * (3 * t * t - 2 * t * t * t))) for t in np.linspace(0, 1, 16)]
+        c.stroke(pts, s * 0.1, col)
+        ey = cy + s * y1
+        c.polygon([(x1 - s * 0.04, ey - s * 0.17), (x1 + s * 0.22, ey), (x1 - s * 0.04, ey + s * 0.17)], col)
+
+
 def ic_repeat_one(c, cx, cy, s, col):
     ic_repeat(c, cx, cy, s, col)
     c.text((cx, cy + s * 0.02), "1", font("Black", s * 0.5), col, anchor="mm")
@@ -537,6 +553,49 @@ def ic_here(c, cx, cy, s, col):
     c.ellipse((cx - s * 0.11, cy - s * 0.11, cx + s * 0.11, cy + s * 0.11), fill=col)
     for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
         c.stroke([(cx + dx * s * 0.34, cy + dy * s * 0.34), (cx + dx * s * 0.5, cy + dy * s * 0.5)], s * 0.1, col)
+
+
+def ic_person(c, cx, cy, s, col):
+    """a head and shoulders: a character"""
+    c.ellipse((cx - s * 0.17, cy - s * 0.46, cx + s * 0.17, cy - s * 0.12), fill=col)
+    c.rrect((cx - s * 0.36, cy - s * 0.04, cx + s * 0.36, cy + s * 0.46), s * 0.18, fill=col)
+
+
+def ic_person_plus(c, cx, cy, s, col):
+    """a character with a plus: onto the stage"""
+    ic_person(c, cx - s * 0.14, cy + s * 0.04, s * 0.92, col)
+    r = s * 0.16
+    c.stroke([(cx + s * 0.36 - r, cy - s * 0.3), (cx + s * 0.36 + r, cy - s * 0.3)], s * 0.1, col)
+    c.stroke([(cx + s * 0.36, cy - s * 0.3 - r), (cx + s * 0.36, cy - s * 0.3 + r)], s * 0.1, col)
+
+
+def ic_person_minus(c, cx, cy, s, col):
+    """a character with a minus: off the stage"""
+    ic_person(c, cx - s * 0.14, cy + s * 0.04, s * 0.92, col)
+    r = s * 0.16
+    c.stroke([(cx + s * 0.36 - r, cy - s * 0.3), (cx + s * 0.36 + r, cy - s * 0.3)], s * 0.1, col)
+
+
+def ic_flip(c, cx, cy, s, col):
+    """two triangles either side of a dashed line: turned round"""
+    c.polygon([(cx - s * 0.1, cy - s * 0.36), (cx - s * 0.1, cy + s * 0.36), (cx - s * 0.52, cy + s * 0.36)], col)
+    c.polygon([(cx + s * 0.1, cy - s * 0.36), (cx + s * 0.1, cy + s * 0.36), (cx + s * 0.52, cy + s * 0.36)], col)
+    for y in (-0.5, -0.24, 0.02, 0.28):
+        c.rrect((cx - s * 0.03, cy + s * y, cx + s * 0.03, cy + s * (y + 0.14)), s * 0.02, fill=col)
+
+
+def ic_hide_panel(c, cx, cy, s, col):
+    """two chevrons pointing left: the panel away"""
+    for o in (-0.16, 0.16):
+        x = cx + s * o
+        c.stroke([(x + s * 0.14, cy - s * 0.34), (x - s * 0.14, cy), (x + s * 0.14, cy + s * 0.34)], s * 0.12, col)
+
+
+def ic_show_panel(c, cx, cy, s, col):
+    """two chevrons pointing right: the panel back"""
+    for o in (-0.16, 0.16):
+        x = cx + s * o
+        c.stroke([(x - s * 0.14, cy - s * 0.34), (x + s * 0.14, cy), (x - s * 0.14, cy + s * 0.34)], s * 0.12, col)
 
 
 def ic_dot(c, cx, cy, s, col):
@@ -1002,6 +1061,22 @@ def make_extras():
     for y in (14, 21, 28):
         c.rrect((9, y, 35, y + 3), 1.5, fill=rgba(LAV_SOFT))
     c.save(out("voice_handle.png", False))
+    # (since 0.25.0) a favourite protected (a closed lock) or not (open), and the jump to its scene
+    for name, on in (("voice_lock_on", True), ("voice_lock_off", False)):
+        c = Canvas(44, 44)
+        col = rgba(VIOLET) if on else rgba(LAV_SOFT)
+        c.rrect((11, 20, 33, 38), 4, fill=col)
+        if on:
+            c.stroke([(16, 21), (16, 14), (17, 10), (22, 7), (27, 10), (28, 14), (28, 21)], 3.5, col)
+        else:
+            # open: lifted, its left leg out of the body
+            c.stroke([(16, 15), (16, 9), (17, 5), (22, 2), (27, 5), (28, 9), (28, 21)], 3.5, col)
+        c.ellipse((20, 25, 24, 29), fill=rgba(WHITE))
+        c.save(out("%s.png" % name, False))
+    c = Canvas(44, 44)
+    c.ellipse((3, 3, 41, 41), fill=rgba(WHITE), outline=rgba(VIOLET), width=2.5)
+    ic_back(c, 22, 22, 22, rgba(VIOLET))
+    c.save(out("voice_jump.png", False))
 
     # Sprite Mode (spritemode.ks, from the CG screen's Characters button): a panel on the left
     # with its title, the rest clear for the World's stage and character; its rows' arrows
@@ -1011,6 +1086,9 @@ def make_extras():
     c.rrect((674, 0, 680, 1080), 0, fill=rgba(VIOLET))
     c.text((60, 150), L("Characters"), font("Black", 84), rgba(VIOLET), anchor="ls", shadow=(6, 6, rgba(LAV)))
     c.rrect((60, 170, 620, 176), 3, fill=rgba(VIOLET))
+    # the line's field (an [edit] over it)
+    c.rrect((60, 830, 620, 890), 12, fill=rgba(LAV))
+    c.rrect((63, 833, 617, 887), 9, fill=rgba(WHITE))
     c.save(out("sprite_base.png"))
     for st in ("normal", "over"):
         for name, sign in (("sprite_prev", -1), ("sprite_next", 1)):
@@ -1021,6 +1099,16 @@ def make_extras():
             b.stroke([(32 - sign * 6, 18), (32 + sign * 8, 32), (32 - sign * 6, 46)], 7, rgba(fg))
             b.save(out("%s_%s.png" % (name, st), False))
         button(330, 80, "", st, size=30, r=12).save(out("sprite_open_%s.png" % st, False))
+        # the stage's tools: a character on and off the stage, turned round, a screenshot, the
+        # panel away and back (the zoom's are the chart's)
+        for name, icon in (("sprite_add", ic_person_plus), ("sprite_remove", ic_person_minus), ("sprite_flip", ic_flip),
+                           ("sprite_shot", ic_camera), ("sprite_hide", ic_hide_panel), ("sprite_show", ic_show_panel)):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            icon(b, 32, 32, 36, rgba(fg))
+            b.save(out("%s_%s.png" % (name, st), False))
 
     size = extra_tab_size()
     for name, label in EXTRA_TABS:
@@ -1061,10 +1149,16 @@ def make_extras():
         for st in ("normal", "over"):
             button(730, 46, L("Track %02d") % (i + 1), st, size=24, r=10, bw=3, icon=ic_note, icon_size=24).save(
                 out("track%02d_%s.png" % (i + 1, st)))
-    for name, label, icon in (("stop", "Stop", ic_stop), ("play", "Play", ic_play), ("repeat", "Repeat", ic_repeat_one),
-                              ("allrepeat", "Repeat All", ic_repeat)):
+    for name, label, icon in (("stop", "Stop", ic_stop), ("play", "Play", ic_play), ("pause", "Pause", ic_pause)):
         for st in ("normal", "over"):
             button(210, 60, L(label), st, size=26, icon=icon, icon_size=24).save(
+                out("musicmode_%s_%s.png" % (name, st)))
+    # what comes after a track (since 0.25.0, three in the row the two repeats had): the track
+    # again, every track in turn, or any other at random
+    for name, label, icon in (("repeat", "One", ic_repeat_one), ("allrepeat", "In Order", ic_repeat),
+                              ("shuffle", "Shuffle", ic_shuffle)):
+        for st in ("normal", "over"):
+            button(140, 60, L(label), st, size=24, icon=icon, icon_size=22).save(
                 out("musicmode_%s_%s.png" % (name, st)))
     # a switch: the track playing stays as the title's music (Override.tjs, setTitleMusic)
     for st in ("normal", "over"):
@@ -1132,6 +1226,20 @@ def make_history():
         p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(VIOLET if st == "normal" else WHITE), width=2.5)
         ic_back(p, 21, 21, 22, rgba(fg))
         p.save(out("log_jump_%s.png" % st, False))
+    # a voiced line kept with the favourite voices (a gold star) or not (an outline; since 0.25.0)
+    for name, on in (("log_star_on", True), ("log_star_off", False)):
+        p = Canvas(42, 42)
+        pts = []
+        for k in range(10):
+            a = math.pi / 2 + k * math.pi / 5
+            r = 18 if k % 2 == 0 else 7.5
+            pts.append((21 + r * math.cos(a), 22 - r * math.sin(a)))
+        if on:
+            p.polygon(pts, rgba((255, 176, 32)))
+            p.stroke(pts, 2, rgba(WHITE), closed=True)
+        else:
+            p.stroke(pts, 3, rgba(LAV), closed=True)
+        p.save(out("%s.png" % name, False))
 
 
 # --- thumbnails drawn from the upscaled art --------------------------------------------

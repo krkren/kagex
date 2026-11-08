@@ -102,8 +102,10 @@ class Engine:
             return b"".join(int(h[i:i + 4], 16).to_bytes(2, "little") for i in range(0, len(h) - 3, 4)).decode("utf-16-le", "replace")
         return value
 
-    def wait(self, what, expr, timeout=60.0, interval=0.25):
-        """Polls a TJS expression until it is true."""
+    def wait(self, what, expr, timeout=60.0, interval=0.05):
+        """Polls a TJS expression until it is true. (A round trip takes some 50 ms of the
+        engine's anyway; a longer pause between polls only made every wait end later: at 0.25 s,
+        150 ms late on average, minutes over a run, and the macOS runner's 20 minutes ran out.)"""
         end = time.time() + timeout
         last = None
         while time.time() < end:
@@ -118,9 +120,23 @@ class Engine:
             return self.tjs('return kag.conductor.curStorage + ":" + kag.conductor.curLine'
                             ' + " status " + kag.conductor.status + " inStable " + kag.inStable'
                             ' + " inSleep " + kag.inSleep + " transCount " + kag.transCount'
-                            ' + " moveCount " + kag.moveCount + " tick " + System.getTickCount();', 5)
+                            ' + " moveCount " + kag.moveCount + " tick " + System.getTickCount();', 5) + self.key_state()
         except SmokeError as e:
             return "(unknown: %s)" % e
+
+    def key_state(self):
+        """What Esc and a right click would meet: the right click's settings, a key capture, the
+        history, a dialog, the hide action (for a wait that timed out after one)."""
+        try:
+            return str(self.tjs('''var r = [];
+                r.add("rclick " + (kag.rightClickEnabled ? 1 : 0) + "/" + (kag.rightClickJump ? "jump" : kag.rightClickCall ? "call" : "hide"));
+                r.add("capture " + (typeof kag.keyCapture != "undefined" && kag.keyCapture !== void ? "on" : "off"));
+                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog !== void ? 1 : 0));
+                r.add("hooks " + kag.rightClickHook.count + " skip " + (kag.prevSkipMode !== void ? kag.prevSkipMode : "-"));
+                r.add("hide " + (KAGActionEnabled("hide") ? 1 : 0)) if typeof global.KAGActionEnabled != "undefined";
+                return " [" + r.join(", ") + "]";''', 5))
+        except SmokeError:
+            return ""
 
     def key(self, name):
         """Presses and releases a key over two frames, so getKeyState sees it held. Builds
@@ -3370,6 +3386,17 @@ def sample_steps(eng):
                     g = got.split(",")
                     if not (int(g[2]) == int(g[0]) - 1 and g[3] == g[1] and g[4] == "1"):
                         raise SmokeError("Change Controls didn't move the quick menu's button, or Reset didn't put the order back: %s" % got)
+                # (since 0.25.0) its strip: the first button dragged two places on
+                if eng.tjs('return typeof kag.currentDialog.strip == "Object" && kag.currentDialog.strip !== void ? 1 : 0;') == 1:
+                    got = str(eng.tjs('''var s = kag.currentDialog.strip, q = kag.quickMenu;
+                        s.buttons(); var first = s.names[0], second = s.names[1];
+                        s.onMouseDown(s.cell / 2, 30, mbLeft, 0); s.onMouseMove(s.cell * 1.5, 30, 0); s.onMouseMove(s.cell * 2.5, 30, 0);
+                        s.onMouseUp(s.cell * 2.5, 30, mbLeft, 0);
+                        var o = q.playerOrder(), r = [first, second, o !== void ? o.find(first) : -1, o !== void ? o[0] : "-"];
+                        q.resetPlayerButtons(); return r.join(",");''')).split(",")
+                    print("     the strip: %s dragged two places on (now at %s, %s first)" % (got[0], got[2], got[3]), flush=True)
+                    if got[2] != "2" or got[3] != got[1]:
+                        raise SmokeError("a drag in Change Controls' strip didn't move the quick menu's button: %s" % got)
             # the mouse's back button taken as a key (0.20.0 on)
             if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" ? 1 : 0;') == 1:
                 eng.tjs('kag.currentDialog.startWaiting("hide"); return 1;')
@@ -4348,8 +4375,10 @@ def sample_steps(eng):
             if picked != "opening_sd,4":
                 raise SmokeError("Smaller didn't play opening_sd with opening.vtt's cues: %s" % picked)
             # where it shows (up to 0.17.2 the web's player couldn't open a movie inside data.xp3)
+            # (the fit comes with the first frame shown: Android hides its decoder's first two)
             eng.wait("the smaller movie's first frames, or its end", 'KAGMoviePlaying === void'
-                     ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
+                     ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1 +'
+                     ' (typeof global.KAGMovieHideFirst != "undefined" ? +KAGMovieHideFirst : 0)', timeout=20)
             small = str(eng.tjs('if (KAGMoviePlaying === void) return "none"; var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
                                 ' return [(int)(l.zoom * f.targetLayer.width / 100 + 0.5), (int)(l.zoom * f.targetLayer.height / 100 + 0.5)].join(",");'))
             print("     the smaller movie: %s, shown at %s" % (picked, small), flush=True)
@@ -4638,6 +4667,62 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("moving through a script KAG plays itself: back to the scene's start and the one before, on to the next scene, back to the last choice")
+    def _():
+        if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof kag.kagScenePoint != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: it writes a script beside a desktop engine's save data, or a framework from before these moves)", flush=True)
+            return
+        # a script not in !scnlist.txt, so KAG plays it: titled scenes with waits and a choice
+        with open(os.path.join(eng.savedir, "zz_moves.ks"), "w", encoding="utf-8") as f:
+            f.write("*m1|Scene One\n[initscene]\n[cm]One A.[p]\nOne B.[p]\n*m2|Scene Two\n[cm]Two A.[p]\nTwo B.[p]\n"
+                    "[seladd text=\"Left\" target=*m3][seladd text=\"Right\" target=*m3][select]\n"
+                    "*m3|Scene Three\n[cm]Three A.[p]\nThree B.[p]\n*m4|Scene Four\n[cm]Four A.[p]\n[s]\n")
+        dirname = tjs_string(storage_name(eng.savedir) + "/")
+        eng.tjs('Storages.addAutoPath(%s); kag.process("zz_moves.ks", "*m1"); return 1;' % dirname)
+        stable = "kag.inStable && kag.conductor.curStorage == \"zz_moves.ks\""
+        def click(n):
+            for i in range(n):
+                eng.wait("a stop", stable, timeout=20)
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.4)
+            eng.wait("a stop", stable, timeout=20)
+        def where():
+            return str(eng.tjs("return kag.currentLabel;"))
+        def act(name):
+            eng.wait("a stop", stable, timeout=20)
+            eng.tjs('KAGRunAction("%s"); return 1;' % name)
+            time.sleep(0.6)
+            eng.wait("a stop", stable + " && kag.skipMode == 0", timeout=30)
+        eng.wait("Scene One", stable, timeout=30)
+        click(3)
+        got = [where()]
+        act("prevScene"); got.append(where())
+        act("prevScene"); got.append(where())
+        eng.tjs("tf.smokeAllSkip = kag.allskip; kag.allskip = true; return 1;")
+        try:
+            act("nextScene"); got.append(where())
+        finally:
+            eng.tjs("kag.allskip = tf.smokeAllSkip; return 1;")
+        click(2)
+        eng.wait("the choice", "kag.selectShowing", timeout=20)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]); return 1;")
+        time.sleep(0.6)
+        click(1)
+        got.append(where())
+        act("prevChoice")
+        for i in range(10):
+            if eng.tjs("return kag.selectShowing ? 1 : 0;") == 1:
+                break
+            click(1)
+        got.append(where() + (":choice" if eng.tjs("return kag.selectShowing ? 1 : 0;") == 1 else ""))
+        print("     KAG's own player: %s (two in, the scene's start, the one before, the next, past the choice, the choice again)" % " ".join(got), flush=True)
+        if got != ["*m2", "*m2", "*m1", "*m2", "*m3", "*m2:choice"]:
+            raise SmokeError("the scene moves in KAG's own player didn't go where they should: %s" % got)
+        eng.tjs('kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]) if kag.selectShowing; Storages.removeAutoPath(%s); return 1;' % dirname)
+        time.sleep(0.5)
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+
     @step("moving through the story: the scene's start, a rewind, the last choice again, the next scene, and the offer to skip a scene read before")
     def _():
         if not eng.compiled or eng.tjs('return typeof global.playerMove != "undefined" ? 1 : 0;') != 1:
@@ -4711,9 +4796,34 @@ def sample_steps(eng):
             eng.wait("a line", "kag.inStable", timeout=30)
             eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("a line", "kag.inStable", timeout=30)
+        # (since 0.25.0) V keeps the voiced line on screen with the favourite voices
+        stars = eng.tjs('return typeof global.KAGKeepVoiceNow != "undefined" && typeof kag.historyLayer.starEntryOf != "undefined" ? 1 : 0;') == 1
+        if stars:
+            for i in range(12):
+                if eng.tjs("return kag.inStable && KAGVoiceNow() !== void ? 1 : 0;") == 1:
+                    break
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.6)
+            kept = str(eng.tjs('''kag.sflags.favouriteVoices = []; var e = KAGVoiceNow(); kag.onKeyDown(#'V', 0);
+                var l = KAGFavouriteVoices.list(0); kag.hideScreenshotNotice();
+                return (e !== void ? e.voice : "none") + "|" + (l.count > 0 ? l[0].voice : "-");''')).split("|")
+            print("     V on a voiced line: %s kept as %s" % tuple(kept), flush=True)
+            if kept[0] == "none" or kept[1] != kept[0]:
+                raise SmokeError("V didn't keep the voiced line on screen with the favourite voices: %s" % kept)
+            time.sleep(0.3)
         eng.tjs("kag.onShowHistoryMenuItemClick(); return 1;")
         eng.wait("the backlog", "kag.historyShowing", timeout=10)
         h = "kag.historyLayer"
+        if stars:
+            # a voiced message's star in the backlog: the line V kept is on (a click takes it off)
+            star = str(eng.tjs('''var h = kag.historyLayer, r = [];
+                for (var n = 0; n < h.dispLines; n++) { var e = h.starEntryOf(n); if (e === void) continue;
+                    if (KAGFavouriteVoices.has(e.voice, 0)) { var x = h.marginL - h.starIndent - 20, y = n * h.lineHeight + h.controlHeight + h.marginT + 10;
+                        h.onMouseDown(x, y, mbLeft, 0); h.onMouseUp(x, y, mbLeft, 0); return e.voice + "|" + KAGFavouriteVoices.has(e.voice, 0); } }
+                return "none|";''')).split("|")
+            print("     the backlog's star on %s, clicked: kept %s" % tuple(star), flush=True)
+            if star[0] == "none" or star[1] != "0":
+                raise SmokeError("the backlog had no star on the voiced line kept, or a click didn't take it off: %s" % star)
         # the text and faces on the text's own layer since 0.21.0 (at the same coordinates)
         faces = eng.tjs('var h = %s, t = typeof h.textPage == "Object" && h.textPage !== void ? h.textPage : h, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
                         ' for (var y = h.controlHeight + h.marginT; y < h.height - 60; y += 6) for (var x = x0; x < x0 + h.faceSize; x += 6)'
@@ -4740,6 +4850,7 @@ def sample_steps(eng):
         if not (int(moves[1]) < int(moves[0])) or int(moves[2]) != max(0, int(moves[1]) - 3):
             raise SmokeError("the scene button or dragging didn't move the backlog: %s" % moves)
         # a flick (a Timer in the game moves it every 16 ms, as a finger would): it coasts on
+        coast = None
         if eng.tjs("return typeof %s.flick != \"undefined\" && %s.dataLines - %s.dispLines > 12 ? 1 : 0;" % (h, h, h)) == 1:
             eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
                     ' global.__smokeFlickTimer = new Timer(function {'
@@ -4756,14 +4867,17 @@ def sample_steps(eng):
             # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
             # timer ran that slow (an emulator), the coast can't be checked; nor where its steps
             # came all at once (a drag of under 10 ms is no flick either)
-            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 60 or int(flick[3]) < 10):
+            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 40 or int(flick[3]) < 10):
                 print("     (the coast: not checked, this machine's timer stepped %s ms apart, %s ms in all)" % (flick[2], flick[3]), flush=True)
             elif not (int(flick[1]) > int(flick[0])):
-                raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
+                coast = "the backlog didn't coast on after a flick: %s" % flick
+        # (closed before a failure is told, so the steps after don't start with it open)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        if coast is not None:
+            raise SmokeError(coast)
 
     @step("the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit")
     def _():
@@ -4771,7 +4885,7 @@ def sample_steps(eng):
             print("     (skipped: a sample from before the history closed by touch)", flush=True)
             return
         menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
-        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.tjs('kag.hideHistory() if kag.historyShowing; kag.process("s0001.ks"); return 1;')
         eng.wait("the demo menu", menu, timeout=30)
         eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
         eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
@@ -5476,6 +5590,35 @@ def sample_steps(eng):
         print("     the preview card: %s" % card, flush=True)
         if card[0] != "shown" or card[1] != "255" or not card[2].startswith("Ai and Pip") or card[3] != "none":
             raise SmokeError("the chart's preview card isn't shown for a scene seen, opaque with its line, and hidden for one not reached: %s" % card)
+        # the card plays the scene (since 0.25.0): its messages one after another, hurried here as
+        # Ctrl would, to its end, where the last stays with a note
+        eng.tjs('''var v = chartViewNow(); v.moveFocus(KAGChartData().byId["char.ks*flashback"]);
+            var c = v.previewCard; c.hurried = function { return true; }; global.__pvSteps = [];
+            global.__pvTimer = new Timer(function { var c = chartViewNow().previewCard; __pvSteps.add(c.shownStep) if __pvSteps.count == 0 || __pvSteps[__pvSteps.count - 1] != c.shownStep; }, "");
+            __pvTimer.interval = 50; __pvTimer.enabled = true; return 1;''')
+        for i in range(60):
+            if eng.tjs("return chartViewNow().previewCard.playing ? 0 : 1;") == 1:
+                break
+            time.sleep(0.5)
+        played = str(eng.tjs('''__pvTimer.enabled = false; var c = chartViewNow().previewCard;
+            var r = [c.stepCount, c.shownStep, c.ended, c.visible, __pvSteps.join(" ")]; invalidate __pvTimer; return r.join("|");''')).split("|")
+        print("     the card playing: %s" % played, flush=True)
+        if int(played[0]) < 2 or played[1] != str(int(played[0]) - 1) or played[2] != "1" or played[3] != "1" or \
+                played[4] != " ".join(str(i) for i in range(int(played[0]))):
+            raise SmokeError("the preview card didn't play the scene's messages in order to its end: %s" % played)
+        # a long press on a node shows its card (a touch screen), and picks nothing
+        at = str(eng.tjs('''var v = chartViewNow(), n = KAGChartData().byId["char.ks*flashback"]; v.hidePreview();
+            return "" + (int)((v.nodeX(n) - v.viewX) * v.zoom + 20) + " " + (int)((v.nodeY(n) - v.viewY) * v.zoom + 20);''')).split(" ")
+        eng.tjs("chartViewNow().onMouseDown(%s, %s, mbLeft, 0); return 1;" % (at[0], at[1]))
+        time.sleep(0.8)
+        eng.tjs("chartViewNow().onMouseUp(%s, %s, mbLeft, 0); return 1;" % (at[0], at[1]))
+        time.sleep(0.4)
+        held = str(eng.tjs('''var c = chartViewNow().previewCard;
+            return (c.visible ? "shown" : "none") + " " + (kag.currentDialog === void ? "no-prompt" : "prompt");'''))
+        print("     a long press: %s" % held, flush=True)
+        if held != "shown no-prompt":
+            raise SmokeError("a long press on a chart node didn't show its card, or picked it: %s" % held)
+        eng.tjs("chartViewNow().hidePreview(); return 1;")
         # a scene not reached asks nothing; one seen asks first (Esc: No)
         eng.tjs('chartPick(KAGChartData().byId["char.ks*station"]); return 1;')
         time.sleep(0.5)
@@ -5553,7 +5696,31 @@ def sample_steps(eng):
         eng.tjs('var l = kag.fore.messages[0].names.voiceList; KAGPlayVoiceLine(tf.voiceRows[0]); return 1;')
         eng.wait("the voice to play", '(function() { var c = world_object.env.characters[KAGFavouriteVoices.list()[0].speaker];'
                  ' return c !== void && c.soundBuffer !== void && c.soundBuffer.status == "play"; })()', timeout=10)
-        eng.tjs('world_object.env.stopAllVoice(); musicView(0); return 1;')
+        eng.tjs('world_object.env.stopAllVoice(); return 1;')
+        if eng.tjs('return typeof global.KAGVoiceListPlayer != "undefined" && typeof global.voiceLock != "undefined" ? 1 : 0;') == 1:
+            # (since 0.25.0) a face beside the rows; a protected favourite stays when its star is
+            # clicked; Play all plays the list in order; a playlist the stars fill
+            more = str(eng.tjs('''var r = [], faces = 0;
+                for (var i = 0; i < tf.voiceRows.count; i++) faces++ if KAGVoiceFace(tf.voiceRows[i], 56) !== void;
+                r.add(faces);
+                voiceLock(0); voiceStar(0); kag.hideScreenshotNotice(); r.add(KAGFavouriteVoices.list().count);
+                voiceLock(0); voiceStar(0); r.add(KAGFavouriteVoices.list().count);
+                voiceListPlay(); r.add(voiceListPlaying()); r.add(voiceListPlayer.index);
+                return r.join(",");''')).split(",")
+            eng.wait("the list's second voice", "voiceListPlayer.index == 1 || !voiceListPlaying()", timeout=20)
+            second = str(eng.tjs("var r = [voiceListPlaying(), voiceListPlayer.index].join(\",\"); voiceListStop(); return r;"))
+            eng.tjs('voiceListStep(1); musicView(1); kag.process("musicmode.ks", "*loop"); return 1;')
+            eng.wait("the voices", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.voiceList !== void'
+                     ' && +tf.musicView == 1', timeout=30)
+            pl = str(eng.tjs('''var l = kag.fore.messages[0].names.voiceList; l.focusIndex = 0; l.onKeyDown(#'F', 0);
+                var r = [KAGFavouriteVoices.at, KAGFavouriteVoices.list(1).count, KAGFavouriteVoices.list(0).count];
+                KAGFavouriteVoices.at = 0; return r.join(",");'''))
+            print("     rows with a face: %s; protected, the star: %s left, unprotected: %s; Play all: %s, then %s; Playlist 1 (at, count, favourites): %s"
+                  % (more[0], more[1], more[2], ",".join(more[3:5]), second, pl), flush=True)
+            if int(more[0]) < 1 or more[1] != "3" or more[2] != "2" or more[3] != "1" or more[4] != "0" or not second.endswith(",1") \
+                    or pl != "1,1,2":
+                raise SmokeError("the favourites' faces, protection, Play all or playlists didn't work: %s / %s / %s" % (more, second, pl))
+        eng.tjs('musicView(0); return 1;')
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
@@ -5580,7 +5747,7 @@ def sample_steps(eng):
         eng.wait("the music", 'kag.fore.messages[0].names.nowPlaying.playing', timeout=15)
         time.sleep(1.0)
         got = str(eng.tjs('''var p = kag.fore.messages[0].names.nowPlaying, b = p.buffer, r = [];
-            r.add(p.angle > 0 ? "turns" : "still"); r.add(nowPlayingTitle() == trackItemName(0) ? "titled" : nowPlayingTitle());
+            r.add(p.angle > 0 ? "turns" : "still"); r.add(nowPlayingTitle() == tr(tf.musicmodelist[0].title) ? "titled" : nowPlayingTitle());
             p.onMouseDown(p.width / 2, p.barY + 4, mbLeft, 0); p.onMouseUp(p.width / 2, p.barY + 4, mbLeft, 0);
             var half = b.position / b.totalTime; r.add("%.2f".sprintf(half));
             var a = b.position; p.onKeyDown(VK_RIGHT, 0); r.add(b.position - a >= 4000 ? "on" : "stuck " + (b.position - a));
@@ -5588,30 +5755,173 @@ def sample_steps(eng):
         print("     the player: %s" % got, flush=True)
         if got[0] != "turns" or got[1] != "titled" or abs(float(got[2]) - 0.5) > 0.05 or got[3] != "on":
             raise SmokeError("the music room's player didn't turn, name the track, seek to its middle or seek on: %s" % got)
+        if eng.tjs('return typeof global.setPlayButton != "undefined" ? 1 : 0;') == 1:
+            # (since 0.25.0) the meter moves while the music plays; Pause holds the record and the
+            # time still, and Play plays it on
+            np = "kag.fore.messages[0].names.nowPlaying"
+            peak = float(eng.tjs('return "%%f".sprintf(%s.meterPeak);' % np))
+            eng.tjs("playOrPause(); return 1;")
+            time.sleep(0.8)
+            a = str(eng.tjs('var p = %s; return [p.paused, (int)p.shownPos, (int)p.angle].join(",");' % np))
+            time.sleep(0.8)
+            b = str(eng.tjs('var p = %s; return [p.paused, (int)p.shownPos, (int)p.angle].join(",");' % np))
+            eng.tjs("playOrPause(); return 1;")
+            time.sleep(0.8)
+            c = str(eng.tjs('var p = %s; return [p.paused, p.playing, (int)p.shownPos].join(",");' % np))
+            print("     the meter's peak %.2f; paused %s, then %s; played on %s" % (peak, a, b, c), flush=True)
+            if peak < 0.05 or not a.startswith("1,") or a.split(",")[:3] != b.split(",")[:3] or not c.startswith("0,1,") \
+                    or int(c.split(",")[2]) <= int(a.split(",")[1]):
+                raise SmokeError("the meter didn't move, or Pause didn't hold the music still and Play play it on: %.2f / %s / %s / %s" % (peak, a, b, c))
+            # the screen drawn again while it plays (another list, a tab) keeps Pause on the button
+            eng.tjs('kag.process("musicmode.ks", "*loop"); return 1;')
+            time.sleep(0.5)
+            eng.wait("the music room again", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable'
+                     ' && kag.fore.messages[0].names.nowPlaying !== void', timeout=30)
+            shows = str(eng.tjs('''var b = kag.fore.messages[0].names.musicmode_play, r = [];
+                var names = [ "musicmode_pause_normal", "musicmode_play_normal", "musicmode_play_over" ];
+                for (var i = 0; i < names.count; i++) {
+                    var t = new global.Layer(kag, kag.primaryLayer), n = 0, k = 0;
+                    t.loadImages(names[i]);
+                    for (var x = 4; x < t.imageWidth && x < b.width; x += 5) { k++; n++ if b.getMainPixel(x, b.height \\ 2) == t.getMainPixel(x, t.imageHeight \\ 2); }
+                    invalidate t;
+                    r.add(k > 0 && n == k ? names[i] : "");
+                }
+                return r.join(",");'''))
+            print("     drawn again while it plays, the button: %s" % shows, flush=True)
+            if not shows.startswith("musicmode_pause_normal,"):
+                raise SmokeError("drawn again while the music plays, the button lost its Pause: %s" % shows)
+            # shuffle, and a playlist (a track in it, then out)
+            modes = str(eng.tjs('''setRepeat("shuffle"); var r = [tf.musicmode, tf.musicrepeat];
+                musicTogglePlaylist(0, 2); r.add(musicRows(2).join(",")); musicTogglePlaylist(0, 2); r.add(musicRows(2).count);
+                setRepeat("one"); return r.join("|");'''))
+            print("     shuffle and a playlist: %s" % modes, flush=True)
+            if modes != "shuffle|0|0|0":
+                raise SmokeError("the shuffle mode or a playlist didn't work: %s" % modes)
+            # Pip greets (Config's Title Greeting): his own line, spoken
+            pip = str(eng.tjs('''var keep = sf.greetingLastTime; sf.greetingLastTime = void; KAGGreetingPicked = void;
+                KAGOptionSet("titleGreeter", "pip"); var g = KAGGreeting(); var r = [g.who, g.voice, KAGGreetingText(g)];
+                KAGOptionSet("titleGreeter", "ai"); sf.greetingLastTime = keep; KAGGreetingPicked = void; tf.greetingRepick = false;
+                return r.join("|");''')).split("|")
+            print("     Pip's greeting: %s" % pip, flush=True)
+            if pip[0] != "pip" or pip[1] != "pipgreet01" or not pip[2].startswith("Hi! I'm Pip"):
+                raise SmokeError("Pip didn't greet with his own line and voice: %s" % pip)
         eng.tjs("stopBgm(); return 1;")
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
-    @step("Sprite Mode: a character at a time in its poses, outfits and faces, over the street at any time of day")
+    @step("screen readers: a screen drawn on a message layer gives its buttons with their help lines, its own lists merged in, and a press through it works")
+    def _():
+        if not a11y_framework(eng) or eng.tjs('return typeof global.KAGMessageNodes != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no screen reader interface here, or a framework from before these screens' nodes)", flush=True)
+            return
+        eng.tjs('tf.musicView = 0; sf.extramode = 3; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("the music room", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.musicList !== void', timeout=30)
+        screen = a11y_find(eng, "group", "Music")
+        stop = a11y_find(eng, "button", "Stop the music")
+        tab = a11y_find(eng, "button", "Voices")
+        lst = a11y_find(eng, "list", "Tracks")
+        np = a11y_find(eng, "slider", "Now playing")
+        print("     the music room: %r (%s), %r, %r (%s), %r, %r" % (screen.get("name"), screen.get("description"), stop.get("name"),
+              tab.get("name"), tab.get("description"), lst.get("name"), np.get("name")), flush=True)
+        if not (screen.get("description") or "").startswith("Pick a track") or not (tab.get("description") or "").startswith("The music, the voices"):
+            raise SmokeError("the music room's nodes have no help lines: %s / %s" % (screen, tab))
+        a11y_click(eng, tab)
+        eng.wait("the voices' view", "+tf.musicView == 1", timeout=10)
+        eng.tjs('musicView(0); galleryStop() if typeof global.galleryStop != "undefined"; kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("Sprite Mode: characters together in their poses, outfits, faces and variations, one dragged and turned round,"
+          " a line said, the street by night or a picture of the player's own, a screenshot without the panel")
     def _():
         if eng.tjs('return typeof global.KAGSpriteShow != "undefined" && typeof global.spriteInit != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: a framework or game from before Sprite Mode)", flush=True)
             return
-        state = ('(function() { var e = world_object.env, r = [], at = tf.spriteAt;'
-                 ' for (var i = 0; i < tf.spriteChars.count; i++) { var c = e.characters[tf.spriteChars[i]]; if (c !== void && c.isShowBU()) r.add(tf.spriteChars[i] + ":" + c.face); }'
-                 ' return r.join(",") + "|" + e.stage.time + "|" + spriteRowValues(3).count; })()')
-        eng.tjs('tf.spriteAt = void; sf.extramode = 1; kag.process("spritemode.ks"); return 1;')
-        eng.wait("Sprite Mode", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        stage25 = eng.tjs('return typeof global.KAGSpriteStageLayer != "undefined" ? 1 : 0;') == 1
+        # a picture of the player's own in the save folder's backgrounds/ (a desktop's)
+        own = False
+        src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "bgimage", "event1.jpg")
+        if stage25 and isinstance(eng, DesktopEngine) and os.path.exists(src) and \
+                eng.tjs('return KAGSpriteBackgroundFolder() !== void ? 1 : 0;') == 1:
+            folder = os.path.join(eng.savedir, "backgrounds")
+            os.makedirs(folder, exist_ok=True)
+            shutil.copyfile(src, os.path.join(folder, "My Picture.jpg"))
+            own = True
+        state = ('(function() { var e = world_object.env, r = [];'
+                 ' for (var i = 0; i < tf.spriteChars.count; i++) { var n = tf.spriteChars[i], c = e.characters[n];'
+                 '   if (c !== void && c.isShowBU()) r.add(n + ":" + c.face + (typeof c.diff != "undefined" && c.diff !== void ? "/" + c.diff : "")); }'
+                 ' return r.join(",") + "|" + e.stage.time + "|" + spriteRowValues(3).count + "|" + e.stage.stage; })()')
+        ready = ('kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0' +
+                 (' && kag.fore.messages[0].names.spriteStage !== void' if stage25 else ''))
+        eng.tjs('tf.spriteAt = tf.spriteSet = tf.spriteSel = tf.spriteBgAt = tf.spriteLine = void; sf.extramode = 1;'
+                ' kag.process("spritemode.ks"); return 1;')
+        eng.wait("Sprite Mode", ready, timeout=30)
         first = str(eng.tjs("return " + state + ";"))
-        eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 2); kag.process("spritemode.ks", "*again"); return 1;')
+        if not stage25:
+            # (0.24.0: a character at a time)
+            eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 2); kag.process("spritemode.ks", "*again"); return 1;')
+        else:
+            # Pip picked, his next face and his arms waving: onto the stage beside Ai, by night
+            eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 1); spriteStep(5, 2); kag.process("spritemode.ks", "*again"); return 1;')
         time.sleep(0.5)
-        eng.wait("Sprite Mode again", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        eng.wait("Sprite Mode again", ready, timeout=30)
         second = str(eng.tjs("return " + state + ";"))
-        print("     %s, then %s (who's shown:face|time|faces)" % (first, second), flush=True)
+        print("     %s, then %s (who's shown:face/variation|time|faces|stage)" % (first, second), flush=True)
         f, s2 = first.split("|"), second.split("|")
-        if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or not s2[0].startswith("pip:") or "," in s2[0] or \
-                s2[0] == "pip:" + spritefirst(eng) or s2[1] != "night" or int(s2[2]) < 2:
-            raise SmokeError("Sprite Mode didn't show Ai by day, then only Pip with his next face at night: %s / %s" % (first, second))
+        if not stage25:
+            if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or not s2[0].startswith("pip:") or "," in s2[0] or \
+                    s2[0] == "pip:" + spritefirst(eng) or s2[1] != "night" or int(s2[2]) < 2:
+                raise SmokeError("Sprite Mode didn't show Ai by day, then only Pip with his next face at night: %s / %s" % (first, second))
+        else:
+            shown = dict(x.split(":", 1) for x in s2[0].split(",") if ":" in x)
+            pip = shown.get("pip", "").split("/")
+            if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or "ai" not in shown or pip[0] in ("", spritefirst(eng)) or \
+                    (len(pip) > 1 and pip[1] != "wave") or s2[1] != "night":
+                raise SmokeError("Sprite Mode didn't show Ai by day, then Ai and Pip (his next face, waving) together at night: %s / %s" % (first, second))
+            # a drag on Ai moves her and picks her (the rows edit her)
+            drag = str(eng.tjs('''var s = tf.spriteSet.ai, x0 = s.x, st = kag.fore.messages[0].names.spriteStage;
+                var sx = 960 + s.x, y = 500, hit = KAGSpriteHit("ai", sx, y);
+                st.onMouseDown(sx - st.left, y, mbLeft, 0);
+                for (var k = 1; k <= 5; k++) st.onMouseMove(sx - st.left - 30 * k, y + 4 * k, 0);
+                st.onMouseUp(sx - st.left - 150, y + 20, mbLeft, 0);
+                return [hit, s.x - x0, s.y, tf.spriteChars[tf.spriteSel]].join(",");'''))
+            time.sleep(0.5)
+            eng.wait("Sprite Mode after the drag", ready, timeout=30)
+            drag += "," + str(eng.tjs('var s = tf.spriteSet.ai; return [KAGSpriteHit("ai", 960 + s.x, 520), KAGSpriteHit("ai", 960 + s.x + 150, 300)].join(",");'))
+            print("     a drag on Ai: %s (hit, moved by, down by, picked, there now, not where she was)" % drag, flush=True)
+            if drag != "1,-150,20,ai,1,0":
+                raise SmokeError("a drag on Ai in Sprite Mode didn't move her and pick her: %s" % drag)
+            # turned round, saying a line; the player's own picture behind her
+            eng.tjs('spriteFlip(); tf.spriteLine = "Hello from the stage."; tf.spriteBgAt = tf.spriteBgs.count - 1;'
+                    ' kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(0.5)
+            eng.wait("Sprite Mode turned round", ready, timeout=30)
+            said = str(eng.tjs('''var st = kag.fore.messages[0].names.spriteStage, c = world_object.env.characters.ai;
+                return [c.flipx, st.speaker, st.line, world_object.env.stage.stage, tf.spriteBgs[tf.spriteBgs.count - 1].name].join("|");'''))
+            print("     turned round and saying a line: %s" % said, flush=True)
+            sd = said.split("|")
+            if sd[0] != "1" or sd[1] != "Ai" or sd[2] != "Hello from the stage." or (own and (sd[3] != "spriteown0" or sd[4] != "My Picture")):
+                raise SmokeError("Ai wasn't turned round, saying the line, over the player's own picture: %s" % said)
+            # the camera: the stage without the panel, saved as F12 saves one, then the panel again
+            before = len([n for n in os.listdir(eng.savedir) if n.startswith("screenshot")]) if isinstance(eng, DesktopEngine) else 0
+            eng.tjs('tf.spriteShot = true; kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(1.0)
+            eng.wait("Sprite Mode after the camera", ready + ' && !tf.spriteShot && kag.fore.messages[0].names.sprite_toggle !== void', timeout=30)
+            if isinstance(eng, DesktopEngine):
+                after = 0
+                for i in range(20):
+                    after = len([n for n in os.listdir(eng.savedir) if n.startswith("screenshot")])
+                    if after > before:
+                        break
+                    time.sleep(0.25)
+                print("     screenshots: %d, then %d" % (before, after), flush=True)
+                if after != before + 1:
+                    raise SmokeError("Sprite Mode's camera didn't save a screenshot")
+            # the panel away, and back with a right-click
+            eng.tjs('spritePanelShow(false); kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(0.5)
+            eng.wait("Sprite Mode without the panel", ready + ' && kag.fore.messages[0].names.sprite_show !== void', timeout=30)
+            eng.key("VK_ESCAPE")
+            eng.wait("the panel back", ready + ' && kag.fore.messages[0].names.sprite_toggle !== void', timeout=30)
         eng.key("VK_ESCAPE")
         eng.wait("the CG screen", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
         eng.key("VK_ESCAPE")

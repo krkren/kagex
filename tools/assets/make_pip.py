@@ -25,7 +25,12 @@ encoded with ffmpeg's libvorbis. They open and shut Pip's mouth by their loudnes
 makes one more line in a real voice, synthesized (data/voice/pip000009.ogg, below), whose vowels
 kagex-lipsync works out (tools/lipsync): that line shows the mouths by vowel.
 
-usage: python3 tools/assets/make_pip.py [art] [voice] [speech]
+`greet` makes Pip's title greetings (greetings.csv's lines whose Who is pip), in babble too, each
+with a seed of its own so the lines above stay as they are (data/voice/pipgreet01.ogg ...), and
+`title` his picture beside them on the title screen (data/image/title_pip.png: waving, smiling,
+at 45%).
+
+usage: python3 tools/assets/make_pip.py [art] [voice] [speech] [greet] [title]
 """
 import math, os, shutil, subprocess, sys, tempfile, urllib.request, wave
 
@@ -847,25 +852,73 @@ def babble(text, seed):
 
 
 def make_voice():
+    babble_files(LINES, 20261025, "pip%06d.ogg")
+
+
+# Pip's title greetings, in the order of their files (data/main/greetings.csv names them); a
+# player's name is said as two syllables
+GREETINGS = [
+    "Hi! I'm Pip! Press Start and I'll show you around!",
+    "You came back! I missed you!",
+    "Morning! Is it breakfast time yet?",
+    "Good afternoon! Let's play a demo!",
+    "Evening already? The street lights look so pretty.",
+    "Yawn... it's late. Just one more demo?",
+    "Hello, hello! Ready for more?",
+    "Welcome back, Sammy! I missed you!",
+]
+
+
+def make_greet():
+    babble_files(GREETINGS, 20261108, "pipgreet%02d.ogg")
+
+
+def babble_files(lines, seed, name):
+    """each line's babble (its seed: seed + its index) as data/voice/<name % its number>"""
     if not shutil.which("ffmpeg"):
         sys.exit("make_pip.py voice needs ffmpeg (with libvorbis)")
     work = tempfile.mkdtemp(prefix="make-pip-")
     try:
-        for i, text in enumerate(LINES):
-            y = babble(text, 20261025 + i)
+        for i, text in enumerate(lines):
+            y = babble(text, seed + i)
             wav = os.path.join(work, "%d.wav" % i)
             with wave.open(wav, "wb") as w:
                 w.setnchannels(1)
                 w.setsampwidth(2)
                 w.setframerate(RATE)
                 w.writeframes((y * 32767).astype("<i2").tobytes())
-            out = os.path.join(VOICE, "pip%06d.ogg" % (i + 1))
+            out = os.path.join(VOICE, name % (i + 1))
             subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", wav, "-c:a", "libvorbis", "-q:a", "3",
                             "-fflags", "+bitexact", "-flags:a", "+bitexact", "-map_metadata", "-1", out],
                            check=True)
-            print("voice %d: %.1f s, %s" % (i + 1, len(y) / RATE, text), flush=True)
+            print("voice %s: %.1f s, %s" % (os.path.basename(out), len(y) / RATE, text), flush=True)
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+# Pip on the title, greeting: the layers of the plain outfit's wave, the smile with its eyes open
+TITLE_LAYERS = {(None, n) for n in ("Shadow", "Feet", "Antenna", "Body", "Cheeks", "Arm L Rest", "Arm R Wave",
+                                    "Brows Neutral")} | {("Eyes", "Open Eyes"), ("Mouth Grin", "Half-open Mouth")}
+TITLE_SCALE = 0.45
+
+
+def make_title():
+    groups, layers = build()
+    canvas = Image.new("RGBA", (round(W * TITLE_SCALE), round(H * TITLE_SCALE)), (0, 0, 0, 0))
+    for layer in reversed(layers):   # bottom first
+        if (layer.group, layer.name) not in TITLE_LAYERS:
+            continue
+        left, top, img = layer.render(TITLE_SCALE)
+        if img is None:
+            continue
+        if layer.opacity < 255:
+            a = img.getchannel("A").point(lambda v: v * layer.opacity // 255)
+            img.putalpha(a)
+        canvas.alpha_composite(img, (left, top))
+    canvas = canvas.crop(canvas.getbbox())
+    path = os.path.join(ROOT, "data", "image", "title_pip.png")
+    canvas.save(path, optimize=True)
+    print("wrote %s %s" % (os.path.relpath(path, ROOT), canvas.size), flush=True)
 
 
 # ---------------------------------------------------------------- speech
@@ -950,7 +1003,7 @@ def make_speech():
 def main():
     what = sys.argv[1:] or ["art", "voice"]
     for w in what:
-        {"art": make_art, "voice": make_voice, "speech": make_speech}[w]()
+        {"art": make_art, "voice": make_voice, "speech": make_speech, "greet": make_greet, "title": make_title}[w]()
 
 
 if __name__ == "__main__":

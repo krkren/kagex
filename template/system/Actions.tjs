@@ -127,22 +127,28 @@ function KAGDefineFrameworkActions(win)
 		func:function { Scripts.eval(currentVoiceScript); } incontextof win,
 		available:function { return typeof global.world_object != "undefined"; },
 		enabled:function { return hasCurrentVoice && currentVoiceScript != ""; } incontextof win ]);
-	// the scene player's moves (compiled scenes, KAGEnvPlayer.tjs)
+	// (since 0.25.0) the voiced line on screen kept with the favourite voices, or let go (Voices.tjs)
+	KAGDefineAction(%[ name:"favouriteVoice", label:"Keep this voice with your favourites",
+		func:function { KAGKeepVoiceNow() if typeof global.KAGKeepVoiceNow != "undefined"; },
+		available:KAGActionWorld,
+		enabled:function { return hasCurrentVoice && typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.working; } incontextof win ]);
+	// the scene player's moves (compiled scenes, KAGEnvPlayer.tjs); in KAG's own player (since
+	// 0.25.0), the window's, to its save points (MainWindow.tjs, kagScenePoint)
 	KAGDefineAction(%[ name:"rewind", label:"Rewind to the start of the scene or the last choice",
-		func:function { var p = KAGActionPlayer(); if (p !== void) p.rewind(); },
-		available:KAGActionWorld,
-		enabled:function { var p = KAGActionMovable(true); return p !== void && (p.canPrevScene || p.canPrevChoice); } ]);
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.rewind(); else if (KAGKagMovable(true) !== void) kag.kagRewind(); },
+		enabled:function { var p = KAGActionMovable(true); if (p !== void) return p.canPrevScene || p.canPrevChoice;
+			return KAGKagMovable(true) !== void && (kag.kagScenePoint() !== void || kag.kagChoicePoint() !== void); } ]);
 	KAGDefineAction(%[ name:"prevScene", label:"Back to the start of the scene",
-		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevScene(true); },
-		available:KAGActionWorld,
-		enabled:function { var p = KAGActionMovable(true); return p !== void && p.canPrevScene; } ]);
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevScene(true); else if (KAGKagMovable(true) !== void) kag.kagPrevScene(); },
+		enabled:function { var p = KAGActionMovable(true); if (p !== void) return p.canPrevScene;
+			return KAGKagMovable(true) !== void && kag.kagScenePoint() !== void; } ]);
 	KAGDefineAction(%[ name:"prevChoice", label:"Back to the last choice",
-		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevChoice(true); },
-		available:KAGActionWorld,
-		enabled:function { var p = KAGActionMovable(true); return p !== void && p.canPrevChoice; } ]);
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.prevChoice(true); else if (KAGKagMovable(true) !== void) kag.kagPrevChoice(); },
+		enabled:function { var p = KAGActionMovable(true); if (p !== void) return p.canPrevChoice;
+			return KAGKagMovable(true) !== void && kag.kagChoicePoint() !== void; } ]);
 	KAGDefineAction(%[ name:"nextScene", label:"On to the next scene",
-		func:function { var p = KAGActionPlayer(); if (p !== void) p.nextScene(); },
-		available:KAGActionWorld, enabled:function { return KAGActionMovable(false) !== void; } ]);
+		func:function { var p = KAGActionPlayer(); if (p !== void) p.nextScene(); else if (KAGKagMovable(false) !== void) kag.kagNextScene(); },
+		enabled:function { return KAGActionMovable(false) !== void || KAGKagMovable(false) !== void; } ]);
 	KAGDefineAction(%[ name:"next", label:"Go on", func:win.onPrimaryClickByKey ]); // (since 0.20.0: the mouse's forward button)
 	KAGDefineAction(%[ name:"language", label:"Show the game in its next language", func:win.switchLanguageByKey,
 		available:function { return languageAvailable; } incontextof win ]);
@@ -177,6 +183,21 @@ function KAGActionMovable(stable)
 	var p = KAGActionPlayer();
 	if (p === void || kag.skipMode != SKIP_NONE || kag.currentDialog !== void || (stable && !kag.inStable)) return;
 	return p;
+}
+
+// The window, while KAG's own player plays a script (not a compiled scene) in the story: on the
+// main conductor, with a save point passed (a titled label), nothing open, not skipping; stable:
+// at a stop too
+function KAGKagMovable(stable)
+{
+	if (KAGActionPlayer() !== void) return;
+	with (kag) {
+		if (.conductor !== .mainConductor || .usingExtraConductor || .currentDialog !== void || .historyShowing) return;
+		if (typeof .kagScenePoint == "undefined" || .skipMode != SKIP_NONE || (stable && !.inStable) || .kagScenePage == "") return;
+		if (!stable && .selectShowing) return; // (on to the next scene: not past a choice)
+		if (.isRecollection) return;
+	}
+	return kag;
 }
 
 // The scene player while it plays a compiled scene

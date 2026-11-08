@@ -364,6 +364,7 @@ class KAGChartView extends Layer
 	var wheelHook, pinchHook, pinchZoom;
 	var a11yHidden = true, linkNum;
 	var preview, previewCard;                    // function(node): the scene to preview (ScenePreview.tjs)
+	var holdTimer, holdTime = 450, previewHeld = false; // a long press showing a node's card (touch)
 
 	function KAGChartView(win, par)
 	{
@@ -377,6 +378,7 @@ class KAGChartView extends Layer
 		visible = true;
 		timer = new Timer(onTick, "");
 		timer.interval = 16;
+		holdTimer = new Timer(onHold, "");
 		wheelHook = onWheelHook;
 		pinchHook = onPinchHook;
 		window.addHook("onMouseWheelHook", wheelHook);
@@ -390,6 +392,7 @@ class KAGChartView extends Layer
 			window.removeHook("onTouchScalingHook", pinchHook);
 		}
 		invalidate timer;
+		invalidate holdTimer;
 		invalidate content if content !== void && isvalid content;
 		invalidate previewCard if previewCard !== void && isvalid previewCard;
 		KAGA11y.removeNodes(this) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
@@ -689,12 +692,26 @@ class KAGChartView extends Layer
 		pressed = true, dragging = false, pressX = x, pressY = y, pressVX = viewX, pressVY = viewY;
 		vx = vy = 0, timer.enabled = false;
 		samples = [ [ System.getTickCount(), x, y ] ];
+		// a card a long press showed goes with the next press; a long press on a node shows its
+		// (a touch screen has no pointer resting on a node)
+		if (previewHeld) { previewHeld = false; hidePreview(); }
+		if (preview !== void && nodeAt(x, y) !== void) { holdTimer.interval = holdTime; holdTimer.enabled = true; }
+	}
+
+	function onHold()
+	{
+		holdTimer.enabled = false;
+		if (!isvalid this || !pressed || dragging) return;
+		var n = nodeAt(pressX, pressY);
+		if (n === void) return;
+		previewHeld = true;
+		updatePreview(n.id, true);
 	}
 
 	function onMouseMove(x, y, shift)
 	{
 		if (pressed) {
-			if (!dragging && (Math.abs(x - pressX) > dragThreshold || Math.abs(y - pressY) > dragThreshold)) dragging = true;
+			if (!dragging && (Math.abs(x - pressX) > dragThreshold || Math.abs(y - pressY) > dragThreshold)) { dragging = true; holdTimer.enabled = false; }
 			if (dragging) {
 				hidePreview();
 				var now = System.getTickCount();
@@ -715,6 +732,9 @@ class KAGChartView extends Layer
 	{
 		if (button != mbLeft || !pressed) { super.onMouseUp(...); return; }
 		pressed = false;
+		holdTimer.enabled = false;
+		// the long press showed a card: it stays, and nothing is picked
+		if (previewHeld) { dragging = false; return; }
 		if (dragging) {
 			dragging = false;
 			var now = System.getTickCount(), s = samples[0], dt = now - s[0];
