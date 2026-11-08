@@ -43,6 +43,16 @@ lipflip=4 なら、声なしで口を四回動かします。
 【pip】またね！
 あの手を振る動きはアニメーションです。data/main/charanim.csv の waving が、ほかの変化があるまでタイマーで腕のポーズを切り替えています。
 [pip hide]
+*pipcg|レイヤーから作る一枚絵
+[EV file=pipcg_day fade]
+ひとつのレイヤーファイルから作った CG です。空、丘、ピップ、その腕や表情がそれぞれレイヤーで、この絵はその一部を見せています。
+[EV file=pipcg_laugh fade]
+pipcg_laugh は同じファイルの別のレイヤーを見せたもの。ばんざいの腕と笑顔です。
+[EV file=pipcg_evening fade]
+pipcg_evening は夕方の空と、全体にかかるオレンジ色の光、それにベレー帽。
+[EV file=pipcg_night fade]
+pipcg_night は月と星と眠そうな顔。ファイルはひとつ、絵は四枚で、ギャラリーではそれぞれの名前で並びます。
+[EV hide fade]
 *live2d|Live2D
 [if exp="!KAGLive2DCanDraw('hiyori')"]
 このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。

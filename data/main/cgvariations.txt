@@ -1,0 +1,9 @@
+# CG variations (CGVariations.tjs, doc/kagex.txt): pictures that are one layered file's layers
+# shown in different ways (made by tools/assets/make_pip.py cg). Tab-separated:
+# name, the file (or a variation it starts from), and what changes from the file's own
+# visibility: a layer or folder shown (with its folders; a folder with what's in it), !shown and
+# the others in its folder hidden, -hidden, * everything hidden first
+pipcg_day	pipcg	!Sky/Day, Sun, Clouds, !Arms/Wave, !Faces/Smile
+pipcg_laugh	pipcg_day	!Arms/Cheer, !Faces/Laugh
+pipcg_evening	pipcg_day	!Sky/Evening, Evening Light, -Clouds, Beret, !Arms/Rest, !Faces/Surprised
+pipcg_night	pipcg	!Sky/Night, -Sun, -Clouds, Moon, Stars, Night Shade, !Arms/Rest, !Faces/Sleepy

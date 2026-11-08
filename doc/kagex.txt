@@ -3975,6 +3975,48 @@ screen again without the panel and takes a screenshot as F12 does; with the pane
 stage shows, and a right-click or the button in the corner brings it back. The panel and the
 World change between [begintrans] and [endtrans], so they fade in as one.
 
+● CG Variations From One Layered File
+
+A CG often comes in variations, one layered file with some of its layers shown: the same scene in
+the evening, with another face, with a hat. Template/system/CGVariations.tjs (since 0.26.0) puts
+such a picture together from the file as it's shown, so the game ships the file once rather than
+a flat picture for every variation. Each variation has a name of its own, listed in
+cgvariations.txt (tab-separated, # comments):
+
+  # name         file (or a variation)   what changes from the file's own visibility
+  pipcg_day      pipcg                   !Sky/Day, Sun, Clouds, !Arms/Wave, !Faces/Smile
+  pipcg_laugh    pipcg_day               !Arms/Cheer, !Faces/Laugh
+
+The name is a picture's name wherever a script loads one: [image storage=pipcg_day], [EV
+file=pipcg_day], [newlay file=pipcg_day], a stage's image, imagenamemap.txt's replacements
+and cglist.csv, so the gallery shows it and sf["cg_PIPCG_DAY"] marks it seen, each
+variation by its own name. The file is the layered file without its extension: <file>.txt,
+psdlayer.tjs's layer structure with a picture per layer (<file>_<layer id>, in any image format),
+which is what kagex-release splits a .psd or .clip into, so a release reads it on every platform;
+else <file>.psd or <file>.clip itself, through the psdfile or clipfile plugin (the desktop
+engines). In its place the name of another variation starts from that one's layers, its own
+changes after. The changes, in order, separated by commas:
+
+  <layer>       shown, with the folders it's in; a folder is shown with everything in it. A
+                name, a folder's name, or a path from the top (<folder>/<layer>), which tells
+                apart layers of one name in different folders
+  !<layer>      the same, and the others in its folder hidden (one face of several)
+  -<layer>      hidden; a folder with everything in it
+  *             everything hidden first
+
+Everything else keeps the file's own visibility. A name the file has no layer or folder for is
+an error that names it. The picture is put together when a layer loads it (KAG and World layers
+alike), in some tens of milliseconds for a 1920x1080 picture of thirty layers; each file is read
+once, the last four kept. Scripts load one into a plain Layer through
+
+  KAGLoadPicture(layer, name)     a variation, or the image of that name (loadImages)
+  KAGCGVariation(name)            the variation of that name, %[ name, file, layers ], or void
+  KAGCGVariationNames()           every variation's name
+
+The sample's Animated Character demo shows four, pipcg_day, pipcg_laugh, pipcg_evening and
+pipcg_night, made of data/evimage/pipcg.txt and its pictures (tools/assets/make_pip.py cg), which
+are one tile in the gallery.
+
 ● The Name Box
 
 [position] takes these for its name window (since 0.17.0), besides nameleft and the rest:

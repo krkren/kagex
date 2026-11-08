@@ -3,7 +3,7 @@
 // Blinking and lip-sync, shared with Live2D characters (world.tjs loads it first)
 KAGLoadScriptOnce("KAGEnvCharacterEyeLip.tjs");
 // Loading psdlayer
-KAGLoadScript("psdlayer.tjs");
+KAGLoadScript("psdlayer.tjs") if typeof global.PSDInfo == "undefined"; // (CGVariations.tjs may have)
 
 // Loading basic stand-alone image info
 var allStandInfoMap, allStandInfoList;

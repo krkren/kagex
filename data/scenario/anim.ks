@@ -43,6 +43,21 @@ And lipflip=4 moves the mouth four times, without a voice.
 【pip】Bye for now!
 That wave is an animation: waving, in data/main/charanim.csv, steps through the arm poses on a timer until something else changes.
 [pip hide]
+*pipcg|A Picture From Layers
+; CG variations (since 0.26.0, CGVariations.tjs): pictures that are one layered file's layers
+; shown in different ways, each with a name of its own, listed in data/main/cgvariations.txt. The
+; file is data/evimage/pipcg.txt with a picture per layer, as kagex-release splits a .psd or .clip
+; (made by tools/assets/make_pip.py cg); the gallery has all four (cglist.csv). See "CG
+; Variations From One Layered File" in doc/kagex.txt.
+[EV file=pipcg_day fade]
+A CG from one layered file: the sky, the hills, Pip, its arms and its faces are layers, and this picture shows some of them.
+[EV file=pipcg_laugh fade]
+pipcg_laugh is the same file with other layers shown: arms up and a laughing face.
+[EV file=pipcg_evening fade]
+pipcg_evening has an evening sky, an orange light over everything, and the beret.
+[EV file=pipcg_night fade]
+And pipcg_night the moon, the stars and a sleepy face. One file, four pictures, each in the gallery by its own name.
+[EV hide fade]
 *live2d|Live2D
 ; A Live2D character: Hiyori, Live2D Inc.'s sample model, drawn by the krkrlive2d plugin
 ; (KAGEnvCharacterLive2D.tjs). Her model, data/fgimage/hiyori.l2d, comes from

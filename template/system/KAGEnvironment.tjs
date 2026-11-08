@@ -1975,7 +1975,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			}
 		}
 		var lay = new global.Layer(temporaryLayer.window, temporaryLayer);
-		lay.loadImages(storage);
+		KAGLoadPicture(lay, storage); // (a CG variation too: CGVariations.tjs)
 		lay.name = "Background Cache:" + storage;
 		//dm("Background image loaded:" + storage);
 		lay.setSizeToImageSize();

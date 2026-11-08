@@ -1019,7 +1019,8 @@ function setCGImage(target, filename)
     // A prepared thumbnail (data/thum/thum_<name>, the picture area's size, in any image format:
     // kagex-release converts it) avoids decoding the full CG on every page; without one the CG is
     // shrunk here
-    layer.loadImages(getExistImageName("thum_"+filename) !== void ? "thum_"+filename : filename);
+    // (a CG variation too, put together from its layered file: KAGLoadPicture, CGVariations.tjs)
+    KAGLoadPicture(layer, getExistImageName("thum_"+filename) !== void ? "thum_"+filename : filename);
     layer2.loadImages("cgmode_thum_normal");
     layer2.imageWidth=pw;
     layer2.imageHeight=ph;
@@ -1305,7 +1306,7 @@ class CGViewer extends Layer
 
     function load()
     {
-        pic.loadImages(list[index]);
+        KAGLoadPicture(pic, list[index]); // (a CG variation too)
         var fx = width / pic.imageWidth, fy = height / pic.imageHeight;
         fit = fx < fy ? fx : fy;
         z = 1.0;

@@ -4704,6 +4704,64 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("CG variations: four pictures from one layered file (cgvariations.txt), by name in a plain layer, a KAG layer and the World's event layer, one starting from another's layers, unlocked in the gallery by their own names, and a layer the file hasn't named")
+    def _():
+        if eng.tjs('return typeof global.KAGCGVariation != "undefined" && KAGCGVariation("pipcg_day") !== void ? 1 : 0;') != 1:
+            print("     (skipped: a framework or sample from before CG variations)", flush=True)
+            return
+        # each one in a plain layer: the size, the sky at the top left, the sun's or moon's place,
+        # a cloud's, and a sum of Pip's face (the faces differ)
+        got = str(eng.tjs('''var r = [], names = ["pipcg_day", "pipcg_laugh", "pipcg_evening", "pipcg_night"];
+            for (var i = 0; i < names.count; i++) {
+                var l = new global.Layer(kag, kag.primaryLayer), face = 0;
+                KAGLoadPicture(l, names[i]);
+                for (var y = 540; y < 800; y += 13) for (var x = 1040; x < 1320; x += 11) face = (face * 31 + (l.getMainPixel(x, y) & 0xffffff)) & 0x7fffffff;
+                r.add("%d,%d,%06x,%06x,%06x,%d".sprintf(l.imageWidth, l.imageHeight, l.getMainPixel(20, 20) & 0xffffff,
+                    l.getMainPixel(1560, 220) & 0xffffff, l.getMainPixel(300, 210) & 0xffffff, face));
+                invalidate l;
+            }
+            return r.join(" ");''')).split(" ")
+        v = [x.split(",") for x in got]
+        print("     size, sky, sun or moon, cloud, face: %s" % "  ".join(got), flush=True)
+        rgb = lambda h: (int(h, 16) >> 16, (int(h, 16) >> 8) & 255, int(h, 16) & 255)
+        sun, moon = rgb(v[0][3]), rgb(v[3][3])
+        if any(x[0:2] != ["1920", "1080"] for x in v):
+            raise SmokeError("a variation isn't the file's size: %s" % got)
+        if v[1][2] != v[0][2] or v[1][4] != v[0][4] or v[1][5] == v[0][5]:
+            raise SmokeError("pipcg_laugh didn't start from pipcg_day's layers, or its face is the same: %s" % got)
+        if not (sun[0] > 220 and sun[1] > 190 and sun[2] < 170) or not (moon[0] > 220 and moon[2] > 160) or rgb(v[3][2])[2] > 90:
+            raise SmokeError("the sun, the moon or the night sky isn't there: %s" % got)
+        if v[2][4] == v[0][4] or v[2][2] == v[0][2] or v[3][2] == v[0][2] or len({x[5] for x in v}) != 4:
+            raise SmokeError("the variations' skies, clouds or faces aren't their own: %s" % got)
+        # a KAG layer and the World's event layer load them by name too
+        kagl = str(eng.tjs('''var n = kag.numCharacterLayers - 1, lay = kag.fore.layers[n];
+            kag.tagHandlers.image(%[ storage: "pipcg_night", layer: (string)n, page: "fore", visible: "true" ]);
+            var p = lay._image._image, r = "%06x".sprintf(p.getMainPixel(20, 20) & 0xffffff) + ":" + (int)p.imageWidth;
+            kag.tagHandlers.freeimage(%[ layer: (string)n, page: "fore" ]); return r;'''))
+        eng.tjs('kag.process("anim.ks", "*pipcg"); return 1;')
+        ev = 'world_object.env.event'
+        eng.wait("the CG in the World's event layer", ev + '.isShowBU() && (string)' + ev + '.imageFile == "pipcg_day" && kag.inStable', timeout=30)
+        world = str(eng.tjs('var p = %s.targetLayer._image._image; return "%%06x".sprintf(p.getMainPixel(20, 20) & 0xffffff) + ":" + (int)p.imageWidth;' % ev))
+        # the gallery: seen by name (the demos played them all), and the tile's picture drawn
+        seen = str(eng.tjs('''cgInit(); var r = [];
+            foreach(%[ a: "PIPCG_DAY", b: "PIPCG_LAUGH", c: "PIPCG_EVENING", d: "PIPCG_NIGHT" ], function(k, v, d, r) { r.add(+sf["cg_" + v]); }, r);
+            var t = new global.Layer(kag, kag.primaryLayer); t.setImageSize(642, 123); t.setSize(214, 123); t.fillRect(0, 0, 642, 123, 0xff000000);
+            setCGImage(t, "pipcg_night"); r.add("%06x".sprintf(t.getMainPixel(60, 20) & 0xffffff)); invalidate t; return r.join(",");'''))
+        # a layer the file doesn't have is an error that names it
+        bad = str(eng.tjs('''KAGCGVariations["smokebad"] = %[ name: "smokebad", file: "pipcg", layers: [ "!Faces/Smile", "No Such Layer" ] ];
+            var l = new global.Layer(kag, kag.primaryLayer), r = "drawn";
+            try { KAGLoadPicture(l, "smokebad"); } catch (e) { r = e.message; }
+            invalidate l; delete KAGCGVariations["smokebad"]; return r;'''))
+        print("     a KAG layer: %s; the event layer: %s; seen in the gallery and the tile's picture: %s; a missing layer: %s" % (kagl, world, seen, bad), flush=True)
+        if kagl != v[3][2] + ":1920" or world != v[0][2] + ":1920":
+            raise SmokeError("a KAG layer or the World's event layer didn't draw the variation: %s, %s" % (kagl, world))
+        if not seen.startswith("1,1,1,1,") or rgb(seen.split(",")[4])[2] > 120 or seen.split(",")[4] == "000000":
+            raise SmokeError("the gallery didn't count the variations as seen, or the tile isn't the night: %s" % seen)
+        if "No Such Layer" not in bad:
+            raise SmokeError("a missing layer wasn't named: %s" % bad)
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:
