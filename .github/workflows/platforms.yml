@@ -226,7 +226,7 @@ jobs:
           path: kirikiri/kagex/build/linux/dist/*.tar.gz
           if-no-files-found: error
       - name: Smoke test
-        timeout-minutes: 20
+        timeout-minutes: 30
         working-directory: kirikiri/kagex/build/linux/package/krkrz
         run: |
           # the engine draws with OpenGL ES through EGL, which the runner image lacks (Mesa's
@@ -392,7 +392,7 @@ jobs:
           path: kirikiri/kagex/build/web/site
           if-no-files-found: error
       - name: Smoke test in headless Chromium
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: |
           # the runner's own Chrome: Playwright's browser download installs its system
           # dependencies with apt, which once took 20 minutes here
@@ -901,7 +901,8 @@ jobs:
           path: kagex-macos.zip
           if-no-files-found: error
       - name: Smoke test
-        timeout-minutes: 20
+        # (the sample's steps take some 22 minutes on this runner since 0.25.0, 1.7 times Linux's)
+        timeout-minutes: 40
         run: |
           exe="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
           # the game as the app holds it (the app has no template/). SDL's offscreen driver has
