@@ -7063,6 +7063,12 @@ def run_steps(eng, steps):
     failures = 0
     for name, fn in steps:
         t = time.time()
+        # the pointer in a corner: since 0.27.0 a prompt leaves it where it is (KAGOpenFocus), and
+        # a kag.onPrimaryClick() with it resting on a glossary term opens the term's entry
+        try:
+            eng.tjs('try { kag.primaryLayer.setCursorPos(4, 4) if typeof global.kag == "Object" && kag !== void; } catch (e) {} return 1;', 5)
+        except SmokeError:
+            pass
         try:
             fn()
             print("ok   %-62s %5.1fs" % (name, time.time() - t), flush=True)
