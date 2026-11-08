@@ -3466,6 +3466,42 @@ eighth page, with Hide the Pointer When Still.
 
 
 
+
+● Advanced Settings
+
+Settings for when something goes wrong (since 0.27.0, template/system/Advanced.tjs), out of the
+casual player's way: in a window the menu bar's Advanced menu has them once Help > Show Advanced
+Settings has shown it (kept in the system variables), and the manual's Advanced Settings page has
+them on every platform (kagexmanual_advanced.txt, linked from the index and from "The Game Is
+Slow"). They're options (Options.tjs), and each takes effect at once:
+
+  memoryMode     Normal or Low: Low keeps the picture cache at KAGLowMemoryCache (64 MB) or less,
+                 lets a layered file's CG variations go at once (KAGCGVariationLinger 0) and
+                 lets go of the pictures kept now
+  pictureCache   the picture cache: Automatic (the engine's size at start) or 128, 256, 512 MB
+                 (System.graphicCacheLimit)
+  drawThreads    the threads that draw: Automatic (the engine's) or 1, 2, 4
+                 (System.drawThreadNum)
+  padEnabled     the controller, and movieQuality, the movies' size (as on Config)
+  resetAdvanced  a button: all of them back as they were (KAGResetOptions(KAGAdvancedOptions))
+
+A game's menus get the Advanced menu from KAGAdvancedMenu(window, menu) and Help's item from
+KAGAdvancedHelpItem(window, helpMenu), which KAGWindow_createMenus calls (a game with its own
+copy of it adds the two lines); the menu's items are added once every option is defined
+(KAGAdvancedMenuFill). KAGAdvancedOptions lists its options, and a game can add its own.
+
+The options the engine reads only as it starts (-memusage, -renderer, -joypad, -gclim and the rest)
+can't be set from a game (UPSTREAM.md: scripts can't write the engine's <exe>.cfu, and nothing
+starts the game again); on a computer the engine's own settings screen sets them when the game is
+started with -userconf, as the manual's page says.
+
+changeUserConf(name, value) keeps an option the game's own scripts read (System.getArgument("-" +
+name)) for the next start, and sets it now: the values are kept in the system variables
+(scflags.userConf) and set with System.setArgument as the game starts. standview.tjs's sub-window
+font size uses it; void forgets one.
+
+
+
 ● KAGEX Operation System
 
 

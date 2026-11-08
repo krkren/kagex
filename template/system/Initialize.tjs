@@ -1167,6 +1167,7 @@ KAGLoadScript("ScrollList.tjs"); // lists that scroll by dragging, flicks, the w
 
 KAGLoadScript("Display.tjs"); // the screen, controller and screenshot settings (since 0.19.0)
 KAGLoadScript("GameCursor.tjs"); // the game's own mouse pointers, and where prompts put the pointer (since 0.27.0)
+KAGLoadScript("Advanced.tjs"); // settings for when something goes wrong: memory, drawing threads (since 0.27.0)
 KAGLoadScript("TextSettings.tjs"); // the message font, outline and shadow, with a preview (since 0.22.0)
 KAGLoadScript("MessageStyles.tjs"); // the message window's styles per scene, in the player's colours (since 0.22.0)
 KAGLoadScript("Glossary.tjs"); // the glossary: its words marked in the text, a click shows the entry (since 0.22.0)
@@ -1314,6 +1315,10 @@ kag.tagHandlers.moviedone = KAGMovieDoneTag;
 
 kag.rightClickHook.add(KAGMovieRightClick);
 kag.addPlugin(new KAGMovieOrderPlugin()); // a 0.17.0 save's movie layer back under the windows
+
+// the advanced settings kept (memory, drawing threads, changeUserConf), and the Advanced menu's
+// items, now that every option is defined (Advanced.tjs, since 0.27.0)
+KAGApplyAdvancedOptions();
 
 
 

@@ -2367,6 +2367,42 @@ def sample_steps(eng):
         finally:
             eng.tjs('KAGOptionSet("promptPointer", "stay"); KAGOptionSet("gameCursor", false); return 1;')
 
+    @step("Advanced settings change the picture cache and the drawing threads at once, Default puts them back")
+    def _():
+        # Advanced.tjs (0.27.0): live engine settings (System.graphicCacheLimit, drawThreadNum),
+        # the menu bar's Advanced menu shown from Help, changeUserConf kept for the next start
+        if eng.tjs('return typeof global.KAGApplyAdvancedOptions != "undefined" && typeof System.graphicCacheLimit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before Advanced.tjs, or an engine without the picture cache's limit)", flush=True)
+            return
+        try:
+            start = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            eng.tjs('KAGOptionSet("memoryMode", "low"); return 1;')
+            low = eng.tjs("return System.graphicCacheLimit;")
+            if low != 64 * 1024 * 1024:
+                raise SmokeError("Low left the picture cache at %s" % low)
+            eng.tjs('KAGOptionSet("memoryMode", "normal"); KAGOptionSet("pictureCache", 256); KAGOptionSet("drawThreads", 1); return 1;')
+            v = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            if v != [str(256 * 1024 * 1024), "1"]:
+                raise SmokeError("256 MB and 1 thread gave %s" % v)
+            if eng.tjs('return typeof kag.advancedMenu == "Object" && kag.advancedMenu !== void ? 1 : 0;') == 1:
+                ticks = str(eng.tjs('var a = [], m = kag.advancedMenu; for (var i = 0; i < m.children.count; i++) { var c = m.children[i];'
+                                    ' if (typeof c.optionName == "undefined") continue; for (var j = 0; j < c.children.count; j++)'
+                                    ' if (c.children[j].checked) a.add(c.optionName + "=" + c.children[j].optionValue); } return a.join(" ");'))
+                if "pictureCache=256" not in ticks or "drawThreads=1" not in ticks:
+                    raise SmokeError("the Advanced menu's ticks don't follow: %s" % ticks)
+                if eng.tjs("KAGAdvancedToggle(); var v = kag.advancedMenu.visible; KAGAdvancedToggle(); return v && !kag.advancedMenu.visible ? 1 : 0;") != 1:
+                    raise SmokeError("Help > Show Advanced Settings didn't show and hide the menu")
+            eng.tjs('changeUserConf("smokeconf", "7"); return 1;')
+            if eng.tjs('return System.getArgument("-smokeconf") == "7" && kag.scflags.userConf.smokeconf == "7" ? 1 : 0;') != 1:
+                raise SmokeError("changeUserConf didn't set and keep the option")
+            eng.tjs("KAGResetOptions(KAGAdvancedOptions); return 1;")
+            back = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            if back != start:
+                raise SmokeError("Default gave %s, the engine started with %s" % (back, start))
+            print("     the engine's: %s bytes, %s threads; Low 64 MB, 256 MB and 1 thread at once, then back" % (start[0], start[1]), flush=True)
+        finally:
+            eng.tjs('KAGResetOptions(KAGAdvancedOptions) if typeof global.KAGAdvancedOptions != "undefined"; changeUserConf("smokeconf", void) if typeof global.changeUserConf != "undefined"; return 1;')
+
     @step("the scripts in !scnlist.txt compile, so the demos play compiled")
     def _():
         # SceneParser.tjs writes <script>.scn.json next to each script, where that's a local

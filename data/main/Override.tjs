@@ -218,6 +218,9 @@ function KAGWindow_createMenus()
 	menu.add(this.showHistoryMenuItem = new KAGMenuItem(this, "Backlog(&B)\tF7", 0, onShowHistoryMenuItemClick, false));
 	menu.add(this.autoModeMenuItem = new KAGMenuItem(this, "Auto(&A)\tF8", 0, onAutoModeMenuItemClick, false));
 
+	// settings for when something goes wrong, shown by Help > Show Advanced Settings (Advanced.tjs)
+	KAGAdvancedMenu(this, menu) if typeof global.KAGAdvancedMenu != "undefined";
+
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
 		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)\tF1", 0,
@@ -225,6 +228,8 @@ function KAGWindow_createMenus()
 
 		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
 			showControls, false));
+
+		KAGAdvancedHelpItem(this, helpMenu) if typeof global.KAGAdvancedHelpItem != "undefined";
 
 		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 		onHelpAboutMenuItemClick, false));
