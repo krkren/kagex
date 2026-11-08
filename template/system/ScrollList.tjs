@@ -230,6 +230,7 @@ class KAGScrollList extends Layer
 		dropCache();
 		position = clampPosition(position);
 		redraw();
+		pushA11y();
 	}
 
 	// the item shown in row r while one is lifted: the others close up round the gap at liftTo
@@ -241,6 +242,7 @@ class KAGScrollList extends Layer
 		return j < lifted ? j : j + 1;
 	}
 
+	var a11yFirst = -1; // the first row a screen reader was given (another one: its nodes again)
 	function redraw()
 	{
 		fillRect(0, 0, imageWidth, imageHeight, 0);
@@ -248,6 +250,7 @@ class KAGScrollList extends Layer
 		if (itemCount > 0 && itemHeight > 0) {
 			var stride = rowStride, w = itemWidth, total = rows;
 			var first = (int)(position \ stride), last = (int)((position + height) \ stride);
+			if (first != a11yFirst) { a11yFirst = first; pushA11y() if a11yFirst >= 0 && isvalid this && parent !== void; }
 			for (var r = first; r <= last; r++) {
 				var row = r;
 				if (loop && contentHeight > height) row = r % total;

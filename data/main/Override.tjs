@@ -1618,9 +1618,15 @@ function replayUnlocked(info)
     return sf[flagname] !== void && +sf[flagname] > 0;
 }
 
+// what screen readers call the sample's screens (Accessibility.tjs)
+KAGA11yScreenNames = %[ "config" => "Config", "save" => "Save", "load" => "Load", "cgmode" => "CG", "replay" => "Replay",
+    "musicmode" => "Music", "searchmode" => "Search", "glossary" => "Glossary", "chart" => "Chart",
+    "spritemode" => "Characters", "title" => "Title", "namescreen" => "Your Name" ];
+
 // A label drawn on each state of a button: the replay tabs' labels
 function drawButtonLabel(button, text, colors, size = 30)
 {
+    button.a11yLabel = text; // (what a screen reader calls it: Accessibility.tjs)
     var hold = button.holdAlpha;
     button.holdAlpha = true;
     for (var st = 0; st < 3; st++)

@@ -2418,15 +2418,22 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	var lastKeyLink = -1; // Last selected link number by keyboard (for re-selection)
 
+	// the screen reader on one of its links (Accessibility.tjs, since 0.25.0)
+	function onA11yAction(id, action, arg) { KAGMessageA11yAction(this, id, action, arg) if typeof global.KAGMessageA11yAction != "undefined"; }
+
 	property keyLink {
 
 		getter { return _keyLink; }
 
 		setter(v) {
 
+			var was = _keyLink;
+
 			_keyLink = v;
 
 			lastKeyLink = v if (v >= 0);
+
+			KAGMessageA11yLater() if v != was && typeof global.KAGMessageA11yLater != "undefined"; // (screen readers: the focus moved)
 
 		}
 
@@ -3576,6 +3583,7 @@ class MessageLayer extends AnimKAGLayerTransMove
         links.clear();
 
         
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined"; // (screen readers: no links now)
 
         numLinks = 0;
 
@@ -7708,6 +7716,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		links[numLinks].lineCount--;
 
 		numLinks++;
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
 		focusable = true; // Capable of receiving focus
 
@@ -7960,6 +7969,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 		numLinks++;
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
 		focusable = true; // Capable of receiving focus
 
@@ -8135,6 +8145,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 		numLinks ++;
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
 		focusable = true;
 
@@ -8279,6 +8290,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
 		numLinks ++;
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
 		focusable = true;
 
@@ -8499,6 +8511,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 
         numLinks ++;
+        KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
         focusable = true;
 
@@ -8555,6 +8568,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 		names[object.name] = object if object.name != "";
 
 		numLinks++;
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined";
 
 		focusable = true;
 

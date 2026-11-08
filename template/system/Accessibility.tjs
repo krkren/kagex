@@ -16,7 +16,17 @@
 // The last owner to show some is in front (a Yes/No prompt over the choices), and only its
 // nodes are given to the engine; when it removes them, the ones behind it come back. The
 // screen reader's actions on a node (focus, click, ...) go to that owner's
-// onA11yAction(id, action, arg).
+// onA11yAction(id, action, arg). An owner that's a layer inside another owner's layer (a
+// scrolling list on a screen's message layer) shows with it: since 0.25.0 the outer one's
+// nodes are given with its inner ones' merged in (their ids "m<n>:<id>", their actions sent
+// back to them), whichever of them spoke last.
+//
+// The screens a game draws on its message layers (Config, save and load, Extras: since 0.25.0)
+// are read too: a fore message layer with links gives a node for each (a button, a link, a text
+// box, a checkbox, a slider; a layer of the game's own gives its own), named by its label
+// (a11yLabel, which the sample's drawButtonLabel sets), its help line (helptexts.csv, hint=) or
+// its name, with the help line as its description, the focus following the keys (keyLink);
+// KAGMessageA11yLater() after its links change.
 //
 // To check without a screen reader, run the engine with a REPL (-replfile) and read
 // Agent.a11yLog() (roughly what it would say) and Agent.a11yTree(), or act on a node with
@@ -90,7 +100,8 @@ class KAGAccessibility
 		var i = indexOf(owner);
 		if (i < 0) return setNodes(...);
 		owners[i].nodes = nodes, owners[i].focus = focus;
-		publish() if (i == owners.count - 1);
+		// (the front one, or one merged into it)
+		publish() if (i == owners.count - 1 || frontIndex() != owners.count - 1 || holderIndex(i) >= 0);
 	}
 
 	/**
@@ -126,6 +137,28 @@ class KAGAccessibility
 		return -1;
 	}
 
+	// the owner whose layer holds owner i's (its parent, or theirs), or -1
+	function holderIndex(i)
+	{
+		var o = owners[i].owner;
+		if (!isvalid o || typeof o.parent == "undefined") return -1;
+		for (var l = o.parent; l !== void && l !== null; l = l.parent) {
+			for (var j = 0; j < owners.count; j++) if (j != i && owners[j].owner === l) return j;
+			if (typeof l.parent == "undefined") break;
+		}
+		return -1;
+	}
+
+	// the owner shown: the last one, or the one holding it
+	function frontIndex()
+	{
+		var f = owners.count - 1, guard = 0;
+		while (f >= 0 && guard++ < 8) { var h = holderIndex(f); if (h < 0) break; f = h; }
+		return f;
+	}
+
+	var merged = %[]; // "m<n>" -> an owner merged into the one shown (publish)
+
 	/**
 	 * Gives the front owner's nodes to the engine (owners that are gone are dropped)
 	 */
@@ -135,14 +168,31 @@ class KAGAccessibility
 			owners.erase(i) if (!isvalid owners[i].owner);
 		toolbar = void if (toolbar !== void && !isvalid toolbar.owner);
 		try {
-			if (owners.count == 0 && toolbar === void) ElementsDialog.clearGameA11y();
-			else if (toolbar === void) with (owners[owners.count - 1]) ElementsDialog.setGameA11y(.nodes, .focus);
-			else {
-				var nodes = [], focus;
-				if (owners.count > 0) with (owners[owners.count - 1]) nodes.assign(.nodes), focus = .focus;
-				for (var i = 0; i < toolbar.nodes.count; i++) nodes.add(toolbar.nodes[i]);
-				ElementsDialog.setGameA11y(nodes, focus);
+			(Dictionary.clear incontextof merged)();
+			if (owners.count == 0 && toolbar === void) { ElementsDialog.clearGameA11y(); return; }
+			var nodes = [], focus, f = frontIndex();
+			if (f >= 0) {
+				with (owners[f]) nodes.assign(.nodes), focus = .focus;
+				// the owners inside it: their nodes, their ids marked as theirs
+				for (var j = 0; j < owners.count; j++) {
+					if (j == f) continue;
+					var h = holderIndex(j);
+					while (h >= 0 && h != f) h = holderIndex(h);
+					if (h != f) continue;
+					var key = "m" + j, o = owners[j];
+					merged[key] = o.owner;
+					for (var k = 0; k < o.nodes.count; k++) {
+						var n = %[];
+						(Dictionary.assign incontextof n)(o.nodes[k]);
+						n.id = key + ":" + n.id;
+						n.parent = key + ":" + n.parent if n.parent !== void;
+						nodes.add(n);
+					}
+					focus = key + ":" + o.focus if o.focus !== void && typeof o.owner.focused != "undefined" && o.owner.focused;
+				}
 			}
+			if (toolbar !== void) for (var i = 0; i < toolbar.nodes.count; i++) nodes.add(toolbar.nodes[i]);
+			ElementsDialog.setGameA11y(nodes, focus);
 		} catch (e) { dm("setGameA11y: " + e.message); }
 	}
 
@@ -159,11 +209,17 @@ class KAGAccessibility
 				return;
 			}
 		}
-		for (var i = owners.count - 1; i >= 0; i--) {
-			var owner = owners[i].owner;
-			if (!isvalid owner) continue;
-			if (typeof owner.onA11yAction != "undefined") owner.onA11yAction(id, action, arg);
+		// an owner merged into the one shown: its own id
+		var c = ((string)id).indexOf(":");
+		if (c > 0 && merged[id.substring(0, c)] !== void) {
+			var o = merged[id.substring(0, c)];
+			if (isvalid o && typeof o.onA11yAction != "undefined") o.onA11yAction(id.substring(c + 1), action, arg);
 			return;
+		}
+		var f = frontIndex();
+		if (f >= 0) {
+			var owner = owners[f].owner;
+			if (isvalid owner && typeof owner.onA11yAction != "undefined") owner.onA11yAction(id, action, arg);
 		}
 	}
 
@@ -183,3 +239,95 @@ class KAGAccessibility
 }
 
 var KAGA11y = new KAGAccessibility();
+
+// ---- the screens a game draws on its message layers (since 0.25.0) ----
+
+var KAGMessageA11yTrigger;
+// the fore message layers' nodes again, in a moment (their links or focus changed)
+function KAGMessageA11yLater()
+{
+	if (typeof global.KAGA11y != "Object" || KAGA11y === void || !KAGA11y.available || typeof global.kag == "undefined" || kag === void) return;
+	KAGMessageA11yTrigger = new AsyncTrigger(KAGMessageA11yNow, "") if KAGMessageA11yTrigger === void;
+	KAGMessageA11yTrigger.trigger();
+}
+
+function KAGMessageA11yNow()
+{
+	if (typeof global.kag == "undefined" || kag === void || !isvalid kag) return;
+	var lists = [ kag.fore.messages, kag.back.messages ];
+	for (var p = 0; p < 2; p++) {
+		var ms = lists[p];
+		for (var i = 0; ms !== void && i < ms.count; i++) {
+			var m = ms[i];
+			if (m === void || !isvalid m) continue;
+			if (p == 0 && m.visible && m.numLinks > 0) {
+				var r = KAGMessageNodes(m);
+				if (KAGA11y.indexOf(m) < 0) KAGA11y.setNodes(m, r[0], r[1]);
+				else KAGA11y.updateNodes(m, r[0], r[1]);
+			} else KAGA11y.removeNodes(m);
+		}
+	}
+}
+
+// what a screen reader calls a screen (its scenario's name, "config": the game's own words here,
+// through tr(); else the name as a word)
+var KAGA11yScreenNames = %[];
+
+// a name for a link without a label or a help line: its name as words ("extra_cgmode": Extra
+// cgmode)
+function KAGA11yWords(s)
+{
+	s = ((string)s).replace(/_/g, " ").trim();
+	return s == "" ? tr("Button") : s.charAt(0).toUpperCase() + s.substring(1);
+}
+
+// a message layer's links as nodes: [nodes, the focused one's id]
+function KAGMessageNodes(m)
+{
+	var win = m.window, tips = typeof win.tooltips == "Object" && win.tooltips !== void ? win.tooltips : void;
+	var screen = tips !== void ? tips.screenName() : "";
+	var root = %[ id:"screen", role:"group", name:tr(KAGA11yScreenNames[screen] !== void ? KAGA11yScreenNames[screen] : KAGA11yWords(screen)) ];
+	var line = tips !== void ? tips.helpText("_", screen) : "";
+	root.description = line if line != "";
+	var nodes = [ root ], focus;
+	for (var i = 0; i < m.numLinks; i++) {
+		var l = m.links[i];
+		if (l === void || l.type == m.ltOwn) continue; // (a layer of the game's own gives its own)
+		var o = l.object;
+		if (o !== void && (!isvalid o || !o.visible)) continue;
+		var key = o !== void && typeof o.name == "String" ? o.name : "";
+		var help = tips !== void && key != "" ? tips.helpText(key, screen) : "";
+		help = (string)l.hint if help == "" && typeof l.hint == "String";
+		help = (string)o.hint if help == "" && o !== void && typeof o.hint == "String";
+		var name = o !== void && typeof o.a11yLabel == "String" && o.a11yLabel != "" ? o.a11yLabel : help != "" ? help : KAGA11yWords(key);
+		var role = "button", states = [];
+		switch (l.type) {
+		case m.ltNormal:   role = "link"; break;
+		case m.ltEdit:     role = "text_box"; name += ": " + (string)o.text; break;
+		case m.ltCheckBox: role = "checkbox"; states.add("selected") if o.checked; break;
+		case m.ltSlider:   role = "slider"; name += ", %d%%".sprintf((int)(+o.position * 100)); break;
+		}
+		states.add("focusable") if o === void || o.enabled;
+		if (i == m.keyLink) { states.add("focused"); focus = "link" + i; }
+		var rect = o !== void ? KAGA11y.rectOf(o) :
+			KAGA11y.rectOf(m, +l.x[0], +l.y[0], +l.w[0], l.h !== void && l.h[0] !== void ? +l.h[0] : m.lineSize + m.lineSpacing);
+		var node = %[ id:"link" + i, role:role, parent:"screen", name:name, states:states, rect:rect ];
+		node.description = help if help != "" && help != name;
+		nodes.add(node);
+	}
+	return [ nodes, focus ];
+}
+
+// the screen reader on a message layer's link: the focus there, or the link run
+function KAGMessageA11yAction(m, id, action, arg)
+{
+	if (((string)id).substring(0, 4) != "link") return;
+	var n = +id.substring(4), l = m.links[n];
+	if (l === void) return;
+	if (action == "focus") { m.setFocusToLink(n, true); return; }
+	if (action == "click") {
+		if (l.type == m.ltCheckBox && l.object !== void) { l.object.checked = !l.object.checked; KAGMessageA11yLater(); return; }
+		if (l.type == m.ltEdit || l.type == m.ltSlider) { m.setFocusToLink(n, true); return; }
+		m.processLink(n);
+	}
+}

@@ -3058,6 +3058,11 @@ engine guide's "Accessibility"):
   ・The menu bar's titles, its menus and the controls list are read as they are (Elements
     screens).
   ・Saving a screenshot is announced.
+  ・The screens drawn on the message layers (since 0.25.0: the sample's Config, save and load,
+    Extras) are read: each button, link, text box, check box and slider, named by its label or
+    its help line, with the screen's help line as the screen's description; the focus follows
+    the keys, and the screen reader can press them. A scrolling list or another layer on the
+    screen that shows its own nodes (the music room's tracks, the player) is merged in.
 
 
 Where the engine has no such interface (the browser build; the Android and iOS builds are made
@@ -3077,6 +3082,28 @@ without it) all of this does nothing. A game shows its own UI drawn on layers th
   KAGA11y.removeNodes(owner)            Takes them away; the ones behind come back.
   KAGA11y.rectOf(layer)                 A layer's place on the screen, for a node's rect.
   kag.a11yReadText                      false: the messages aren't read out.
+
+A message layer's links (since 0.25.0) become nodes by themselves, as soon as the layer shows
+them and whenever they change:
+
+  the screen                            A group named by KAGA11yScreenNames[<the screen's
+                                        scenario, without .ks>] (through tr(); otherwise the
+                                        name as words), its description the screen's help line
+                                        (helptexts.csv's "<screen>._").
+  a link's name                         Its button's a11yLabel (the sample's drawButtonLabel
+                                        sets it to the label it draws), else its help line
+                                        (helptexts.csv, hint=), else its name as words
+                                        ("extra_cgmode": "Extra cgmode"). The help line is its
+                                        description when the name isn't it already.
+  KAGMessageA11yLater()                 The fore message layers' nodes again, in a moment: the
+                                        framework calls it as links are added or cleared, the
+                                        focus moves or the pages are exchanged; a game calls it
+                                        after changing a link's picture or state itself.
+
+An owner of KAGA11y.setNodes whose layer is inside another owner's (a KAGScrollList on a
+screen's message layer) is shown with it: the outer owner's nodes come with the inner ones'
+merged in, whichever of them called last, and the screen reader's actions go back to the one
+each node came from (onA11yAction gets the owner's own id).
 
 
 To check without a screen reader, run the engine with a REPL and read Agent.a11yLog() (roughly

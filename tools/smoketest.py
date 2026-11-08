@@ -5769,6 +5769,27 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("screen readers: a screen drawn on a message layer gives its buttons with their help lines, its own lists merged in, and a press through it works")
+    def _():
+        if not a11y_framework(eng) or eng.tjs('return typeof global.KAGMessageNodes != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no screen reader interface here, or a framework from before these screens' nodes)", flush=True)
+            return
+        eng.tjs('tf.musicView = 0; sf.extramode = 3; kag.process("title.ks", "*extra"); return 1;')
+        eng.wait("the music room", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.musicList !== void', timeout=30)
+        screen = a11y_find(eng, "group", "Music")
+        stop = a11y_find(eng, "button", "Stop the music")
+        tab = a11y_find(eng, "button", "Voices")
+        lst = a11y_find(eng, "list", "Tracks")
+        np = a11y_find(eng, "slider", "Now playing")
+        print("     the music room: %r (%s), %r, %r (%s), %r, %r" % (screen.get("name"), screen.get("description"), stop.get("name"),
+              tab.get("name"), tab.get("description"), lst.get("name"), np.get("name")), flush=True)
+        if not (screen.get("description") or "").startswith("Pick a track") or not (tab.get("description") or "").startswith("The music, the voices"):
+            raise SmokeError("the music room's nodes have no help lines: %s / %s" % (screen, tab))
+        a11y_click(eng, tab)
+        eng.wait("the voices' view", "+tf.musicView == 1", timeout=10)
+        eng.tjs('musicView(0); galleryStop() if typeof global.galleryStop != "undefined"; kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Sprite Mode: characters together in their poses, outfits, faces and variations, one dragged and turned round,"
           " a line said, the street by night or a picture of the player's own, a screenshot without the panel")
     def _():

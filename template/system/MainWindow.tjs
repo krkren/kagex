@@ -12288,6 +12288,7 @@ class KAGWindow extends Window
 		back = tmp;
 		current = (currentPage?back:fore).messages[currentNum]; // Re-set current
 		forEachEventHook('onExchangeForeBack');
+		KAGMessageA11yLater() if typeof global.KAGMessageA11yLater != "undefined"; // (screen readers: the screen now in front)
 
         // Restore choices
         if (selectShowing) {
