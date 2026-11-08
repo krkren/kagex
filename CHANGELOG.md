@@ -14,6 +14,7 @@
 
 ### Changed
 
+- **The transitions demo shows extNagano's transitions as the plugin draws them**: from 0.18.0 to 0.26.1 kagex drew book, multiripple, rgbfade, zoomfade and spin itself in scripts (`ScriptTransitions.tjs`), under the plugin's names, because krkrz_dev's rebuild of the plugin draws them wrong (`UPSTREAM.md` 42), so the demo passed kagex's drawing off as the plugin's. The scripts are gone, those five are left out of the demo, and it shows the plugin's other seven; a game that uses the five gets the plugin's own.
 - **A Yes/No prompt no longer moves the pointer to No by itself** (it did since KAG3: `DialogLayer.setFocusToLink`); Pointer on Questions brings that back.
 
 ## 0.26.1

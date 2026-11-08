@@ -3120,63 +3120,23 @@ def sample_steps(eng):
         if missing:
             raise SmokeError("these transitions' plugin isn't loaded: " + missing)
 
-    @step("book, multiripple, rgbfade, zoomfade and spin, drawn by kagex itself, cover the screen, end on time and can be stopped")
+    @step("the transitions demo's extNagano transitions are the plugin's own: a layer's transition is the engine's, nothing stands in for it")
     def _():
-        if eng.tjs('return typeof global.KAGScriptTransition != "undefined" ? 1 : 0;') != 1:
-            print("     (skipped: this build's framework predates transitions drawn by scripts)", flush=True)
+        if eng.tjs('return typeof global.KAGPluginTransitions != "undefined" && KAGPluginTransitions.flutter == "linked" ? 1 : 0;') != 1:
+            print("     (skipped: no extNagano here)", flush=True)
             return
-        # the canvases showing (a layer named "Script transition ..."), nine points of a layer's
-        # picture as shown, and how many of them differ from such a sample (layer 0 may still be
-        # placed or zoomed by an earlier step, so the back page's own picture is the reference)
-        eng.tjs('global.__stCanvases = function() { var r = [], a = [ kag.primaryLayer ];'
-                ' while (a.count) { var l = a.pop(); for (var i = 0; i < l.children.count; i++) { var c = l.children[i];'
-                ' r.add("%dx%d".sprintf(c.imageWidth, c.imageHeight)) if c.visible && c.name.indexOf("Script transition") == 0;'
-                ' a.add(c); } } return r.join(" "); };'
-                ' global.__stSample = function(l) { var w = kag.scWidth, h = kag.scHeight, v = l.visible; l.visible = true;'
-                ' try { l.onPaint() if typeof l.drawAffine != "undefined"; } catch {}'
-                ' var p = new global.Layer(kag, kag.primaryLayer); p.setImageSize(w, h); p.fillRect(0, 0, w, h, 0);'
-                ' p.piledCopy(0, 0, l, 0, 0, w, h); l.visible = v; var r = [];'
-                ' for (var i = 0; i < 9; i++) r.add(p.getMainPixel((int)(w * (i % 3 * 2 + 1) / 6), (int)(h * (i \\ 3 * 2 + 1) / 6)));'
-                ' invalidate p; return r; };'
-                ' global.__stDiffers = function(want) { var got = __stSample(kag.fore.layers[0]), d = 0;'
-                ' for (var i = 0; i < 9; i++) { var a = got[i], b = want[i];'
-                ' d++ if Math.abs((a & 0xff) - (b & 0xff)) + Math.abs((a >> 8 & 0xff) - (b >> 8 & 0xff)) + Math.abs((a >> 16 & 0xff) - (b >> 16 & 0xff)) > 24; }'
-                ' return d; }; return 1;')
-        # each from an empty layer (an affine layer without a picture says it's 32x32; the World's
-        # stand-in for no picture is one), which should still take the whole screen, run its time
-        # and end on the new picture (3 s each, so a slow REPL, the macOS runner's, finds it going)
-        want = str(eng.tjs('return "%dx%d".sprintf(kag.scWidth, kag.scHeight);'))
-        for i, (method, extra) in enumerate([("multiripple", 'count:"3"'), ("rgbfade", 'delayR:"0", delayG:"96", delayB:"192"'),
-                                             ("zoomfade", 'zoom1:"200"'), ("spin", 'type1:"0", type2:"1"')]):
-            picture = "event1" if i % 2 == 0 else "bg01_01"
-            shown = str(eng.tjs('kag.tagHandlers.freeimage(%%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%%[layer:"0", page:"back"]);'
-                                ' kag.fore.layers[0].visible = true;'
-                                ' kag.tagHandlers.image(%%[layer:"0", page:"back", storage:"%s", visible:"true"]);'
-                                ' tf.stWant = __stSample(kag.back.layers[0]);'
-                                ' kag.tagHandlers.trans(%%[layer:"0", method:"%s", time:"3000", children:"false", %s]);'
-                                ' return __stCanvases();' % (picture, method, extra)))
-            canvases = shown.split(" ") if shown else []
-            time.sleep(0.5)
-            mid = int(eng.tjs('return kag.transCount;'))
-            eng.wait(method + "'s end", "kag.transCount == 0", timeout=20)
-            end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
-            print("     %s: canvases %s (the screen: %s); going at half a second: transCount %d; after it: transCount, canvases,"
-                  " points unlike the back page's: %s" % (method, shown or "none", want, mid, end), flush=True)
-            if not canvases or any(c != want for c in canvases):
-                raise SmokeError("%s from an empty layer drew on %s, not the screen's %s" % (method, shown or "nothing", want))
-            if mid != 1 or end != "0,,0":
-                raise SmokeError("%s didn't run its time and end on the new picture (%d, then %s)" % (method, mid, end))
-        # a book stopped halfway ([stoptrans], or a click) ends on the new picture at once
-        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"back", storage:"bg01_01", visible:"true"]);'
-                ' tf.stWant = __stSample(kag.back.layers[0]);'
-                ' kag.tagHandlers.trans(%[layer:"0", method:"book", time:"5000", dir:"1", children:"false"]); return 1;')
-        time.sleep(0.5)
-        going = str(eng.tjs('return [kag.transCount, __stCanvases()].join(",");'))
-        stopped = str(eng.tjs('kag.tagHandlers.stoptrans(%[]); return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
-        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]); return 1;')
-        print("     book going: transCount, canvases %s; stopped: transCount, canvases, points unlike the back page's: %s" % (going, stopped), flush=True)
-        if going != "1," + want or stopped != "0,,0":
-            raise SmokeError("book didn't run or stop as it should (%s, then %s)" % (going, stopped))
+        # flutter on a KAG layer: the engine runs it, and nothing of kagex's draws one in its place
+        got = str(eng.tjs('''var l = kag.back.layers[0];
+            kag.tagHandlers.image(%[ layer: "0", page: "back", storage: "event1", visible: "true" ]);
+            kag.tagHandlers.trans(%[ layer: "0", method: "flutter", time: "3000", children: "false" ]);
+            var f = kag.fore.layers[0], r = [ typeof global.KAGScriptTransition, typeof global.KAGScriptTransitions,
+                kag.transCount, f.inTransition ? 1 : 0 ];
+            kag.tagHandlers.stoptrans(%[]);
+            kag.tagHandlers.freeimage(%[ layer: "0", page: "fore" ]); kag.tagHandlers.freeimage(%[ layer: "0", page: "back" ]);
+            return r.join(",");'''))
+        print("     a script stand-in, its table, transitions going, the layer's: %s" % got, flush=True)
+        if got != "undefined,undefined,1,1":
+            raise SmokeError("a transition of extNagano's isn't the plugin's own: %s" % got)
 
     @step("a movie named without its extension is found as .webm, the format the engine plays")
     def _():

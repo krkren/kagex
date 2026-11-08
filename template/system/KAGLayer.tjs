@@ -137,22 +137,8 @@ class KAGLayer extends Layer
 			elm.delayB = elm.delayb if elm.delayB === void;
 			elm.delayA = elm.delaya if elm.delayA === void;
 		}
-		// book, multiripple, rgbfade, zoomfade and spin are drawn by scripts, with or without
-		// extNagano (ScriptTransitions.tjs: the plugin's don't do what they say, UPSTREAM.md 42)
-		if (typeof global.KAGScriptTransition != "undefined" && KAGScriptTransition.handles(method, this, src)) {
-			new KAGScriptTransition(this, method, withchildren, src, elm);
-			return;
-		}
 		method = KAGTransitionMethod(method); // a crossfade when its plugin isn't loaded
 		super.beginTransition(method, withchildren, src, elm);
-	}
-
-	var scriptTransition; // a transition drawn by a script (KAGScriptTransition) while it runs
-
-	function stopTransition()
-	{
-		if (scriptTransition !== void) { scriptTransition.finish(); return; }
-		super.stopTransition(...);
 	}
 	
 	function setOptions(elm)
