@@ -4649,6 +4649,62 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("moving through a script KAG plays itself: back to the scene's start and the one before, on to the next scene, back to the last choice")
+    def _():
+        if not isinstance(eng, DesktopEngine) or eng.tjs('return typeof kag.kagScenePoint != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: it writes a script beside a desktop engine's save data, or a framework from before these moves)", flush=True)
+            return
+        # a script not in !scnlist.txt, so KAG plays it: titled scenes with waits and a choice
+        with open(os.path.join(eng.savedir, "zz_moves.ks"), "w", encoding="utf-8") as f:
+            f.write("*m1|Scene One\n[initscene]\n[cm]One A.[p]\nOne B.[p]\n*m2|Scene Two\n[cm]Two A.[p]\nTwo B.[p]\n"
+                    "[seladd text=\"Left\" target=*m3][seladd text=\"Right\" target=*m3][select]\n"
+                    "*m3|Scene Three\n[cm]Three A.[p]\nThree B.[p]\n*m4|Scene Four\n[cm]Four A.[p]\n[s]\n")
+        dirname = tjs_string(storage_name(eng.savedir) + "/")
+        eng.tjs('Storages.addAutoPath(%s); kag.process("zz_moves.ks", "*m1"); return 1;' % dirname)
+        stable = "kag.inStable && kag.conductor.curStorage == \"zz_moves.ks\""
+        def click(n):
+            for i in range(n):
+                eng.wait("a stop", stable, timeout=20)
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.4)
+            eng.wait("a stop", stable, timeout=20)
+        def where():
+            return str(eng.tjs("return kag.currentLabel;"))
+        def act(name):
+            eng.wait("a stop", stable, timeout=20)
+            eng.tjs('KAGRunAction("%s"); return 1;' % name)
+            time.sleep(0.6)
+            eng.wait("a stop", stable + " && kag.skipMode == 0", timeout=30)
+        eng.wait("Scene One", stable, timeout=30)
+        click(3)
+        got = [where()]
+        act("prevScene"); got.append(where())
+        act("prevScene"); got.append(where())
+        eng.tjs("tf.smokeAllSkip = kag.allskip; kag.allskip = true; return 1;")
+        try:
+            act("nextScene"); got.append(where())
+        finally:
+            eng.tjs("kag.allskip = tf.smokeAllSkip; return 1;")
+        click(2)
+        eng.wait("the choice", "kag.selectShowing", timeout=20)
+        eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]); return 1;")
+        time.sleep(0.6)
+        click(1)
+        got.append(where())
+        act("prevChoice")
+        for i in range(10):
+            if eng.tjs("return kag.selectShowing ? 1 : 0;") == 1:
+                break
+            click(1)
+        got.append(where() + (":choice" if eng.tjs("return kag.selectShowing ? 1 : 0;") == 1 else ""))
+        print("     KAG's own player: %s (two in, the scene's start, the one before, the next, past the choice, the choice again)" % " ".join(got), flush=True)
+        if got != ["*m2", "*m2", "*m1", "*m2", "*m3", "*m2:choice"]:
+            raise SmokeError("the scene moves in KAG's own player didn't go where they should: %s" % got)
+        eng.tjs('kag._selectLayer.onButtonClick(kag._selectLayer.selects[0]) if kag.selectShowing; Storages.removeAutoPath(%s); return 1;' % dirname)
+        time.sleep(0.5)
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.currentDialog === void', timeout=30)
+
     @step("moving through the story: the scene's start, a rewind, the last choice again, the next scene, and the offer to skip a scene read before")
     def _():
         if not eng.compiled or eng.tjs('return typeof global.playerMove != "undefined" ? 1 : 0;') != 1:

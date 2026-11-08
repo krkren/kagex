@@ -120,6 +120,18 @@ cleared it, a choice or another script, at most 50 texts. A load does the same.
   begins, stopping at a choice or unread text as skipping does (unless Config skips all).
   canPrevScene and canPrevChoice say whether there is one. The sample has a button for each by
   the message window's others (playerMove() in Override.tjs).
+- In scripts KAG plays itself (not compiled, or -scnplay=no; since 0.25.0) the same actions
+  (rewind, prevScene, prevChoice, nextScene: Actions.tjs) move to KAG's save points instead, its
+  titled labels, since KAG can't go back to a message: the window keeps each titled label's
+  state as it started (kag.kagMoveHistory, the newest first, kagMoveHistoryMax 100, in memory
+  only; cleared by a load and at [startanchor], so never back into the title), whatever the
+  game's own Back keeps (recordHistoryOfStore). A scene is a run of labels with one title (an
+  untitled label begins none); kagPrevScene() goes to the start of the scene playing (its first
+  titled label), or of the one before when no click has been made since; kagPrevChoice() to the
+  label of the last choice ([select] marks the label it's shown in), which plays to it again;
+  kagRewind() to the nearer of the two; kagNextScene() skips until a label of another title,
+  stopping at a choice or unread text. kagScenePoint() and kagChoicePoint() say where (void:
+  nowhere).
 - For a backlog (since 0.18.0): player.historyFaceIcon(pos, size) is the face of the speaker at
   history position pos as the face window drew it (envinit's faceCrop; void for narration or a
   character off the stage), player.historySnapshot(pos, layer) the World as it was there (as the
