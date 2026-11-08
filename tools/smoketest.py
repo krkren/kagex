@@ -3370,6 +3370,17 @@ def sample_steps(eng):
                     g = got.split(",")
                     if not (int(g[2]) == int(g[0]) - 1 and g[3] == g[1] and g[4] == "1"):
                         raise SmokeError("Change Controls didn't move the quick menu's button, or Reset didn't put the order back: %s" % got)
+                # (since 0.25.0) its strip: the first button dragged two places on
+                if eng.tjs('return typeof kag.currentDialog.strip == "Object" && kag.currentDialog.strip !== void ? 1 : 0;') == 1:
+                    got = str(eng.tjs('''var s = kag.currentDialog.strip, q = kag.quickMenu;
+                        s.buttons(); var first = s.names[0], second = s.names[1];
+                        s.onMouseDown(s.cell / 2, 30, mbLeft, 0); s.onMouseMove(s.cell * 1.5, 30, 0); s.onMouseMove(s.cell * 2.5, 30, 0);
+                        s.onMouseUp(s.cell * 2.5, 30, mbLeft, 0);
+                        var o = q.playerOrder(), r = [first, second, o !== void ? o.find(first) : -1, o !== void ? o[0] : "-"];
+                        q.resetPlayerButtons(); return r.join(",");''')).split(",")
+                    print("     the strip: %s dragged two places on (now at %s, %s first)" % (got[0], got[2], got[3]), flush=True)
+                    if got[2] != "2" or got[3] != got[1]:
+                        raise SmokeError("a drag in Change Controls' strip didn't move the quick menu's button: %s" % got)
             # the mouse's back button taken as a key (0.20.0 on)
             if eng.tjs('return typeof global.VK_XBUTTON1 != "undefined" ? 1 : 0;') == 1:
                 eng.tjs('kag.currentDialog.startWaiting("hide"); return 1;')

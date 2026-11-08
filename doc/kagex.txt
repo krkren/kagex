@@ -3200,7 +3200,10 @@ is where Android and iOS start, as a finger taps it), Quick Menu Opacity (quickM
 to 100%) and the buttons it leaves out (kag.quickMenu.setHidden(action, true), kept in
 kag.scflags.quickMenuHidden) and their order (since 0.20.0: Change Controls' arrows move a
 button earlier or later, kept in kag.scflags.quickMenuOrder, and the strip then puts them one
-after another, gap px apart; Reset puts the game's back). A button's picture is drawn at the
+after another, gap px apart; Reset puts the game's back). Since 0.25.0 Change Controls also
+shows the buttons in their order under its rows (KAGQuickOrderStrip, Controls.tjs), where a drag
+puts one in another place, the others making room; the rows shrink to fit the screen with it.
+A button's picture is drawn at the
 strip's size; a labelled one
 in the dialogs' button frame at its own height. The sample has them on Config's sixth page.
 When it can show again (the story starting, the window back) an unpinned strip peeks out for
