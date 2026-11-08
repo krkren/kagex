@@ -30,7 +30,10 @@ with a seed of its own so the lines above stay as they are (data/voice/pipgreet0
 `title` his picture beside them on the title screen (data/image/title_pip.png: waving, smiling,
 at 45%).
 
-usage: python3 tools/assets/make_pip.py [art] [voice] [speech] [greet] [title]
+`cg` makes a CG of Pip as a layered file, split as kagex-release splits a .psd (data/evimage/pipcg.txt
+and its pictures), and data/main/cgvariations.txt, the pictures its layers make.
+
+usage: python3 tools/assets/make_pip.py [art] [voice] [speech] [greet] [title] [cg]
 """
 import math, os, shutil, subprocess, sys, tempfile, urllib.request, wave
 
@@ -288,13 +291,15 @@ class Layer:
         b = [Offset(s, 2 + f).bbox() for s, c, a, f in self.ops]
         return (min(x[0] for x in b), min(x[1] for x in b), max(x[2] for x in b), max(x[3] for x in b))
 
-    def render(self, scale):
-        """the layer at scale: (left, top, RGBA image) in that level's pixels"""
+    def render(self, scale, size=None):
+        """the layer at scale: (left, top, RGBA image) in that level's pixels (on a canvas of
+        size, Pip's by default)"""
+        cw, ch = size or (W, H)
         x0, y0, x1, y1 = self.bbox()
         x0 = max(0, math.floor(x0 * scale))
         y0 = max(0, math.floor(y0 * scale))
-        x1 = min(math.ceil(W * scale), math.ceil(x1 * scale))
-        y1 = min(math.ceil(H * scale), math.ceil(y1 * scale))
+        x1 = min(math.ceil(cw * scale), math.ceil(x1 * scale))
+        y1 = min(math.ceil(ch * scale), math.ceil(y1 * scale))
         xs = (np.arange(x0, x1) + 0.5) / scale
         ys = (np.arange(y0, y1) + 0.5) / scale
         X, Y = np.meshgrid(xs, ys)
@@ -921,6 +926,164 @@ def make_title():
     print("wrote %s %s" % (os.path.relpath(path, ROOT), canvas.size), flush=True)
 
 
+# ---------------------------------------------------------------- a layered CG
+
+# One CG of Pip on a hill, as a layered file of the kind kagex-release splits a .psd or .clip into
+# (data/evimage/pipcg.txt, the layer structure, and pipcg_<layer id>.png), whose layers make
+# several pictures (data/main/cgvariations.txt: CGVariations.tjs): the sky by day, in the evening
+# or at night, the sun or the moon and stars, the light, Pip's arms, faces and beret. Folders
+# hold the choices (Sky, Arms, Faces, and in Faces a folder for each face's parts); what shows by
+# default is the day.
+CG_OUT = os.path.join(ROOT, "data", "evimage")
+CG_W, CG_H = 1920, 1080
+CG_SCALE = 1.1
+CG_OX, CG_OY = round(1180 - CX * CG_SCALE), round(960 - GROUND * CG_SCALE)
+GRASS, GRASS_LINE, GRASS_FAR = (132, 206, 126), (52, 120, 78), (176, 226, 160)
+
+
+def cg_scene(layer):
+    """a scene layer, drawn in the CG's own pixels: (left, top, image)"""
+    return layer.render(1.0, (CG_W, CG_H))
+
+
+def cg_pip(parts):
+    """Pip's layers (by group and name, the top one first) merged into one picture, at the CG's
+    scale and place: (left, top, image)"""
+    _, layers = build()
+    by = {(l.group, l.name): l for l in layers}
+    canvas = Image.new("RGBA", (math.ceil(W * CG_SCALE), math.ceil(H * CG_SCALE)), (0, 0, 0, 0))
+    for key in reversed(parts):
+        left, top, img = by[key].render(CG_SCALE)
+        if img is not None:
+            canvas.alpha_composite(img, (left, top))
+    box = canvas.getbbox()
+    return CG_OX + box[0], CG_OY + box[1], canvas.crop(box)
+
+
+def cg_fill(colour):
+    return 0, 0, Image.new("RGBA", (CG_W, CG_H), tuple(colour) + (255,))
+
+
+def cg_sky(stops):
+    """a sky from top to bottom through the colours given, (fraction, colour) pairs"""
+    t = np.linspace(0, 1, CG_H)
+    rgb = np.stack([np.interp(t, [f for f, c in stops], [c[k] for f, c in stops]) for k in range(3)], -1)
+    rows = np.concatenate([rgb.round().astype(np.uint8), np.full((CG_H, 1), 255, np.uint8)], -1)
+    return 0, 0, Image.fromarray(np.repeat(rows[:, None, :], CG_W, axis=1), "RGBA")
+
+
+def cg_stars():
+    rng = np.random.default_rng(26)
+    l = Layer("Stars")
+    n = 0
+    while n < 46:
+        x, y = rng.uniform(40, CG_W - 40), rng.uniform(30, 700)
+        if 700 < x < 1640 and y > 150:     # not over Pip
+            continue
+        if 1470 < x < 1760 and y < 330:    # nor the moon
+            continue
+        r = rng.uniform(5, 13)
+        l.fill(Ellipse(x, y, r * 2.2), WHITE, 0.18, feather=r * 2)
+        l.fill(Poly(star_points(x, y, r, r * 0.42, rot=rng.uniform(-90, -60))), (255, 248, 210), 0.95)
+        n += 1
+    return l
+
+
+def cg_clouds():
+    l = Layer("Clouds")
+    for cx, cy, k in ((300, 210, 1.0), (760, 120, 0.7), (1500, 420, 0.8)):
+        puffs = Union(*[Ellipse(cx + dx * k, cy + dy * k, r * k) for dx, dy, r in
+                        ((-90, 20, 60), (-30, -16, 78), (50, -4, 70), (110, 24, 52), (10, 30, 70))])
+        l.fill(puffs, WHITE, 0.85, feather=10)
+    return l
+
+
+def cg_layers():
+    """[(group path or None, name, opacity, visible, (left, top, image))], the top one first, and
+    the folders [(path, visible)]"""
+    sun = Layer("Sun")
+    sun.fill(Ellipse(1620, 220, 170), (255, 244, 190), 0.35, feather=80)
+    sun.fill(Ellipse(1620, 220, 84), (255, 226, 120), 1.0)
+    moon = Layer("Moon")
+    moon.fill(Ellipse(1610, 200, 140), (230, 230, 255), 0.22, feather=70)
+    moon.fill(Ellipse(1610, 200, 74) - Ellipse(1644, 178, 64), (255, 246, 206), 1.0)
+    far = Layer("Hill Far").outlined(Ellipse(380, 1330, 980, 520), GRASS_FAR, 6, (90, 150, 100))
+    near = Layer("Hill").outlined(Ellipse(1020, 1500, 1480, 650), vgrad(GRASS, (96, 172, 104), 850, 1080), 7, GRASS_LINE)
+    body = [(None, "Cheeks"), (None, "Body"), (None, "Antenna"), (None, "Feet")]
+    out = [
+        (None, "Stars", 255, False, cg_scene(cg_stars())),
+        (None, "Moon", 255, False, cg_scene(moon)),
+        (None, "Night Shade", 120, False, cg_fill((22, 20, 86))),
+        (None, "Evening Light", 64, False, cg_fill((255, 128, 48))),
+        ("Faces/Smile", "Brows", 255, True, cg_pip([(None, "Brows Neutral")])),
+        ("Faces/Smile", "Eyes", 255, True, cg_pip([("Eyes", "Open Eyes")])),
+        ("Faces/Smile", "Mouth", 255, True, cg_pip([("Mouth Grin", "Closed Mouth")])),
+        ("Faces/Laugh", "Brows", 255, True, cg_pip([(None, "Brows Raised")])),
+        ("Faces/Laugh", "Blush", 255, True, cg_pip([(None, "Blush")])),
+        ("Faces/Laugh", "Eyes", 255, True, cg_pip([(None, "Eyes Happy")])),
+        ("Faces/Laugh", "Mouth", 255, True, cg_pip([("Mouth Grin", "Open Mouth")])),
+        ("Faces/Surprised", "Brows", 255, True, cg_pip([(None, "Brows Raised")])),
+        ("Faces/Surprised", "Eyes", 255, True, cg_pip([("Eyes Wide", "Open Eyes")])),
+        ("Faces/Surprised", "Mouth", 255, True, cg_pip([("Mouth O", "Half-open Mouth")])),
+        ("Faces/Sleepy", "Brows", 255, True, cg_pip([(None, "Brows Neutral")])),
+        ("Faces/Sleepy", "Eyes", 255, True, cg_pip([("Eyes", "Closed Eyes")])),
+        ("Faces/Sleepy", "Mouth", 255, True, cg_pip([("Mouth", "Closed Mouth")])),
+        ("Arms", "Rest", 255, False, cg_pip([(None, "Arm L Rest"), (None, "Arm R Rest")])),
+        ("Arms", "Wave", 255, True, cg_pip([(None, "Arm L Rest"), (None, "Arm R Wave")])),
+        ("Arms", "Cheer", 255, False, cg_pip([(None, "Arm L Up"), (None, "Arm R Up")])),
+        (None, "Beret", 255, False, cg_pip([(None, "Beret")])),
+        (None, "Pip", 255, True, cg_pip(body)),
+        (None, "Shadow", 255, True, cg_pip([(None, "Shadow")])),
+        (None, "Hill", 255, True, cg_scene(near)),
+        (None, "Hill Far", 255, True, cg_scene(far)),
+        (None, "Clouds", 255, True, cg_scene(cg_clouds())),
+        (None, "Sun", 255, True, cg_scene(sun)),
+        ("Sky", "Day", 255, True, cg_sky([(0, (96, 170, 255)), (0.75, (196, 228, 255)), (1, (226, 240, 255))])),
+        ("Sky", "Evening", 255, False, cg_sky([(0, (88, 64, 160)), (0.45, (238, 120, 120)), (0.8, (255, 196, 128)), (1, (255, 220, 160))])),
+        ("Sky", "Night", 255, False, cg_sky([(0, (6, 8, 40)), (0.7, (30, 34, 100)), (1, (54, 52, 128))])),
+    ]
+    folders = [("Faces", True), ("Faces/Smile", True), ("Faces/Laugh", False), ("Faces/Surprised", False),
+               ("Faces/Sleepy", False), ("Arms", True), ("Sky", True)]
+    return out, folders
+
+
+CG_VARIATIONS = """# CG variations (CGVariations.tjs, doc/kagex.txt): pictures that are one layered file's layers
+# shown in different ways (made by tools/assets/make_pip.py cg). Tab-separated:
+# name, the file (or a variation it starts from), and what changes from the file's own
+# visibility: a layer or folder shown (with its folders; a folder with what's in it), !shown and
+# the others in its folder hidden, -hidden, * everything hidden first
+pipcg_day\tpipcg\t!Sky/Day, Sun, Clouds, !Arms/Wave, !Faces/Smile
+pipcg_laugh\tpipcg_day\t!Arms/Cheer, !Faces/Laugh
+pipcg_evening\tpipcg_day\t!Sky/Evening, Evening Light, -Clouds, Beret, !Arms/Rest, !Faces/Surprised
+pipcg_night\tpipcg\t!Sky/Night, -Sun, -Clouds, Moon, Stars, Night Shade, !Arms/Rest, !Faces/Sleepy
+"""
+
+
+def make_cg():
+    layers, folders = cg_layers()
+    os.makedirs(CG_OUT, exist_ok=True)
+    for f in os.listdir(CG_OUT):
+        if f == "pipcg.txt" or (f.startswith("pipcg_") and f.endswith(".png")):
+            os.remove(os.path.join(CG_OUT, f))
+    gid = {path: 1000 + i for i, (path, v) in enumerate(folders)}
+    lines = [HEADER, "\t\t\t\t%d\t%d" % (CG_W, CG_H)]
+    for i, (group, name, opacity, visible, (left, top, img)) in enumerate(layers):
+        lid = i + 1
+        img.save(os.path.join(CG_OUT, "pipcg_%d.png" % lid), optimize=True)
+        lines.append("0\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s" % (
+            name, left, top, img.width, img.height, LT_PSNORMAL, opacity, 1 if visible else 0, lid,
+            str(gid[group]) if group else ""))
+    for path, visible in folders:
+        parent = path.rsplit("/", 1)[0] if "/" in path else None
+        lines.append("2\t%s\t0\t0\t0\t0\t%d\t255\t%d\t%d\t%s" % (
+            path.rsplit("/", 1)[-1], LT_PSNORMAL, 1 if visible else 0, gid[path], str(gid[parent]) if parent else ""))
+    with open(os.path.join(CG_OUT, "pipcg.txt"), "w", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
+    with open(os.path.join(ROOT, "data", "main", "cgvariations.txt"), "w", newline="\n") as f:
+        f.write(CG_VARIATIONS)
+    print("pipcg: %d layers, %d folders" % (len(layers), len(folders)), flush=True)
+
+
 # ---------------------------------------------------------------- speech
 
 # One line in a real voice, to show the mouths by vowel (anim.ks, voice=9: pip000009.ogg), spoken
@@ -1003,7 +1166,8 @@ def make_speech():
 def main():
     what = sys.argv[1:] or ["art", "voice"]
     for w in what:
-        {"art": make_art, "voice": make_voice, "speech": make_speech, "greet": make_greet, "title": make_title}[w]()
+        {"art": make_art, "voice": make_voice, "speech": make_speech, "greet": make_greet, "title": make_title,
+         "cg": make_cg}[w]()
 
 
 if __name__ == "__main__":

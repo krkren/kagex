@@ -30,6 +30,12 @@ class EnvGraphicLayer extends GraphicLayerEx
 	var originx;
 	var originy;
 
+	// (since 0.26.0) a layer the World's links place (KAGEnvLinks.tjs): an object attached to another,
+	// or following its picture, has its place on the screen set from the other's, so recalcPosition
+	// hands over to this function (it gets the layer)
+	var linkPlace;
+	var linkChildren; // (the layers placed from this one, told at once when it moves)
+
 	function EnvGraphicLayer(win, par, owner) {
 		this.owner = owner;
 		this.ownerenv  = owner.env;
@@ -194,6 +200,7 @@ class EnvGraphicLayer extends GraphicLayerEx
 	 * Coordinate position adjustment
 	 */
 	function recalcPosition() {
+		if (linkPlace !== void) { linkPlace(this); return; }
 		var cz = nocameraMode ? 1 : (real)ownerenv.camerazoom / 100.0;
 		var cr = nocameraMode ? 0 : ownerenv.camerarotate;
 		var cx = nocameraMode ? 0 : ownerenv.camerax;
@@ -221,6 +228,22 @@ class EnvGraphicLayer extends GraphicLayerEx
 		super.zoomx = __zoomx * cz;
 		super.zoomy = __zoomy * cz;
 		super.rotate = __rotate - cr;
+		KAGEnvLinkChildren(this) if linkChildren !== void;
+	}
+
+	// where the picture is on the screen (the affine layer's own values, after the camera), and
+	// setting them directly (KAGEnvLinks.tjs)
+	property screenLeft { getter() { return super.left; } }
+	property screenTop { getter() { return super.top; } }
+	property screenZoomx { getter() { return super.zoomx; } }
+	property screenZoomy { getter() { return super.zoomy; } }
+	property screenRotate { getter() { return super.rotate; } }
+	function setScreen(l, t, zx, zy, r) {
+		super.left = l;
+		super.top = t;
+		super.zoomx = zx;
+		super.zoomy = zy;
+		super.rotate = r;
 	}
 
 	function getCenterCamera(xpos,ypos) {
@@ -462,6 +485,7 @@ var actionParam = %[
 
 KAGLoadScript('KAGEnvBase.tjs');
 KAGLoadScript('KAGEnvImage.tjs');
+KAGLoadScript('KAGEnvLinks.tjs');
 KAGLoadScript('KAGEnvLayer.tjs');
 KAGLoadScript('KAGEnvEvent.tjs');
 KAGLoadScript('KAGEnvStage.tjs');

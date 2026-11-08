@@ -1,0 +1,15 @@
+﻿# 画面が引き伸ばされる、ぼやける、黒い帯が出る
+## 黒い帯
+形の違う画面では、ゲームは自分の形を保ち、左右や上下に帯が出ます。フルスクリーンのとき：
+- [帯を出す](option:fullScreenFit=contain)：絵の全体を、作られたとおりに。
+- [画面いっぱい](option:fullScreenFit=cover)：帯は出ませんが、端が切れます。
+- [引き伸ばす](option:fullScreenFit=fill)：帯も切れもありませんが、形がゆがみます。
+## ぼやける、ギザギザになる
+元の大きさより大きく、または小さく映すと、絵はなめらかに補間されます。
+- [なめらか](option:smoothScaling=true)はやわらかく、[シャープ](option:smoothScaling=false)は輪郭がくっきりしますがギザギザになります。
+- ウィンドウ表示では、[100%](option:windowSize=100)がゲーム本来の大きさで、いちばん鮮明です。
+## ちらつき、ずれ
+動くときに絵の途中に線が走るときは、[垂直同期をオン](option:vsync=true)にしてください。
+## ウィンドウか画面全体か
+[ウィンドウ](option:fullScreen=false)か[フルスクリーン](option:fullScreen=true)。ウィンドウの大きさ：[50%](option:windowSize=50) [75%](option:windowSize=75) [100%](option:windowSize=100)。
+> スマートフォンやタブレットでは横向きにしてください。ゲームは横長です。

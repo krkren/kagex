@@ -16,7 +16,7 @@ function toggleFullScreenByKey()
     }
 }
 
-kag.bindKey(VK_F1, 0, showAbout, "About"); // in the game window (YesNoDialogLayer.tjs)
+kag.bindKey(VK_F1, 0, "@manual"); // the manual (Manual.tjs; About is in the Help menu and the manual's last page)
 kag.bindKey(VK_F2, 0, startSave, "Save");
 kag.bindKey(VK_F3, 0, startLoad, "Load");
 kag.bindKey(VK_F4, 0, startConfig, "Config");

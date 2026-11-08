@@ -1,0 +1,260 @@
+/**
+ * CG variations from one layered file (since 0.26.0; doc/kagex.txt, "CG Variations From One
+ * Layered File"): pictures that are one file's layers shown in different ways, each with a name
+ * of its own, listed in cgvariations.txt (tab-separated, # comments):
+ *
+ *   pipcg_day	pipcg	Sky Day, Sun, !Arms/Wave, !Faces/Smile
+ *   pipcg_laugh	pipcg_day	!Arms/Cheer, !Faces/Laugh
+ *
+ *   name     what scripts load as a picture: [image storage=pipcg_day], [EV file=pipcg_day],
+ *            [newlay file=...], a stage's image, cglist.csv (the gallery and sf["cg_PIPCG_DAY"]
+ *            go by it)
+ *   file     the layered file, without its extension: <file>.txt (psdlayer.tjs's layer structure,
+ *            with a picture per layer, <file>_<layer id>: what kagex-release splits a .psd or
+ *            .clip into), else <file>.psd or <file>.clip through the psdfile or clipfile plugin
+ *            (the desktop engines); or another variation's name, whose layers it starts from
+ *   layers   what changes from the file's own visibility, in order, separated by commas:
+ *              <layer>     shown, with the folders it's in (a name, or a path: <folder>/<layer>);
+ *                          a folder is shown with everything in it
+ *              !<layer>    the same, and the others in its folder hidden
+ *              -<layer>    hidden (a folder hides what's in it)
+ *              *           everything hidden first
+ *
+ * The picture is put together when a layer loads it (BitmapAffineSourceLayer.loadImages, so KAG
+ * and World layers alike) or through KAGLoadPicture(layer, name) for a plain Layer (the gallery's
+ * tiles, its viewer, a stage's background); the file last read is kept until a few seconds after
+ * the last picture drawn from it (KAGCGVariationLinger), so a gallery's tiles and its viewer read
+ * it once without holding its layers for the rest of the game
+ */
+
+var KAGCGVariations;                 // name (lower case) => %[ name, file, layers ]
+var KAGCGVariationFiles = %[];       // placed file (lower case) => PSDInfo
+var KAGCGVariationFileOrder = [];    // the files kept, the one used last at the end
+var KAGCGVariationKeep = 1;          // files kept at once
+var KAGCGVariationLinger = 10000;    // ms after the last picture drawn before they go (0: kept)
+var KAGCGVariationOwner;             // the KAG plugin that lets them go with the window
+var KAGCGVariationExtensions = [ ".txt", ".psd", ".clip" ];
+
+function KAGCGVariationsLoad()
+{
+	KAGCGVariations = %[];
+	var file = "cgvariations.txt";
+	if (!Storages.isExistentStorage(file)) return;
+	var lines = [];
+	lines.load(file);
+	for (var i = 0; i < lines.count; i++) {
+		var line = lines[i];
+		if (line == "" || line.charAt(0) == "#") continue;
+		var c = line.split(/\t/);
+		if (c.count < 2) continue;
+		var name = c[0].trim(), base = c[1].trim();
+		if (name == "" || base == "") continue;
+		var specs = [];
+		if (c.count > 2) {
+			var parts = c[2].split(",");
+			for (var j = 0; j < parts.count; j++) {
+				var s = parts[j].trim();
+				specs.add(s) if s != "";
+			}
+		}
+		KAGCGVariations[name.toLowerCase()] = %[ name: name, file: base, layers: specs ];
+	}
+}
+
+// the variation of that name (void: none)
+function KAGCGVariation(name)
+{
+	if (typeof name != "String" || name == "") return;
+	KAGCGVariationsLoad() if KAGCGVariations === void;
+	return KAGCGVariations[name.toLowerCase()];
+}
+
+// every variation's name, in no particular order
+function KAGCGVariationNames()
+{
+	KAGCGVariationsLoad() if KAGCGVariations === void;
+	var ret = [];
+	foreach(KAGCGVariations, function(k, v, d, ret) { ret.add(v.name); }, ret);
+	return ret;
+}
+
+// a variation's file and its layer changes, a base variation's first
+function KAGCGVariationChain(v)
+{
+	var chain = [ v ], cur = v;
+	for (var n = 0; n < 16; n++) {
+		var b = KAGCGVariations[cur.file.toLowerCase()];
+		if (b === void || chain.find(b) >= 0) break;
+		chain.insert(0, b);
+		cur = b;
+	}
+	var specs = [];
+	for (var i = 0; i < chain.count; i++) specs.push(chain[i].layers*);
+	return %[ file: cur.file, layers: specs ];
+}
+
+// the layered file's storage: given with its extension, else .txt, .psd, .clip (void: none)
+function KAGCGVariationFile(file)
+{
+	if (Storages.extractStorageExt(file) != "")
+		return Storages.isExistentStorage(file) ? file : void;
+	var names = [ file ];
+	names.add(file.toLowerCase()) if file != file.toLowerCase();
+	for (var n = 0; n < names.count; n++) {
+		for (var i = 0; i < KAGCGVariationExtensions.count; i++) {
+			var f = names[n] + KAGCGVariationExtensions[i];
+			if (Storages.isExistentStorage(f)) return f;
+		}
+	}
+}
+
+// the file's layers, read once (the last few kept)
+function KAGCGVariationInfo(win, file)
+{
+	var key = file.toLowerCase(), info = KAGCGVariationFiles[key];
+	if (info !== void && isvalid info) {
+		var at = KAGCGVariationFileOrder.find(key);
+		if (at >= 0) KAGCGVariationFileOrder.erase(at);
+		KAGCGVariationFileOrder.add(key);
+		return info;
+	}
+	KAGLoadScript("psdlayer.tjs") if typeof global.PSDInfo == "undefined";
+	if (KAGCGVariationOwner === void || !isvalid KAGCGVariationOwner) {
+		// (the files' layers belong to the window: let go before it is, not at the engine's exit,
+		// when the globals they need are gone)
+		KAGCGVariationOwner = new KAGCGVariationFilesOwner();
+		win.addPlugin(KAGCGVariationOwner) if typeof win.addPlugin != "undefined";
+	}
+	info = new PSDInfo(win);
+	try {
+		info.loadImages(file);
+	} catch (e) {
+		invalidate info;
+		throw e;
+	}
+	KAGCGVariationFiles[key] = info;
+	KAGCGVariationFileOrder.add(key);
+	while (KAGCGVariationFileOrder.count > KAGCGVariationKeep) {
+		var old = KAGCGVariationFileOrder[0];
+		KAGCGVariationFileOrder.erase(0);
+		var o = KAGCGVariationFiles[old];
+		delete KAGCGVariationFiles[old];
+		invalidate o if o !== void && isvalid o;
+	}
+	return info;
+}
+
+// every file kept, let go
+function KAGCGVariationRelease()
+{
+	foreach(KAGCGVariationFiles, function(k, v) { invalidate v if v !== void && isvalid v; });
+	(Dictionary.clear incontextof KAGCGVariationFiles)();
+	KAGCGVariationFileOrder.clear();
+}
+
+class KAGCGVariationFilesOwner extends KAGPlugin
+{
+	var timer;
+	function KAGCGVariationFilesOwner() { super.KAGPlugin(); timer = new Timer(onTimer, ""); timer.enabled = false; }
+	function finalize()
+	{
+		invalidate timer if timer !== void && isvalid timer;
+		KAGCGVariationRelease();
+		super.finalize(...);
+	}
+	// a picture was drawn: the files go KAGCGVariationLinger ms from now
+	function touch()
+	{
+		timer.enabled = false;
+		if (KAGCGVariationLinger <= 0) return;
+		timer.interval = KAGCGVariationLinger;
+		timer.enabled = true;
+	}
+	function onTimer()
+	{
+		timer.enabled = false;
+		KAGCGVariationRelease();
+	}
+}
+
+// the layers and folders outside any folder
+function KAGCGVariationTop(info)
+{
+	var ret = [];
+	for (var i = 0; i < info.layers.count; i++) ret.add(info.layers[i]) if info.layers[i].group === void;
+	for (var i = 0; i < info.groups.count; i++) ret.add(info.groups[i]) if info.groups[i].group === void;
+	return ret;
+}
+
+// a folder and everything in it
+function KAGCGVariationSetInside(pl, g, v)
+{
+	pl.setVisibleInfo(g, v);
+	if (g.layers === void) return;
+	for (var i = 0; i < g.layers.count; i++) KAGCGVariationSetInside(pl, g.layers[i], v);
+}
+
+// the layer changes on a PSDLayer of the file
+function KAGCGVariationApply(pl, info, specs, name, file)
+{
+	for (var i = 0; i < specs.count; i++) {
+		var s = specs[i];
+		if (s == "*") {
+			for (var j = 0; j < info.layers.count; j++) pl.setVisibleInfo(info.layers[j], false);
+			for (var j = 0; j < info.groups.count; j++) pl.setVisibleInfo(info.groups[j], false);
+			continue;
+		}
+		var mode = s.charAt(0);
+		if (mode == "-" || mode == "!" || mode == "+") s = s.substring(1).trim();
+		else mode = "";
+		var li = info.getPropInfo(s);
+		if (li === void) throw new Exception(name + ": no layer or folder " + s + " in " + file + " (cgvariations.txt)");
+		if (mode == "-") {
+			KAGCGVariationSetInside(pl, li, false);
+			continue;
+		}
+		if (mode == "!") {
+			var others = li.group !== void ? li.group.layers : KAGCGVariationTop(info);
+			for (var j = 0; j < others.count; j++) pl.setVisibleInfo(others[j], false) if others[j] !== li;
+		}
+		KAGCGVariationSetInside(pl, li, true);
+		for (var g = li.group; g !== void; g = g.group) pl.setVisibleInfo(g, true);
+	}
+}
+
+/**
+ * Draws the variation of that name into a layer (its image and its image size): true, or false
+ * when there's no variation of that name
+ */
+function KAGCGVariationDraw(target, name)
+{
+	var v = KAGCGVariation(name);
+	if (v === void) return false;
+	var c = KAGCGVariationChain(v);
+	var file = KAGCGVariationFile(c.file);
+	if (file === void) throw new Exception(name + ": no layered file " + c.file + " (.txt, .psd or .clip; cgvariations.txt)");
+	var info = KAGCGVariationInfo(target.window, file);
+	var pl = new PSDLayer(target.window, target, info);
+	try {
+		KAGCGVariationApply(pl, info, c.layers, v.name, file);
+		pl.updateImage();
+		target.assignImages(pl);
+		target.setSizeToImageSize();
+	} catch (e) {
+		invalidate pl;
+		KAGCGVariationOwner.touch() if KAGCGVariationOwner !== void && isvalid KAGCGVariationOwner;
+		throw e;
+	}
+	invalidate pl;
+	KAGCGVariationOwner.touch() if KAGCGVariationOwner !== void && isvalid KAGCGVariationOwner;
+	return true;
+}
+
+/**
+ * A picture into a plain Layer: a CG variation, or the image of that name (what loadImages returns)
+ */
+function KAGLoadPicture(layer, name)
+{
+	if (KAGCGVariationDraw(layer, name)) return %[];
+	return layer.loadImages(name);
+}

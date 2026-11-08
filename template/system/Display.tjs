@@ -39,6 +39,13 @@ function KAGWindowSizeValues()
 	return list;
 }
 
+// a window or the whole screen (since 0.26.0, for the manual's links: Config screens have their own buttons)
+KAGDefineOption(%[ name:"fullScreen", label:"Screen", kind:"toggle",
+	values:[ ["Window", false], ["Full Screen", true] ],
+	available:function { return KAGIsDesktop() && typeof kag.changeFullScreenOrWindow != "undefined"; },
+	getValue:function { return !!kag.fullScreened; },
+	setValue:function(v) { kag.changeFullScreenOrWindow(!!v); } ]);
+
 KAGDefineOption(%[ name:"windowSize", label:"Window Size", kind:"choice", initial:100,
 	values:[ ["50%", 50], ["75%", 75], ["100%", 100] ], // the sizes that fit, at start (KAGApplyDisplayOptions)
 	available:function { return KAGIsDesktop() && typeof kag.setZoom != "undefined"; },
@@ -46,12 +53,20 @@ KAGDefineOption(%[ name:"windowSize", label:"Window Size", kind:"choice", initia
 	setValue:function(v) {
 		if (kag.fullScreened) { kag.scflags.zoomNumer = v, kag.scflags.zoomDenom = 100; return; }
 		kag.setZoom(v, 100);
+		KAGDisplayMenuSync();
 	} ]);
 
 KAGDefineOption(%[ name:"fullScreenFit", label:"Full Screen Fit", kind:"choice", save:true, initial:"contain",
-	values:[ ["Bars", "contain"], ["Fill", "cover"], ["Stretch", "fill"] ],
+	values:[ ["Bars", "contain"], ["Fill", "cover"], ["Stretch", "fill"], ["Part Way", "between"] ],
 	available:function { return typeof kag.setViewport != "undefined"; },
 	setValue:function(v) { kag.viewportFit = v; kag.applyMenuBarLayout(); } ]);
+
+// Part Way (since 0.26.0): how far from the bars (all of the picture) to filling the screen (its
+// edges cut off), as a percentage
+KAGDefineOption(%[ name:"fullScreenFill", label:"How Far to Fill", kind:"slider", save:true, initial:50,
+	min:0, max:100, step:5, ends:[ "Bars", "Fill" ],
+	available:function { return typeof kag.setViewport != "undefined"; },
+	setValue:function(v) { kag.viewportFill = +v; kag.applyMenuBarLayout() if kag.viewportFit == "between"; } ]);
 
 KAGDefineOption(%[ name:"smoothScaling", label:"Smooth Scaling", kind:"toggle", save:true, initial:true,
 	values:[ ["Smooth", true], ["Sharp", false] ],
@@ -88,7 +103,7 @@ KAGDefineOption(%[ name:"screenshotFormat", label:"Screenshot Format", kind:"tog
 function KAGApplyDisplayOptions()
 {
 	KAGOptions.windowSize.values = KAGWindowSizeValues() if KAGIsDesktop();
-	var names = [ "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ];
+	var names = [ "fullScreenFill", "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ];
 	for (var i = 0; i < names.count; i++) {
 		var o = KAGOptions[names[i]];
 		if (o.available !== void && !o.available()) continue;
@@ -96,6 +111,38 @@ function KAGApplyDisplayOptions()
 		if (v === void) continue; // never set: the engine's own
 		try { o.setValue(v); } catch (e) { dm(names[i] + ": " + e.message); }
 	}
+	KAGDisplayMenuSync();
+}
+
+// The Screen menu's window sizes (since 0.26.0): one radio item for each size that fits the
+// screen (Menus.tjs, and a game's own menus, add them)
+function KAGDisplayMenuSizes(win, menu)
+{
+	if (menu === void || !KAGIsDesktop() || typeof win.setZoom == "undefined") return;
+	var w = win.scWidth, h = win.scHeight;
+	var sw = typeof System.desktopWidth != "undefined" ? System.desktopWidth : System.screenWidth;
+	var sh = typeof System.desktopHeight != "undefined" ? System.desktopHeight : System.screenHeight;
+	for (var i = 0; i < KAGWindowSizes.count; i++) {
+		var p = KAGWindowSizes[i];
+		if (p != 100 && (w * p / 100 > sw || h * p / 100 + win.menuBarHeight > sh)) continue;
+		var item = new KAGMenuItem(win, p + "%", 2, KAGWindowSizeMenuClick incontextof global, false);
+		item.windowSize = p;
+		menu.add(item);
+	}
+}
+
+function KAGWindowSizeMenuClick(item)
+{
+	KAGOptionSet("windowSize", item.windowSize);
+	KAGDisplayMenuSync();
+}
+
+// the size items' ticks, as the window is
+function KAGDisplayMenuSync()
+{
+	if (typeof global.kag != "Object" || kag === void || typeof kag.displayMenu != "Object") return;
+	var v = KAGOptionGet("windowSize"), c = kag.displayMenu.children;
+	for (var i = 0; i < c.count; i++) if (typeof c[i].windowSize != "undefined") c[i].checked = c[i].windowSize == v;
 }
 
 // [screenshot enabled=false] / [screenshot off] ... (kept in saves: KAGWindow.screenshotsOff)

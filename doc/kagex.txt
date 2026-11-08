@@ -2890,6 +2890,14 @@ system variables (scflags.language) and wins from then on.
   scnTitleIn(scene[, lang]), scnTitles(scene)
                                 A compiled scene's title in a language, and in every one by
                                 code (KAGEnvPlayer.tjs; the scenes of a StorageData).
+  KAGLanguage.menuCode          The language of the menus (since 0.26.0): menuLanguage, or the
+                                story's (current) when the player hasn't chosen one for them.
+  kag.setMenuLanguage(code)     The menus in a language of their own ("": the story's), shown
+                                as setLanguage shows a language.
+  KAGLanguage.second            A second language shown under the story's, or void.
+  kag.setSecondLanguage(code)   Shows it ("": none) and draws the page on show again.
+  kag.swapLanguages()           The story's language and the second swapped (the action
+                                swapLanguages, Shift+F9).
 
 
 The message window records what each page draws (MessageLayer.redrawTextEnabled, on when
@@ -2898,6 +2906,28 @@ language, and draws the page again from that record in the new language
 (MessageLayer.redrawTextIn). A message layer with buttons or links on it isn't drawn again:
 the screen it belongs to is (languageChangeHook). The system buttons ([sysbutton]) load their
 images again by name.
+
+
+◇ The menus' own language, and two languages at once (since 0.26.0)
+
+The menus can be in a language of their own while the story is in another (the options
+menuLanguage and secondLanguage, Options.tjs; the sample's Config has them on its last page,
+Languages). With one, data/lang/<code>/ on the search path, the strings (tr()), the menu bar,
+the options' labels, the quick menu, the manual and the fonts of every role but "message" are
+the menus' (KAGLanguage.menuCode); the story's text, its speakers' names, the choices, the
+scenes' titles, the message window's font and its line breaking are the story's
+(KAGLanguage.current). F9 and the Language buttons change the story's language; with no menu
+language of their own the menus follow it, as before 0.26.0.
+
+A second language shows each message again under it, at the click wait, in a smaller size
+(kag.secondLanguageScale, 0.72 of the window's) and another colour (kag.secondLanguageColor):
+for language learners, and for two players who read different languages. It's the compiled
+scenes' own translation of each text (scripts KAG plays itself have none), recorded with the
+page (MessageLayer.beginSecondText), so switching languages, swapping the two (Shift+F9, the
+action swapLanguages) or turning it off draws the page again as it should be. A message too
+long for the window's lines is cut where the window ends. The backlog keeps the story's
+language. The player's choices are kept in the system variables (scflags.menuLanguage,
+scflags.secondLanguage).
 
 
 
@@ -3356,7 +3386,14 @@ variables and applied at start; one the platform can't do leaves its row empty:
   windowSize        the window's size as a share of the game's, those that fit the screen
                     (desktops; in full screen it's kept for when the window comes back)
   fullScreenFit     how the game fills a screen of another shape: Bars ("contain"), Fill (the
-                    edges cut off, "cover") or Stretch ("fill"); kag.viewportFit
+                    edges cut off, "cover"), Stretch ("fill") or, since 0.26.0, Part Way
+                    ("between"): kag.viewportFit
+  fullScreenFill    Part Way's percentage (since 0.26.0): 0 is the bars' size, 100 the fill's,
+                    and between them the picture is that much larger, its edges cut off that
+                    much less (kag.viewportFill, kag.viewportBetweenZoom(): setViewport's
+                    "custom" zoom from the window's size)
+  fullScreen        the window or the whole screen (since 0.26.0; desktops), for links such as
+                    the manual's
   smoothScaling     smooth or sharp scaling to the screen (-smoothzoom)
   vsync             frames in step with the display (Window.waitVSync)
   padEnabled        the controller on or off (System.padEnabled)
@@ -3381,6 +3418,9 @@ For the game, in KAGWindow (AfterInit.tjs):
 [screenshot enabled=false] turns screenshots off until [screenshot enabled=true], for scenes
 that would spoil the story ([screenshot off] and [screenshot on] say the same); F12 then says
 so instead, and saves keep it. The sample's Config has them on its sixth page.
+
+The Screen menu has the window's sizes that fit the screen (since 0.26.0: KAGDisplayMenuSizes
+adds them to a game's own menus), ticked as the window is.
 
 
 
@@ -3974,6 +4014,158 @@ first row, or a click on one on the stage), which a drag moves and the wheel zoo
 screen again without the panel and takes a screenshot as F12 does; with the panel away the whole
 stage shows, and a right-click or the button in the corner brings it back. The panel and the
 World change between [begintrans] and [endtrans], so they fade in as one.
+
+● CG Variations From One Layered File
+
+A CG often comes in variations, one layered file with some of its layers shown: the same scene in
+the evening, with another face, with a hat. Template/system/CGVariations.tjs (since 0.26.0) puts
+such a picture together from the file as it's shown, so the game ships the file once rather than
+a flat picture for every variation. Each variation has a name of its own, listed in
+cgvariations.txt (tab-separated, # comments):
+
+  # name         file (or a variation)   what changes from the file's own visibility
+  pipcg_day      pipcg                   !Sky/Day, Sun, Clouds, !Arms/Wave, !Faces/Smile
+  pipcg_laugh    pipcg_day               !Arms/Cheer, !Faces/Laugh
+
+The name is a picture's name wherever a script loads one: [image storage=pipcg_day], [EV
+file=pipcg_day], [newlay file=pipcg_day], a stage's image, imagenamemap.txt's replacements
+and cglist.csv, so the gallery shows it and sf["cg_PIPCG_DAY"] marks it seen, each
+variation by its own name. The file is the layered file without its extension: <file>.txt,
+psdlayer.tjs's layer structure with a picture per layer (<file>_<layer id>, in any image format),
+which is what kagex-release splits a .psd or .clip into, so a release reads it on every platform;
+else <file>.psd or <file>.clip itself, through the psdfile or clipfile plugin (the desktop
+engines). In its place the name of another variation starts from that one's layers, its own
+changes after. The changes, in order, separated by commas:
+
+  <layer>       shown, with the folders it's in; a folder is shown with everything in it. A
+                name, a folder's name, or a path from the top (<folder>/<layer>), which tells
+                apart layers of one name in different folders
+  !<layer>      the same, and the others in its folder hidden (one face of several)
+  -<layer>      hidden; a folder with everything in it
+  *             everything hidden first
+
+Everything else keeps the file's own visibility. A name the file has no layer or folder for is
+an error that names it. The picture is put together when a layer loads it (KAG and World layers
+alike), in some tens of milliseconds for a 1920x1080 picture of thirty layers. The file's layers
+are kept for ten seconds after the last picture drawn from it (KAGCGVariationLinger, in ms; 0
+keeps them), so a gallery's tiles and its viewer read it once, and the layers don't stay in
+memory for the rest of the game. Scripts load one into a plain Layer through
+
+  KAGLoadPicture(layer, name)     a variation, or the image of that name (loadImages)
+  KAGCGVariation(name)            the variation of that name, %[ name, file, layers ], or void
+  KAGCGVariationNames()           every variation's name
+
+The sample's Animated Character demo shows four, pipcg_day, pipcg_laugh, pipcg_evening and
+pipcg_night, made of data/evimage/pipcg.txt and its pictures (tools/assets/make_pip.py cg), which
+are one tile in the gallery.
+
+● The Manual
+
+Template/system/Manual.tjs (since 0.26.0) shows a manual in the game window, on every platform:
+pages of help with links between them, Back and Forward, and links that change a setting there
+and then or open a screen. Help > Contents opens it, as do the action "manual" (F1, unless the
+game binds F1 to something else) and KAGShowManual(page) from a script or a button
+(exp="KAGShowManual()"). Every game gets the framework's pages (template/system/kagexmanual_*.txt,
+in English and Japanese): an index, the controls, saving and loading, the settings, and answers
+for a game that's slow, a picture stretched or blurry, no sound, movies that don't play, and
+making the game easier to see, hear and play, and getting help. KAGManualEnabled = false turns
+it off (Help > Contents then opens helpFile, as before).
+
+A page is a text file found by its name: the game's manual_<page>.txt (a language's own in
+data/lang/<code>/, as its pictures), else the framework's kagexmanual_<page>_<language>.txt,
+then kagexmanual_<page>.txt. So a game adds pages, and puts its own in place of the framework's
+(manual_index.txt for its first page, manual_support.txt with its own address). A page's lines:
+
+  # The page's title             its first line
+  ## A heading
+  A paragraph: lines that follow each other make one; a blank line ends it.
+  - an item of a list
+  > a note, in a box
+  ---                            a rule across the page
+  ; a comment
+
+and in the text:
+
+  [what it says](where it goes)  a link:
+      <page>, page:<page>          another page
+      option:<name>=<value>        an option (Options.tjs) set there and then, with a box before
+                                   it that's filled while the option has that value: rows of
+                                   them work as Config's buttons do
+      action:<name>                the manual closes and the action is done: one of Actions.tjs,
+                                   an option's button by its name (padTest), controls or about
+      url:<address>                opened in the browser where the engine can, else copied
+      copy:<text>                  copied to the clipboard
+  {title} {version}              the game's title and version (sf.software_title, _version)
+  {engine} {platform}            the engine's version, and Windows, Linux, macOS, Android, iOS or
+                                 a web browser
+  {savefolder} {screenshots}     where the saves and the screenshots go
+  {key:<action>}                 the keys, controller buttons and gestures that do an action now
+  {option:<name>}                an option's value now, as Config shows it
+  \[ \] \{ \} \\                 the character itself
+
+A link this platform can't follow (an option it hasn't, a screen the game hasn't) shows as text.
+
+The keys: up and down move between the links and scroll, Return or A follows one, left or
+Backspace goes back, right forward, Page Up and Page Down scroll, Home goes to the index, Esc or
+B closes it. The wheel, a drag and the scroll bar scroll; a click follows a link; a right-click
+goes back, or closes it on its first page. Screen readers get the page as headings, paragraphs
+and links (an option's as a checkbox). Its colours are KAGManualTheme's, its text styles
+"manual.title", "manual.heading", "manual.text" and "manual.button" (Fonts.tjs).
+
+The sample's manual adds a page about its demos and its own support page, and Config has a Manual
+button under its panels.
+
+● Debug Helpers
+
+Template/system/DebugTools.tjs (since 0.26.0) helps a game's writers and its tests. Its Debug
+menu items (the Debug menu shows in debug mode: debugMenu.visible in Config.tjs) come after the
+framework's own:
+
+  Restart This Script       the script the game is in, from its top
+  Go to a Line ...          the script's lines with text (a compiled script's, each with its
+                            line number, speaker and text; a script KAG plays, its labels) in the
+                            manual's viewer: a link plays from that line (player.seek)
+  Flags ...                 the game's flags (f., sf., tf.) with their values, in the manual's
+                            viewer; the ones flaglist.txt lists come first, with what they are and
+                            links that set them to the values it offers (tab-separated: the flag,
+                            what it is, the values by commas), and true and false for the others
+  Copy the Voice's File Name, Copy Where the Game Is
+                            to the clipboard: the voice of the line shown; the script, line,
+                            label, speaker and text
+  Write a Bug Report        bugreport-<date>.txt in the save folder (the game, the engine, where
+                            it is, the voice, the language, every f. and sf. flag, the World's
+                            objects and the log's last 200 lines) and bugreport-<date>.png (the
+                            screen); its path is copied
+  Trace Tags in the Log     every tag the main conductor runs, with where, its attributes, what
+                            its handler returned and how long it took (KAGDebugTrace)
+  Layers and World into the Log
+                            the layers shown, as a tree, and the World's objects (KAGDebugLayers,
+                            KAGDebugWorld)
+
+-allseen=yes on the command line makes every CG, scene, song and movie count as seen for that run
+(tf.allseen, which isn't saved; not in a signed build). -instance=<name> gives the run a
+single-instance lock of its own, so several copies of a game can run at once (for tests).
+
+KAGPlaytest plays a route on its own: KAGPlaytest.start(%[ storage, label, choices, skip, until,
+stuck, timeout ]) plays from the script (and label), skipping read and unread text alike unless
+skip is false, clicking on at every wait, answering a Yes/No prompt Yes, taking choices[n] at the
+n-th choice (the first option past the list) and stopping at until (a script, once it has left
+the first one), or as "stuck" when nothing has moved for stuck ms (20000), or after timeout ms.
+KAGPlaytest.report() says what happened in one line: status|where|choices taken as
+picked/options|ms|message.
+
+tools/playtest.py runs a game's routes with it, each in a game of its own (headless on Linux, its
+own save folder and log), and reports each one: done, stuck, or the first script error with its
+trace (the engine's "Script exception raised" or KAG's "A fatal error has occurred", which names
+the script, line and tag):
+
+  python3 tools/playtest.py --start char.ks --until s0001.ks --all --jobs 2
+  route 1: done    choices 0/2      9.7 s  at s0001.ks:3
+  route 2: done    choices 1/2      9.0 s  at s0001.ks:3
+
+--choices 1,0 plays one route; --all plays every one, the first without choices given, then for
+each choice a route made one route for each of its other options (--max-routes stops it); --jobs
+runs that many at once. Its exit code is the number of routes that failed.
 
 ● The Name Box
 

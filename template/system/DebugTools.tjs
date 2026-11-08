@@ -1,0 +1,492 @@
+/**
+ * Debug helpers (since 0.26.0; doc/kagex.txt, "Debug Helpers"): for a game's writers and its
+ * tests. The Debug menu's items (debug mode: Config.tjs's debugMenu.visible) and one-line helpers
+ * for the console or a REPL:
+ *
+ *   KAGPlaytest.start(%[ storage, label, choices, skip, until, stuck, timeout ])
+ *       plays from a script (and label) on its own: it clicks on at every wait, skips (skip, the
+ *       default: read and unread text alike), takes choices[n] at the n-th choice (the first
+ *       option beyond the list) and stops at until (a script, once it has left the first), or
+ *       "stuck" when nothing has moved for stuck ms (20000), or after timeout ms (600000).
+ *       KAGPlaytest.report() is what happened, one line: status, where, the choices taken as
+ *       "<picked>/<options>", the time; tools/playtest.py drives it
+ *   KAGDebugTrace(on)      every tag the main conductor runs, into the log, with how long it took
+ *   KAGDebugLayers()       the layers shown, as a tree, into the log
+ *   KAGDebugWorld()        the World's characters, layers, stage and time, into the log
+ *   -allseen=yes           every CG, scene, song and movie counts as seen this run (tf.allseen;
+ *                          never saved)
+ *
+ * The Debug menu adds: restart this script, a list of the script's lines to go to, the flags (to
+ * read and change, flaglist.txt saying what the ones that matter are), copy the voice's file
+ * name or where the game is, and a bug report (where it is, the flags, the World, the log's last
+ * lines and a screenshot, in the save folder).
+ */
+
+// ------------------------------------------------------------------ the route runner
+
+class KAGPlaytestRunner
+{
+	var spec;                // what start was given
+	var status = "idle";     // running, done, stuck, timeout, stopped
+	var message = "";
+	var picks = [];          // the choices to take, by number
+	var route = [];          // %[ storage, picked, options ] for each choice taken
+	var timer, startTick = 0, lastMove = 0, lastKey = "", left = false, allskipBefore;
+
+	function KAGPlaytestRunner() {}
+
+	function finalize() { invalidate timer if timer !== void; }
+
+	function start(s)
+	{
+		stop() if status == "running";
+		spec = %[ storage:"first.ks", label:"", choices:[], skip:true, until:"", stuck:20000, timeout:600000, interval:30 ];
+		(Dictionary.assign incontextof spec)(s, false) if s !== void;
+		picks = [];
+		picks.assign(spec.choices) if spec.choices !== void;
+		route = [];
+		status = "running", message = "", left = false, lastKey = "";
+		startTick = lastMove = System.getTickCount();
+		allskipBefore = kag.allskip;
+		kag.allskip = true if spec.skip;
+		if (timer === void) timer = new Timer(tick, "");
+		timer.interval = +spec.interval;
+		timer.enabled = true;
+		kag.process(spec.storage, spec.label != "" ? spec.label : void);
+		dm("Playtest: from " + spec.storage + (spec.label != "" ? " " + spec.label : "") + ", choices " + picks.join(","));
+	}
+
+	function stop(why = "stopped", msg = "")
+	{
+		if (timer !== void) timer.enabled = false;
+		if (status == "running") {
+			status = why, message = msg;
+			kag.allskip = allskipBefore if allskipBefore !== void;
+			kag.cancelSkip() if kag.skipMode;
+			dm("Playtest: " + report());
+		}
+	}
+
+	// where the game is: the script and line, and in a compiled scene its text
+	function where()
+	{
+		var c = kag.conductor, s = c.curStorage + ":" + (c.curLine + 1);
+		var p = typeof global.world_object == "Object" && world_object !== void ? world_object.player : void;
+		if (p !== void && p.working) s += " (" + p.curStorage + " text " + p.curTextId + ", line " + (p.curLine !== void ? p.curLine + 1 : "?") + ")";
+		return s;
+	}
+
+	function tick()
+	{
+		if (status != "running" || !isvalid kag) return;
+		var now = System.getTickCount(), key = where() + "/" + route.count + "/" + kag.clickWaiting;
+		if (key != lastKey) lastKey = key, lastMove = now;
+		var storage = kag.conductor.curStorage;
+		left = true if storage != spec.storage;
+		if (left && spec.until != "" && storage == spec.until) return stop("done");
+		if (now - lastMove > +spec.stuck) return stop("stuck", "nothing moved for " + (+spec.stuck \ 1000) + " s at " + where());
+		if (now - startTick > +spec.timeout) return stop("timeout", "at " + where());
+		// a Yes/No prompt: answered Yes, as a player going on would (it's noted)
+		if (kag.currentDialog !== void) {
+			var d = kag.currentDialog;
+			if (typeof d.yesFunc != "undefined" || d instanceof "YesNoDialogLayer") {
+				message = "answered a prompt at " + where();
+				try { d.onKeyDown(VK_RETURN, 0); } catch (e) {}
+			}
+			return;
+		}
+		if (kag.selectShowing && kag.inStable && kag._selectLayer !== void && kag._selectLayer.selects.count > 0) {
+			var sl = kag._selectLayer, n = route.count < picks.count ? +picks[route.count] : 0;
+			n = 0 if n < 0 || n >= sl.selects.count;
+			route.add(%[ storage:storage, picked:n, options:sl.selects.count, at:where() ]);
+			sl.onButtonClick(sl.selects[n]);
+			return;
+		}
+		if (!kag.inStable) return;
+		if (spec.skip && kag.skipMode == 0 && kag.clickWaiting) kag.skipToStop();
+		else kag.onPrimaryClick();
+	}
+
+	// what happened: status|where|picked/options,...|ms|message
+	function report()
+	{
+		var r = [];
+		for (var i = 0; i < route.count; i++) r.add(route[i].picked + "/" + route[i].options);
+		return [ status, where(), r.join(","), System.getTickCount() - startTick, message ].join("|");
+	}
+}
+var KAGPlaytest = new KAGPlaytestRunner();
+
+// ------------------------------------------------------------------ the log's helpers
+
+var KAGDebugTraceOn = false, KAGDebugTraceOrig;
+
+/**
+ * Every tag the main conductor runs into the log: where, the tag with its attributes, what the
+ * handler returned and how long it took
+ */
+function KAGDebugTrace(on = true)
+{
+	var c = kag.mainConductor;
+	if (on && !KAGDebugTraceOn) {
+		KAGDebugTraceOrig = c.onTag;
+		c.onTag = KAGDebugTraceTag;
+	} else if (!on && KAGDebugTraceOn) {
+		c.onTag = KAGDebugTraceOrig;
+	}
+	KAGDebugTraceOn = on;
+	return on;
+}
+
+function KAGDebugTraceTag(elm)
+{
+	var t = System.getTickCount();
+	var r = KAGDebugTraceOrig(elm);
+	var a = [], keys = [];
+	keys.assign(elm);
+	for (var i = 0; i < keys.count; i += 2) {
+		var k = keys[i], v = keys[i + 1];
+		if (k == "tagname" || k.charAt(0) == "*" || typeof v == "Object") continue;
+		a.add(k + "=" + v);
+	}
+	var c = kag.mainConductor;
+	dm("tag %s(%d) [%s%s] -> %s, %d ms".sprintf(c.curStorage, c.curLine + 1, elm.tagname, a.count > 0 ? " " + a.join(" ") : "",
+		r === void ? "void" : r, System.getTickCount() - t));
+	return r;
+}
+
+// a value as it would be written
+function KAGDebugValue(v)
+{
+	if (v === void) return "void";
+	if (typeof v == "String") return "\"" + v + "\"";
+	if (typeof v == "Object") return v === null ? "null" : v instanceof "Array" ? "[" + v.count + " items]" : "%[...]";
+	return (string)v;
+}
+
+// a member of an object, or "-"
+function KAGDebugField(o, name)
+{
+	try { return typeof o[name] != "undefined" ? KAGDebugValue(o[name]) : "-"; } catch (e) { return "-"; }
+}
+
+/**
+ * The layers shown, as a tree (out: an array to add the lines to instead of the log)
+ */
+function KAGDebugLayers(out = void, layer = void, depth = 0)
+{
+	layer = kag.primaryLayer if layer === void;
+	var line = "";
+	for (var i = 0; i < depth; i++) line += "  ";
+	line += "%s  %d,%d %dx%d abs %d opacity %d".sprintf(layer.name != "" ? layer.name : "(no name)", layer.left, layer.top,
+		layer.width, layer.height, layer.absolute, layer.opacity);
+	if (out !== void) out.add(line); else dm(line);
+	var c = layer.children;
+	for (var i = 0; i < c.count; i++) if (c[i].visible) KAGDebugLayers(out === void ? void : out, c[i], depth + 1);
+	return out;
+}
+
+/**
+ * The World's objects (out: an array to add the lines to instead of the log)
+ */
+function KAGDebugWorld(out = void)
+{
+	var lines = out !== void ? out : [];
+	if (typeof global.world_object != "Object" || world_object === void) { lines.add("no World"); }
+	else {
+		var e = world_object.env;
+		lines.add("World: stage " + KAGDebugField(e.stage, "name") + " " + KAGDebugField(e.stage, "stageName") + ", time " + KAGDebugField(e, "currentTime"));
+		var groups = [ [ "character", e.characterList ], [ "layer", e.layerList ] ];
+		for (var g = 0; g < groups.count; g++) {
+			var list = groups[g][1];
+			if (list === void) continue;
+			for (var i = 0; i < list.count; i++) {
+				var o = list[i];
+				if (o === void || !isvalid o) continue;
+				var shown = typeof o.isShowBU != "undefined" && o.isShowBU();
+				lines.add("  %s %s%s: pose %s dress %s face %s, at %s,%s, level %s, zoom %s, file %s".sprintf(groups[g][0], o.name, shown ? "" : " (hidden)",
+					KAGDebugField(o, "pose"), KAGDebugField(o, "dress"), KAGDebugField(o, "face"), KAGDebugField(o, "xpos"),
+					KAGDebugField(o, "ypos"), KAGDebugField(o, "level"), KAGDebugField(o, "zoom"), KAGDebugField(o, "imageFile")));
+			}
+		}
+	}
+	if (out === void) for (var i = 0; i < lines.count; i++) dm(lines[i]);
+	return lines;
+}
+
+// ------------------------------------------------------------------ where the game is
+
+// %[ storage, line, label, text, speaker, voice ] of what the player sees now
+function KAGDebugHere()
+{
+	var c = kag.conductor, r = %[ storage:c.curStorage, line:c.curLine + 1, label:c.curLabel, text:"", speaker:"", voice:"" ];
+	var p = typeof global.world_object == "Object" && world_object !== void ? world_object.player : void;
+	if (p !== void && p.working) {
+		r.storage = p.curStorage, r.label = p.curLabel;
+		r.line = p.curLine !== void ? p.curLine + 1 : 0;
+		var t = p.curText;
+		if (t !== void) {
+			t = scnTextIn(t);
+			r.text = t.text !== void ? (string)t.text : "";
+			r.speaker = t.disp !== void && t.disp != "" ? t.disp : t.name !== void ? t.name : "";
+		}
+	}
+	var v = kag.currentVoice;
+	if (v !== void && v.count > 0) r.voice = (string)v[0].voice + (v[0].ext !== void ? v[0].ext : "");
+	return r;
+}
+
+function KAGDebugDescribe()
+{
+	var h = KAGDebugHere();
+	return "%s(%d) %s%s%s".sprintf(h.storage, h.line, h.label, h.speaker != "" ? " " + h.speaker + ":" : "", h.text != "" ? " " + h.text : "");
+}
+
+function KAGDebugCopy(text, what)
+{
+	var ok = false;
+	if (typeof global.Clipboard != "undefined") { try { Clipboard.asText = text; ok = true; } catch (e) {} }
+	dm(what + ": " + text);
+	try { showYesNoNotice(kag, ok ? tr("Copied: %s").sprintf(text) : text); } catch (e) {}
+	return text;
+}
+
+function KAGDebugCopyVoice()
+{
+	var v = KAGDebugHere().voice;
+	return KAGDebugCopy(v != "" ? v : tr("No voice"), "Voice");
+}
+
+function KAGDebugCopyScene() { return KAGDebugCopy(KAGDebugDescribe(), "Scene"); }
+
+// ------------------------------------------------------------------ restarting and going to a line
+
+function KAGDebugRestart()
+{
+	var h = KAGDebugHere();
+	dm("Debug: " + h.storage + " from its top");
+	kag.process(h.storage);
+}
+
+// a goto: link (the lines page): <storage>|<label>|<text> in a compiled scene, <storage>|*<label>
+// in a script KAG plays
+var KAGDebugGotoPending;
+function KAGDebugGoto(arg)
+{
+	KAGDebugGotoPending = arg;
+	if (typeof kag.currentDialog == "Object" && kag.currentDialog !== void) kag.currentDialog.close();
+	KAGAfterDialogClosed(KAGDebugGotoNow);
+}
+function KAGDebugGotoNow()
+{
+	var a = ((string)KAGDebugGotoPending).split("|");
+	KAGDebugGotoPending = void;
+	if (a.count >= 3) {
+		world_object.initPlayer() if typeof world_object.initPlayer != "undefined";
+		var label = a[1].charAt(0) == "*" ? a[1] : "*" + a[1];
+		world_object.player.seek(a[0], label, +a[2]);
+		kag.process(a[0], label);
+	} else if (a.count == 2) {
+		kag.process(a[0], a[1]);
+	}
+}
+
+// ------------------------------------------------------------------ the debug pages (the manual's viewer)
+
+// a text for a page's line: brackets and braces as text
+function KAGDebugEscape(s)
+{
+	return ((string)s).replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]").replace(/\{/g, "\\{").replace(/\}/g, "\\}");
+}
+
+// the flags that matter, with what they do and their values: flaglist.txt (tab-separated:
+// name (f.x, sf.x or tf.x), what it is, the values to offer, by commas; # comments)
+function KAGDebugFlagList()
+{
+	var r = [];
+	if (!Storages.isExistentStorage("flaglist.txt")) return r;
+	var lines = [];
+	lines.load("flaglist.txt");
+	for (var i = 0; i < lines.count; i++) {
+		var l = lines[i];
+		if (l == "" || l.charAt(0) == "#") continue;
+		var c = l.split(/\t/);
+		if (c[0].trim() == "") continue;
+		r.add(%[ name:c[0].trim(), comment:c.count > 1 ? c[1].trim() : "", values:c.count > 2 && c[2].trim() != "" ? c[2].split(",") : [] ]);
+	}
+	return r;
+}
+
+function KAGDebugFlagTable(name)
+{
+	var dot = name.indexOf("."), pre = dot > 0 ? name.substring(0, dot) : "f";
+	return pre == "sf" ? kag.sflags : pre == "tf" ? kag.tflags : kag.flags;
+}
+function KAGDebugFlagKey(name) { var dot = name.indexOf("."); return dot > 0 ? name.substring(dot + 1) : name; }
+
+function KAGDebugFlagsPage()
+{
+	var p = [ "# " + tr("Flags"), tr("The game's flags now; a link sets one. flaglist.txt says what the ones that matter are."), "" ];
+	var listed = KAGDebugFlagList(), seen = %[];
+	if (listed.count > 0) p.add("## flaglist.txt");
+	for (var i = 0; i < listed.count; i++) {
+		var f = listed[i], v = KAGDebugFlagTable(f.name)[KAGDebugFlagKey(f.name)];
+		seen[f.name] = true;
+		var links = [];
+		var values = f.values.count > 0 ? f.values : [ "true", "false" ];
+		for (var j = 0; j < values.count; j++) links.add("[" + KAGDebugEscape(values[j].trim()) + "](flag:" + f.name + "=" + values[j].trim() + ")");
+		p.add("- " + KAGDebugEscape(f.name + " = " + KAGDebugValue(v)) + (f.comment != "" ? ": " + KAGDebugEscape(f.comment) : "") + " " + links.join(" "));
+	}
+	var tables = [ [ "f", kag.flags ], [ "sf", kag.sflags ], [ "tf", kag.tflags ] ];
+	for (var t = 0; t < tables.count; t++) {
+		var keys = [];
+		keys.assign(tables[t][1]);
+		var rows = [];
+		for (var i = 0; i < keys.count; i += 2) {
+			var name = tables[t][0] + "." + keys[i], v = keys[i + 1];
+			if (seen[name] || typeof v == "Object") continue;
+			var row = "- " + KAGDebugEscape(name + " = " + KAGDebugValue(v));
+			if (typeof v == "Integer" && (v == 0 || v == 1) || typeof v == "String" && (v == "true" || v == "false"))
+				row += " [true](flag:" + name + "=true) [false](flag:" + name + "=false)";
+			rows.add(row);
+		}
+		rows.sort();
+		if (rows.count > 0) { p.add(""); p.add("## " + tables[t][0]); p.push(rows*); }
+	}
+	return p;
+}
+
+function KAGDebugSetFlag(arg, manual)
+{
+	var eq = arg.indexOf("=");
+	if (eq < 0) return;
+	var name = arg.substring(0, eq), s = arg.substring(eq + 1), v = s;
+	if (s == "true") v = true;
+	else if (s == "false") v = false;
+	else if (s != "" && (string)(+s) == s) v = +s;
+	KAGDebugFlagTable(name)[KAGDebugFlagKey(name)] = v;
+	dm("Debug: " + name + " = " + KAGDebugValue(v));
+	manual.refresh() if manual !== void && isvalid manual;
+}
+
+// the script's lines with text, each a link that plays from it
+function KAGDebugLinesPage()
+{
+	var h = KAGDebugHere(), storage = h.storage;
+	var p = [ "# " + KAGDebugEscape(storage), tr("Each line with text: a link plays from it."), "" ];
+	var path = typeof global.scnFindCompiled != "undefined" ? scnFindCompiled(storage) : void;
+	if (path !== void) {
+		var sd = new StorageData(Storages.extractStorageName(storage)), scenes = sd.root !== void ? sd.root.scenes : void;
+		for (var s = 0; scenes !== void && s < scenes.count; s++) {
+			var sc = scenes[s], title = sc.title;
+			title = title[0] if typeof title == "Object" && title instanceof "Array";
+			p.add("## " + KAGDebugEscape(sc.label) + (title !== void && title != "" ? " " + KAGDebugEscape(title) : ""));
+			for (var i = 0; i < sc.lines.count; i++) {
+				var o = sc.lines[i];
+				if (typeof o != "Object" || !(o instanceof "Array") || typeof o[0] != "Integer" || typeof o[2] != "Integer") continue;
+				var id = o[2], line = +o[4] + 1, t = convertSceneText(sc.texts[id - 1], sd.languages);
+				if (t === void) continue;
+				t = scnTextIn(t);
+				// (the scene player's escapes and marks out: the characters as shown)
+				var text = kag.languageWrapLine(kag.languageTextItems((string)t.text)).replace(/[\r\n]+/g, " ");
+				text = text.substring(0, 70) + "..." if text.length > 73;
+				var who = t.disp !== void && t.disp != "" ? t.disp : t.name !== void ? t.name : "";
+				var mark = sc.label == h.label && line == h.line ? " ◀" : "";
+				p.add("- [" + line + "](goto:" + storage + "|" + sc.label + "|" + id + ") " + KAGDebugEscape((who != "" ? who + ": " : "") + text) + mark);
+			}
+		}
+		invalidate sd;
+	} else if (Storages.isExistentStorage(storage)) {
+		var lines = [];
+		lines.load(storage);
+		for (var i = 0; i < lines.count; i++) {
+			var l = lines[i];
+			if (l.charAt(0) != "*") continue;
+			var label = l.split("|")[0];
+			p.add("- [" + (i + 1) + "](goto:" + storage + "|" + label + ") " + KAGDebugEscape(l));
+		}
+	}
+	return p;
+}
+
+// ------------------------------------------------------------------ a bug report
+
+/**
+ * Writes bugreport-<date>.txt (where the game is, the game, the engine, the flags, the World,
+ * the log's last lines) and bugreport-<date>.png (the screen) into the save folder; returns the
+ * text file's path
+ */
+function KAGDebugBugReport()
+{
+	var d = new Date();
+	var stamp = "%04d%02d%02d-%02d%02d%02d".sprintf(d.getYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds());
+	var base = System.dataPath + "bugreport-" + stamp;
+	var r = [], h = KAGDebugHere();
+	r.add("Bug report " + stamp);
+	r.add("Game: " + (sf.software_title !== void ? sf.software_title : System.title) + " " + (sf.software_version !== void ? sf.software_version : ""));
+	r.add("Engine: " + System.versionString + (typeof System.platformTag != "undefined" ? " on " + System.platformTag : ""));
+	r.add("Where: " + KAGDebugDescribe());
+	r.add("Voice: " + h.voice);
+	r.add("Language: " + (global.KAGLanguage !== void ? KAGLanguage.current + " (menus " + KAGLanguage.menuCode + ")" : "-"));
+	r.add("");
+	r.add("Flags:");
+	var tables = [ [ "f", kag.flags ], [ "sf", kag.sflags ] ];
+	for (var t = 0; t < tables.count; t++) {
+		var keys = [];
+		keys.assign(tables[t][1]);
+		var rows = [];
+		for (var i = 0; i < keys.count; i += 2) rows.add("  " + tables[t][0] + "." + keys[i] + " = " + KAGDebugValue(keys[i + 1]));
+		rows.sort();
+		r.push(rows*);
+	}
+	r.add("");
+	KAGDebugWorld(r);
+	r.add("");
+	r.add("The log's last lines:");
+	if (typeof Debug.getLastLog != "undefined") {
+		var log = Debug.getLastLog(200).split("\n");
+		for (var i = 0; i < log.count; i++) r.add("  " + log[i]);
+	}
+	r.save(base + ".txt");
+	// the screen as shown, its alpha filled (the layers' own means nothing)
+	try {
+		var s = kag.primaryLayer, l = new global.Layer(kag, s);
+		l.setImageSize(s.width, s.height);
+		l.piledCopy(0, 0, s, 0, 0, s.width, s.height);
+		l.face = dfMask; l.fillRect(0, 0, s.width, s.height, 255); l.face = dfAlpha;
+		l.saveLayerImage(base + ".png", "png");
+		invalidate l;
+	} catch (e) { dm("Bug report: no screenshot: " + e.message); }
+	var where = typeof global.KAGManualPath != "undefined" ? KAGManualPath(base + ".txt") : base + ".txt";
+	KAGDebugCopy(where, "Bug report");
+	return base + ".txt";
+}
+
+// ------------------------------------------------------------------ the Debug menu
+
+/**
+ * The writer's items at the end of the Debug menu (Menus.tjs, and a game's own menus)
+ */
+function KAGDebugMenuItems(win, menu)
+{
+	if (menu === void) return;
+	menu.add(new MenuItem(win, "-"));
+	var items = [
+		[ "Restart This Script(&T)", function { KAGDebugRestart(); } ],
+		[ "Go to a Line(&G) ...", function { KAGShowManual("debuglines"); } ],
+		[ "Flags(&F) ...", function { KAGShowManual("debugflags"); } ],
+		[ "Copy the Voice's File Name", function { KAGDebugCopyVoice(); } ],
+		[ "Copy Where the Game Is", function { KAGDebugCopyScene(); } ],
+		[ "Write a Bug Report(&B)", function { KAGDebugBugReport(); } ],
+		[ "Trace Tags in the Log", function { KAGDebugTrace(!KAGDebugTraceOn); } ],
+		[ "Layers and World into the Log", function { KAGDebugLayers(); KAGDebugWorld(); } ]
+	];
+	for (var i = 0; i < items.count; i++)
+		menu.add(new KAGMenuItem(win, items[i][0], 0, items[i][1] incontextof global, false));
+}
+
+// the debug pages in the manual's viewer, and its flag: and goto: links
+KAGManualPages["debugflags"] = KAGDebugFlagsPage;
+KAGManualPages["debuglines"] = KAGDebugLinesPage;
+KAGManualLinkKinds["flag"] = KAGDebugSetFlag;
+KAGManualLinkKinds["goto"] = function(arg, manual) { KAGDebugGoto(arg); } incontextof global;

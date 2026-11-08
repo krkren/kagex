@@ -1,0 +1,5 @@
+# Outfits an earlier choice changes (doc/world.txt, "Pictures and Outfits an Earlier Choice Changes")
+# Tab-separated: the character, the outfit the script names, the outfit shown instead, and when
+# (TJS, f being the playthrough's flags); the first row whose condition holds wins, decided as
+# the character is drawn
+pip	plain	beret	f.charRoute == "park"

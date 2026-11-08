@@ -1,0 +1,999 @@
+/**
+ * The manual (since 0.26.0; doc/kagex.txt, "The Manual"): pages of help inside the game window,
+ * on every platform: an index, answers to common problems, a page per group of settings, links
+ * between pages with Back and Forward, and links that change a setting there and then or open a
+ * screen. Help > Contents opens it, as does the action "manual" (Actions.tjs) and
+ * KAGShowManual(page). The framework has pages of its own (kagexmanual_*.txt, English and
+ * Japanese) that every game gets; a game adds pages or puts its own in place of the framework's.
+ *
+ * A page is a text file found by name: manual_<page>.txt, the game's (a language's own in
+ * data/lang/<code>/, as its pictures are), else the framework's kagexmanual_<page>_<language>.txt,
+ * then kagexmanual_<page>.txt. The first page is "index". A page's lines:
+ *
+ *   # The page's title             (its first line)
+ *   ## A heading
+ *   A paragraph: lines that follow each other make one; a blank line ends it.
+ *   - an item of a list
+ *   > a note, in a box (lines that follow each other make one)
+ *   ---                            a rule across the page
+ *   ; a comment
+ *
+ * and in the text:
+ *
+ *   [what it says](where it goes)  a link:
+ *       <page>, page:<page>          another page
+ *       option:<name>=<value>        an option set there and then (Options.tjs), shown with a box
+ *                                    that's filled while the option has that value
+ *       action:<name>                the manual closes and the action is done (Actions.tjs, an
+ *                                    option's button by its name, or controls, about)
+ *       url:<address>                opened in the browser where the engine can, else copied
+ *       copy:<text>                  copied to the clipboard
+ *   {title} {version} {engine} {platform} {savefolder} {screenshots}   what they say
+ *   {key:<action>}                 the keys and controller buttons that do an action now
+ *   {option:<name>}                an option's value now, as Config shows it
+ *   \[ \] \{ \} \\                 the character itself
+ *
+ * The keys: up and down move between the links (and scroll), Return or A follows one, left or
+ * Backspace goes back, right forward, Page Up and Page Down scroll, Home goes to the index, Esc or
+ * B closes it. The wheel and a drag scroll; a click follows a link. Screen readers get the page as
+ * headings, paragraphs and links.
+ */
+
+var KAGManualEnabled = true; // false: no manual (Help > Contents opens helpFile, as before 0.26.0)
+
+// the colours (0xAARRGGBB)
+var KAGManualTheme = %[
+	veil:0xd8100c38, paper:0xfffcfbff, border:0xff5025ff, note:0xffeee9ff, noteBar:0xff5025ff,
+	rule:0xffc4b6ff, hover:0x305025ff, focus:0x505025ff, focusLine:0xff5025ff,
+	track:0x30010062, thumb:0xff5025ff, link:0x4a1fe0, box:0xff5025ff
+];
+
+KAGDefineTextStyle("manual", %[ role:"interface", size:30, color:0x010062, lines:1, fit:false, ellipsis:"", lineSpacing:14 ]);
+KAGDefineTextStyle("manual.text", %[]);
+KAGDefineTextStyle("manual.heading", %[ size:36, bold:true, color:0x5025ff, lineSpacing:10 ]);
+KAGDefineTextStyle("manual.title", %[ size:44, bold:true, color:0xffffff, edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, valign:"middle" ]);
+KAGDefineTextStyle("manual.button", %[ size:28, bold:true, color:0xffffff, edge:true, edgeColor:0x010062, edgeExtent:2, edgeEmphasis:255, align:"center", valign:"middle" ]);
+
+// pages made by a function (its lines, as a file's), by name: the debug pages (DebugTools.tjs)
+var KAGManualPages = %[];
+
+// links of a game's own kinds: <kind>:<what> runs KAGManualLinkKinds[kind](what, the manual)
+var KAGManualLinkKinds = %[];
+
+// action: links the options table and Actions.tjs don't have
+var KAGManualActions = %[
+	"controls" => (function { kag.showControls(); } incontextof global),
+	"about" => (function { global.showAbout(); } incontextof global)
+];
+
+function KAGManualLanguage()
+{
+	return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.menuCode : "en";
+}
+
+// a page's file (void: none)
+function KAGManualFile(page)
+{
+	page = ((string)page).toLowerCase();
+	var names = [ "manual_" + page + ".txt", "kagexmanual_" + page + "_" + KAGManualLanguage() + ".txt", "kagexmanual_" + page + ".txt" ];
+	for (var i = 0; i < names.count; i++) if (Storages.isExistentStorage(names[i])) return names[i];
+}
+
+function KAGManualAvailable()
+{
+	return KAGManualEnabled && KAGManualFile("index") !== void;
+}
+
+// a path as the player would type it
+function KAGManualPath(p)
+{
+	if (p === void || p == "") return "";
+	try { var l = Storages.getLocalName(p); return l != "" ? l : p; } catch (e) { return p; }
+}
+
+function KAGManualPlatform()
+{
+	var t = typeof System.platformTag != "undefined" ? (string)System.platformTag : "windows";
+	var names = %[ windows:"Windows", linux:"Linux", macos:"macOS", android:"Android", ios:"iOS", web:tr("a web browser") ];
+	return names[t] !== void ? names[t] : t;
+}
+
+// an option's value as Config shows it
+function KAGManualOptionText(name)
+{
+	var o = KAGOptions[name];
+	if (o === void) return "?";
+	var v = KAGOptionGet(name);
+	if (o.values !== void) for (var i = 0; i < o.values.count; i++) if (KAGOptionSame(v, o.values[i][1])) return tr(o.values[i][0]);
+	return v === void ? "" : (string)v;
+}
+
+// the keys and buttons that do an action now
+function KAGManualKeys(name)
+{
+	if (typeof global.KAGActionBindings == "undefined" || typeof global.kag != "Object") return "";
+	var b = KAGActionBindings(kag, name), parts = [];
+	parts.add(b[0].join(", ")) if b[0].count > 0;
+	parts.add(tr("controller") + ": " + b[1].join(", ")) if b[1].count > 0;
+	parts.add(b[2].join(", ")) if b[2].count > 0;
+	return parts.count > 0 ? parts.join("; ") : tr("no key");
+}
+
+// {placeholders} in a line
+function KAGManualExpand(line)
+{
+	var out = "", i = 0, n = line.length;
+	while (i < n) {
+		var ch = line.charAt(i);
+		if (ch == "\\" && i + 1 < n) { out += ch + line.charAt(i + 1); i += 2; continue; }
+		if (ch != "{") { out += ch; i++; continue; }
+		var e = line.indexOf("}", i);
+		if (e < 0) { out += line.substring(i); break; }
+		var key = line.substring(i + 1, e - i - 1), v;
+		switch (key) {
+		case "title": v = typeof global.sf == "Object" && sf.software_title !== void && sf.software_title != "" ? sf.software_title : System.title; break;
+		case "version": v = typeof global.sf == "Object" && sf.software_version !== void ? (string)sf.software_version : ""; break;
+		case "engine": v = System.versionString; break;
+		case "platform": v = KAGManualPlatform(); break;
+		case "savefolder": v = KAGManualPath(System.dataPath); break;
+		case "screenshots": v = KAGManualPath(typeof global.kag == "Object" && kag.screenshotFolder !== void ? kag.screenshotFolder : System.dataPath); break;
+		default:
+			if (key.substring(0, 4) == "key:") v = KAGManualKeys(key.substring(4));
+			else if (key.substring(0, 7) == "option:") v = KAGManualOptionText(key.substring(7));
+		}
+		if (v === void) out += "{" + key + "}";
+		else out += ((string)v).replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]"); // (a path's \ is text)
+		i = e + 1;
+	}
+	return out;
+}
+
+// a line's text and links: [ %[ text, target (void: plain text) ] ]
+function KAGManualInline(line)
+{
+	var segs = [], cur = "", i = 0, n = line.length;
+	while (i < n) {
+		var ch = line.charAt(i);
+		if (ch == "\\" && i + 1 < n) { cur += line.charAt(i + 1); i += 2; continue; }
+		if (ch == "[") {
+			// [text](target)
+			var e = i + 1, text = "";
+			while (e < n && line.charAt(e) != "]") {
+				if (line.charAt(e) == "\\" && e + 1 < n) { text += line.charAt(e + 1); e += 2; continue; }
+				text += line.charAt(e), e++;
+			}
+			if (e + 1 < n && line.charAt(e + 1) == "(") {
+				var c = line.indexOf(")", e + 2);
+				if (c > 0) {
+					segs.add(%[ text:cur ]) if cur != "";
+					cur = "";
+					segs.add(%[ text:text, target:line.substring(e + 2, c - e - 2).trim() ]);
+					i = c + 1;
+					continue;
+				}
+			}
+		}
+		cur += ch;
+		i++;
+	}
+	segs.add(%[ text:cur ]) if cur != "";
+	return segs;
+}
+
+// two lines joined: a space between them unless either side is text without spaces
+function KAGManualJoin(a, b)
+{
+	if (a == "") return b;
+	if (b == "") return a;
+	var x = a.charAt(a.length - 1), y = b.charAt(0);
+	return #x >= 0x3000 || #y >= 0x3000 ? a + b : a + " " + b;
+}
+
+/**
+ * A page read: %[ name, title, blocks: [ %[ kind ("heading", "text", "item", "note", "rule"),
+ * segs ] ] ], or void when there's no such page
+ */
+function KAGManualRead(page)
+{
+	var lines = [];
+	var maker = KAGManualPages[((string)page).toLowerCase()];
+	if (maker !== void) lines = maker();
+	else {
+		var file = KAGManualFile(page);
+		if (file === void) return;
+		lines.load(file);
+	}
+	var doc = %[ name:page, title:"", blocks:[] ], para, paraKind;
+	var flush = function(doc, para, kind) { doc.blocks.add(%[ kind:kind, segs:KAGManualInline(para) ]) if para != ""; };
+	for (var i = 0; i < lines.count; i++) {
+		var raw = lines[i];
+		var line = raw.trim();
+		if (line.length > 0 && line.charAt(0) == ";") continue;
+		var kind = "", text = line;
+		if (line == "") kind = "end";
+		else if (line.substring(0, 3) == "## ") kind = "heading", text = line.substring(3);
+		else if (line.substring(0, 2) == "# ") kind = "title", text = line.substring(2);
+		else if (line == "---") kind = "rule";
+		else if (line.substring(0, 2) == "- ") kind = "item", text = line.substring(2);
+		else if (line.substring(0, 1) == ">") kind = "note", text = line.substring(1).trim();
+		else kind = "text";
+		// a line that goes on with the paragraph (or note) before it
+		if ((kind == "text" && (paraKind == "text" || paraKind == "item")) || (kind == "note" && paraKind == "note")) {
+			para = KAGManualJoin(para, KAGManualExpand(text));
+			continue;
+		}
+		flush(doc, para, paraKind) if para !== void;
+		para = void, paraKind = void;
+		switch (kind) {
+		case "title": doc.title = KAGManualUnescape(KAGManualExpand(text)); break;
+		case "heading": flush(doc, KAGManualExpand(text), "heading"); break;
+		case "rule": doc.blocks.add(%[ kind:"rule", segs:[] ]); break;
+		case "text": case "item": case "note": para = KAGManualExpand(text), paraKind = kind; break;
+		}
+	}
+	flush(doc, para, paraKind) if para !== void;
+	doc.title = page if doc.title == "";
+	return doc;
+}
+
+// \x as x
+function KAGManualUnescape(s)
+{
+	var out = "";
+	for (var i = 0; i < s.length; i++) {
+		var ch = s.charAt(i);
+		if (ch == "\\" && i + 1 < s.length) ch = s.charAt(++i);
+		out += ch;
+	}
+	return out;
+}
+
+// a block's text, without its links' marks
+function KAGManualPlain(segs)
+{
+	var s = "";
+	for (var i = 0; i < segs.count; i++) s += segs[i].text;
+	return s;
+}
+
+// a block's words (or, in text without spaces, its characters and Latin words): [ %[ text,
+// link (its index in links, or -1), sp (a space), brk (a line may break before it) ] ]
+function KAGManualTokens(segs, links, words)
+{
+	var out = [];
+	for (var s = 0; s < segs.count; s++) {
+		var text = segs[s].text, link = segs[s].link !== void ? segs[s].link : -1, i = 0, n = text.length;
+		while (i < n) {
+			var ch = text.charAt(i);
+			if (ch == " ") { out.add(%[ text:" ", link:link, sp:true, brk:false ]); i++; continue; }
+			if (words || KAGStyleLatin(ch)) {
+				var j = i + 1;
+				while (j < n && text.charAt(j) != " " && (words || KAGStyleLatin(text.charAt(j)))) j++;
+				var prev = out.count > 0 ? out[out.count - 1] : void;
+				var brk = prev === void || !words && !KAGStyleLatin(prev.text.charAt(prev.text.length - 1));
+				out.add(%[ text:text.substring(i, j - i), link:link, sp:false, brk:brk ]);
+				i = j;
+				continue;
+			}
+			out.add(%[ text:ch, link:link, sp:false, brk:KAGStyleNoStart.indexOf(ch) < 0 ]);
+			i++;
+		}
+	}
+	for (var i = 1; i < out.count; i++) out[i].brk = true if out[i - 1].sp && !out[i].sp;
+	return out;
+}
+
+/**
+ * Shows the manual at a page ("index": its first)
+ */
+function KAGShowManual(page = "index")
+{
+	if (typeof global.kag != "Object" || !isvalid kag || !KAGManualAvailable()) return false;
+	if (kag.currentDialog !== void) {
+		// the manual open already: to that page
+		if (kag.currentDialog instanceof "KAGManualLayer") { kag.currentDialog.go(page); return true; }
+		return false;
+	}
+	if (typeof global.drawYesNoPanel == "undefined") KAGLoadScript("YesNoDialog.tjs");
+	(new KAGManualLayer(kag, page)).open();
+	return true;
+}
+
+KAGDefineAction(%[ name:"manual", label:"Manual", func:function { KAGShowManual(); },
+	available:function { return KAGManualAvailable(); } ]);
+
+class KAGManualLayer extends Layer
+{
+	var doc, pageName;
+	var history = [], ahead = []; // %[ page, scroll ] gone back from, and gone back to
+	var clip, hi, paper, head, bar;
+	var links = [];            // %[ target, text, rects:[ [x, y, w, h] in the page ], option, value ]
+	var blocks = [];           // %[ role, name, rect ] for screen readers
+	var focusLink = -1, hoverLink = -1, hoverButton = "";
+	var scroll = 0, pageH = 0;
+	var buttons = [];          // %[ id, label, x, y, w, h ] in the header's coordinates
+	var pressed = "", downX, downY, downScroll, dragging = false;
+	var opened = false, closing = false;
+	var PX, PY, PW, PH, BX, BY, BW, BH, HX, HY, HW, HH, btnH = 64;
+	var pad = 44, topGap = 30;
+	var a11yHidden = true;
+
+	function KAGManualLayer(win, first)
+	{
+		super.Layer(win, win.primaryLayer);
+		name = "Manual";
+		var W = win.primaryLayer.width, H = win.primaryLayer.height;
+		setImageSize(W, H);
+		setSizeToImageSize();
+		type = ltAlpha;
+		hitType = htMask;
+		hitThreshold = 0;
+		visible = false;
+		try { btnH = yesNoImage("dialog_button_normal").imageHeight; } catch (e) {}
+		PX = 90, PY = 40, PW = W - 180, PH = H - 80;
+		HX = PX + 40, HY = PY + 34, HW = PW - 12 - 80, HH = btnH;
+		BX = PX + 40, BY = HY + HH + 30, BW = PW - 12 - 80 - 34, BH = PY + PH - 12 - 40 - BY;
+		clip = newChild(this, BX, BY, BW, BH);
+		hi = newChild(clip, 0, 0, BW, BH);
+		paper = newChild(clip, 0, 0, BW, BH);
+		head = newChild(this, HX, HY, HW, HH);
+		bar = newChild(this, BX + BW + 14, BY, 14, BH);
+		var labels = [ [ "back", "Back" ], [ "forward", "Forward" ], [ "index", "Contents" ], [ "close", "Close" ] ];
+		var bw = 176, gap = 14, x = HW - (bw * labels.count + gap * (labels.count - 1));
+		for (var i = 0; i < labels.count; i++) buttons.add(%[ id:labels[i][0], label:labels[i][1], x:x + i * (bw + gap), y:0, w:bw, h:btnH ]);
+		drawFrame();
+		go(first, false);
+	}
+
+	function newChild(par, x, y, w, h)
+	{
+		var l = new global.Layer(window, par);
+		l.type = ltAlpha;
+		l.setPos(x, y);
+		l.setImageSize(w, h);
+		l.setSizeToImageSize();
+		l.face = dfAlpha;
+		l.fillRect(0, 0, w, h, 0);
+		l.hitType = htMask;
+		l.hitThreshold = 256;
+		l.visible = true;
+		return l;
+	}
+
+	function finalize()
+	{
+		// (at the end the window may be gone first)
+		try { window.keyCapture = void if (isvalid window && window.keyCapture === onKey); } catch (e) {}
+		KAGA11y.removeNodes(this);
+		super.finalize(...);
+	}
+
+	// ------------------------------------------------------------ KAGWindow.openDialog's contract
+
+	function open() { window.openDialog(this); }
+
+	function onOpen()
+	{
+		opened = true;
+		window.keyCapture = onKey;
+		pushA11y();
+		KAGA11y.announce(doc !== void ? doc.title : "");
+		KAGInterfaceSound("manual.open") if typeof global.KAGInterfaceSound != "undefined";
+	}
+
+	function close()
+	{
+		if (closing) return;
+		closing = true;
+		window.keyCapture = void if window.keyCapture === onKey;
+		KAGA11y.removeNodes(this);
+		if (opened) window.closeDialog(this);
+		else invalidate this;
+	}
+
+	function hasWheel() { return true; }
+	function processWheel(shift, delta, x, y) { setScroll(scroll - delta); }
+
+	// ------------------------------------------------------------ pages
+
+	/**
+	 * Goes to a page (remember: the one shown goes into Back's history)
+	 */
+	function go(page, remember = true)
+	{
+		var d = KAGManualRead(page);
+		if (d === void) {
+			dm("Manual: no page " + page);
+			if (doc !== void) { showNotice(tr("There's no page %s").sprintf(page)); return; }
+			d = %[ name:page, title:tr("Manual"), blocks:[ %[ kind:"text", segs:[ %[ text:tr("There's no page %s").sprintf(page) ] ] ] ] ];
+		}
+		if (remember && doc !== void) {
+			history.add(%[ page:pageName, scroll:scroll ]);
+			ahead.clear();
+		}
+		show(d, 0);
+	}
+
+	function show(d, at)
+	{
+		doc = d, pageName = d.name;
+		focusLink = -1, hoverLink = -1;
+		layout();
+		setScroll(at);
+		drawHead();
+		if (opened) { pushA11y(); KAGA11y.announce(doc.title); }
+	}
+
+	function goBack()
+	{
+		if (history.count == 0) return;
+		var h = history.pop();
+		ahead.add(%[ page:pageName, scroll:scroll ]);
+		var d = KAGManualRead(h.page);
+		show(d, h.scroll) if d !== void;
+	}
+
+	function goForward()
+	{
+		if (ahead.count == 0) return;
+		var h = ahead.pop();
+		history.add(%[ page:pageName, scroll:scroll ]);
+		var d = KAGManualRead(h.page);
+		show(d, h.scroll) if d !== void;
+	}
+
+	// the page as it is now (an option a link changed)
+	function refresh()
+	{
+		var d = KAGManualRead(pageName);
+		if (d === void) return;
+		var keep = scroll, f = focusLink;
+		doc = d;
+		layout();
+		setScroll(keep);
+		focusLink = f < links.count ? f : -1;
+		drawHighlights();
+		pushA11y() if opened;
+	}
+
+	// ------------------------------------------------------------ drawing
+
+	function drawFrame()
+	{
+		face = dfAlpha;
+		fillRect(0, 0, imageWidth, imageHeight, KAGManualTheme.veil);
+		drawYesNoPanel(this, PX, PY, PW, PH);
+		fillRect(BX - 4, BY - 4, BW + 8, BH + 8, KAGManualTheme.border);
+		fillRect(BX, BY, BW, BH, KAGManualTheme.paper);
+	}
+
+	function buttonEnabled(id)
+	{
+		switch (id) {
+		case "back": return history.count > 0;
+		case "forward": return ahead.count > 0;
+		case "index": return pageName != "index";
+		}
+		return true;
+	}
+
+	function drawHead()
+	{
+		var h = head;
+		h.face = dfAlpha;
+		h.fillRect(0, 0, h.imageWidth, h.imageHeight, 0);
+		var titleW = buttons[0].x - 24;
+		KAGDrawStyledText(h, "manual.title", doc !== void ? doc.title : "", 8, 0, titleW, HH, %[ fit:true, minSize:24 ]);
+		for (var i = 0; i < buttons.count; i++) {
+			var b = buttons[i], on = buttonEnabled(b.id);
+			drawYesNoButtonFrame(h, b.x, b.y, b.w, on && hoverButton == b.id);
+			KAGDrawStyledText(h, "manual.button", tr(b.label), b.x, b.y, b.w, b.h, on ? void : %[ color:0xb4a8e0, edge:false ]);
+		}
+	}
+
+	// the page's blocks laid out and drawn on the paper
+	function layout()
+	{
+		links = [], blocks = [];
+		var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.menuCode) : true;
+		var ops = [], y = topGap, x0 = pad, w = BW - pad * 2;
+		for (var i = 0; i < doc.blocks.count; i++) {
+			var b = doc.blocks[i];
+			// links numbered in the page's order
+			for (var s = 0; s < b.segs.count; s++) {
+				var g = b.segs[s];
+				// a link that can't be followed here (a setting this platform hasn't, a screen the
+				// game hasn't) is text
+				if (g.target === void || !KAGManualLinkAvailable(g.target)) continue;
+				var l = %[ target:g.target, text:g.text, rects:[] ];
+				if (g.target.substring(0, 7) == "option:") {
+					var eq = g.target.indexOf("=");
+					l.option = g.target.substring(7, (eq < 0 ? g.target.length : eq) - 7);
+					l.value = eq < 0 ? "" : g.target.substring(eq + 1);
+					l.on = KAGManualOptionIs(l.option, l.value);
+				}
+				g.link = links.count;
+				links.add(l);
+			}
+			var plain = KAGManualPlain(b.segs);
+			switch (b.kind) {
+			case "heading":
+				y += 22 if i > 0;
+				var top0 = y;
+				y = layBlock(b.segs, "manual.heading", x0, w, y, ops, words);
+				blocks.add(%[ role:"heading", name:plain, rect:[ x0, top0, w, y - top0 ] ]);
+				y += 16;
+				break;
+			case "rule":
+				ops.add(%[ kind:"fill", x:x0, y:y + 8, w:w, h:3, color:KAGManualTheme.rule ]);
+				y += 30;
+				break;
+			case "item":
+				var top0 = y;
+				ops.add(%[ kind:"dot", x:x0 + 6, y:y + 12, size:10 ]);
+				y = layBlock(b.segs, "manual.text", x0 + 34, w - 34, y, ops, words);
+				blocks.add(%[ role:"label", name:plain, rect:[ x0, top0, w, y - top0 ] ]);
+				y += 12;
+				break;
+			case "note":
+				var top0 = y, box = ops.count;
+				ops.add(%[ kind:"fill", x:x0, y:y, w:w, h:0, color:KAGManualTheme.note ]);
+				ops.add(%[ kind:"fill", x:x0, y:y, w:8, h:0, color:KAGManualTheme.noteBar ]);
+				y = layBlock(b.segs, "manual.text", x0 + 34, w - 58, y + 18, ops, words) + 18;
+				ops[box].h = ops[box + 1].h = y - top0;
+				blocks.add(%[ role:"label", name:plain, rect:[ x0, top0, w, y - top0 ] ]);
+				y += 22;
+				break;
+			default:
+				var top0 = y;
+				y = layBlock(b.segs, "manual.text", x0, w, y, ops, words);
+				blocks.add(%[ role:"label", name:plain, rect:[ x0, top0, w, y - top0 ] ]);
+				y += 22;
+				break;
+			}
+		}
+		pageH = y + topGap;
+		var ph = Math.max(pageH, BH);
+		with (paper) { .setImageSize(BW, ph); .setSizeToImageSize(); .face = dfAlpha; .fillRect(0, 0, BW, ph, 0); }
+		with (hi) { .setImageSize(BW, ph); .setSizeToImageSize(); .face = dfAlpha; .fillRect(0, 0, BW, ph, 0); }
+		for (var i = 0; i < ops.count; i++) {
+			var o = ops[i];
+			switch (o.kind) {
+			case "fill": paper.fillRect(o.x, o.y, o.w, o.h, o.color); break;
+			case "dot": paper.fillRect(o.x, o.y, o.size, o.size, 0xff000000 | KAGManualTheme.link); break;
+			case "box":
+				var c = KAGManualTheme.box, s = o.size;
+				paper.fillRect(o.x, o.y, s, s, c);
+				paper.fillRect(o.x + 3, o.y + 3, s - 6, s - 6, KAGManualTheme.paper);
+				paper.fillRect(o.x + 7, o.y + 7, s - 14, s - 14, c) if o.on;
+				break;
+			default:
+				KAGDrawStyledText(paper, o.style, o.text, o.x, o.y, o.w + 60, o.h + 24, o.link >= 0 ? %[ color:KAGManualTheme.link ] : void);
+				paper.fillRect(o.x, o.y + o.h + 3, o.uw, 2, 0xff000000 | KAGManualTheme.link) if o.link >= 0 && o.uw > 0;
+				break;
+			}
+		}
+		drawHighlights();
+	}
+
+	// a block's text from x, y, w wide: draws added to ops, the y below it returned
+	function layBlock(segs, style, x, w, y, ops, words)
+	{
+		var lo = KAGStyledTextLayout(paper, style, "Ag", 100000, 1000);
+		var measure = lo.measure, size = lo.size, lh = size + +lo.style.lineSpacing;
+		var sp = measure("a a") - measure("aa"), boxW = (int)(size / 1.2) + 10;
+		sp = size \ 4 if sp <= 0;
+		var toks = KAGManualTokens(segs, links, words), boxed = %[];
+		// an option's link starts with its box, which goes with its first word
+		for (var i = 0; i < toks.count; i++) {
+			var t = toks[i];
+			if (t.link < 0 || links[t.link].option === void || boxed[t.link] !== void) continue;
+			boxed[t.link] = true;
+			toks.insert(i, %[ box:true, text:"", link:t.link, sp:false, brk:t.brk ]);
+			t.brk = false;
+			i++;
+		}
+		for (var i = 0; i < toks.count; i++) {
+			var t = toks[i];
+			t.w = t.box ? boxW : t.sp ? sp : measure(t.text);
+			// a word longer than a line, broken anywhere
+			if (t.w > w && !t.sp && !t.box && t.text.length > 1) {
+				var n = t.text.length - 1;
+				while (n > 1 && measure(t.text.substring(0, n)) > w) n--;
+				toks.insert(i + 1, %[ text:t.text.substring(n), link:t.link, sp:false, brk:true ]);
+				t.text = t.text.substring(0, n), t.w = measure(t.text);
+			}
+		}
+		// lines: a token that may start one starts one when it and what must stay with it (the
+		// word after a box, punctuation after a word, a character that doesn't start a line)
+		// don't fit
+		var lines = [ [] ], lx = 0;
+		for (var i = 0; i < toks.count; i++) {
+			var t = toks[i], line = lines[lines.count - 1];
+			if (t.brk && line.count > 0) {
+				var unit = t.w;
+				for (var j = i + 1; j < toks.count && !toks[j].brk && !toks[j].sp; j++) unit += toks[j].w;
+				if (lx + unit > w) {
+					while (line.count > 0 && line[line.count - 1].sp) line.pop();
+					lines.add(line = []), lx = 0;
+				}
+			}
+			if (t.sp && line.count == 0) continue; // a space doesn't start a line
+			line.add(t);
+			lx += t.w;
+		}
+		for (var n = 0; n < lines.count; n++) {
+			var line = lines[n], ly = y + n * lh;
+			while (line.count > 0 && line[line.count - 1].sp) line.pop();
+			// each token's place, from the width of the line's text before it (words measured one
+			// by one round up, which adds up along a line)
+			var acc = "", fixed = 0;
+			for (var i = 0; i < line.count; i++) {
+				var t = line[i];
+				t.x = measure(acc) + fixed;
+				if (t.box) fixed += t.w; else acc += t.text;
+				t.end = t.box ? t.x + t.w : measure(acc) + fixed;
+			}
+			var run, boxStart = %[];
+			for (var i = 0; i <= line.count; i++) {
+				var t = i < line.count ? line[i] : void;
+				if (run !== void && (t === void || t.box || t.link != run.link)) {
+					var text = run.text;
+					while (text.length > 0 && text.charAt(text.length - 1) == " ") text = text.substring(0, text.length - 1);
+					var tw = measure(text);
+					ops.add(%[ style:style, text:run.text, x:x + run.x, y:ly, w:run.w, h:size, link:run.link, uw:run.link >= 0 ? tw : 0 ]);
+					if (run.link >= 0) {
+						// (an option's box and its words: one rectangle)
+						var rx = boxStart[run.link] !== void ? boxStart[run.link] : run.x;
+						delete boxStart[run.link];
+						links[run.link].rects.add([ x + rx - 8, ly - 6, run.x - rx + tw + 16, size + 14 ]);
+					}
+					run = void;
+				}
+				if (t === void) break;
+				if (t.box) {
+					var bs = boxW - 10;
+					ops.add(%[ kind:"box", x:x + t.x, y:ly + ((size - bs) >> 1) + 2, size:bs, on:links[t.link].on ]);
+					boxStart[t.link] = t.x;
+					continue;
+				}
+				if (run === void) run = %[ link:t.link, text:"", x:t.x, w:0 ];
+				run.text += t.text;
+				run.w = t.end - run.x;
+			}
+		}
+		return y + lines.count * lh - +lo.style.lineSpacing;
+	}
+
+	// the hover and the focus behind the links
+	function drawHighlights()
+	{
+		hi.face = dfAlpha;
+		hi.fillRect(0, 0, hi.imageWidth, hi.imageHeight, 0);
+		if (hoverLink >= 0 && hoverLink < links.count && hoverLink != focusLink) {
+			var rs = links[hoverLink].rects;
+			for (var i = 0; i < rs.count; i++) hi.fillRect(rs[i][0], rs[i][1], rs[i][2], rs[i][3], KAGManualTheme.hover);
+		}
+		if (focusLink >= 0 && focusLink < links.count) {
+			var rs = links[focusLink].rects, c = KAGManualTheme.focusLine;
+			for (var i = 0; i < rs.count; i++) {
+				var r = rs[i];
+				hi.fillRect(r[0], r[1], r[2], r[3], KAGManualTheme.focus);
+				hi.fillRect(r[0], r[1], r[2], 3, c);
+				hi.fillRect(r[0], r[1] + r[3] - 3, r[2], 3, c);
+				hi.fillRect(r[0], r[1], 3, r[3], c);
+				hi.fillRect(r[0] + r[2] - 3, r[1], 3, r[3], c);
+			}
+		}
+	}
+
+	function drawBar()
+	{
+		bar.face = dfAlpha;
+		bar.fillRect(0, 0, bar.imageWidth, bar.imageHeight, 0);
+		if (pageH <= BH) return;
+		bar.fillRect(4, 0, 6, BH, KAGManualTheme.track);
+		var th = Math.max(48, BH * BH \ pageH), ty = (BH - th) * scroll \ (pageH - BH);
+		bar.fillRect(0, ty, 14, th, KAGManualTheme.thumb);
+	}
+
+	function setScroll(v)
+	{
+		var most = Math.max(0, pageH - BH);
+		v = (int)v;
+		v = 0 if v < 0;
+		v = most if v > most;
+		scroll = v;
+		paper.top = hi.top = -scroll;
+		drawBar();
+	}
+
+	// a link's first rectangle in view (scrolling to it)
+	function showLink(n)
+	{
+		if (n < 0 || n >= links.count || links[n].rects.count == 0) return;
+		var rs = links[n].rects, t = rs[0][1], b = rs[rs.count - 1][1] + rs[rs.count - 1][3];
+		if (t < scroll + 12) setScroll(t - 40);
+		else if (b > scroll + BH - 12) setScroll(b - BH + 40);
+	}
+
+	// ------------------------------------------------------------ what a link does
+
+	function follow(n)
+	{
+		if (n < 0 || n >= links.count) return;
+		var l = links[n], t = l.target, colon = t.indexOf(":");
+		var kind = colon < 0 ? "page" : t.substring(0, colon), arg = colon < 0 ? t : t.substring(colon + 1);
+		KAGInterfaceSound("manual.link") if typeof global.KAGInterfaceSound != "undefined";
+		switch (kind) {
+		case "page": go(arg); break;
+		case "option": setOption(l); break;
+		case "action":
+			// done once the manual has closed (a screen it opens can't open over it)
+			KAGManualPending = arg;
+			close();
+			KAGAfterDialogClosed(KAGManualDoPending);
+			break;
+		case "url":
+			var done = false;
+			if (typeof System.shellExecute != "undefined") { try { System.shellExecute(arg); done = true; } catch (e) {} }
+			if (!done) copyText(arg, true);
+			break;
+		case "copy": copyText(arg, false); break;
+		default:
+			if (KAGManualLinkKinds[kind] !== void) KAGManualLinkKinds[kind](arg, this);
+			else go(t);
+			break;
+		}
+	}
+
+	function setOption(l)
+	{
+		var o = KAGOptions[l.option];
+		if (o === void) { showNotice(tr("There's no setting %s").sprintf(l.option)); return; }
+		if (o.available !== void && !o.available()) { showNotice(tr("This isn't something this platform can change")); return; }
+		var v = KAGManualOptionValue(o, l.value);
+		KAGOptionSet(l.option, v);
+		kag.saveSystemVariables() if typeof kag.saveSystemVariables != "undefined";
+		showNotice(KAGOptionLabel(o) + ": " + KAGManualOptionText(l.option));
+		refresh();
+	}
+
+	function copyText(text, isAddress)
+	{
+		var ok = false;
+		if (typeof global.Clipboard != "undefined") { try { Clipboard.asText = text; ok = true; } catch (e) {} }
+		showNotice(ok ? tr("Copied: %s").sprintf(text) : (isAddress ? text : tr("Couldn't copy it: %s").sprintf(text)));
+	}
+
+	function showNotice(text)
+	{
+		try { showYesNoNotice(window, text); } catch (e) { dm("Manual: " + text); }
+		KAGA11y.announce(text, true);
+	}
+
+	// ------------------------------------------------------------ the keys
+
+	function onKey(key, shift)
+	{
+		if (!isvalid this || closing) return;
+		switch (key) {
+		case VK_ESCAPE: case VK_PAD2: close(); return;
+		case VK_UP: case VK_PADUP: moveFocus(-1); break;
+		case VK_DOWN: case VK_PADDOWN: moveFocus(1); break;
+		case VK_TAB: moveFocus(shift & ssShift ? -1 : 1, true); break;
+		case VK_LEFT: case VK_PADLEFT: case VK_BACK: goBack(); break;
+		case VK_RIGHT: case VK_PADRIGHT: goForward(); break;
+		case VK_PRIOR: setScroll(scroll - BH * 4 \ 5); break;
+		case VK_NEXT: setScroll(scroll + BH * 4 \ 5); break;
+		case VK_HOME: if (pageName != "index") go("index"); else setScroll(0); break;
+		case VK_END: setScroll(pageH); break;
+		case VK_RETURN: case VK_SPACE: case VK_PAD1:
+			if (focusLink >= 0 && linkInView(focusLink)) { follow(focusLink); if (!isvalid this || closing) return; }
+			else setScroll(scroll + BH * 4 \ 5);
+			break;
+		}
+		window.keyCapture = onKey if isvalid this && !closing;
+	}
+
+	function linkInView(n)
+	{
+		var rs = links[n].rects;
+		return rs.count > 0 && rs[rs.count - 1][1] + rs[rs.count - 1][3] > scroll && rs[0][1] < scroll + BH;
+	}
+
+	// to the next link (dir 1) or the one before; the page scrolls instead where the next is out
+	// of reach (all: Tab, to it whatever the distance)
+	function moveFocus(dir, all = false)
+	{
+		var n = -1;
+		if (focusLink >= 0 && linkInView(focusLink)) n = focusLink + dir;
+		else {
+			// the first link in view from that side
+			for (var i = dir > 0 ? 0 : links.count - 1; i >= 0 && i < links.count; i += dir) if (linkInView(i) && links[i].rects[0][1] >= scroll - 4) { n = i; break; }
+		}
+		if (n < 0 || n >= links.count) { setScroll(scroll + dir * BH \ 2); if (focusLink >= 0 && !linkInView(focusLink)) focusLink = -1, drawHighlights(); return; }
+		var y = links[n].rects[0][1];
+		if (!all && (dir > 0 ? y > scroll + BH + BH \ 2 : y < scroll - BH \ 2)) { setScroll(scroll + dir * BH \ 2); return; }
+		focusLink = n;
+		showLink(n);
+		drawHighlights();
+		pushA11y();
+	}
+
+	// ------------------------------------------------------------ the mouse and fingers
+
+	function buttonAt(x, y)
+	{
+		x -= HX, y -= HY;
+		for (var i = 0; i < buttons.count; i++) { var b = buttons[i]; if (x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return b.id; }
+		return "";
+	}
+
+	function linkAt(x, y)
+	{
+		if (x < BX || x >= BX + BW || y < BY || y >= BY + BH) return -1;
+		x -= BX, y = y - BY + scroll;
+		for (var i = 0; i < links.count; i++) {
+			var rs = links[i].rects;
+			for (var j = 0; j < rs.count; j++) if (x >= rs[j][0] && x < rs[j][0] + rs[j][2] && y >= rs[j][1] && y < rs[j][1] + rs[j][3]) return i;
+		}
+		return -1;
+	}
+
+	function press(id)
+	{
+		if (!buttonEnabled(id)) return;
+		KAGInterfaceSound("manual." + id) if typeof global.KAGInterfaceSound != "undefined";
+		switch (id) {
+		case "back": goBack(); break;
+		case "forward": goForward(); break;
+		case "index": go("index"); break;
+		case "close": close(); break;
+		}
+	}
+
+	function onMouseDown(x, y, button, shift)
+	{
+		if (closing) return;
+		if (button == mbRight) { if (history.count > 0) goBack(); else close(); return; }
+		if (button != mbLeft) return;
+		downX = x, downY = y, downScroll = scroll, dragging = false;
+		pressed = x >= BX + BW && x < BX + BW + 40 && y >= BY && y < BY + BH && pageH > BH ? "bar" : "down";
+		if (pressed == "bar") barTo(y);
+	}
+
+	function barTo(y)
+	{
+		setScroll((y - BY) * (pageH - BH) \ BH);
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (closing) return;
+		if (pressed == "bar") { barTo(y); return; }
+		if (pressed == "down") {
+			if (!dragging && Math.abs(y - downY) > 12) dragging = true;
+			if (dragging) { setScroll(downScroll - (y - downY)); return; }
+		}
+		var l = linkAt(x, y), b = buttonAt(x, y);
+		cursor = l >= 0 || b != "" && buttonEnabled(b) ? crHandPoint : crDefault;
+		if (l != hoverLink) { hoverLink = l; drawHighlights(); }
+		if (b != hoverButton) { hoverButton = b; drawHead(); }
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (closing || button != mbLeft) return;
+		var was = pressed, drag = dragging;
+		pressed = "", dragging = false;
+		if (was != "down" || drag) return;
+		var b = buttonAt(x, y);
+		if (b != "") { press(b); return; }
+		var l = linkAt(x, y);
+		if (l >= 0) { focusLink = l; drawHighlights(); follow(l); return; }
+		// a click outside the panel closes it
+		if (x < PX || x >= PX + PW || y < PY || y >= PY + PH) close();
+	}
+
+	function onMouseLeave()
+	{
+		if (hoverLink >= 0) { hoverLink = -1; drawHighlights(); }
+		if (hoverButton != "") { hoverButton = ""; drawHead(); }
+	}
+
+	// ------------------------------------------------------------ screen readers
+
+	function pushA11y()
+	{
+		if (!KAGA11y.available || closing) return;
+		var nodes = [ %[ id:"manual", role:"group", name:tr("Manual") + ": " + (doc !== void ? doc.title : "") ] ];
+		for (var i = 0; i < buttons.count; i++) {
+			var b = buttons[i];
+			nodes.add(%[ id:"btn" + b.id, role:"button", parent:"manual", name:tr(b.label),
+				states:buttonEnabled(b.id) ? [ "focusable" ] : [], rect:KAGA11y.rectOf(this, HX + b.x, HY + b.y, b.w, b.h) ]);
+		}
+		var focus, li = 0;
+		for (var i = 0; i < blocks.count; i++) {
+			var b = blocks[i];
+			nodes.add(%[ id:"b" + i, role:b.role, parent:"manual", name:b.name,
+				rect:KAGA11y.rectOf(this, BX + b.rect[0], BY + b.rect[1] - scroll, b.rect[2], b.rect[3]) ]);
+		}
+		for (var i = 0; i < links.count; i++) {
+			var l = links[i], r = l.rects.count > 0 ? l.rects[0] : [ 0, 0, 0, 0 ];
+			var states = [ "focusable" ];
+			states.add("selected") if l.on;
+			states.add("focused"), focus = "link" + i if i == focusLink;
+			nodes.add(%[ id:"link" + i, role:l.option !== void ? "checkbox" : "link", parent:"manual", name:l.text,
+				states:states, rect:KAGA11y.rectOf(this, BX + r[0], BY + r[1] - scroll, r[2], r[3]) ]);
+		}
+		KAGA11y.setNodes(this, nodes, focus);
+	}
+
+	function onA11yAction(id, action, arg)
+	{
+		if (id.substring(0, 3) == "btn") { press(id.substring(3)) if action == "click"; return; }
+		if (id.substring(0, 4) != "link") return;
+		var n = +id.substring(4);
+		if (n < 0 || n >= links.count) return;
+		focusLink = n;
+		showLink(n);
+		drawHighlights();
+		if (action == "click") follow(n);
+	}
+}
+
+// an option link's value as the option has it (true/false, a number, or one of its values)
+function KAGManualOptionValue(o, s)
+{
+	if (o.values !== void) for (var i = 0; i < o.values.count; i++) if ((string)o.values[i][1] == s) return o.values[i][1];
+	if (s == "true") return true;
+	if (s == "false") return false;
+	if (s != "" && (string)(+s) == s) return +s;
+	return s;
+}
+
+function KAGManualOptionIs(name, s)
+{
+	var o = KAGOptions[name];
+	return o !== void && KAGOptionSame(KAGOptionGet(name), KAGManualOptionValue(o, s));
+}
+
+// whether a link can be followed here
+function KAGManualLinkAvailable(t)
+{
+	var colon = t.indexOf(":"), kind = colon < 0 ? "page" : t.substring(0, colon), arg = colon < 0 ? t : t.substring(colon + 1);
+	switch (kind) {
+	case "page": return KAGManualPages[arg.toLowerCase()] !== void || KAGManualFile(arg) !== void;
+	case "option":
+		var eq = arg.indexOf("="), o = KAGOptions[eq < 0 ? arg : arg.substring(0, eq)];
+		return o !== void && (o.available === void || o.available());
+	case "action":
+		if (arg == "controls") return typeof global.KAGElementsScreenAvailable != "undefined" && KAGElementsScreenAvailable();
+		if (KAGManualActions[arg] !== void) return true;
+		var o = KAGOptions[arg];
+		if (o !== void && o.action !== void) return o.available === void || o.available();
+		var a = typeof global.KAGActions != "undefined" ? KAGActions[arg] : void;
+		return a !== void && (a.available === void || a.available());
+	}
+	return true;
+}
+
+// an action: link's action, done once the manual has closed
+var KAGManualPending;
+function KAGManualDoPending()
+{
+	var name = KAGManualPending;
+	KAGManualPending = void;
+	KAGManualDo(name) if name !== void;
+}
+
+function KAGManualDo(name)
+{
+	var f = KAGManualActions[name];
+	if (f !== void) { f(); return; }
+	var o = KAGOptions[name];
+	if (o !== void && o.action !== void) { o.action(); return; }
+	if (typeof global.KAGRunAction != "undefined" && KAGActions[name] !== void) { KAGRunAction(name); return; }
+	dm("Manual: no action " + name);
+}

@@ -1,0 +1,15 @@
+﻿# Making the Game Easier to See, Hear and Play
+## Screen readers
+The game gives its text, its choices and its buttons to the system's screen reader: Narrator on Windows, VoiceOver on a Mac, Orca on Linux. Start the screen reader before the game.
+## Seeing
+- [Reduce Motion](option:reduceMotion=true) stills the effects that keep moving.
+- The message window can be [solid](option:windowOpacity=255) behind the text.
+- Text speed: [slow](option:textSpeed=3) [fastest](option:textSpeed=10). Config also has the font, its outline and its shadow.
+- [Tips](option:tooltips=true) say what a button does when the pointer rests on it.
+## Hearing
+- [Subtitles](option:subtitles=true) for the movies.
+- [Voices from where the speakers stand](option:voicePlacement=true), or [all from the middle](option:voicePlacement=false).
+- Voices [slower](option:voiceSpeed=0.8), [as recorded](option:voiceSpeed=1.0) or [faster](option:voiceSpeed=1.25).
+## Playing
+- Every action can have keys of your choice: [the controls](action:controls).
+- [Auto mode](action:auto) goes on by itself; Config sets its speed.

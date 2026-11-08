@@ -230,7 +230,7 @@ class KAGMenuBar
 		if (!window.menuBarShown) return hide();
 		var list = KAGMenuVisibleItems(window, window.menu), key = [];
 		key.add(window.innerWidth), key.add(window.innerHeight), key.add(window.menuBarHeight);
-		key.add(KAGLanguage.current) if typeof global.KAGLanguage == "Object" && KAGLanguage !== void;
+		key.add(KAGLanguage.menuCode) if typeof global.KAGLanguage == "Object" && KAGLanguage !== void;
 		for (var i = 0; i < list.count; i++)
 			if (typeof list[i] == "Object") key.add(KAGMenuItemText(list[i]).label + (KAGMenuEnabled(list[i]) ? "+" : "-"));
 		key = key.join("|");

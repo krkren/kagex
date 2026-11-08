@@ -661,7 +661,8 @@ class BitmapAffineSourceLayer extends AffineSourceLayer {
 	 */
 	function loadImages(storage) {
 		_psdlayer = void;
-		var ret = affineLoadLayeredLayer(_image, storage) ? %[] : _image.loadImages(...);
+		// a CG variation (CGVariations.tjs), a layer of a .clip or .psd, or an image
+		var ret = (KAGCGVariationDraw(_image, storage) || affineLoadLayeredLayer(_image, storage)) ? %[] : _image.loadImages(...);
 		_image.setSizeToImageSize();
 		if (_redrawFunction !== void) {
 			_redrawFunction(_image);
@@ -1628,6 +1629,7 @@ class AffineLayer extends KAGLayer {
 	var _clipImage; ///< For clipping
 	var _clipImageLeft;
 	var _clipImageTop;
+	var _clipLayer; ///< (since 0.26.0) a layer whose picture, as drawn, clips this one's (KAGEnvLinks.tjs)
 
 	// Clear draw region
 	function clearAll() {
@@ -1689,6 +1691,30 @@ class AffineLayer extends KAGLayer {
 		calcAffine();
 	}
 	
+	// (since 0.26.0) clipped to another layer's picture as drawn on the screen: both are the
+	// parent's size at 0, 0, so this one's alpha is multiplied by the other's, pixel by pixel, after
+	// each draw (an outline to light, a window to look through); void: none
+	property clipLayer {
+		setter(v) {
+			if (v !== _clipLayer) {
+				_clipLayer = v;
+				calcAffine();
+			}
+		}
+		getter() {
+			return _clipLayer;
+		}
+	}
+
+	// (since 0.26.0) this layer's picture is another layer's as drawn (all of it: the parent's
+	// size), so it can be turned, flipped and faded about any point of it (a reflection, a second
+	// view); called again for each new frame of the other
+	function followPicture(src) {
+		_initBitmap();
+		_image.assignImages(src);
+		calcAffine();
+	}
+
 	// Clear clip image
 	function clearClipImage() {
 		if (_clipImage !== void) {
@@ -1921,6 +1947,12 @@ class AffineLayer extends KAGLayer {
 		}
 		if (_clipImage !== void) {
 			super.clipAlphaRect(_clipImageLeft, _clipImageTop, _clipImage,0,0,_clipImage.imageWidth,_clipImage.imageHeight,0);
+		}
+		if (_clipLayer !== void) {
+			if (isvalid _clipLayer)
+				super.clipAlphaRect(0, 0, _clipLayer, 0, 0, super.width, super.height, 0);
+			else
+				_clipLayer = void;
 		}
 		super.onPaint(...);
 	}

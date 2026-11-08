@@ -206,6 +206,8 @@ function KAGWindow_createMenus()
 			/**/           onResetWindowSizeMenuItemClick, false));
 		displayMenu.add(this.disableWindowResizeMenuItem = new KAGMenuItem(this, "Disable Resizing(&Z)", 0,
 			/**/           onDisableWinwodResizeMenuItemClick, false));
+		// the window sizes that fit the screen (Display.tjs, since 0.26.0)
+		KAGDisplayMenuSizes(this, displayMenu) if typeof global.KAGDisplayMenuSizes != "undefined";
 
 		displayMenu.add(new MenuItem(this, "-"));
 
@@ -218,13 +220,13 @@ function KAGWindow_createMenus()
 
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
-		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)", 0,
+		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)\tF1", 0,
 			onHelpIndexMenuItemClick, false));
 
 		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
 			showControls, false));
 
-		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...\tF1", 0,
+		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 		onHelpAboutMenuItemClick, false));
 
 	menu.add(this.debugMenu = new KAGMenuItem(this, "Debug(&D)", 0, void, false));
@@ -266,6 +268,9 @@ function KAGWindow_createMenus()
 
         debugMenu.add(this.outputDebugLogMenuItem = new KAGMenuItem(this, "Output KAGEX Log", 0,
 			onOutputDebugLogMenuItemClick, false));
+
+		// the writer's helpers: restart, go to a line, flags, copy, a bug report (DebugTools.tjs)
+		KAGDebugMenuItems(this, debugMenu) if typeof global.KAGDebugMenuItems != "undefined";
 
         debugMenu.add(new MenuItem(this, "-"));
 
@@ -765,12 +770,17 @@ var configPages = [
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
-    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips", "fullScreenFill" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
     // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
     [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],
-      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ]
+      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ],
+    // the languages (Language.tjs, since 0.26.0): the menus' own, and a second under the story's
+    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [] ]
     ];
+
+KAGDefineOption(%[ name:"languageNote", label:"Languages", kind:"note", rows:2,
+    lines:[ "A second language shows, smaller,", "under each line of the story.", "Shift+F9 swaps the two." ] ]);
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
     lines:[ "A slider sets a character's volume;", "Test plays one of their lines.",
@@ -1019,7 +1029,8 @@ function setCGImage(target, filename)
     // A prepared thumbnail (data/thum/thum_<name>, the picture area's size, in any image format:
     // kagex-release converts it) avoids decoding the full CG on every page; without one the CG is
     // shrunk here
-    layer.loadImages(getExistImageName("thum_"+filename) !== void ? "thum_"+filename : filename);
+    // (a CG variation too, put together from its layered file: KAGLoadPicture, CGVariations.tjs)
+    KAGLoadPicture(layer, getExistImageName("thum_"+filename) !== void ? "thum_"+filename : filename);
     layer2.loadImages("cgmode_thum_normal");
     layer2.imageWidth=pw;
     layer2.imageHeight=ph;
@@ -1305,7 +1316,7 @@ class CGViewer extends Layer
 
     function load()
     {
-        pic.loadImages(list[index]);
+        KAGLoadPicture(pic, list[index]); // (a CG variation too)
         var fx = width / pic.imageWidth, fy = height / pic.imageHeight;
         fit = fx < fy ? fx : fy;
         z = 1.0;

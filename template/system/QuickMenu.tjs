@@ -332,7 +332,7 @@ class KAGQuickMenu extends KAGPlugin
 		// it can show again (the story, the window back): unpinned, it peeks out for a moment so
 		// the player knows it's there (since 0.20.0)
 		if (!showable) { showable = true; lastNear = System.getTickCount(); }
-		var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
+		var lang = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.menuCode : "";
 		if (lang != language) { language = lang; dropPictures(); stateKey = ""; }
 		if (layer === void) build();
 		var key = stateOf();

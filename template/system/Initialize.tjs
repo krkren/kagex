@@ -970,6 +970,11 @@ if (typeof System.createAppLock == "undefined") {
     System.createAppLock = function(key) { return true; };
 }
 
+// -instance=<name> (since 0.26.0): a lock of its own, so tools/playtest.py runs several at once
+// (not in a signed build, which refuses startup options: SignatureCheck.tjs)
+var lockInstance = System.getArgument("-instance");
+lockKey += "_" + lockInstance if lockInstance != "" && global.KAGSigned !== true;
+
 if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[^A-Za-z0-9]/g, '_')) && typeof global.restart == "undefined")
 
 {
@@ -1097,6 +1102,8 @@ KAGLoadScript("UpdateRegion.tjs");
 
 KAGLoadScript("AffineLayer.tjs");
 
+KAGLoadScript("CGVariations.tjs");
+
 KAGLoadScript("AnimationLayer.tjs");
 
 KAGLoadScript("GraphicLayer.tjs");
@@ -1164,6 +1171,8 @@ KAGLoadScript("Greetings.tjs"); // a line for the title by the time of day, the 
 KAGLoadScript("Voices.tjs"); // the voices heard, and the player's favourites in their own order (since 0.24.0)
 KAGLoadScript("SpriteMode.tjs"); // the characters one at a time in any pose and face, for a viewer (since 0.24.0)
 KAGLoadScript("Flowchart.tjs"); // the flowchart: the scenes, the ways between them, the route taken (since 0.24.0)
+KAGLoadScript("Manual.tjs"); // the manual: pages of help, links that change settings (since 0.26.0)
+KAGLoadScript("DebugTools.tjs"); // the route runner, the tag trace, the Debug menu's helpers (since 0.26.0)
 
 
 
@@ -1438,7 +1447,25 @@ function KAGCompileScenarios(force = false)
 	var r = world_object.player.compileAll(force);
 	dm("Compiled scenarios: %d compiled, %d up to date, %d failed, %d warnings".sprintf(r.compiled, r.skipped, r.failed, r.warnings));
 	for (var i = 0; i < r.errors.count; i++) dm("  " + r.errors[i]);
+	KAGLanguageReport(world_object.player.parser);
 	return r;
+}
+// For translators (since 0.26.0): each language's texts in the scripts just compiled, and those
+// still as written in the scripts' language (-scncompile=all reports every script)
+function KAGLanguageReport(parser)
+{
+	if (parser === void || typeof parser.languageStats != "Object") return;
+	var keys = [];
+	keys.assign(parser.languageStats);
+	for (var i = 0; i < keys.count; i += 2) {
+		var lang = keys[i], st = keys[i + 1];
+		dm("Language %s: %d texts, %d still as written%s%s".sprintf(lang, st.texts, st.untranslated,
+			st.scenes > 0 ? ", %d scenes that don't fit their translation".sprintf(st.scenes) : "",
+			st.missing > 0 ? ", %d scripts without a translation".sprintf(st.missing) : ""));
+		var most = 200;
+		for (var j = 0; j < st.places.count && j < most; j++) dm("  " + lang + ": " + st.places[j]);
+		dm("  ... and %d more".sprintf(st.places.count - most)) if st.places.count > most;
+	}
 }
 if (System.getArgument("-scncompile") != "" && System.getArgument("-scncompile") != "no") {
 	var r = KAGCompileScenarios(System.getArgument("-scncompile") == "all");
@@ -1478,6 +1505,13 @@ if (System.getArgument("-voicelines") != "") {
 	var r = KAGListVoiceLines(System.getArgument("-voicelines"));
 	KAGUnlinkPluginsBeforeExit();
 	System.exit(r.failed > 0 ? 1 : 0);
+}
+
+// -allseen=yes: every CG, scene, song and movie counts as seen this run (tf.allseen, which is
+// never saved; since 0.26.0), not in a signed build
+if (global.KAGSigned !== true && typeof global.kag == "Object" && kag !== void) {
+	var allseen = System.getArgument("-allseen");
+	kag.tflags.allseen = true if allseen == "yes" || allseen == "true";
 }
 
 // In a signed build, verify the archives, the engine files and the patches first, then start the

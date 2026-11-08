@@ -1,0 +1,15 @@
+﻿# The Picture Is Stretched, Blurry, or Has Black Bars
+## Black bars
+The game keeps its shape on a screen of another shape, with bars at the sides or above and below. In full screen:
+- [Bars](option:fullScreenFit=contain): all of the picture, as it was made.
+- [Fill](option:fullScreenFit=cover): no bars; the edges are cut off.
+- [Stretch](option:fullScreenFit=fill): no bars, and nothing cut off, but out of shape.
+## Blurry or jagged
+A picture made larger or smaller than its own size is smoothed:
+- [Smooth](option:smoothScaling=true) looks softer; [sharp](option:smoothScaling=false) keeps the edges hard but jagged.
+- In a window, [100%](option:windowSize=100) is the game's own size, and the sharpest.
+## Tearing
+A line across the picture as it moves: turn [vertical sync on](option:vsync=true).
+## The window or the whole screen
+[Window](option:fullScreen=false) or [full screen](option:fullScreen=true). In a window: [50%](option:windowSize=50) [75%](option:windowSize=75) [100%](option:windowSize=100).
+> On a phone or a tablet, turn it sideways: the game is wider than it's tall.

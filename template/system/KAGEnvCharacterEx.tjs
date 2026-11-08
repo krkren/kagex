@@ -3,7 +3,7 @@
 // Blinking and lip-sync, shared with Live2D characters (world.tjs loads it first)
 KAGLoadScriptOnce("KAGEnvCharacterEyeLip.tjs");
 // Loading psdlayer
-KAGLoadScript("psdlayer.tjs");
+KAGLoadScript("psdlayer.tjs") if typeof global.PSDInfo == "undefined"; // (CGVariations.tjs may have)
 
 // Loading basic stand-alone image info
 var allStandInfoMap, allStandInfoList;
@@ -2211,6 +2211,11 @@ class KAGEnvCharacterEx extends KAGEnvCharacterEyeLip {
 		//dm(name + " Pose:" + pose + ":" + levelName);
 		
 		if (pose !== void && dress !== void && diff !== void && face !== void) {
+
+			// (since 0.26.0) the outfit dressnamemap.txt puts in place of the one the script names,
+			// decided as it's drawn (with the flags as they are now: a save from before the choice,
+			// Back, Replay); it was decided only when the outfit was given
+			_setDress(dress) if !noconvdress && convDressName(dress, "dressNameMap") != convDress;
 
 			// Layer reorganization
 			if (standlayer === void || standlayer.poseName != pose || standlayer.level != level) {

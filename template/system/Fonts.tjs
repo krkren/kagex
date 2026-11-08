@@ -98,17 +98,19 @@ function KAGFontThere(face)
 
 function KAGFontHas(list, item) { return list.find("*") >= 0 || list.find(item) >= 0; }
 
-// The language shown (or "" before the languages are read)
-function KAGFontLanguage()
+// The language a role's text is in (or "" before the languages are read): the story's for the
+// message window's, the menus' for the rest (since 0.26.0 they can differ: Language.tjs)
+function KAGFontLanguage(role = "interface")
 {
-	return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "";
+	if (typeof global.KAGLanguage != "Object" || KAGLanguage === void) return "";
+	return role == "message" ? KAGLanguage.current : KAGLanguage.menuCode;
 }
 
 // The face list for a role in a language (the language shown when void)
 function KAGFontFace(role = "interface", lang = void)
 {
 	KAGReadFonts();
-	lang = KAGFontLanguage() if lang === void;
+	lang = KAGFontLanguage(role) if lang === void;
 	var key = role + "/" + lang, r = KAGFontFaceCache[key];
 	if (r !== void) return r;
 	if (KAGFonts.count == 0) return KAGFontFaceCache[key] = KAGFallbackFaces;
@@ -126,7 +128,7 @@ function KAGFontFace(role = "interface", lang = void)
 function KAGFontChoices(role = "message")
 {
 	KAGReadFonts();
-	var r = [], lang = KAGFontLanguage(), rest = KAGFontFace(role).split(",");
+	var r = [], lang = KAGFontLanguage(role), rest = KAGFontFace(role).split(",");
 	for (var i = 0; i < KAGFonts.count; i++) {
 		var f = KAGFonts[i];
 		if (f.caption == "" || !KAGFontHas(f.roles, role) || !KAGFontThere(f.face)) continue;
@@ -297,7 +299,7 @@ function KAGStyledTextLayout(layer, style, text, w, h, changes = void)
 	var font = layer.font;
 	font.face = st.face !== void ? st.face : KAGFontFace(st.role);
 	font.bold = !!st.bold, font.italic = !!st.italic, font.angle = 0;
-	var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.current) : true;
+	var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(st.role == "message" ? KAGLanguage.current : KAGLanguage.menuCode) : true;
 	var size = +st.size, maxLines = Math.max(1, +st.lines), gap = +st.lineSpacing, lines;
 	var rta, measure;
 	for (;;) {

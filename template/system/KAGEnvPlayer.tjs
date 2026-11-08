@@ -860,6 +860,7 @@ class KAGEnvPlayer
 			return ret;
 		}
 		parser.initDepend(list);
+		parser.languageStats = %[];
 		var w = parser.warnings.count;
 		var compiled = %[], failed = %[];
 		for (var round = 0; round < 4; round++) {

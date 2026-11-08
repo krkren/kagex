@@ -66,7 +66,7 @@ LABELS = {
         "Ai": "あい", "Pip": "ピップ", "Hiyori": "ひより", "Vee": "ヴィー", "Undo": "前に戻す", "Revert": "すべて戻す",
         "Window": "ウィンドウ", "Full Screen": "フルスクリーン", "Normal": "通常", "Skip": "スキップ",
         "All": "すべて", "Read Only": "既読のみ",
-        "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法",
+        "Default": "初期設定", "Title": "タイトル", "Return": "戻る", "Controls": "操作方法", "Manual": "マニュアル",
         "Your Name": "名前",
         # save / load
         "Save": "セーブ", "Load": "ロード", "NO DATA": "データなし",
@@ -879,7 +879,8 @@ def make_config():
         button(180, 60, L(name), "muted", size=26, icon=ic_ring, icon_size=14).save(
             out("config_voice%d_off.png" % i))
     for name, label in (("config_initial", "Default"), ("config_title", "Title"), ("return", "Return"),
-                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert")):
+                        ("config_controls", "Controls"), ("config_undo", "Undo"), ("config_revert", "Revert"),
+                        ("config_manual", "Manual")):
         for st in ("normal", "over"):
             nav_button(L(label), st).save(out("%s_%s.png" % (name, st)))
     make_config_pages()
@@ -1405,9 +1406,39 @@ def make_star():
     c.save(os.path.join(REPO, "data", "fgimage", "star.png"))
 
 
+# --- props for the World demo's objects that move with others (0.26.0) ----------------------
+def make_props():
+    """prop_bubble: a speech bubble with three dots (attached to Pip, its tail at the bottom left);
+    prop_light: warm light falling from the top left, to clip to a character's outline"""
+    w, h = 300, 236
+    c = Canvas(w, h)
+    body = (14, 14, w - 14, 176)
+    tail = [(60, 146), (136, 146), (36, 224)]
+    # outline first (the body and the tail, a little larger), then the white over it
+    c.ellipse((body[0] - 7, body[1] - 7, body[2] + 7, body[3] + 7), fill=rgba(NAVY))
+    c.stroke(tail, 14, rgba(NAVY), closed=True)
+    c.polygon(tail, rgba(NAVY))
+    c.ellipse(body, fill=rgba(WHITE))
+    c.polygon([(72, 140), (124, 140), (50, 204)], rgba(WHITE))
+    for i in range(3):
+        x = 98 + i * 52
+        c.ellipse((x - 15, 80, x + 15, 110), fill=rgba(VIOLET))
+    c.save(os.path.join(REPO, "data", "fgimage", "prop_bubble.png"))
+    # the light: 1200 x 1800, an orange glow strongest at the top left, gone by the middle
+    w, h = 600, 900
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    d = (xx / w * 0.8 + yy / h * 0.6)
+    a = np.clip(1.0 - d / 0.9, 0, 1) ** 1.6
+    arr = np.zeros((h, w, 4), np.uint8)
+    arr[:, :, 0], arr[:, :, 1], arr[:, :, 2] = 255, 176, 84
+    arr[:, :, 3] = (a * 235 + 0.5).astype(np.uint8)
+    Image.fromarray(arr, "RGBA").resize((w * 2, h * 2), Image.BILINEAR).save(os.path.join(REPO, "data", "fgimage", "prop_light.png"), optimize=True)
+
+
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
           "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
-          "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview, "dialog": make_dialog}
+          "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview, "dialog": make_dialog,
+          "props": make_props}
 
 
 # the groups whose images have words on them, drawn again for each other language

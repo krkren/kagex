@@ -2165,6 +2165,76 @@ or written by a script as make_vrm.py does.
 
 
 
+● Objects That Move With Others
+
+
+
+Since 0.26.0 a character or a layer can be attached to another, show another's picture, or be
+clipped to another's outline (template/system/KAGEnvLinks.tjs). These are attributes of the object
+like its xpos or its opacity, part of the World's state, so compiled scenes, saves, Back and Replay
+carry them; the sample's Character demo shows them in its "Together" scene.
+
+  attach=<name>        It moves, zooms and turns with the other object: its own xpos and ypos are
+                       an offset from the other's anchor (World units, y going up), scaled and
+                       turned as the other is, and its own zoom and rotate are added to the other's.
+                       It's drawn just above the other, faded with it, and it leaves when the other
+                       leaves (hidden, or deleted with [dellay]/[delchar]). It follows every move,
+                       zoom and turn as it happens, actions and timed moves included.
+  attachbehind=true    Drawn just behind the other instead (false: just above it).
+  attachkeep=true      Stays when the other leaves, hidden until it's back.
+  follow=<name>        Its picture is the other's as drawn (any character, a Live2D or VRM one
+                       too, or a layer), each frame, so it blinks and moves with it: a reflection,
+                       a shadow, a second view. Its own flipx, flipy, zoom and rotate turn it about
+                       the other's anchor, and its xpos and ypos then move it; drawn just behind the
+                       other. A reflection is flipy=true moved down by twice the height of the
+                       other's anchor above its feet.
+  clipto=<name>        Drawn only where the other is drawn: its alpha multiplied by the other's,
+                       on the screen (a light on a character, a pattern on a costume).
+  relative=<name>,<dx>,<dy>
+                       Placed once at the other's xpos and ypos plus dx, dy (no lasting link).
+  detach               Lets go of all of them; the object goes back to its own place.
+
+    [ai standard posleft]
+    [pip standard posright]
+    [newlay name=bubble file=prop_bubble attach=pip xpos=210 ypos=330 show]
+    [pip center time=800]          (the bubble goes with him)
+    [newlay name=light file=prop_light attach=ai clipto=ai xpos=180 ypos=760 opacity=220 show]
+    [newlay name=view follow=ai zoom=38 flipx=true xpos=1180 ypos=1020 show]
+    [pip hide]                     (and his bubble with him)
+
+An attached or following object's layer is placed from the other's place on the screen, after the
+camera, so it keeps its place on the other through the camera's moves too. Leaving with the other
+is immediate: an attached prop disappears as its character's hide transition begins.
+
+
+
+● Pictures and Outfits an Earlier Choice Changes
+
+
+
+An earlier choice (glasses or not, which outfit) can change the pictures and outfits shown later
+while the script still names one, with no branch in every scene that shows them. Two tab-separated
+tables, anywhere on the auto path (the sample's are in data/main), each read when the World starts;
+a line starting with # is a comment, and the first row whose condition holds wins (TJS; f is the
+playthrough's flags, sf the system's):
+
+  imagenamemap.txt    <name the script uses> <tab> <picture shown> <tab> <condition>
+                      For layers ([newlay], event CGs), stages' pictures (since 0.26.0) and the
+                      CG gallery's unlocks, which record the picture shown. Names compare in
+                      lower case.
+  dressnamemap.txt    <character> <tab> <outfit the script names> <tab> <outfit shown> <tab> <condition>
+                      For characters drawn from layers and, since 0.26.0, for those drawn from
+                      pictures (envinit.tjs's dresses).
+
+    pip     plain   beret   f.charRoute == "park"
+
+Since 0.26.0 both are decided as the picture is drawn, with the flags as they are then, not when
+the script names it: compiled scenes keep the name the script used, so a save made before the
+choice, Back and Replay all show what the flags say now. The sample's Character demo puts Pip in his
+beret in its Together scene when its choice went by the park.
+
+
+
 ● Event Object Functions
 
 
