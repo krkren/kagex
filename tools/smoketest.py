@@ -111,15 +111,39 @@ class Engine:
         """Writes what the engine's threads are doing (a hung game) to path; False where it can't"""
         return False
 
+    # The commands run the step's TJS through a runner the first command defines, as a string
+    # for Scripts.exec: the engine keeps every block it compiles that has a function in it (10 to
+    # 16 KB a command), and a run polls thousands of times, so the commands used to wrap the TJS
+    # in function expressions kept some 180 MB by the end of the sample's steps, which ran the
+    # browser build (2 GB in all) out of memory in 0.26.0's first platforms run; a block without
+    # one keeps under 1 KB
+    RUNNER = ("(global.__smokeHex = function(src) { var r = Scripts.exec(src); if (typeof r != 'String') return r;"
+              " var a = []; for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
+              " return 'S:' + a.join(''); }, 0)")
+    runner_ready = False
+
+    def _run(self, cmd, timeout):
+        """cmd, once the runner is there (again, after the game started over)"""
+        if not self.runner_ready:
+            j = self._eval(self.RUNNER, 30)
+            if not j.get("ok"):
+                return j
+            self.runner_ready = True
+        j = self._eval(cmd, timeout)
+        if not j.get("ok") and re.search(r"global\.(\w+)", self.RUNNER).group(1) in str(j.get("error")):
+            self.runner_ready = False
+            j = self._eval(self.RUNNER, 30)
+            if j.get("ok"):
+                self.runner_ready = True
+                j = self._eval(cmd, timeout)
+        return j
+
     def tjs(self, body, timeout=30.0):
         """Runs TJS statements on the main thread; 'return x;' gives the result. The REPLs print a
         string result as a TJS literal (EscapeC), where an apostrophe is \\', which JSON refuses
         (the web build's language step failed on "It's"), so a string comes back as the hex of
         its UTF-16 code units"""
-        cmd = ("(function(r) { if (typeof r != 'String') return r; var a = [];"
-               " for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
-               " return 'S:' + a.join(''); })((function() {\n" + body + "\n})())")
-        j = self._eval(cmd, timeout)
+        j = self._run("__smokeHex(%s)" % tjs_string(body), timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         result = j.get("result", "")
@@ -243,6 +267,9 @@ class FileChannel(Engine):
     """The REPL file channel (-replfile=<dir>): TJS in cmd, the answer in resp. A native modal
     dialog shows up as a modal file; it is answered and counted as a failure."""
     chan = None
+    RUNNER = ("(global.__smokeSave = function(src, out) { var r = Scripts.exec(src); var t = typeof r;"
+              " var a = [ t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
+              " a.save(out); return 0; }, 0)")
 
     def alive(self):
         return True
@@ -283,10 +310,7 @@ class FileChannel(Engine):
         out = os.path.join(self.chan, "result.txt")
         if os.path.exists(out):
             os.remove(out)
-        cmd = ("(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r"
-               " : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
-               " a.save('%s'); return 0; })((function() {\n%s\n})())") % (storage_name(out), body)
-        j = self._eval(cmd, timeout)
+        j = self._run("__smokeSave(%s, %s)" % (tjs_string(body), tjs_string(storage_name(out))), timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         with open(out, encoding="utf-16") as f:   # Array.save: UTF-16 with a BOM
@@ -717,22 +741,27 @@ class WebEngine(Engine):
     def _dot(self, cmd):
         return self._raw(cmd).get("result", "")
 
+    timer_ready = False
+
     def _eval(self, cmd, timeout):
-        start = self._raw("""(function() {
-            global.__smokeRes = void;
-            global.__smokeFn = function() { return %s; };
-            if (typeof global.__smokeTimer == "undefined") {
+        # a scenario load started inside krkrz_repl_eval crashed the page, so the command runs
+        # from a game Timer; the timer and its function are made once (a function made for every
+        # command is a compiled block the engine keeps: Engine.RUNNER) and the command is a string
+        if not self.timer_ready:
+            made = self._raw("""(function() {
                 global.__smokeRun = function() {
                     global.__smokeTimer.enabled = false;
-                    try { global.__smokeRes = %%[ok: 1, value: global.__smokeFn()]; }
-                    catch (e) { global.__smokeRes = %%[ok: 0, error: e.message]; }
+                    try { global.__smokeRes = %[ok: 1, value: Scripts.eval(global.__smokeCmd)]; }
+                    catch (e) { global.__smokeRes = %[ok: 0, error: e.message]; }
                 };
                 global.__smokeTimer = new Timer(global.__smokeRun, "");
                 global.__smokeTimer.interval = 1;
-            }
-            global.__smokeTimer.enabled = true;
-            return 1;
-        })()""" % cmd)
+                return 1;
+            })()""")
+            if not made.get("ok"):
+                return made
+            self.timer_ready = True
+        start = self._raw("(global.__smokeRes = void, global.__smokeCmd = %s, global.__smokeTimer.enabled = true, 1)" % tjs_string(cmd))
         if not start.get("ok"):
             return start
         end = time.time() + timeout
@@ -2085,7 +2114,7 @@ global.__smokeStyled = function(text, styled) {
 
 def tjs_string(text):
     """text as a TJS string literal"""
-    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n") + '"'
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"').replace("\r", "\\r").replace("\n", "\\n") + '"'
 
 
 def page_text(eng):
