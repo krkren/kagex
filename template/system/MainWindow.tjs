@@ -2956,6 +2956,11 @@ class KAGWindow extends Window
 
 
 
+		// The object the signature checks ran on goes while this window is still here
+		// (KAGSignatureReleaseChecker, SignatureCheck.tjs)
+
+		KAGSignatureReleaseChecker() if global.kag === this && typeof global.KAGSignatureReleaseChecker != "undefined";
+
 		// The game window going ends the game: unlink the plugins that abort the engine on its
 		// way out (KAGUnlinkPluginsBeforeExit, Initialize.tjs)
 

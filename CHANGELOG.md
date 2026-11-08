@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.26.1
+
+### Fixed
+
+- **A signed game could lose parts of its window at start-up and stop with an error, or hang**: the engine's signature checker looks a member up on the window it was given from its own thread for every per cent it checks, and a member lookup rearranges the window's member table while the game's timers look members up in it. The checks run on an object of their own now (`KAGSignatureChecker`, `SignatureCheck.tjs`), for start-up and for signed DLC. A smoke step runs 60 checks while a timer looks the window's methods up every millisecond (`UPSTREAM.md` 50).
+- **The smoke test made the game rebuild its file list on every command**: it deleted its result file before each one, and the engine rebuilds its whole auto path table whenever a script makes a new file (5-7 ms for the sample, at each wait's poll every 50 ms). The file is written over now, with the command's number on its first line; a command takes 51 ms instead of 56. The release's Windows test (`run-kagex.ps1`) did the same, and also wrapped every command in a function of its own, which the engine keeps compiled: its result writer is defined once now.
+
 ## 0.26.0
 
 ### Added

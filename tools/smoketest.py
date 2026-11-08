@@ -279,9 +279,14 @@ class FileChannel(Engine):
     """The REPL file channel (-replfile=<dir>): TJS in cmd, the answer in resp. A native modal
     dialog shows up as a modal file; it is answered and counted as a failure."""
     chan = None
-    RUNNER = ("(global.__smokeSave = function(src, out) { var r = Scripts.exec('{\\n' + src + '\\n}'); var t = typeof r;"
-              " var a = [ t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
+    # The result file is written over, never deleted: the engine rebuilds its whole auto path
+    # table whenever a script makes a new file (5-7 ms for the sample's 900 files), and deleting it
+    # before every command made each wait's poll, every 50 ms, cost the game that. Its first line,
+    # the command's number, tells this command's result from the one before
+    RUNNER = ("(global.__smokeSave = function(src, out, seq) { var r = Scripts.exec('{\\n' + src + '\\n}'); var t = typeof r;"
+              " var a = [ '#' + seq, t == 'String' ? 'S' + r : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
               " a.save(out); return 0; }, 0)")
+    seq = 0
 
     def alive(self):
         return True
@@ -320,19 +325,20 @@ class FileChannel(Engine):
         the main thread's reference counts: engine 2.6.5 aborted with "double free or corruption"
         now and then (UPSTREAM.md). So the REPL only gets the number 0 back."""
         out = os.path.join(self.chan, "result.txt")
-        if os.path.exists(out):
-            os.remove(out)
+        self.seq += 1
         if self.MAKES_FUNCTIONS.search(body):
-            cmd = ("(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r"
+            cmd = ("(function(r) { var t = typeof r; var a = [ '#%d', t == 'String' ? 'S' + r"
                    " : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
-                   " a.save('%s'); return 0; })((function() {\n%s\n})())") % (storage_name(out), body)
+                   " a.save('%s'); return 0; })((function() {\n%s\n})())") % (self.seq, storage_name(out), body)
             j = self._eval(cmd, timeout)
         else:
-            j = self._run("__smokeSave(%s, %s)" % (tjs_string(body), tjs_string(storage_name(out))), timeout)
+            j = self._run("__smokeSave(%s, %s, %d)" % (tjs_string(body), tjs_string(storage_name(out)), self.seq), timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         with open(out, encoding="utf-16") as f:   # Array.save: UTF-16 with a BOM
-            text = f.read()
+            head, _, text = f.read().partition("\n")
+        if head.rstrip("\r") != "#%d" % self.seq:
+            raise SmokeError("no result written for command %d (the file has %s)\n%s" % (self.seq, head.strip(), body))
         text = text[:-1] if text.endswith("\n") else text
         text = text[:-1] if text.endswith("\r") else text
         kind, value = text[:1], text[1:]
@@ -2249,6 +2255,59 @@ def sample_steps(eng):
     def _():
         if eng.tjs("return sf.clear ? 1 : 0;") != 0:
             raise SmokeError("sf.clear is already set on a fresh start")
+
+    @step("signature checks leave the game window's members alone (sigcheck)")
+    def _():
+        # The sigcheck plugin's thread looks the HWND member up on the object it was called on for
+        # every message it posts, and a TJS lookup moves members in their hash chain: done on kag
+        # while the game looked kag's members up, members went (0.26.0's first tool-check lost
+        # "fore" and "conductor" a second into a signed build) or the engine hung. The framework
+        # runs the checks on an object of their own (KAGSignatureChecker): 60 checks while a timer
+        # looks kag's methods up every millisecond, and every one of them still there after. No
+        # real signature: with a key that isn't one the plugin still hashes the file, posting a
+        # message for each per cent, and then reports an error
+        if not isinstance(eng, DesktopEngine) or \
+                eng.tjs('return typeof global.KAGSignatureCheck != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: not the desktop, or a framework from before KAGSignatureChecker)", flush=True)
+            return
+        if eng.tjs('try { Plugins.link("plugin/sigcheck.dll") if typeof global.Window.checkSignature == "undefined"; }'
+                   ' catch (e) {} return typeof global.Window.checkSignature != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no sigcheck plugin here)", flush=True)
+            return
+        target = os.path.join(eng.savedir, "smoke-sigcheck.bin")
+        with open(target, "wb") as f:
+            f.write(bytes(2 << 20))
+        with open(target + ".sig", "w", encoding="ascii") as f:
+            f.write("-- SIGNATURE - SHA256/PSS/RSA --" + "A" * 344)
+        src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "template", "system", "MainWindow.tjs")
+        names = sorted(set(re.findall(r"^\tfunction (\w+)\(", open(src, encoding="utf-8-sig").read(), re.M))) \
+            if os.path.exists(src) else ["process", "onPrimaryClick", "storeFlags", "saveBookMark", "setLanguage"]
+        kept = eng.tjs('var all = %s; global.__sigNames = []; for (var i = 0; i < all.count; i++)'
+                       ' if (typeof kag[all[i]] != "undefined") __sigNames.add(all[i]);'
+                       ' global.__sigLost = []; global.__sigDone = 0; global.__sigLeft = 60; global.__sigTicks = 0;'
+                       ' global.__sigKeyWas = global.KAGSignaturePublicKey; global.__sigFile = "%s";'
+                       ' global.KAGSignaturePublicKey = "-----BEGIN PUBLIC KEY-----\\nAAAA\\n-----END PUBLIC KEY-----";'
+                       ' return __sigNames.count;' % (json.dumps(names), storage_name(target)))
+        eng.tjs('global.__sigHammer = function() { __sigTicks++; for (var i = 0; i < __sigNames.count; i++)'
+                ' if (typeof kag[__sigNames[i]] == "undefined" && __sigLost.find(__sigNames[i]) < 0) __sigLost.add(__sigNames[i]); };'
+                ' global.__sigNext = function(h, info, result, msg) { if (info != "") __sigDone++;'
+                ' if (__sigLeft-- > 0) KAGSignatureCheck(__sigFile, "smoke"); };'
+                ' global.__sigTimer = new Timer(__sigHammer, ""); __sigTimer.interval = 1; __sigTimer.enabled = true;'
+                ' KAGSignatureChecker().onCheckSignatureDone = __sigNext incontextof global; __sigNext(0, "", 0, ""); return 1;')
+        try:
+            eng.wait("60 signature checks", "__sigDone >= 60 || __sigLost.count > 0", timeout=180)
+        finally:
+            r = str(eng.tjs('__sigTimer.enabled = false; invalidate __sigTimer; KAGSignatureReleaseChecker();'
+                            ' global.KAGSignaturePublicKey = __sigKeyWas;'
+                            ' return [__sigDone, __sigTicks, __sigLost.join(" ")].join(",");')).split(",", 2)
+            for n in (target, target + ".sig"):
+                try:
+                    os.remove(n)
+                except OSError:
+                    pass
+        print("     %s checks while %s of kag's methods were looked up %s times" % (r[0], kept, r[1]), flush=True)
+        if r[2] != "":
+            raise SmokeError("members of kag went missing during the checks: " + r[2])
 
     @step("the scripts in !scnlist.txt compile, so the demos play compiled")
     def _():

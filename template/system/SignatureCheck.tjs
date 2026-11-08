@@ -154,7 +154,7 @@ function KAGSignedDeferPatchZip(storage)
 
 
 //---------------------------------------------------------------------------
-// Verification (a serial queue of checks, run through kag.checkSignature)
+// Verification (a serial queue of checks, run through Window.checkSignature on KAGSignatureChecker's object)
 //---------------------------------------------------------------------------
 // Each entry: %[ storage, label, expect ("pass" = result 1, "mismatch" = result 0), kind ]
 var KAGSigQueue = [];
@@ -209,10 +209,55 @@ function KAGSignatureVerifyAndStart(cont)
 		KAGSigQueue.add(%[ "storage" => KAGSignedPatchZip[i], "label" => "a patch (" +
 			Storages.extractStorageName(KAGSignedPatchZip[i]) + ")", "expect" => "pass", "kind" => "patchzip", "index" => i ]);
 
-	// The plugin reports back on kag; give it the handlers and start.
-	kag.onCheckSignatureDone = KAGSignatureOnDone;
-	kag.onCheckSignatureProgress = KAGSignatureOnProgress;
+	// The plugin reports back on the checker object (KAGSignatureChecker); give it the handlers
+	// and start.
+	KAGSignatureChecker().onCheckSignatureDone = KAGSignatureOnDone incontextof global;
 	KAGSignatureStartNext();
+}
+
+// The object the checks run on. The sigcheck plugin's thread reads the HWND member of the window
+// it was called on for every progress and done message it posts (WindowSigCheck::postMessage),
+// and a TJS member lookup isn't read-only: it moves what it finds up its hash chain
+// (tTJSCustomObject::Find) and may rebuild the whole table first (PropGet, after a rehash). Done
+// on kag, whose members the game's timers look up all the while, that dropped members of kag now
+// and then (0.26.0's first tool-check: "fore" and "conductor" gone a second into a signed build,
+// then the error handler's dialog) and hung the engine in a stress test here (UPSTREAM.md). So
+// the checks run on a dictionary of four members instead: the plugin makes its checker for
+// whatever object the method is called on, reads HWND there and registers its message receiver
+// through the registerMessageReceiver it finds there, which is kag's (a closure keeps its own
+// this), so the messages still come through kag's window. The handlers are bound to the global
+// object: called with the dictionary as this, a function from outside any object would read
+// every global as the dictionary's void.
+var KAGSigChecker = void;
+function KAGSignatureChecker()
+{
+	if (global.KAGSigChecker === void) {
+		var o = %[];
+		o.HWND = kag.HWND;
+		o.registerMessageReceiver = kag.registerMessageReceiver;
+		o.onCheckSignatureDone = KAGSignatureOnDone incontextof global;
+		o.onCheckSignatureProgress = KAGSignatureOnProgress incontextof global;
+		global.KAGSigChecker = o;
+	}
+	return global.KAGSigChecker;
+}
+
+// Starts a check of storage; the result comes to the checker's onCheckSignatureDone with info
+function KAGSignatureCheck(storage, info)
+{
+	var o = KAGSignatureChecker();
+	o.HWND = kag.HWND;
+	(global.Window.checkSignature incontextof o)(storage, KAGSignaturePublicKey, info);
+}
+
+// Lets the checker object go while kag is still there: the plugin's checker unregisters its
+// receiver through it (kag's registerMessageReceiver), which throws once kag has gone, in a
+// destructor. Called when the checks have passed or failed, after a DLC's, and as kag goes.
+function KAGSignatureReleaseChecker()
+{
+	var o = global.KAGSigChecker;
+	global.KAGSigChecker = void;
+	if (o !== void) try { invalidate o; } catch (e) {}
 }
 
 function KAGSignatureEngineListName()
@@ -238,7 +283,7 @@ function KAGSignatureStartNext()
 		KAGSignatureQuit("A file that must be checked is missing: " + item.label + ".");
 		return;
 	}
-	kag.checkSignature(item.storage, KAGSignaturePublicKey, (string)KAGSigIndex);
+	KAGSignatureCheck(item.storage, (string)KAGSigIndex);
 }
 
 function KAGSignatureOnProgress(handler, info, percent)
@@ -303,6 +348,7 @@ function KAGSignatureQueueEngineFiles(listStorage)
 // Every check passed: add the verified archives' auto paths, mount the verified patches, start.
 function KAGSignatureAllPassed()
 {
+	KAGSignatureReleaseChecker();
 	global.KAGSignedMountOK = true;
 	for (var i = 0; i < KAGSignedParts.count; i++) {
 		var part = KAGSignedParts[i];
@@ -340,14 +386,14 @@ function KAGMountSignedPatchZip(storage, onDone)
 	if (!Storages.isExistentStorage(storage)) { if (onDone !== void) onDone(storage, false); return; }
 	global.KAGSignedDlcStorage = storage;
 	global.KAGSignedDlcDone = onDone;
-	kag.onCheckSignatureDone = KAGSignatureDlcDone;
-	kag.onCheckSignatureProgress = KAGSignatureOnProgress;
-	kag.checkSignature(storage, KAGSignaturePublicKey, "dlc");
+	KAGSignatureChecker().onCheckSignatureDone = KAGSignatureDlcDone incontextof global;
+	KAGSignatureCheck(storage, "dlc");
 }
 
 function KAGSignatureDlcDone(handler, info, result, errormsg)
 {
 	if (info != "dlc") return;
+	KAGSignatureReleaseChecker();
 	var storage = global.KAGSignedDlcStorage, onDone = global.KAGSignedDlcDone;
 	var ok = false;
 	if (result == 1) {
@@ -370,6 +416,7 @@ function KAGSignatureQuit(reason)
 		"\n\nThe game files or the program may be damaged or modified. Please reinstall from the original source.";
 	dm("Signature check: " + reason);
 	global.KAGSignatureAborted = true;   // Initialize.tjs returns on this; terminate() is async
+	KAGSignatureReleaseChecker();
 	try {
 		var wasDisabled = System.eventDisabled;
 		System.eventDisabled = true;
