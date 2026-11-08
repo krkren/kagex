@@ -116,7 +116,11 @@ class Engine:
     # 16 KB a command), and a run polls thousands of times, so the commands used to wrap the TJS
     # in function expressions kept some 180 MB by the end of the sample's steps, which ran the
     # browser build (2 GB in all) out of memory in 0.26.0's first platforms run; a block without
-    # one keeps under 1 KB
+    # one keeps under 1 KB. TJS that makes a function (a Timer's, a hook) goes the old way: a
+    # function belongs to the block it was compiled in, the REPL keeps its blocks, and
+    # Scripts.exec lets its block go as it returns, which leaves such a function invalid
+    # ("object already invalidated" at its next call)
+    MAKES_FUNCTIONS = re.compile(r"\b(function|class|property)\b")
     RUNNER = ("(global.__smokeHex = function(src) { var r = Scripts.exec(src); if (typeof r != 'String') return r;"
               " var a = []; for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
               " return 'S:' + a.join(''); }, 0)")
@@ -143,7 +147,13 @@ class Engine:
         string result as a TJS literal (EscapeC), where an apostrophe is \\', which JSON refuses
         (the web build's language step failed on "It's"), so a string comes back as the hex of
         its UTF-16 code units"""
-        j = self._run("__smokeHex(%s)" % tjs_string(body), timeout)
+        if self.MAKES_FUNCTIONS.search(body):
+            cmd = ("(function(r) { if (typeof r != 'String') return r; var a = [];"
+                   " for (var i = 0; i < r.length; i++) a.add('%04x'.sprintf(#(r.charAt(i))));"
+                   " return 'S:' + a.join(''); })((function() {\n" + body + "\n})())")
+            j = self._eval(cmd, timeout)
+        else:
+            j = self._run("__smokeHex(%s)" % tjs_string(body), timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         result = j.get("result", "")
@@ -310,7 +320,13 @@ class FileChannel(Engine):
         out = os.path.join(self.chan, "result.txt")
         if os.path.exists(out):
             os.remove(out)
-        j = self._run("__smokeSave(%s, %s)" % (tjs_string(body), tjs_string(storage_name(out))), timeout)
+        if self.MAKES_FUNCTIONS.search(body):
+            cmd = ("(function(r) { var t = typeof r; var a = [ t == 'String' ? 'S' + r"
+                   " : (t == 'Integer' || t == 'Real') ? 'N' + r : t == 'void' ? 'V' : 'O' + (string)r ];"
+                   " a.save('%s'); return 0; })((function() {\n%s\n})())") % (storage_name(out), body)
+            j = self._eval(cmd, timeout)
+        else:
+            j = self._run("__smokeSave(%s, %s)" % (tjs_string(body), tjs_string(storage_name(out))), timeout)
         if not j.get("ok"):
             raise SmokeError("TJS failed: %s\n%s" % (j.get("error"), body))
         with open(out, encoding="utf-16") as f:   # Array.save: UTF-16 with a BOM
@@ -745,13 +761,15 @@ class WebEngine(Engine):
 
     def _eval(self, cmd, timeout):
         # a scenario load started inside krkrz_repl_eval crashed the page, so the command runs
-        # from a game Timer; the timer and its function are made once (a function made for every
-        # command is a compiled block the engine keeps: Engine.RUNNER) and the command is a string
+        # from a game Timer; the timer and its function are made once, and a command is a string
+        # for Scripts.eval (a function made for every command is a compiled block the engine
+        # keeps: Engine.RUNNER), except one that makes a function, which the REPL compiles (and
+        # keeps) as before
         if not self.timer_ready:
             made = self._raw("""(function() {
                 global.__smokeRun = function() {
                     global.__smokeTimer.enabled = false;
-                    try { global.__smokeRes = %[ok: 1, value: Scripts.eval(global.__smokeCmd)]; }
+                    try { global.__smokeRes = %[ok: 1, value: global.__smokeCmd !== void ? Scripts.eval(global.__smokeCmd) : global.__smokeFn()]; }
                     catch (e) { global.__smokeRes = %[ok: 0, error: e.message]; }
                 };
                 global.__smokeTimer = new Timer(global.__smokeRun, "");
@@ -761,7 +779,11 @@ class WebEngine(Engine):
             if not made.get("ok"):
                 return made
             self.timer_ready = True
-        start = self._raw("(global.__smokeRes = void, global.__smokeCmd = %s, global.__smokeTimer.enabled = true, 1)" % tjs_string(cmd))
+        if self.MAKES_FUNCTIONS.search(cmd):
+            start = self._raw("(global.__smokeRes = void, global.__smokeCmd = void, global.__smokeFn = function() { return %s; },"
+                              " global.__smokeTimer.enabled = true, 1)" % cmd)
+        else:
+            start = self._raw("(global.__smokeRes = void, global.__smokeCmd = %s, global.__smokeTimer.enabled = true, 1)" % tjs_string(cmd))
         if not start.get("ok"):
             return start
         end = time.time() + timeout
