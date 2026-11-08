@@ -2208,6 +2208,33 @@ is immediate: an attached prop disappears as its character's hide transition beg
 
 
 
+● Pictures and Outfits an Earlier Choice Changes
+
+
+
+An earlier choice (glasses or not, which outfit) can change the pictures and outfits shown later
+while the script still names one, with no branch in every scene that shows them. Two tab-separated
+tables, anywhere on the auto path (the sample's are in data/main), each read when the World starts;
+a line starting with # is a comment, and the first row whose condition holds wins (TJS; f is the
+playthrough's flags, sf the system's):
+
+  imagenamemap.txt    <name the script uses> <tab> <picture shown> <tab> <condition>
+                      For layers ([newlay], event CGs), stages' pictures (since 0.26.0) and the
+                      CG gallery's unlocks, which record the picture shown. Names compare in
+                      lower case.
+  dressnamemap.txt    <character> <tab> <outfit the script names> <tab> <outfit shown> <tab> <condition>
+                      For characters drawn from layers and, since 0.26.0, for those drawn from
+                      pictures (envinit.tjs's dresses).
+
+    pip     plain   beret   f.charRoute == "park"
+
+Since 0.26.0 both are decided as the picture is drawn, with the flags as they are then, not when
+the script names it: compiled scenes keep the name the script used, so a save made before the
+choice, Back and Replay all show what the flags say now. The sample's Character demo puts Pip in his
+beret in its Together scene when its choice went by the park.
+
+
+
 ● Event Object Functions
 
 

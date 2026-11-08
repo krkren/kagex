@@ -4629,7 +4629,12 @@ def sample_steps(eng):
         if not first.startswith("0,0,0,1,1") or not moved.startswith("0,0,0,1,1") or not notes or worst > 2:
             raise SmokeError("the bubble didn't stay on Pip as he moved, zoomed and turned: %s / %s / %s" % (first, moved, notes[:5]))
         # the light: clipped to Ai (nothing where she isn't); the copy: her picture, mirrored
-        eng.tjs("kag.onPrimaryClick(); return 1;")
+        for i in range(4):
+            eng.tjs("kag.onPrimaryClick(); return 1;")
+            time.sleep(0.6)
+            eng.wait("a stop", stable, timeout=30)
+            if eng.tjs("return world_object.env.layers.light !== void && world_object.env.layers.light.targetLayer !== void ? 1 : 0;") == 1:
+                break
         eng.wait("the light", stable + " && world_object.env.layers.light !== void && world_object.env.layers.light.targetLayer !== void", timeout=30)
         eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("the copy", stable + " && world_object.env.layers.view !== void && world_object.env.layers.view.targetLayer !== void", timeout=30)
@@ -4666,6 +4671,36 @@ def sample_steps(eng):
         print("     after a load: %s; Pip gone (bubble, light cleared): %s; Ai gone (light, copy, let go): %s" % (kept, gone1, gone2), flush=True)
         if not kept.startswith("pip,ai,ai,0,0,0,1,1") or gone1 != "1,0" or gone2 != "1,1,1":
             raise SmokeError("a load lost the links, or they didn't leave with their objects: %s / %s / %s" % (kept, gone1, gone2))
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("pictures and outfits an earlier choice changes: Pip's beret by the park route (dressnamemap.txt), decided as he's drawn (a flag changed after a save), and imagenamemap.txt's pictures, a stage's too")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof world_object.env.mappedImageName != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before these maps at drawing)", flush=True)
+            return
+        stable = 'kag.inStable && kag.conductor.curStorage == "char.ks"'
+        dress = 'world_object.env.characters.pip.convDress'
+        got = []
+        for route in ("park", "station"):
+            eng.tjs('kag.goToStart(); return 1;')
+            eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+            eng.tjs('kag.flags.charRoute = "%s"; kag.process("char.ks", "*together"); return 1;' % route)
+            eng.wait("Pip", stable + " && world_object.env.characters.pip.isShowBU()", timeout=30)
+            got.append(str(eng.tjs("return [world_object.env.characters.pip.dress, %s].join(\":\");" % dress)))
+        # the flag changed while he's on the screen: the next time he's drawn, the other outfit
+        eng.tjs('kag.flags.charRoute = "park"; world_object.env.characters.pip.redraw = true; world_object.env.updateAll(); return 1;')
+        got.append(str(eng.tjs("return %s;" % dress)))
+        # imagenamemap.txt (a table given here): a name in place of another while a flag holds
+        maps = str(eng.tjs('''var e = world_object.env, keep = e.imageNameMap, r = [];
+            e.imageNameMap = %[ "bg01_01" => [ [ "event1", "f.smokeMapped" ] ] ];
+            kag.flags.smokeMapped = false; r.add(e.mappedImageName("bg01_01")); r.add(e.mappedImageName("BG_Other"));
+            kag.flags.smokeMapped = true; r.add(e.mappedImageName("bg01_01"));
+            e.imageNameMap = keep; delete kag.flags.smokeMapped; return r.join(",");'''))
+        print("     Pip by the park, by the station (script's outfit:shown): %s, %s; the station's flag turned to the park's: %s; imagenamemap: %s"
+              % (got[0], got[1], got[2], maps), flush=True)
+        if got[0] != "plain:beret" or got[1] != "plain:plain" or got[2] != "beret" or maps != "bg01_01,BG_Other,event1":
+            raise SmokeError("the outfit or picture maps didn't decide as the flags said: %s / %s" % (got, maps))
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 

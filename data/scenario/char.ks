@@ -284,11 +284,12 @@ After an [[eyecatch], the next scene begins.
 ; Objects that move with others (since 0.26.0, KAGEnvLinks.tjs): a prop attached to a character,
 ; a light clipped to one's outline, and a picture that follows another's; doc/world.txt
 [ai standard happy posleft]
-[pip standard neutral posright]
+[pip standard plain neutral posright]
 [newlay name=bubble file=prop_bubble attach=pip xpos=210 ypos=330 show]
 A speech bubble attached to Pip (attach=pip) goes where he goes...
 [pip center time=800][pip zoom=112 time=800][pip rotate=-12 time=800]
 ...moving, growing and turning with him.
+If you went by the park, Pip wears a beret here, though the script still says plain: dressnamemap.txt turns one outfit into another by a choice made earlier.
 [newlay name=light file=prop_light attach=ai clipto=ai xpos=180 ypos=760 opacity=220 show]
 A warm light clipped to Ai's outline (clipto=ai) falls on her, and on nothing behind her.
 [newlay name=view follow=ai zoom=38 flipx=true xpos=1180 ypos=1020 opacity=235 show]

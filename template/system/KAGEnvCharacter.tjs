@@ -1091,7 +1091,11 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
             // Refer to default if no outfit is specified
 			var dressName;
 			if (dress !== void) {
-				dressName = dresses[dress];
+				// (since 0.26.0) dressnamemap.txt: the outfit an earlier choice put in place of the
+				// one the script names, decided now, as it's drawn
+				var mapped = env.convDressName(initName, dress, "dressNameMap");
+				dressName = dresses[mapped];
+				dressName = dresses[dress] if dressName === void;
             } 
 			dressName = poseInfo.defaultDress if dressName === void;
 

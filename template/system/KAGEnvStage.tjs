@@ -278,7 +278,7 @@ class KAGEnvStage extends KAGEnvImage {
 				// Process image loading and coordinate correction
 				try {
 					image = image.replace(/TIME/, timeInfo.prefix);
-					env.loadBGFromCache(layer, image);
+					env.loadBGFromCache(layer, env.mappedImageName(image)); // (imagenamemap.txt, since 0.26.0)
 				} catch(e) {
 					try {
 						// If image fails to load, handle with correction

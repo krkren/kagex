@@ -1369,6 +1369,17 @@ class KAGEnvironment extends KAGEnvTrans {
 
 	
 	/**
+	 * (since 0.26.0) the picture imagenamemap.txt puts in place of a name now (its conditions on
+	 * the flags as they are while it's drawn), or the name as it was (its case kept: getImageName
+	 * lower-cases every name, which a case-sensitive file system doesn't forgive)
+	 */
+	function mappedImageName(name) {
+		if (name === void || imageNameMap === void || Scripts.getObjectCount(imageNameMap) == 0) return name;
+		var m = getImageName(name);
+		return m != ((string)name).toLowerCase() ? m : name;
+	}
+
+	/**
 	 * Get actual image data to load from the given name
 	 * @param name Name
 	 * @return Data for image loading
