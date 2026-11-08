@@ -77,6 +77,36 @@ class Engine:
     def _eval(self, cmd, timeout):
         raise NotImplementedError
 
+    def _dot(self, cmd):
+        """One of the REPL's own commands (.mem): its text"""
+        return self._eval(cmd, 10).get("result", "")
+
+    memory_off = False
+
+    def memory(self):
+        """The REPL's .mem in short: MB in use for pictures, files, sound, scripts and the
+        process ("" where the REPL has no .mem). The web build has fixed pools (pictures 640,
+        files 320, sound 96, scripts 128 MB, then plain malloc, 2 GB in all), and 0.26.0's
+        first platforms run ran out of memory there with nothing in the log to say how close
+        it had been"""
+        if self.memory_off:
+            return ""
+        try:
+            text = str(self._dot(".mem") or "")
+        except Exception:
+            text = ""
+        parts = []
+        for name, key, label in (("Bitmap", "used", "pictures"), ("File", "used", "files"), ("Sound", "used", "sound"),
+                                 ("Krkrz", "live", "scripts"), ("Process", "rss", "process")):
+            m = re.search(r"%s: [^\n]*?\b%s=([0-9.]+)([KMG])B" % (name, key), text)
+            if m:
+                mb = float(m.group(1)) * {"K": 1.0 / 1024, "M": 1.0, "G": 1024.0}[m.group(2)]
+                parts.append("%s %d" % (label, round(mb)))
+        if not parts:
+            self.memory_off = True
+            return ""
+        return ", ".join(parts)
+
     def hang_report(self, path):
         """Writes what the engine's threads are doing (a hung game) to path; False where it can't"""
         return False
@@ -395,6 +425,9 @@ class SimulatorEngine(Engine):
             raise SmokeError("simctl %s failed: %s" % (" ".join(args), r.stderr.strip()))
         return r.stdout
 
+    def _dot(self, cmd):
+        return ""  # /pad/exec runs TJS only
+
     def _eval(self, cmd, timeout):
         import urllib.request, urllib.error
         # /pad/exec runs a whole script; its value is what the script returns
@@ -680,6 +713,9 @@ class WebEngine(Engine):
             raise SmokeError("page: %s" % e)
         j["result"] = str(j.get("result", "")).strip()
         return j
+
+    def _dot(self, cmd):
+        return self._raw(cmd).get("result", "")
 
     def _eval(self, cmd, timeout):
         start = self._raw("""(function() {
@@ -4901,7 +4937,14 @@ def sample_steps(eng):
                             ' return n + "|" + t;'))
         target = lines.split("|", 1)[1]
         eng.tjs('var m = kag.currentDialog; for (var i = 0; i < m.links.count; i++) if (m.links[i].target == "%s") { m.follow(i); break; } return 1;' % target)
-        eng.wait("the line gone to", 'kag.currentDialog === void && kag.inStable && kag.clickWaiting', timeout=30)
+        # there once the go-to has run (after the manual has closed: on a slow phone the line
+        # before was still waiting for its click then) and the player stands at the line
+        t = target[len("goto:"):].split("|")
+        try:
+            eng.wait("the line gone to", 'kag.currentDialog === void && KAGDebugGotoPending === void && kag.inStable && kag.clickWaiting'
+                     ' && (string)world_object.player.curTextId == "%s"' % (t[2] if len(t) > 2 else ""), timeout=30)
+        except SmokeError:
+            pass  # told below, with where it got to
         went = str(eng.tjs('var h = KAGDebugHere(); return [h.storage, h.label, world_object.player.curTextId].join("|");'))
         # the flags page and a flag set from it
         eng.tjs('KAGShowManual("debugflags"); return 1;')
@@ -4925,7 +4968,6 @@ def sample_steps(eng):
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
         print("     here: %s; the lines page's links and one gone to: %s -> %s; flags page (title, set, value): %s;"
               " layers, World lines, bug report: %s; traced: %s; route: %s" % (here, lines, went, flags, dumps, traced, route), flush=True)
-        t = target[len("goto:"):].split("|")
         w = went.split("|")
         if int(lines.split("|")[0]) < 20 or len(t) < 3 or w[0] != t[0] or w[1] != t[1] or w[2] != t[2]:
             raise SmokeError("the lines page didn't list the script's texts, or going to one didn't get there: %s -> %s" % (lines, went))
@@ -4953,13 +4995,16 @@ def sample_steps(eng):
             var items = [], c = kag.displayMenu.children;
             for (var i = 0; i < c.count; i++) items.add(c[i].windowSize) if typeof c[i].windowSize != "undefined";
             r.add(items.join("/"));
+            r.add(KAGIsDesktop() ? 1 : 0);
             return r.join(",");'''))
         print("     zoom at 0%%, 50%%, 100%%, then the bars' and the fill's; the Screen menu's sizes: %s" % got, flush=True)
         z = got.split(",")
         lo, mid, hi, want_lo, want_hi = (float(v) for v in z[:5])
         if abs(lo - want_lo) > 0.002 or abs(hi - want_hi) > 0.002 or not (lo <= mid <= hi) or abs(mid - (lo + hi) / 2) > 0.002:
             raise SmokeError("the part-way zoom isn't between the bars and the fill: %s" % got)
-        if "100" not in z[5].split("/"):
+        # (window sizes on a desktop only: the web, Android and iOS are full screen; on a 16:9
+        # screen the bars and the fill are the same zoom)
+        if z[6] == "1" and "100" not in z[5].split("/"):
             raise SmokeError("the Screen menu has no window sizes: %s" % got)
 
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
@@ -6745,6 +6790,9 @@ def run_steps(eng, steps):
         try:
             fn()
             print("ok   %-62s %5.1fs" % (name, time.time() - t), flush=True)
+            mem = eng.memory()
+            if mem:
+                print("     memory (MB): " + mem, flush=True)
         except SmokeError as e:
             failures += 1
             print("FAIL %s\n     %s" % (name, str(e).replace("\n", "\n     ")), flush=True)

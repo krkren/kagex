@@ -387,7 +387,8 @@ function KAGDebugLinesPage()
 				var id = o[2], line = +o[4] + 1, t = convertSceneText(sc.texts[id - 1], sd.languages);
 				if (t === void) continue;
 				t = scnTextIn(t);
-				var text = ((string)t.text).replace(/[\r\n]+/g, " ");
+				// (the scene player's escapes and marks out: the characters as shown)
+				var text = kag.languageWrapLine(kag.languageTextItems((string)t.text)).replace(/[\r\n]+/g, " ");
 				text = text.substring(0, 70) + "..." if text.length > 73;
 				var who = t.disp !== void && t.disp != "" ? t.disp : t.name !== void ? t.name : "";
 				var mark = sc.label == h.label && line == h.line ? " ◀" : "";
