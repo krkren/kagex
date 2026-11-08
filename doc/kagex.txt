@@ -3424,6 +3424,48 @@ adds them to a game's own menus), ticked as the window is.
 
 
 
+● The Mouse Pointer
+
+The game's own pointers (since 0.27.0, template/system/GameCursor.tjs). The SDL engine shows the
+system's arrow whatever a layer's cursor says, even over buttons (it loads no cursor file and
+maps no cr* constant: UPSTREAM.md), so a game's pointers are drawn on a layer over everything
+that follows the mouse, and the system's is hidden while the mouse is over the game. They're
+listed in cursors.csv, a line each (# comments, tabs or commas between the fields):
+
+  <kind>  <picture>  <hot spot x>  <hot spot y>
+
+  default   anywhere else
+  pointed   a button or a link (a layer whose cursor is crHandPoint: KAG's cursorPointed)
+  click     a click wait (the base layer's cursor while KAG waits for a click)
+  auto      auto mode's wait (click when there's no auto)
+  text      a text field ([edit]: crIBeam, crHBeam for vertical text)
+  drag      something to drag (crSizeAll, KAG's cursorDraggable, and the other drag cursors)
+  wait      busy (crHourGlass, crAppStart)
+
+A kind the table lacks shows default, a layer whose cursor is crNone hides the pointer, and
+without cursors.csv (or a default line) the system's pointer shows as before. A picture's size
+is its size on the screen: the pointer is drawn larger or smaller as the window zooms the game
+(kag.gameCursor.minScale and maxScale, 0.5 and 4, bound how many of the game's pixels a
+picture's pixel takes). The hot spot is the pixel that points, in the picture's own pixels.
+Over the menu bar and the bars beside a full-screen game the system's pointer shows; a touch
+hides the drawn one until the mouse moves; Hide the Pointer When Still hides it too; F12's
+screenshots leave it out (kag.gameCursor.hideForCopy()). A native message box (an error) shows
+the system's pointer, since the drawn one is under it. There's no pointer on Android and iOS.
+
+Options for a Config screen (template/system/GameCursor.tjs):
+
+  gameCursor     The Game's or The System's (only where cursors.csv has a default)
+  promptPointer  where the pointer goes as a Yes/No prompt opens: Stays (where it is), To No or
+                 To Yes, which also takes the keys' focus there. About and the controller test
+                 put it on their button unless it's Stays. Before 0.27.0 every prompt moved the
+                 pointer to No (DialogLayer.setFocusToLink's third argument, move, is false
+                 for Stays: KAGOpenFocus)
+
+The sample's pointers are tools/assets/make_ui.py's (cursors), and its Config has them on its
+eighth page, with Hide the Pointer When Still.
+
+
+
 ● KAGEX Operation System
 
 

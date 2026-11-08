@@ -1435,10 +1435,57 @@ def make_props():
     Image.fromarray(arr, "RGBA").resize((w * 2, h * 2), Image.BILINEAR).save(os.path.join(REPO, "data", "fgimage", "prop_light.png"), optimize=True)
 
 
+# --- the mouse pointers (0.27.0) ------------------------------------------------------------
+def make_cursors():
+    """cursor_<kind>.png, the game's own mouse pointers (template/system/GameCursor.tjs, the
+    sample's data/main/cursors.csv): 44 px squares, each its size on the screen. default: a
+    white arrow outlined in navy with a hard violet shadow; pointed (a button or a link): the
+    arrow in violet, outlined in white; click (a click wait): the arrow with a lavender ring
+    by its tail; text (a text field): an I-beam; drag (a draggable area): four arrows"""
+    n = 44
+    arrow = [(3, 3), (3, 33), (11, 26), (17, 39), (23, 36), (17, 24), (28, 24)]
+
+    def draw_arrow(c, fill, line, shadow):
+        c.polygon([(x + 3, y + 3) for x, y in arrow], rgba(shadow, 170))
+        c.stroke(arrow, 4.5, rgba(line), closed=True)
+        c.polygon(arrow, rgba(fill))
+
+    c = Canvas(n, n)
+    draw_arrow(c, WHITE, NAVY, VIOLET)
+    c.save(os.path.join(IMAGE, "cursor_default.png"))
+    c = Canvas(n, n)
+    draw_arrow(c, VIOLET, WHITE, NAVY)
+    c.save(os.path.join(IMAGE, "cursor_pointed.png"))
+    c = Canvas(n, n)
+    draw_arrow(c, WHITE, NAVY, VIOLET)
+    c.ellipse((26, 26, 42, 42), fill=rgba(NAVY))
+    c.ellipse((28.5, 28.5, 39.5, 39.5), fill=rgba(LAV))
+    c.ellipse((32, 32, 36, 36), fill=rgba(WHITE))
+    c.save(os.path.join(IMAGE, "cursor_click.png"))
+    c = Canvas(n, n)
+    beam = [(15, 6), (29, 6), (29, 10), (24, 10), (24, 34), (29, 34), (29, 38), (15, 38), (15, 34),
+            (20, 34), (20, 10), (15, 10)]
+    c.stroke(beam, 4, rgba(NAVY), closed=True)
+    c.polygon(beam, rgba(WHITE))
+    c.save(os.path.join(IMAGE, "cursor_text.png"))
+    c = Canvas(n, n)
+    m, a, b, d, w = 22, 19, 2.5, 7, 7.5   # the middle, an arm's reach, the bar's half width, a head's depth and half width
+    cross = []
+    for k in range(4):   # each arm, turned a quarter at a time: up, right, down, left
+        arm = [(-b, -b), (-b, -a + d), (-w, -a + d), (0, -a), (w, -a + d), (b, -a + d), (b, -b)]
+        for x, y in arm[:-1]:   # its last corner is the next arm's first
+            for _ in range(k):
+                x, y = -y, x
+            cross.append((m + x, m + y))
+    c.stroke(cross, 4, rgba(NAVY), closed=True)
+    c.polygon(cross, rgba(WHITE))
+    c.save(os.path.join(IMAGE, "cursor_drag.png"))
+
+
 GROUPS = {"title": make_title, "logo": make_logo, "message": make_message, "config": make_config,
           "saveload": make_saveload, "extras": make_extras, "history": make_history, "star": make_star,
           "thumbs": make_thumbs, "icons": make_icons, "preview": make_preview, "dialog": make_dialog,
-          "props": make_props}
+          "props": make_props, "cursors": make_cursors}
 
 
 # the groups whose images have words on them, drawn again for each other language

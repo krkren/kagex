@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.27.0
+
+### Added
+
+- **The game's own mouse pointers**: a game lists its pointers in `cursors.csv` (the arrow, over buttons, at a click wait, in auto mode, over a text field, over something to drag, busy) and they're drawn over everything, following the mouse, at the same size on the screen whatever the window's zoom, with the system's pointer hidden over the game; the SDL engine itself shows only the system's arrow (`UPSTREAM.md` 51). Config's Mouse Pointer picks the game's or the system's. The sample has its own, in its colours (`make_ui.py cursors`). Desktops and the browser (`GameCursor.tjs`).
+- **Where a question puts the pointer**: Config's Pointer on Questions leaves the pointer where it is as a Yes/No prompt opens, or puts it on No or on Yes (which then has the keys' focus too); About and the controller test follow it.
+
+### Changed
+
+- **A Yes/No prompt no longer moves the pointer to No by itself** (it did since KAG3: `DialogLayer.setFocusToLink`); Pointer on Questions brings that back.
+
 ## 0.26.1
 
 ### Fixed

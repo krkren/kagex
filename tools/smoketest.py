@@ -2232,6 +2232,9 @@ def sample_steps(eng):
     @step("start-up reaches the title screen")
     def _():
         eng.wait("the REPL", "1", timeout=60)
+        # the game's own pointer (GameCursor.tjs) off: the steps read what's on the screen, and
+        # it would be drawn wherever the clicks left the pointer ("the game's own pointer" below)
+        eng.tjs('KAGOptionSet("gameCursor", false) if typeof global.KAGGameCursorOf != "undefined"; return 1;')
         eng.clicker(True, until="title.ks")  # clicks through the logo
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
         eng.clicker(False)
@@ -2308,6 +2311,61 @@ def sample_steps(eng):
         print("     %s checks while %s of kag's methods were looked up %s times" % (r[0], kept, r[1]), flush=True)
         if r[2] != "":
             raise SmokeError("members of kag went missing during the checks: " + r[2])
+
+    @step("the game's own pointer follows the mouse, a button's over buttons; prompts leave it unless asked")
+    def _():
+        # GameCursor.tjs (0.27.0): the SDL engine shows only the system's arrow, so the sample's
+        # cursors.csv pointers are drawn on a layer over everything, with the system's hidden
+        if not isinstance(eng, DesktopEngine) or \
+                eng.tjs('return typeof global.KAGGameCursorOf != "undefined" && KAGGameCursorAvailable() ? 1 : 0;') != 1:
+            print("     (skipped: not the desktop, or no game pointers here)", flush=True)
+            return
+        state = ('var g = kag.gameCursor, l = g.layer; return [ l !== void && isvalid l && l.visible ? 1 : 0,'
+                 ' l === void ? -1 : l.left, l === void ? -1 : l.top, g.kind,'
+                 ' kag.mouseCursorState == mcsHidden ? "hidden" : "shown", "%f".sprintf(g.shownScale) ].join(",");')
+        try:
+            eng.tjs('KAGOptionSet("gameCursor", true); kag.primaryLayer.cursorX = 700; kag.primaryLayer.cursorY = 300; return 1;')
+            eng.wait("the pointer drawn", 'kag.gameCursor.layer !== void && kag.gameCursor.layer.visible && kag.gameCursor.kind == "default"', timeout=10)
+            v = str(eng.tjs(state)).split(",")
+            x, y = eng.tjs("return kag.primaryLayer.cursorX;"), eng.tjs("return kag.primaryLayer.cursorY;")
+            s_ = float(v[5])
+            want = (int(x - 3 * s_ + 0.5), int(y - 3 * s_ + 0.5))
+            if v[0] != "1" or (int(v[1]), int(v[2])) != want or v[4] != "hidden":
+                raise SmokeError("over the title: %s (wanted the default pointer at %s, the system's hidden)" % (v, want))
+            # a title button: the pointed one
+            at = str(eng.tjs('var m = kag.fore.messages[0]; for (var i = 0; i < m.numLinks; i++) { var o = m.links[i].object;'
+                             ' if (o !== void && isvalid o && o.visible && o.cursor == kag.cursorPointed) {'
+                             ' var x = o.left + o.width \\ 2, y = o.top + o.height \\ 2, p = o.parent;'
+                             ' while (p !== kag.primaryLayer && p !== void) { x += p.left; y += p.top; p = p.parent; }'
+                             ' kag.primaryLayer.cursorX = x; kag.primaryLayer.cursorY = y; return x + "," + y; } } return "";'))
+            if at == "":
+                raise SmokeError("no button on the title to point at")
+            eng.wait("the pointed pointer over a title button", 'kag.gameCursor.kind == "pointed" && kag.gameCursor.shownKind == "pointed"', timeout=10)
+            # a screenshot leaves it out, and puts it back
+            if eng.tjs('var g = kag.gameCursor, was = g.hideForCopy(), off = !g.layer.visible; g.showAfterCopy(was);'
+                       ' return was && off && g.layer.visible ? 1 : 0;') != 1:
+                raise SmokeError("hideForCopy didn't hide the pointer for a copy and show it again")
+            # the system's, when the player picks it
+            eng.tjs('KAGOptionSet("gameCursor", false); return 1;')
+            eng.wait("the system's pointer back", '!kag.gameCursor.layer.visible && kag.mouseCursorState == mcsVisible', timeout=10)
+            # a prompt leaves the pointer where it is, or puts it on No when asked
+            eng.tjs('kag.primaryLayer.cursorX = 300; kag.primaryLayer.cursorY = 200; return 1;')
+            for setting in ("stay", "no"):
+                eng.tjs('KAGOptionSet("promptPointer", "%s"); askYesNo("Smoke test?", "Smoke", function {}, function {}); return 1;' % setting)
+                eng.wait("the prompt", "kag.currentDialog !== void && kag.currentDialog.keyLink == 1", timeout=15)
+                r = str(eng.tjs('var d = kag.currentDialog, b = d.links[1].object, x = kag.primaryLayer.cursorX, y = kag.primaryLayer.cursorY;'
+                                ' var bx = d.left + b.left, by = d.top + b.top;'
+                                ' return [ x, y, x >= bx && y >= by && x < bx + b.width && y < by + b.height ? 1 : 0 ].join(",");')).split(",")
+                eng.tjs("kag.currentDialog.close(); return 1;")
+                eng.wait("the prompt closed", "kag.currentDialog === void", timeout=15)
+                on_no = r[2] == "1"
+                if setting == "stay" and (on_no or abs(int(r[0]) - 300) > 2 or abs(int(r[1]) - 200) > 2):
+                    raise SmokeError("with Stays the prompt moved the pointer to %s,%s" % (r[0], r[1]))
+                if setting == "no" and not on_no:
+                    raise SmokeError("with To No the pointer isn't on No: %s,%s" % (r[0], r[1]))
+            print("     the pointer at %s,%s (scale %.3f), a button's at %s; prompts: stays, then on No" % (x, y, s_, at), flush=True)
+        finally:
+            eng.tjs('KAGOptionSet("promptPointer", "stay"); KAGOptionSet("gameCursor", false); return 1;')
 
     @step("the scripts in !scnlist.txt compile, so the demos play compiled")
     def _():

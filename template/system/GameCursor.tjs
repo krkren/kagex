@@ -1,0 +1,351 @@
+/**
+ * The game's own mouse pointers (since 0.27.0; doc/kagex.txt, "The Mouse Pointer"). The SDL
+ * engine shows the system's arrow whatever a layer's cursor says (it loads no cursor and maps no
+ * cr* constant: UPSTREAM.md), so a game's pointers are drawn on a layer over everything that
+ * follows the mouse, and the system's is hidden while it's over the game (the window's
+ * mouseCursorState). The game's cursors.csv lists them, a line each (# comments):
+ *
+ *   <kind>, <picture>, <hot spot x>, <hot spot y>
+ *
+ *   default   anywhere else
+ *   pointed   a button or a link (a layer whose cursor is crHandPoint, KAG's cursorPointed)
+ *   click     a click wait (the base layer's cursor while KAG waits for a click)
+ *   auto      auto mode's wait (click where the table has no auto)
+ *   text      a text field (crIBeam, crHBeam for vertical text)
+ *   drag      something to drag (crSizeAll, KAG's cursorDraggable, and the other drag cursors)
+ *   wait      busy (crHourGlass, crAppStart)
+ *
+ * A kind the table doesn't have shows default, and a layer whose cursor is crNone hides it. A
+ * picture's size is its size on the screen: it's drawn larger or smaller as the window zooms the
+ * game (between minScale and maxScale of the game's pixels). Config's Mouse Pointer (the
+ * gameCursor option) picks the game's or the system's. There's none on Android and iOS, a touch
+ * hides it until the mouse moves, it hides with Hide the Pointer When Still, and screenshots
+ * leave it out (hideForCopy). A KAG plugin of the window (kag.gameCursor, KAGGameCursorOf).
+ *
+ * The Yes/No prompts, About and the controller test put the pointer on a button as they open
+ * when the player asks for it (the promptPointer option: stays, to No, to Yes; KAGOpenFocus).
+ */
+
+// whether this platform has a mouse pointer to draw: desktops and the browser
+function KAGPointerPlatform()
+{
+	var t = typeof global.KAGPlatformTag != "undefined" ? KAGPlatformTag() : "";
+	return t != "android" && t != "ios";
+}
+
+// the game's pointers: kind => %[ picture, x, y ] from cursors.csv, read once (void: none)
+var KAGGameCursorTableRead = false, KAGGameCursorTableData;
+function KAGGameCursorTable()
+{
+	if (KAGGameCursorTableRead) return KAGGameCursorTableData;
+	KAGGameCursorTableRead = true;
+	if (!Storages.isExistentStorage("cursors.csv")) return;
+	var lines = [];
+	try { lines.load("cursors.csv"); } catch (e) { dm("cursors.csv: " + e.message); return; }
+	var t = %[], n = 0;
+	for (var i = 0; i < lines.count; i++) {
+		var line = lines[i];
+		if (line == "" || line[0] == "#") continue;
+		var f = line.split(",\t", , true);
+		if (f.count < 2) continue;
+		for (var j = 0; j < f.count; j++) f[j] = KAGGameCursorTrim(f[j]);
+		if (f[0] == "" || f[1] == "") continue;
+		t[f[0]] = %[ picture: f[1], x: KAGGameCursorNumber(f[2]), y: KAGGameCursorNumber(f[3]) ];
+		n++;
+	}
+	if (t["default"] === void) { dm("cursors.csv has no default pointer: the system's is shown"); return; }
+	KAGGameCursorTableData = t;
+	return t;
+}
+
+// a hot spot's coordinate (TJS reads "08" as octal: the leading zeros go first)
+function KAGGameCursorNumber(s)
+{
+	if (s === void) return 0;
+	while (s.length > 1 && s[0] == "0") s = s.substring(1);
+	return (int)+s;
+}
+
+function KAGGameCursorTrim(s)
+{
+	while (s != "" && (s[0] == " " || s[0] == "\t")) s = s.substring(1);
+	while (s != "" && (s[s.length - 1] == " " || s[s.length - 1] == "\t" || s[s.length - 1] == "\r")) s = s.substring(0, s.length - 1);
+	return s;
+}
+
+// whether the game's pointers can be shown here: a table with a default, and a mouse
+function KAGGameCursorAvailable()
+{
+	return KAGPointerPlatform() && KAGGameCursorTable() !== void;
+}
+
+class KAGGameCursorLayer extends Layer
+{
+	var a11yHidden = true;
+	function KAGGameCursorLayer(win, par) { super.Layer(...); }
+	function finalize() { super.finalize(...); }
+}
+
+class KAGGameCursor extends KAGPlugin
+{
+	var window;
+	var layer;                 // the pointer, over everything
+	var pictures = %[];        // kind => the picture, loaded on first use (false: it didn't load)
+	var shownKind = "";        // the kind drawn on the layer, and its scale
+	var shownScale = 0;
+	var kind = "default";      // what's under the pointer, looked at when it moves and every lookEvery ms
+	var lookEvery = 100;
+	var lastLook = 0, lastX = -100000, lastY = -100000, lastMove = 0;
+	var minScale = 0.5, maxScale = 4.0;   // the game's pixels a picture's pixel may take
+	var on = true;             // the player's choice (the gameCursor option)
+	var systemHidden = false;  // the system's pointer hidden by this
+	var handler;               // the continuous handler while it's on
+
+	// the cr* constants of each kind (crHandPoint and crIBeam alone, below)
+	var dragCursors = [ crSizeAll, crDrag, crMultiDrag, crSizeNESW, crSizeNS, crSizeNWSE, crSizeWE, crHSplit, crVSplit ];
+	var waitCursors = [ crHourGlass, crAppStart, crSQLWait ];
+
+	function KAGGameCursor(win)
+	{
+		super.KAGPlugin();
+		window = win;
+		var v = win.scflags["option:gameCursor"];
+		on = v === void ? true : !!v;
+		update();
+	}
+
+	function finalize()
+	{
+		stop();
+		invalidate layer if layer !== void && isvalid layer;
+		var a = [];
+		a.assign(pictures);
+		for (var i = 1; i < a.count; i += 2) invalidate a[i] if typeof a[i] == "Object" && a[i] !== void && isvalid a[i];
+		super.finalize(...);
+	}
+
+	property active { getter() { return on && KAGGameCursorAvailable(); } }
+
+	function setOn(v)
+	{
+		on = !!v;
+		update();
+	}
+
+	// starts or stops following the mouse as the setting and the platform say
+	function update()
+	{
+		if (active) {
+			if (handler === void) {
+				handler = onFrame;
+				System.addContinuousHandler(handler);
+			}
+		} else stop();
+	}
+
+	function stop()
+	{
+		if (handler !== void) {
+			System.removeContinuousHandler(handler);
+			handler = void;
+		}
+		layer.visible = false if layer !== void && isvalid layer;
+		showSystem(true);
+	}
+
+	// the system's pointer over the game: hidden while the game's is drawn
+	function showSystem(v)
+	{
+		if (v == !systemHidden) return;
+		systemHidden = !v;
+		try { window.mouseCursorState = v ? mcsVisible : mcsHidden; } catch (e) {}
+	}
+
+	// how much the window zooms the game: a window's zoom, or what full screen fits it to
+	function screenScale()
+	{
+		var w = window, p = w.primaryLayer;
+		var full = typeof w.fullScreened != "undefined" ? w.fullScreened : w.fullScreen;
+		if (!full && typeof w.zoomDenom != "undefined" && w.zoomDenom > 0) return w.zoomNumer / w.zoomDenom;
+		if (p.width <= 0 || p.height <= 0) return 1;
+		var zx = w.innerWidth / p.width, zy = w.innerHeight / p.height;
+		return zx < zy ? zx : zy;
+	}
+
+	// the kind of pointer for what's at x, y on the screen (the game's coordinates)
+	function kindAt(x, y)
+	{
+		var w = window, l, c = crDefault;
+		try { l = w.primaryLayer.getLayerAt(x, y); } catch (e) { l = void; }
+		while (l !== void && l !== null && isvalid l) {
+			var lc = l.cursor;
+			if (typeof lc == "Integer" && lc != crDefault) { c = lc; break; }
+			l = l.parent;
+		}
+		if (c == crNone) return "none";
+		if (c == crHandPoint || isKagCursor(c, w.cursorPointed)) return "pointed";
+		if (c == crIBeam || c == crHBeam) return "text";
+		if (dragCursors.find(c) >= 0 || isKagCursor(c, w.cursorDraggable)) return "drag";
+		if (waitCursors.find(c) >= 0) return "wait";
+		if (l === w.fore.base && w.clickWaiting) return w.autoMode ? "auto" : "click";
+		return "default";
+	}
+
+	// whether c is the cursor KAG gives a kind of layer (cursorPointed ...), when it isn't the
+	// default one (a .cur file's name isn't a number: the engine loads none)
+	function isKagCursor(c, k)
+	{
+		return typeof k == "Integer" && k == c && !(typeof window.cursorDefault == "Integer" && k == window.cursorDefault);
+	}
+
+	// the picture of a kind, or of the kind it falls back to
+	function pictureOf(k)
+	{
+		var t = KAGGameCursorTable();
+		if (t === void) return void;
+		if (k == "auto" && t.auto === void) k = "click";
+		if (t[k] === void) k = "default";
+		var p = pictures[k];
+		if (p === void) {
+			try {
+				p = new global.Layer(window, window.primaryLayer);
+				p.visible = false;
+				p.loadImages(t[k].picture);
+				p.setSizeToImageSize();
+			} catch (e) {
+				dm("The pointer " + t[k].picture + " didn't load: " + e.message);
+				invalidate p if p !== void && isvalid p;
+				p = false;
+			}
+			pictures[k] = p;
+		}
+		return p ? %[ layer: p, x: t[k].x, y: t[k].y, kind: k ] : (k != "default" ? pictureOf("default") : void);
+	}
+
+	function makeLayer()
+	{
+		if (layer !== void && isvalid layer) return;
+		layer = new KAGGameCursorLayer(window, window.primaryLayer);
+		with (layer) {
+			.name = "Game pointer";
+			.type = ltAlpha;
+			.hitType = htMask;
+			.hitThreshold = 256;   // the mouse goes through it
+			.focusable = false;
+			.absolute = 2140000000; // over the Yes/No prompts (2000000000) and everything else
+			.visible = false;
+		}
+	}
+
+	function hide()
+	{
+		layer.visible = false if layer !== void && isvalid layer && layer.visible;
+	}
+
+	function onFrame(tick)
+	{
+		if (!isvalid window || window.primaryLayer === void) return;
+		var p = window.primaryLayer;
+		var x = p.cursorX, y = p.cursorY;
+		var inside = x >= 0 && y >= 0 && x < p.width && y < p.height;
+		if (x != lastX || y != lastY) lastMove = tick;
+		// a finger's touch moves the pointer too: no pointer until the mouse moves alone
+		var g = typeof window.gestures == "Object" && window.gestures !== void ? window.gestures : void;
+		var touch = g !== void && typeof g.lastTouch != "undefined" && g.lastTouch > 0 && tick - g.lastTouch < 600;
+		var idle = window.hideCursorIdle && window.currentDialog === void && tick - lastMove >= window.idleCursorTime;
+		if (!inside) {
+			// outside the game (the menu bar, the bars beside it, another window): the system's
+			hide();
+			showSystem(true);
+			lastX = x, lastY = y;
+			return;
+		}
+		showSystem(false);
+		if (touch) { hide(); lastX = x, lastY = y; return; }
+		if (x != lastX || y != lastY || tick - lastLook >= lookEvery) {
+			kind = kindAt(x, y);
+			lastLook = tick;
+		}
+		lastX = x, lastY = y;
+		if (idle || kind == "none") { hide(); return; }
+		var pic = pictureOf(kind);
+		if (pic === void) { hide(); showSystem(true); return; }
+		makeLayer();
+		var s = 1 / screenScale();
+		s = minScale if s < minScale;
+		s = maxScale if s > maxScale;
+		if (pic.kind != shownKind || s != shownScale) {
+			var src = pic.layer;
+			var dw = (int)(src.imageWidth * s + 0.5), dh = (int)(src.imageHeight * s + 0.5);
+			dw = 1 if dw < 1;
+			dh = 1 if dh < 1;
+			layer.setImageSize(dw, dh);
+			layer.setSizeToImageSize();
+			if (dw == src.imageWidth && dh == src.imageHeight)
+				layer.copyRect(0, 0, src, 0, 0, dw, dh);
+			else
+				layer.stretchCopy(0, 0, dw, dh, src, 0, 0, src.imageWidth, src.imageHeight, stLinear);
+			shownKind = pic.kind;
+			shownScale = s;
+		}
+		var lx = (int)(x - pic.x * s + 0.5), ly = (int)(y - pic.y * s + 0.5);
+		layer.setPos(lx, ly) if layer.left != lx || layer.top != ly;
+		layer.visible = true if !layer.visible;
+	}
+
+	// left out of a picture of the screen: returns what to give showAfterCopy
+	function hideForCopy()
+	{
+		if (layer === void || !isvalid layer || !layer.visible) return false;
+		layer.visible = false;
+		return true;
+	}
+
+	function showAfterCopy(was)
+	{
+		layer.visible = true if was && layer !== void && isvalid layer;
+	}
+
+	// a native dialog (an error) over the game: the system's pointer, since the layer is under it
+	function showSystemPointer()
+	{
+		hide();
+		showSystem(true);
+	}
+}
+
+function KAGGameCursorOf(win)
+{
+	if (typeof win.gameCursor != "Object" || win.gameCursor === void) {
+		win.gameCursor = new KAGGameCursor(win);
+		win.addPlugin(win.gameCursor);
+	}
+	return win.gameCursor;
+}
+
+// What the Yes/No prompts and the other dialogs do with the pointer as they open (the
+// promptPointer option): "stay", "no" or "yes"
+function KAGPromptPointer()
+{
+	if (!KAGPointerPlatform() || typeof global.KAGOptionGet == "undefined") return "stay";
+	var v = KAGOptionGet("promptPointer");
+	return v == "no" || v == "yes" ? v : "stay";
+}
+
+// A dialog that opens with the focus on its link n: the pointer goes there too when the player
+// asked for it (otherwise only the keys' focus)
+function KAGOpenFocus(dialog, n)
+{
+	dialog.setFocusToLink(n, true, KAGPromptPointer() != "stay");
+}
+
+KAGDefineOption(%[ name:"gameCursor", label:"Mouse Pointer", kind:"toggle", save:true, initial:true,
+	values:[ ["The Game's", true], ["The System's", false] ],
+	available:function { return KAGGameCursorAvailable(); },
+	getValue:function { return KAGGameCursorOf(kag).on; },
+	setValue:function(v) { KAGGameCursorOf(kag).setOn(v); } ]);
+KAGDefineOption(%[ name:"promptPointer", label:"Pointer on Questions", kind:"choice", save:true, initial:"stay",
+	values:[ ["Stays", "stay"], ["To No", "no"], ["To Yes", "yes"] ],
+	available:function { return KAGPointerPlatform(); } ]);
+KAGOptionHelpTexts.gameCursor = "The game's own pointer, or your system's";
+KAGOptionHelpTexts.promptPointer = "Where the pointer goes when the game asks a question";
