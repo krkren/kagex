@@ -197,7 +197,7 @@ class Engine:
             return str(self.tjs('''var r = [];
                 r.add("rclick " + (kag.rightClickEnabled ? 1 : 0) + "/" + (kag.rightClickJump ? "jump" : kag.rightClickCall ? "call" : "hide"));
                 r.add("capture " + (typeof kag.keyCapture != "undefined" && kag.keyCapture !== void ? "on" : "off"));
-                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog !== void ? 1 : 0));
+                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog === void ? "0" : (function(d) { var n = "1"; try { n = "1 (" + Scripts.getClassNames(d)[0] + (typeof d.message == "String" ? ": " + d.message : "") + ")"; } catch (e) {} return n; })(kag.currentDialog)));
                 r.add("hooks " + kag.rightClickHook.count + " skip " + (kag.prevSkipMode !== void ? kag.prevSkipMode : "-"));
                 r.add("hide " + (KAGActionEnabled("hide") ? 1 : 0)) if typeof global.KAGActionEnabled != "undefined";
                 return " [" + r.join(", ") + "]";''', 5))
@@ -6971,7 +6971,7 @@ def sample_steps(eng):
             time.sleep(0.2)
             eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
         else:
-            raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s)" % (name, units))
+            raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s); %s" % (name, units, eng.where()))
         texts = units[-1][0]
         source, ja = texts.get("en", ""), texts.get("ja", "")
         print("     English: [%s] %s" % (name, units[-1][1]), flush=True)
