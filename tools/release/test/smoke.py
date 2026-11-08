@@ -198,21 +198,40 @@ def own_plugin_tests(exe, proj):
         subprocess.run(["cc", "-dynamiclib", "-arch", "arm64", "-o", str(proj / "plugins" / "macos" / "libkrkrgame.dylib"), str(src)], check=True)
         src.unlink()
     (proj / "plugins" / "linux" / "notes.txt").write_text("not a plugin")
-    (proj / "plugins" / "android").mkdir(parents=True, exist_ok=True)
-    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=windows,linux,steam,macos")
+    # Android (0.27.0): plugins/android/<ABI>/lib*.so go into the APK; a file beside the ABI
+    # folders, a folder that isn't an ABI and a file that isn't lib*.so are warned about, a plugin
+    # with an engine library's name is refused; iOS's folder is still left out
+    andr = proj / "plugins" / "android"
+    (andr / "arm64-v8a").mkdir(parents=True, exist_ok=True)
+    (andr / "mips").mkdir(parents=True, exist_ok=True)
+    (andr / "arm64-v8a" / "libkrkrgame.so").write_bytes(b"not a real plugin")
+    (andr / "arm64-v8a" / "readme.txt").write_text("not a plugin")
+    (andr / "mips" / "libkrkrgame.so").write_bytes(b"not a real plugin")
+    (andr / "notes.txt").write_text("not a plugin")
+    (proj / "plugins" / "ios").mkdir(parents=True, exist_ok=True)
+    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=windows,linux,steam,macos,android")
     lines = {o["platform"]: " | ".join(o.get("contents", [])) for o in json.loads(out)["outputs"]}
     step("own plugins: the plan lists them", "krkrgame.dll" in lines.get("windows", "") and "libkrkrgame.so" in lines.get("linux", "")
          and "libkrkrgame.so" in lines.get("steam", "") and "libkrkrgame.dylib" in lines.get("macos", "")
-         and "notes.txt" not in lines.get("linux", ""), lines.get("linux", ""))
+         and "notes.txt" not in lines.get("linux", "") and "arm64-v8a/libkrkrgame.so" in lines.get("android", "")
+         and "mips" not in lines.get("android", ""), "%s / %s" % (lines.get("linux", ""), lines.get("android", "")))
     t = dict(s)
     t["platforms"] = json.loads(json.dumps(s["platforms"]))
     t["platforms"]["android"]["enabled"] = True
+    t["platforms"]["ios"]["enabled"] = True
     code, errs, warns = check_issues(exe, proj, t)
     w = " ".join(warns.get("contents.plugins", []))
-    step("own plugins: check warns about a stray file and plugins/android", "notes.txt" in w and "plugins/android/" in w and
-         "contents.plugins" not in errs, w)
+    step("own plugins: check warns about stray files, a folder that isn't an ABI, and plugins/ios",
+         "plugins/linux/notes.txt" in w and "plugins/android/notes.txt" in w and "plugins/android/mips" in w
+         and "plugins/android/arm64-v8a/readme.txt" in w and "plugins/ios/" in w and "libkrkrgame" not in w
+         and "contents.plugins" not in errs, w)
+    (andr / "arm64-v8a" / "libkrkrz.so").write_bytes(b"not the engine")
+    code, errs, warns = check_issues(exe, proj, t)
+    step("own plugins: an Android plugin named as the engine is refused", "libkrkrz.so" in " ".join(errs.get("contents.plugins", [])),
+         str(errs.get("contents.plugins")))
     (proj / "plugins" / "linux" / "notes.txt").unlink()
-    shutil.rmtree(proj / "plugins" / "android")
+    shutil.rmtree(andr)
+    shutil.rmtree(proj / "plugins" / "ios")
     # a game with a Live2D model and no Live2D plugin for an enabled desktop platform
     model = proj / "data" / "fgimage" / "zz_test.l2d"
     model.write_bytes(b"PK")
@@ -703,6 +722,10 @@ def android_tests(exe, proj, args):
               "ttsQuery": True, "manifestAdditions": '<uses-permission android:name="android.permission.INTERNET" />',
               "applicationAdditions": '<meta-data android:name="io.github.krkren.kagex.test" android:value="added" />'})
     version = s["identity"]["version"]
+    # a plugin of the game's own for the emulator's ABI (0.27.0): it goes in beside the engine's
+    own = proj / "plugins" / "android" / "x86_64"
+    own.mkdir(parents=True, exist_ok=True)
+    (own / "libkrkrgame.so").write_bytes(b"\x7fELF not a real plugin")
     for fmt, data in (("apk", "xp3"), ("aab", "folder")):
         a["format"], a["data"] = fmt, data
         rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
@@ -727,6 +750,8 @@ def android_tests(exe, proj, args):
                      "%s; %s" % (info and info.compress_type, libs))
             else:
                 step("android (%s): the data folder and the engine" % fmt, prefix + "assets/data/startup.tjs" in names and len(libs) == 2, "; ".join(libs))
+            step("android (%s): the game's own plugin beside the engine" % fmt, prefix + "lib/x86_64/libkrkrgame.so" in names,
+                 "; ".join(sorted(n for n in names if n.startswith(prefix + "lib/"))))
             # the game's engine options go ahead of the engine's in the config.cf it reads
             # from its assets (the sample's krkrz.cf has only names, so: debugwin=no)
             cf = z.read(prefix + "assets/config.cf").decode("utf-8", "replace") if prefix + "assets/config.cf" in names else ""
@@ -747,6 +772,7 @@ def android_tests(exe, proj, args):
                 step("android: the manifest has the speech query and the game's additions",
                      "android.intent.action.TTS_SERVICE" in tree and "android.permission.INTERNET" in tree
                      and "io.github.krkren.kagex.test" in tree, "%d lines" % len(tree.splitlines()))
+    shutil.rmtree(proj / "plugins" / "android", ignore_errors=True)
 
 
 def ios_tests(exe, proj, args):

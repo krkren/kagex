@@ -1644,6 +1644,21 @@ private:
 		androidManifestInto(proj / "app" / "src" / "main" / "AndroidManifest.xml");
 		if (encryptedXp3For("android")) archiveKeyInto("android", proj);   // key the engine .so before Gradle packages it
 		scenesInto("android", proj);
+		// the game's own plugins (plugins/android/<abi>/lib*.so, since 0.27.0) beside the engine's
+		// libraries: the engine opens a plugin it hasn't linked in from the app's own
+		for (const auto& [abi, f] : gameAndroidPlugins(p_)) {
+			const fs::path dir = proj / "app" / "src" / "main" / "jniLibs" / krt::toPath(abi);
+			const std::string name = krt::fromPath(f.filename());
+			if (isAndroidEngineLibrary(name)) throw Failure{ "plugins/android/" + abi + "/" + name + " has the name of one of the engine's own libraries" };
+			if (!fs::is_directory(dir, ec)) {
+				const std::string note = "plugins/android/" + abi + "/ stays out of the APK: the engine package has no " + abi + " engine";
+				pr_.log(note);
+				notes_.push_back(note);
+				continue;
+			}
+			fs::remove(dir / f.filename(), ec);
+			copyFile(f, dir / f.filename());
+		}
 
 		// app-config.json: the engine's settings, with the game's
 		Json cfg;

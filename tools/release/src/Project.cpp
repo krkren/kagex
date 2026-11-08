@@ -137,6 +137,36 @@ std::vector<fs::path> gamePlugins(const Project& p, const std::string& platform)
 	return out;
 }
 
+bool isAndroidAbi(const std::string& name)
+{
+	return name == "arm64-v8a" || name == "armeabi-v7a" || name == "x86_64" || name == "x86";
+}
+
+bool isAndroidEngineLibrary(const std::string& name)
+{
+	const std::string n = lower(name);
+	return n == "libkrkrz.so" || n == "libsdl3.so" || n == "libc++_shared.so" || n == "libomp.so" || n == "libmain.so";
+}
+
+std::vector<std::pair<std::string, fs::path>> gameAndroidPlugins(const Project& p)
+{
+	std::vector<std::pair<std::string, fs::path>> out;
+	std::error_code ec;
+	const fs::path dir = p.root / "plugins" / "android";
+	if (p.root.empty() || !fs::is_directory(dir, ec)) return out;
+	for (const auto& a : fs::directory_iterator(dir, ec)) {
+		const std::string abi = krt::fromPath(a.path().filename());
+		if (!a.is_directory(ec) || !isAndroidAbi(abi)) continue;
+		for (const auto& e : fs::directory_iterator(a.path(), ec)) {
+			const std::string n = lower(krt::fromPath(e.path().filename()));
+			if (e.is_regular_file(ec) && n.rfind("lib", 0) == 0 && n.size() > 6 && n.compare(n.size() - 3, 3, ".so") == 0)
+				out.push_back({ abi, e.path() });
+		}
+	}
+	std::sort(out.begin(), out.end());
+	return out;
+}
+
 bool findProject(const fs::path& start, Project& out, std::string& error)
 {
 	std::error_code ec;

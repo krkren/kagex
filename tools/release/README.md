@@ -380,16 +380,40 @@ own Cubism SDK: `tools/live2d`), goes in `plugins/<platform>/` next to `data/`: 
 `plugins/macos/`. Each build copies them into its `plugin/` folder (into `Contents/MacOS` in the
 app) after the engine's, so one with the name of an engine plugin replaces it; they're all copied,
 whatever `contents.plugins` says, and a signed build signs them with the engine. The plan lists
-them. The web, Android and iOS engines have their plugins linked in, so there a plugin of your
-own means an engine package built with it (`engines/`); `check` warns about a `plugins/android`
-or `plugins/ios` folder for an enabled platform, and about files in the others' folders that
-aren't plugins for them. On the web the one file of your own is Live2D's Web Core: the web
+them. On Android (since 0.27.0) a plugin built for each ABI goes in `plugins/android/<ABI>/`
+(`arm64-v8a`, `x86_64`, `armeabi-v7a`, `x86`) as `lib<name>.so`: the build puts it in the APK
+beside the engine's libraries, where the engine opens a plugin it hasn't linked in
+(`Plugins.link("plugin/<name>.dll")` finds `lib<name>.so` there); an ABI the engine package
+hasn't got is left out with a note, and a plugin with the name of one of the engine's libraries
+(`libkrkrz.so` ...) stops the build. The web and iOS engines have their plugins linked in and open
+none at run time, so there a plugin of your own means an engine package built with it
+(`engines/`); `check` warns about a `plugins/ios` folder for an enabled iOS, and about files in
+the other folders that aren't plugins for them. On the web the one file of your own is Live2D's Web Core: the web
 engine has the Live2D plugin, and a Live2D game's page loads `live2dcubismcore.min.js` (from your
 Cubism SDK for Web) before the engine, so put it in `plugins/web/`: the build copies it into the
 site and adds its script tag. An engine package never brings one (0.13.1 and 0.13.2's did, and
 the build leaves theirs out). A game with Live2D models (`.l2d`) gets a warning for each enabled
 platform that lacks what draws them: the Live2D plugin in a desktop's folder
 (`tools/live2d/setup.py` builds it), the Web Core in `plugins/web/`.
+
+Writing a plugin of your own, for the engines kagex-release uses:
+
+- **No engine type in a global at namespace scope.** A `ttstr` (or anything that calls the
+  engine) built as the library loads runs before `V2Link` has handed the engine's functions over,
+  and the engine stops with "A dynamic link library (DLL) initialization routine failed". Make
+  such values on first use, or in `V2Link`.
+- **On Android, take the engine's `new` and `delete`.** The engine (`libkrkrz.so`) defines and
+  exports its own `operator new` and `delete`, which `libc++_shared.so` uses for what it
+  allocates, while a plugin opened later with `dlopen` binds its own `delete` to the C++
+  library's plain one: the first `std::string` the plugin frees then stops the game ("Scudo ERROR:
+  corrupted chunk header"). Define `operator new`/`delete` in the plugin to call the engine's
+  (look them up in `libkrkrz.so` with `dlsym`), as kagex's ShellExecute, SpeechSynth and
+  WaveFilters plugins do in their `AndroidAllocator.cpp` (UPSTREAM.md). A plugin linked into the
+  engine (an engine package of your own) doesn't need this.
+- **On Linux, build in the Steam Linux Runtime.** A plugin needs the glibc it was built against:
+  one built with GCC 13 on glibc 2.38 asks for `__isoc23_sscanf`, which the runtime's 2.31 lacks.
+  `tools/live2d/build.py --steamrt` shows how (Debian 11's GCC 10 in the `sniper` SDK image), and
+  `-Wl,--exclude-libs,ALL` keeps a static libstdc++ inside the plugin.
 
 ### release.json
 
