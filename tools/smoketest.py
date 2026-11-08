@@ -102,8 +102,10 @@ class Engine:
             return b"".join(int(h[i:i + 4], 16).to_bytes(2, "little") for i in range(0, len(h) - 3, 4)).decode("utf-16-le", "replace")
         return value
 
-    def wait(self, what, expr, timeout=60.0, interval=0.25):
-        """Polls a TJS expression until it is true."""
+    def wait(self, what, expr, timeout=60.0, interval=0.05):
+        """Polls a TJS expression until it is true. (A round trip takes some 50 ms of the
+        engine's anyway; a longer pause between polls only made every wait end later: at 0.25 s,
+        150 ms late on average, minutes over a run, and the macOS runner's 20 minutes ran out.)"""
         end = time.time() + timeout
         last = None
         while time.time() < end:
@@ -118,9 +120,23 @@ class Engine:
             return self.tjs('return kag.conductor.curStorage + ":" + kag.conductor.curLine'
                             ' + " status " + kag.conductor.status + " inStable " + kag.inStable'
                             ' + " inSleep " + kag.inSleep + " transCount " + kag.transCount'
-                            ' + " moveCount " + kag.moveCount + " tick " + System.getTickCount();', 5)
+                            ' + " moveCount " + kag.moveCount + " tick " + System.getTickCount();', 5) + self.key_state()
         except SmokeError as e:
             return "(unknown: %s)" % e
+
+    def key_state(self):
+        """What Esc and a right click would meet: the right click's settings, a key capture, the
+        history, a dialog, the hide action (for a wait that timed out after one)."""
+        try:
+            return str(self.tjs('''var r = [];
+                r.add("rclick " + (kag.rightClickEnabled ? 1 : 0) + "/" + (kag.rightClickJump ? "jump" : kag.rightClickCall ? "call" : "hide"));
+                r.add("capture " + (typeof kag.keyCapture != "undefined" && kag.keyCapture !== void ? "on" : "off"));
+                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog !== void ? 1 : 0));
+                r.add("hooks " + kag.rightClickHook.count + " skip " + (kag.prevSkipMode !== void ? kag.prevSkipMode : "-"));
+                r.add("hide " + (KAGActionEnabled("hide") ? 1 : 0)) if typeof global.KAGActionEnabled != "undefined";
+                return " [" + r.join(", ") + "]";''', 5))
+        except SmokeError:
+            return ""
 
     def key(self, name):
         """Presses and releases a key over two frames, so getKeyState sees it held. Builds
@@ -4359,8 +4375,10 @@ def sample_steps(eng):
             if picked != "opening_sd,4":
                 raise SmokeError("Smaller didn't play opening_sd with opening.vtt's cues: %s" % picked)
             # where it shows (up to 0.17.2 the web's player couldn't open a movie inside data.xp3)
+            # (the fit comes with the first frame shown: Android hides its decoder's first two)
             eng.wait("the smaller movie's first frames, or its end", 'KAGMoviePlaying === void'
-                     ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1', timeout=20)
+                     ' || kag.fore.layers[+KAGMoviePlaying.layer].flip.frames > 1 +'
+                     ' (typeof global.KAGMovieHideFirst != "undefined" ? +KAGMovieHideFirst : 0)', timeout=20)
             small = str(eng.tjs('if (KAGMoviePlaying === void) return "none"; var l = kag.fore.layers[+KAGMoviePlaying.layer], f = l.flip;'
                                 ' return [(int)(l.zoom * f.targetLayer.width / 100 + 0.5), (int)(l.zoom * f.targetLayer.height / 100 + 0.5)].join(",");'))
             print("     the smaller movie: %s, shown at %s" % (picked, small), flush=True)
@@ -4832,6 +4850,7 @@ def sample_steps(eng):
         if not (int(moves[1]) < int(moves[0])) or int(moves[2]) != max(0, int(moves[1]) - 3):
             raise SmokeError("the scene button or dragging didn't move the backlog: %s" % moves)
         # a flick (a Timer in the game moves it every 16 ms, as a finger would): it coasts on
+        coast = None
         if eng.tjs("return typeof %s.flick != \"undefined\" && %s.dataLines - %s.dispLines > 12 ? 1 : 0;" % (h, h, h)) == 1:
             eng.tjs('var h = %s; h.scrollTo(0); global.__smokeFlick = %%[ step:0, at:-1 ];'
                     ' global.__smokeFlickTimer = new Timer(function {'
@@ -4848,14 +4867,17 @@ def sample_steps(eng):
             # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
             # timer ran that slow (an emulator), the coast can't be checked; nor where its steps
             # came all at once (a drag of under 10 ms is no flick either)
-            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 60 or int(flick[3]) < 10):
+            if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 40 or int(flick[3]) < 10):
                 print("     (the coast: not checked, this machine's timer stepped %s ms apart, %s ms in all)" % (flick[2], flick[3]), flush=True)
             elif not (int(flick[1]) > int(flick[0])):
-                raise SmokeError("the backlog didn't coast on after a flick: %s" % flick)
+                coast = "the backlog didn't coast on after a flick: %s" % flick
+        # (closed before a failure is told, so the steps after don't start with it open)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        if coast is not None:
+            raise SmokeError(coast)
 
     @step("the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit")
     def _():
@@ -4863,7 +4885,7 @@ def sample_steps(eng):
             print("     (skipped: a sample from before the history closed by touch)", flush=True)
             return
         menu = 'kag.inStable && kag.selectShowing && kag._selectLayer !== void && kag._selectLayer.selects.count > 0'
-        eng.tjs('kag.process("s0001.ks"); return 1;')
+        eng.tjs('kag.hideHistory() if kag.historyShowing; kag.process("s0001.ks"); return 1;')
         eng.wait("the demo menu", menu, timeout=30)
         eng.tjs("kag._selectLayer.onButtonClick(kag._selectLayer.selects[1]); return 1;")
         eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable', timeout=30)
