@@ -41,22 +41,18 @@ World 機能におけるトランジション記述の例
 ; and goes, so each one changes the whole screen. Without the plugin (KAGPluginTransitions
 ; says which loaded), each one runs as a crossfade.
 [ai hide trans=normal][day trans=normal]
-extNagano プラグインでトランジションがさらに12種類増えます。
-[if exp="KAGPluginTransitions.book != 'linked'"]
+extNagano プラグインでトランジションがさらに増えます。そのうち7種類をご覧ください。
+[if exp="KAGPluginTransitions.flutter != 'linked'"]
 このビルドにはないので、ここではどれもクロスフェードになります。
 [endif]
-[EV file=event1 trans=book time=1500 dir=1]book：ページがめくれる
-[EV hide trans=flutter time=1500]flutter：絵が紙のようにはがれていく
 [EV file=event1 trans=blurfade time=1500 blur1=48 blur2=48]blurfade：ぼかしを通したクロスフェード
-[EV hide trans=zoomfade time=1500 zoom1=200]zoomfade：消えながら拡大する
+[EV hide trans=flutter time=1500]flutter：絵が紙のようにはがれていく
 [EV file=event1 trans=scanline time=1200]scanline：線が左右交互にすべり込む
-[EV hide trans=rgbfade time=1800 delayr=0 delayg=96 delayb=192]rgbfade：赤・緑・青が順番に切り替わる
-[EV file=event1 trans=spin time=1500]spin：箱の側面のように絵が回る
-[EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple：五か所から波紋が広がる
-[EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe：画像に沿ったワイプ（ここでは筆のストローク）
 [EV hide trans=3duniversal time=2000 rule=rule_shatter accel1=0.4]3duniversal：ルール画像で破片が飛び散る（ここではガラス片）
-[EV file=event1 trans=honeyturn time=1500 size=80]honeyturn：六角形がひとつずつ裏返る
+[EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe：画像に沿ったワイプ（ここでは筆のストローク）
 [EV hide trans=swirl]morphing：三角形で絵をゆがめる（ここでは渦巻き、envinit.tjs）
+[EV file=event1 trans=honeyturn time=1500 size=80]honeyturn：六角形がひとつずつ裏返る
+[EV hide trans=normal]
 
 [demodone name=transition]
 

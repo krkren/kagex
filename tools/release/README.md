@@ -281,6 +281,40 @@ Before packing, lossless media in the staged data are converted (the sources are
 Results are cached by content and settings (in the cache folder below), so a later build only
 converts what changed.
 
+**CG pieces** (since 0.27.0): before the images are converted, the lossless pictures of the CG
+folders (*CG folders*, `media.images.cgPieces`: folder names, by default `evimage`) are compared in
+name order, each with the first of its run (its base). A picture of the base's size that differs
+from it in at most half its area is staged as just the rectangle that differs (in its own format,
+converted with the rest), and a line in the release's `cgpieces.txt` (`<name>`, `<base>`, `<x>`,
+`<y>`, tab-separated) has the framework draw it back over the base wherever the game loads it by
+name: a KAG or World layer, the gallery, `KAGLoadPicture` (doc/kagex.txt, "CG Variations From One
+Layered File"). So `ev01b` to `ev01f`, the same scene with five faces, ship as one picture and five
+faces. A picture that differs more starts a run of its own, as does one of another size. Left whole:
+pictures in `lang/`, pictures whose name another picture of the game has too (a language's
+version), names `cgvariations.txt` lists, masks and the pictures that have them, a layered file's
+layer pictures, and pictures that become JPEG (each would be compressed on its own, and the
+rectangle's edges would show). A script of your own that loads a CG into a plain `Layer` with
+`loadImages` gets only the piece: use `KAGLoadPicture(layer, name)`. A framework from before 0.27.0
+doesn't read `cgpieces.txt`, so with one every picture goes in whole. The comparisons are cached
+by content.
+
+**Loudness** (since 0.27.0): with *Measure every sound* (`loudness.measure`) a build measures the
+staged sounds' loudness (EBU R128 integrated loudness, as the engine plays them: an Opus file's
+header gain included) into `<name>-<version>-loudness.csv` beside the packages: each sound's LUFS,
+how loud it plays with the game's `loudness.csv` (the framework's table of gains: doc/kagex.txt,
+"Loudness"), and notes. With targets for kinds (`loudness.targets`: `voice`, `bgm`, `se`, each a
+LUFS value; a sound's kind is the folder it's in, as the framework has it), each sound of those
+kinds further than `loudness.tolerance` (1 LU) from its target gets a line in the release's
+`loudness.csv` (the staged copy; the game's own file is left as it is) that brings it there. A
+line the game has for that file wins; a speaker's line (`voice:<name>`) doesn't, since the tool
+doesn't know whose a voice is. WAV files play without a gain (the engine applies one only as it
+decodes Ogg Vorbis and Opus), so a far one is only noted: convert it or level it by hand. A sound
+shorter than a 400 ms block is measured as one block (ffmpeg's `ebur128` gives such sounds no
+value); longer ones measure as ffmpeg does (0.5 LU at most apart on a second-long sound, where a
+few samples' difference in decoding moves the blocks). `kagex-release --cli loudness [<path>]`
+prints the same measurements of the project's `data/` without building; measurements are cached
+by content.
+
 ### Photoshop and CLIP STUDIO PAINT files
 
 A game can keep layers in the files they're drawn in: a character's poses as `.psd` or `.clip`
@@ -380,16 +414,40 @@ own Cubism SDK: `tools/live2d`), goes in `plugins/<platform>/` next to `data/`: 
 `plugins/macos/`. Each build copies them into its `plugin/` folder (into `Contents/MacOS` in the
 app) after the engine's, so one with the name of an engine plugin replaces it; they're all copied,
 whatever `contents.plugins` says, and a signed build signs them with the engine. The plan lists
-them. The web, Android and iOS engines have their plugins linked in, so there a plugin of your
-own means an engine package built with it (`engines/`); `check` warns about a `plugins/android`
-or `plugins/ios` folder for an enabled platform, and about files in the others' folders that
-aren't plugins for them. On the web the one file of your own is Live2D's Web Core: the web
+them. On Android (since 0.27.0) a plugin built for each ABI goes in `plugins/android/<ABI>/`
+(`arm64-v8a`, `x86_64`, `armeabi-v7a`, `x86`) as `lib<name>.so`: the build puts it in the APK
+beside the engine's libraries, where the engine opens a plugin it hasn't linked in
+(`Plugins.link("plugin/<name>.dll")` finds `lib<name>.so` there); an ABI the engine package
+hasn't got is left out with a note, and a plugin with the name of one of the engine's libraries
+(`libkrkrz.so` ...) stops the build. The web and iOS engines have their plugins linked in and open
+none at run time, so there a plugin of your own means an engine package built with it
+(`engines/`); `check` warns about a `plugins/ios` folder for an enabled iOS, and about files in
+the other folders that aren't plugins for them. On the web the one file of your own is Live2D's Web Core: the web
 engine has the Live2D plugin, and a Live2D game's page loads `live2dcubismcore.min.js` (from your
 Cubism SDK for Web) before the engine, so put it in `plugins/web/`: the build copies it into the
 site and adds its script tag. An engine package never brings one (0.13.1 and 0.13.2's did, and
 the build leaves theirs out). A game with Live2D models (`.l2d`) gets a warning for each enabled
 platform that lacks what draws them: the Live2D plugin in a desktop's folder
 (`tools/live2d/setup.py` builds it), the Web Core in `plugins/web/`.
+
+Writing a plugin of your own, for the engines kagex-release uses:
+
+- **No engine type in a global at namespace scope.** A `ttstr` (or anything that calls the
+  engine) built as the library loads runs before `V2Link` has handed the engine's functions over,
+  and the engine stops with "A dynamic link library (DLL) initialization routine failed". Make
+  such values on first use, or in `V2Link`.
+- **On Android, take the engine's `new` and `delete`.** The engine (`libkrkrz.so`) defines and
+  exports its own `operator new` and `delete`, which `libc++_shared.so` uses for what it
+  allocates, while a plugin opened later with `dlopen` binds its own `delete` to the C++
+  library's plain one: the first `std::string` the plugin frees then stops the game ("Scudo ERROR:
+  corrupted chunk header"). Define `operator new`/`delete` in the plugin to call the engine's
+  (look them up in `libkrkrz.so` with `dlsym`), as kagex's ShellExecute, SpeechSynth and
+  WaveFilters plugins do in their `AndroidAllocator.cpp` (UPSTREAM.md). A plugin linked into the
+  engine (an engine package of your own) doesn't need this.
+- **On Linux, build in the Steam Linux Runtime.** A plugin needs the glibc it was built against:
+  one built with GCC 13 on glibc 2.38 asks for `__isoc23_sscanf`, which the runtime's 2.31 lacks.
+  `tools/live2d/build.py --steamrt` shows how (Debian 11's GCC 10 in the `sniper` SDK image), and
+  `-Wl,--exclude-libs,ALL` keeps a static libstdc++ inside the plugin.
 
 ### release.json
 
@@ -399,7 +457,7 @@ platform that lacks what draws them: the Live2D plugin in a desktop's folder
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.bak` anywhere, `bgimage/raw/**`, `work/`; the defaults are `*.bak`, `*.tmp`, `Thumbs.db`, `desktop.ini` and `.DS_Store`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, or that is a pose `charinit.csv` names, goes in all the same; every `.psd` and `.clip` that goes in is split into its layers: see "Photoshop and CLIP STUDIO PAINT files"), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |
-| `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
+| `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `images.cgPieces` (CG folders whose variations are kept as the part that differs; `[]` for none), `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
 | `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |

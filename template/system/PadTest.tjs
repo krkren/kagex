@@ -157,7 +157,7 @@ class KAGPadTestLayer extends DialogLayer
 
 	function onOpen()
 	{
-		setFocusToLink(0, true);
+		KAGOpenFocus(this, 0);
 		openYesNoA11y(this);
 		draw();
 		window.keyCapture = onCaptured;

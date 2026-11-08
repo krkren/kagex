@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.27.0
+
+### Added
+
+- **The game's own mouse pointers**: a game lists its pointers in `cursors.csv` (the arrow, over buttons, at a click wait, in auto mode, over a text field, over something to drag, busy) and they're drawn over everything, following the mouse, at the same size on the screen whatever the window's zoom, with the system's pointer hidden over the game; the SDL engine itself shows only the system's arrow (`UPSTREAM.md` 51). Config's Mouse Pointer picks the game's or the system's. The sample has its own, in its colours (`make_ui.py cursors`). Desktops and the browser (`GameCursor.tjs`).
+- **Advanced settings**: Help > Show Advanced Settings adds an Advanced menu to the menu bar, and the manual has a page of them on every platform: memory use (Low keeps fewer pictures), the picture cache's size, the drawing threads, the controller and the movies' size, each taking effect at once, and Default. The options the engine reads only as it starts still need its own `-userconf` screen (`UPSTREAM.md` 52). `changeUserConf`, which `standview.tjs` called without it existing, keeps an option for the next start (`Advanced.tjs`).
+- **A game's own plugins on Android, without an engine of its own**: kagex-release puts `plugins/android/<ABI>/lib*.so` in the APK beside the engine's libraries, where the engine opens a plugin it hasn't linked in; `check` warns about files and folders that aren't one and refuses a plugin named as an engine library. `tools/release/README.md` has notes for plugin authors (no engine types in globals, the engine's `new` and `delete` on Android, building for Linux in the Steam Runtime).
+- **kagex-release measures loudness**: with *Measure every sound* a build reports each sound's EBU R128 loudness as it plays, and with targets for voices, music or sound effects it adds a line to the release's `loudness.csv` for each sound further than the tolerance from its kind's target (the game's own lines win; WAV files, which play without a gain, are only noted). `--cli loudness` prints the measurements without building. The measurement is the tool's own and matches ffmpeg's `ebur128`.
+- **Saves that outlast a patch of their script**: a save keeps what its line says and the two before it, and a save made before a patch resumes at that line in the script as it is now, wherever lines added or taken out have moved it, the history's lines too; up to 0.26.1 any change to a script, or to `envinit.tjs`, sent every save in it back to the top of its scene. A line the patch changed is found by the two before it. A compile says in the log how many lines of each scene are new and how many gone since it was last compiled (`KAGEnvPlayer.mapPoint`, `SceneParser.reportTextChanges`, doc/scn.txt).
+- **Smaller packages for CGs drawn as whole pictures**: kagex-release keeps a CG that is the one before it with a little changed (a face, an arm) as the rectangle that differs, and the framework draws it back over that one wherever the game loads it by name (`cgpieces.txt`, `KAGCGPieceDraw` in `CGVariations.tjs`). *CG folders* says where to look (`evimage` by default); pictures that become JPEG stay whole. A patch or DLC that brings a `cgpieces.txt` or a `cgvariations.txt` has them read again.
+- **Where a question puts the pointer**: Config's Pointer on Questions leaves the pointer where it is as a Yes/No prompt opens, or puts it on No or on Yes (which then has the keys' focus too); About and the controller test follow it.
+
+### Changed
+
+- **The transitions demo shows extNagano's transitions as the plugin draws them**: from 0.18.0 to 0.26.1 kagex drew book, multiripple, rgbfade, zoomfade and spin itself in scripts (`ScriptTransitions.tjs`), under the plugin's names, because krkrz_dev's rebuild of the plugin draws them wrong (`UPSTREAM.md` 42), so the demo passed kagex's drawing off as the plugin's. The scripts are gone, those five are left out of the demo, and it shows the plugin's other seven; a game that uses the five gets the plugin's own.
+- **A Yes/No prompt no longer moves the pointer to No by itself** (it did since KAG3: `DialogLayer.setFocusToLink`); Pointer on Questions brings that back.
+
 ## 0.26.1
 
 ### Fixed

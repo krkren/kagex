@@ -198,21 +198,40 @@ def own_plugin_tests(exe, proj):
         subprocess.run(["cc", "-dynamiclib", "-arch", "arm64", "-o", str(proj / "plugins" / "macos" / "libkrkrgame.dylib"), str(src)], check=True)
         src.unlink()
     (proj / "plugins" / "linux" / "notes.txt").write_text("not a plugin")
-    (proj / "plugins" / "android").mkdir(parents=True, exist_ok=True)
-    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=windows,linux,steam,macos")
+    # Android (0.27.0): plugins/android/<ABI>/lib*.so go into the APK; a file beside the ABI
+    # folders, a folder that isn't an ABI and a file that isn't lib*.so are warned about, a plugin
+    # with an engine library's name is refused; iOS's folder is still left out
+    andr = proj / "plugins" / "android"
+    (andr / "arm64-v8a").mkdir(parents=True, exist_ok=True)
+    (andr / "mips").mkdir(parents=True, exist_ok=True)
+    (andr / "arm64-v8a" / "libkrkrgame.so").write_bytes(b"not a real plugin")
+    (andr / "arm64-v8a" / "readme.txt").write_text("not a plugin")
+    (andr / "mips" / "libkrkrgame.so").write_bytes(b"not a real plugin")
+    (andr / "notes.txt").write_text("not a plugin")
+    (proj / "plugins" / "ios").mkdir(parents=True, exist_ok=True)
+    code, out = run(exe, "--cli", "plan", str(proj / "release.json"), "--json", "--platform=windows,linux,steam,macos,android")
     lines = {o["platform"]: " | ".join(o.get("contents", [])) for o in json.loads(out)["outputs"]}
     step("own plugins: the plan lists them", "krkrgame.dll" in lines.get("windows", "") and "libkrkrgame.so" in lines.get("linux", "")
          and "libkrkrgame.so" in lines.get("steam", "") and "libkrkrgame.dylib" in lines.get("macos", "")
-         and "notes.txt" not in lines.get("linux", ""), lines.get("linux", ""))
+         and "notes.txt" not in lines.get("linux", "") and "arm64-v8a/libkrkrgame.so" in lines.get("android", "")
+         and "mips" not in lines.get("android", ""), "%s / %s" % (lines.get("linux", ""), lines.get("android", "")))
     t = dict(s)
     t["platforms"] = json.loads(json.dumps(s["platforms"]))
     t["platforms"]["android"]["enabled"] = True
+    t["platforms"]["ios"]["enabled"] = True
     code, errs, warns = check_issues(exe, proj, t)
     w = " ".join(warns.get("contents.plugins", []))
-    step("own plugins: check warns about a stray file and plugins/android", "notes.txt" in w and "plugins/android/" in w and
-         "contents.plugins" not in errs, w)
+    step("own plugins: check warns about stray files, a folder that isn't an ABI, and plugins/ios",
+         "plugins/linux/notes.txt" in w and "plugins/android/notes.txt" in w and "plugins/android/mips" in w
+         and "plugins/android/arm64-v8a/readme.txt" in w and "plugins/ios/" in w and "libkrkrgame" not in w
+         and "contents.plugins" not in errs, w)
+    (andr / "arm64-v8a" / "libkrkrz.so").write_bytes(b"not the engine")
+    code, errs, warns = check_issues(exe, proj, t)
+    step("own plugins: an Android plugin named as the engine is refused", "libkrkrz.so" in " ".join(errs.get("contents.plugins", [])),
+         str(errs.get("contents.plugins")))
     (proj / "plugins" / "linux" / "notes.txt").unlink()
-    shutil.rmtree(proj / "plugins" / "android")
+    shutil.rmtree(andr)
+    shutil.rmtree(proj / "plugins" / "ios")
     # a game with a Live2D model and no Live2D plugin for an enabled desktop platform
     model = proj / "data" / "fgimage" / "zz_test.l2d"
     model.write_bytes(b"PK")
@@ -703,6 +722,10 @@ def android_tests(exe, proj, args):
               "ttsQuery": True, "manifestAdditions": '<uses-permission android:name="android.permission.INTERNET" />',
               "applicationAdditions": '<meta-data android:name="io.github.krkren.kagex.test" android:value="added" />'})
     version = s["identity"]["version"]
+    # a plugin of the game's own for the emulator's ABI (0.27.0): it goes in beside the engine's
+    own = proj / "plugins" / "android" / "x86_64"
+    own.mkdir(parents=True, exist_ok=True)
+    (own / "libkrkrgame.so").write_bytes(b"\x7fELF not a real plugin")
     for fmt, data in (("apk", "xp3"), ("aab", "folder")):
         a["format"], a["data"] = fmt, data
         rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
@@ -727,6 +750,8 @@ def android_tests(exe, proj, args):
                      "%s; %s" % (info and info.compress_type, libs))
             else:
                 step("android (%s): the data folder and the engine" % fmt, prefix + "assets/data/startup.tjs" in names and len(libs) == 2, "; ".join(libs))
+            step("android (%s): the game's own plugin beside the engine" % fmt, prefix + "lib/x86_64/libkrkrgame.so" in names,
+                 "; ".join(sorted(n for n in names if n.startswith(prefix + "lib/"))))
             # the game's engine options go ahead of the engine's in the config.cf it reads
             # from its assets (the sample's krkrz.cf has only names, so: debugwin=no)
             cf = z.read(prefix + "assets/config.cf").decode("utf-8", "replace") if prefix + "assets/config.cf" in names else ""
@@ -747,6 +772,7 @@ def android_tests(exe, proj, args):
                 step("android: the manifest has the speech query and the game's additions",
                      "android.intent.action.TTS_SERVICE" in tree and "android.permission.INTERNET" in tree
                      and "io.github.krkren.kagex.test" in tree, "%d lines" % len(tree.splitlines()))
+    shutil.rmtree(proj / "plugins" / "android", ignore_errors=True)
 
 
 def ios_tests(exe, proj, args):
@@ -1183,6 +1209,180 @@ def scenes_tests(exe, proj, args):
          ", ".join(sorted(names)) or err or (r or {}).get("error", ""))
     s["output"]["patchFrom"] = ""
     rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+
+
+def loudness_tests(exe, proj):
+    """The sounds' loudness (0.27.0): --cli loudness measures the project's sounds (EBU R128) with
+    what loudness.csv makes of them; a build with loudness.measure writes the report beside the
+    packages, and with loudness.targets adds a line to the staged loudness.csv for each sound
+    further than the tolerance from its kind's target (a line of the game's own wins). Engine-free:
+    a patch build"""
+    code, out = run(exe, "--cli", "loudness", str(proj / "release.json"), "--json")
+    try:
+        sounds = {x["file"]: x for x in json.loads(out[out.index("{"):])["sounds"]}
+    except ValueError:
+        step("loudness: --cli loudness lists the sounds", False, out[-500:])
+        return
+    v = sounds.get("voice/ai000001.ogg", {})
+    b = sounds.get("bgm/bgm01.ogg", {})
+    # ffmpeg's ebur128 measures them at -15.9 and -16.3 LUFS; pip000009 has its own line (+5)
+    step("loudness: --cli loudness measures the sounds as ffmpeg does, with loudness.csv's gains",
+         abs(v.get("lufs", 0) + 15.9) < 0.15 and abs(b.get("lufs", 0) + 16.3) < 0.15 and b.get("gain") == -4
+         and sounds.get("voice/pip000009.ogg", {}).get("gain") == 5 and len(sounds) >= 30,
+         "ai000001 %s, bgm01 %s (%d sounds)" % (v.get("lufs"), b.get("lufs"), len(sounds)))
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        s = json.loads(saved.decode("utf-8"))
+        for p in s["platforms"]:
+            s["platforms"][p]["enabled"] = False
+        s["output"]["check"] = False
+        s["contents"]["compileScripts"] = False
+        s["scenes"] = {"compile": False, "encrypt": False}
+        s["identity"]["version"] = "3.0.0"
+        s["loudness"] = {"measure": True, "targets": {"voice": -16, "lufs": -3}, "tolerance": 1.0}
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, errs, warns = check_issues(exe, proj, s)
+        step("loudness: check refuses a target for a kind there isn't", "lufs" in " ".join(errs.get("loudness.targets", [])), str(errs))
+        s["loudness"]["targets"] = {"voice": -16}
+        out = proj / "release"
+        out.mkdir(exist_ok=True)
+        (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+        s["output"]["patchFrom"] = "release/nothing-files.json"
+        rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        code, text = run(exe, "--cli", "build", str(rel), "--json")
+        try:
+            r = json.loads(text[text.index("{"):])
+        except ValueError:
+            r = {"ok": False, "error": text[-1500:]}
+        report = out / "kagex-sample-3.0.0-loudness.csv"
+        step("loudness: a build writes the report", r.get("ok") and report.exists(), r.get("error", ""))
+        if not report.exists():
+            return
+        rows = {l.split("\t")[0]: l.split("\t") for l in report.read_text(encoding="utf-8").splitlines() if not l.startswith("#")}
+        z = zipfile.ZipFile(out / "kagex-sample-3.0.0-patch" / "patch.zip")
+        table = z.read("main/loudness.csv").decode("utf-8")
+        lines = {l.split("\t")[0]: l.split("\t")[1] for l in table.splitlines() if l and not l.startswith("#")}
+        # pip000008 plays at -13.5, 2.5 over the target: its line brings it there; ai000001
+        # (-15.9) is within the tolerance; pip000009's own line stays
+        step("loudness: the staged loudness.csv brings the far voices to the target, keeps the game's lines",
+             lines.get("pip000008.ogg") == "-2.5" and "ai000001.ogg" not in lines and lines.get("pip000009") == "+5"
+             and lines.get("bgm") == "-4" and "bgm01.ogg" not in lines,
+             " ".join("%s=%s" % kv for kv in sorted(lines.items())))
+        step("loudness: the report notes what the table does", "brought to its target" in rows.get("voice/pip000008.ogg", [""])[-1]
+             and "its own line" in rows.get("voice/pip000009.ogg", [""])[-1], str(rows.get("voice/pip000008.ogg")))
+    finally:
+        rel.write_bytes(saved)
+
+
+def write_png(path, w, h, pixel):
+    """An RGB PNG of w x h, pixel(x, y) giving (r, g, b): the standard library only"""
+    import struct
+    import zlib
+    raw = b"".join(b"\0" + bytes(c for x in range(w) for c in pixel(x, y)) for y in range(h))
+    chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def png_size(data):
+    import struct
+    return struct.unpack(">II", data[16:24]) if data[:8] == b"\x89PNG\r\n\x1a\n" else (0, 0)
+
+
+def cg_pieces_tests(exe, proj):
+    """CG pieces (0.27.0): in a CG folder (media.images.cgPieces, evimage by default) a picture that
+    is the first of its run with a little changed is staged as the rectangle that differs, listed in
+    cgpieces.txt (name, base, x, y); one that differs more starts a run, as does one of another size;
+    a masked picture, one whose name a language's picture shares and one that becomes JPEG stay
+    whole. Engine-free: a patch build, its pictures kept PNG to read their sizes"""
+    ev = proj / "data" / "evimage"
+    ja = proj / "data" / "lang" / "ja" / "evimage"
+    ja.mkdir(parents=True, exist_ok=True)
+    base = lambda x, y: ((x * 7) % 256, (y * 5) % 256, (x + y) % 256)
+    def changed(rect, colour):
+        rx, ry, rw, rh = rect
+        return lambda x, y: colour if rx <= x < rx + rw and ry <= y < ry + rh else base(x, y)
+    other = lambda x, y: (255 - (x * 3) % 256, (y * 11) % 256, 90)
+    made = {
+        "zz_a": (320, 180, base),
+        "zz_b": (320, 180, changed((100, 50, 40, 30), (250, 0, 0))),        # a piece of zz_a
+        "zz_c": (320, 180, other),                                          # a run of its own
+        "zz_d": (320, 180, lambda x, y: (0, 0, 255) if 10 <= x < 15 and 10 <= y < 15 else other(x, y)),   # of zz_c
+        "zz_e": (200, 100, base),                                           # another size
+        "zz_f": (320, 180, lambda x, y: (1, 2, 3) if x < 8 and y < 8 else other(x, y)),   # has a mask: whole
+        "zz_g": (320, 180, lambda x, y: (9, 9, 9) if x < 4 and y < 4 else other(x, y)),   # a language's too: whole
+    }
+    for name, (w, h, px) in made.items():
+        write_png(ev / (name + ".png"), w, h, px)
+    write_png(ev / "zz_f_m.png", 320, 180, lambda x, y: (255, 255, 255))
+    write_png(ja / "zz_g.png", 320, 180, other)
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        s = json.loads(saved.decode("utf-8"))
+        for p in s["platforms"]:
+            s["platforms"][p]["enabled"] = False
+        s["output"]["check"] = False
+        s["contents"]["compileScripts"] = False
+        s["scenes"] = {"compile": False, "encrypt": False}
+        s["media"]["images"]["opaque"] = "png"
+        s["media"]["images"]["alpha"] = "png"
+        step("pieces: the defaults look at evimage", s["media"]["images"].get("cgPieces", ["evimage"]) == ["evimage"], str(s["media"]["images"]))
+        s["media"]["images"]["cgPieces"] = ["evimage/zz"]
+        code, errs, warns = check_issues(exe, proj, s)
+        step("pieces: check refuses a path for a CG folder", "media.images.cgPieces" in errs, str(errs))
+        s["media"]["images"]["cgPieces"] = ["evimage"]
+        out = proj / "release"
+        out.mkdir(exist_ok=True)
+        (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+        s["output"]["patchFrom"] = "release/nothing-files.json"
+
+        def build(version):
+            s["identity"]["version"] = version
+            rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+            code, text = run(exe, "--cli", "build", str(rel), "--json")
+            try:
+                r = json.loads(text[text.index("{"):])
+            except ValueError:
+                r = {"ok": False, "error": text[-1500:]}
+            zp = out / ("kagex-sample-%s-patch" % version) / "patch.zip"
+            return r, (zipfile.ZipFile(zp) if zp.exists() else None)
+
+        r, z = build("4.0.0")
+        step("pieces: a build with CG pieces", r.get("ok") and z is not None, r.get("error", ""))
+        if z is None:
+            return
+        names = set(z.namelist())
+        table = z.read("cgpieces.txt").decode("utf-8-sig") if "cgpieces.txt" in names else ""
+        lines = {l.split("\t")[0]: l.split("\t")[1:] for l in table.splitlines() if l and not l.startswith("#")}
+        size = lambda n: png_size(z.read("evimage/%s.png" % n)) if "evimage/%s.png" % n in names else (0, 0)
+        step("pieces: a picture that's its run's first with a rectangle changed is that rectangle, listed with its base and place",
+             lines.get("zz_b") == ["zz_a", "100", "50"] and size("zz_b") == (40, 30) and lines.get("zz_d") == ["zz_c", "10", "10"]
+             and size("zz_d") == (5, 5), "%s; zz_b %s, zz_d %s" % (lines, size("zz_b"), size("zz_d")))
+        step("pieces: bases, another size, a masked picture and a language's are kept whole",
+             not ({"zz_a", "zz_c", "zz_e", "zz_f", "zz_g"} & set(lines)) and size("zz_a") == (320, 180) and size("zz_e") == (200, 100)
+             and size("zz_f") == (320, 180) and size("zz_g") == (320, 180), "%s" % sorted(lines))
+        step("pieces: a layered file's layer pictures stay as they are", not any(n.startswith("pipcg") for n in lines), str(sorted(lines)))
+        cp = r.get("cgPieces", {})
+        step("pieces: the build reports them", cp.get("pieces") == 2 and cp.get("bytesAfter", 1) < cp.get("bytesBefore", 0), str(cp))
+        first = z.read("evimage/zz_b.png")
+        r, z = build("4.0.1")
+        step("pieces: a second build takes them from the cache, the same bytes",
+             r.get("cgPieces", {}).get("fromCache", 0) >= 4 and z is not None and z.read("evimage/zz_b.png") == first, str(r.get("cgPieces")))
+        s["media"]["images"]["opaque"] = "jpeg"
+        r, z = build("4.0.2")
+        step("pieces: pictures that become JPEG stay whole", r.get("ok") and z is not None and "cgpieces.txt" not in z.namelist(), r.get("error", ""))
+        s["media"]["images"]["opaque"] = "png"
+        s["media"]["images"]["cgPieces"] = []
+        r, z = build("4.0.3")
+        step("pieces: none without CG folders", r.get("ok") and z is not None and "cgpieces.txt" not in z.namelist()
+             and png_size(z.read("evimage/zz_b.png")) == (320, 180), r.get("error", ""))
+    finally:
+        rel.write_bytes(saved)
+        for name in list(made) + ["zz_f_m"]:
+            (ev / (name + ".png")).unlink(missing_ok=True)
+        shutil.rmtree(ja, ignore_errors=True)
 
 
 def patch_tests(exe, proj):
@@ -2160,7 +2360,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -2203,6 +2403,10 @@ def main():
                 scenes_tests(exe, proj, args)
         if want("patch"):
             patch_tests(exe, proj)
+        if want("loudness"):
+            loudness_tests(exe, proj)
+        if want("pieces"):
+            cg_pieces_tests(exe, proj)
         if want("layered"):
             layered_tests(exe, Path(t), args)
     print("%d failed" % len(failures) if failures else "all passed")

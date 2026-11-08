@@ -446,6 +446,9 @@ Json makePlan(const Json& s, const Project& p)
 			add(std::string("application ID ") + str(s, base + "applicationId") + ", versionCode " +
 			    std::to_string(at(s, base + "versionCode").asInt() > 0 ? at(s, base + "versionCode").asInt() : versionNumber(str(s, "identity.version"))));
 			add(std::string("assets/") + (dataMode == "xp3" ? "data.xp3" : "data/"));
+			std::string own;
+			for (const auto& [abi, f] : gameAndroidPlugins(p)) own += (own.empty() ? "" : ", ") + abi + "/" + krt::fromPath(f.filename());
+			if (!own.empty()) add("the game's own plugins: " + own);
 		} else if (id == "ios") {
 			const bool device = str(s, base + "target") == "device";
 			folder.clear();

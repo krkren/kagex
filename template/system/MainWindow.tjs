@@ -14210,8 +14210,11 @@ class KAGWindow extends Window
 				for (var i = 0; i < list.count; i++)
 					if (list[i] !== void && isvalid list[i] && list[i].visible) list[i].visible = false, hidden.add(list[i]);
 			}
-			try { lay.piledCopy(0, 0, primaryLayer, 0, 0, w, h); } catch (e) { for (var i = 0; i < hidden.count; i++) hidden[i].visible = true; throw e; }
+			// nor the game's pointer (GameCursor.tjs)
+			var pointer = typeof this.gameCursor == "Object" && gameCursor !== void ? gameCursor.hideForCopy() : false;
+			try { lay.piledCopy(0, 0, primaryLayer, 0, 0, w, h); } catch (e) { for (var i = 0; i < hidden.count; i++) hidden[i].visible = true; gameCursor.showAfterCopy(pointer) if pointer; throw e; }
 			for (var i = 0; i < hidden.count; i++) hidden[i].visible = true;
+			gameCursor.showAfterCopy(pointer) if pointer;
 			stampWatermark(lay);
 			// what the layers leave in the alpha channel means nothing on the screen, and PNG keeps it
 			lay.face = dfMask;

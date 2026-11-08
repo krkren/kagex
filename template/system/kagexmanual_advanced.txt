@@ -1,0 +1,11 @@
+﻿# Advanced Settings
+These are for when something goes wrong. Each one takes effect at once, and [Default](action:resetAdvanced) puts them all back.
+## Memory
+- Memory use: [Normal](option:memoryMode=normal) or [Low](option:memoryMode=low). Low keeps fewer pictures in memory, for a phone, a tablet or an older computer that runs short, and the game may load pictures again more often.
+- Picture cache: [Automatic](option:pictureCache=0), [128 MB](option:pictureCache=128), [256 MB](option:pictureCache=256) or [512 MB](option:pictureCache=512): how many pictures already shown stay ready.
+## Drawing
+- Drawing threads: [Automatic](option:drawThreads=0), [1](option:drawThreads=1), [2](option:drawThreads=2) or [4](option:drawThreads=4). If pictures come out wrong or the game stops while it draws, try 1.
+## The controller and movies
+- [Controller on](option:padEnabled=true) or [off](option:padEnabled=false), if a pad you aren't using moves the game.
+- Movies: [Automatic](option:movieQuality=auto), [Full](option:movieQuality=full) or [Smaller](option:movieQuality=small).
+> On a computer, the engine has settings of its own, read as the game starts (sound output, the graphics driver and more): start the game with -userconf to see them.

@@ -1360,16 +1360,7 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
-book and multiripple (since 0.18.0) and rgbfade, zoomfade and spin (since 0.18.1) are drawn by kagex itself (ScriptTransitions.tjs): extNagano's, as rebuilt, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way, multiripple brings the old picture back halfway, rgbfade's colours each take the shortest one's time, zoomfade's zoom is jagged and spin's box doesn't turn. They take the same attributes, on KAG layers ([trans]) and World layers (trans=) alike, run their whole time, end at a click or [stoptrans] as the engine's transitions do, and keep each picture's transparency, so a picture that comes or goes over the World's stage turns, ripples, zooms or changes colour over the stage. The page itself ([trans] of the base layer) is opaque, the bottom of the screen: its pictures are taken opaque (since 0.23.0: they kept the message window's see-through alpha, and the window's inside came out black through the transition). They need no plugin. KAGScriptTransitions lists them by name: delete an entry to have the plugin's instead, or add a class of your own:
-
-    class MyTransition extends KAGScriptTransitionEffect {
-        function MyTransition(owner) { super.KAGScriptTransitionEffect(owner); }
-        function prepare(elm) { ... }   // once a and b, the two pictures (w x h), are taken
-        function draw(t) { ... }        // t from 0 to 1: draw the frame into canvas
-    }
-    KAGScriptTransitions["mine"] = MyTransition;   // [trans method=mine time=1000]
-
-The sample's transition.ks shows all twelve.
+Five of extNagano's transitions, as krkrz_dev rebuilt the plugin, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way and the rest of the old picture vanishes at the end, multiripple brings the old picture back where two or three ripples have passed, rgbfade's colours each take the shortest one's time and a pixel without alpha comes out in a solid colour, zoomfade's zoom is jagged, and spin shows a flat panel growing from the middle instead of a turning box. kagex runs them as the plugin draws them (from 0.18.0 to 0.26.1 it drew these five itself, ScriptTransitions.tjs, under the plugin's names; that's gone), and the sample's transition.ks shows the seven others.
 
 
 
@@ -1405,27 +1396,27 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  shrinks from zoom2% to 100%, about the middle (defaults 100 and 200: a picture
 
-                 that goes, with nothing after it, only zooms with zoom1). Drawn by kagex.
+                 that goes, with nothing after it, only zooms with zoom1). The rebuilt plugin
 
-    rgbfade      Red, green and blue each change at a time of their own. delayr, delayg, delayb:
+                 samples the nearest pixel, so the zoom is jagged (UPSTREAM.md 42).
 
-                 how late each starts (0-255 of the time); they all end together. A picture that
+    rgbfade      Red, green and blue each change at a time of their own. delayr, delayg, delayb,
 
-                 comes or goes changes colour by colour against what's behind it. Drawn by kagex
+                 delaya: how late each starts (0-255 of the time). The rebuilt plugin gives each
 
-                 (delaya, the plugin's alpha delay, isn't used: each colour's coverage goes with it).
+                 colour the shortest one's time rather than ending them together, and draws a
 
-    spin         The pictures turn about an upright axis, in perspective. type1 (the old picture)
+                 pixel of alpha 0 (a scene put together for a transition) in a solid colour
 
-                 and type2 (the new one): -1 stays still; 0 and 1 are the faces of a box turning
+                 (UPSTREAM.md 42).
 
-                 (type1 0 turns away to the left, 1 to the right; type2 1 comes in from the right,
+    spin         The picture turns like the side of a box. type1 (the old picture) and type2 (the
 
-                 0 from the left; the defaults, 0 and 1, turn one box); 4 and 5 a door hinged on
+                 new one): how each turns. The rebuilt plugin's geometry was lost in the
 
-                 its left edge, 6 and 7 on its right (type1 4 and 6 swing away from the viewer, 5
+                 decompile: the new picture shows as a flat panel growing from the middle, and the
 
-                 and 7 towards; type2 4 and 6 come in from the viewer's side). Drawn by kagex.
+                 old one doesn't turn (UPSTREAM.md 42).
 
     flutter      The picture peels away like paper. back: the colour of the paper's back
 
@@ -1435,9 +1426,9 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
     book         A page turns. dir: 0 the left page turns to the right, 1 the right page to the
 
-                 left, -1 either (default). Drawn by kagex: the old picture's half lifts, shaded as
+                 left, -1 either (default). The rebuilt plugin's page stops three quarters of the
 
-                 it turns, and the new picture's other half comes down on its back.
+                 way, and the rest of the old picture vanishes at the end (UPSTREAM.md 42).
 
     imagewipe    A wipe led by a picture. rule: in each row, the rightmost pixel more than 94%
 
@@ -1461,11 +1452,13 @@ Attributes of extNagano's transitions (time is needed by all of them)
 
                  shows inside them. count: how many (1-20). wavecount: wave rings each. rwidth:
 
-                 the rings' spacing. maxdrift: how bright the rings are (0: none). roundness: 1.0
+                 the rings' spacing. maxdrift: how far the waves bend the picture. roundness: 1.0
 
                  circles, less taller, more wider. delaylast: how late the last one starts (1.0:
 
-                 as the others). Drawn by kagex: the rings brighten the picture rather than bend it.
+                 as the others). The rebuilt plugin brings the old picture back where two or
+
+                 three ripples have passed (UPSTREAM.md 42).
 
 
 
@@ -3424,6 +3417,84 @@ adds them to a game's own menus), ticked as the window is.
 
 
 
+● The Mouse Pointer
+
+The game's own pointers (since 0.27.0, template/system/GameCursor.tjs). The SDL engine shows the
+system's arrow whatever a layer's cursor says, even over buttons (it loads no cursor file and
+maps no cr* constant: UPSTREAM.md), so a game's pointers are drawn on a layer over everything
+that follows the mouse, and the system's is hidden while the mouse is over the game. They're
+listed in cursors.csv, a line each (# comments, tabs or commas between the fields):
+
+  <kind>  <picture>  <hot spot x>  <hot spot y>
+
+  default   anywhere else
+  pointed   a button or a link (a layer whose cursor is crHandPoint: KAG's cursorPointed)
+  click     a click wait (the base layer's cursor while KAG waits for a click)
+  auto      auto mode's wait (click when there's no auto)
+  text      a text field ([edit]: crIBeam, crHBeam for vertical text)
+  drag      something to drag (crSizeAll, KAG's cursorDraggable, and the other drag cursors)
+  wait      busy (crHourGlass, crAppStart)
+
+A kind the table lacks shows default, a layer whose cursor is crNone hides the pointer, and
+without cursors.csv (or a default line) the system's pointer shows as before. A picture's size
+is its size on the screen: the pointer is drawn larger or smaller as the window zooms the game
+(kag.gameCursor.minScale and maxScale, 0.5 and 4, bound how many of the game's pixels a
+picture's pixel takes). The hot spot is the pixel that points, in the picture's own pixels.
+Over the menu bar and the bars beside a full-screen game the system's pointer shows; a touch
+hides the drawn one until the mouse moves; Hide the Pointer When Still hides it too; F12's
+screenshots leave it out (kag.gameCursor.hideForCopy()). A native message box (an error) shows
+the system's pointer, since the drawn one is under it. There's no pointer on Android and iOS.
+
+Options for a Config screen (template/system/GameCursor.tjs):
+
+  gameCursor     The Game's or The System's (only where cursors.csv has a default)
+  promptPointer  where the pointer goes as a Yes/No prompt opens: Stays (where it is), To No or
+                 To Yes, which also takes the keys' focus there. About and the controller test
+                 put it on their button unless it's Stays. Before 0.27.0 every prompt moved the
+                 pointer to No (DialogLayer.setFocusToLink's third argument, move, is false
+                 for Stays: KAGOpenFocus)
+
+The sample's pointers are tools/assets/make_ui.py's (cursors), and its Config has them on its
+eighth page, with Hide the Pointer When Still.
+
+
+
+
+● Advanced Settings
+
+Settings for when something goes wrong (since 0.27.0, template/system/Advanced.tjs), out of the
+casual player's way: in a window the menu bar's Advanced menu has them once Help > Show Advanced
+Settings has shown it (kept in the system variables), and the manual's Advanced Settings page has
+them on every platform (kagexmanual_advanced.txt, linked from the index and from "The Game Is
+Slow"). They're options (Options.tjs), and each takes effect at once:
+
+  memoryMode     Normal or Low: Low keeps the picture cache at KAGLowMemoryCache (64 MB) or less,
+                 lets a layered file's CG variations go at once (KAGCGVariationLinger 0) and
+                 lets go of the pictures kept now
+  pictureCache   the picture cache: Automatic (the engine's size at start) or 128, 256, 512 MB
+                 (System.graphicCacheLimit)
+  drawThreads    the threads that draw: Automatic (the engine's) or 1, 2, 4
+                 (System.drawThreadNum)
+  padEnabled     the controller, and movieQuality, the movies' size (as on Config)
+  resetAdvanced  a button: all of them back as they were (KAGResetOptions(KAGAdvancedOptions))
+
+A game's menus get the Advanced menu from KAGAdvancedMenu(window, menu) and Help's item from
+KAGAdvancedHelpItem(window, helpMenu), which KAGWindow_createMenus calls (a game with its own
+copy of it adds the two lines); the menu's items are added once every option is defined
+(KAGAdvancedMenuFill). KAGAdvancedOptions lists its options, and a game can add its own.
+
+The options the engine reads only as it starts (-memusage, -renderer, -joypad, -gclim and the rest)
+can't be set from a game (UPSTREAM.md: scripts can't write the engine's <exe>.cfu, and nothing
+starts the game again); on a computer the engine's own settings screen sets them when the game is
+started with -userconf, as the manual's page says.
+
+changeUserConf(name, value) keeps an option the game's own scripts read (System.getArgument("-" +
+name)) for the next start, and sets it now: the values are kept in the system variables
+(scflags.userConf) and set with System.setArgument as the game starts. standview.tjs's sub-window
+font size uses it; void forgets one.
+
+
+
 ● KAGEX Operation System
 
 
@@ -4059,6 +4130,23 @@ The sample's Animated Character demo shows four, pipcg_day, pipcg_laugh, pipcg_e
 pipcg_night, made of data/evimage/pipcg.txt and its pictures (tools/assets/make_pip.py cg), which
 are one tile in the gallery.
 
+A CG drawn as whole pictures, one for each variation, is kept smaller by kagex-release (since
+0.27.0; its README, "Media", CG pieces): in the CG folders (evimage by default) a picture that is
+the first of its run with a little changed (a face, an arm) ships as the rectangle that differs,
+and the release's cgpieces.txt says where it goes (tab-separated, # comments):
+
+  # name     base      x     y
+  ev01b      ev01a     812   236
+
+The picture of that name is then the base (a picture, a variation or a piece itself) with the
+file <name>, which holds only the rectangle, drawn over it at x, y. It's put together wherever a
+variation would be (KAG and World layers, KAGLoadPicture), so the scripts name ev01b as before.
+Scripts of a game's own that load a CG into a plain Layer with loadImages get only the rectangle in
+a release: load it with KAGLoadPicture. A patch or DLC (KAGMountPatchZip) that brings a
+cgpieces.txt or a cgvariations.txt has its tables read again.
+
+  KAGCGPiece(name)                the piece of that name, %[ base, x, y ], or void
+
 ● The Manual
 
 Template/system/Manual.tjs (since 0.26.0) shows a manual in the game window, on every platform:
@@ -4351,6 +4439,11 @@ Lines starting with # are comments. KAGLoudness.set(key, dB) changes one while t
 the files opened after it, and KAGLoudness.gainOf(storage) says what a file gets. WAV files get
 no gain. The sample's table (data/main/loudness.csv) brings its synthesized voices up to the
 others (measured with EBU R128) and puts the music 4 dB under the voices.
+
+kagex-release measures the sounds too (since 0.27.0; tools/release/README.md, "Media"): a build
+with loudness.measure writes each sound's loudness into a report, and with loudness.targets it
+adds a line to the release's loudness.csv for each sound far from its kind's target; kagex-release
+--cli loudness prints the measurements without building.
 
 
 

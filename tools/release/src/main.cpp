@@ -11,6 +11,9 @@
 //                                                             keys an existing one lacks
 //   kagex-release --cli split <file.psd|.clip> <folder>        what a build splits that file into: its
 //                                                             layer structure (.txt) and pictures
+//   kagex-release --cli loudness [<release.json>] [--json]    every sound's loudness (EBU R128), with
+//                                                             what loudness.csv and loudness.targets
+//                                                             make of it: nothing is changed
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits
@@ -30,6 +33,7 @@
 #include "Host.h"
 #include "Keys.h"
 #include "Layered.h"
+#include "Loudness.h"
 #include "Plan.h"
 #include "Project.h"
 #include "Scenes.h"
@@ -173,7 +177,7 @@ bool selected(const Options& o, const std::string& id)
 int runCli(const Options& o, const std::vector<std::string>& args)
 {
 	if (args.empty()) {
-		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen|split [<path>] (see --help)\n");
+		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen|split|loudness [<path>] (see --help)\n");
 		return 2;
 	}
 	const std::string cmd = args[0];
@@ -274,6 +278,40 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 			for (const auto& n : st.notes) std::printf("  note: %s\n", n.c_str());
 		}
 		return problems ? 1 : 0;
+	}
+
+	if (cmd == "loudness") {
+		// every sound in data/ measured (EBU R128), with what loudness.csv and loudness.targets
+		// make of it: nothing is changed (a build with loudness.targets writes the gains)
+		std::map<std::string, double> table, targets;
+		const fs::path csv = findLoudnessTable(t.project.data);
+		std::string text;
+		if (!csv.empty() && krt::readFile(csv, text)) table = readLoudnessTable(text);
+		for (const auto& [k, v] : at(s, "loudness.targets").members()) targets[k] = v.asReal();
+		const double tolerance = at(s, "loudness.tolerance").asReal(1.0);
+		const auto report = loudnessReport(t.project.data, table, targets, tolerance, cacheDir() / "loudness");
+		if (o.json) {
+			Json list = Json::array();
+			for (const auto& e : report) {
+				Json j = Json::object();
+				j.set("file", Json(e.path));
+				j.set("kind", Json(e.kind));
+				j.set("measured", Json(e.measured));
+				if (!e.error.empty()) j.set("error", Json(e.error));
+				if (e.measured) j.set("lufs", Json(e.lufs));
+				j.set("gain", Json(e.gainNow));
+				j.set("gainApplies", Json(e.gainApplies));
+				if (e.hasTarget) { j.set("target", Json(e.target)); j.set("far", Json(e.far)); j.set("newGain", Json(e.newGain)); }
+				list.push(std::move(j));
+			}
+			Json out = Json::object();
+			out.set("table", Json(csv.empty() ? std::string() : krt::fromPath(csv)));
+			out.set("sounds", std::move(list));
+			std::printf("%s\n", out.dump(1).c_str());
+			return 0;
+		}
+		std::printf("%s", loudnessReportText(report).c_str());
+		return 0;
 	}
 
 	if (cmd == "plan") {

@@ -198,8 +198,17 @@ Json defaultSettings(const Project& p)
 			{ "opaque", Json("tlg6") },
 			{ "alpha", Json("tlg6") },
 			{ "jpegQuality", Json(90) },
+			// CG folders whose variations drawn whole are kept as the part that differs (Pieces.h)
+			{ "cgPieces", strings({ "evimage" }) },
 		}) },
 		{ "references", Json("keep") },
+	}));
+	// the sounds' loudness (since 0.27.0): measured into a report, and with targets for kinds, the
+	// files far from them brought there in the staged loudness.csv (Loudness.h)
+	s.set("loudness", obj({
+		{ "measure", Json(false) },
+		{ "targets", Json::object() },
+		{ "tolerance", Json(1.0) },
 	}));
 	// compiled when the game lists scripts to compile and its framework compiles them
 	s.set("scenes", obj({
@@ -381,10 +390,31 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 					warn("contents.plugins", "plugins/" + std::string(id) + "/" + n + " isn't a " + kind + " plugin: it stays out of the packages");
 			}
 		}
-		for (const char* id : { "android", "ios" })
-			if (!p.root.empty() && fs::is_directory(p.root / "plugins" / id, ec) && flag(s, std::string("platforms.") + id + ".enabled"))
-				warn("contents.plugins", std::string("plugins/") + id + "/ stays out of the packages: that engine has its plugins linked in, so a game's own "
-				     "plugins need an engine package built with them (engines/ next to data/)");
+		if (!p.root.empty() && fs::is_directory(p.root / "plugins" / "ios", ec) && flag(s, "platforms.ios.enabled"))
+			warn("contents.plugins", "plugins/ios/ stays out of the packages: the iOS engine has its plugins linked in and opens none at run "
+			     "time, so a game's own plugins need an engine package built with them (engines/ next to data/)");
+		// Android (since 0.27.0): plugins/android/<abi>/lib*.so go into the APK beside the engine's
+		// libraries, which the engine opens a plugin it hasn't linked in from
+		const fs::path android = p.root / "plugins" / "android";
+		if (!p.root.empty() && fs::is_directory(android, ec) && flag(s, "platforms.android.enabled")) {
+			for (const auto& a : fs::directory_iterator(android, ec)) {
+				const std::string n = krt::fromPath(a.path().filename());
+				if (n.empty() || n[0] == '.') continue;
+				if (!a.is_directory(ec) || !isAndroidAbi(n)) {
+					warn("contents.plugins", "plugins/android/" + n + " stays out of the APK: a plugin goes in plugins/android/<ABI>/ "
+					     "(arm64-v8a, x86_64, armeabi-v7a or x86)");
+					continue;
+				}
+				for (const auto& e : fs::directory_iterator(a.path(), ec)) {
+					const std::string f = krt::fromPath(e.path().filename());
+					if (f.empty() || f[0] == '.') continue;
+					if (!isPluginFor("linux", f))
+						warn("contents.plugins", "plugins/android/" + n + "/" + f + " isn't an Android plugin (lib*.so): it stays out of the APK");
+					else if (isAndroidEngineLibrary(f))
+						error("contents.plugins", "plugins/android/" + n + "/" + f + " has the name of one of the engine's own libraries");
+				}
+			}
+		}
 
 		// Live2D models (.l2d) need the krkrlive2d plugin, which no engine package has: a desktop
 		// platform without it in plugins/<platform>/ draws none of them
@@ -437,6 +467,21 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 			      ") looks for buttons' hover, pressed and focus images as .png, .tlg5, .tlg6 or .bmp only: it predates KAGEX 0.3.1, "
 			      "and with images converted to TLG or JPEG its buttons wouldn't highlight. Convert images to PNG or keep them, "
 			      "or update it from KAGEX 0.3.1's template/system");
+	}
+	// the loudness targets (since 0.27.0): kinds loudness.csv knows, LUFS a sound can reach
+	for (const auto& [k, v] : at(s, "loudness.targets").members()) {
+		if (!oneOf(k, { "voice", "bgm", "se" })) error("loudness.targets", "A target is for voice, bgm or se (not \"" + k + "\")");
+		else if (!v.isNum() || v.asReal() < -60 || v.asReal() > -5) error("loudness.targets", "A target is between -60 and -5 LUFS (" + k + ")");
+	}
+	if (at(s, "loudness.tolerance").asReal(1.0) < 0 || at(s, "loudness.tolerance").asReal(1.0) > 20)
+		error("loudness.tolerance", "The tolerance is 0 to 20 LU");
+	{
+		const Json& cg = at(s, "media.images.cgPieces");
+		if (!cg.isArr()) error("media.images.cgPieces", "The CG folders are a list of folder names ([] for none)");
+		else
+			for (const auto& f : cg.elements())
+				if (!f.isStr() || f.asStr().empty() || f.asStr().find_first_of("/\\") != std::string::npos)
+					error("media.images.cgPieces", "A CG folder is a folder's name, as evimage (not a path)");
 	}
 	const long long jq = at(s, "media.images.jpegQuality").asInt(90);
 	if (jq < 1 || jq > 100) error("media.images.jpegQuality", "The JPEG quality is 1 to 100");

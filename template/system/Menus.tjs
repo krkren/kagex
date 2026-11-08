@@ -208,12 +208,16 @@ function KAGWindow_createMenus()
 		displayMenu.add(this.screenshotMenuItem = new KAGMenuItem(this, "Save Screenshot(&S)\tF12", 0,
 			/**/           saveScreenshot, false));
 
+	// settings for when something goes wrong, shown by Help > Show Advanced Settings (Advanced.tjs)
+	KAGAdvancedMenu(this, menu) if typeof global.KAGAdvancedMenu != "undefined";
+
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
 		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Contents(&I) ...", 0,
 			onHelpIndexMenuItemClick, false));
 		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
 			showControls, false));
+		KAGAdvancedHelpItem(this, helpMenu) if typeof global.KAGAdvancedHelpItem != "undefined";
 		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 			onHelpAboutMenuItemClick, false));
 

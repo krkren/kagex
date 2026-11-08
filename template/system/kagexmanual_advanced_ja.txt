@@ -1,0 +1,11 @@
+﻿# 詳細設定
+うまく動かないときのための設定です。どれもすぐに反映され、[初期設定](action:resetAdvanced)ですべて元に戻ります。
+## メモリ
+- メモリの使い方：[普通](option:memoryMode=normal)か[少なめ](option:memoryMode=low)。少なめにすると、メモリの足りないスマートフォン、タブレット、古いコンピューターのために画像をあまり残さなくなり、画像を読み直すことが増えます。
+- 画像キャッシュ：[自動](option:pictureCache=0)、[128 MB](option:pictureCache=128)、[256 MB](option:pictureCache=256)、[512 MB](option:pictureCache=512)：一度表示した画像をどれだけすぐ出せるように残しておくか。
+## 描画
+- 描画スレッド：[自動](option:drawThreads=0)、[1](option:drawThreads=1)、[2](option:drawThreads=2)、[4](option:drawThreads=4)。絵がおかしくなったり、描くところで止まったりするときは 1 にしてみてください。
+## コントローラーとムービー
+- 使っていないパッドでゲームが動いてしまうときは、[コントローラーをオフ](option:padEnabled=false)に（[オン](option:padEnabled=true)に戻せます）。
+- ムービー：[自動](option:movieQuality=auto)、[フル](option:movieQuality=full)、[小さめ](option:movieQuality=small)。
+> コンピューターでは、起動するときに読まれるエンジン自身の設定（音の出力、グラフィックドライバーなど）もあります。-userconf を付けてゲームを起動すると表示されます。

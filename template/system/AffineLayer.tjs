@@ -662,7 +662,7 @@ class BitmapAffineSourceLayer extends AffineSourceLayer {
 	function loadImages(storage) {
 		_psdlayer = void;
 		// a CG variation (CGVariations.tjs), a layer of a .clip or .psd, or an image
-		var ret = (KAGCGVariationDraw(_image, storage) || affineLoadLayeredLayer(_image, storage)) ? %[] : _image.loadImages(...);
+		var ret = (KAGCGVariationDraw(_image, storage) || KAGCGPieceDraw(_image, storage) || affineLoadLayeredLayer(_image, storage)) ? %[] : _image.loadImages(...);
 		_image.setSizeToImageSize();
 		if (_redrawFunction !== void) {
 			_redrawFunction(_image);

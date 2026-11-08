@@ -146,6 +146,15 @@ function convertSceneText(array, codes)
 	}
 }
 
+// What a text says, as a save finds it again after a patch (since 0.27.0): its speaker and its
+// text in the script's language ("" for none), at most 160 characters
+function scnTextPrint(t)
+{
+	if (t === void) return "";
+	var s = (t.name !== void ? (string)t.name : "") + "\t" + (t.text !== void ? (string)t.text : "");
+	return s.length > 160 ? s.substring(0, 160) : s;
+}
+
 // The index of a language in a compiled script's codes (StorageData.languages): 0, the
 // source language, for one it doesn't have
 function scnLanguageIndex(codes, lang)
@@ -272,6 +281,19 @@ class StorageData {
 			}
 			return sceneMap[label];
 		}
+	}
+
+	// the text of a scene that says print (scnTextPrint), the nearest to near of those; void: none
+	function findTextPrint(label, print, near) {
+		var scene = findScene(label);
+		if (!scene || scene.texts === void) return;
+		var texts = scene.texts, best, dist;
+		for (var i = 0; i < texts.count; i++) {
+			if (scnTextPrint(convertSceneText(texts[i], scene.languages)) != print) continue;
+			var d = Math.abs(i + 1 - near);
+			if (best === void || d < dist) best = i + 1, dist = d;
+		}
+		return best;
 	}
 
 	function findSceneLine(line) {
@@ -1275,6 +1297,111 @@ class KAGEnvPlayer
 
 	// -------------------------------------------------------------
 
+	// ------------------------------------- saves that outlast a patch of their script (0.27.0)
+
+	// a save point's text, as scnTextPrint has it ("" for a point without one)
+	function pointPrint(o) {
+		return typeof o[SAVE_TEXT] == "Integer" ? scnTextPrint(getText(o[SAVE_TEXT])) : "";
+	}
+
+	// whether a line of the scene is a save point
+	function isPoint(o) {
+		return typeof o == "Object" && o !== null && typeof o[SAVE_POINT] == "Integer";
+	}
+
+	/**
+	 * The texts the current save point is found by again: its own (pointPrint) and the two
+	 * different ones of the points with text before it; void outside a scene
+	 */
+	function pointContext() {
+		var lines = scenario !== void ? scenario.lines : void;
+		if (lines === void || curPoint === void || lines.count == 0) return;
+		var at = -1;
+		for (var i = cur < lines.count ? cur : lines.count - 1; i >= 0; i--) {
+			var o = lines[i];
+			if (isPoint(o) && o[SAVE_POINT] == curPoint) { at = i; break; }
+		}
+		if (at < 0) return;
+		var r = [ pointPrint(lines[at]) ], last = lines[at][SAVE_TEXT];
+		for (var i = at - 1; i >= 0 && r.count < 3; i--) {
+			var o = lines[i];
+			if (!isPoint(o) || typeof o[SAVE_TEXT] != "Integer" || o[SAVE_TEXT] === last) continue;
+			r.add(pointPrint(o));
+			last = o[SAVE_TEXT];
+		}
+		return r;
+	}
+
+	/**
+	 * The save point of this scene (compiled again since a save was made at point old) with the
+	 * texts the save noted (pointContext): the point's own text counts most, then the two before
+	 * it, so a save at a text a patch changed finds its place by the ones before; of points that
+	 * fit as well, the nearest to old. void when none fits
+	 */
+	function mapPoint(old, ctx) {
+		var lines = scenario !== void ? scenario.lines : void;
+		if (lines === void || typeof ctx != "Object" || ctx === null || ctx.count == 0) return;
+		var pts = [];
+		for (var i = 0; i < lines.count; i++) if (isPoint(lines[i])) pts.add(lines[i]);
+		var prints = [];
+		for (var i = 0; i < pts.count; i++) prints[i] = pointPrint(pts[i]);
+		var best, bestScore = 0, bestDist;
+		for (var j = 0; j < pts.count; j++) {
+			var score = 0;
+			if (prints[j] == ctx[0]) score += ctx[0] != "" ? 4 : 1;
+			// the different texts before it
+			var before = [], last = pts[j][SAVE_TEXT];
+			for (var i = j - 1; i >= 0 && before.count < 2; i--) {
+				if (typeof pts[i][SAVE_TEXT] != "Integer" || pts[i][SAVE_TEXT] === last) continue;
+				before.add(prints[i]);
+				last = pts[i][SAVE_TEXT];
+			}
+			score += 2 if ctx.count > 1 && before.count > 0 && before[0] == ctx[1];
+			score += 1 if ctx.count > 2 && before.count > 1 && before[1] == ctx[2];
+			if (score < 3) continue;
+			var d = Math.abs(pts[j][SAVE_POINT] - old);
+			if (score > bestScore || (score == bestScore && d < bestDist)) best = pts[j][SAVE_POINT], bestScore = score, bestDist = d;
+		}
+		return best;
+	}
+
+	/**
+	 * The history a save brought, after a patch may have moved its texts: each block that knows
+	 * its first text (print) is found again by it in its scene, or left out when it's gone
+	 */
+	function fixHistories() {
+		var out = [], changed = false;
+		for (var i = 0; i < histories.count; i++) {
+			var h = histories[i];
+			if (h.text !== void || h.print === void || h.scene === void) { out.add(h); continue; }
+			var idx = void;
+			try {
+				var storage = getStorage(h.scene), label = getLabel(h.scene);
+				if (storageCache === void || storageCache.storage != storage) {
+					invalidate storageCache if storageCache !== void;
+					storageCache = new StorageData(storage);
+				}
+				idx = scnTextPrint(storageCache.getText(label, h.idx)) == h.print ? h.idx : storageCache.findTextPrint(label, h.print, h.idx);
+			} catch (e) {
+				idx = void;
+			}
+			if (idx === h.idx) { out.add(h); continue; }
+			changed = true;
+			if (idx === void) continue;
+			h.idx = idx;
+			out.add(h);
+		}
+		if (!changed) return;
+		var no = histories.count > 0 ? histories[0].startNo : 0;
+		histories.clear();
+		for (var i = 0; i < out.count; i++) {
+			out[i].startNo = no;
+			no += out[i].num;
+			histories.add(out[i]);
+		}
+		dm("The history a save brought was put in line with the scenes as they are now");
+	}
+
 	/**
 	 * Save process
 	 * @param f Save variable
@@ -1287,6 +1414,9 @@ class KAGEnvPlayer
 			//dm("Saving:%s:%d".sprintf(curStorage, curPoint));
 			f.scenePlayer = %[scene:curSceneName, point:curPoint];
 			f.scenePlayer.hash = scnStorage.hash if scnStorage !== void && scnStorage.hash !== void;
+			// the texts the point is found by again when a patch has moved it (mapPoint)
+			var at = pointContext();
+			f.scenePlayer.at = at if at !== void;
 			storeHistory(f.scenePlayer);
 			storeHistoryOfStore(f.scenePlayer);
 			return true;
@@ -1303,13 +1433,21 @@ class KAGEnvPlayer
 		if (f.scenePlayer !== void) {
 			clear();
 			restoreHistory(f.scenePlayer);
+			fixHistories();
 			restoreHistoryOfStore(f.scenePlayer);
 			loadScene(f.scenePlayer.scene);
 			var point = f.scenePlayer.point;
 			if (point !== void && f.scenePlayer.hash !== void && scnStorage.hash != f.scenePlayer.hash) {
-				// compiled again since the save: its save points may have moved
-				dm(@"${f.scenePlayer.scene}: compiled again since this save was made, so it starts from the top of its scene");
-				point = 0;
+				// compiled again since the save (a patch): its save points may have moved, so the
+				// point is the one with the texts the save was made at (since 0.27.0), else the top
+				var mapped = mapPoint(point, f.scenePlayer.at);
+				if (mapped !== void) {
+					dm(@"${f.scenePlayer.scene}: compiled again since this save was made; its point ${point} is ${mapped} now") if mapped != point;
+					point = mapped;
+				} else {
+					dm(@"${f.scenePlayer.scene}: compiled again since this save was made, and the text it was made at isn't there, so it starts from the top of its scene");
+					point = 0;
+				}
 			}
 			if (point !== void) {
 				goToPoint(point);
@@ -1471,7 +1609,7 @@ class KAGEnvPlayer
 		var flags = %[];
 		(Dictionary.assignStruct incontextof flags)(kag.flags);
 		histories.push(%[startNo:startNo, scene:curSceneName, title:title, idx:idx, num:1, flags:flags,
-			lang:shownLanguage]);
+			lang:shownLanguage, print:scnTextPrint(getText(idx))]);
 	}
 
 	// The language the texts are shown in (Language.tjs), kept with each history block so the

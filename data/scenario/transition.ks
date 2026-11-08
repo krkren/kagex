@@ -37,31 +37,26 @@ Update all at once
 [night trans=ripple time=1000]ripple
 
 *nagano|extNagano
-; extNagano's twelve transitions, in daylight without the character: the event picture comes
-; and goes, so each one changes the whole screen. Without the plugin (KAGPluginTransitions
-; says which loaded), each one runs as a crossfade.
-[ai hide trans=normal][day trans=normal]
-The extNagano plugin adds twelve more transitions.
-[if exp="KAGPluginTransitions.book != 'linked'"]
-This build doesn't have it, so they all run as crossfades here.
-[endif]
-; book, multiripple, rgbfade, zoomfade and spin are drawn by kagex itself (ScriptTransitions.tjs):
-; the plugin's page stopped three quarters of the way, its ripples brought the old picture back,
-; its colours each took the shortest one's time, its zoom was jagged and its box didn't turn.
+; extNagano's transitions, in daylight without the character: the event picture comes and goes,
+; so each one changes the whole screen. Every one is the plugin's own; without the plugin
+; (KAGPluginTransitions says which loaded), each one runs as a crossfade. The plugin has five
+; more, book, zoomfade, rgbfade, spin and multiripple, which krkrz_dev's rebuild of it draws
+; wrong (UPSTREAM.md 42), so they're left out here.
 ; 3duniversal's pieces fly only with a speed: accel1 (or speed1) for the old picture's pieces,
 ; accel2 (speed2) for the new one's (with none at all, the plugin fades the new picture out).
-[EV file=event1 trans=book time=1500 dir=1]book: a page turns
-[EV hide trans=flutter time=1500]flutter: the picture peels away like paper
+[ai hide trans=normal][day trans=normal]
+The extNagano plugin adds more transitions. Here are seven of them.
+[if exp="KAGPluginTransitions.flutter != 'linked'"]
+This build doesn't have it, so they all run as crossfades here.
+[endif]
 [EV file=event1 trans=blurfade time=1500 blur1=48 blur2=48]blurfade: a crossfade through a blur
-[EV hide trans=zoomfade time=1500 zoom1=200]zoomfade: the picture zooms in as it fades
+[EV hide trans=flutter time=1500]flutter: the picture peels away like paper
 [EV file=event1 trans=scanline time=1200]scanline: lines slide in from alternate sides
-[EV hide trans=rgbfade time=1800 delayr=0 delayg=96 delayb=192]rgbfade: red, green and blue change one after another
-[EV file=event1 trans=spin time=1500]spin: the picture turns like the side of a box
-[EV hide trans=multiripple time=2000 count=5 wavecount=3 rwidth=64 maxdrift=48]multiripple: ripples spread from five points
-[EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe: a wipe led by a picture, here a brush stroke
 [EV hide trans=3duniversal time=2000 rule=rule_shatter accel1=0.4]3duniversal: a rule picture sends pieces flying, here shards
-[EV file=event1 trans=honeyturn time=1500 size=80]honeyturn: hexagons flip over one by one
+[EV file=event1 trans=imagewipe time=1500 rule=wipe_brush]imagewipe: a wipe led by a picture, here a brush stroke
 [EV hide trans=swirl]morphing: triangles warp the picture, here into a swirl (envinit.tjs)
+[EV file=event1 trans=honeyturn time=1500 size=80]honeyturn: hexagons flip over one by one
+[EV hide trans=normal]
 
 [demodone name=transition]
 

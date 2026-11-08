@@ -197,7 +197,7 @@ class Engine:
             return str(self.tjs('''var r = [];
                 r.add("rclick " + (kag.rightClickEnabled ? 1 : 0) + "/" + (kag.rightClickJump ? "jump" : kag.rightClickCall ? "call" : "hide"));
                 r.add("capture " + (typeof kag.keyCapture != "undefined" && kag.keyCapture !== void ? "on" : "off"));
-                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog !== void ? 1 : 0));
+                r.add("history " + (kag.historyShowing ? 1 : 0) + " dialog " + (kag.currentDialog === void ? "0" : (function(d) { var n = "1"; try { n = "1 (" + Scripts.getClassNames(d)[0] + (typeof d.message == "String" ? ": " + d.message : "") + ")"; } catch (e) {} return n; })(kag.currentDialog)));
                 r.add("hooks " + kag.rightClickHook.count + " skip " + (kag.prevSkipMode !== void ? kag.prevSkipMode : "-"));
                 r.add("hide " + (KAGActionEnabled("hide") ? 1 : 0)) if typeof global.KAGActionEnabled != "undefined";
                 return " [" + r.join(", ") + "]";''', 5))
@@ -2232,6 +2232,9 @@ def sample_steps(eng):
     @step("start-up reaches the title screen")
     def _():
         eng.wait("the REPL", "1", timeout=60)
+        # the game's own pointer (GameCursor.tjs) off: the steps read what's on the screen, and
+        # it would be drawn wherever the clicks left the pointer ("the game's own pointer" below)
+        eng.tjs('KAGOptionSet("gameCursor", false) if typeof global.KAGGameCursorOf != "undefined"; return 1;')
         eng.clicker(True, until="title.ks")  # clicks through the logo
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=60)
         eng.clicker(False)
@@ -2308,6 +2311,97 @@ def sample_steps(eng):
         print("     %s checks while %s of kag's methods were looked up %s times" % (r[0], kept, r[1]), flush=True)
         if r[2] != "":
             raise SmokeError("members of kag went missing during the checks: " + r[2])
+
+    @step("the game's own pointer follows the mouse, a button's over buttons; prompts leave it unless asked")
+    def _():
+        # GameCursor.tjs (0.27.0): the SDL engine shows only the system's arrow, so the sample's
+        # cursors.csv pointers are drawn on a layer over everything, with the system's hidden
+        if not isinstance(eng, DesktopEngine) or \
+                eng.tjs('return typeof global.KAGGameCursorOf != "undefined" && KAGGameCursorAvailable() ? 1 : 0;') != 1:
+            print("     (skipped: not the desktop, or no game pointers here)", flush=True)
+            return
+        state = ('var g = kag.gameCursor, l = g.layer; return [ l !== void && isvalid l && l.visible ? 1 : 0,'
+                 ' l === void ? -1 : l.left, l === void ? -1 : l.top, g.kind,'
+                 ' kag.mouseCursorState == mcsHidden ? "hidden" : "shown", "%f".sprintf(g.shownScale) ].join(",");')
+        try:
+            eng.tjs('KAGOptionSet("gameCursor", true); kag.primaryLayer.cursorX = 700; kag.primaryLayer.cursorY = 300; return 1;')
+            eng.wait("the pointer drawn", 'kag.gameCursor.layer !== void && kag.gameCursor.layer.visible && kag.gameCursor.kind == "default"', timeout=10)
+            v = str(eng.tjs(state)).split(",")
+            x, y = eng.tjs("return kag.primaryLayer.cursorX;"), eng.tjs("return kag.primaryLayer.cursorY;")
+            s_ = float(v[5])
+            want = (int(x - 3 * s_ + 0.5), int(y - 3 * s_ + 0.5))
+            if v[0] != "1" or (int(v[1]), int(v[2])) != want or v[4] != "hidden":
+                raise SmokeError("over the title: %s (wanted the default pointer at %s, the system's hidden)" % (v, want))
+            # a title button: the pointed one
+            at = str(eng.tjs('var m = kag.fore.messages[0]; for (var i = 0; i < m.numLinks; i++) { var o = m.links[i].object;'
+                             ' if (o !== void && isvalid o && o.visible && o.cursor == kag.cursorPointed) {'
+                             ' var x = o.left + o.width \\ 2, y = o.top + o.height \\ 2, p = o.parent;'
+                             ' while (p !== kag.primaryLayer && p !== void) { x += p.left; y += p.top; p = p.parent; }'
+                             ' kag.primaryLayer.cursorX = x; kag.primaryLayer.cursorY = y; return x + "," + y; } } return "";'))
+            if at == "":
+                raise SmokeError("no button on the title to point at")
+            eng.wait("the pointed pointer over a title button", 'kag.gameCursor.kind == "pointed" && kag.gameCursor.shownKind == "pointed"', timeout=10)
+            # a screenshot leaves it out, and puts it back
+            if eng.tjs('var g = kag.gameCursor, was = g.hideForCopy(), off = !g.layer.visible; g.showAfterCopy(was);'
+                       ' return was && off && g.layer.visible ? 1 : 0;') != 1:
+                raise SmokeError("hideForCopy didn't hide the pointer for a copy and show it again")
+            # the system's, when the player picks it
+            eng.tjs('KAGOptionSet("gameCursor", false); return 1;')
+            eng.wait("the system's pointer back", '!kag.gameCursor.layer.visible && kag.mouseCursorState == mcsVisible', timeout=10)
+            # a prompt leaves the pointer where it is, or puts it on No when asked
+            eng.tjs('kag.primaryLayer.cursorX = 300; kag.primaryLayer.cursorY = 200; return 1;')
+            for setting in ("stay", "no"):
+                eng.tjs('KAGOptionSet("promptPointer", "%s"); askYesNo("Smoke test?", "Smoke", function {}, function {}); return 1;' % setting)
+                eng.wait("the prompt", "kag.currentDialog !== void && kag.currentDialog.keyLink == 1", timeout=15)
+                r = str(eng.tjs('var d = kag.currentDialog, b = d.links[1].object, x = kag.primaryLayer.cursorX, y = kag.primaryLayer.cursorY;'
+                                ' var bx = d.left + b.left, by = d.top + b.top;'
+                                ' return [ x, y, x >= bx && y >= by && x < bx + b.width && y < by + b.height ? 1 : 0 ].join(",");')).split(",")
+                eng.tjs("kag.currentDialog.close(); return 1;")
+                eng.wait("the prompt closed", "kag.currentDialog === void", timeout=15)
+                on_no = r[2] == "1"
+                if setting == "stay" and (on_no or abs(int(r[0]) - 300) > 2 or abs(int(r[1]) - 200) > 2):
+                    raise SmokeError("with Stays the prompt moved the pointer to %s,%s" % (r[0], r[1]))
+                if setting == "no" and not on_no:
+                    raise SmokeError("with To No the pointer isn't on No: %s,%s" % (r[0], r[1]))
+            print("     the pointer at %s,%s (scale %.3f), a button's at %s; prompts: stays, then on No" % (x, y, s_, at), flush=True)
+        finally:
+            eng.tjs('KAGOptionSet("promptPointer", "stay"); KAGOptionSet("gameCursor", false); return 1;')
+
+    @step("Advanced settings change the picture cache and the drawing threads at once, Default puts them back")
+    def _():
+        # Advanced.tjs (0.27.0): live engine settings (System.graphicCacheLimit, drawThreadNum),
+        # the menu bar's Advanced menu shown from Help, changeUserConf kept for the next start
+        if eng.tjs('return typeof global.KAGApplyAdvancedOptions != "undefined" && typeof System.graphicCacheLimit != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before Advanced.tjs, or an engine without the picture cache's limit)", flush=True)
+            return
+        try:
+            start = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            eng.tjs('KAGOptionSet("memoryMode", "low"); return 1;')
+            low = eng.tjs("return System.graphicCacheLimit;")
+            if low != 64 * 1024 * 1024:
+                raise SmokeError("Low left the picture cache at %s" % low)
+            eng.tjs('KAGOptionSet("memoryMode", "normal"); KAGOptionSet("pictureCache", 256); KAGOptionSet("drawThreads", 1); return 1;')
+            v = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            if v != [str(256 * 1024 * 1024), "1"]:
+                raise SmokeError("256 MB and 1 thread gave %s" % v)
+            if eng.tjs('return typeof kag.advancedMenu == "Object" && kag.advancedMenu !== void ? 1 : 0;') == 1:
+                ticks = str(eng.tjs('var a = [], m = kag.advancedMenu; for (var i = 0; i < m.children.count; i++) { var c = m.children[i];'
+                                    ' if (typeof c.optionName == "undefined") continue; for (var j = 0; j < c.children.count; j++)'
+                                    ' if (c.children[j].checked) a.add(c.optionName + "=" + c.children[j].optionValue); } return a.join(" ");'))
+                if "pictureCache=256" not in ticks or "drawThreads=1" not in ticks:
+                    raise SmokeError("the Advanced menu's ticks don't follow: %s" % ticks)
+                if eng.tjs("KAGAdvancedToggle(); var v = kag.advancedMenu.visible; KAGAdvancedToggle(); return v && !kag.advancedMenu.visible ? 1 : 0;") != 1:
+                    raise SmokeError("Help > Show Advanced Settings didn't show and hide the menu")
+            eng.tjs('changeUserConf("smokeconf", "7"); return 1;')
+            if eng.tjs('return System.getArgument("-smokeconf") == "7" && kag.scflags.userConf.smokeconf == "7" ? 1 : 0;') != 1:
+                raise SmokeError("changeUserConf didn't set and keep the option")
+            eng.tjs("KAGResetOptions(KAGAdvancedOptions); return 1;")
+            back = str(eng.tjs('return [ System.graphicCacheLimit, System.drawThreadNum ].join(",");')).split(",")
+            if back != start:
+                raise SmokeError("Default gave %s, the engine started with %s" % (back, start))
+            print("     the engine's: %s bytes, %s threads; Low 64 MB, 256 MB and 1 thread at once, then back" % (start[0], start[1]), flush=True)
+        finally:
+            eng.tjs('KAGResetOptions(KAGAdvancedOptions) if typeof global.KAGAdvancedOptions != "undefined"; changeUserConf("smokeconf", void) if typeof global.changeUserConf != "undefined"; return 1;')
 
     @step("the scripts in !scnlist.txt compile, so the demos play compiled")
     def _():
@@ -2566,6 +2660,77 @@ def sample_steps(eng):
         after = str(eng.tjs(state))
         if after != before:
             raise SmokeError("loaded at %s, saved at %s" % (after, before))
+
+    @step("a save made before a patch of its script loads at the text it was made at: the save point and the history found again by their texts, or the top of the scene when the text is gone")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.scnTextPrint != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before saves that outlast a patch)", flush=True)
+            return
+        # where the last step left the game: char.ks's sixth text, loaded from bookmark 1. A patch
+        # is played by the save itself: another script hash, its point and its last history
+        # block's text moved on, as a patch that adds lines before them would have them
+        state = 'var p = world_object.player; return [p.curSceneName, p.curTextId, p.curPoint].join(",");'
+        before = str(eng.tjs(state))
+        info = str(eng.tjs('''var p = kag.pcflags.scenePlayer;
+            if (p === void || p.at === void || p.histories === void) { var k = []; if (p !== void) k.assign(p); return "none: " + (p === void ? "no scenePlayer" : k.join(" ")); }
+            var h = p.histories[p.histories.count - 1];
+            return [p.at.count, p.at[0].length > 0 ? 1 : 0, h.print !== void ? 1 : 0, h.idx, p.histories.count].join(",");'''))
+        print("     at %s; the save's texts, its own text, the last block's print and text, blocks: %s" % (before, info), flush=True)
+        if info.startswith("none") or not info.startswith("3,1,1,"):
+            raise SmokeError("the save doesn't note the texts it was made at, or the history its first text: %s" % info)
+        point, last_idx = before.split(",")[2], info.split(",")[3]
+
+        def patched(slot, edit):
+            eng.tjs('''var p = kag.pcflags.scenePlayer; global.__smokeKeep = %%[]; (Dictionary.assignStruct incontextof __smokeKeep)(p);
+                p.hash = "patched"; p.point += 9; var h = p.histories[p.histories.count - 1]; h.idx += 2; %s
+                kag.saveBookMark(%d); (Dictionary.assignStruct incontextof p)(__smokeKeep); global.__smokeKeep = void; return 1;''' % (edit, slot))
+            eng.wait("the save to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(%d))" % slot, timeout=10)
+            eng.tjs("kag.goToStart(); return 1;")
+            eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+            eng.tjs("loadFunction(%d); return 1;" % slot)
+            eng.wait("the save to load", "world_object.player.working && kag.inStable && world_object.player.curSceneName == %s"
+                     % tjs_string(before.split(",")[0]), timeout=30)
+            time.sleep(0.3)
+            return str(eng.tjs('var p = world_object.player, hs = p.histories;'
+                               ' return [p.curSceneName, p.curTextId, p.curPoint, hs.count > 0 ? hs[hs.count - 1].idx : "-", p.getHistoryCount()].join(",");'))
+
+        moved = patched(6, "")
+        same_text = patched(7, 'p.at[0] = "nobody\\tno such line";')
+        gone = patched(8, 'p.at = [ "nobody\\tno such line", "nor\\tthis", "nor\\tthat" ]; h.print = "nobody\\tno such line";')
+        print("     moved: %s; its text changed: %s; nothing found: %s" % (moved, same_text, gone), flush=True)
+        m, t, g = moved.split(","), same_text.split(","), gone.split(",")
+        b = before.split(",")
+        # back where the last step left it, for the steps after (before any failure is told)
+        eng.tjs("kag.goToStart(); return 1;")
+        eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs("loadFunction(1); return 1;")
+        eng.wait("the save to load", "world_object.player.working && world_object.player.curTextId == %s && kag.inStable" % b[1], timeout=30)
+        if m[1] != b[1] or m[2] != point or m[3] != last_idx:
+            raise SmokeError("a save whose point and history a patch moved didn't load at its text: %s (saved at %s, block %s)" % (moved, before, last_idx))
+        if t[1] != b[1] or t[3] != last_idx:
+            raise SmokeError("a save whose own text a patch changed didn't find its place by the texts before: %s" % same_text)
+        # (the history is the first text's alone: the block the save had is left out)
+        if g[1] != "1" or g[4] != "1":
+            raise SmokeError("a save whose texts are gone didn't start from the top of its scene, or kept the block it can't find: %s" % gone)
+
+    @step("a compile tells the texts it made new and the ones gone since the script was last compiled, as the player finds them")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof world_object.player.parser == "Object" && typeof world_object.player.parser.reportTextChanges != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiler here, or one from before the report)", flush=True)
+            return
+        got = str(eng.tjs('''var p = world_object.player.parser, t = function(n, s) { return [ n, [ [ void, s ] ], void, 0, void ]; };
+            var before = %[ "*a" => [ p.textPrint(t("ai", "one")), p.textPrint(t("ai", "two")), p.textPrint(t("pip", "three")) ],
+                            "*gone" => [ p.textPrint(t("ai", "four")) ] ];
+            var root = %[ scenes: [ %[ label: "*a", texts: [ t("ai", "one"), t("pip", "three"), t("pip", "new") ] ], %[ label: "*b", texts: [ t("ai", "five") ] ] ] ];
+            var same = p.reportTextChanges("smoke.ks", %[ "*a" => before["*a"] ], %[ scenes: [ %[ label: "*a", texts: [ t("ai", "one"), t("ai", "two"), t("pip", "three") ] ] ] ]);
+            var shown = world_object.player.getText(1), mine = scnTextPrint(shown);
+            return [ p.reportTextChanges("smoke.ks", before, root), same === void ? "nothing" : same, mine == p.textPrint(world_object.player.scenario.texts[0]) ? "alike" : mine ].join("|");'''))
+        print("     " + got.replace("|", "\n     "), flush=True)
+        report, same, alike = got.split("|")
+        if "2 texts are new and 1 gone" not in report or "*a: 1 new, 1 gone" not in report or "scenes gone: *gone" not in report:
+            raise SmokeError("the compile's report didn't count the texts new and gone: %s" % report)
+        if same != "nothing" or alike != "alike":
+            raise SmokeError("the report spoke of an unchanged script, or the compiler and the player see a text differently: %s, %s" % (same, alike))
 
     @step("BACK goes back a message, and the backlog's marks go back to theirs")
     def _():
@@ -2955,63 +3120,23 @@ def sample_steps(eng):
         if missing:
             raise SmokeError("these transitions' plugin isn't loaded: " + missing)
 
-    @step("book, multiripple, rgbfade, zoomfade and spin, drawn by kagex itself, cover the screen, end on time and can be stopped")
+    @step("the transitions demo's extNagano transitions are the plugin's own: a layer's transition is the engine's, nothing stands in for it")
     def _():
-        if eng.tjs('return typeof global.KAGScriptTransition != "undefined" ? 1 : 0;') != 1:
-            print("     (skipped: this build's framework predates transitions drawn by scripts)", flush=True)
+        if eng.tjs('return typeof global.KAGPluginTransitions != "undefined" && KAGPluginTransitions.flutter == "linked" ? 1 : 0;') != 1:
+            print("     (skipped: no extNagano here)", flush=True)
             return
-        # the canvases showing (a layer named "Script transition ..."), nine points of a layer's
-        # picture as shown, and how many of them differ from such a sample (layer 0 may still be
-        # placed or zoomed by an earlier step, so the back page's own picture is the reference)
-        eng.tjs('global.__stCanvases = function() { var r = [], a = [ kag.primaryLayer ];'
-                ' while (a.count) { var l = a.pop(); for (var i = 0; i < l.children.count; i++) { var c = l.children[i];'
-                ' r.add("%dx%d".sprintf(c.imageWidth, c.imageHeight)) if c.visible && c.name.indexOf("Script transition") == 0;'
-                ' a.add(c); } } return r.join(" "); };'
-                ' global.__stSample = function(l) { var w = kag.scWidth, h = kag.scHeight, v = l.visible; l.visible = true;'
-                ' try { l.onPaint() if typeof l.drawAffine != "undefined"; } catch {}'
-                ' var p = new global.Layer(kag, kag.primaryLayer); p.setImageSize(w, h); p.fillRect(0, 0, w, h, 0);'
-                ' p.piledCopy(0, 0, l, 0, 0, w, h); l.visible = v; var r = [];'
-                ' for (var i = 0; i < 9; i++) r.add(p.getMainPixel((int)(w * (i % 3 * 2 + 1) / 6), (int)(h * (i \\ 3 * 2 + 1) / 6)));'
-                ' invalidate p; return r; };'
-                ' global.__stDiffers = function(want) { var got = __stSample(kag.fore.layers[0]), d = 0;'
-                ' for (var i = 0; i < 9; i++) { var a = got[i], b = want[i];'
-                ' d++ if Math.abs((a & 0xff) - (b & 0xff)) + Math.abs((a >> 8 & 0xff) - (b >> 8 & 0xff)) + Math.abs((a >> 16 & 0xff) - (b >> 16 & 0xff)) > 24; }'
-                ' return d; }; return 1;')
-        # each from an empty layer (an affine layer without a picture says it's 32x32; the World's
-        # stand-in for no picture is one), which should still take the whole screen, run its time
-        # and end on the new picture (3 s each, so a slow REPL, the macOS runner's, finds it going)
-        want = str(eng.tjs('return "%dx%d".sprintf(kag.scWidth, kag.scHeight);'))
-        for i, (method, extra) in enumerate([("multiripple", 'count:"3"'), ("rgbfade", 'delayR:"0", delayG:"96", delayB:"192"'),
-                                             ("zoomfade", 'zoom1:"200"'), ("spin", 'type1:"0", type2:"1"')]):
-            picture = "event1" if i % 2 == 0 else "bg01_01"
-            shown = str(eng.tjs('kag.tagHandlers.freeimage(%%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%%[layer:"0", page:"back"]);'
-                                ' kag.fore.layers[0].visible = true;'
-                                ' kag.tagHandlers.image(%%[layer:"0", page:"back", storage:"%s", visible:"true"]);'
-                                ' tf.stWant = __stSample(kag.back.layers[0]);'
-                                ' kag.tagHandlers.trans(%%[layer:"0", method:"%s", time:"3000", children:"false", %s]);'
-                                ' return __stCanvases();' % (picture, method, extra)))
-            canvases = shown.split(" ") if shown else []
-            time.sleep(0.5)
-            mid = int(eng.tjs('return kag.transCount;'))
-            eng.wait(method + "'s end", "kag.transCount == 0", timeout=20)
-            end = str(eng.tjs('return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
-            print("     %s: canvases %s (the screen: %s); going at half a second: transCount %d; after it: transCount, canvases,"
-                  " points unlike the back page's: %s" % (method, shown or "none", want, mid, end), flush=True)
-            if not canvases or any(c != want for c in canvases):
-                raise SmokeError("%s from an empty layer drew on %s, not the screen's %s" % (method, shown or "nothing", want))
-            if mid != 1 or end != "0,,0":
-                raise SmokeError("%s didn't run its time and end on the new picture (%d, then %s)" % (method, mid, end))
-        # a book stopped halfway ([stoptrans], or a click) ends on the new picture at once
-        eng.tjs('kag.tagHandlers.image(%[layer:"0", page:"back", storage:"bg01_01", visible:"true"]);'
-                ' tf.stWant = __stSample(kag.back.layers[0]);'
-                ' kag.tagHandlers.trans(%[layer:"0", method:"book", time:"5000", dir:"1", children:"false"]); return 1;')
-        time.sleep(0.5)
-        going = str(eng.tjs('return [kag.transCount, __stCanvases()].join(",");'))
-        stopped = str(eng.tjs('kag.tagHandlers.stoptrans(%[]); return [kag.transCount, __stCanvases(), __stDiffers(tf.stWant)].join(",");'))
-        eng.tjs('kag.tagHandlers.freeimage(%[layer:"0", page:"fore"]); kag.tagHandlers.freeimage(%[layer:"0", page:"back"]); return 1;')
-        print("     book going: transCount, canvases %s; stopped: transCount, canvases, points unlike the back page's: %s" % (going, stopped), flush=True)
-        if going != "1," + want or stopped != "0,,0":
-            raise SmokeError("book didn't run or stop as it should (%s, then %s)" % (going, stopped))
+        # flutter on a KAG layer: the engine runs it, and nothing of kagex's draws one in its place
+        got = str(eng.tjs('''var l = kag.back.layers[0];
+            kag.tagHandlers.image(%[ layer: "0", page: "back", storage: "event1", visible: "true" ]);
+            kag.tagHandlers.trans(%[ layer: "0", method: "flutter", time: "3000", children: "false" ]);
+            var f = kag.fore.layers[0], r = [ typeof global.KAGScriptTransition, typeof global.KAGScriptTransitions,
+                kag.transCount, f.inTransition ? 1 : 0 ];
+            kag.tagHandlers.stoptrans(%[]);
+            kag.tagHandlers.freeimage(%[ layer: "0", page: "fore" ]); kag.tagHandlers.freeimage(%[ layer: "0", page: "back" ]);
+            return r.join(",");'''))
+        print("     a script stand-in, its table, transitions going, the layer's: %s" % got, flush=True)
+        if got != "undefined,undefined,1,1":
+            raise SmokeError("a transition of extNagano's isn't the plugin's own: %s" % got)
 
     @step("a movie named without its extension is found as .webm, the format the engine plays")
     def _():
@@ -4912,6 +5037,43 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("CG pieces: a picture kagex-release keeps as the part that differs (cgpieces.txt) is drawn over its base, in a plain layer and a KAG layer")
+    def _():
+        if eng.tjs('return typeof global.KAGCGPieceDraw != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before CG pieces)", flush=True)
+            return
+        if not getattr(eng, "savedir", None):
+            print("     (skipped: no save folder of its own to write the piece into)", flush=True)
+            return
+        # a 120x80 red piece, put at 400, 300 of event1
+        import struct
+        import zlib
+        raw = b"".join(b"\0" + b"\xff\x00\x00" * 120 for _ in range(80))
+        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        with open(os.path.join(eng.savedir, "smokepiece.png"), "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 120, 80, 8, 2, 0, 0, 0))
+                    + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+        got = str(eng.tjs('''var path = System.dataPath + "smokepiece.png";
+            if (!Storages.isExistentStorage(path)) return "missing";
+            KAGCGPiecesLoad() if KAGCGPieces === void;
+            KAGCGPieces["smokepiece"] = %[ base: "event1", x: 400, y: 300 ];
+            var e = new global.Layer(kag, kag.primaryLayer), c = new global.Layer(kag, kag.primaryLayer), r = [];
+            e.loadImages("event1"); KAGLoadPicture(c, path);
+            var px = function(l, x, y) { return "%06x".sprintf(l.getMainPixel(x, y) & 0xffffff); };
+            r.add((int)c.imageWidth + "x" + (int)c.imageHeight);
+            r.add(px(c, 450, 330)); r.add(px(c, 519, 379));
+            r.add(px(c, 399, 330) == px(e, 399, 330) && px(c, 520, 379) == px(e, 520, 379) && px(c, 450, 299) == px(e, 450, 299) && px(c, 450, 380) == px(e, 450, 380) ? "edges" : "wrong edges");
+            var n = kag.numCharacterLayers - 1, lay = kag.fore.layers[n];
+            kag.tagHandlers.image(%[ storage: path, layer: (string)n, page: "fore", visible: "true" ]);
+            var p = lay._image._image;
+            r.add(px(p, 450, 330) + "/" + (px(p, 20, 20) == px(e, 20, 20) ? "base" : "no base") + "/" + (int)p.imageWidth);
+            kag.tagHandlers.freeimage(%[ layer: (string)n, page: "fore" ]);
+            invalidate e; invalidate c; delete KAGCGPieces["smokepiece"];
+            return r.join(" ");'''))
+        print("     the picture put together: %s" % got, flush=True)
+        if got != "1920x1080 ff0000 ff0000 edges ff0000/base/1920":
+            raise SmokeError("the piece wasn't drawn over its base where cgpieces.txt says: %s" % got)
+
     @step("the manual: F1's action opens its index, the keys follow a link, Back and Forward, a click, the wheel, a link that sets an option, the Japanese pages, screen readers' nodes, and a link that closes it and opens About")
     def _():
         if eng.tjs('return typeof global.KAGShowManual != "undefined" ? 1 : 0;') != 1:
@@ -6809,7 +6971,7 @@ def sample_steps(eng):
             time.sleep(0.2)
             eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
         else:
-            raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s)" % (name, units))
+            raise SmokeError("no line of Ai's in char.ks's first lines (the page: %s %s); %s" % (name, units, eng.where()))
         texts = units[-1][0]
         source, ja = texts.get("en", ""), texts.get("ja", "")
         print("     English: [%s] %s" % (name, units[-1][1]), flush=True)
@@ -6901,9 +7063,23 @@ def run_steps(eng, steps):
     failures = 0
     for name, fn in steps:
         t = time.time()
+        # the pointer in a corner: since 0.27.0 a prompt leaves it where it is (KAGOpenFocus), and
+        # a kag.onPrimaryClick() with it resting on a glossary term opens the term's entry
+        try:
+            eng.tjs('try { kag.primaryLayer.setCursorPos(4, 4) if typeof global.kag == "Object" && kag !== void; } catch (e) {} return 1;', 5)
+        except SmokeError:
+            pass
         try:
             fn()
             print("ok   %-62s %5.1fs" % (name, time.time() - t), flush=True)
+            # a dialog a step leaves open swallows the next steps' clicks and keys
+            try:
+                left = str(eng.tjs('var d = typeof global.kag == "Object" && kag !== void ? kag.currentDialog : void;'
+                                   ' return d === void ? "" : Scripts.getClassNames(d)[0];', 5))
+                if left:
+                    print("     (a dialog is open after it: %s)" % left, flush=True)
+            except SmokeError:
+                pass
             mem = eng.memory()
             if mem:
                 print("     memory (MB): " + mem, flush=True)

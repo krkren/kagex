@@ -1,0 +1,212 @@
+/**
+ * Advanced settings (since 0.27.0; doc/kagex.txt, "Advanced Settings"): settings for when
+ * something goes wrong, out of the casual player's way. In a window the menu bar's Advanced menu
+ * has them once Help > Show Advanced Settings has shown it (scflags.advancedShown), and the
+ * manual's Advanced Settings page has them on every platform (kagexmanual_advanced.txt). They're
+ * options (Options.tjs), kept in the system variables, and each takes effect at once:
+ *
+ *   memoryMode     Normal or Low: Low keeps fewer pictures (the picture cache no larger than
+ *                  KAGLowMemoryCache, a layered file's CG variations let go at once) and lets
+ *                  go of what it can now
+ *   pictureCache   the picture cache's size: Automatic (the engine's) or 128, 256, 512 MB
+ *                  (System.graphicCacheLimit)
+ *   drawThreads    the threads that draw: Automatic (the engine's) or 1, 2, 4 (System.drawThreadNum)
+ *   padEnabled     the controller (Display.tjs), and movieQuality, the movies' size (Movies.tjs)
+ *
+ * The options the engine reads only as it starts (-memusage, -renderer, -joypad, -gclim) can't be
+ * set from a game: scripts can't write the engine's <exe>.cfu nor start the game again
+ * (UPSTREAM.md); on a computer the engine's own settings screen sets them (the game started with
+ * -userconf).
+ *
+ * changeUserConf(name, value), which standview.tjs calls, keeps an option the game's scripts read
+ * from the command line (System.getArgument) for the next start: KAGApplyUserConf sets each one
+ * with System.setArgument as the game starts.
+ */
+
+var KAGLowMemoryCache = 64 * 1024 * 1024;   // Low's picture cache, in bytes
+var KAGAdvancedOptions = [ "memoryMode", "pictureCache", "drawThreads", "padEnabled", "movieQuality" ];
+
+// the engine's own values, as it started (Auto)
+var KAGAdvancedStartCache = typeof System.graphicCacheLimit != "undefined" ? System.graphicCacheLimit : 0;
+var KAGAdvancedStartThreads = typeof System.drawThreadNum != "undefined" ? System.drawThreadNum : 0;
+
+function KAGAdvancedValue(name, initial)
+{
+	var v = typeof global.kag == "Object" && kag !== void ? kag.scflags["option:" + name] : void;
+	return v === void ? initial : v;
+}
+
+// puts the picture cache and the CG variations' lingering as Memory Use and Picture Cache say
+function KAGApplyMemoryOptions()
+{
+	if (typeof System.graphicCacheLimit == "undefined") return;
+	var low = KAGAdvancedValue("memoryMode", "normal") == "low";
+	var mb = KAGAdvancedValue("pictureCache", 0);
+	var bytes = mb > 0 ? mb * 1024 * 1024 : KAGAdvancedStartCache;
+	if (low && (bytes <= 0 || bytes > KAGLowMemoryCache)) bytes = KAGLowMemoryCache;
+	try { System.graphicCacheLimit = bytes if bytes > 0; } catch (e) { dm("graphicCacheLimit: " + e.message); }
+	if (typeof global.KAGCGVariationLingerNormal == "undefined" && typeof global.KAGCGVariationLinger != "undefined")
+		global.KAGCGVariationLingerNormal = KAGCGVariationLinger;
+	if (typeof global.KAGCGVariationLinger != "undefined")
+		global.KAGCGVariationLinger = low ? 0 : KAGCGVariationLingerNormal;
+}
+
+function KAGApplyDrawThreads()
+{
+	if (typeof System.drawThreadNum == "undefined") return;
+	var n = KAGAdvancedValue("drawThreads", 0);
+	try { System.drawThreadNum = n > 0 ? n : KAGAdvancedStartThreads; } catch (e) { dm("drawThreadNum: " + e.message); }
+}
+
+// Low: let go of the pictures kept now, and of the memory the engine can give back
+function KAGFreeMemoryNow()
+{
+	try { System.clearGraphicCache(); } catch (e) {}
+	try { KAGCGVariationRelease() if typeof global.KAGCGVariationRelease != "undefined"; } catch (e) {}
+	try { System.doCompact(clAll); } catch (e) {}
+}
+
+KAGDefineOption(%[ name:"memoryMode", label:"Memory Use", kind:"toggle", save:true, initial:"normal",
+	values:[ ["Normal", "normal"], ["Low", "low"] ],
+	getValue:function { return KAGAdvancedValue("memoryMode", "normal"); },
+	setValue:function(v) {
+		kag.scflags["option:memoryMode"] = v;
+		KAGApplyMemoryOptions();
+		KAGFreeMemoryNow() if v == "low";
+	} ]);
+KAGDefineOption(%[ name:"pictureCache", label:"Picture Cache", kind:"choice", save:true, initial:0,
+	values:[ ["Automatic", 0], ["128 MB", 128], ["256 MB", 256], ["512 MB", 512] ],
+	available:function { return typeof System.graphicCacheLimit != "undefined"; },
+	getValue:function { return KAGAdvancedValue("pictureCache", 0); },
+	setValue:function(v) { kag.scflags["option:pictureCache"] = v; KAGApplyMemoryOptions(); } ]);
+KAGDefineOption(%[ name:"drawThreads", label:"Drawing Threads", kind:"choice", save:true, initial:0,
+	values:[ ["Automatic", 0], ["1", 1], ["2", 2], ["4", 4] ],
+	available:function { return typeof System.drawThreadNum != "undefined"; },
+	getValue:function { return KAGAdvancedValue("drawThreads", 0); },
+	setValue:function(v) { kag.scflags["option:drawThreads"] = v; KAGApplyDrawThreads(); } ]);
+KAGDefineOption(%[ name:"resetAdvanced", label:"Advanced Settings", kind:"button", button:"Default",
+	action:function { KAGResetOptions(KAGAdvancedOptions); } ]);
+KAGOptionHelpTexts.memoryMode = "Low keeps fewer pictures in memory, for a device that runs short";
+KAGOptionHelpTexts.pictureCache = "How much memory the pictures already seen may keep";
+KAGOptionHelpTexts.drawThreads = "How many threads draw the screen; one may help where drawing goes wrong";
+
+// at start, once the window has its system variables
+function KAGApplyAdvancedOptions()
+{
+	KAGApplyMemoryOptions();
+	KAGApplyDrawThreads();
+	KAGApplyUserConf();
+	KAGAdvancedMenuFill(kag) if typeof global.kag == "Object" && kag !== void;
+}
+
+// --------------------------------------------------------------- options kept for the next start
+
+// keeps name=value (an option the game's scripts read with System.getArgument("-<name>")) for the
+// next start, and sets it now too; value void forgets it
+function changeUserConf(name, value)
+{
+	if (typeof global.kag != "Object" || kag === void) return;
+	var conf = kag.scflags.userConf;
+	if (typeof conf != "Object" || conf === void) conf = kag.scflags.userConf = %[];
+	if (value === void) delete conf[name];
+	else conf[name] = (string)value;
+	try { System.setArgument("-" + name, value === void ? "" : (string)value); } catch (e) {}
+}
+
+function KAGApplyUserConf()
+{
+	if (typeof global.kag != "Object" || kag === void) return;
+	var conf = kag.scflags.userConf;
+	if (typeof conf != "Object" || conf === void) return;
+	var a = [];
+	a.assign(conf);
+	for (var i = 0; i + 1 < a.count; i += 2)
+		try { System.setArgument("-" + a[i], a[i + 1]); } catch (e) { dm("changeUserConf " + a[i] + ": " + e.message); }
+}
+
+// ------------------------------------------------------------------------ the menu bar's menu
+
+// whether Help > Show Advanced Settings has shown the Advanced menu
+function KAGAdvancedShown()
+{
+	return typeof global.kag == "Object" && kag !== void && !!kag.scflags.advancedShown;
+}
+
+// KAGWindow_createMenus calls it (this window, its menu): the Advanced menu, before Help, hidden
+// until Help shows it; KAGAdvancedMenuFill fills it once every option is defined (some are
+// defined after the window: Movies.tjs)
+function KAGAdvancedMenu(win, menu)
+{
+	if (menu === void) return;
+	menu.add(win.advancedMenu = new KAGMenuItem(win, "Advanced(&N)", 0, void, false));
+	win.advancedMenu.visible = !!win.scflags.advancedShown;
+}
+
+function KAGAdvancedMenuFill(win)
+{
+	var m = typeof win.advancedMenu == "Object" ? win.advancedMenu : void;
+	if (m === void || m.children.count > 0) return;
+	for (var i = 0; i < KAGAdvancedOptions.count; i++) {
+		var o = KAGOptions[KAGAdvancedOptions[i]];
+		if (o === void || o.values === void || (o.available !== void && !o.available())) continue;
+		var sub = new KAGMenuItem(win, o.label, 0, void, false);
+		sub.optionName = o.name;
+		m.add(sub);
+		for (var j = 0; j < o.values.count; j++) {
+			var item = new KAGMenuItem(win, o.values[j][0], 2, KAGAdvancedMenuClick incontextof global, false);
+			item.optionName = o.name;
+			item.optionValue = o.values[j][1];
+			sub.add(item);
+		}
+	}
+	m.add(new MenuItem(win, "-"));
+	m.add(new KAGMenuItem(win, "What These Do(&W) ...", 0, KAGAdvancedHelp incontextof global, false));
+	m.add(new KAGMenuItem(win, "Hide Advanced Settings(&H)", 0, KAGAdvancedToggle incontextof global, false));
+	KAGAdvancedMenuSync();
+}
+
+// Help's item that shows or hides the Advanced menu
+function KAGAdvancedHelpItem(win, helpMenu)
+{
+	if (helpMenu === void) return;
+	helpMenu.add(win.advancedShowMenuItem = new KAGMenuItem(win, "Show Advanced Settings(&V)", 0,
+		KAGAdvancedToggle incontextof global, false));
+	win.advancedShowMenuItem.checked = !!win.scflags.advancedShown;
+}
+
+function KAGAdvancedToggle()
+{
+	kag.scflags.advancedShown = !kag.scflags.advancedShown;
+	kag.advancedMenu.visible = kag.scflags.advancedShown if typeof kag.advancedMenu == "Object" && kag.advancedMenu !== void;
+	kag.advancedShowMenuItem.checked = kag.scflags.advancedShown if typeof kag.advancedShowMenuItem == "Object" && kag.advancedShowMenuItem !== void;
+	KAGAdvancedMenuSync();
+	kag.updateMenuBar() if typeof kag.updateMenuBar != "undefined";
+}
+
+function KAGAdvancedMenuClick(item)
+{
+	KAGOptionSet(item.optionName, item.optionValue);
+	KAGAdvancedMenuSync();
+}
+
+function KAGAdvancedHelp()
+{
+	KAGShowManual("advanced") if typeof global.KAGShowManual != "undefined";
+}
+
+// the menu's ticks, as the options are
+function KAGAdvancedMenuSync()
+{
+	if (typeof global.kag != "Object" || kag === void || typeof kag.advancedMenu != "Object" || kag.advancedMenu === void) return;
+	var subs = kag.advancedMenu.children;
+	for (var i = 0; i < subs.count; i++) {
+		var sub = subs[i];
+		if (typeof sub != "Object" || typeof sub.optionName == "undefined") continue;
+		var v = KAGOptionGet(sub.optionName);
+		for (var j = 0; j < sub.children.count; j++)
+			sub.children[j].checked = typeof KAGOptionSame != "undefined" ? KAGOptionSame(v, sub.children[j].optionValue) : v == sub.children[j].optionValue;
+	}
+}
+
+// an option changed elsewhere (Config, the manual): the menu follows
+KAGOptionHook.add(function(name, v) { KAGAdvancedMenuSync() if KAGAdvancedOptions.find(name) >= 0; } incontextof global);

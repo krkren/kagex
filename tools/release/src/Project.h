@@ -54,4 +54,16 @@ bool isPluginFor(const std::string& platform, const std::string& name);
 /// copies them in after the engine's, so one of a name the engine has replaces it
 std::vector<std::filesystem::path> gamePlugins(const Project& project, const std::string& platform);
 
+/// The Android ABIs a game's own plugins may be built for (plugins/android/<abi>/)
+bool isAndroidAbi(const std::string& name);
+
+/// The libraries the Android engine package has itself (libkrkrz.so, libSDL3.so ...): a game's own
+/// plugin of one of those names would replace the engine's
+bool isAndroidEngineLibrary(const std::string& name);
+
+/// The game's own Android plugins (since 0.27.0): plugins/android/<abi>/lib*.so, by ABI and name.
+/// The Android engine opens a plugin it hasn't linked in as lib<name>.so from the app's
+/// libraries, so a build puts them in the Gradle project's jniLibs/<abi>/ beside the engine's
+std::vector<std::pair<std::string, std::filesystem::path>> gameAndroidPlugins(const Project& project);
+
 } // namespace kr

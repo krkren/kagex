@@ -14,7 +14,7 @@
 #---------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.21)
 
-project(kagex_release VERSION 0.26.1 LANGUAGES C CXX)
+project(kagex_release VERSION 0.27.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -70,7 +70,9 @@ add_library(kagex_release_core STATIC
     src/Build.cpp
     src/Encrypt.cpp
     src/Media.cpp
+    src/Loudness.cpp
     src/Layered.cpp
+    src/Pieces.cpp
     src/Keys.cpp
     src/Sign.cpp
     src/Scripts.cpp

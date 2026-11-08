@@ -218,6 +218,9 @@ function KAGWindow_createMenus()
 	menu.add(this.showHistoryMenuItem = new KAGMenuItem(this, "Backlog(&B)\tF7", 0, onShowHistoryMenuItemClick, false));
 	menu.add(this.autoModeMenuItem = new KAGMenuItem(this, "Auto(&A)\tF8", 0, onAutoModeMenuItemClick, false));
 
+	// settings for when something goes wrong, shown by Help > Show Advanced Settings (Advanced.tjs)
+	KAGAdvancedMenu(this, menu) if typeof global.KAGAdvancedMenu != "undefined";
+
 	menu.add(this.helpMenu = new KAGMenuItem(this, "Help(&H)", 0, void, false));
 
 		helpMenu.add(this.helpIndexMenuItem = new KAGMenuItem(this, "Manual(&M)\tF1", 0,
@@ -225,6 +228,8 @@ function KAGWindow_createMenus()
 
 		helpMenu.add(this.controlsMenuItem = new KAGMenuItem(this, "Controls(&K) ...", 0,
 			showControls, false));
+
+		KAGAdvancedHelpItem(this, helpMenu) if typeof global.KAGAdvancedHelpItem != "undefined";
 
 		helpMenu.add(this.helpAboutMenuItem = new KAGMenuItem(this, "About This Software(&A) ...", 0,
 		onHelpAboutMenuItemClick, false));
@@ -762,7 +767,7 @@ function setConfigPage(page)
 var configPages = [
     void, void,
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
-      [ "continueOn", "quickSaves", "askAgain", "hideCursorIdle", "screenshotWindow", "screenshotFormat" ] ],
+      [ "continueOn", "quickSaves", "askAgain", "screenshotWindow", "screenshotFormat" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "msgStyleTint:normal", "msgStyleTint:memory" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow", "titleGreeter" ],
@@ -775,8 +780,9 @@ var configPages = [
     // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
     [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],
       [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ],
-    // the languages (Language.tjs, since 0.26.0): the menus' own, and a second under the story's
-    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [] ]
+    // the languages (Language.tjs, since 0.26.0): the menus' own, and a second under the story's;
+    // the mouse pointer (GameCursor.tjs, since 0.27.0): the game's own, where questions put it
+    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [ "gameCursor", "promptPointer", "hideCursorIdle" ] ]
     ];
 
 KAGDefineOption(%[ name:"languageNote", label:"Languages", kind:"note", rows:2,

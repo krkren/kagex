@@ -812,9 +812,10 @@ class DialogLayer extends AnimKAGLayer
 		return %[ x:x, y:y ];
 	}
 
-	function setFocusToLink(n, force = false)
+	function setFocusToLink(n, force = false, move = true)
 	{
-		// Move cursor or set focus to link number n
+		// Move cursor or set focus to link number n (move false: the focus alone, the pointer
+		// staying where it is: KAGOpenFocus, GameCursor.tjs)
 		var linkn = links[n];
 		if(linkn === void) return;
 		var x, y;
@@ -824,8 +825,10 @@ class DialogLayer extends AnimKAGLayer
 		var process = force || sgks(VK_LEFT) || sgks(VK_UP) || sgks(VK_RIGHT) || sgks(VK_DOWN) || sgks(VK_TAB);
 		if(process)
 		{
-            cursorX = x;
-            cursorY = y;
+            if (move) {
+                cursorX = x;
+                cursorY = y;
+            }
             if(force) keyLink = n; 
 		}
 		if(linkn.type == ltEdit || linkn.type == ltCheckBox || linkn.type == ltSlider)
