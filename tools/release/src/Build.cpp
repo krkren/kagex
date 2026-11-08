@@ -16,6 +16,7 @@
 #include "Keys.h"
 #include "Layered.h"
 #include "Loudness.h"
+#include "Pieces.h"
 #include "Media.h"
 #include "Plan.h"
 #include "Sign.h"
@@ -380,7 +381,8 @@ public:
 			}
 
 			stage(PartProgress(pr_, 0.0, 0.05));
-			layered(PartProgress(pr_, 0.05, 0.08));   // before media: the pictures it writes are converted with the rest
+			layered(PartProgress(pr_, 0.05, 0.07));   // before media: the pictures it writes are converted with the rest
+			cgPieces(PartProgress(pr_, 0.07, 0.08));   // the lossless pictures compared before media converts them
 			media(PartProgress(pr_, 0.08, 0.2));
 			loudness(PartProgress(pr_, 0.2, 0.2));   // the sounds as they'll ship, before the file list
 			scenes(PartProgress(pr_, 0.2, 0.21));   // before signStage: a compiling run of a signed game would refuse its options
@@ -448,6 +450,7 @@ public:
 		if (media_.isObj()) result.set("media", media_);
 		if (loudness_.isObj()) result.set("loudness", loudness_);
 		if (layered_.isObj()) result.set("layered", layered_);
+		if (pieces_.isObj()) result.set("cgPieces", pieces_);
 		if (scripts_.isObj()) result.set("scripts", scripts_);
 		{
 			// what the packages are protected with (the keys file's keys)
@@ -528,6 +531,30 @@ private:
 		layered_.set("pictures", Json(r.pictures));
 		layered_.set("bytesBefore", Json((long long)r.bytesBefore));
 		layered_.set("bytesAfter", Json((long long)r.bytesAfter));
+	}
+
+	//-----------------------------------------------------------------------
+	// CG variations drawn as whole pictures, kept as the rectangle that differs from the first of
+	// their run (Pieces.h, since 0.27.0), which the framework draws back over it
+	//-----------------------------------------------------------------------
+	void cgPieces(krt::Progress&& pr)
+	{
+		if (at(s_, "media.images.cgPieces").elements().empty()) return;
+		if (!p_.framework.empty() && !frameworkDrawsCgPieces(p_.framework)) return;   // an older framework: every picture whole
+		PiecesResult r;
+		std::string err;
+		if (!makeCgPieces(s_, stage_, pr, r, err)) throw Failure{ err == "Canceled" ? err : "CG pieces: " + err };
+		if (r.pieces == 0) return;
+		const auto kb = [](uint64_t b) { return std::to_string((b + 512) / 1024) + " KB"; };
+		pr.log("Kept " + std::to_string(r.pieces) + " of " + std::to_string(r.pictures) + " CG pictures as the part that differs (cgpieces.txt): " +
+		       kb(r.bytesBefore) + " -> " + kb(r.bytesAfter));
+		for (const auto& n : r.notes) { pr.log(n); notes_.push_back(n); }
+		pieces_ = Json::object();
+		pieces_.set("pictures", Json(r.pictures));
+		pieces_.set("pieces", Json(r.pieces));
+		pieces_.set("fromCache", Json(r.fromCache));
+		pieces_.set("bytesBefore", Json((long long)r.bytesBefore));
+		pieces_.set("bytesAfter", Json((long long)r.bytesAfter));
 	}
 
 	void media(krt::Progress&& pr)
@@ -2512,7 +2539,7 @@ private:
 	std::map<std::string, fs::path> built_;
 	std::map<std::string, std::string> hashes_;   ///< the staged files' SHA-256 (fileList)
 	bool patchFailed_ = false;
-	Json media_, scripts_, layered_, loudness_;
+	Json media_, scripts_, layered_, loudness_, pieces_;
 	// signing
 	bool signing_ = false;
 	std::string privPem_, pubPem_;                ///< the signing keys (set when signing_)

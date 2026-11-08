@@ -72,6 +72,7 @@ add_library(kagex_release_core STATIC
     src/Media.cpp
     src/Loudness.cpp
     src/Layered.cpp
+    src/Pieces.cpp
     src/Keys.cpp
     src/Sign.cpp
     src/Scripts.cpp

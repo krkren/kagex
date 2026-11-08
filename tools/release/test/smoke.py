@@ -1275,6 +1275,116 @@ def loudness_tests(exe, proj):
         rel.write_bytes(saved)
 
 
+def write_png(path, w, h, pixel):
+    """An RGB PNG of w x h, pixel(x, y) giving (r, g, b): the standard library only"""
+    import struct
+    import zlib
+    raw = b"".join(b"\0" + bytes(c for x in range(w) for c in pixel(x, y)) for y in range(h))
+    chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+                     + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
+
+
+def png_size(data):
+    import struct
+    return struct.unpack(">II", data[16:24]) if data[:8] == b"\x89PNG\r\n\x1a\n" else (0, 0)
+
+
+def cg_pieces_tests(exe, proj):
+    """CG pieces (0.27.0): in a CG folder (media.images.cgPieces, evimage by default) a picture that
+    is the first of its run with a little changed is staged as the rectangle that differs, listed in
+    cgpieces.txt (name, base, x, y); one that differs more starts a run, as does one of another size;
+    a masked picture, one whose name a language's picture shares and one that becomes JPEG stay
+    whole. Engine-free: a patch build, its pictures kept PNG to read their sizes"""
+    ev = proj / "data" / "evimage"
+    ja = proj / "data" / "lang" / "ja" / "evimage"
+    ja.mkdir(parents=True, exist_ok=True)
+    base = lambda x, y: ((x * 7) % 256, (y * 5) % 256, (x + y) % 256)
+    def changed(rect, colour):
+        rx, ry, rw, rh = rect
+        return lambda x, y: colour if rx <= x < rx + rw and ry <= y < ry + rh else base(x, y)
+    other = lambda x, y: (255 - (x * 3) % 256, (y * 11) % 256, 90)
+    made = {
+        "zz_a": (320, 180, base),
+        "zz_b": (320, 180, changed((100, 50, 40, 30), (250, 0, 0))),        # a piece of zz_a
+        "zz_c": (320, 180, other),                                          # a run of its own
+        "zz_d": (320, 180, lambda x, y: (0, 0, 255) if 10 <= x < 15 and 10 <= y < 15 else other(x, y)),   # of zz_c
+        "zz_e": (200, 100, base),                                           # another size
+        "zz_f": (320, 180, lambda x, y: (1, 2, 3) if x < 8 and y < 8 else other(x, y)),   # has a mask: whole
+        "zz_g": (320, 180, lambda x, y: (9, 9, 9) if x < 4 and y < 4 else other(x, y)),   # a language's too: whole
+    }
+    for name, (w, h, px) in made.items():
+        write_png(ev / (name + ".png"), w, h, px)
+    write_png(ev / "zz_f_m.png", 320, 180, lambda x, y: (255, 255, 255))
+    write_png(ja / "zz_g.png", 320, 180, other)
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        s = json.loads(saved.decode("utf-8"))
+        for p in s["platforms"]:
+            s["platforms"][p]["enabled"] = False
+        s["output"]["check"] = False
+        s["contents"]["compileScripts"] = False
+        s["scenes"] = {"compile": False, "encrypt": False}
+        s["media"]["images"]["opaque"] = "png"
+        s["media"]["images"]["alpha"] = "png"
+        step("pieces: the defaults look at evimage", s["media"]["images"].get("cgPieces", ["evimage"]) == ["evimage"], str(s["media"]["images"]))
+        s["media"]["images"]["cgPieces"] = ["evimage/zz"]
+        code, errs, warns = check_issues(exe, proj, s)
+        step("pieces: check refuses a path for a CG folder", "media.images.cgPieces" in errs, str(errs))
+        s["media"]["images"]["cgPieces"] = ["evimage"]
+        out = proj / "release"
+        out.mkdir(exist_ok=True)
+        (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+        s["output"]["patchFrom"] = "release/nothing-files.json"
+
+        def build(version):
+            s["identity"]["version"] = version
+            rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+            code, text = run(exe, "--cli", "build", str(rel), "--json")
+            try:
+                r = json.loads(text[text.index("{"):])
+            except ValueError:
+                r = {"ok": False, "error": text[-1500:]}
+            zp = out / ("kagex-sample-%s-patch" % version) / "patch.zip"
+            return r, (zipfile.ZipFile(zp) if zp.exists() else None)
+
+        r, z = build("4.0.0")
+        step("pieces: a build with CG pieces", r.get("ok") and z is not None, r.get("error", ""))
+        if z is None:
+            return
+        names = set(z.namelist())
+        table = z.read("cgpieces.txt").decode("utf-8-sig") if "cgpieces.txt" in names else ""
+        lines = {l.split("\t")[0]: l.split("\t")[1:] for l in table.splitlines() if l and not l.startswith("#")}
+        size = lambda n: png_size(z.read("evimage/%s.png" % n)) if "evimage/%s.png" % n in names else (0, 0)
+        step("pieces: a picture that's its run's first with a rectangle changed is that rectangle, listed with its base and place",
+             lines.get("zz_b") == ["zz_a", "100", "50"] and size("zz_b") == (40, 30) and lines.get("zz_d") == ["zz_c", "10", "10"]
+             and size("zz_d") == (5, 5), "%s; zz_b %s, zz_d %s" % (lines, size("zz_b"), size("zz_d")))
+        step("pieces: bases, another size, a masked picture and a language's are kept whole",
+             not ({"zz_a", "zz_c", "zz_e", "zz_f", "zz_g"} & set(lines)) and size("zz_a") == (320, 180) and size("zz_e") == (200, 100)
+             and size("zz_f") == (320, 180) and size("zz_g") == (320, 180), "%s" % sorted(lines))
+        step("pieces: a layered file's layer pictures stay as they are", not any(n.startswith("pipcg") for n in lines), str(sorted(lines)))
+        cp = r.get("cgPieces", {})
+        step("pieces: the build reports them", cp.get("pieces") == 2 and cp.get("bytesAfter", 1) < cp.get("bytesBefore", 0), str(cp))
+        first = z.read("evimage/zz_b.png")
+        r, z = build("4.0.1")
+        step("pieces: a second build takes them from the cache, the same bytes",
+             r.get("cgPieces", {}).get("fromCache", 0) >= 4 and z is not None and z.read("evimage/zz_b.png") == first, str(r.get("cgPieces")))
+        s["media"]["images"]["opaque"] = "jpeg"
+        r, z = build("4.0.2")
+        step("pieces: pictures that become JPEG stay whole", r.get("ok") and z is not None and "cgpieces.txt" not in z.namelist(), r.get("error", ""))
+        s["media"]["images"]["opaque"] = "png"
+        s["media"]["images"]["cgPieces"] = []
+        r, z = build("4.0.3")
+        step("pieces: none without CG folders", r.get("ok") and z is not None and "cgpieces.txt" not in z.namelist()
+             and png_size(z.read("evimage/zz_b.png")) == (320, 180), r.get("error", ""))
+    finally:
+        rel.write_bytes(saved)
+        for name in list(made) + ["zz_f_m"]:
+            (ev / (name + ".png")).unlink(missing_ok=True)
+        shutil.rmtree(ja, ignore_errors=True)
+
+
 def patch_tests(exe, proj):
     """A build with output.patchFrom: the file list each build writes, then patch.zip of what
     changed since an earlier list. A patch alone needs no platform (and so no engines)"""
@@ -2250,7 +2360,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -2295,6 +2405,8 @@ def main():
             patch_tests(exe, proj)
         if want("loudness"):
             loudness_tests(exe, proj)
+        if want("pieces"):
+            cg_pieces_tests(exe, proj)
         if want("layered"):
             layered_tests(exe, Path(t), args)
     print("%d failed" % len(failures) if failures else "all passed")

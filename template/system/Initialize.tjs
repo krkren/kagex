@@ -790,6 +790,9 @@ function KAGMountPatchZip(storage) {
 	order.sort();
 	for (var i = 0; i < order.count; i++) Storages.addAutoPath(root + order[i]);
 	KAGPatchZips.add(storage);
+	// the tables of pictures put together read again, with what the zip brings (CGVariations.tjs)
+	global.KAGCGVariations = void if typeof global.KAGCGVariations != "undefined";
+	global.KAGCGPieces = void if typeof global.KAGCGPieces != "undefined";
 	if (langs) {
 		KAGLanguageRoots.add(root);
 		if (typeof global.KAGLanguage == "Object") KAGLanguage.applyPaths(), KAGLanguage.loadTable();

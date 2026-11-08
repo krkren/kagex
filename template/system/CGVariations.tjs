@@ -251,6 +251,61 @@ function KAGCGVariationDraw(target, name)
 }
 
 /**
+ * Pictures a release stores as the part that differs from another (since 0.27.0): a CG drawn as a
+ * whole picture that's another with a little changed (a face, an arm) is kept by kagex-release as
+ * the rectangle that differs, and cgpieces.txt, which it writes, says where it goes (a line each,
+ * tab-separated: <name>, <base>, <x>, <y>): the file <name> holds only that rectangle, and the
+ * picture is <base> (a picture, a variation or a piece itself) with it drawn at x, y
+ */
+var KAGCGPieces;   // name (lower case) => %[ base, x, y ]
+
+function KAGCGPiecesLoad()
+{
+	KAGCGPieces = %[];
+	var file = "cgpieces.txt";
+	if (!Storages.isExistentStorage(file)) return;
+	var lines = [];
+	lines.load(file);
+	for (var i = 0; i < lines.count; i++) {
+		var line = lines[i];
+		if (line == "" || line.charAt(0) == "#") continue;
+		var c = line.split(/\t/);
+		if (c.count < 4) continue;
+		KAGCGPieces[c[0].trim().toLowerCase()] = %[ base: c[1].trim(), x: (int)+c[2].trim(), y: (int)+c[3].trim() ];
+	}
+}
+
+// the piece of that name (void: none)
+function KAGCGPiece(name)
+{
+	if (typeof name != "String" || name == "") return;
+	KAGCGPiecesLoad() if KAGCGPieces === void;
+	return KAGCGPieces[Storages.chopStorageExt(Storages.extractStorageName(name)).toLowerCase()];
+}
+
+/**
+ * Draws the picture a piece is part of into a layer: its base, then the piece over it. True, or
+ * false when that name isn't a piece
+ */
+function KAGCGPieceDraw(target, name)
+{
+	var p = KAGCGPiece(name);
+	if (p === void) return false;
+	KAGLoadPicture(target, p.base);
+	target.setSizeToImageSize();
+	var piece = new global.Layer(target.window, target);
+	try {
+		piece.loadImages(name);   // the file itself: the rectangle that differs
+		target.copyRect(p.x, p.y, piece, 0, 0, piece.imageWidth, piece.imageHeight);
+	} catch (e) {
+		invalidate piece;
+		throw e;
+	}
+	invalidate piece;
+	return true;
+}
+
+/**
  * Whether there's a picture of that name: a CG variation, or an image file loadImages finds
  */
 function KAGPictureExists(name)
@@ -259,10 +314,11 @@ function KAGPictureExists(name)
 }
 
 /**
- * A picture into a plain Layer: a CG variation, or the image of that name (what loadImages returns)
+ * A picture into a plain Layer: a CG variation, a piece put back together, or the image of that
+ * name (what loadImages returns)
  */
 function KAGLoadPicture(layer, name)
 {
-	if (KAGCGVariationDraw(layer, name)) return %[];
+	if (KAGCGVariationDraw(layer, name) || KAGCGPieceDraw(layer, name)) return %[];
 	return layer.loadImages(name);
 }

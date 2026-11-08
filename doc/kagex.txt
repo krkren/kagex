@@ -4137,6 +4137,23 @@ The sample's Animated Character demo shows four, pipcg_day, pipcg_laugh, pipcg_e
 pipcg_night, made of data/evimage/pipcg.txt and its pictures (tools/assets/make_pip.py cg), which
 are one tile in the gallery.
 
+A CG drawn as whole pictures, one for each variation, is kept smaller by kagex-release (since
+0.27.0; its README, "Media", CG pieces): in the CG folders (evimage by default) a picture that is
+the first of its run with a little changed (a face, an arm) ships as the rectangle that differs,
+and the release's cgpieces.txt says where it goes (tab-separated, # comments):
+
+  # name     base      x     y
+  ev01b      ev01a     812   236
+
+The picture of that name is then the base (a picture, a variation or a piece itself) with the
+file <name>, which holds only the rectangle, drawn over it at x, y. It's put together wherever a
+variation would be (KAG and World layers, KAGLoadPicture), so the scripts name ev01b as before.
+Scripts of a game's own that load a CG into a plain Layer with loadImages get only the rectangle in
+a release: load it with KAGLoadPicture. A patch or DLC (KAGMountPatchZip) that brings a
+cgpieces.txt or a cgvariations.txt has its tables read again.
+
+  KAGCGPiece(name)                the piece of that name, %[ base, x, y ], or void
+
 ● The Manual
 
 Template/system/Manual.tjs (since 0.26.0) shows a manual in the game window, on every platform:

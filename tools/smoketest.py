@@ -5006,6 +5006,43 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("CG pieces: a picture kagex-release keeps as the part that differs (cgpieces.txt) is drawn over its base, in a plain layer and a KAG layer")
+    def _():
+        if eng.tjs('return typeof global.KAGCGPieceDraw != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before CG pieces)", flush=True)
+            return
+        if not getattr(eng, "savedir", None):
+            print("     (skipped: no save folder of its own to write the piece into)", flush=True)
+            return
+        # a 120x80 red piece, put at 400, 300 of event1
+        import struct
+        import zlib
+        raw = b"".join(b"\0" + b"\xff\x00\x00" * 120 for _ in range(80))
+        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        with open(os.path.join(eng.savedir, "smokepiece.png"), "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 120, 80, 8, 2, 0, 0, 0))
+                    + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+        got = str(eng.tjs('''var path = System.dataPath + "smokepiece.png";
+            if (!Storages.isExistentStorage(path)) return "missing";
+            KAGCGPiecesLoad() if KAGCGPieces === void;
+            KAGCGPieces["smokepiece"] = %[ base: "event1", x: 400, y: 300 ];
+            var e = new global.Layer(kag, kag.primaryLayer), c = new global.Layer(kag, kag.primaryLayer), r = [];
+            e.loadImages("event1"); KAGLoadPicture(c, path);
+            var px = function(l, x, y) { return "%06x".sprintf(l.getMainPixel(x, y) & 0xffffff); };
+            r.add((int)c.imageWidth + "x" + (int)c.imageHeight);
+            r.add(px(c, 450, 330)); r.add(px(c, 519, 379));
+            r.add(px(c, 399, 330) == px(e, 399, 330) && px(c, 520, 379) == px(e, 520, 379) && px(c, 450, 299) == px(e, 450, 299) && px(c, 450, 380) == px(e, 450, 380) ? "edges" : "wrong edges");
+            var n = kag.numCharacterLayers - 1, lay = kag.fore.layers[n];
+            kag.tagHandlers.image(%[ storage: path, layer: (string)n, page: "fore", visible: "true" ]);
+            var p = lay._image._image;
+            r.add(px(p, 450, 330) + "/" + (px(p, 20, 20) == px(e, 20, 20) ? "base" : "no base") + "/" + (int)p.imageWidth);
+            kag.tagHandlers.freeimage(%[ layer: (string)n, page: "fore" ]);
+            invalidate e; invalidate c; delete KAGCGPieces["smokepiece"];
+            return r.join(" ");'''))
+        print("     the picture put together: %s" % got, flush=True)
+        if got != "1920x1080 ff0000 ff0000 edges ff0000/base/1920":
+            raise SmokeError("the piece wasn't drawn over its base where cgpieces.txt says: %s" % got)
+
     @step("the manual: F1's action opens its index, the keys follow a link, Back and Forward, a click, the wheel, a link that sets an option, the Japanese pages, screen readers' nodes, and a link that closes it and opens About")
     def _():
         if eng.tjs('return typeof global.KAGShowManual != "undefined" ? 1 : 0;') != 1:

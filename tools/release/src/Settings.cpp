@@ -198,6 +198,8 @@ Json defaultSettings(const Project& p)
 			{ "opaque", Json("tlg6") },
 			{ "alpha", Json("tlg6") },
 			{ "jpegQuality", Json(90) },
+			// CG folders whose variations drawn whole are kept as the part that differs (Pieces.h)
+			{ "cgPieces", strings({ "evimage" }) },
 		}) },
 		{ "references", Json("keep") },
 	}));
@@ -473,6 +475,14 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	}
 	if (at(s, "loudness.tolerance").asReal(1.0) < 0 || at(s, "loudness.tolerance").asReal(1.0) > 20)
 		error("loudness.tolerance", "The tolerance is 0 to 20 LU");
+	{
+		const Json& cg = at(s, "media.images.cgPieces");
+		if (!cg.isArr()) error("media.images.cgPieces", "The CG folders are a list of folder names ([] for none)");
+		else
+			for (const auto& f : cg.elements())
+				if (!f.isStr() || f.asStr().empty() || f.asStr().find_first_of("/\\") != std::string::npos)
+					error("media.images.cgPieces", "A CG folder is a folder's name, as evimage (not a path)");
+	}
 	const long long jq = at(s, "media.images.jpegQuality").asInt(90);
 	if (jq < 1 || jq > 100) error("media.images.jpegQuality", "The JPEG quality is 1 to 100");
 	if (!oneOf(str(s, "media.references"), { "keep", "rewrite" })) error("media.references", "references is \"keep\" or \"rewrite\"");

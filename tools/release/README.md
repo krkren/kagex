@@ -281,6 +281,23 @@ Before packing, lossless media in the staged data are converted (the sources are
 Results are cached by content and settings (in the cache folder below), so a later build only
 converts what changed.
 
+**CG pieces** (since 0.27.0): before the images are converted, the lossless pictures of the CG
+folders (*CG folders*, `media.images.cgPieces`: folder names, by default `evimage`) are compared in
+name order, each with the first of its run (its base). A picture of the base's size that differs
+from it in at most half its area is staged as just the rectangle that differs (in its own format,
+converted with the rest), and a line in the release's `cgpieces.txt` (`<name>`, `<base>`, `<x>`,
+`<y>`, tab-separated) has the framework draw it back over the base wherever the game loads it by
+name: a KAG or World layer, the gallery, `KAGLoadPicture` (doc/kagex.txt, "CG Variations From One
+Layered File"). So `ev01b` to `ev01f`, the same scene with five faces, ship as one picture and five
+faces. A picture that differs more starts a run of its own, as does one of another size. Left whole:
+pictures in `lang/`, pictures whose name another picture of the game has too (a language's
+version), names `cgvariations.txt` lists, masks and the pictures that have them, a layered file's
+layer pictures, and pictures that become JPEG (each would be compressed on its own, and the
+rectangle's edges would show). A script of your own that loads a CG into a plain `Layer` with
+`loadImages` gets only the piece: use `KAGLoadPicture(layer, name)`. A framework from before 0.27.0
+doesn't read `cgpieces.txt`, so with one every picture goes in whole. The comparisons are cached
+by content.
+
 **Loudness** (since 0.27.0): with *Measure every sound* (`loudness.measure`) a build measures the
 staged sounds' loudness (EBU R128 integrated loudness, as the engine plays them: an Opus file's
 header gain included) into `<name>-<version>-loudness.csv` beside the packages: each sound's LUFS,
@@ -440,7 +457,7 @@ Writing a plugin of your own, for the engines kagex-release uses:
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.bak` anywhere, `bgimage/raw/**`, `work/`; the defaults are `*.bak`, `*.tmp`, `Thumbs.db`, `desktop.ini` and `.DS_Store`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, or that is a pose `charinit.csv` names, goes in all the same; every `.psd` and `.clip` that goes in is split into its layers: see "Photoshop and CLIP STUDIO PAINT files"), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |
-| `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
+| `media` | `audio.convert` (`opus`, `vorbis` or `keep`; from WAV and FLAC), `audio.opusKbps` (by folder under `data/`, `*` for the rest), `audio.vorbisQuality` (0-10), `images.opaque` / `images.alpha` (`tlg6`, `tlg5`, `png`, `jpeg` / `jpeg-mask`, `keep`; from PNG, BMP and TLG), `images.jpegQuality`, `images.cgPieces` (CG folders whose variations are kept as the part that differs; `[]` for none), `references` (`keep` files a script names with their extension, or `rewrite` the scripts) |
 | `output` | `folder`, `archive` (`auto`: zip, tar.gz for Linux), `checksums` (SHA256SUMS), `check` (start the build for this computer headless afterwards), `patchFrom` (an earlier build's file list: also make `patch.zip` of what changed since) |
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
 | `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |
