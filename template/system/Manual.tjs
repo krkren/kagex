@@ -62,7 +62,7 @@ var KAGManualActions = %[
 
 function KAGManualLanguage()
 {
-	return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "en";
+	return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.menuCode : "en";
 }
 
 // a page's file (void: none)
@@ -484,7 +484,7 @@ class KAGManualLayer extends Layer
 	function layout()
 	{
 		links = [], blocks = [];
-		var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.current) : true;
+		var words = typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.wordWrap(KAGLanguage.menuCode) : true;
 		var ops = [], y = topGap, x0 = pad, w = BW - pad * 2;
 		for (var i = 0; i < doc.blocks.count; i++) {
 			var b = doc.blocks[i];

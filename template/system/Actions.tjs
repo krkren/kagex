@@ -152,6 +152,9 @@ function KAGDefineFrameworkActions(win)
 	KAGDefineAction(%[ name:"next", label:"Go on", func:win.onPrimaryClickByKey ]); // (since 0.20.0: the mouse's forward button)
 	KAGDefineAction(%[ name:"language", label:"Show the game in its next language", func:win.switchLanguageByKey,
 		available:function { return languageAvailable; } incontextof win ]);
+	KAGDefineAction(%[ name:"swapLanguages", label:"Swap the story's language and the second one", func:win.swapLanguages,
+		available:function { return languageAvailable; } incontextof win,
+		enabled:function { return languageAvailable && KAGLanguage.shownSecond !== void; } incontextof win ]);
 	KAGDefineAction(%[ name:"menu", label:"Menu", func:function { showMenuBar(); } incontextof win,
 		available:function { return menuBarShown; } incontextof win ]);
 	KAGDefineAction(%[ name:"screenshot", label:"Save a screenshot", func:function { saveScreenshot(); } incontextof win,

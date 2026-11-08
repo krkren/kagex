@@ -97,21 +97,26 @@
 [eval exp="configOptionsPage()"]
 
 *nav
-; The pages' tabs (the save screens' page buttons), each with a tip of what it holds
-[locate x=612 y=78]
+; The pages' tabs (the save screens' page buttons), each with a tip of what it holds; eight of
+; them fit between the title and Default 3 px apart
+[locate x=584 y=78]
 [button name="page1" exp="setConfigPage(1)" hint="Sound and Text"]
-[locate x=674 y=78]
+[locate x=643 y=78]
 [button name="page2" exp="setConfigPage(2)" hint="Voices, Saves and Screenshots"]
-[locate x=736 y=78]
+[locate x=702 y=78]
 [button name="page3" exp="setConfigPage(3)" hint="Reading"]
-[locate x=798 y=78]
+[locate x=761 y=78]
 [button name="page4" exp="setConfigPage(4)" hint="On the Screen"]
-[locate x=860 y=78]
+[locate x=820 y=78]
 [button name="page5" exp="setConfigPage(5)" hint="Each Character's Voice"]
-[locate x=922 y=78]
+[locate x=879 y=78]
 [button name="page6" exp="setConfigPage(6)" hint="Screen and Controls"]
-[locate x=984 y=78]
+[locate x=938 y=78]
 [button name="page7" exp="setConfigPage(7)" hint="How Text Looks"]
+[if exp="kag.languageAvailable"]
+[locate x=997 y=78]
+[button name="page8" exp="setConfigPage(8)" hint="Languages"]
+[endif]
 
 ; Under the panels: the manual (Manual.tjs, since 0.26.0), Controls, the list of what each key and
 ; button does (Controls.tjs), where the engine can show it; Undo (the last change) and Revert

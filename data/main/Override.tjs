@@ -769,8 +769,13 @@ var configPages = [
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
     // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
     [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],
-      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ]
+      [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ],
+    // the languages (Language.tjs, since 0.26.0): the menus' own, and a second under the story's
+    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [] ]
     ];
+
+KAGDefineOption(%[ name:"languageNote", label:"Languages", kind:"note", rows:2,
+    lines:[ "A second language shows, smaller,", "under each line of the story.", "Shift+F9 swaps the two." ] ]);
 
 KAGDefineOption(%[ name:"voiceNote", label:"Each Character's Voice", kind:"note", rows:2,
     lines:[ "A slider sets a character's volume;", "Test plays one of their lines.",

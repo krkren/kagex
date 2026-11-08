@@ -30,12 +30,20 @@
 // table change, then every object registered with addListener gets onLanguageChange(code,
 // previous), which the window (MainWindow.tjs) uses to draw the message, the choices and the
 // screen on show again.
+//
+// Since 0.26.0 the menus can have a language of their own (setMenu(code); void: the story's,
+// as before): the search path, the strings (tr()) and the interface's fonts follow menuCode, the
+// story's text, names, choices and line breaking follow current. And a second language can be
+// shown under the story's (second: the window draws each message's text in it beneath, smaller,
+// at the click wait; KAGWindow.setSecondLanguage, swapLanguages).
 
 class KAGLanguageManager
 {
 	var list = [];          // the language codes, the source language first
 	var source = "en";      // the language the scenarios are written in
-	var current;            // the language shown
+	var current;            // the language shown: the story's
+	var menuLanguage;       // the menus' own language, or void: the story's (since 0.26.0)
+	var second;             // a second language shown under the story's, or void (since 0.26.0)
 	var chosen = false;     // whether the player chose it (saved; otherwise the system's)
 	var table;              // current's tables, merged: %[ name, strings ]
 	var paths = [];         // the search paths added for current
@@ -71,6 +79,10 @@ class KAGLanguageManager
 	property available { getter() { return list.count > 1; } }
 
 	property isSource { getter() { return current == source; } }
+
+	// the language of the menus, the interface strings and their files (current unless the
+	// player chose another for them)
+	property menuCode { getter() { return menuLanguage !== void ? menuLanguage : current; } }
 
 	// "en_US" and "EN-us" as "en-us"
 	function normalize(code)
@@ -127,7 +139,7 @@ class KAGLanguageManager
 	function nameOf(code)
 	{
 		code = normalize(code);
-		if (code == current && typeof table.name == "String" && table.name != "") return table.name;
+		if (code == menuCode && typeof table.name == "String" && table.name != "") return table.name;
 		return ownNames[code] !== void ? ownNames[code] : code;
 	}
 
@@ -145,28 +157,57 @@ class KAGLanguageManager
 		var c = match(code);
 		if (c === void) { dm("Language not listed in KAGLanguageList: " + code); return false; }
 		if (c == current && generation > 0) return false;
-		var previous = current;
+		var previous = current, menuBefore = menuCode;
 		current = c;
+		if (menuCode != menuBefore || generation == 0) refreshInterface();
+		// the fonts' roles and the text styles are per language (Fonts.tjs)
+		else global.KAGFontsChanged() if typeof global.KAGFontsChanged != "undefined";
+		generation++;
+		dm("Language: " + current + (previous != current ? " (was " + previous + ")" : ""));
+		tell(previous) if notify && previous != current;
+		return previous != current;
+	}
+
+	// The menus in a language of their own (void or "": the story's); the listeners are told as
+	// for a change of language (with the story's language as it was). Returns whether it changed.
+	function setMenu(code, notify = true)
+	{
+		var c = code === void || code == "" ? void : match(code);
+		if (code !== void && code != "" && c === void) { dm("Language not listed in KAGLanguageList: " + code); return false; }
+		var before = menuCode;
+		menuLanguage = c;
+		if (menuCode == before) return false;
+		refreshInterface();
+		generation++;
+		dm("Menu language: " + menuCode + " (was " + before + ")");
+		tell(current) if notify;
+		return true;
+	}
+
+	// The interface's files and strings in menuCode's language
+	function refreshInterface()
+	{
 		applyPaths();
 		// The image cache goes by the name a script loads, not the file found, so an image
 		// the previous language's folder (or none) gave would come back for the same name
 		if (generation > 0 && typeof System.clearGraphicCache != "undefined") System.clearGraphicCache();
 		loadTable();
-		// the fonts' roles and the text styles are per language (Fonts.tjs)
 		global.KAGFontsChanged() if typeof global.KAGFontsChanged != "undefined";
-		generation++;
-		dm("Language: " + current + (previous != current ? " (was " + previous + ")" : ""));
-		if (notify && previous != current) {
-			var ls = [];
-			ls.assign(listeners);
-			for (var i = 0; i < ls.count; i++) {
-				if (!isvalid ls[i]) { listeners.remove(ls[i], true); continue; }
-				try { ls[i].onLanguageChange(current, previous); }
-				catch (e) { dm("onLanguageChange: " + e.message); }
-			}
-		}
-		return previous != current;
 	}
+
+	function tell(previous)
+	{
+		var ls = [];
+		ls.assign(listeners);
+		for (var i = 0; i < ls.count; i++) {
+			if (!isvalid ls[i]) { listeners.remove(ls[i], true); continue; }
+			try { ls[i].onLanguageChange(current, previous); }
+			catch (e) { dm("onLanguageChange: " + e.message); }
+		}
+	}
+
+	// the second language shown (void: none; the story's own isn't shown twice)
+	property shownSecond { getter() { return second !== void && second != current ? second : void; } }
 
 	// The search paths: lang/<code>/ in the game's data and in each zip patch that has one
 	// (KAGLanguageRoots, Initialize.tjs), after every other path, so the language's files win
@@ -177,7 +218,7 @@ class KAGLanguageManager
 		paths.clear();
 		var roots = global.KAGLanguageRoots;
 		for (var i = 0; i < roots.count; i++) {
-			var p = roots[i] + "lang/" + current + "/";
+			var p = roots[i] + "lang/" + menuCode + "/";
 			Storages.addAutoPath(p);
 			paths.add(p);
 		}
@@ -230,10 +271,10 @@ class KAGLanguageManager
 		return t;
 	}
 
-	// The current language's tables
+	// The menus' language's tables
 	function loadTable()
 	{
-		table = readTables(current);
+		table = readTables(menuCode);
 		otherTables = %[];
 	}
 
@@ -246,7 +287,7 @@ class KAGLanguageManager
 	var otherTables = %[];
 	function tableFor(lang)
 	{
-		if (lang === void || lang == current) return table;
+		if (lang === void || lang == menuCode) return table;
 		lang = normalize(lang);
 		if (otherTables[lang] !== void) return otherTables[lang];
 		return otherTables[lang] = readTables(lang);
@@ -266,7 +307,7 @@ class KAGLanguageManager
 	function ui(text, lang)
 	{
 		if (typeof text != "String" || text == "") return text;
-		if (lang === void) lang = current;
+		if (lang === void) lang = menuCode;
 		if (lang == source) return text;
 		var r = find(tableFor(lang).strings, text);
 		return r !== void ? r : text;

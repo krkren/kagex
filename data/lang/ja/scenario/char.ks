@@ -252,10 +252,10 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 ; The staging kit (since 0.18.0): twenty gestures, three screen shakes, a close-up, a veil for
 ; inner thoughts and an eyecatch card, a word each (envinit.tjs's actions, macro.ks's macros)
 [ai standard happy center]
-ひとことで身ぶり： [ai nod][wact]nod、[ai nods][wact]nods, [ai headshake][wact]headshake, [ai sigh][wact]sigh, [ai laugh][wact]laugh.
-[ai shrug][wact]shrug, [ai lookaround][wact]lookaround, [ai wobble][wact]wobble, [ai slump][wact]slump, [ai startle][wact]startle.
-[ai tremble][wact]tremble, [ai bounce][wact]bounce, [ai leanin][wact]leanin, [ai stepback][wact]stepback, [ai sway][wact]sway.
-[ai stomp][wact]stomp, [ai pop][wact]pop, [ai tilt][wact]tilt, [ai giggle][wact]giggle, [ai faint][wact]faint.
+ひとことで身ぶり：[ai nod][wact]nod、[ai nods][wact]nods、[ai headshake][wact]headshake、[ai sigh][wact]sigh、[ai laugh][wact]laugh。
+[ai shrug][wact]shrug、[ai lookaround][wact]lookaround、[ai wobble][wact]wobble、[ai slump][wact]slump、[ai startle][wact]startle。
+[ai tremble][wact]tremble、[ai bounce][wact]bounce、[ai leanin][wact]leanin、[ai stepback][wact]stepback、[ai sway][wact]sway。
+[ai stomp][wact]stomp、[ai pop][wact]pop、[ai tilt][wact]tilt、[ai giggle][wact]giggle、[ai faint][wact]faint。
 画面：[quake][wact]quake、[thud][wact]thud、[rumble][wact]rumble。
 [closeup]
 [[closeup]：カメラが寄って、背景がぼやけます。

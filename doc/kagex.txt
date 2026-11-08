@@ -2890,6 +2890,14 @@ system variables (scflags.language) and wins from then on.
   scnTitleIn(scene[, lang]), scnTitles(scene)
                                 A compiled scene's title in a language, and in every one by
                                 code (KAGEnvPlayer.tjs; the scenes of a StorageData).
+  KAGLanguage.menuCode          The language of the menus (since 0.26.0): menuLanguage, or the
+                                story's (current) when the player hasn't chosen one for them.
+  kag.setMenuLanguage(code)     The menus in a language of their own ("": the story's), shown
+                                as setLanguage shows a language.
+  KAGLanguage.second            A second language shown under the story's, or void.
+  kag.setSecondLanguage(code)   Shows it ("": none) and draws the page on show again.
+  kag.swapLanguages()           The story's language and the second swapped (the action
+                                swapLanguages, Shift+F9).
 
 
 The message window records what each page draws (MessageLayer.redrawTextEnabled, on when
@@ -2898,6 +2906,28 @@ language, and draws the page again from that record in the new language
 (MessageLayer.redrawTextIn). A message layer with buttons or links on it isn't drawn again:
 the screen it belongs to is (languageChangeHook). The system buttons ([sysbutton]) load their
 images again by name.
+
+
+◇ The menus' own language, and two languages at once (since 0.26.0)
+
+The menus can be in a language of their own while the story is in another (the options
+menuLanguage and secondLanguage, Options.tjs; the sample's Config has them on its last page,
+Languages). With one, data/lang/<code>/ on the search path, the strings (tr()), the menu bar,
+the options' labels, the quick menu, the manual and the fonts of every role but "message" are
+the menus' (KAGLanguage.menuCode); the story's text, its speakers' names, the choices, the
+scenes' titles, the message window's font and its line breaking are the story's
+(KAGLanguage.current). F9 and the Language buttons change the story's language; with no menu
+language of their own the menus follow it, as before 0.26.0.
+
+A second language shows each message again under it, at the click wait, in a smaller size
+(kag.secondLanguageScale, 0.72 of the window's) and another colour (kag.secondLanguageColor):
+for language learners, and for two players who read different languages. It's the compiled
+scenes' own translation of each text (scripts KAG plays itself have none), recorded with the
+page (MessageLayer.beginSecondText), so switching languages, swapping the two (Shift+F9, the
+action swapLanguages) or turning it off draws the page again as it should be. A message too
+long for the window's lines is cut where the window ends. The backlog keeps the story's
+language. The player's choices are kept in the system variables (scflags.menuLanguage,
+scflags.secondLanguage).
 
 
 

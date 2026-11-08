@@ -4832,6 +4832,52 @@ def sample_steps(eng):
         if not ja.startswith("ヘルプ,ゲームが重い") or "kagexmanual_slow_ja" not in ja:
             raise SmokeError("the Japanese pages weren't found: %s" % ja)
 
+    @step("languages: a second one drawn under each line, swapped with the story's, the menus in a language of their own, and the compiler's count of texts still as written")
+    def _():
+        if eng.tjs('return typeof kag.setSecondLanguage != "undefined" && kag.languageAvailable ? 1 : 0;') != 1:
+            print("     (skipped: one language, or a framework from before 0.26.0)", flush=True)
+            return
+        stable = 'kag.inStable && kag.clickWaiting && kag.conductor.curStorage == "char.ks"'
+        eng.tjs('KAGLanguage.set("en"); kag.process("char.ks", "*start"); return 1;')
+        eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks"', timeout=20)
+        # on to a line with text in both languages
+        for i in range(4):
+            eng.wait("a click wait", stable, timeout=30)
+            eng.tjs('kag.onPrimaryClick(); return 1;')
+        eng.wait("a click wait", stable, timeout=30)
+        where = 'var m = kag.current, n = 0; for (var i = 0; i < m.redrawTextStates.count; i++) n++ if m.redrawTextStates[i][0] == "beginSecondText";'
+        off = str(eng.tjs(where + ' return [m.y, n].join(",");'))
+        eng.tjs('kag.setSecondLanguage("ja"); return 1;')
+        on = str(eng.tjs(where + ' return [m.y, n].join(",");'))
+        eng.tjs('KAGRunAction("swapLanguages"); return 1;')
+        eng.wait("the languages swapped", 'KAGLanguage.current == "ja"', timeout=10)
+        swapped = str(eng.tjs('return [KAGLanguage.current, KAGLanguage.second].join(",");'))
+        eng.tjs('kag.setSecondLanguage(""); return 1;')
+        eng.tjs('kag.setLanguage("en"); return 1;')
+        eng.wait("English again", 'KAGLanguage.current == "en"', timeout=10)
+        # the menus in Japanese, the story in English
+        eng.tjs('kag.setMenuLanguage("ja"); return 1;')
+        eng.wait("the menus in Japanese", 'KAGLanguage.menuCode == "ja"', timeout=10)
+        menu = str(eng.tjs('return [KAGLanguage.current, KAGLanguage.menuCode, tr("Yes"), Storages.getPlacedPath("config_normal.png").indexOf("lang/ja") >= 0 ? 1 : 0,'
+                           ' KAGFontLanguage("message"), KAGFontLanguage("interface")].join(",");'))
+        eng.tjs('kag.setMenuLanguage(""); return 1;')
+        eng.wait("the menus as the story", 'KAGLanguage.menuCode == "en"', timeout=10)
+        report = str(eng.tjs('var p = world_object.player.parser, s = p !== void ? p.languageStats.ja : void;'
+                             ' return s !== void ? [s.texts, s.untranslated, s.places.count].join(",") : "none";'))
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        print("     the message's end and second-language records (off, on): %s / %s; swapped: %s; menus (story, menus, Yes, picture, fonts): %s;"
+              " the compiler's Japanese (texts, still as written, places): %s" % (off, on, swapped, menu, report), flush=True)
+        o, n = off.split(","), on.split(",")
+        if not (int(n[0]) > int(o[0]) and int(n[1]) >= 1):
+            raise SmokeError("the second language wasn't drawn under the line: %s / %s" % (off, on))
+        if swapped != "ja,en":
+            raise SmokeError("swapLanguages didn't swap them: %s" % swapped)
+        if menu != "en,ja,はい,1,en,ja":
+            raise SmokeError("the menus didn't take their own language: %s" % menu)
+        if report != "none" and (int(report.split(",")[0]) < 100 or int(report.split(",")[2]) != int(report.split(",")[1])):
+            raise SmokeError("the compiler's count of Japanese texts is off: %s" % report)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:

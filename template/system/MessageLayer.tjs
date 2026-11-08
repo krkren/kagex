@@ -3811,6 +3811,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		termRects.clear(), termMark = void;
 
+		secondPending.clear();
+
 		clearAnimChars();
 
 		// Display position to initial position
@@ -3880,6 +3882,8 @@ class MessageLayer extends AnimKAGLayerTransMove
 		clearLayer(all);
 
 		termRects.clear(), termMark = void;
+
+		secondPending.clear();
 
 		clearAnimChars();
 
@@ -4805,6 +4809,16 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 	}
 
+	// A second language under the story's (since 0.26.0, Language.tjs): the text units since the
+	// last click wait, noted as they end (KAGWindow's endtextunit), which the window draws again in
+	// the second language at the wait (KAGWindow.drawSecondTextNow); that drawing is recorded
+	// between beginSecondText and endSecondText, so redrawTextIn draws it again in the second
+	// language of the moment, or leaves it out
+	var secondPending = [];
+	function noteSecondUnit(info) { secondPending.add(info) if info !== void; }
+	function beginSecondText(info) { storeRedrawTextState("beginSecondText", info); }
+	function endSecondText() { storeRedrawTextState("endSecondText"); }
+
 	// The speaker's name in every language, by code (a compiled scenario's), for the next
 
 	// processName
@@ -4831,13 +4845,29 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		ops.assignStruct(redrawTextStates);
 
-		var nameSource, inUnit = false;
+		var nameSource, inUnit = false, inSecond = false;
 
 		textUnitOpen = false;
 
 		for (var i = 0; i < ops.count; i++) {
 
 			var op = ops[i], name = op[0];
+
+			if (inSecond) { inSecond = name != "endSecondText"; continue; }
+
+			if (name == "beginSecondText") {
+
+				// the second language's text, drawn again in the second language now (or not)
+
+				inSecond = true;
+
+				window.drawSecondTextNow(this, op[1]);
+
+				continue;
+
+			}
+
+			if (name == "endSecondText") continue;
 
 			if (inUnit) {
 

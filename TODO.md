@@ -38,7 +38,7 @@ Found building a game for every platform with kagex-release, and still there at 
 
 ## The message window and text
 
-- [ ] **A menu language of its own, and two languages at once**: since 0.10.0 the story's language switches while playing, translations are compiled into each `.scn`, and interface strings and stand-in files come from `data/lang/<code>/`, but the story and the interface share one language, and only one is shown at a time. What's left: a menu language apart from the story's (a second setting, with the story's `data/lang` folder taken off the search path for interface files); a second language under the first, for language learners or two players, which the compiled scenes already carry, so it's the message window's drawing, a font scaled to fit two, a key that swaps them, and perhaps both in the backlog; and checks for translators as the compiler matches texts (narration given a name, a speaker whose name differs, a count that doesn't match), with a per-language report from `-scncompile` of the texts still in the script's language. Chinese needs SC and TC fonts, too large for the web build's download, so they'd ship as language packs (`KAGMountPatchZip`).
+- [ ] **Chinese for the sample**: the framework shows any language a game lists (with a menu language of its own and a second one under the story's since 0.26.0), but Chinese needs SC and TC fonts, too large for the web build's download, so they'd ship as language packs (`KAGMountPatchZip`).
 
 ## Screens, menus and controls
 

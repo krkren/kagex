@@ -197,6 +197,19 @@ or one said by someone else) or another number of choices, and every scene of a 
 a translation, has the script's own text in that language; the compiler says which (a
 warning).
 
+For translators (since 0.26.0) the compiler also warns about a text left empty in a
+translation, and a speaker shown by another name in one of them only (【ai/???】 in the script,
+【ai】 in the translation). And -scncompile ends with a report for each language: how many texts
+it has, how many are still as written in the script's language (a text left as it was, a scene
+that doesn't fit its translation, a script without one), and where each of those is:
+
+  Language ja: 333 texts, 9 still as written
+    ja: transition.ks(31): wave
+    ...
+
+Texts without words (numbers and marks) aren't counted. -scncompile=all compiles, and so
+reports, every listed script; plain -scncompile only those that changed.
+
 The player shows each text, name, choice and title in the language shown, and in the one it
 was shown in when it writes the backlog again (going back, a load). Switching the language
 draws the message on screen and the choices on show again from the compiled file

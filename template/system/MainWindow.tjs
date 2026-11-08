@@ -5913,6 +5913,10 @@ class KAGWindow extends Window
 			KAGLanguage.chosen = true;
 			KAGLanguage.set(scflags.language, false);
 		}
+		if (global.KAGLanguage !== void) {
+			KAGLanguage.setMenu(scflags.menuLanguage, false) if typeof scflags.menuLanguage == "String" && KAGLanguage.has(scflags.menuLanguage);
+			KAGLanguage.second = typeof scflags.secondLanguage == "String" ? KAGLanguage.match(scflags.secondLanguage) : void;
+		}
 
 		if(scflags.autoModePageWait !== void)
 
@@ -6332,6 +6336,8 @@ class KAGWindow extends Window
 
 		// The language, when the player chose one (otherwise the game follows the system's)
 		if (global.KAGLanguage !== void) scflags.language = KAGLanguage.chosen ? KAGLanguage.current : void;
+		// the menus' own language and the second (since 0.26.0)
+		if (global.KAGLanguage !== void) scflags.menuLanguage = KAGLanguage.menuLanguage, scflags.secondLanguage = KAGLanguage.second;
 
 		// Full-screen
 
@@ -13850,6 +13856,7 @@ class KAGWindow extends Window
 			bindKey(#'S', ssShift, "@quickSave", void, false);
 			bindKey(#'L', ssShift, "@quickLoad", void, false);
 			bindKey(VK_F9, 0, "@language", void, false);
+			bindKey(VK_F9, ssShift, "@swapLanguages", void, false);
 			bindKey(#'R', void, "@backlog", void, false);
 			bindKey(VK_UP, ssShift, "@backlog", void, false);
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
@@ -14749,6 +14756,11 @@ class KAGWindow extends Window
 	var languagePending;         // the language asked for, shown once the game is stable
 	var languageTrigger;         // shows it outside the event or tag that asked for it
 	var languageSerial = 0;      // wrap keys for text drawn again
+	var menuLanguagePending;     // the menus' language asked for ("": the story's), since 0.26.0
+	var languageSwap = false;    // the language asked for comes from the second (swapLanguages)
+	var secondLanguageScale = 0.72;    // the second language's size, of the window's (since 0.26.0)
+	var secondLanguageColor = 0xd8d2ff; // and its colour
+	var lastTextUnit;            // the text unit being drawn (its texts), noted at its end
 
 	property languageAvailable { getter() { return global.KAGLanguage !== void && KAGLanguage.available; } }
 
@@ -14768,19 +14780,100 @@ class KAGWindow extends Window
 		return true;
 	}
 
+	// The menus in a language of their own (void or "": the story's), at the next stable state, as
+	// setLanguage (since 0.26.0)
+	function setMenuLanguage(code)
+	{
+		if (!languageAvailable || currentDialog !== void) return false;
+		menuLanguagePending = code === void ? "" : (string)code;
+		if (languageTrigger === void) languageTrigger = new AsyncTrigger(applyPendingLanguage, "");
+		languageTrigger.trigger() if inStable;
+		return true;
+	}
+
+	// A second language under the story's (void or "": none), at once: the page on show is drawn
+	// again with it (since 0.26.0)
+	function setSecondLanguage(code)
+	{
+		if (!languageAvailable) return false;
+		var c = code === void || code == "" ? void : KAGLanguage.match(code);
+		KAGLanguage.second = c;
+		onLanguageChange(KAGLanguage.current, KAGLanguage.current);
+		try { saveSystemVariables(); } catch (e) { dm("Language: system variables not saved: " + e.message); }
+		return true;
+	}
+
+	// The story's language and the second swapped (the action swapLanguages, Shift+F9)
+	function swapLanguages()
+	{
+		if (!languageAvailable || KAGLanguage.shownSecond === void) return false;
+		languageSwap = true;
+		if (!setLanguage(KAGLanguage.second)) { languageSwap = false; return false; }
+		return true;
+	}
+
+	// The second language's text under the message at a click wait: the text units drawn since
+	// the last one, in the second language (Language.tjs)
+	function drawSecondLanguage()
+	{
+		if (!textWriteEnabled || skipNoDisp || !languageAvailable) return;
+		var m = current;
+		if (m === void || m.secondPending.count == 0) return;
+		var units = [];
+		units.assignStruct(m.secondPending);
+		m.secondPending.clear();
+		var info = %[ units:units ];
+		drawSecondTextNow(m, info);
+		drawSecondTextNow(m.comp, info) if currentWithBack;
+	}
+
+	// A message's text in the second language of the moment, drawn at once on a line of its own,
+	// smaller (secondLanguageScale, secondLanguageColor), without the backlog or waits, and
+	// recorded (MessageLayer.beginSecondText), so a redraw draws it again in the second language
+	// then, or leaves it out
+	function drawSecondTextNow(layer, info)
+	{
+		layer.beginSecondText(info);
+		var lang = KAGLanguage.shownSecond;
+		if (lang !== void && info !== void && info.units !== void) {
+			var text = "", sep = KAGLanguage.wordWrap(lang) ? " " : "";
+			for (var i = 0; i < info.units.count; i++) {
+				var u = info.units[i], t = u !== void && u.texts !== void ? u.texts[lang] : void;
+				if (t === void || t == "") continue;
+				text += (text != "" ? sep : "") + t;
+			}
+			if (text != "" && !layer.processReturn()) {
+				layer.setFont(%[ size:(int)(layer.defaultFontSize * secondLanguageScale), color:secondLanguageColor ]);
+				drawLanguageText(layer, text, lang);
+				layer.resetFont();
+			}
+		}
+		layer.endSecondText();
+	}
+
 	// at a stable state, the language asked for (stableHandlers)
 	function languageStableHandler()
 	{
-		if (languagePending !== void && languageTrigger !== void) languageTrigger.trigger();
+		if ((languagePending !== void || menuLanguagePending !== void) && languageTrigger !== void) languageTrigger.trigger();
 	}
 
 	function applyPendingLanguage()
 	{
-		if (languagePending === void) return;
+		if (languagePending === void && menuLanguagePending === void) return;
 		if (!inStable || currentDialog !== void || transCount > 0) return; // at the next stable state
-		var c = languagePending;
-		languagePending = void;
-		KAGLanguage.set(c);
+		if (menuLanguagePending !== void) {
+			var m = menuLanguagePending;
+			menuLanguagePending = void;
+			KAGLanguage.setMenu(m);
+		}
+		if (languagePending !== void) {
+			var c = languagePending;
+			languagePending = void;
+			// swapped: the story's language becomes the second
+			if (languageSwap) KAGLanguage.second = KAGLanguage.current;
+			languageSwap = false;
+			KAGLanguage.set(c);
+		}
 		// the player's choice, kept at once (a phone may stop the game without an exit)
 		try { saveSystemVariables(); } catch (e) { dm("Language: system variables not saved: " + e.message); }
 	}
@@ -14881,6 +14974,14 @@ class KAGWindow extends Window
 		if (text === void) text = texts[KAGLanguage.source];
 		if (text === void) return;
 		layer.beginTextUnit(unit);
+		drawLanguageText(layer, text, lang);
+		layer.endTextUnit();
+	}
+
+	// A text in a language drawn at once on a message layer, with the word wrap, without the
+	// backlog or waits (drawTextUnitNow, drawSecondTextNow)
+	function drawLanguageText(layer, text, lang)
+	{
 		var items = languageTextItems(text);
 		var w = %[wrap:%[key:"language:" + (++languageSerial), line:languageWrapLine(items), wordWrap:KAGLanguage.wordWrap(lang)]];
 		// the word wrap measures on this layer, and the scenario line being drawn keeps its own
@@ -14917,7 +15018,6 @@ class KAGWindow extends Window
 		restoreWordWrap(wrapState);
 		restoreGlossaryState(glossState);
 		layer.markTerm(void) if layer.termMark !== void;
-		layer.endTextUnit();
 	}
 
 	// Change Controls (KAGBindingsPanel) waiting for a key or a controller button: keyCapture
@@ -15171,6 +15271,7 @@ class KAGWindow extends Window
 		if(skipMode) return skipCancelKeyPressing()?-4:0;
 			// During skipping (allow event processing opportunity to cancel skip if key pressed)
 
+		drawSecondLanguage(); // the second language under it (Language.tjs)
 		a11yAnnounceText(); // screen readers: the text so far
 
 		if(nowaitMode)
@@ -15215,6 +15316,7 @@ class KAGWindow extends Window
 		if(skipMode == SKIP_FAST && !skipKeyPressing()) cancelSkip();
 		if(skipMode) return -4; // Process events once
 
+		drawSecondLanguage(); // the second language under it (Language.tjs)
 		a11yAnnounceText(); // screen readers: the page's text
 
 		if(nowaitMode)
@@ -17194,6 +17296,7 @@ class KAGWindow extends Window
 		var info = %[texts:elm.texts];
 		current.beginTextUnit(info);
 		current.comp.beginTextUnit(info) if currentWithBack;
+		lastTextUnit = info;
 		return 0;
 	} incontextof this,
 
@@ -17202,6 +17305,9 @@ class KAGWindow extends Window
 		if (skipNoDisp) return 0;
 		current.endTextUnit();
 		current.comp.endTextUnit() if currentWithBack;
+		// (for the second language at the click wait)
+		current.noteSecondUnit(lastTextUnit) if lastTextUnit !== void;
+		lastTextUnit = void;
 		return 0;
 	} incontextof this,
 

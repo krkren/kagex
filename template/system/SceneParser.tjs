@@ -530,6 +530,10 @@ class SceneParser
 	var keyCache = %[]; // storage -> %[hash, entry] of its compiled file
 	var exitCache = %[]; // storage -> the exits its compiled file records (exitsOf)
 	var warnings = [];
+	// what the translations hold, by language (since 0.26.0): %[ texts, untranslated, scenes
+	// (shown as written: a scene that doesn't fit), missing (scripts without a translation),
+	// places:[ "<script>(<line>): <text>" of the texts still as written ] ], for -scncompile's report
+	var languageStats = %[];
 	var prepared = false; // prepare() has run
 
 	function SceneParser(env, scenePath) {
@@ -949,9 +953,12 @@ class SceneParser
 					}
 				}
 				titles.add(ts !== void ? ts.title : s.title);
+				var st = languageStat(langs[k]);
+				st.scenes++ if maps[k] !== void && ts === void;
 				for (var j = 0; j < texts.count; j++) {
 					var t = ts !== void ? ts.texts[j] : texts[j];
 					entries[j].add(scnLanguageEntry(t[1], t[2]));
+					checkTranslatedText(st, s, j, texts[j], ts !== void ? t : void, names[k], langs[k]);
 				}
 				var tc = ts !== void ? choicesOf(ts) : choices;
 				for (var c = 0; c < choices.count; c++) choiceEntries[c].add(scnChoiceEntry((string)tc[c].text));
@@ -963,6 +970,47 @@ class SceneParser
 			for (var c = 0; c < choices.count; c++) choices[c].language = choiceEntries[c];
 			s.title = titles;
 		}
+	}
+
+	// a language's counts (languageStats)
+	function languageStat(lang) {
+		var st = languageStats[lang];
+		if (st === void) st = languageStats[lang] = %[ texts:0, untranslated:0, scenes:0, missing:0, places:[] ];
+		return st;
+	}
+
+	// whether a text has words in it (letters, kana or kanji), not only numbers and marks
+	function hasWords(text) {
+		for (var i = 0; i < text.length; i++) {
+			var c = #text.charAt(i);
+			if ((c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || (c >= 0xc0 && c < 0x2000) || c >= 0x3040) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * A text and its translation, for translators (since 0.26.0): one still as written in the
+	 * script's language (or a scene shown as written: tr void), one left empty, and a speaker
+	 * shown by another name in one of them only (【ai/???】 against 【ai】)
+	 */
+	function checkTranslatedText(st, scene, j, a, b, file, lang) {
+		var text = (string)a[2];
+		if (!hasWords(text)) return;
+		st.texts++;
+		var line = scene.lines.count > 0 ? textLineOf(scene, j + 1) + 1 : 0;
+		var label = scene.label != "" ? scene.label : "the start";
+		if (b === void || (string)b[2] == text) {
+			st.untranslated++;
+			var shown = text.replace(/[\r\n]+/g, " ");
+			shown = shown.substring(0, 60) + "..." if shown.length > 63;
+			st.places.add("%s(%d): %s".sprintf(cstorage, line, shown));
+			return;
+		}
+		if ((string)b[2] == "") warnFile(file, "text %d of %s is empty in it, not in the script (line %d)".sprintf(j + 1, label, line));
+		var da = (string)a[1], db = (string)b[1];
+		if ((da != "") != (db != ""))
+			warnFile(file, "text %d of %s shows its speaker as %s in it, as %s in the script (line %d)".sprintf(j + 1, label,
+				db != "" ? "\"" + db + "\"" : "their own name", da != "" ? "\"" + da + "\"" : "their own name", line));
 	}
 
 	function fileHash(storage) {
@@ -1094,6 +1142,7 @@ class SceneParser
 				names.add(path !== void ? path : translationName(storage, langs[i]));
 				if (path === void) {
 					warnFile(storage, "no translation into " + langs[i] + " (" + names[i] + "), so it's shown as written in " + langs[i]);
+					languageStat(langs[i]).missing++;
 				} else {
 					try {
 						t = compileScript(path, entry);
