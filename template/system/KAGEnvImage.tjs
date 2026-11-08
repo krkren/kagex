@@ -566,7 +566,9 @@ class KAGEnvImage extends KAGEnvTrans {
 				}
 			}
 			if (v !== _disp) {
+				var leaving = v == CLEAR && _disp !== void && _disp != CLEAR;
 				_disp = v;
+				KAGEnvLinkLeft(this) if leaving; // (since 0.26.0) what's attached to it leaves too
 				doShow = true;
 				redraw = true;
 				if (type !== void) {
@@ -1035,6 +1037,16 @@ class KAGEnvImage extends KAGEnvTrans {
     // Display position coordinates
 	var xpos = 0;
 	var ypos = 0;
+
+	// (since 0.26.0) objects that move with others (KAGEnvLinks.tjs): the object this one is
+	// attached to (it moves, zooms, turns and leaves with it, its own xpos/ypos an offset from it),
+	// drawn behind it, kept when it leaves; the object whose picture this one shows; the object
+	// whose outline clips it
+	var linkAttach;
+	var linkBehind; // (void: attached above, following behind)
+	var linkKeep = false;
+	var linkFollow;
+	var linkClip;
 	var xposFrom;
     var yposFrom;
 	var moveTime;
@@ -1896,6 +1908,13 @@ class KAGEnvImage extends KAGEnvTrans {
 	trans : this.setTrans incontextof this,
 	notrans : function(param) { trans = %[]; } incontextof this,
 	stoptrans : function(param) { stopTransition(true); } incontextof this,
+	attach : function(param, elm) { linkAttach = KAGEnvLinkName(param); } incontextof this,
+	attachbehind : function(param, elm) { linkBehind = KAGEnvLinkFlag(param); } incontextof this,
+	attachkeep : function(param, elm) { linkKeep = KAGEnvLinkFlag(param); } incontextof this,
+	follow : function(param, elm) { linkFollow = KAGEnvLinkName(param); redraw = true; } incontextof this,
+	clipto : function(param, elm) { linkClip = KAGEnvLinkName(param); redraw = true; } incontextof this,
+	relative : function(param, elm) { KAGEnvLinkRelative(this, param); } incontextof this,
+	detach : function(param, elm) { linkAttach = linkFollow = linkClip = linkBehind = void; linkKeep = false; reposition = true; redraw = true; } incontextof this,
 	show : function(param) { disp = SHOW; },
 	hide : function(param) { disp = CLEAR; },
 	waitmovie : null,
@@ -1981,6 +2000,12 @@ class KAGEnvImage extends KAGEnvTrans {
 
 		f.nocameraMode = _nocameraMode if _nocameraMode !== void;
 		f.noshiftMode  = _noshiftMode if _noshiftMode !== void;
+
+		f.linkAttach = linkAttach if linkAttach !== void;
+		f.linkBehind = linkBehind if linkBehind !== void;
+		f.linkKeep   = true if linkKeep;
+		f.linkFollow = linkFollow if linkFollow !== void;
+		f.linkClip   = linkClip if linkClip !== void;
 	}
 
     /**
@@ -2076,6 +2101,12 @@ class KAGEnvImage extends KAGEnvTrans {
 		_absolute = f.absolute;
 		_nocameraMode = f.nocameraMode;
 		_noshiftMode  = f.noshiftMode;
+
+		linkAttach = f.linkAttach;
+		linkBehind = f.linkBehind;
+		linkKeep   = f.linkKeep ? true : false;
+		linkFollow = f.linkFollow;
+		linkClip   = f.linkClip;
 
 		redraw = true;
 	}
@@ -2615,6 +2646,9 @@ class KAGEnvImage extends KAGEnvTrans {
 
 		_prevAbsolute = absolute;
 		_prevShow     = isShowBU();
+
+		// (since 0.26.0) attached, following or clipped: placed and drawn from the other object
+		KAGEnvLinkSync(this) if (linkAttach !== void || linkFollow !== void || linkClip !== void || (targetLayer !== void && targetLayer.linkPlace !== void));
 	}
 
 	function updateSound(skipMode){

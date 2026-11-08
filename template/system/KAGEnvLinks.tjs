@@ -1,0 +1,253 @@
+/**
+ * Objects that move with others (since 0.26.0): a World object (a character or a layer) attached
+ * to another, showing another's picture, or clipped to another's outline (doc/world.txt, "Objects
+ * That Move With Others")
+ *
+ *   [newlay name=bubble file=bubble attach=pip xpos=260 ypos=420]
+ *       moves, zooms and turns with Pip: its xpos/ypos are an offset from Pip's anchor (World units,
+ *       y up), scaled and turned as Pip is; drawn just above Pip, and it leaves when Pip does
+ *     attachbehind=true    drawn just behind the other (false: just above it, a follower too)
+ *     attachkeep=true      stays where it is when the other leaves
+ *   [newlay name=reflection follow=ai flipy=true opacity=90]
+ *       its picture is Ai's as drawn, turned, flipped, zoomed and faded by its own settings about
+ *       Ai's anchor, then moved by its own xpos/ypos (a reflection: flipped about the anchor, then
+ *       moved down twice the anchor's height above the feet); drawn just behind Ai
+ *   [newlay name=glow file=glow attach=ai clipto=ai]
+ *       drawn only where Ai is drawn (its alpha times Ai's, on the screen)
+ *   [pip relative=ai,700,0]     placed once at Ai's xpos/ypos plus 700, 0
+ *   [bubble detach]             lets go of all of them
+ *
+ * They're the objects' World state (KAGEnvImage.onStore), so compiled scenes, saves and Back carry
+ * them. Each linked object's layer is placed by KAGEnvLinkPlace instead of its own World values
+ * (EnvGraphicLayer.linkPlace), and a pass every frame (KAGEnvLinks) places it again as the other
+ * moves (its actions, its blinking, a Live2D model's motion), picks up the other's picture, and
+ * clips it again.
+ */
+
+// a link's object name: void for none
+function KAGEnvLinkName(v)
+{
+	if (v === void || v === null) return;
+	v = ((string)v).trim();
+	return v == "" || v == "none" || v == "false" ? void : v;
+}
+
+// an attribute's yes or no ("true", "1", "yes"; an attribute without a value)
+function KAGEnvLinkFlag(v)
+{
+	if (typeof v == "String") return v == "true" || v == "yes" || (v != "" && v != "false" && v != "no" && +v != 0);
+	return v ? true : false;
+}
+
+// the World's object of that name: a character, else a layer
+function KAGEnvLinkObject(env, name)
+{
+	if (env === void || name === void || name == "") return;
+	var o = env.characters[name];
+	o = env.layers[name] if o === void && typeof env.layers == "Object";
+	return o;
+}
+
+// relative=<name>,<dx>,<dy>: placed once where the other is, plus dx, dy (World units)
+function KAGEnvLinkRelative(o, param)
+{
+	var a = ((string)param).split(",");
+	var other = KAGEnvLinkObject(o.env, a[0].trim());
+	if (other === void) {
+		dm(o.name + ": relative=: no object named " + a[0]);
+		return;
+	}
+	o.xpos = +other.xpos + (a.count > 1 ? +a[1] : 0);
+	o.ypos = +other.ypos + (a.count > 2 ? +a[2] : 0);
+	o.reposition = true;
+}
+
+// the other object's layer while it's on the screen (void: not shown)
+function KAGEnvLinkShownLayer(p)
+{
+	if (p === void || !isvalid p || !p.isShowBU()) return;
+	var l = p.targetLayer;
+	return l !== void && isvalid l ? l : void;
+}
+
+// the layers placed from this one, placed again now that it has moved (EnvGraphicLayer's
+// recalcPosition: an action moving, zooming or turning it, so they follow in the same frame)
+var KAGEnvLinkDepth = 0;
+function KAGEnvLinkChildren(pl)
+{
+	if (KAGEnvLinkDepth > 8) return; // (a ring of links)
+	var c = pl.linkChildren;
+	for (var i = c.count - 1; i >= 0; i--) {
+		var l = c[i];
+		if (!isvalid l || l.linkPlace === void) { c.erase(i); continue; }
+		KAGEnvLinkDepth++;
+		try { KAGEnvLinkPlace(l); } catch (e) { dm("links: " + e.message); }
+		KAGEnvLinkDepth--;
+	}
+	pl.linkChildren = void if c.count == 0;
+}
+
+/**
+ * Places a linked object's layer from the other's (EnvGraphicLayer.recalcPosition hands over to
+ * this, and the frame pass calls it)
+ */
+function KAGEnvLinkPlace(l)
+{
+	if (l === void || !isvalid l) return;
+	var o = l.owner;
+	if (o === void || !isvalid o) return;
+	var following = o.linkFollow !== void;
+	var name = following ? o.linkFollow : o.linkAttach;
+	if (name === void) {
+		// let go: its own place again
+		l.linkPlace = void;
+		l.recalcPosition();
+		return;
+	}
+	var p = KAGEnvLinkObject(o.env, name);
+	var pl = KAGEnvLinkShownLayer(p);
+	if (pl === void || pl === l) {
+		// the other isn't on the screen (yet, or kept while it's away): this one waits, hidden
+		// (its leaving with the other is World state: KAGEnvLinkLeft)
+		KAGEnvLinkShow(o, l);
+		return;
+	}
+	// (told when the other moves)
+	if (pl.linkChildren === void) pl.linkChildren = [ l ];
+	else if (pl.linkChildren.find(l) < 0) pl.linkChildren.add(l);
+	var dx = +o.xpos, dy = -(+o.ypos); // (World y goes up)
+	var zx = l.zoomx, zy = l.zoomy, r = l.rotate; // its own (EnvGraphicLayer: World values)
+	var px = pl.screenLeft, py = pl.screenTop;
+	if (following) {
+		// the other's picture as drawn, about the other's anchor
+		l.followPicture(pl);
+		l.afx = px;
+		l.afy = py;
+		l.setScreen(px + dx, py + dy, zx, zy, r);
+	} else {
+		var pzx = pl.screenZoomx / 100.0, pzy = pl.screenZoomy / 100.0, pr = pl.screenRotate;
+		dx = -dx if pl.flipx;
+		dy = -dy if pl.flipy;
+		var ox = dx * pzx, oy = dy * pzy;
+		var a = pr * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+		l.setScreen(px + ox * c - oy * s, py + ox * s + oy * c, pl.screenZoomx * zx / 100.0, pl.screenZoomy * zy / 100.0, pr + r);
+	}
+	// faded with the other, and drawn just over it (attached) or just under it (following: a
+	// reflection, a shadow), or as attachbehind= says
+	var op = (int)(pl.opacity * +o.opacity / 255);
+	l.opacity = op if l.opacity != op;
+	var behind = o.linkBehind !== void ? o.linkBehind : following;
+	var ab = pl.absolute + (behind ? -1 : 1);
+	l.absolute = ab if l.absolute != ab;
+	KAGEnvLinkShow(o, l);
+	KAGEnvLinkChildren(l) if l.linkChildren !== void; // (what's attached to it, in turn)
+}
+
+// shown while what it's attached to, follows or is clipped to is on the screen (and it's shown
+// itself; not in the middle of its own transition, which shows and hides it)
+function KAGEnvLinkShow(o, l)
+{
+	if (!o.isShowBU() || o.isInTransition()) return;
+	var v = true;
+	if (o.linkAttach !== void || o.linkFollow !== void)
+		v = KAGEnvLinkShownLayer(KAGEnvLinkObject(o.env, o.linkFollow !== void ? o.linkFollow : o.linkAttach)) !== void;
+	if (v && o.linkClip !== void)
+		v = KAGEnvLinkShownLayer(KAGEnvLinkObject(o.env, o.linkClip)) !== void;
+	l.visible = v if l.visible != v;
+}
+
+// An object hidden or deleted: the objects attached to it or following it leave with it (World
+// state: the disp setter and delLayer/delCharacter call this, the scene compiler's World too),
+// unless kept (attachkeep=true: they wait, hidden, until it's back)
+function KAGEnvLinkLeft(p)
+{
+	var env = p.env;
+	if (env === void || p.name === void) return;
+	var lists = [ env.characterList, env.layerList ];
+	for (var k = 0; k < lists.count; k++) {
+		var list = lists[k];
+		if (list === void) continue;
+		for (var i = list.count - 1; i >= 0; i--) {
+			var o = list[i];
+			if (o === p || o === void || !isvalid o || o.linkKeep) continue;
+			if (o.linkAttach != p.name && o.linkFollow != p.name) continue;
+			o.linkAttach = o.linkFollow = o.linkClip = o.linkBehind = void;
+			o.disp = global.KAGEnvImage.CLEAR if !o.isClear(); // (and its own followers in turn)
+		}
+	}
+}
+
+// After an object's World update: its layer handed to the links (or taken back)
+function KAGEnvLinkSync(o)
+{
+	var l = o.targetLayer;
+	if (l === void || !isvalid l || typeof l.linkPlace == "undefined") return;
+	var placed = o.linkAttach !== void || o.linkFollow !== void;
+	if (placed) {
+		l.linkPlace = KAGEnvLinkPlace;
+		KAGEnvLinkPlace(l);
+	} else if (l.linkPlace !== void) {
+		l.linkPlace = void;
+		l.recalcPosition();
+	}
+	KAGEnvLinkClip(o, l);
+	KAGEnvLinks.add(o) if placed || o.linkClip !== void;
+}
+
+// clipto=: the other's layer as this one's clip (drawn again so it clips with the other's picture now)
+function KAGEnvLinkClip(o, l)
+{
+	if (typeof l.clipLayer == "undefined") return;
+	var cl = o.linkClip !== void ? KAGEnvLinkShownLayer(KAGEnvLinkObject(o.env, o.linkClip)) : void;
+	l.clipLayer = cl if l.clipLayer !== cl;
+	l.calcAffine() if cl !== void;
+	KAGEnvLinkShow(o, l) if o.linkClip !== void; // (nothing of the other shows: nothing of this one)
+}
+
+/**
+ * The frame pass: every linked object placed, followed and clipped again as the others move
+ */
+class KAGEnvLinksClass
+{
+	var objects = [];
+	var running = false;
+	var handler;
+
+	function KAGEnvLinksClass() { handler = onFrame; }
+
+	function add(o)
+	{
+		objects.add(o) if objects.find(o) < 0;
+		if (!running) { System.addContinuousHandler(handler); running = true; }
+	}
+
+	function stop()
+	{
+		if (running) { System.removeContinuousHandler(handler); running = false; }
+	}
+
+	function onFrame(tick)
+	{
+		for (var i = objects.count - 1; i >= 0; i--) {
+			var o = objects[i];
+			if (!isvalid o || (o.linkAttach === void && o.linkFollow === void && o.linkClip === void)) {
+				objects.erase(i);
+				continue;
+			}
+			var l = o.targetLayer;
+			if (l === void || !isvalid l) continue;
+			try {
+				if (o.linkAttach !== void || o.linkFollow !== void) {
+					l.linkPlace = KAGEnvLinkPlace if l.linkPlace === void;
+					KAGEnvLinkPlace(l);
+				}
+				KAGEnvLinkClip(o, l) if o.linkClip !== void && isvalid o;
+			} catch (e) {
+				dm("links: " + o.name + ": " + e.message);
+				objects.erase(i);
+			}
+		}
+		stop() if objects.count == 0;
+	}
+}
+var KAGEnvLinks = new KAGEnvLinksClass();

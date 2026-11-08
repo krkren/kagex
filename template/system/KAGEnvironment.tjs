@@ -1695,6 +1695,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			var lay = getEnvLayer(elm.name);
 			if (lay !== void) {
 				lay.deleteFlag = true;
+				KAGEnvLinkLeft(lay); // (since 0.26.0) what's attached to it leaves too
 			}
 		}
         return 0;
@@ -1708,6 +1709,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			var ch = getCharacter(elm.name);
 			if (ch !== void) {
 				ch.deleteFlag = true;
+				KAGEnvLinkLeft(ch);
 			}
 		}
 		return 0;

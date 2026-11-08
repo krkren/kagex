@@ -279,6 +279,25 @@ Pip slides in as it fades in (trans=showslide).
 [ai hide]
 After an [[eyecatch], the next scene begins.
 
+*together|Together
+
+; Objects that move with others (since 0.26.0, KAGEnvLinks.tjs): a prop attached to a character,
+; a light clipped to one's outline, and a picture that follows another's; doc/world.txt
+[ai standard happy posleft]
+[pip standard neutral posright]
+[newlay name=bubble file=prop_bubble attach=pip xpos=210 ypos=330 show]
+A speech bubble attached to Pip (attach=pip) goes where he goes...
+[pip center time=800][pip zoom=112 time=800][pip rotate=-12 time=800]
+...moving, growing and turning with him.
+[newlay name=light file=prop_light attach=ai clipto=ai xpos=180 ypos=760 opacity=220 show]
+A warm light clipped to Ai's outline (clipto=ai) falls on her, and on nothing behind her.
+[newlay name=view follow=ai zoom=38 flipx=true xpos=1180 ypos=1020 opacity=235 show]
+A small copy follows her picture (follow=ai), mirrored, and blinks when she does.
+[pip hide]
+When Pip leaves, his bubble leaves with him.
+[ai hide]
+And so do Ai's light and her copy.
+
 *label6|Character Action
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]

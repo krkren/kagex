@@ -4600,6 +4600,75 @@ def sample_steps(eng):
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
+    @step("objects that move with others: a bubble attached to Pip moves, zooms and turns with him (during the move too), a light clipped to Ai's outline, a copy following her picture, all leaving with them, kept in a save")
+    def _():
+        if not eng.compiled or eng.tjs('return typeof global.KAGEnvLinkPlace != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no compiled scenes, or a framework from before the World's links)", flush=True)
+            return
+        stable = 'kag.inStable && kag.conductor.curStorage == "char.ks"'
+        eng.tjs('kag.process("char.ks", "*together"); return 1;')
+        eng.wait("the Together scene", stable + ' && world_object.env.layers.bubble !== void && world_object.env.layers.bubble.targetLayer !== void', timeout=30)
+        # where the bubble should be: Pip's anchor plus its offset, zoomed and turned as Pip is
+        off = ('(function() { var e = world_object.env, p = e.characters.pip.targetLayer, b = e.layers.bubble, l = b.targetLayer;'
+               ' var a = p.screenRotate * Math.PI / 180, zx = p.screenZoomx / 100.0, zy = p.screenZoomy / 100.0;'
+               ' var ox = +b.xpos * zx, oy = -(+b.ypos) * zy;'
+               ' var x = p.screenLeft + ox * Math.cos(a) - oy * Math.sin(a), y = p.screenTop + ox * Math.sin(a) + oy * Math.cos(a);'
+               ' return "%d,%d,%d,%d,%d".sprintf(Math.abs(l.screenLeft - x) + Math.abs(l.screenTop - y), l.screenRotate - p.screenRotate,'
+               ' l.screenZoomx - p.screenZoomx, l.absolute - p.absolute, l.visible); })()')
+        first = str(eng.tjs("return " + off + ";"))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        # during Pip's move, zoom and turn (a game Timer notes the bubble every 30 ms)
+        eng.tjs('global.__linkNotes = []; global.__linkTimer = new Timer(function { global.__linkNotes.add(%s); }, ""); __linkTimer.interval = 30; __linkTimer.enabled = true; return 1;' % off)
+        time.sleep(1.2)
+        notes = str(eng.tjs('__linkTimer.enabled = false; invalidate __linkTimer; return __linkNotes.join(" ");')).split()
+        eng.wait("Pip moved", stable, timeout=30)
+        moved = str(eng.tjs("return " + off + ";"))
+        worst = max(int(n.split(",")[0]) for n in notes) if notes else -1
+        print("     the bubble (distance from where it should be, turn and zoom against Pip's, depth over Pip, shown): %s; moved %s; during the move, %d notes, at most %d px off"
+              % (first, moved, len(notes), worst), flush=True)
+        if not first.startswith("0,0,0,1,1") or not moved.startswith("0,0,0,1,1") or not notes or worst > 2:
+            raise SmokeError("the bubble didn't stay on Pip as he moved, zoomed and turned: %s / %s / %s" % (first, moved, notes[:5]))
+        # the light: clipped to Ai (nothing where she isn't); the copy: her picture, mirrored
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("the light", stable + " && world_object.env.layers.light !== void && world_object.env.layers.light.targetLayer !== void", timeout=30)
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("the copy", stable + " && world_object.env.layers.view !== void && world_object.env.layers.view.targetLayer !== void", timeout=30)
+        time.sleep(0.5)
+        lit = str(eng.tjs('''var e = world_object.env, a = e.characters.ai.targetLayer, l = e.layers.light.targetLayer, v = e.layers.view.targetLayer;
+            var inside = 0, outside = 0, lit = 0, n = 0;
+            for (var y = 20; y < 1060; y += 23) for (var x = 20; x < 1900; x += 23) {
+                var am = a.getMaskPixel(x, y), lm = l.getMaskPixel(x, y);
+                if (am == 0 && lm > 0) outside++;
+                if (am > 0) { inside++; lit++ if lm > 0; }
+            }
+            var shown = 0; for (var y = 20; y < 1060; y += 23) for (var x = 1300; x < 1900; x += 23) shown++ if v.getMaskPixel(x, y) > 0;
+            return [l.clipLayer === a ? "clipped" : "not", outside, lit, inside, v._image._image.imageWidth, shown, v.absolute < a.absolute ? "behind" : "over"].join(",");''')).split(",")
+        print("     the light: %s, %s samples lit outside Ai, %s of her %s lit; the copy: a %s-wide picture, %s samples of it shown, %s her"
+              % tuple(lit), flush=True)
+        if lit[0] != "clipped" or lit[1] != "0" or int(lit[2]) < 20 or int(lit[4]) != 1920 or int(lit[5]) < 20:
+            raise SmokeError("the light wasn't clipped to Ai, or the copy didn't show her picture: %s" % lit)
+        # a save and a load keep them
+        eng.tjs("kag.saveBookMark(0); return 1;")
+        eng.wait("data0 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(0))", timeout=10)
+        eng.tjs('kag.goToStart(); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        eng.tjs("loadFunction(0); return 1;")
+        eng.wait("the load", stable + " && world_object.env.layers.view !== void && world_object.env.layers.view.targetLayer !== void", timeout=30)
+        time.sleep(0.5)
+        kept = str(eng.tjs('var e = world_object.env; return [e.layers.bubble.linkAttach, e.layers.light.linkClip, e.layers.view.linkFollow, %s].join(",");' % off))
+        # Pip leaves: so does his bubble; then Ai, with her light and her copy
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("Pip gone", stable + " && world_object.env.characters.pip.isClear()", timeout=30)
+        gone1 = str(eng.tjs('var e = world_object.env; return [e.layers.bubble.isClear(), e.layers.light.isClear()].join(",");'))
+        eng.tjs("kag.onPrimaryClick(); return 1;")
+        eng.wait("Ai gone", stable + " && world_object.env.characters.ai.isClear()", timeout=30)
+        gone2 = str(eng.tjs('var e = world_object.env; return [e.layers.light.isClear(), e.layers.view.isClear(), e.layers.light.linkAttach === void].join(",");'))
+        print("     after a load: %s; Pip gone (bubble, light cleared): %s; Ai gone (light, copy, let go): %s" % (kept, gone1, gone2), flush=True)
+        if not kept.startswith("pip,ai,ai,0,0,0,1,1") or gone1 != "1,0" or gone2 != "1,1,1":
+            raise SmokeError("a load lost the links, or they didn't leave with their objects: %s / %s / %s" % (kept, gone1, gone2))
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:

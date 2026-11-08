@@ -273,6 +273,24 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [ai hide]
 [[eyecatch]のあと、次の場面が始まります。
 
+*together|いっしょに
+
+; ほかのものといっしょに動くもの（0.26.0 から、KAGEnvLinks.tjs）
+[ai standard happy posleft]
+[pip standard neutral posright]
+[newlay name=bubble file=prop_bubble attach=pip xpos=210 ypos=330 show]
+ピップにつけたふきだし（attach=pip）は、ピップの行くところについて行きます……
+[pip center time=800][pip zoom=112 time=800][pip rotate=-12 time=800]
+……いっしょに動いて、大きくなって、回ります。
+[newlay name=light file=prop_light attach=ai clipto=ai xpos=180 ypos=760 opacity=220 show]
+あいの輪郭で切りぬいた暖かい光（clipto=ai）は、あいだけを照らします。
+[newlay name=view follow=ai zoom=38 flipx=true xpos=1180 ypos=1020 opacity=235 show]
+小さな写し（follow=ai）があいの絵について行きます。左右反転して、まばたきもいっしょです。
+[pip hide]
+ピップが去ると、ふきだしもいっしょに去ります。
+[ai hide]
+あいの光と写しも同じです。
+
 *label6|キャラアクション
 
 [newchar name=ai2 initname=ai center opacity=255:0 zoom=100:140 time=300 sync]
