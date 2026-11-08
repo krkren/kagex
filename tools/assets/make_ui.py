@@ -1045,6 +1045,22 @@ def make_extras():
     for y in (14, 21, 28):
         c.rrect((9, y, 35, y + 3), 1.5, fill=rgba(LAV_SOFT))
     c.save(out("voice_handle.png", False))
+    # (since 0.25.0) a favourite protected (a closed lock) or not (open), and the jump to its scene
+    for name, on in (("voice_lock_on", True), ("voice_lock_off", False)):
+        c = Canvas(44, 44)
+        col = rgba(VIOLET) if on else rgba(LAV_SOFT)
+        c.rrect((11, 20, 33, 38), 4, fill=col)
+        if on:
+            c.stroke([(16, 21), (16, 14), (17, 10), (22, 7), (27, 10), (28, 14), (28, 21)], 3.5, col)
+        else:
+            # open: lifted, its left leg out of the body
+            c.stroke([(16, 15), (16, 9), (17, 5), (22, 2), (27, 5), (28, 9), (28, 21)], 3.5, col)
+        c.ellipse((20, 25, 24, 29), fill=rgba(WHITE))
+        c.save(out("%s.png" % name, False))
+    c = Canvas(44, 44)
+    c.ellipse((3, 3, 41, 41), fill=rgba(WHITE), outline=rgba(VIOLET), width=2.5)
+    ic_back(c, 22, 22, 22, rgba(VIOLET))
+    c.save(out("voice_jump.png", False))
 
     # Sprite Mode (spritemode.ks, from the CG screen's Characters button): a panel on the left
     # with its title, the rest clear for the World's stage and character; its rows' arrows
@@ -1188,6 +1204,20 @@ def make_history():
         p.ellipse((2, 2, 40, 40), fill=rgba(fill), outline=rgba(VIOLET if st == "normal" else WHITE), width=2.5)
         ic_back(p, 21, 21, 22, rgba(fg))
         p.save(out("log_jump_%s.png" % st, False))
+    # a voiced line kept with the favourite voices (a gold star) or not (an outline; since 0.25.0)
+    for name, on in (("log_star_on", True), ("log_star_off", False)):
+        p = Canvas(42, 42)
+        pts = []
+        for k in range(10):
+            a = math.pi / 2 + k * math.pi / 5
+            r = 18 if k % 2 == 0 else 7.5
+            pts.append((21 + r * math.cos(a), 22 - r * math.sin(a)))
+        if on:
+            p.polygon(pts, rgba((255, 176, 32)))
+            p.stroke(pts, 2, rgba(WHITE), closed=True)
+        else:
+            p.stroke(pts, 3, rgba(LAV), closed=True)
+        p.save(out("%s.png" % name, False))
 
 
 # --- thumbnails drawn from the upscaled art --------------------------------------------

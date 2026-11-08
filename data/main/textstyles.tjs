@@ -27,6 +27,9 @@ KAGDefineTextStyle("glossary.text", %[ size:32, lines:14, lineSpacing:12, edge:t
 // the music room's voices (musicmode.ks, voiceList): who speaks, then the line
 KAGDefineTextStyle("voices.name", %[ size:24, bold:true, valign:"middle", color:0x5025ff, minSize:16 ]);
 KAGDefineTextStyle("voices.text", %[ size:24, valign:"middle", color:0x24107a, minSize:22 ]);
+// the favourites' list picked, and which list the voices' stars keep them in (since 0.25.0)
+KAGDefineTextStyle("voices.list", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:18 ]);
+KAGDefineTextStyle("voices.note", %[ size:24, align:"center", valign:"middle", color:0x5c4cb4, minSize:16 ]);
 
 // the title's greeting, in its speech bubble (titleGreeting)
 KAGDefineTextStyle("greeting", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, lines:3, lineSpacing:6, minSize:20 ]);

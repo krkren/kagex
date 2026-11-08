@@ -3817,17 +3817,44 @@ favourites in an order of their own (sf.favouriteVoices; template/system/Voices.
 0.24.0):
 
   KAGHeardVoices()                 [%[ storage, label, idx, voice, speaker, name, text ]...]
-  KAGFavouriteVoices.list(), has(voice), add(entry), remove(voice), toggle(entry), move(from, to)
+  KAGFavouriteVoices.list(n), has(voice, n), add(entry, n), remove(voice, n), toggle(entry, n),
+                     move(from, to, n)
   KAGFavouriteVoices.shown(entry)  its name and line in the language shown
   KAGPlayVoiceLine(entry)          plays it, as the backlog's voice mark does
+
+Since 0.25.0 there are playlists besides the favourites (KAGFavouriteVoices.playlists, 3, in
+sf.voicePlaylists): n is 0 for the favourites, 1 and on for the playlists, and void for the list
+picked (KAGFavouriteVoices.at, kept in sf.voiceListAt; names() and shownName(n) name them). And:
+
+  KAGFavouriteVoices.protect(voice, on, n), isProtected(voice, n)
+                                   a protected line stays in its list (remove and toggle leave
+                                   it) until it's unprotected
+  KAGVoiceNow()                    the voiced line on screen (compiled scenes; the first text of
+                                   the message shown), void where there's none
+  KAGKeepVoiceNow()                it kept with the favourites, or let go, with a notice: the
+                                   favouriteVoice action, which V runs ("Keep this voice with
+                                   your favourites"; enabled while a voiced line is shown)
+  KAGVoiceFace(entry, size)        the speaker's face at the line, as the face window would draw
+                                   it (envinit's faceCrop of the World at that text), size px
+                                   square, kept by speaker and face (KAGEnvPlayer.faceIconAt)
+  KAGVoiceListPlayer               a list's voices one after another (play(entries, from), stop(),
+                                   playing, index; onEntry(index), onEnd())
+
+The player gives the entries: KAGEnvPlayer.voiceEntryAt(storage, label, idx),
+voiceEntryAtHistory(pos) and voiceEntryNow(). A line plays from its place to its scene's end
+with KAGEnvPlayer.seek, as Search plays a line found.
 
 A KAGScrollList of one column with a reorder function lets its items be put in another order: a
 press on an item's right end (reorderHandle px, where the game draws a handle) or a long press
 elsewhere (holdTime ms) lifts it, a drag moves it (the list scrolls on near its ends), letting go
 puts it there, and Shift with the up and down keys moves the focused one; onItemKey(index, key,
 shift) takes a key on the focused item first. The sample's music room has Music, Voices and
-Favourites views: a click plays a voice, its star (or F) keeps it, the favourites' handle moves
-them.
+Favourites views: a click plays a voice, the speaker's face beside it; its star (F) keeps it in
+the list picked (on Favourites, whose arrows go through the favourites and the playlists), its
+lock (P) protects it, its arrow (J) plays its scene and comes back, and a handle moves it; Play
+all plays the list. The sample's backlog has a star right of a voiced message's voice mark
+(MyHistoryLayer.tjs; marginL 270 makes room for it), which keeps the voice with the favourites
+or lets it go.
 
 ● The Music Playing
 

@@ -127,6 +127,15 @@
 ; The tracks: a list that scrolls with the wheel, by dragging, with its bar and with the keys or a
 ; controller's D-pad, as many as musiclist.csv has (musicTrackList in Override.tjs); or the voices
 ; (voiceList: a click plays one, its star keeps it, the favourites' handle puts them in order)
+; The favourites' list picker (the favourites, the playlists) and Play all (since 0.25.0)
+[if exp="+tf.musicView == 2"]
+[locate x=870 y=291]
+[button name="voice_listprev" normal="sprite_prev_normal" over="sprite_prev_over" exp="voiceListStep(-1)" target=*loop]
+[locate x=1316 y=291]
+[button name="voice_listnext" normal="sprite_next_normal" over="sprite_next_over" exp="voiceListStep(1)" target=*loop]
+[locate x=1438 y=295]
+[button name="voice_play" normal="music_view_normal" over="music_view_over" exp="voiceListPlay()"]
+[endif]
 [eval exp='musicViewList()']
 [eval exp='setRepeat()']
 

@@ -38,6 +38,10 @@ class HistoryLayer extends Layer
     var jumpIndent = 8;
     var jumpInfo = []; // What each line's mark runs (Ring buffer, like actionInfo)
     var jumpHover = void; // The jumpInfo index whose mark is under the mouse
+    // Since 0.25.0 (compiled scenes): a star right of a voiced message's voice mark keeps its voice
+    // with the favourite voices (Voices.tjs), or lets it go; marginL leaves room for it
+    var starMarkOn = void, starMarkOff = void, starIndent = 8;
+    var starEntries = %[]; // a message's voiced line by its history position (false: none)
 
     // Since 0.18.0 (compiled scenes): each message's speaker's face left of its marks, a picture
     // of the scene at a message while the pointer rests on its going-back mark, buttons to the
@@ -185,6 +189,8 @@ class HistoryLayer extends Layer
         invalidate actionMarkOver if actionMarkOver !== void;
         invalidate jumpMark if jumpMark !== void;
         invalidate jumpMarkOver if jumpMarkOver !== void;
+        invalidate starMarkOn if starMarkOn !== void;
+        invalidate starMarkOff if starMarkOff !== void;
 
         invalidate topPageButton if topPageButton !== void;
 		invalidate prevPageButton if prevPageButton !== void;
@@ -205,6 +211,7 @@ class HistoryLayer extends Layer
 		actionInfo = [];
 		jumpInfo = [];
 		jumpHover = void;
+		starEntries = %[];
 		dataStart = 0;
 		dataLines = 0;
 		dataPos = 0;
@@ -342,6 +349,15 @@ class HistoryLayer extends Layer
         jumpMarkOver = new global.Layer(window, this);
         jumpMarkOver.loadImages("log_jump_over");
         jumpMarkOver.setSizeToImageSize();
+
+        if (typeof global.KAGFavouriteVoices == "Object") {
+            starMarkOn = new global.Layer(window, this);
+            starMarkOn.loadImages("log_star_on");
+            starMarkOn.setSizeToImageSize();
+            starMarkOff = new global.Layer(window, this);
+            starMarkOff.loadImages("log_star_off");
+            starMarkOff.setSizeToImageSize();
+        }
         
         topPageButton  = new LButtonLayer(window, this);
         prevPageButton = new LButtonLayer(window, this);
@@ -491,10 +507,62 @@ class HistoryLayer extends Layer
 		return n;
 	}
 
-	// Where the going-back marks are: left of the voice marks
+	// Where the going-back marks are: left of the voice marks, which are left of the stars
 	property jumpMarkLeft
 	{
-		getter() { return marginL - actionIndent - (actionMark !== void ? actionMark.width : 0) - jumpIndent - jumpMark.width; }
+		getter() { return actionMarkLeft - jumpIndent - jumpMark.width; }
+	}
+	property starSpace
+	{
+		getter() { return starMarkOn !== void && !everypage && !verticalView ? starIndent + starMarkOn.width : 0; }
+	}
+	property actionMarkLeft
+	{
+		getter() { return marginL - starSpace - actionIndent - (actionMark !== void ? actionMark.width : 0); }
+	}
+
+	// the voiced line of the message that starts on display line n (void: none); kept by position
+	function starEntryOf(n)
+	{
+		if(starMarkOn === void || player === void || everypage || verticalView) return void;
+		var pos = jumpPosOf(jumpIndex(n + dispStart));
+		if(pos === void) return void;
+		var e = starEntries[pos];
+		if(e === void)
+		{
+			try { e = player.voiceEntryAtHistory(pos); } catch(ex) { dm("backlog star: " + ex.message); }
+			starEntries[pos] = e !== void ? e : false;
+		}
+		return e ? e : void;
+	}
+
+	function drawStarMark(n)
+	{
+		var e = starEntryOf(n);
+		if(e === void) return;
+		var img = KAGFavouriteVoices.has(e.voice, 0) ? starMarkOn : starMarkOff;
+		textPage.operateRect(marginL - starIndent - img.width, n*lineHeight + controlHeight + marginT, img, 0, 0, img.width, img.height);
+	}
+
+	// the display line whose star is at x, y (void: none)
+	function getStarFromPos(x, y)
+	{
+		if(starSpace == 0) return void;
+		if(x < marginL - starIndent - starMarkOn.width || x >= marginL - starIndent) return void;
+		var line = lineAtY(y);
+		if(line === void || starEntryOf(line) === void) return void;
+		return line;
+	}
+
+	// a star clicked: its voice kept with the favourites or let go (a protected one stays)
+	function toggleStar(n)
+	{
+		var e = starEntryOf(n);
+		if(e === void) return;
+		var on = KAGFavouriteVoices.toggle(e, 0);
+		KAGInterfaceSound(on ? "backlog.star.on" : "backlog.star.off") if typeof global.KAGInterfaceSound != "undefined";
+		clearBack(n);
+		drawLine(n);
 	}
 
 	function drawJumpMark(n)
@@ -1118,11 +1186,11 @@ class HistoryLayer extends Layer
             var y = n*lineHeight + controlHeight + marginT;
             if (!over) {
                 if (actionMark !== void) {
-                    textPage.operateRect(marginL - actionIndent - actionMark.width, y, actionMark, 0, 0, actionMark.width, actionMark.height);
+                    textPage.operateRect(actionMarkLeft, y, actionMark, 0, 0, actionMark.width, actionMark.height);
                 }
             } else {
                 if (actionMarkOver !== void) {
-                    textPage.operateRect(marginL - actionIndent - actionMark.width, y, actionMarkOver, 0, 0, actionMarkOver.width, actionMarkOver.height);
+                    textPage.operateRect(actionMarkLeft, y, actionMarkOver, 0, 0, actionMarkOver.width, actionMarkOver.height);
                 }
             }
         } 
@@ -1189,6 +1257,7 @@ class HistoryLayer extends Layer
         
         drawActionMark(n,over);
         drawJumpMark(n);
+        drawStarMark(n);
         drawFaceParts(n);
     }
 
@@ -1254,7 +1323,7 @@ class HistoryLayer extends Layer
             var info = ai[i];
             var start = info.start;
             if (actionMark !== void) {
-                start -= (actionIndent + actionMark.width);
+                start -= (actionIndent + actionMark.width + starSpace);
             }
             if(info.end !== void && start < p && p <= info.end) return info;
 		}
@@ -1543,8 +1612,9 @@ class HistoryLayer extends Layer
 			}
 			if(!dragged)
 			{
-				var jump = getJumpFromPos(pressX, pressY);
-				if(jump !== void) Scripts.eval(jumpInfo[jump]);
+				var jump = getJumpFromPos(pressX, pressY), star = getStarFromPos(pressX, pressY);
+				if(star !== void) toggleStar(star);
+				else if(jump !== void) Scripts.eval(jumpInfo[jump]);
 				else
 				{
 					var n = getActionInfoFromPos(pressX, pressY);

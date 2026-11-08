@@ -4711,9 +4711,34 @@ def sample_steps(eng):
             eng.wait("a line", "kag.inStable", timeout=30)
             eng.tjs("kag.onPrimaryClick(); return 1;")
         eng.wait("a line", "kag.inStable", timeout=30)
+        # (since 0.25.0) V keeps the voiced line on screen with the favourite voices
+        stars = eng.tjs('return typeof global.KAGKeepVoiceNow != "undefined" && typeof kag.historyLayer.starEntryOf != "undefined" ? 1 : 0;') == 1
+        if stars:
+            for i in range(12):
+                if eng.tjs("return kag.inStable && KAGVoiceNow() !== void ? 1 : 0;") == 1:
+                    break
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.6)
+            kept = str(eng.tjs('''kag.sflags.favouriteVoices = []; var e = KAGVoiceNow(); kag.onKeyDown(#'V', 0);
+                var l = KAGFavouriteVoices.list(0); kag.hideScreenshotNotice();
+                return (e !== void ? e.voice : "none") + "|" + (l.count > 0 ? l[0].voice : "-");''')).split("|")
+            print("     V on a voiced line: %s kept as %s" % tuple(kept), flush=True)
+            if kept[0] == "none" or kept[1] != kept[0]:
+                raise SmokeError("V didn't keep the voiced line on screen with the favourite voices: %s" % kept)
+            time.sleep(0.3)
         eng.tjs("kag.onShowHistoryMenuItemClick(); return 1;")
         eng.wait("the backlog", "kag.historyShowing", timeout=10)
         h = "kag.historyLayer"
+        if stars:
+            # a voiced message's star in the backlog: the line V kept is on (a click takes it off)
+            star = str(eng.tjs('''var h = kag.historyLayer, r = [];
+                for (var n = 0; n < h.dispLines; n++) { var e = h.starEntryOf(n); if (e === void) continue;
+                    if (KAGFavouriteVoices.has(e.voice, 0)) { var x = h.marginL - h.starIndent - 20, y = n * h.lineHeight + h.controlHeight + h.marginT + 10;
+                        h.onMouseDown(x, y, mbLeft, 0); h.onMouseUp(x, y, mbLeft, 0); return e.voice + "|" + KAGFavouriteVoices.has(e.voice, 0); } }
+                return "none|";''')).split("|")
+            print("     the backlog's star on %s, clicked: kept %s" % tuple(star), flush=True)
+            if star[0] == "none" or star[1] != "0":
+                raise SmokeError("the backlog had no star on the voiced line kept, or a click didn't take it off: %s" % star)
         # the text and faces on the text's own layer since 0.21.0 (at the same coordinates)
         faces = eng.tjs('var h = %s, t = typeof h.textPage == "Object" && h.textPage !== void ? h.textPage : h, x0 = h.jumpMarkLeft - 8 - h.faceSize, a = 0;'
                         ' for (var y = h.controlHeight + h.marginT; y < h.height - 60; y += 6) for (var x = x0; x < x0 + h.faceSize; x += 6)'
@@ -5582,7 +5607,31 @@ def sample_steps(eng):
         eng.tjs('var l = kag.fore.messages[0].names.voiceList; KAGPlayVoiceLine(tf.voiceRows[0]); return 1;')
         eng.wait("the voice to play", '(function() { var c = world_object.env.characters[KAGFavouriteVoices.list()[0].speaker];'
                  ' return c !== void && c.soundBuffer !== void && c.soundBuffer.status == "play"; })()', timeout=10)
-        eng.tjs('world_object.env.stopAllVoice(); musicView(0); return 1;')
+        eng.tjs('world_object.env.stopAllVoice(); return 1;')
+        if eng.tjs('return typeof global.KAGVoiceListPlayer != "undefined" && typeof global.voiceLock != "undefined" ? 1 : 0;') == 1:
+            # (since 0.25.0) a face beside the rows; a protected favourite stays when its star is
+            # clicked; Play all plays the list in order; a playlist the stars fill
+            more = str(eng.tjs('''var r = [], faces = 0;
+                for (var i = 0; i < tf.voiceRows.count; i++) faces++ if KAGVoiceFace(tf.voiceRows[i], 56) !== void;
+                r.add(faces);
+                voiceLock(0); voiceStar(0); kag.hideScreenshotNotice(); r.add(KAGFavouriteVoices.list().count);
+                voiceLock(0); voiceStar(0); r.add(KAGFavouriteVoices.list().count);
+                voiceListPlay(); r.add(voiceListPlaying()); r.add(voiceListPlayer.index);
+                return r.join(",");''')).split(",")
+            eng.wait("the list's second voice", "voiceListPlayer.index == 1 || !voiceListPlaying()", timeout=20)
+            second = str(eng.tjs("var r = [voiceListPlaying(), voiceListPlayer.index].join(\",\"); voiceListStop(); return r;"))
+            eng.tjs('voiceListStep(1); musicView(1); kag.process("musicmode.ks", "*loop"); return 1;')
+            eng.wait("the voices", 'kag.conductor.curStorage == "musicmode.ks" && kag.inStable && kag.fore.messages[0].names.voiceList !== void'
+                     ' && +tf.musicView == 1', timeout=30)
+            pl = str(eng.tjs('''var l = kag.fore.messages[0].names.voiceList; l.focusIndex = 0; l.onKeyDown(#'F', 0);
+                var r = [KAGFavouriteVoices.at, KAGFavouriteVoices.list(1).count, KAGFavouriteVoices.list(0).count];
+                KAGFavouriteVoices.at = 0; return r.join(",");'''))
+            print("     rows with a face: %s; protected, the star: %s left, unprotected: %s; Play all: %s, then %s; Playlist 1 (at, count, favourites): %s"
+                  % (more[0], more[1], more[2], ",".join(more[3:5]), second, pl), flush=True)
+            if int(more[0]) < 1 or more[1] != "3" or more[2] != "2" or more[3] != "1" or more[4] != "0" or not second.endswith(",1") \
+                    or pl != "1,1,2":
+                raise SmokeError("the favourites' faces, protection, Play all or playlists didn't work: %s / %s / %s" % (more, second, pl))
+        eng.tjs('musicView(0); return 1;')
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 

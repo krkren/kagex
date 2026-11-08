@@ -127,6 +127,11 @@ function KAGDefineFrameworkActions(win)
 		func:function { Scripts.eval(currentVoiceScript); } incontextof win,
 		available:function { return typeof global.world_object != "undefined"; },
 		enabled:function { return hasCurrentVoice && currentVoiceScript != ""; } incontextof win ]);
+	// (since 0.25.0) the voiced line on screen kept with the favourite voices, or let go (Voices.tjs)
+	KAGDefineAction(%[ name:"favouriteVoice", label:"Keep this voice with your favourites",
+		func:function { KAGKeepVoiceNow() if typeof global.KAGKeepVoiceNow != "undefined"; },
+		available:KAGActionWorld,
+		enabled:function { return hasCurrentVoice && typeof global.world_object != "undefined" && world_object.player !== void && world_object.player.working; } incontextof win ]);
 	// the scene player's moves (compiled scenes, KAGEnvPlayer.tjs)
 	KAGDefineAction(%[ name:"rewind", label:"Rewind to the start of the scene or the last choice",
 		func:function { var p = KAGActionPlayer(); if (p !== void) p.rewind(); },

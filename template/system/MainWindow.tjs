@@ -13742,6 +13742,7 @@ class KAGWindow extends Window
 			bindKey(VK_ESCAPE, void, "@hide", void, false);
 			bindKey(VK_F10, 0, "@menu", void, false);
 			bindKey(VK_F12, 0, "@screenshot", void, false);
+			bindKey(#'V', void, "@favouriteVoice", void, false);
 			// the mouse's side buttons (since 0.20.0): back a line, and on
 			bindKey(VK_XBUTTON1, 0, "@back", void, false) if (typeof global.VK_XBUTTON1 != "undefined");
 			bindKey(VK_XBUTTON2, 0, "@next", void, false) if (typeof global.VK_XBUTTON2 != "undefined");

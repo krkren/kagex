@@ -4,13 +4,28 @@
  * system variables, sf.favouriteVoices). The sample's music room lists both (Override.tjs,
  * voiceList); the favourites' list takes a drag to put them in order (KAGScrollList.reorder).
  *
+ * Since 0.25.0: playlists (more lists than the favourites, sf.voicePlaylists), a line kept from
+ * the story (V, the favouriteVoice action, or the backlog's star), a line protected (it stays
+ * in its list until it's unprotected), the speaker's face at the line, a list played through,
+ * and a jump to the scene a line came from.
+ *
  *   KAGHeardVoices()                    [%[storage, label, idx, voice, speaker, name, text]...]:
  *                                       every voice heard once, in the scripts' order (name and
  *                                       text as shown, in the language shown)
- *   KAGFavouriteVoices.list()           the favourites: [%[voice, speaker, storage, label, idx]...]
- *   KAGFavouriteVoices.has(voice), add(entry), remove(voice), toggle(entry), move(from, to)
+ *   KAGFavouriteVoices.list(n)          a list's entries: [%[voice, speaker, storage, label, idx,
+ *                                       kept]...] (n: 0 the favourites, 1... the playlists;
+ *                                       void: the list picked, KAGFavouriteVoices.at)
+ *   KAGFavouriteVoices.names()          the lists' names: "Favourites", "Playlist 1"...
+ *   KAGFavouriteVoices.has(voice, n), add(entry, n), remove(voice, n), toggle(entry, n),
+ *                      move(from, to, n), protect(voice, on, n), isProtected(voice, n)
  *   KAGFavouriteVoices.shown(entry)     the entry with its name and text as shown now
  *   KAGPlayVoiceLine(entry)             plays it as the backlog's voice mark does
+ *   KAGVoiceNow()                       the voiced line on screen (void: none)
+ *   KAGKeepVoiceNow()                   it kept with the favourites, or let go (a notice says
+ *                                       which; a protected one stays)
+ *   KAGVoiceFace(entry, size)           the speaker's face at the line, size px square (void:
+ *                                       none: narration, no face window, not on stage)
+ *   KAGVoiceListPlayer                  plays a list's voices one after another (play, stop)
  */
 
 function KAGHeardVoices()
@@ -29,49 +44,99 @@ function KAGPlayVoiceLine(e)
 
 class KAGFavouriteVoicesClass
 {
-	function list()
+	var playlists = 3; // how many lists besides the favourites
+
+	// the list picked (the music room's), 0 the favourites
+	property at
 	{
-		var l = kag.sflags.favouriteVoices;
-		if (typeof l != "Object" || l === void || !(l instanceof "Array")) l = kag.sflags.favouriteVoices = [];
-		return l;
+		getter { var n = +kag.sflags.voiceListAt; return n >= 0 && n <= playlists ? n : 0; }
+		setter(v) { kag.sflags.voiceListAt = v >= 0 && v <= playlists ? +v : 0; }
 	}
 
-	function indexOf(voice)
+	function names()
 	{
-		var l = list(), k = ((string)voice).toLowerCase();
+		var r = [ "Favourites" ];
+		for (var i = 1; i <= playlists; i++) r.add("Playlist %d".sprintf(i));
+		return r;
+	}
+
+	// a list's name as shown (Playlist 2: tr("Playlist %d"))
+	function shownName(n = void)
+	{
+		n = at if n === void;
+		return n == 0 ? tr("Favourites") : tr("Playlist %d").sprintf(n);
+	}
+
+	function list(n = void)
+	{
+		n = at if n === void;
+		var sf = kag.sflags;
+		if (n == 0) {
+			var l = sf.favouriteVoices;
+			if (typeof l != "Object" || l === void || !(l instanceof "Array")) l = sf.favouriteVoices = [];
+			return l;
+		}
+		var p = sf.voicePlaylists;
+		if (typeof p != "Object" || p === void || !(p instanceof "Array")) p = sf.voicePlaylists = [];
+		while (p.count < n) p.add([]);
+		return p[n - 1];
+	}
+
+	function indexOf(voice, n = void)
+	{
+		var l = list(n), k = ((string)voice).toLowerCase();
 		for (var i = 0; i < l.count; i++) if (((string)l[i].voice).toLowerCase() == k) return i;
 		return -1;
 	}
 
-	function has(voice) { return indexOf(voice) >= 0; }
+	function has(voice, n = void) { return indexOf(voice, n) >= 0; }
 
-	function add(e)
+	function add(e, n = void)
 	{
-		if (e === void || has(e.voice)) return;
-		list().add(%[ voice:(string)e.voice, speaker:(string)e.speaker, storage:(string)e.storage, label:(string)e.label, idx:+e.idx ]);
+		if (e === void || has(e.voice, n)) return;
+		list(n).add(%[ voice:(string)e.voice, speaker:(string)e.speaker, storage:(string)e.storage, label:(string)e.label, idx:+e.idx ]);
 	}
 
-	function remove(voice)
+	// let go (not a protected one: false)
+	function remove(voice, n = void)
 	{
-		var i = indexOf(voice);
-		list().erase(i) if i >= 0;
-	}
-
-	// on or off; the new state
-	function toggle(e)
-	{
-		if (has(e.voice)) { remove(e.voice); return false; }
-		add(e);
+		var i = indexOf(voice, n);
+		if (i < 0) return true;
+		if (list(n)[i].kept) return false;
+		list(n).erase(i);
 		return true;
 	}
 
-	function move(from, to)
+	// on or off; the new state (a protected one stays on)
+	function toggle(e, n = void)
 	{
-		var l = list();
+		if (has(e.voice, n)) return !remove(e.voice, n);
+		add(e, n);
+		return true;
+	}
+
+	function move(from, to, n = void)
+	{
+		var l = list(n);
 		if (from < 0 || from >= l.count || to < 0 || to >= l.count || from == to) return;
 		var e = l[from];
 		l.erase(from);
 		l.insert(to, e);
+	}
+
+	// a protected line stays in its list until it's unprotected
+	function protect(voice, on, n = void)
+	{
+		var i = indexOf(voice, n);
+		if (i < 0) return;
+		var e = list(n)[i];
+		if (on) e.kept = true; else delete e.kept;
+	}
+
+	function isProtected(voice, n = void)
+	{
+		var i = indexOf(voice, n);
+		return i >= 0 && !!list(n)[i].kept;
 	}
 
 	// an entry with its speaker's name and its words as shown now (the language shown)
@@ -89,3 +154,103 @@ class KAGFavouriteVoicesClass
 	}
 }
 var KAGFavouriteVoices = new KAGFavouriteVoicesClass();
+
+// the voiced line on screen (compiled scenes; void: none)
+function KAGVoiceNow()
+{
+	if (typeof global.world_object == "undefined" || world_object.player === void) return;
+	try { return world_object.player.voiceEntryNow(); } catch (e) { dm("voice now: " + e.message); }
+}
+
+// the line on screen kept with the favourites, or let go: a notice says which (a protected one
+// stays); whether it's a favourite now
+function KAGKeepVoiceNow()
+{
+	var e = KAGVoiceNow();
+	if (e === void) return false;
+	var was = KAGFavouriteVoices.has(e.voice, 0), now = KAGFavouriteVoices.toggle(e, 0);
+	var text = now ? (was ? tr("Protected: it stays with your favourite voices") : tr("Kept with your favourite voices"))
+		: tr("Taken from your favourite voices");
+	kag.showScreenshotNotice(text) if typeof kag.showScreenshotNotice != "undefined";
+	KAGA11y.announce(text) if typeof global.KAGA11y == "Object" && KAGA11y !== void;
+	return now;
+}
+
+// the speaker's face at the line (the face window's crop), size px square, kept by speaker and
+// face (KAGEnvPlayer.faceIconAt); void where there's none
+function KAGVoiceFace(e, size)
+{
+	if (e === void || typeof global.world_object == "undefined") return;
+	try {
+		world_object.initPlayer();
+		return world_object.player.faceIconAt(e.storage, e.label, e.idx, e.speaker, size);
+	} catch (ex) {
+		dm("voice face: " + ex.message);
+	}
+}
+
+/**
+ * Plays a list of voiced lines one after another (each once the one before has ended, after a
+ * short pause), onEntry(index) told as each starts and onEnd() at the end
+ *   var p = new KAGVoiceListPlayer();
+ *   p.play(entries, 0);  p.stop();  p.playing, p.index
+ */
+class KAGVoiceListPlayer
+{
+	var entries, index = -1, timer, waitFrom, onEntry, onEnd, gap = 600, started = false;
+
+	function KAGVoiceListPlayer()
+	{
+		timer = new Timer(onTick, "");
+		timer.interval = 100;
+	}
+
+	function finalize()
+	{
+		invalidate timer;
+	}
+
+	property playing { getter { return timer.enabled; } }
+
+	function play(list, from = 0)
+	{
+		entries = list;
+		index = from - 1;
+		next();
+	}
+
+	function stop()
+	{
+		timer.enabled = false;
+		index = -1;
+		try { world_object.env.stopAllVoice(); } catch {}
+	}
+
+	function next()
+	{
+		index++;
+		if (entries === void || index >= entries.count) {
+			timer.enabled = false;
+			index = -1;
+			KAGBindToGlobal(onEnd)() if onEnd !== void;
+			return;
+		}
+		KAGPlayVoiceLine(entries[index]);
+		KAGBindToGlobal(onEntry)(index) if onEntry !== void;
+		waitFrom = System.getTickCount();
+		started = false;
+		timer.enabled = true;
+	}
+
+	// a voice playing counts on the World (playVoiceCount); once it's back to 0 (or the voice
+	// never started within two seconds), the next after the gap
+	function onTick()
+	{
+		var count = 0;
+		try { count = +world_object.env.playVoiceCount; } catch {}
+		var now = System.getTickCount();
+		if (count > 0) { started = true; waitFrom = now; return; }
+		if (!started && now - waitFrom < 2000) return;
+		if (now - waitFrom >= gap) next();
+	}
+}
