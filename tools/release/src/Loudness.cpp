@@ -258,7 +258,7 @@ std::vector<LoudnessEntry> loudnessReport(const fs::path& root, const std::map<s
 		if (e.hasTarget && e.measured && e.lufs > -70) {
 			e.target = t->second;
 			const double played = e.lufs + (e.gainApplies ? e.gainNow : 0.0);
-			e.far = std::fabs(played - e.target) > tolerance;
+			e.offTarget = std::fabs(played - e.target) > tolerance;
 			e.newGain = std::round((e.target - e.lufs) * 10.0) / 10.0;
 		}
 	}
@@ -293,7 +293,7 @@ std::string loudnessReportText(const std::vector<LoudnessEntry>& entries)
 		std::string note;
 		if (!e.gainApplies) note = "WAV: the engine applies no gain";
 		else if (e.ownLine) note = "its own line in loudness.csv";
-		if (e.far) note += std::string(note.empty() ? "" : "; ") + (e.ownLine || !e.gainApplies ? "far from its target" : "brought to its target");
+		if (e.offTarget) note += std::string(note.empty() ? "" : "; ") + (e.ownLine || !e.gainApplies ? "far from its target" : "brought to its target");
 		t += note + "\n";
 	}
 	return t;
