@@ -1974,6 +1974,9 @@ class KAGEnvironment extends KAGEnvTrans {
 				return;
 			}
 		}
+		// a name with no picture (the time-of-day background KAGEnvStage tries first and falls
+		// back from) throws here, before a layer is made, as it did before CG variations
+		if (!KAGPictureExists(storage)) throw new Exception("no picture: " + storage);
 		var lay = new global.Layer(temporaryLayer.window, temporaryLayer);
 		KAGLoadPicture(lay, storage); // (a CG variation too: CGVariations.tjs)
 		lay.name = "Background Cache:" + storage;

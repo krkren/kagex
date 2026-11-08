@@ -251,6 +251,14 @@ function KAGCGVariationDraw(target, name)
 }
 
 /**
+ * Whether there's a picture of that name: a CG variation, or an image file loadImages finds
+ */
+function KAGPictureExists(name)
+{
+	return KAGCGVariation(name) !== void || getExistImageName(name) !== void;
+}
+
+/**
  * A picture into a plain Layer: a CG variation, or the image of that name (what loadImages returns)
  */
 function KAGLoadPicture(layer, name)
