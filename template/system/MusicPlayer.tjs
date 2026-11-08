@@ -13,6 +13,14 @@
  *
  * The picture holds still with Reduce Motion. Its look: the text styles nowplaying.title and
  * nowplaying.time, and the bar's colours.
+ *
+ * The bar and the time follow a clock started from the buffer's position (since 0.25.0): the
+ * engine's position moves in steps (a block of samples at a time), and for about half a second
+ * after a seek or a loop it is a buffer (half a second) ahead, which made the knob shake and jump
+ * back. The clock is set again from the position when the track, the buffer or its status
+ * changes, at a jump (a loop goes on from the clock's own count past the end), when the position
+ * is lower than the clock soon after a jump (it is only ever ahead), or when the two stay apart
+ * (more than driftLimit ms for driftTime ms).
  */
 
 KAGDefineTextStyle("nowplaying.title", %[ size:30, bold:true, align:"center", valign:"middle", color:0x24107a, minSize:18 ]);
@@ -33,6 +41,8 @@ class KAGNowPlaying extends Layer
 	var pic, picSize = 260, angle = 0.0, turnSpeed = 60.0;  // degrees a second
 	var barH = 12, barMargin = 30, trackColor = 0xffd8cfff, fillColor = 0xff5025ff, knobColor = 0xff5025ff;
 	var timer, lastTick, seeking = false, lastText = "";
+	var clockBuffer, clockStorage, clockPos, clockTick, clockStatus, driftSince, clockHold = 0, settleUntil = 0;
+	var driftLimit = 200, driftTime = 800, jumpLimit = 1500, settleTime = 1000, shownPos = 0;
 	var a11yHidden = true, linkNum;
 
 	function KAGNowPlaying(win, par)
@@ -87,6 +97,71 @@ class KAGNowPlaying extends Layer
 
 	property barY { getter { return picSize + 86; } }
 
+	// the file a buffer plays (a WaveSoundBuffer has no name of it: KAG's BGM keeps it)
+	function storageOf(b)
+	{
+		if (b === void) return "";
+		if (typeof b.storage != "undefined") return (string)b.storage;
+		var bgm = typeof window.bgm == "Object" ? window.bgm : void;
+		if (bgm !== void && b === bgm.currentBuffer && typeof bgm.playingStorage != "undefined") return (string)bgm.playingStorage;
+		return "";
+	}
+
+	// the buffer's place as shown: a clock from the last position it was set from
+	function shownPosition(b, total)
+	{
+		var now = System.getTickCount(), raw = +b.position, st = b.status;
+		if (clockBuffer !== b || clockStorage != storageOf(b) || clockStatus != st || st != "play") {
+			setClock(b, raw, now);
+			settleUntil = now + settleTime;
+			return raw;
+		}
+		var pos = clockPos + (now - clockTick);
+		// (a seek of our own: the buffer may still say where it was for a moment)
+		if (now < clockHold) return clampPosition(pos, total);
+		var err = raw - pos;
+		if (err > jumpLimit || err < -jumpLimit) {
+			// a loop goes on from the clock's count past the end (the position is ahead just
+			// then); a seek from elsewhere is where the buffer says
+			var wrapped = pos - total;
+			if (err < 0 && total > 0 && pos >= total - jumpLimit && raw - wrapped <= jumpLimit && raw - wrapped >= -jumpLimit) setClock(b, wrapped, now);
+			else setClock(b, raw, now);
+			settleUntil = now + settleTime;
+			return clampPosition(clockPos, total);
+		}
+		if (err < -driftLimit && now < settleUntil) {
+			// soon after a jump a lower position is the true one
+			setClock(b, raw, now);
+			return raw;
+		}
+		if (err > driftLimit || err < -driftLimit) {
+			if (driftSince === void) driftSince = now;
+			else if (now - driftSince >= driftTime) { setClock(b, raw, now); return raw; }
+		} else driftSince = void;
+		return clampPosition(pos, total);
+	}
+
+	function clampPosition(pos, total)
+	{
+		pos = total if total > 0 && pos > total;
+		pos = 0 if pos < 0;
+		return pos;
+	}
+
+	function setClock(b, pos, now = System.getTickCount())
+	{
+		clockBuffer = b, clockStorage = storageOf(b), clockStatus = b !== void ? b.status : void;
+		clockPos = pos, clockTick = now, driftSince = void, clockHold = 0;
+	}
+
+	// after a seek: the clock from there, whatever the buffer says for a moment
+	function seekClock(b, pos)
+	{
+		setClock(b, pos);
+		clockHold = clockTick + 300;
+		settleUntil = clockTick + settleTime;
+	}
+
 	function onTick()
 	{
 		if (!isvalid this) return;
@@ -122,8 +197,9 @@ class KAGNowPlaying extends Layer
 		}
 		var b = buffer, title = "", pos = 0, total = 0;
 		if (loaded(b)) {
-			try { pos = +b.position; total = +b.totalTime; } catch {}
-			title = titleOf !== void ? KAGBindToGlobal(titleOf)() : Storages.extractStorageName(b.storage);
+			try { total = +b.totalTime; pos = shownPosition(b, total); } catch {}
+			shownPos = pos;
+			title = titleOf !== void ? KAGBindToGlobal(titleOf)() : Storages.extractStorageName(storageOf(b));
 		}
 		var y = picSize + 16;
 		KAGDrawStyledText(this, "nowplaying.title", title != "" ? title : "—", 10, y, width - 20, 40);
@@ -158,7 +234,7 @@ class KAGNowPlaying extends Layer
 		var k = (x - barMargin) / (width - barMargin * 2);
 		k = 0 if k < 0;
 		k = 0.999 if k > 0.999;
-		try { b.position = (int)(total * k); } catch (e) { dm("now playing: " + e.message); }
+		try { b.position = (int)(total * k); seekClock(b, (int)(total * k)); } catch (e) { dm("now playing: " + e.message); }
 		redraw();
 	}
 
@@ -192,7 +268,7 @@ class KAGNowPlaying extends Layer
 		var total = +b.totalTime, p = +b.position + ms;
 		p = 0 if p < 0;
 		p = total - 500 if p > total - 500;
-		try { b.position = (int)p; } catch (e) { dm("now playing: " + e.message); }
+		try { b.position = (int)p; seekClock(b, (int)p); } catch (e) { dm("now playing: " + e.message); }
 		redraw();
 	}
 
