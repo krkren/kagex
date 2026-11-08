@@ -539,6 +539,49 @@ def ic_here(c, cx, cy, s, col):
         c.stroke([(cx + dx * s * 0.34, cy + dy * s * 0.34), (cx + dx * s * 0.5, cy + dy * s * 0.5)], s * 0.1, col)
 
 
+def ic_person(c, cx, cy, s, col):
+    """a head and shoulders: a character"""
+    c.ellipse((cx - s * 0.17, cy - s * 0.46, cx + s * 0.17, cy - s * 0.12), fill=col)
+    c.rrect((cx - s * 0.36, cy - s * 0.04, cx + s * 0.36, cy + s * 0.46), s * 0.18, fill=col)
+
+
+def ic_person_plus(c, cx, cy, s, col):
+    """a character with a plus: onto the stage"""
+    ic_person(c, cx - s * 0.14, cy + s * 0.04, s * 0.92, col)
+    r = s * 0.16
+    c.stroke([(cx + s * 0.36 - r, cy - s * 0.3), (cx + s * 0.36 + r, cy - s * 0.3)], s * 0.1, col)
+    c.stroke([(cx + s * 0.36, cy - s * 0.3 - r), (cx + s * 0.36, cy - s * 0.3 + r)], s * 0.1, col)
+
+
+def ic_person_minus(c, cx, cy, s, col):
+    """a character with a minus: off the stage"""
+    ic_person(c, cx - s * 0.14, cy + s * 0.04, s * 0.92, col)
+    r = s * 0.16
+    c.stroke([(cx + s * 0.36 - r, cy - s * 0.3), (cx + s * 0.36 + r, cy - s * 0.3)], s * 0.1, col)
+
+
+def ic_flip(c, cx, cy, s, col):
+    """two triangles either side of a dashed line: turned round"""
+    c.polygon([(cx - s * 0.1, cy - s * 0.36), (cx - s * 0.1, cy + s * 0.36), (cx - s * 0.52, cy + s * 0.36)], col)
+    c.polygon([(cx + s * 0.1, cy - s * 0.36), (cx + s * 0.1, cy + s * 0.36), (cx + s * 0.52, cy + s * 0.36)], col)
+    for y in (-0.5, -0.24, 0.02, 0.28):
+        c.rrect((cx - s * 0.03, cy + s * y, cx + s * 0.03, cy + s * (y + 0.14)), s * 0.02, fill=col)
+
+
+def ic_hide_panel(c, cx, cy, s, col):
+    """two chevrons pointing left: the panel away"""
+    for o in (-0.16, 0.16):
+        x = cx + s * o
+        c.stroke([(x + s * 0.14, cy - s * 0.34), (x - s * 0.14, cy), (x + s * 0.14, cy + s * 0.34)], s * 0.12, col)
+
+
+def ic_show_panel(c, cx, cy, s, col):
+    """two chevrons pointing right: the panel back"""
+    for o in (-0.16, 0.16):
+        x = cx + s * o
+        c.stroke([(x - s * 0.14, cy - s * 0.34), (x + s * 0.14, cy), (x - s * 0.14, cy + s * 0.34)], s * 0.12, col)
+
+
 def ic_dot(c, cx, cy, s, col):
     c.ellipse((cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2), fill=col)
 
@@ -1011,6 +1054,9 @@ def make_extras():
     c.rrect((674, 0, 680, 1080), 0, fill=rgba(VIOLET))
     c.text((60, 150), L("Characters"), font("Black", 84), rgba(VIOLET), anchor="ls", shadow=(6, 6, rgba(LAV)))
     c.rrect((60, 170, 620, 176), 3, fill=rgba(VIOLET))
+    # the line's field (an [edit] over it)
+    c.rrect((60, 830, 620, 890), 12, fill=rgba(LAV))
+    c.rrect((63, 833, 617, 887), 9, fill=rgba(WHITE))
     c.save(out("sprite_base.png"))
     for st in ("normal", "over"):
         for name, sign in (("sprite_prev", -1), ("sprite_next", 1)):
@@ -1021,6 +1067,16 @@ def make_extras():
             b.stroke([(32 - sign * 6, 18), (32 + sign * 8, 32), (32 - sign * 6, 46)], 7, rgba(fg))
             b.save(out("%s_%s.png" % (name, st), False))
         button(330, 80, "", st, size=30, r=12).save(out("sprite_open_%s.png" % st, False))
+        # the stage's tools: a character on and off the stage, turned round, a screenshot, the
+        # panel away and back (the zoom's are the chart's)
+        for name, icon in (("sprite_add", ic_person_plus), ("sprite_remove", ic_person_minus), ("sprite_flip", ic_flip),
+                           ("sprite_shot", ic_camera), ("sprite_hide", ic_hide_panel), ("sprite_show", ic_show_panel)):
+            fill, border, fg, _ = STYLE[st]
+            b = Canvas(64, 64)
+            b.rrect((0, 0, 64, 64), 12, fill=rgba(border))
+            b.rrect((3, 3, 61, 61), 9, fill=fill)
+            icon(b, 32, 32, 36, rgba(fg))
+            b.save(out("%s_%s.png" % (name, st), False))
 
     size = extra_tab_size()
     for name, label in EXTRA_TABS:

@@ -3863,13 +3863,40 @@ voice ], KAGGreetingText(g) the text as shown. The sample's Ai says it in a bubb
 
 Template/system/SpriteMode.tjs (since 0.24.0) is what a character viewer needs: the World's
 characters that can be drawn here (a Live2D or VRM one only where its plugin draws it,
-KAGSpriteCharacters), their "pose", "dress" and "face" names (KAGSpriteChoices; a pose's own
-outfits and faces once it's shown), every stage at every time of day (KAGSpriteBackgrounds),
-their commands run as their tags would, without their own transitions (KAGSpriteShow,
-KAGSpriteStage, then KAGSpriteUpdate), and the World cleared (KAGSpriteClear). The sample's Sprite
-Mode (spritemode.ks, the CG screen's Characters button) changes them between [begintrans] and
-[endtrans], so its panel and the World fade in as one; envinit.tjs's spriteview position puts
-the character right of the panel.
+KAGSpriteCharacters), their "pose", "dress", "face" and "diff" names (KAGSpriteChoices; a pose's
+own outfits and faces once it's shown; diffs are a layered character's variations for its
+outfit, from its _info.txt, since 0.25.0), every stage at every time of day
+(KAGSpriteBackgrounds), their commands run as their tags would (KAGSpriteShow, KAGSpriteStage,
+then KAGSpriteUpdate; between [begintrans] and [endtrans] without their own transitions), and
+the World cleared (KAGSpriteClear). Since 0.25.0 also:
+
+  KAGSpriteBackgroundFolder()     the folder for the player's own backgrounds: backgrounds/ in
+                                  the save folder (void on the web and phones, whose save folder
+                                  isn't one the player can put files in)
+  KAGSpriteOwnBackgrounds()       the pictures there (PNG, JPEG, BMP, TLG, WebP), in name order,
+                                  each made a stage of the World (spriteown0, spriteown1...)
+                                  that fills the screen: [%[ stage, time, file, name ]...]
+  KAGSpriteHit(name, x, y)        whether the character draws something at a point of the screen
+                                  (its picture's pixels, not its rectangle)
+  KAGSpriteStageLayer             a message layer's link over the stage: a press on a character
+                                  and a drag (names, onPick, onMove), the wheel over one (onZoom),
+                                  and a line in a window drawn as the story's (setLine, lineRect;
+                                  the text styles sprite.line and sprite.name)
+
+A character's place, size and turn are the World's own attributes (xpos, ypos, zoom, flipx), so
+a drag runs [<name> xpos= ypos=] at once, outside a transition (with notrans there the World
+would leave the character's new layer hidden: KAGSpriteShow adds notrans only inside one).
+
+The sample's Sprite Mode (spritemode.ks, the CG screen's Characters button) has a panel on the
+left: rows for the character, its pose, outfit, face and variation (Pip's arms), and the
+background (the street at each time of day, then the player's own pictures), a line to type,
+and tools: the character onto the stage or off it, turned round, smaller and larger, the camera,
+the panel away. Several characters stand on the stage at once; the rows edit the one picked (the
+first row, or a click on one on the stage), which a drag moves and the wheel zooms. A line typed
+(Enter) is said by the one picked, in a message window like the story's. The camera draws the
+screen again without the panel and takes a screenshot as F12 does; with the panel away the whole
+stage shows, and a right-click or the button in the corner brings it back. The panel and the
+World change between [begintrans] and [endtrans], so they fade in as one.
 
 ● The Name Box
 

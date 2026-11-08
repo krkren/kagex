@@ -2040,66 +2040,115 @@ function glossaryEntry()
 
 /**
  * Sprite Mode (spritemode.ks, the CG screen's Characters button; template/system/SpriteMode.tjs):
- * a character at a time over the street, any pose, outfit and face, the street at any time of
- * day; the rows' arrows go through them
+ * the characters over the street, any pose, outfit, face and (Pip's) arms, the street at any time
+ * of day or a picture of the player's own; the rows edit the character picked (the rows' first,
+ * or a click on one on the stage), which a drag moves and the wheel zooms; a line typed under
+ * them is said by the one picked; the camera takes the stage without the panel
  */
 var spriteNames = [ "ai", "pip", "hiyori", "vee" ];
-var spriteRowNames = [ "Character", "Pose", "Outfit", "Face", "Background" ];
+var spriteRowNames = [ "Character", "Pose", "Outfit", "Face", "Variation", "Background" ];
+var spriteRowY = 230, spriteRowStep = 96;
+// the places across the stage new arrivals take, the first one free
+var spriteSpots = [ 340, 40, 640, -260, 940 ];
 function spriteInit()
 {
     tf.recollect = 0;
     tf.spriteFade = 300;
+    tf.spritePanel = true;
+    tf.spriteShot = false;
     tf.spriteChars = KAGSpriteCharacters(spriteNames);
-    tf.spriteBgs = KAGSpriteBackgrounds();
-    tf.spriteAt = [ 0, 0, 0, 0, 0 ] if tf.spriteAt === void;
+    spriteBackgroundsRead();
+    tf.spriteSel = 0 if tf.spriteSel === void || tf.spriteSel >= tf.spriteChars.count;
+    tf.spriteBgAt = 0 if tf.spriteBgAt === void;
+    tf.spriteLine = "" if tf.spriteLine === void;
+    if (tf.spriteSet === void) {
+        tf.spriteSet = %[];
+        // the first character on the stage, where it stood before (one at a time, 0.24.0)
+        var first = tf.spriteChars[0];
+        if (first !== void) { var s = spriteSetOf(first); s.on = true; s.x = spriteSpots[0]; }
+    }
     KAGSpriteClear();
 }
-// the World as the rows say: the stage, the character (the others away), its pose first, then
-// the outfit and face that pose has
+// the stage's backgrounds: the World's stages at each time of day, then the player's own pictures
+function spriteBackgroundsRead()
+{
+    var l = KAGSpriteBackgrounds(), own = KAGSpriteOwnBackgrounds();
+    for (var i = 0; i < own.count; i++) l.add(own[i]);
+    tf.spriteBgs = l;
+}
+// a character's settings (made on first use): its pose, outfit, face and variation, whether it's
+// on the stage, where (xpos, ypos), its zoom and whether it's turned round
+function spriteSetOf(name)
+{
+    var s = tf.spriteSet[name];
+    if (s === void) s = tf.spriteSet[name] = %[ at:[ 0, 0, 0, 0 ], on:false, x:void, y:0, zoom:100, flip:false ];
+    return s;
+}
+function spriteName() { return tf.spriteChars[tf.spriteSel]; }
+// the World as the settings say: the stage, then each character on it (the others away), its pose
+// first, then the outfit, face and variation that pose has
 function spriteApply()
 {
-    var at = tf.spriteAt, bg = tf.spriteBgs[at[4] % (tf.spriteBgs.count > 0 ? tf.spriteBgs.count : 1)];
+    var bgs = tf.spriteBgs, bg = bgs.count > 0 ? bgs[tf.spriteBgAt % bgs.count] : void;
     if (bg !== void) KAGSpriteStage(bg.stage, bg.time);
-    var name = tf.spriteChars[at[0]];
     for (var i = 0; i < tf.spriteChars.count; i++) {
-        var other = tf.spriteChars[i];
-        if (other != name && world_object.env.characters[other] !== void) KAGSpriteShow(other, %[ hide:true ]);
+        var name = tf.spriteChars[i], s = spriteSetOf(name);
+        if (!s.on) {
+            KAGSpriteShow(name, %[ hide:true ]) if world_object.env.characters[name] !== void;
+            continue;
+        }
+        var e = spritePlace(s), poses = KAGSpriteChoices(name, "pose");
+        if (poses.count > 0) { s.at[0] = s.at[0] % poses.count; e.pose = poses[s.at[0]]; }
+        KAGSpriteShow(name, e);
+        var e2 = spritePlace(s), lists = [ KAGSpriteChoices(name, "dress"), KAGSpriteChoices(name, "face"), KAGSpriteChoices(name, "diff") ];
+        var keys = [ "dress", "face", "diff" ];
+        for (var k = 0; k < 3; k++) if (lists[k].count > 0) { s.at[k + 1] = s.at[k + 1] % lists[k].count; e2[keys[k]] = lists[k][s.at[k + 1]]; }
+        KAGSpriteShow(name, e2);
     }
-    if (name === void) { KAGSpriteUpdate(); return; }
-    var poses = KAGSpriteChoices(name, "pose");
-    var e = %[ pos:"spriteview" ];
-    if (poses.count > 0) { at[1] = at[1] % poses.count; e.pose = poses[at[1]]; }
-    KAGSpriteShow(name, e);
-    var dresses = KAGSpriteChoices(name, "dress"), faces = KAGSpriteChoices(name, "face");
-    var e2 = %[];
-    if (dresses.count > 0) { at[2] = at[2] % dresses.count; e2.dress = dresses[at[2]]; }
-    if (faces.count > 0) { at[3] = at[3] % faces.count; e2.face = faces[at[3]]; }
-    KAGSpriteShow(name, e2) if dresses.count > 0 || faces.count > 0;
     KAGSpriteUpdate();
+}
+// where a character stands, as a World command's attributes
+function spritePlace(s)
+{
+    return %[ xpos:(int)s.x, ypos:(int)s.y, zoom:(int)s.zoom, flipx:s.flip ? 1 : 0 ];
 }
 // what row r shows now, and how many it has
 function spriteRowValues(r)
 {
-    var name = tf.spriteChars[tf.spriteAt[0]];
+    var name = spriteName();
     switch (r) {
     case 0: {
         var l = [];
-        for (var i = 0; i < tf.spriteChars.count; i++) {
-            var n = tf.spriteChars[i], ch = world_object.env.getCharacter(n);
-            l.add(ch !== void ? world_object.env.nameAliasOf(ch) : n);
-        }
+        for (var i = 0; i < tf.spriteChars.count; i++) l.add(spriteDisplayName(tf.spriteChars[i]));
         return l;
     }
     case 1: return name !== void ? KAGSpriteChoices(name, "pose") : [];
     case 2: return name !== void ? KAGSpriteChoices(name, "dress") : [];
     case 3: return name !== void ? KAGSpriteChoices(name, "face") : [];
-    case 4: {
+    case 4: return name !== void ? KAGSpriteChoices(name, "diff") : [];
+    case 5: {
         var l = [];
-        for (var i = 0; i < tf.spriteBgs.count; i++) l.add(tr(spriteWord(tf.spriteBgs[i].stage)) + " (" + tr(spriteWord(tf.spriteBgs[i].time)) + ")");
+        for (var i = 0; i < tf.spriteBgs.count; i++) {
+            var b = tf.spriteBgs[i];
+            l.add(b.file !== void ? b.name : tr(spriteWord(b.stage)) + " (" + tr(spriteWord(b.time)) + ")");
+        }
         return l;
     }
     }
     return [];
+}
+// the row's place in what it lists
+function spriteRowAt(r)
+{
+    if (r == 0) return tf.spriteSel;
+    if (r == 5) return tf.spriteBgAt;
+    var name = spriteName();
+    return name !== void ? spriteSetOf(name).at[r - 1] : 0;
+}
+function spriteDisplayName(n)
+{
+    var ch = world_object.env.getCharacter(n);
+    return ch !== void ? world_object.env.nameAliasOf(ch) : n;
 }
 // a name from envinit.tjs as words: "road" Road, "posleft" Posleft (the game's own names)
 function spriteWord(s)
@@ -2111,27 +2160,156 @@ function spriteStep(r, dir)
 {
     var n = spriteRowValues(r).count;
     if (n <= 0) return;
-    var at = tf.spriteAt;
-    at[r] = ((at[r] + dir) % n + n) % n;
-    // another character or pose starts from its first pose, outfit and face
-    if (r == 0) at[1] = at[2] = at[3] = 0;
-    else if (r == 1) at[2] = at[3] = 0;
+    var at = (spriteRowAt(r) + dir) % n;
+    at += n if at < 0;
+    if (r == 0) { tf.spriteSel = at; return; }
+    if (r == 5) { tf.spriteBgAt = at; return; }
+    var s = spriteSetOf(spriteName());
+    s.at[r - 1] = at;
+    // another pose starts from its first outfit, face and variation
+    if (r == 1) s.at[1] = s.at[2] = s.at[3] = 0;
+    // what's changed is seen: the character comes onto the stage
+    spriteOnStage(spriteName(), true);
 }
-// the rows' names and what each shows, on the panel
+// a character onto the stage (at the first place free) or off it
+function spriteOnStage(name, on)
+{
+    var s = spriteSetOf(name);
+    if (on && !s.on && s.x === void) {
+        s.x = spriteSpots[0];
+        for (var k = 0; k < spriteSpots.count; k++) {
+            var free = true;
+            for (var i = 0; i < tf.spriteChars.count; i++) {
+                var o = spriteSetOf(tf.spriteChars[i]);
+                free = false if o.on && o.x !== void && Math.abs(o.x - spriteSpots[k]) < 200;
+            }
+            if (free) { s.x = spriteSpots[k]; break; }
+        }
+    }
+    s.on = on;
+}
+// the button that puts the character picked onto the stage, or takes it off when it's there
+function spriteToggleImage(state)
+{
+    var n = spriteName();
+    return (n !== void && spriteSetOf(n).on ? "sprite_remove_" : "sprite_add_") + state;
+}
+function spriteToggle() { var n = spriteName(); spriteOnStage(n, !spriteSetOf(n).on) if n !== void; }
+function spriteFlip() { var n = spriteName(); if (n !== void) { var s = spriteSetOf(n); s.flip = !s.flip; spriteOnStage(n, true); } }
+function spriteZoomBy(steps)
+{
+    var n = spriteName();
+    if (n === void) return;
+    var s = spriteSetOf(n);
+    s.zoom = s.zoom + steps * 10;
+    s.zoom = 40 if s.zoom < 40;
+    s.zoom = 250 if s.zoom > 250;
+    spriteOnStage(n, true);
+}
+// the rows' names and what each shows, the line's name, on the panel
 function spriteRows()
 {
     var m = kag.current, hold = m.holdAlpha;
     m.holdAlpha = true;
-    for (var r = 0; r < 5; r++) {
-        var y = 262 + r * 130, l = spriteRowValues(r), v = l.count > 0 ? spriteWord(l[tf.spriteAt[r] % l.count]) : "—";
-        KAGDrawStyledText(m, "sprite.row", tr(spriteRowNames[r]), 60, y - 46, 560, 40);
-        KAGDrawStyledText(m, "sprite.value", r == 0 || r == 4 ? v : tr(v), 132, y, 416, 64);
-        if (l.count > 1) KAGDrawStyledText(m, "sprite.count", "%d / %d".sprintf(tf.spriteAt[r] % l.count + 1, l.count), 132, y + 64, 416, 28);
+    for (var r = 0; r < 6; r++) {
+        var y = spriteRowY + r * spriteRowStep, l = spriteRowValues(r), at = spriteRowAt(r);
+        var v = l.count > 0 ? spriteWord(l[at % l.count]) : "—";
+        KAGDrawStyledText(m, "sprite.row", tr(spriteRowNames[r]), 60, y - 34, 400, 32);
+        KAGDrawStyledText(m, "sprite.value", r == 0 || r == 5 ? v : tr(v), 132, y, 416, 64);
+        if (l.count > 1) KAGDrawStyledText(m, "sprite.count", "%d / %d".sprintf(at % l.count + 1, l.count), 420, y - 34, 200, 32);
         var on = l.count > 1;
         var p = m.names["sprite_prev" + r], q = m.names["sprite_next" + r];
         p.enabled = q.enabled = on if p !== void && q !== void;
     }
+    KAGDrawStyledText(m, "sprite.row", tr("Line"), 60, 794, 400, 32);
     m.holdAlpha = hold;
+}
+// the stage: drags and the wheel on the characters, the line in its window; over the part the
+// panel leaves (all of it without the panel)
+function spriteStage()
+{
+    var m = kag.current, full = !tf.spritePanel || tf.spriteShot;
+    var st = new KAGSpriteStageLayer(kag, m);
+    st.name = "spriteStage";
+    st.names = spriteFront;
+    st.onPick = spritePick;
+    st.onMove = spriteMove;
+    st.onZoom = spriteWheel;
+    st.setPos(full ? 0 : 680, 0);
+    st.setSize(full ? 1920 : 1240, 1080);
+    // the story's window (macro.ks, [initscene]); beside the panel, the part of the stage it leaves
+    st.lineRect = full ? [ 60, 714, 1800, 330 ] : [ 704, 714, 1192, 330 ];
+    var n = spriteName();
+    st.setLine(tf.spriteLine != "" && n !== void ? spriteDisplayName(n) : "", tf.spriteLine);
+    m.addLinkLayer(st);
+}
+// the characters on the stage, the one picked first (it's checked first for a click)
+function spriteFront()
+{
+    var l = [], n = spriteName();
+    l.add(n) if n !== void && spriteSetOf(n).on;
+    for (var i = tf.spriteChars.count - 1; i >= 0; i--) {
+        var c = tf.spriteChars[i];
+        l.add(c) if c != n && spriteSetOf(c).on;
+    }
+    return l;
+}
+// a character clicked or dragged: the rows edit it (the panel drawn again a moment later)
+function spritePick(name)
+{
+    if (name === void || name == spriteName()) return;
+    var i = tf.spriteChars.find(name);
+    if (i < 0) return;
+    tf.spriteSel = i;
+    tf.spriteFade = 100;
+    spriteAgainLater();
+}
+var spriteAgainTrigger;
+function spriteAgainLater()
+{
+    spriteAgainTrigger = new AsyncTrigger(function { if (kag.conductor.curStorage == "spritemode.ks") kag.process("spritemode.ks", "*again"); }, "") if spriteAgainTrigger === void;
+    spriteAgainTrigger.trigger();
+}
+// dragged: it moves with the pointer (the World drawn at once, without a transition)
+function spriteMove(name, dx, dy, done)
+{
+    var s = spriteSetOf(name);
+    if (s.from === void) s.from = [ s.x !== void ? s.x : 0, s.y ];
+    s.x = (int)(s.from[0] + dx), s.y = (int)(s.from[1] + dy);
+    KAGSpriteShow(name, %[ xpos:s.x, ypos:s.y ]);
+    KAGSpriteUpdate();
+    delete s.from if done;
+}
+// the wheel over a character: it zooms, the World drawn at once
+function spriteWheel(name, steps)
+{
+    var s = spriteSetOf(name);
+    s.zoom = (int)(s.zoom + steps * 5);
+    s.zoom = 40 if s.zoom < 40;
+    s.zoom = 250 if s.zoom > 250;
+    KAGSpriteShow(name, %[ zoom:s.zoom ]);
+    KAGSpriteUpdate();
+}
+// the line typed (Enter): said by the character picked
+function spriteLineSet()
+{
+    tf.spriteFade = 100;
+    spriteAgainLater();
+}
+// the panel away (true: back); whether it changed
+function spritePanelShow(on)
+{
+    if (tf.spritePanel == on) return false;
+    tf.spritePanel = on;
+    tf.spriteFade = 150;
+    return true;
+}
+// the camera: the screen drawn without the panel, then this (the screenshot, as F12 takes one)
+function spriteShot()
+{
+    tf.spriteShot = false;
+    tf.spriteFade = 150;
+    kag.saveScreenshot();
 }
 function spriteLeave()
 {

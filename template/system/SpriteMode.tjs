@@ -1,18 +1,30 @@
 /**
- * Sprite Mode (since 0.24.0): the World's characters one at a time, in any of their poses,
- * outfits and faces, over any stage at any time of day, for a game's character viewer (the
- * sample's: Extras, the CG screen's Characters button, spritemode.ks and Override.tjs).
+ * Sprite Mode (since 0.24.0): the World's characters in any of their poses, outfits and faces,
+ * over any stage at any time of day, for a game's character viewer (the sample's: Extras, the
+ * CG screen's Characters button, spritemode.ks and Override.tjs). Since 0.25.0 several at once,
+ * moved, zoomed and turned round, a layered character's variations (its diffs), a line said in a
+ * message window, a screenshot, and backgrounds of the player's own.
  *
  *   KAGSpriteCharacters(names)        the names that can be drawn here (a Live2D or VRM
  *                                     character only where its plugin draws it)
- *   KAGSpriteChoices(name, what)      the character's "pose", "dress" or "face" names (for its
- *                                     current pose: show the pose first)
+ *   KAGSpriteChoices(name, what)      the character's "pose", "dress", "face" or "diff" names
+ *                                     (for its current pose: show the pose first; diffs: a
+ *                                     layered character's, _info.txt, for its outfit)
  *   KAGSpriteBackgrounds()            [%[ stage, time ]...]: every stage at every time of day
+ *   KAGSpriteBackgroundFolder()       the folder of the player's own backgrounds (the save
+ *                                     folder's backgrounds/; void on the web and phones)
+ *   KAGSpriteOwnBackgrounds()         [%[ stage, time, file, name ]...]: the pictures there, each
+ *                                     a stage of the World now (filling the screen)
  *   KAGSpriteShow(name, elm)          the character's World command (elm: pose, dress, face,
- *                                     xpos, ...), as its tag in a script would run it
+ *                                     diff, xpos, ypos, zoom, flipx, ...), as its tag in a script
+ *                                     would run it
  *   KAGSpriteStage(stage, time)       the stage at the time of day
  *   KAGSpriteUpdate()                 the World drawn as the commands left it
  *   KAGSpriteClear()                  every character and the stage gone
+ *   KAGSpriteHit(name, x, y)          whether the character's picture is at x, y (the screen's
+ *                                     coordinates; what it draws, not its rectangle)
+ *   KAGSpriteStageLayer               a message layer's link over the stage: drags and the wheel
+ *                                     on the characters, and a line in a message window (below)
  */
 
 function KAGSpriteCharacters(names)
@@ -40,6 +52,8 @@ function KAGSpriteChoices(name, what)
 		case "pose":  list = ch.getPoseNames(); break;
 		case "dress": list = ch.getDressNames(); break;
 		case "face":  list = ch.getFaceNames(); break;
+		// a layered character's diffs for its outfit (KAGEnvCharacterEx.tjs); none for others
+		case "diff":  list = typeof ch.getDiffNames != "undefined" ? ch.getDiffNames(true) : void; break;
 		}
 	} catch (e) {
 		dm("Sprite Mode: " + name + "'s " + what + " names: " + e.message);
@@ -51,8 +65,10 @@ function KAGSpriteChoices(name, what)
 function KAGSpriteBackgrounds()
 {
 	var env = world_object.env, ret = [], stages = KAGSpriteKeys(env.stages), times = KAGSpriteKeys(env.times);
-	for (var s = 0; s < stages.count; s++)
+	for (var s = 0; s < stages.count; s++) {
+		if (stages[s].indexOf(KAGSpriteOwnPrefix) == 0) continue; // the player's own (KAGSpriteOwnBackgrounds)
 		for (var t = 0; t < times.count; t++) ret.add(%[ stage:stages[s], time:times[t] ]);
+	}
 	return ret;
 }
 
@@ -66,12 +82,78 @@ function KAGSpriteKeys(d)
 	return ret;
 }
 
+// ---- the player's own backgrounds ---------------------------------------------------------------
+
+var KAGSpriteOwnPrefix = "spriteown";
+var KAGSpriteOwnSizes = %[]; // a picture's size, by its storage name: [w, h]
+var KAGSpriteOwnExtensions = [ ".png", ".jpg", ".jpeg", ".bmp", ".tlg", ".webp" ];
+
+function KAGSpriteBackgroundFolder()
+{
+	// the web's and the phones' save folders aren't a folder the player can put files in
+	var tag = typeof System.platformTag != "undefined" ? System.platformTag : "windows";
+	if (tag == "web" || tag == "android" || tag == "ios") return void;
+	if (typeof Storages.dirlist == "undefined") return void;
+	return kag.saveDataLocation + "backgrounds/";
+}
+
+// the pictures in the folder (names in alphabetical order), each made a stage of the World that
+// fills the screen (its resolution: a large photo shown smaller, keeping its shape, cut to fit)
+function KAGSpriteOwnBackgrounds()
+{
+	var ret = [], folder = KAGSpriteBackgroundFolder();
+	if (folder === void) return ret;
+	var files;
+	try { files = Storages.dirlist(folder); } catch { return ret; }
+	if (files === void) return ret;
+	var names = [];
+	for (var i = 0; i < files.count; i++) {
+		var f = (string)files[i], low = f.toLowerCase();
+		if (f == "" || f.charAt(f.length - 1) == "/") continue;
+		var ok = false;
+		for (var j = 0; j < KAGSpriteOwnExtensions.count && !ok; j++) {
+			var e = KAGSpriteOwnExtensions[j];
+			ok = low.length > e.length && low.substring(low.length - e.length) == e;
+		}
+		names.add(f) if ok;
+	}
+	names.sort();
+	var env = world_object.env, time = env.defaultTime !== void ? (string)env.defaultTime : "";
+	for (var i = 0; i < names.count; i++) {
+		var storage = folder + names[i], size = KAGSpriteOwnSizes[storage];
+		if (size === void) {
+			try {
+				var l = new global.Layer(kag, kag.fore.base);
+				l.loadImages(storage);
+				size = [ l.imageWidth, l.imageHeight ];
+				invalidate l;
+			} catch (e) {
+				dm("Sprite Mode: " + storage + ": " + e.message);
+				size = [ 0, 0 ];
+			}
+			KAGSpriteOwnSizes[storage] = size;
+		}
+		if (size[0] <= 0 || size[1] <= 0) continue;
+		// the screen filled: the smaller of the two ratios, as a resolution (100: as it is)
+		var sw = kag.scWidth, sh = kag.scHeight, k = size[0] / sw < size[1] / sh ? size[0] / sw : size[1] / sh;
+		var stage = KAGSpriteOwnPrefix + i;
+		env.stages[stage] = %[ image:storage, resolution:(int)(k * 100) ];
+		ret.add(%[ stage:stage, time:time, file:storage, name:names[i].replace(/\.[^.]*$/, "") ]);
+	}
+	return ret;
+}
+
+// ---- the World --------------------------------------------------------------------------------
+
 function KAGSpriteShow(name, elm)
 {
-	// at once (a character's own transition would draw it on the back page, which a screen's
-	// [backlay] copies over), unless the game gives one
-	elm.notrans = true if elm.trans === void;
-	world_object.env.unknown(name, elm);
+	// between [begintrans] and [endtrans]: at once (a character's own transition would draw it on
+	// the back page, which a screen's [backlay] copies over), unless the game gives one; outside
+	// them (a drag), as a script's tag would (there notrans makes an empty transition, which
+	// leaves the character's new layer hidden)
+	var env = world_object.env;
+	elm.notrans = true if elm.trans === void && env.transMode;
+	env.unknown(name, elm);
 }
 
 // the World's layers drawn as the commands left it (after KAGSpriteShow and KAGSpriteStage)
@@ -92,4 +174,227 @@ function KAGSpriteClear()
 	var env = world_object.env;
 	env.initEnv();
 	env.updateAll() if typeof env.updateAll != "undefined";
+}
+
+// whether the character draws something at x, y on the screen: its layer as the engine has it
+// (an affine layer's own size and pixels are its picture's), and a pixel there that isn't clear
+function KAGSpriteHit(name, x, y)
+{
+	try {
+		var ch = world_object.env.characters[name];
+		if (ch === void || !ch.isShowBU()) return false;
+		var l = ch.targetLayer;
+		if (l === void || !isvalid l) return false;
+		var L = global.Layer;
+		for (var p = l; p !== void && p !== null; p = p.parent) {
+			if (!*(&L.visible incontextof p)) return false;
+			x -= *(&L.left incontextof p), y -= *(&L.top incontextof p) if p !== kag.primaryLayer;
+			if (p === kag.primaryLayer) break;
+		}
+		var w = *(&L.width incontextof l), h = *(&L.height incontextof l);
+		if (x < 0 || y < 0 || x >= w || y >= h) return false;
+		var ix = x - *(&L.imageLeft incontextof l), iy = y - *(&L.imageTop incontextof l);
+		if (ix < 0 || iy < 0 || ix >= *(&L.imageWidth incontextof l) || iy >= *(&L.imageHeight incontextof l)) return false;
+		return (L.getMaskPixel incontextof l)(ix, iy) > 32;
+	} catch (e) {
+		return false;
+	}
+}
+
+/**
+ * The stage of a Sprite Mode screen: a message layer's link (addLinkLayer, so the page copies
+ * keep it) over the part of the screen the characters stand on. A press on a character picks it,
+ * a drag moves it, the wheel zooms it; a line can be shown in a message window drawn as the story
+ * draws one (the window's frame and its name box, the text styles sprite.line and sprite.name),
+ * placed in the screen's coordinates (lineRect; the text and the name box in it as the story's
+ * [position] places them: textInset, nameAt) and cut to the layer. A window narrower than its
+ * frame's picture keeps the picture's ends and stretches its middle.
+ *
+ *   var s = new KAGSpriteStageLayer(kag, kag.current);
+ *   s.setPos(680, 0); s.setSize(1240, 1080);
+ *   s.names = function { return [ "pip", "ai" ]; };     // the characters on it, the front first
+ *   s.onPick = function(name) {};                        // clicked or dragged, once let go
+ *                                                         // (void: the stage itself)
+ *   s.onMove = function(name, dx, dy, done) {};           // dragged so far (done: let go)
+ *   s.onZoom = function(name, steps) {};                  // a wheel's notches (up: +)
+ *   s.lineRect = [ 700, 714, 1200, 330 ];                // where the window is (the screen's)
+ *   s.setLine("Ai", "Hello.");                            // "" and "": no window
+ *   kag.current.addLinkLayer(s);
+ */
+KAGDefineTextStyle("sprite.line", %[ role:"message", size:39, lines:3, lineSpacing:5, shadow:true, minSize:24 ]);
+KAGDefineTextStyle("sprite.name", %[ role:"message", size:34, bold:true, align:"center", valign:"middle", shadow:true, minSize:18 ]);
+
+class KAGSpriteStageLayer extends Layer
+{
+	var window;
+	var names, onPick, onMove, onZoom;
+	var lineFrame = "messagewindow", nameFrame = "namebox";
+	var lineRect = [ 60, 714, 1800, 330 ], textInset = [ 48, 66, 60, 92 ], nameAt = [ 36, -30, 300, 64 ], capWidth = 64;
+	var speaker = "", line = "";
+	var pressed = false, dragging = false, pressX, pressY, grabbed, dragThreshold = 6, wheelHook;
+	var a11yHidden = true, linkNum;
+
+	function KAGSpriteStageLayer(win, par)
+	{
+		super.Layer(win, par);
+		window = win;
+		type = ltAlpha;
+		face = dfAlpha;
+		hitType = htMask;
+		hitThreshold = 0; // the whole stage takes the mouse
+		visible = true;
+		wheelHook = onWheelHook;
+		window.addHook("onMouseWheelHook", wheelHook);
+	}
+
+	function finalize()
+	{
+		window.removeHook("onMouseWheelHook", wheelHook) if isvalid window;
+		super.finalize(...);
+	}
+
+	function setSize(w, h)
+	{
+		super.setSize(w, h);
+		setImageSize(w, h);
+		redraw();
+	}
+
+	function setPos(x, y)
+	{
+		super.setPos(x, y);
+		redraw();
+	}
+
+	function setLine(name, text)
+	{
+		speaker = name !== void ? (string)name : "", line = text !== void ? (string)text : "";
+		redraw();
+	}
+
+	// the screen's coordinates of a point on the layer
+	function screenX(x) { var p = this, sx = x; for (; p !== void && p !== null && p !== window.primaryLayer; p = p.parent) sx += p.left; return sx; }
+	function screenY(y) { var p = this, sy = y; for (; p !== void && p !== null && p !== window.primaryLayer; p = p.parent) sy += p.top; return sy; }
+
+	// the window, in the screen's coordinates less the layer's place
+	function redraw()
+	{
+		if (!isvalid this || imageWidth <= 0) return;
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		// (krkr_richtext draws a layer's pixels only once something has read them)
+		if (typeof this.useCache != "undefined") this.useCache;
+		if (line != "") {
+			var x = lineRect[0] - screenX(0), y = lineRect[1] - screenY(0), w = lineRect[2], h = lineRect[3];
+			drawPicture(lineFrame, x, y, w, h);
+			if (speaker != "") drawPicture(nameFrame, x + nameAt[0], y + nameAt[1], nameAt[2], nameAt[3]);
+			if (typeof this.useCache != "undefined") this.useCache; // (again, after the copies)
+			if (speaker != "") KAGDrawStyledText(this, "sprite.name", speaker, x + nameAt[0] + 12, y + nameAt[1], nameAt[2] - 24, nameAt[3]);
+			KAGDrawStyledText(this, "sprite.line", line, x + textInset[0], y + textInset[1], w - textInset[0] - textInset[2], h - textInset[1] - textInset[3]);
+		}
+		update();
+	}
+
+	// a picture by name at x, y, w x h (what's off the layer is cut): narrower or wider than the
+	// picture, its ends (capWidth) as they are and its middle stretched
+	function drawPicture(name, x, y, w, h)
+	{
+		var pic = new global.Layer(window, this);
+		try {
+			pic.loadImages(name);
+			var pw = pic.imageWidth, ph = pic.imageHeight, cap = capWidth;
+			cap = pw \ 3 if cap > pw \ 3;
+			cap = w \ 2 if cap > w \ 2;
+			if (pw == w && ph == h) operateRect(x, y, pic, 0, 0, w, h, omAlpha, 255);
+			else if (ph == h) {
+				operateRect(x, y, pic, 0, 0, cap, h, omAlpha, 255);
+				operateStretch(x + cap, y, w - cap * 2, h, pic, cap, 0, pw - cap * 2, ph, omAlpha, 255, stLinear);
+				operateRect(x + w - cap, y, pic, pw - cap, 0, cap, h, omAlpha, 255);
+			} else operateStretch(x, y, w, h, pic, 0, 0, pw, ph, omAlpha, 255, stLinear);
+		} catch (e) {
+			fillRect(x, y, w, h, 0xc0101040);
+		}
+		invalidate pic;
+	}
+
+	// the character at a point of the layer: the front one that draws something there
+	function characterAt(x, y)
+	{
+		if (names === void) return void;
+		var list = KAGBindToGlobal(names)(), sx = screenX(x), sy = screenY(y);
+		for (var i = 0; list !== void && i < list.count; i++) if (KAGSpriteHit(list[i], sx, sy)) return list[i];
+		return void;
+	}
+
+	function onMouseDown(x, y, button, shift)
+	{
+		if (button != mbLeft) { super.onMouseDown(...); return; }
+		window.gestures.cancel() if typeof window.gestures == "Object" && window.gestures !== void && typeof window.gestures.cancel != "undefined";
+		pressed = true, dragging = false, pressX = x, pressY = y;
+		grabbed = characterAt(x, y);
+	}
+
+	function onMouseMove(x, y, shift)
+	{
+		if (pressed && grabbed !== void) {
+			if (!dragging && (Math.abs(x - pressX) > dragThreshold || Math.abs(y - pressY) > dragThreshold)) dragging = true;
+			if (dragging && onMove !== void) KAGBindToGlobal(onMove)(grabbed, x - pressX, y - pressY, false);
+			return;
+		}
+		cursor = !pressed && characterAt(x, y) !== void ? window.cursorPointed : window.cursorDefault;
+		super.onMouseMove(...);
+	}
+
+	function onMouseUp(x, y, button, shift)
+	{
+		if (button != mbLeft || !pressed) { super.onMouseUp(...); return; }
+		pressed = false;
+		if (dragging && grabbed !== void && onMove !== void) KAGBindToGlobal(onMove)(grabbed, x - pressX, y - pressY, true);
+		dragging = false;
+		// (picked once the press is over: the game may draw its screen again)
+		KAGBindToGlobal(onPick)(grabbed) if onPick !== void;
+	}
+
+	// the wheel over a character zooms it (through the window's hook, which keeps it from KAG's
+	// wheel: the history, a click)
+	function onMouseWheel(shift, delta, x, y) {}
+
+	function onWheelHook(shift, delta, x, y)
+	{
+		if (!isvalid this || window.currentDialog !== void || onZoom === void) return false;
+		for (var l = this; l !== null && l !== void; l = l.parent) if (!l.visible) return false;
+		var cx = cursorX, cy = cursorY;
+		if (cx < 0 || cy < 0 || cx >= width || cy >= height) return false;
+		var name = characterAt(cx, cy);
+		if (name === void) return false;
+		KAGBindToGlobal(onZoom)(name, delta / 120.0);
+		return true;
+	}
+
+	// as a message layer's link (addLinkLayer)
+	function commit() {}
+
+	function onSearchPrevFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findPrevFocusable != "undefined") layer = parent.findPrevFocusable(this, layer);
+		super.onSearchPrevFocusable(layer);
+	}
+
+	function onSearchNextFocusable(layer)
+	{
+		if (linkNum !== void && typeof parent.findNextFocusable != "undefined") layer = parent.findNextFocusable(this, layer);
+		super.onSearchNextFocusable(layer);
+	}
+
+	function cloneFor(win, par)
+	{
+		var l = new global.KAGSpriteStageLayer(win, par);
+		l.name = name;
+		l.names = names, l.onPick = onPick, l.onMove = onMove, l.onZoom = onZoom;
+		l.lineFrame = lineFrame, l.nameFrame = nameFrame, l.lineRect = lineRect, l.textInset = textInset, l.nameAt = nameAt, l.capWidth = capWidth;
+		l.speaker = speaker, l.line = line;
+		l.setPos(left, top);
+		l.setSize(width, height);
+		l.visible = visible;
+		return l;
+	}
 }

@@ -5621,26 +5621,98 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
 
-    @step("Sprite Mode: a character at a time in its poses, outfits and faces, over the street at any time of day")
+    @step("Sprite Mode: characters together in their poses, outfits, faces and variations, one dragged and turned round,"
+          " a line said, the street by night or a picture of the player's own, a screenshot without the panel")
     def _():
         if eng.tjs('return typeof global.KAGSpriteShow != "undefined" && typeof global.spriteInit != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: a framework or game from before Sprite Mode)", flush=True)
             return
-        state = ('(function() { var e = world_object.env, r = [], at = tf.spriteAt;'
-                 ' for (var i = 0; i < tf.spriteChars.count; i++) { var c = e.characters[tf.spriteChars[i]]; if (c !== void && c.isShowBU()) r.add(tf.spriteChars[i] + ":" + c.face); }'
-                 ' return r.join(",") + "|" + e.stage.time + "|" + spriteRowValues(3).count; })()')
-        eng.tjs('tf.spriteAt = void; sf.extramode = 1; kag.process("spritemode.ks"); return 1;')
-        eng.wait("Sprite Mode", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        stage25 = eng.tjs('return typeof global.KAGSpriteStageLayer != "undefined" ? 1 : 0;') == 1
+        # a picture of the player's own in the save folder's backgrounds/ (a desktop's)
+        own = False
+        src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "bgimage", "event1.jpg")
+        if stage25 and isinstance(eng, DesktopEngine) and os.path.exists(src) and \
+                eng.tjs('return KAGSpriteBackgroundFolder() !== void ? 1 : 0;') == 1:
+            folder = os.path.join(eng.savedir, "backgrounds")
+            os.makedirs(folder, exist_ok=True)
+            shutil.copyfile(src, os.path.join(folder, "My Picture.jpg"))
+            own = True
+        state = ('(function() { var e = world_object.env, r = [];'
+                 ' for (var i = 0; i < tf.spriteChars.count; i++) { var n = tf.spriteChars[i], c = e.characters[n];'
+                 '   if (c !== void && c.isShowBU()) r.add(n + ":" + c.face + (typeof c.diff != "undefined" && c.diff !== void ? "/" + c.diff : "")); }'
+                 ' return r.join(",") + "|" + e.stage.time + "|" + spriteRowValues(3).count + "|" + e.stage.stage; })()')
+        ready = ('kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0' +
+                 (' && kag.fore.messages[0].names.spriteStage !== void' if stage25 else ''))
+        eng.tjs('tf.spriteAt = tf.spriteSet = tf.spriteSel = tf.spriteBgAt = tf.spriteLine = void; sf.extramode = 1;'
+                ' kag.process("spritemode.ks"); return 1;')
+        eng.wait("Sprite Mode", ready, timeout=30)
         first = str(eng.tjs("return " + state + ";"))
-        eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 2); kag.process("spritemode.ks", "*again"); return 1;')
+        if not stage25:
+            # (0.24.0: a character at a time)
+            eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 2); kag.process("spritemode.ks", "*again"); return 1;')
+        else:
+            # Pip picked, his next face and his arms waving: onto the stage beside Ai, by night
+            eng.tjs('spriteStep(0, 1); spriteStep(3, 1); spriteStep(4, 1); spriteStep(5, 2); kag.process("spritemode.ks", "*again"); return 1;')
         time.sleep(0.5)
-        eng.wait("Sprite Mode again", 'kag.conductor.curStorage == "spritemode.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        eng.wait("Sprite Mode again", ready, timeout=30)
         second = str(eng.tjs("return " + state + ";"))
-        print("     %s, then %s (who's shown:face|time|faces)" % (first, second), flush=True)
+        print("     %s, then %s (who's shown:face/variation|time|faces|stage)" % (first, second), flush=True)
         f, s2 = first.split("|"), second.split("|")
-        if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or not s2[0].startswith("pip:") or "," in s2[0] or \
-                s2[0] == "pip:" + spritefirst(eng) or s2[1] != "night" or int(s2[2]) < 2:
-            raise SmokeError("Sprite Mode didn't show Ai by day, then only Pip with his next face at night: %s / %s" % (first, second))
+        if not stage25:
+            if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or not s2[0].startswith("pip:") or "," in s2[0] or \
+                    s2[0] == "pip:" + spritefirst(eng) or s2[1] != "night" or int(s2[2]) < 2:
+                raise SmokeError("Sprite Mode didn't show Ai by day, then only Pip with his next face at night: %s / %s" % (first, second))
+        else:
+            shown = dict(x.split(":", 1) for x in s2[0].split(",") if ":" in x)
+            pip = shown.get("pip", "").split("/")
+            if not f[0].startswith("ai:") or "," in f[0] or f[1] != "day" or "ai" not in shown or pip[0] in ("", spritefirst(eng)) or \
+                    (len(pip) > 1 and pip[1] != "wave") or s2[1] != "night":
+                raise SmokeError("Sprite Mode didn't show Ai by day, then Ai and Pip (his next face, waving) together at night: %s / %s" % (first, second))
+            # a drag on Ai moves her and picks her (the rows edit her)
+            drag = str(eng.tjs('''var s = tf.spriteSet.ai, x0 = s.x, st = kag.fore.messages[0].names.spriteStage;
+                var sx = 960 + s.x, y = 500, hit = KAGSpriteHit("ai", sx, y);
+                st.onMouseDown(sx - st.left, y, mbLeft, 0);
+                for (var k = 1; k <= 5; k++) st.onMouseMove(sx - st.left - 30 * k, y + 4 * k, 0);
+                st.onMouseUp(sx - st.left - 150, y + 20, mbLeft, 0);
+                return [hit, s.x - x0, s.y, tf.spriteChars[tf.spriteSel]].join(",");'''))
+            time.sleep(0.5)
+            eng.wait("Sprite Mode after the drag", ready, timeout=30)
+            drag += "," + str(eng.tjs('var s = tf.spriteSet.ai; return [KAGSpriteHit("ai", 960 + s.x, 520), KAGSpriteHit("ai", 960 + s.x + 150, 300)].join(",");'))
+            print("     a drag on Ai: %s (hit, moved by, down by, picked, there now, not where she was)" % drag, flush=True)
+            if drag != "1,-150,20,ai,1,0":
+                raise SmokeError("a drag on Ai in Sprite Mode didn't move her and pick her: %s" % drag)
+            # turned round, saying a line; the player's own picture behind her
+            eng.tjs('spriteFlip(); tf.spriteLine = "Hello from the stage."; tf.spriteBgAt = tf.spriteBgs.count - 1;'
+                    ' kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(0.5)
+            eng.wait("Sprite Mode turned round", ready, timeout=30)
+            said = str(eng.tjs('''var st = kag.fore.messages[0].names.spriteStage, c = world_object.env.characters.ai;
+                return [c.flipx, st.speaker, st.line, world_object.env.stage.stage, tf.spriteBgs[tf.spriteBgs.count - 1].name].join("|");'''))
+            print("     turned round and saying a line: %s" % said, flush=True)
+            sd = said.split("|")
+            if sd[0] != "1" or sd[1] != "Ai" or sd[2] != "Hello from the stage." or (own and (sd[3] != "spriteown0" or sd[4] != "My Picture")):
+                raise SmokeError("Ai wasn't turned round, saying the line, over the player's own picture: %s" % said)
+            # the camera: the stage without the panel, saved as F12 saves one, then the panel again
+            before = len([n for n in os.listdir(eng.savedir) if n.startswith("screenshot")]) if isinstance(eng, DesktopEngine) else 0
+            eng.tjs('tf.spriteShot = true; kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(1.0)
+            eng.wait("Sprite Mode after the camera", ready + ' && !tf.spriteShot && kag.fore.messages[0].names.sprite_toggle !== void', timeout=30)
+            if isinstance(eng, DesktopEngine):
+                after = 0
+                for i in range(20):
+                    after = len([n for n in os.listdir(eng.savedir) if n.startswith("screenshot")])
+                    if after > before:
+                        break
+                    time.sleep(0.25)
+                print("     screenshots: %d, then %d" % (before, after), flush=True)
+                if after != before + 1:
+                    raise SmokeError("Sprite Mode's camera didn't save a screenshot")
+            # the panel away, and back with a right-click
+            eng.tjs('spritePanelShow(false); kag.process("spritemode.ks", "*again"); return 1;')
+            time.sleep(0.5)
+            eng.wait("Sprite Mode without the panel", ready + ' && kag.fore.messages[0].names.sprite_show !== void', timeout=30)
+            eng.key("VK_ESCAPE")
+            eng.wait("the panel back", ready + ' && kag.fore.messages[0].names.sprite_toggle !== void', timeout=30)
         eng.key("VK_ESCAPE")
         eng.wait("the CG screen", 'kag.conductor.curStorage == "cgmode.ks" && kag.inStable', timeout=30)
         eng.key("VK_ESCAPE")
