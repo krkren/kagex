@@ -54,6 +54,12 @@ KAGDefineTextStyle("manual.heading", %[ size:36, bold:true, color:0x5025ff, line
 KAGDefineTextStyle("manual.title", %[ size:44, bold:true, color:0xffffff, edge:true, edgeColor:0x010062, edgeExtent:3, edgeEmphasis:255, valign:"middle" ]);
 KAGDefineTextStyle("manual.button", %[ size:28, bold:true, color:0xffffff, edge:true, edgeColor:0x010062, edgeExtent:2, edgeEmphasis:255, align:"center", valign:"middle" ]);
 
+// pages made by a function (its lines, as a file's), by name: the debug pages (DebugTools.tjs)
+var KAGManualPages = %[];
+
+// links of a game's own kinds: <kind>:<what> runs KAGManualLinkKinds[kind](what, the manual)
+var KAGManualLinkKinds = %[];
+
 // action: links the options table and Actions.tjs don't have
 var KAGManualActions = %[
 	"controls" => (function { kag.showControls(); } incontextof global),
@@ -189,10 +195,14 @@ function KAGManualJoin(a, b)
  */
 function KAGManualRead(page)
 {
-	var file = KAGManualFile(page);
-	if (file === void) return;
 	var lines = [];
-	lines.load(file);
+	var maker = KAGManualPages[((string)page).toLowerCase()];
+	if (maker !== void) lines = maker();
+	else {
+		var file = KAGManualFile(page);
+		if (file === void) return;
+		lines.load(file);
+	}
 	var doc = %[ name:page, title:"", blocks:[] ], para, paraKind;
 	var flush = function(doc, para, kind) { doc.blocks.add(%[ kind:kind, segs:KAGManualInline(para) ]) if para != ""; };
 	for (var i = 0; i < lines.count; i++) {
@@ -352,7 +362,8 @@ class KAGManualLayer extends Layer
 
 	function finalize()
 	{
-		window.keyCapture = void if (isvalid window && window.keyCapture === onKey);
+		// (at the end the window may be gone first)
+		try { window.keyCapture = void if (isvalid window && window.keyCapture === onKey); } catch (e) {}
 		KAGA11y.removeNodes(this);
 		super.finalize(...);
 	}
@@ -729,7 +740,10 @@ class KAGManualLayer extends Layer
 			if (!done) copyText(arg, true);
 			break;
 		case "copy": copyText(arg, false); break;
-		default: go(t); break;
+		default:
+			if (KAGManualLinkKinds[kind] !== void) KAGManualLinkKinds[kind](arg, this);
+			else go(t);
+			break;
 		}
 	}
 
@@ -950,7 +964,7 @@ function KAGManualLinkAvailable(t)
 {
 	var colon = t.indexOf(":"), kind = colon < 0 ? "page" : t.substring(0, colon), arg = colon < 0 ? t : t.substring(colon + 1);
 	switch (kind) {
-	case "page": return KAGManualFile(arg) !== void;
+	case "page": return KAGManualPages[arg.toLowerCase()] !== void || KAGManualFile(arg) !== void;
 	case "option":
 		var eq = arg.indexOf("="), o = KAGOptions[eq < 0 ? arg : arg.substring(0, eq)];
 		return o !== void && (o.available === void || o.available());

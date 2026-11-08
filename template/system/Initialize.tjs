@@ -970,6 +970,11 @@ if (typeof System.createAppLock == "undefined") {
     System.createAppLock = function(key) { return true; };
 }
 
+// -instance=<name> (since 0.26.0): a lock of its own, so tools/playtest.py runs several at once
+// (not in a signed build, which refuses startup options: SignatureCheck.tjs)
+var lockInstance = System.getArgument("-instance");
+lockKey += "_" + lockInstance if lockInstance != "" && global.KAGSigned !== true;
+
 if(!System.createAppLock(System.appLockKey=(System.exePath + lockKey).replace(/[^A-Za-z0-9]/g, '_')) && typeof global.restart == "undefined")
 
 {
@@ -1167,6 +1172,7 @@ KAGLoadScript("Voices.tjs"); // the voices heard, and the player's favourites in
 KAGLoadScript("SpriteMode.tjs"); // the characters one at a time in any pose and face, for a viewer (since 0.24.0)
 KAGLoadScript("Flowchart.tjs"); // the flowchart: the scenes, the ways between them, the route taken (since 0.24.0)
 KAGLoadScript("Manual.tjs"); // the manual: pages of help, links that change settings (since 0.26.0)
+KAGLoadScript("DebugTools.tjs"); // the route runner, the tag trace, the Debug menu's helpers (since 0.26.0)
 
 
 
@@ -1499,6 +1505,13 @@ if (System.getArgument("-voicelines") != "") {
 	var r = KAGListVoiceLines(System.getArgument("-voicelines"));
 	KAGUnlinkPluginsBeforeExit();
 	System.exit(r.failed > 0 ? 1 : 0);
+}
+
+// -allseen=yes: every CG, scene, song and movie counts as seen this run (tf.allseen, which is
+// never saved; since 0.26.0), not in a signed build
+if (global.KAGSigned !== true && typeof global.kag == "Object" && kag !== void) {
+	var allseen = System.getArgument("-allseen");
+	kag.tflags.allseen = true if allseen == "yes" || allseen == "true";
 }
 
 // In a signed build, verify the archives, the engine files and the patches first, then start the

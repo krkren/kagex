@@ -4878,6 +4878,62 @@ def sample_steps(eng):
         if report != "none" and (int(report.split(",")[0]) < 100 or int(report.split(",")[2]) != int(report.split(",")[1])):
             raise SmokeError("the compiler's count of Japanese texts is off: %s" % report)
 
+    @step("debug helpers: the script's lines page and a go-to from it, the flags page and a flag set, the tag trace, the layer and World dumps, a bug report, and the route runner taking a choice")
+    def _():
+        if eng.tjs('return typeof global.KAGPlaytest == "Object" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the debug helpers)", flush=True)
+            return
+        stable = 'kag.inStable && kag.clickWaiting && kag.conductor.curStorage == "char.ks"'
+        isman = 'kag.currentDialog !== void && kag.currentDialog instanceof "KAGManualLayer" && kag.currentDialog.opened'
+        eng.tjs('kag.process("char.ks", "*start"); return 1;')
+        for i in range(3):
+            eng.wait("a click wait", stable, timeout=30)
+            eng.tjs('kag.onPrimaryClick(); return 1;')
+        eng.wait("a click wait", stable, timeout=30)
+        here = str(eng.tjs('return KAGDebugDescribe();'))
+        # the lines page: a link for each text; one further on is gone to
+        eng.tjs('KAGShowManual("debuglines"); return 1;')
+        eng.wait("the lines page", isman, timeout=10)
+        lines = str(eng.tjs('var m = kag.currentDialog, n = 0, t = ""; for (var i = 0; i < m.links.count; i++) if (m.links[i].target.indexOf("goto:") == 0) { n++; t = m.links[i].target if n == 12; }'
+                            ' return n + "|" + t;'))
+        target = lines.split("|", 1)[1]
+        eng.tjs('var m = kag.currentDialog; for (var i = 0; i < m.links.count; i++) if (m.links[i].target == "%s") { m.follow(i); break; } return 1;' % target)
+        eng.wait("the line gone to", 'kag.currentDialog === void && kag.inStable && kag.clickWaiting', timeout=30)
+        went = str(eng.tjs('var h = KAGDebugHere(); return [h.storage, h.label, world_object.player.curTextId].join("|");'))
+        # the flags page and a flag set from it
+        eng.tjs('KAGShowManual("debugflags"); return 1;')
+        eng.wait("the flags page", isman, timeout=10)
+        flags = str(eng.tjs('var m = kag.currentDialog, r = 0;'
+                            ' for (var i = 0; i < m.links.count; i++) if (m.links[i].target == "flag:f.charRoute=station") { m.follow(i); r = 1; break; }'
+                            ' var t = m.doc.title; m.close(); return [t, r, kag.flags.charRoute].join("|");'))
+        eng.wait("the flags page to close", "kag.currentDialog === void", timeout=10)
+        # the trace, the dumps and a bug report
+        eng.tjs('KAGDebugTrace(true); kag.onPrimaryClick(); return 1;')
+        eng.wait("a click wait", stable, timeout=30)
+        dumps = str(eng.tjs('KAGDebugTrace(false); var a = KAGDebugLayers([]), b = KAGDebugWorld([]); var f = KAGDebugBugReport();'
+                            ' return [a.count, b.count, Storages.isExistentStorage(f) ? 1 : 0, Storages.isExistentStorage(f.replace(/\\.txt$/, ".png")) ? 1 : 0, f].join("|");'))
+        traced = "tag char.ks(" in eng.output()
+        # the route runner: the choice in char.ks, its second option, on to the demo menu
+        eng.tjs('kag.flags.charRoute = void; KAGPlaytest.start(%[ storage:"char.ks", label:"*crossroads", choices:[1], until:"s0001.ks", stuck:20000 ]); return 1;')
+        eng.wait("the route to end", 'KAGPlaytest.status != "running"', timeout=120)
+        route = str(eng.tjs('return KAGPlaytest.report() + "|" + kag.flags.charRoute;'))
+        eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
+        eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+        print("     here: %s; the lines page's links and one gone to: %s -> %s; flags page (title, set, value): %s;"
+              " layers, World lines, bug report: %s; traced: %s; route: %s" % (here, lines, went, flags, dumps, traced, route), flush=True)
+        t = target[len("goto:"):].split("|")
+        w = went.split("|")
+        if int(lines.split("|")[0]) < 20 or len(t) < 3 or w[0] != t[0] or w[1] != t[1] or w[2] != t[2]:
+            raise SmokeError("the lines page didn't list the script's texts, or going to one didn't get there: %s -> %s" % (lines, went))
+        if flags.split("|")[1:] != ["1", "station"]:
+            raise SmokeError("the flags page didn't set the flag: %s" % flags)
+        d = dumps.split("|")
+        if int(d[0]) < 5 or int(d[1]) < 2 or d[2:4] != ["1", "1"] or not traced:
+            raise SmokeError("a dump, the bug report or the trace is missing: %s, traced %s" % (dumps, traced))
+        r = route.split("|")
+        if r[0] != "done" or r[2] != "1/2" or r[-1] != "station":
+            raise SmokeError("the route runner didn't take the choice and get to the menu: %s" % route)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:

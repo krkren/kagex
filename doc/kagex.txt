@@ -4103,6 +4103,58 @@ and links (an option's as a checkbox). Its colours are KAGManualTheme's, its tex
 The sample's manual adds a page about its demos and its own support page, and Config has a Manual
 button under its panels.
 
+● Debug Helpers
+
+Template/system/DebugTools.tjs (since 0.26.0) helps a game's writers and its tests. Its Debug
+menu items (the Debug menu shows in debug mode: debugMenu.visible in Config.tjs) come after the
+framework's own:
+
+  Restart This Script       the script the game is in, from its top
+  Go to a Line ...          the script's lines with text (a compiled script's, each with its
+                            line number, speaker and text; a script KAG plays, its labels) in the
+                            manual's viewer: a link plays from that line (player.seek)
+  Flags ...                 the game's flags (f., sf., tf.) with their values, in the manual's
+                            viewer; the ones flaglist.txt lists come first, with what they are and
+                            links that set them to the values it offers (tab-separated: the flag,
+                            what it is, the values by commas), and true and false for the others
+  Copy the Voice's File Name, Copy Where the Game Is
+                            to the clipboard: the voice of the line shown; the script, line,
+                            label, speaker and text
+  Write a Bug Report        bugreport-<date>.txt in the save folder (the game, the engine, where
+                            it is, the voice, the language, every f. and sf. flag, the World's
+                            objects and the log's last 200 lines) and bugreport-<date>.png (the
+                            screen); its path is copied
+  Trace Tags in the Log     every tag the main conductor runs, with where, its attributes, what
+                            its handler returned and how long it took (KAGDebugTrace)
+  Layers and World into the Log
+                            the layers shown, as a tree, and the World's objects (KAGDebugLayers,
+                            KAGDebugWorld)
+
+-allseen=yes on the command line makes every CG, scene, song and movie count as seen for that run
+(tf.allseen, which isn't saved; not in a signed build). -instance=<name> gives the run a
+single-instance lock of its own, so several copies of a game can run at once (for tests).
+
+KAGPlaytest plays a route on its own: KAGPlaytest.start(%[ storage, label, choices, skip, until,
+stuck, timeout ]) plays from the script (and label), skipping read and unread text alike unless
+skip is false, clicking on at every wait, answering a Yes/No prompt Yes, taking choices[n] at the
+n-th choice (the first option past the list) and stopping at until (a script, once it has left
+the first one), or as "stuck" when nothing has moved for stuck ms (20000), or after timeout ms.
+KAGPlaytest.report() says what happened in one line: status|where|choices taken as
+picked/options|ms|message.
+
+tools/playtest.py runs a game's routes with it, each in a game of its own (headless on Linux, its
+own save folder and log), and reports each one: done, stuck, or the first script error with its
+trace (the engine's "Script exception raised" or KAG's "A fatal error has occurred", which names
+the script, line and tag):
+
+  python3 tools/playtest.py --start char.ks --until s0001.ks --all --jobs 2
+  route 1: done    choices 0/2      9.7 s  at s0001.ks:3
+  route 2: done    choices 1/2      9.0 s  at s0001.ks:3
+
+--choices 1,0 plays one route; --all plays every one, the first without choices given, then for
+each choice a route made one route for each of its other options (--max-routes stops it); --jobs
+runs that many at once. Its exit code is the number of routes that failed.
+
 ● The Name Box
 
 [position] takes these for its name window (since 0.17.0), besides nameleft and the rest:

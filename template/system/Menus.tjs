@@ -255,6 +255,9 @@ function KAGWindow_createMenus()
         debugMenu.add(this.outputDebugLogMenuItem = new KAGMenuItem(this, "Output KAGEX Log", 0,
 			onOutputDebugLogMenuItemClick, false));
 
+		// the writer's helpers: restart, go to a line, flags, copy, a bug report (DebugTools.tjs)
+		KAGDebugMenuItems(this, debugMenu) if typeof global.KAGDebugMenuItems != "undefined";
+
         debugMenu.add(new MenuItem(this, "-"));
     
 		debugMenu.add(this.voiceSpeedMenu = new KAGMenuItem(this, "Voice Speed(&V)", 0, void, false));
