@@ -206,6 +206,8 @@ function KAGWindow_createMenus()
 			/**/           onResetWindowSizeMenuItemClick, false));
 		displayMenu.add(this.disableWindowResizeMenuItem = new KAGMenuItem(this, "Disable Resizing(&Z)", 0,
 			/**/           onDisableWinwodResizeMenuItemClick, false));
+		// the window sizes that fit the screen (Display.tjs, since 0.26.0)
+		KAGDisplayMenuSizes(this, displayMenu) if typeof global.KAGDisplayMenuSizes != "undefined";
 
 		displayMenu.add(new MenuItem(this, "-"));
 
@@ -768,7 +770,7 @@ var configPages = [
     // the characters' voices (configVoiceOptions, AfterInit.tjs), filled in by configOptionsPage
     [ [], [ "volumeSamples", "voiceNote", "movieVolume" ] ],
     // the interface: the quick menu and its panels, tips; the screen and the controller (Display.tjs)
-    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips" ],
+    [ [ "quickMenu", "quickMenuSize", "quickMenuOpacity", "quickMenuPanels", "tooltips", "fullScreenFill" ],
       [ "windowSize", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "padTest" ] ],
     // the text's look (TextSettings.tjs, since 0.22.0), with its preview in the right column
     [ [ "textFont", "textOutline", "textOutlineColor", "textShadow", "textShadowColor", "readColor" ],

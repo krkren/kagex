@@ -13920,6 +13920,20 @@ class KAGWindow extends Window
 	var menuBarViewport = false;   // the game is placed under a strip (setViewport "custom")
 	var viewportFit;               // void, or how the game fills the window without a strip
 	                               // (setViewport's mode: "contain", "cover", "fill"; Display.tjs)
+	                               // or "between": part way from contain to cover (since 0.26.0)
+	var viewportFill = 50;         // how far "between" goes, from 0 (contain) to 100 (cover)
+
+	// the zoom of "between": part way from the whole picture with bars to the window filled
+	function viewportBetweenZoom()
+	{
+		var sw = scWidth, sh = scHeight, iw = innerWidth, ih = innerHeight;
+		if (sw <= 0 || sh <= 0 || iw <= 0 || ih <= 0) return 1.0;
+		var a = iw / sw, b = ih / sh, lo = a < b ? a : b, hi = a < b ? b : a;
+		var f = +viewportFill;
+		f = 0 if f < 0;
+		f = 100 if f > 100;
+		return lo + (hi - lo) * f / 100;
+	}
 	var menuChosen;                // the item the menu closed for, done once it has closed
 	var menuChoiceTrigger;
 
@@ -13953,6 +13967,7 @@ class KAGWindow extends Window
 		if (strip == 0 && !menuBarViewport && viewportFit === void) return;
 		try {
 			if (strip > 0) setViewport("custom", zoomNumer / zoomDenom, 0.5, 0, 0, strip);
+			else if (viewportFit == "between") setViewport("custom", viewportBetweenZoom(), 0.5, 0.5, 0, 0);
 			else setViewport(viewportFit !== void ? viewportFit : "contain", 1.0, 0.5, 0.5, 0, 0);
 			menuBarViewport = strip > 0;
 		} catch (e) {

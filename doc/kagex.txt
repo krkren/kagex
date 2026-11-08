@@ -3386,7 +3386,14 @@ variables and applied at start; one the platform can't do leaves its row empty:
   windowSize        the window's size as a share of the game's, those that fit the screen
                     (desktops; in full screen it's kept for when the window comes back)
   fullScreenFit     how the game fills a screen of another shape: Bars ("contain"), Fill (the
-                    edges cut off, "cover") or Stretch ("fill"); kag.viewportFit
+                    edges cut off, "cover"), Stretch ("fill") or, since 0.26.0, Part Way
+                    ("between"): kag.viewportFit
+  fullScreenFill    Part Way's percentage (since 0.26.0): 0 is the bars' size, 100 the fill's,
+                    and between them the picture is that much larger, its edges cut off that
+                    much less (kag.viewportFill, kag.viewportBetweenZoom(): setViewport's
+                    "custom" zoom from the window's size)
+  fullScreen        the window or the whole screen (since 0.26.0; desktops), for links such as
+                    the manual's
   smoothScaling     smooth or sharp scaling to the screen (-smoothzoom)
   vsync             frames in step with the display (Window.waitVSync)
   padEnabled        the controller on or off (System.padEnabled)
@@ -3411,6 +3418,9 @@ For the game, in KAGWindow (AfterInit.tjs):
 [screenshot enabled=false] turns screenshots off until [screenshot enabled=true], for scenes
 that would spoil the story ([screenshot off] and [screenshot on] say the same); F12 then says
 so instead, and saves keep it. The sample's Config has them on its sixth page.
+
+The Screen menu has the window's sizes that fit the screen (since 0.26.0: KAGDisplayMenuSizes
+adds them to a game's own menus), ticked as the window is.
 
 
 

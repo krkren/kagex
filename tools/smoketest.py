@@ -4934,6 +4934,30 @@ def sample_steps(eng):
         if r[0] != "done" or r[2] != "1/2" or r[-1] != "station":
             raise SmokeError("the route runner didn't take the choice and get to the menu: %s" % route)
 
+    @step("full screen filled part way: the zoom from the bars to filling the screen by a percentage, and the Screen menu's window sizes")
+    def _():
+        if eng.tjs('return typeof kag.viewportBetweenZoom != "undefined" && KAGOptions.fullScreenFit.available() ? 1 : 0;') != 1:
+            print("     (skipped: no viewport here, or a framework from before 0.26.0)", flush=True)
+            return
+        got = str(eng.tjs('''var r = [], fit = KAGOptionGet("fullScreenFit"), fill = KAGOptionGet("fullScreenFill");
+            KAGOptionSet("fullScreenFit", "between");
+            var sizes = [ 0, 50, 100 ];
+            for (var i = 0; i < sizes.count; i++) { KAGOptionSet("fullScreenFill", sizes[i]); r.add("%.3f".sprintf(kag.viewportBetweenZoom())); }
+            var a = kag.innerWidth / kag.scWidth, b = kag.innerHeight / kag.scHeight;
+            r.add("%.3f".sprintf(a < b ? a : b)); r.add("%.3f".sprintf(a < b ? b : a));
+            KAGOptionSet("fullScreenFill", fill !== void ? fill : 50); KAGOptionSet("fullScreenFit", fit !== void ? fit : "contain");
+            var items = [], c = kag.displayMenu.children;
+            for (var i = 0; i < c.count; i++) items.add(c[i].windowSize) if typeof c[i].windowSize != "undefined";
+            r.add(items.join("/"));
+            return r.join(",");'''))
+        print("     zoom at 0%%, 50%%, 100%%, then the bars' and the fill's; the Screen menu's sizes: %s" % got, flush=True)
+        z = got.split(",")
+        lo, mid, hi, want_lo, want_hi = (float(v) for v in z[:5])
+        if abs(lo - want_lo) > 0.002 or abs(hi - want_hi) > 0.002 or not (lo <= mid <= hi) or abs(mid - (lo + hi) / 2) > 0.002:
+            raise SmokeError("the part-way zoom isn't between the bars and the fill: %s" % got)
+        if "100" not in z[5].split("/"):
+            raise SmokeError("the Screen menu has no window sizes: %s" % got)
+
     @step("Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes")
     def _():
         if eng.tjs('return typeof global.KAGReduceMotion != "undefined" ? 1 : 0;') != 1:
