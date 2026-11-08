@@ -684,7 +684,7 @@ private:
 		char buf[96];
 		for (const auto& e : report) {
 			if (e.measured) ++measured;
-			if (!e.far) continue;
+			if (!e.offTarget) continue;
 			if (!e.gainApplies) { ++wav; continue; }
 			if (e.ownLine) continue;
 			std::snprintf(buf, sizeof(buf), "%s\t%+.1f\n", e.name.c_str(), e.newGain);

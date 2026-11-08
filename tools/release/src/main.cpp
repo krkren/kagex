@@ -301,7 +301,7 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 				if (e.measured) j.set("lufs", Json(e.lufs));
 				j.set("gain", Json(e.gainNow));
 				j.set("gainApplies", Json(e.gainApplies));
-				if (e.hasTarget) { j.set("target", Json(e.target)); j.set("far", Json(e.far)); j.set("newGain", Json(e.newGain)); }
+				if (e.hasTarget) { j.set("target", Json(e.target)); j.set("far", Json(e.offTarget)); j.set("newGain", Json(e.newGain)); }
 				list.push(std::move(j));
 			}
 			Json out = Json::object();

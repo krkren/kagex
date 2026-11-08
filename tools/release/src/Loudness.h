@@ -48,7 +48,7 @@ struct LoudnessEntry {
 	bool gainApplies = true;   ///< false for WAV: the engine applies no gain to it
 	bool hasTarget = false;    ///< its kind has a target (loudness.targets)
 	double target = 0;
-	bool far = false;          ///< further than the tolerance from its kind's target, as it plays
+	bool offTarget = false;    ///< further than the tolerance from its kind's target, as it plays (not "far": a macro on Windows)
 	double newGain = 0;        ///< the gain that brings it to the target
 };
 
