@@ -1,0 +1,153 @@
+﻿Title: Bringing a Game to KAGEX's Engines
+
+
+
+● Overview
+
+KAGEX's engines are Kirikiri Z built on SDL 3 (krkrz_dev): one engine for Windows, Linux,
+macOS, the web, Android and iOS. A game written for Windows Kirikiri 2 or Kirikiri Z, on KAG3,
+KAGEX or a framework of its own, runs on them with few changes, and this note lists those
+changes: what the engines do differently, what they lack, and the helpers KAGEX has for a game
+brought from elsewhere (template/system/Porting.tjs, since 0.28.0).
+
+The engines' own problems, with what each costs and how the framework works around it, are in
+UPSTREAM.md; this note names the ones a game brought from elsewhere meets.
+
+
+
+● Plugins
+
+◇ How they're linked
+
+Plugins.link("plugin/foo.dll") works on every engine. On Windows the engine loads
+plugin/foo.dll; elsewhere a plugin is a library of its own (Linux libfoo.so, macOS
+libfoo.dylib) or is linked into the engine (the web, Android and iOS), and KAGEX's
+Initialize.tjs drops the folder, since the engine's own search finds plugin/libfoo.so. A game
+with its own startup does the same (Initialize.tjs, the wrapper around Plugins.link at the
+top).
+
+File names are case-sensitive on Linux, macOS, Android and iOS: link a plugin by its library's
+name (the packages ship libsaveStruct.so, so "plugin/savestruct.dll" only worked on Windows).
+
+◇ Plugins built into the engine
+
+On the web, Android and iOS every plugin is linked into the engine and is there before any
+script runs. A game that checks for a plugin's class or method to decide whether to link it
+skips the whole block, settings included: a voice script never set
+WaveSoundBuffer.enableGetSample, and every voiced line with a moving mouth stopped with 'Member
+"enableGetSample" does not exist'. Link each plugin on its own and keep the settings out of
+the check (KAGEX's KAGLinkPlugin does).
+
+◇ What isn't there
+
+The Windows-only plugins (README, "Not available on the SDL3 build"): menu.dll and windowEx.dll
+(KAGEX's framework draws a game's KAGWindow_createMenus menu as a menu bar in a window),
+win32dialog.dll, gfxEffect.dll, flashPlayer.dll, layerExDraw.dll's GDI+ (krkr_richtext draws
+outlines; layerExVector draws SVG), shellExecute.dll and process.dll. System.shellExecute is
+there on every platform through kagex's sdlsystem plugin (since 0.28.0): Windows' ShellExecute
+on Windows; elsewhere a program starts with its parameters split as a shell would split them,
+and anything else opens as SDLSystem.open opens it (a page, a file or a folder).
+
+System.readRegValue and the registry are Windows Kirikiri's only: Porting.tjs gives scripts
+stand-ins that read nothing.
+
+◇ Stand-ins
+
+A script stand-in for a missing plugin defines what the game asks of it. Two rules:
+- install an override of a native class's method before any instance of the class exists (an
+  instance made before keeps the method it was made with);
+- take every option the game's callers pass, even ones it ignores, and return what they test.
+
+
+
+● Porting.tjs
+
+Run it first thing in the game's startup.tjs, before any plugin is linked, then add the game's
+own entries:
+
+  Scripts.execStorage("Porting.tjs");
+  KAGPortingPlugins["textrender.dll"] = "skip";
+  KAGPortingPlugins["getlangname.dll"] = function(name) { System.getLangName = ...; } incontextof global;
+
+It sends Plugins.link through KAGPortingPlugins, by the plugin's file name in lower case:
+
+  "<other>.dll"  link that plugin instead (shellexecute.dll is sdlsystem.dll)
+  "builtin"      the engine has it: nothing to link
+  "skip"         nothing to link, and no error: the game does without it
+  "missing"      link fails, as for a plugin that isn't there, so the game's own fallback runs
+                 (the Windows-only plugins above)
+  a function     a stand-in, called once with the name instead of linking
+
+A name the table doesn't have is linked as it is; each name is linked or stood in for once.
+
+It also makes Storages.copyFile return false when the file to copy isn't there, as fstat's
+copyFile did (the engine's throws, UPSTREAM.md 56: a game's rotating saves that copy an empty
+slot fail on the first quick save without it), and true when it copied; and it gives
+KAGOneSlash(name), which folds a doubled slash in a storage name (next section).
+
+
+
+● Files and saves
+
+- Storage names must match the files' case exactly and use /, data files included (a
+  musiclist.csv that named BGM01 for bgm01.ogg played on Windows only).
+- The save folder is System.dataPath: on desktops a folder, on Android and iOS SDL's storage
+  (user://), on the web the browser's IndexedDB (KAGEX moves saveDataLocation to /persist/;
+  user:// is the page's memory there, UPSTREAM.md 37). A name with a doubled slash in user://
+  saves nothing and says nothing (UPSTREAM.md 54); System.dataPath ends with /, so
+  System.dataPath + "/data.ksd" has one. Build names with one slash, or pass them through
+  KAGOneSlash (kag.saveDataFile does it for KAGEX's own saves).
+- Storages.truncateFile and anything else that needs a local file throws "Cannot get local
+  name" for user://: write the file elsewhere (Storages.getTemporaryName()) and copy it over.
+- Pictures saved as BMP on Linux and macOS come back with their colours shifted (the BMP
+  writer's header is two bytes off there): save thumbnails and the like as PNG.
+- The file pool (-filepoolsize, 256 MB) deadlocks when it fills (UPSTREAM.md 55): a game with
+  large embedded fonts or files read at start-up sets filepoolsize=none in its krkrz.cf
+  (kagex-release puts the developer's options into the config.cf of Android, iOS and the web).
+- The web fetches each file as it's needed, by its name in lower case: host the site where
+  names keep their case or lower-case them (kagex-release does). A name with %, # or ? is
+  fetched by its escaped name since 0.28.0 (kagex-web.js; UPSTREAM.md 57); games made with
+  Wamsoft's framework name UI pieces window@base%base.png and the like.
+- Movies are .webm (VP9 and Opus, as the sample's); a movie named without its extension is
+  looked for as .webm first. Sounds are .wav, .ogg or .opus.
+- kagex-release converts pictures to TLG or JPEG: find a picture with getExistImageName(name),
+  not Storages.isExistentStorage(name + ".png").
+
+
+
+● The window and the screen
+
+- The window has no menu (Window.menu): KAGEX's framework draws one (MenuBar.tjs). A game on
+  another framework shows its commands on screen or on keys.
+- One window: a second window (a modal about box, a dialog) can't be shown over the game on the
+  SDL engine; KAGEX draws its prompts and About as layers. Window.setMaskRegion isn't there.
+- Full screen switches a moment later: kag.fullScreen still reads the old mode right after a
+  switch (KAGEX keeps what was asked in kag.fullScreened).
+- Android and iOS draw every game on a 1920x1080 surface, full screen from the start
+  (UPSTREAM.md 48).
+- The mouse pointer is the system's arrow whatever a layer's cursor says (UPSTREAM.md 51):
+  KAGEX draws a game's own pointers (GameCursor.tjs, cursors.csv).
+- A face name the engine hasn't registered draws text in its icon font (arrows): give fonts as
+  face lists ("Yu Gothic Medium,Yu Gothic,Noto Sans JP,Roboto"); KAGEX registers Noto Sans JP,
+  and Roboto is in every engine.
+
+
+
+● Scripts
+
+- Never test a string as a boolean (if (s), s ? a : b): the engine converts it to a number, so
+  "event1" is false, and an empty string has crashed it. Compare: if (s != "").
+- TJS takes a number string with a leading 0 as octal: +"02.400" is 2.5.
+- A function made by Scripts.eval or Scripts.exec of a string lives only as long as that call.
+- Debug information in compiled scripts makes the engine dump core when it reports an exception;
+  64-bit engines cut integer constants beyond 32 bits in compiled scripts (kagex-release
+  handles both, CLAUDE.md).
+
+
+
+● Building
+
+kagex-release (tools/release) packages a game for every platform from its data folder, with the
+engines of the KAGEX release it comes with; a game's own plugins go in plugins/<platform>/ next
+to data/ (tools/release/README.md, "Your own plugins"; on the web, Android and iOS a plugin
+has to be linked into the engine, so those need an engine package of the game's own).

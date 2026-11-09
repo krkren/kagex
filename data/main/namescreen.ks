@@ -26,7 +26,7 @@
 [locate x=1374 y=470]
 [button name="name_ok" normal="config_choice240_normal" over="config_choice240_over" exp="nameOK()"]
 [eval exp="nameButtons()"]
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message1 page=fore]
 [eval exp="nameFocus()"]
@@ -35,7 +35,7 @@
 *done
 [backlay]
 [position layer=message1 page=back visible=false frame="" left=0 top=0 width=8 height=8]
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message0]
 [jump storage=config.ks target=*fromName cond="tf.nameFrom == 'config'"]

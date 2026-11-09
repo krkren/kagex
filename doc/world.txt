@@ -1144,6 +1144,45 @@ an engine without 3D sound. A line's pan= puts its voice there instead. The Char
 
 
 
+※ Voice Effects (since 0.28.0)
+
+
+
+An echo on a memory or an inner voice, a thin voice on the phone, a muffled one through a door,
+a hall, a cave, a radio: kagex's voicefx plugin (https://github.com/krkren/voicefx, built into
+every engine) filters a voice as it plays (template/system/VoiceEffects.tjs). A character's
+voicefx= sets that character's, the env's sets every voice's:
+
+    [pip facewin voicefx=phone voice=5]
+    【pip】And I'm not even on stage. I'm calling from somewhere else!
+    [pip voicefx=default]
+
+    [env voicefx=memory]      every voice through the memories' echo (the sample's [memory])
+    [env voicefx=none]        none again
+
+[<char> voicefx=none] gives that character no effect even while the env has one, and
+[<char> voicefx=default] (or "") has it follow the env's again. Both are World state, kept in
+saves, compiled scenes and going back. An effect starts with the next voice the character says
+(the engine builds a sound's filters as it opens it), and with an echo or a reverb the voice
+rings on after its end (at most the effect's tail), which auto mode waits for.
+
+An effect's name is one of voicefx.csv's (on the search path, optional) or one of the plugin's
+presets: echo, phone, muffled, hall, cave, radio. voicefx.csv has a line per effect, its fields
+apart by tabs or commas: the name, a preset (or none), then settings as name=value; # starts a
+comment:
+
+    memory  echo   delay=320 feedback=48 echo=58 damping=50 room=40 reverb=16 dry=90
+    phone   phone  drive=34
+
+The settings (the plugin's README says more): lowcut and highcut (Butterworth filters, in Hz;
+0: none) of order 2 or 4; drive (0-100: a phone's or a radio's crackle); mono (0 or 1); delay (ms),
+feedback (0-95 %: how long the repeats go on), echo (0-100 %: how loud they are) and damping
+(0-100 %: how much darker each repeat is); room and reverb (0-100: the room's size and how loud it
+is); dry (0-100 %: the voice itself, 100); gain (%, 100); tail (ms the voice may ring on at most,
+8000). Without the plugin, voices play as they are.
+
+
+
 ◇ Face Windows
 
 

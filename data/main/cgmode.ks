@@ -58,7 +58,7 @@
 [button name="gallery_stop" normal="musicmode_stop_normal" over="musicmode_stop_over" exp="galleryStop()" target=*loop]
 [endif]
 [eval exp='galleryPlayer()']
-[trans method=crossfade time=500]
+[trans screen method=crossfade time=500]
 [wt]
 [current layer=message0 page=fore]
 [s]

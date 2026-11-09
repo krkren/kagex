@@ -1,0 +1,236 @@
+/**
+ * Lines read aloud with the system's voices (since 0.28.0, through kagex's speech plugin), for
+ * players who can't or don't want to read. Each message is spoken when it waits for a click (as
+ * a screen reader reads it, MainWindow.a11yAnnounceText) and played like a voice line: auto mode
+ * waits for it, it lowers the music as voices do, and it plays at the voice volume (the
+ * speaker's own where they have one). A new line, a skip or the title ends the one before.
+ * While it's on, the screen reader isn't given the lines too. On the web the browser speaks the
+ * line itself, at its own volume.
+ *
+ * The options (Options.tjs), kept in the system variables:
+ *   readAloud       "off", "unvoiced" (lines without a voice of their own: narration, and
+ *                   speakers who aren't voiced) or "all"
+ *   readAloudVoice  the system voice: "" for the system's own, or a voice's id (the choices are
+ *                   the first three voices of the story's language)
+ *   readAloudSpeed  how fast, in % (50-200)
+ *   readAloudTest   a button that reads a sentence
+ *
+ * envinit.tjs gives a character a voice of their own: "speech" => %[ voice:<id>, pitch:<%>,
+ * rate:<%> ] (pitch and rate as % of the player's; the sample's pitches tell Ai and Pip apart
+ * with one system voice). readaloud.csv (on the search path, optional) says how to say words
+ * the system gets wrong: a line per word, its fields apart by tabs or commas: the language code
+ * (or * for any), the word as written, and as it's to be said.
+ */
+
+class KAGReadAloudReader
+{
+	var buffer;          // plays the WAV a line was spoken into
+	var timer;           // follows the line being made and played
+	var file = "";       // the WAV being made (a native path)
+	var counted = false; // the line counts as a voice on the World (auto mode waits for it)
+	var lastVoiceStarts = 0;
+	var words;           // readaloud.csv: [ [language, written, spoken], ... ]
+	var log = [];        // what was read (tests)
+	var state = "idle";  // idle, making, playing, speaking (the web)
+
+	function KAGReadAloudReader() {}
+
+	function finalize()
+	{
+		cancel();
+		invalidate timer if timer !== void && isvalid timer;
+		invalidate buffer if buffer !== void && isvalid buffer;
+	}
+
+	property available { getter { return typeof global.Speech != "undefined" && Speech.available; } }
+	property mode { getter { var m = KAGOptionGet("readAloud"); return m === void ? "off" : m; } }
+	property on { getter { return mode != "off" && available; } }
+
+	// how the system should say it: readaloud.csv's words, in the story's language
+	function pronounce(text, lang)
+	{
+		if (words === void) {
+			words = [];
+			if (Storages.isExistentStorage("readaloud.csv")) {
+				try {
+					var lines = [].load("readaloud.csv");
+					for (var i = 0; i < lines.count; i++) {
+						var l = lines[i].trim();
+						if (l == "" || l.charAt(0) == "#") continue;
+						var f = l.split("\t,", , true);
+						if (f.count >= 3) words.add([ f[0].trim(), f[1].trim(), f[2].trim() ]);
+					}
+				} catch (e) { dm("readaloud.csv: " + e.message); }
+			}
+		}
+		for (var i = 0; i < words.count; i++) {
+			var w = words[i];
+			if (w[0] != "*" && w[0] != lang) continue;
+			var at;
+			while ((at = text.indexOf(w[1])) >= 0) text = text.substring(0, at) + w[2] + text.substring(at + w[1].length);
+		}
+		return text;
+	}
+
+	// the story's language code ("en" without Language.tjs)
+	function language()
+	{
+		return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.current : "en";
+	}
+
+	function env() { try { return world_object.env; } catch (e) { return void; } }
+
+	/**
+	 * A message waits for a click: read it. name: its speaker's shown name
+	 */
+	function line(text, name)
+	{
+		var e = env();
+		var starts = e !== void && typeof e.voiceStarts != "undefined" ? e.voiceStarts : 0;
+		var voiced = starts != lastVoiceStarts;
+		lastVoiceStarts = starts;
+		cancel();
+		if (!on || text === void) return;
+		text = text.trim();
+		if (text == "") return;
+		if (mode == "unvoiced" && voiced) return;
+		var ch = e !== void ? e.currentNameTarget : void;
+		var own = ch !== void && ch.init !== void && typeof ch.init.speech == "Object" ? ch.init.speech : void;
+		var r = %[];
+		r.voice = KAGOptionGet("readAloudVoice");
+		r.voice = own.voice if own !== void && own.voice !== void;
+		r.voice = "" if r.voice === void;
+		var speed = KAGOptionGet("readAloudSpeed");
+		r.rate = (speed === void ? 100 : +speed) * (own !== void && own.rate !== void ? +own.rate : 100) / 100;
+		r.pitch = own !== void && own.pitch !== void ? +own.pitch : 100;
+		var vol = ch !== void && ch.init !== void ? kag.getVoiceVolume(ch.init.voiceName) : kag.voicevolume;
+		r.volume = vol;
+		var said = pronounce(text, language());
+		log.add(%[ text:said, name:name, voice:r.voice, rate:r.rate, pitch:r.pitch ]);
+		log.erase(0) if log.count > 32;
+		start(said, r);
+	}
+
+	// starts a line (also the Test button's)
+	function start(text, r)
+	{
+		if (Speech.mode == "file") {
+			file = Storages.getTemporaryName() + ".wav";
+			r.file = file;
+		}
+		if (!Speech.speak(text, r)) { file = ""; return false; }
+		state = Speech.mode == "file" ? "making" : "speaking";
+		count(true);
+		if (timer === void) { timer = new Timer(onTimer, ""); timer.interval = 40; }
+		timer.enabled = true;
+		return true;
+	}
+
+	function onTimer()
+	{
+		switch (state) {
+		case "making": {
+			var s = Speech.state;
+			if (s == "busy") return;
+			if (s != "done") { done(); return; }
+			if (buffer === void) buffer = new WaveSoundBuffer(kag);
+			try {
+				buffer.open(kag.localStorageName(file));
+				var e = env(), ch = e !== void ? e.currentNameTarget : void;
+				buffer.volume2 = (int)((ch !== void && ch.init !== void ? kag.getVoiceVolume(ch.init.voiceName) : kag.voicevolume) * 1000);
+				buffer.play();
+				state = "playing";
+			} catch (e) {
+				dm("read aloud: " + e.message);
+				done();
+			}
+			return; }
+		case "playing":
+			if (buffer.status != "play") done();
+			return;
+		case "speaking":
+			if (Speech.state != "busy") done();
+			return;
+		}
+		timer.enabled = false;
+	}
+
+	// the line ended (or failed)
+	function done()
+	{
+		state = "idle";
+		timer.enabled = false if timer !== void;
+		removeFile();
+		count(false);
+	}
+
+	function cancel()
+	{
+		if (state == "idle") return;
+		try { Speech.cancel(); } catch (e) {}
+		buffer.stop() if buffer !== void && state == "playing";
+		done();
+	}
+
+	function removeFile()
+	{
+		if (file == "") return;
+		try { Storages.deleteFile(kag.localStorageName(file)); } catch (e) {}
+		try { Storages.deleteFile(kag.localStorageName(file + ".txt")); } catch (e) {}
+		file = "";
+	}
+
+	// a line counts as a voice on the World while it's made and played
+	function count(start)
+	{
+		if (start == counted) return;
+		counted = start;
+		var e = env();
+		if (e === void) return;
+		try { if (start) e.onStartVoice("kagex-readaloud"); else e.onStopVoice("kagex-readaloud"); } catch (x) {}
+	}
+
+	// the voices of the story's language: [ [label, id], ... ], the system's own first
+	function voiceChoices()
+	{
+		var list = [ [ "System", "" ] ];
+		if (!available) return list;
+		var lang = language(), vs = Speech.voices();
+		for (var i = 0; i < vs.count && list.count < 4; i++) {
+			var v = vs[i], l = v.language.toLowerCase();
+			if (l == lang || l.substring(0, lang.length + 1) == lang + "-" || l.substring(0, lang.length + 1) == lang + "_")
+				list.add([ v.name, v.id ]);
+		}
+		return list;
+	}
+}
+
+var KAGReadAloud = new KAGReadAloudReader();
+
+KAGDefineOption(%[ name:"readAloud", label:"Read Lines Aloud", kind:"choice", save:true, initial:"off",
+	values:[ ["Off", "off"], ["Unvoiced", "unvoiced"], ["All", "all"] ],
+	available:function { return KAGReadAloud.available; },
+	setValue:function(v) { KAGReadAloud.cancel() if v == "off"; } ]);
+
+KAGDefineOption(%[ name:"readAloudVoice", label:"Reading Voice", kind:"choice", save:true, initial:"",
+	values:[ ["System", ""] ], // the voices there are, when Config is drawn (KAGReadAloudVoices)
+	available:function { return KAGReadAloud.available && Speech.mode == "file"; } ]);
+
+KAGDefineOption(%[ name:"readAloudSpeed", label:"Reading Speed", kind:"slider", save:true, initial:100,
+	min:50, max:200, step:10, ends:[ "Slow", "Fast" ],
+	available:function { return KAGReadAloud.available; } ]);
+
+KAGDefineOption(%[ name:"readAloudTest", label:"Reading Test", kind:"button", button:"Test",
+	available:function { return KAGReadAloud.available; },
+	action:function {
+		var speed = KAGOptionGet("readAloudSpeed"), voice = KAGOptionGet("readAloudVoice");
+		KAGReadAloud.cancel();
+		KAGReadAloud.start(tr("This is how lines are read aloud."),
+			%[ voice:voice === void ? "" : voice, rate:speed === void ? 100 : +speed, pitch:100, volume:kag.voicevolume ]);
+	} ]);
+
+// the voice choices for the story's language, before a Config page is drawn
+function KAGReadAloudVoices()
+{
+	KAGOptions.readAloudVoice.values = KAGReadAloud.voiceChoices();
+}

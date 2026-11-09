@@ -202,6 +202,17 @@ Json defaultSettings(const Project& p)
 			{ "cgPieces", strings({ "evimage" }) },
 		}) },
 		{ "references", Json("keep") },
+		// movies through ffmpeg (Media.h): other formats into WebM, and the smaller versions
+		// [movie] plays on the web and phones ("played": the movies [movie] tags name, "all",
+		// "off"), sdHeight lines high at about sdKbps
+		{ "movies", obj({
+			{ "convert", Json(true) },
+			{ "smaller", Json("played") },
+			{ "sdHeight", Json(540) },
+			{ "sdKbps", Json(1200) },
+			{ "crf", Json(31) },
+			{ "ffmpeg", Json("") },
+		}) },
 	}));
 	// the sounds' loudness (since 0.27.0): measured into a report, and with targets for kinds, the
 	// files far from them brought there in the staged loudness.csv (Loudness.h)

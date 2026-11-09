@@ -54,6 +54,17 @@ extNagano プラグインでトランジションがさらに増えます。そ�
 [EV file=event1 trans=honeyturn time=1500 size=80]honeyturn：六角形がひとつずつ裏返る
 [EV hide trans=normal]
 
+*glitch|グリッチ
+; kagex's own glitch transition (the glitchtrans plugin, since 0.28.0): the picture breaks up like
+; a damaged signal (bands shifted, colours split, rows of static, blocks out of place) and the new
+; one comes through in stripes; [glitch] (macro.ks) breaks up what's on the screen for a moment.
+; Without the plugin the transition is a crossfade, and [glitch] a short pause
+kagex 独自のグリッチ・トランジションは、絵を乱しながら次の絵へ移ります。
+[EV file=event1 trans=glitch time=1200]glitch：古い絵が崩れ、新しい絵が透けてくる
+[EV hide trans=glitch time=800 strength=60 seed=7]控えめで、毎回同じもの：strength=60 seed=7
+[glitch]
+そして [[glitch]：同じ画面が一瞬だけ乱れます。
+
 [demodone name=transition]
 
 [jump storage=s0001.ks]

@@ -1,0 +1,301 @@
+/**
+ * What the system does for the game (since 0.28.0, through kagex's sdlsystem plugin): opening web
+ * pages, files and folders and starting programs; what the game does while its window is in the
+ * background; a save as the system puts the game away or warns that memory is low; a frame-rate
+ * limit. Without the plugin none of it is offered: KAGCanOpen() is false and the options' rows
+ * stay empty.
+ *
+ *   KAGCanOpen()            whether pages (and, on desktops, files and folders) can be opened
+ *   KAGCanOpenFolders()     whether files and folders can be (desktops)
+ *   KAGOpen(target)         opens a page (a URL with a scheme: https:, mailto: ...), or a file or
+ *                           folder: a storage name (file://./..., or a name on the search path)
+ *                           or a native path; false when it can't
+ *   KAGCanRun()             whether programs can be started (desktops)
+ *   KAGRun(program, args)   starts a program with its arguments (an array), not waiting for it
+ *   KAGNativePath(storage)  a storage name's native path ("" when it has none: in an archive)
+ *
+ * The options (Options.tjs), kept in the system variables:
+ *   backgroundMode  while the window is in the background (another window has the keyboard, it's
+ *                   minimized or hidden, a browser's tab is hidden): "play" on, "mute" the sound,
+ *                   or "pause": the story waits (the conductors as a dialog stops them), the
+ *                   sound is muted and the screen dims with "Paused" until the window comes back
+ *   frameLimit      frames a second at most: 0 (none), 30 or 60 (not on the web, where the browser
+ *                   paces them)
+ *
+ * And always, with the plugin: when the system puts the game away (phones), warns that memory is
+ * low, or ends it, the continue save and the system variables are written there and then
+ * (KAGSaveBeforeError), and on a low-memory warning the caches are let go and a notice says so.
+ */
+
+function KAGCanOpen() { return typeof global.SDLSystem != "undefined"; }
+function KAGCanOpenFolders() { return KAGCanOpen() && KAGIsDesktop(); }
+function KAGCanRun() { return typeof global.SDLSystem != "undefined" && SDLSystem.canRun; }
+
+// a URL of the web or mail (a scheme of two letters or more, not file:, which is a storage name)
+function KAGIsURL(t)
+{
+	var c = t.indexOf(":");
+	if (c < 2) return false;
+	var scheme = t.substring(0, c).toLowerCase();
+	if (scheme == "file") return false;
+	for (var i = 0; i < scheme.length; i++) {
+		var ch = scheme.charAt(i);
+		if (!((ch >= "a" && ch <= "z") || (ch >= "0" && ch <= "9") || ch == "+" || ch == "-" || ch == ".")) return false;
+	}
+	return true;
+}
+
+function KAGNativePath(name)
+{
+	if (name === void || name == "") return "";
+	// already a native path: /... or C:\..., C:/...
+	if (name.charAt(0) == "/" || (name.length > 2 && name.charAt(1) == ":" && (name.charAt(2) == "\\" || name.charAt(2) == "/")))
+		return name;
+	try {
+		var placed = name;
+		if (name.indexOf("://") < 0) placed = Storages.getPlacedPath(name);
+		if (placed == "") return "";
+		return Storages.getLocalName(placed);
+	} catch (e) {
+		return "";
+	}
+}
+
+function KAGOpen(target)
+{
+	if (!KAGCanOpen() || target === void || target == "") return false;
+	try {
+		if (KAGIsURL(target)) return SDLSystem.open(target);
+		if (!KAGCanOpenFolders()) return false;
+		var path = KAGNativePath(target);
+		if (path == "") { dm("Can't open " + target + ": it isn't a file of its own"); return false; }
+		return SDLSystem.open(path);
+	} catch (e) {
+		dm("Can't open " + target + ": " + e.message);
+		return false;
+	}
+}
+
+function KAGRun(program, args = [])
+{
+	if (!KAGCanRun()) return false;
+	try { return SDLSystem.run(program, args); } catch (e) { dm("Can't start " + program + ": " + e.message); return false; }
+}
+
+// -------------------------------------------------------------------------------------------
+// The options
+// -------------------------------------------------------------------------------------------
+
+KAGDefineOption(%[ name:"backgroundMode", label:"In the Background", kind:"choice", save:true, initial:"play",
+	values:[ ["Keep Playing", "play"], ["Mute", "mute"], ["Pause", "pause"] ],
+	available:function { return typeof global.SDLSystem != "undefined" && SDLSystem.available; },
+	setValue:function(v) { kag.systemEvents.modeChanged(v) if typeof kag.systemEvents == "Object" && kag.systemEvents !== void; } ]);
+
+KAGDefineOption(%[ name:"frameLimit", label:"Frame Rate Limit", kind:"choice", save:true, initial:0,
+	values:[ ["None", 0], ["30", 30], ["60", 60] ],
+	available:function { return typeof global.SDLSystem != "undefined" && SDLSystem.frameLimitPossible; },
+	setValue:function(v) { try { SDLSystem.frameLimit = +v; } catch (e) { dm("frameLimit: " + e.message); } } ]);
+
+// -------------------------------------------------------------------------------------------
+// The window's events: a KAG plugin of the window, polling the plugin's events four times a
+// second; the urgent ones (the game put away, low memory, the end) come at once through
+// SDLSystem.onEvent
+// -------------------------------------------------------------------------------------------
+
+class KAGSystemEvents extends KAGPlugin
+{
+	var window;
+	var timer;
+	var away = false;          // the window is in the background
+	var awayReasons = %[];     // why: blur, minimize, hide, background
+	var mutedFrom;             // the global volume before muting (void: not muted)
+	var paused = false;
+	var pauseLayer;
+	var interruptedMain = false, interruptedExtra = false;
+	var lowMemoryNotice = false;
+	var log = [];              // the events seen (tests read it)
+
+	function KAGSystemEvents(win)
+	{
+		super.KAGPlugin();
+		window = win;
+		timer = new Timer(onTimer, "");
+		timer.interval = 250;
+		timer.enabled = true;
+		if (typeof global.SDLSystem != "undefined") SDLSystem.onEvent = KAGSystemUrgentEvent;
+	}
+
+	function finalize()
+	{
+		leave();
+		if (typeof global.SDLSystem != "undefined") try { SDLSystem.onEvent = void; } catch (e) {}
+		invalidate timer if timer !== void && isvalid timer;
+		invalidate pauseLayer if pauseLayer !== void && isvalid pauseLayer;
+		super.finalize(...);
+	}
+
+	function onTimer()
+	{
+		if (typeof global.SDLSystem == "undefined") return;
+		var events;
+		try { events = SDLSystem.takeEvents(); } catch (e) { return; }
+		for (var i = 0; i < events.count; i++) note(events[i]);
+		if (lowMemoryNotice) {
+			lowMemoryNotice = false;
+			try { window.showScreenshotNotice(tr("Memory is low: your place has been saved")); } catch (e) {}
+		}
+	}
+
+	// an event by name (also what tests send)
+	function note(name)
+	{
+		log.add(name);
+		log.erase(0) if log.count > 64;
+		switch (name) {
+		case "blur": awayReasons.blur = true; break;
+		case "focus": delete awayReasons.blur; break;
+		case "minimize": awayReasons.minimize = true; break;
+		case "restore": delete awayReasons.minimize; delete awayReasons.hide; break;
+		case "hide": awayReasons.hide = true; break;
+		case "show": delete awayReasons.hide; break;
+		case "background": awayReasons.background = true; break;
+		case "foreground": delete awayReasons.background; break;
+		}
+		var now = awayReasons.blur !== void || awayReasons.minimize !== void || awayReasons.hide !== void || awayReasons.background !== void;
+		if (now == away) return;
+		away = now;
+		if (away) enter(); else leave();
+	}
+
+	function enter()
+	{
+		var mode = KAGOptionGet("backgroundMode");
+		if (mode == "mute" || mode == "pause") mute();
+		if (mode == "pause") pause();
+	}
+
+	function leave()
+	{
+		unpause();
+		unmute();
+	}
+
+	// the option changed while the window is away (Config in a window beside another)
+	function modeChanged(mode)
+	{
+		if (!away) return;
+		leave();
+		if (mode == "mute" || mode == "pause") mute();
+		if (mode == "pause") pause();
+	}
+
+	function mute()
+	{
+		if (mutedFrom !== void) return;
+		try { mutedFrom = WaveSoundBuffer.globalVolume; WaveSoundBuffer.globalVolume = 0; } catch (e) { mutedFrom = void; }
+	}
+
+	function unmute()
+	{
+		if (mutedFrom === void) return;
+		try { WaveSoundBuffer.globalVolume = mutedFrom; } catch (e) {}
+		mutedFrom = void;
+	}
+
+	function pause()
+	{
+		if (paused) return;
+		paused = true;
+		// the story waits as a dialog makes it (MainWindow.openDialog); an open dialog waits anyway
+		interruptedMain = window.mainConductor.interrupted;
+		interruptedExtra = window.extraConductor.interrupted;
+		window.mainConductor.interrupted = true;
+		window.extraConductor.interrupted = true;
+		showPauseLayer();
+		KAGA11y.announce(tr("Paused")) if typeof global.KAGA11y == "Object";
+	}
+
+	function unpause()
+	{
+		if (!paused) return;
+		paused = false;
+		// put back as they were, unless a dialog opened meanwhile (closing it starts them)
+		if (window.currentDialog === void) {
+			window.mainConductor.interrupted = interruptedMain;
+			window.extraConductor.interrupted = interruptedExtra;
+		}
+		pauseLayer.visible = false if pauseLayer !== void && isvalid pauseLayer;
+	}
+
+	function showPauseLayer()
+	{
+		var w = window.primaryLayer.width, h = window.primaryLayer.height;
+		if (pauseLayer === void || !isvalid pauseLayer) {
+			pauseLayer = new global.Layer(window, window.primaryLayer);
+			pauseLayer.name = "paused";
+			pauseLayer.hitType = htMask;
+			pauseLayer.hitThreshold = 0; // takes the clicks: the one that brings the window back doesn't go on
+		}
+		with (pauseLayer) {
+			.setImageSize(w, h);
+			.setSize(w, h);
+			.setPos(0, 0);
+			.type = ltAlpha;
+			.face = dfAlpha;
+			.fillRect(0, 0, w, h, 0x99000000);
+			.font.face = typeof window.chDefaultFace != "undefined" ? window.chDefaultFace : "";
+			.font.height = 72;
+			.font.bold = true;
+			var text = tr("Paused");
+			var tw = .font.getTextWidth(text);
+			.drawText((w - tw) \ 2, (h - 72) \ 2, text, 0xffffff, 255, true, 255, 0x000000, 2, 0, 0);
+			.absolute = 2130000000; // over the game, under its pointer (GameCursor.tjs)
+			.visible = true;
+		}
+	}
+}
+
+// the urgent events: called by the plugin at once, on the engine's thread, so it must catch its
+// own exceptions (one that came back through the plugin would unwind through its frames)
+function KAGSystemUrgentEvent(name)
+{
+	try {
+		var ev = typeof global.kag == "Object" && kag !== void && isvalid kag && typeof kag.systemEvents == "Object" ? kag.systemEvents : void;
+		ev.log.add(name) if ev !== void;
+		switch (name) {
+		case "background":
+			// a phone puts the game away, and may stop it without a word: write the place now
+			KAGSaveBeforeError();
+			ev.note(name) if ev !== void;
+			break;
+		case "lowmemory":
+			KAGSaveBeforeError();
+			try { System.doCompact(clAll); } catch (e) {}
+			ev.lowMemoryNotice = true if ev !== void;
+			break;
+		case "terminating":
+			KAGSaveBeforeError();
+			break;
+		}
+	} catch (e) {
+		try { dm("system event " + name + ": " + e.message); } catch (e2) {}
+	}
+}
+
+function KAGSystemEventsOf(win)
+{
+	if (typeof win.systemEvents != "Object" || win.systemEvents === void) {
+		win.systemEvents = new KAGSystemEvents(win);
+		win.addPlugin(win.systemEvents);
+	}
+	return win.systemEvents;
+}
+
+// at start, once the window and its system variables are there
+function KAGApplySystemOptions()
+{
+	if (typeof global.SDLSystem == "undefined") return;
+	KAGSystemEventsOf(kag);
+	var v = KAGOptionGet("frameLimit");
+	if (v !== void && KAGOptions.frameLimit.available()) KAGOptions.frameLimit.setValue(v);
+}

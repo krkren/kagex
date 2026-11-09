@@ -1,0 +1,80 @@
+/**
+ * Voice effects (since 0.28.0, through kagex's voicefx plugin): an echo on a memory or an inner
+ * voice, a thin voice on the phone, a muffled one through a door, a hall, a cave, a radio.
+ *
+ * A writer sets one for a character, [ai voicefx=phone], or for every voice, [env voicefx=memory].
+ * [ai voicefx=none] gives that character none all the same, [ai voicefx=default] has it follow
+ * [env voicefx] again, and [env voicefx=none] ends the World's. Both are World state, so saves,
+ * compiled scenes and going back keep them. An effect starts with the next voice the character
+ * says (the engine builds a sound's filters as it opens it); with an echo or a reverb, the voice
+ * rings on after its end.
+ *
+ * An effect's name is one of voicefx.csv's, or one of the plugin's presets: echo, phone, muffled,
+ * hall, cave, radio. voicefx.csv (on the search path, optional): a line per effect, its fields
+ * apart by tabs or commas: the name, a preset (or none), then settings as name=value (VoiceFX's:
+ * lowcut, highcut, order, drive, mono, delay, feedback, echo, damping, room, reverb, dry, gain,
+ * tail; see the plugin's README). # starts a comment.
+ *
+ * Without the plugin, voices play as they are.
+ */
+
+var KAGVoiceEffects; // name => settings (VoiceFX.load's dictionary), from voicefx.csv
+
+function KAGVoiceEffectTable()
+{
+	if (KAGVoiceEffects !== void) return KAGVoiceEffects;
+	KAGVoiceEffects = %[];
+	if (!Storages.isExistentStorage("voicefx.csv")) return KAGVoiceEffects;
+	try {
+		var lines = [].load("voicefx.csv");
+		for (var i = 0; i < lines.count; i++) {
+			var line = lines[i];
+			var hash = line.indexOf("#");
+			line = line.substring(0, hash) if hash >= 0;
+			line = line.trim();
+			if (line == "") continue;
+			var fields = line.split("\t,", , true); // each character a separator
+			if (fields.count < 1) continue;
+			var name = fields[0].trim();
+			var d = %[];
+			if (fields.count > 1 && fields[1].trim() != "") d.preset = fields[1].trim();
+			for (var k = 2; k < fields.count; k++) {
+				var parts = fields[k].trim().split(" ", , true);
+				for (var p = 0; p < parts.count; p++) {
+					var eq = parts[p].indexOf("=");
+					if (eq > 0) d[parts[p].substring(0, eq)] = +parts[p].substring(eq + 1);
+				}
+			}
+			KAGVoiceEffects[name] = d;
+		}
+	} catch (e) {
+		dm("voicefx.csv: " + e.message);
+	}
+	return KAGVoiceEffects;
+}
+
+// The settings of an effect by name (void: none)
+function KAGVoiceEffectSettings(name)
+{
+	if (name === void || name == "" || name == "none") return void;
+	var t = KAGVoiceEffectTable()[name];
+	if (t !== void) return t;
+	return %[ preset:name ]; // one of the plugin's presets (VoiceFX logs a name it doesn't know)
+}
+
+// The effect a character's voices play with now: its own, or the World's (void: none)
+function KAGVoiceEffectOf(ch)
+{
+	var name = ch.voiceEffect;
+	name = ch.env.voiceEffect if name === void;
+	return name == "none" ? void : name;
+}
+
+// Before a character's voice opens (KAGEnvCharacter.playVoice)
+function KAGApplyVoiceEffect(ch, track)
+{
+	if (typeof global.VoiceFX == "undefined" || typeof track.setEffect == "undefined") return;
+	var name = KAGVoiceEffectOf(ch);
+	var settings = KAGVoiceEffectSettings(name);
+	try { track.setEffect(settings === void ? "" : name, settings); } catch (e) { dm("voice effect " + name + ": " + e.message); }
+}

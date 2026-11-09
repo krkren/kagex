@@ -567,11 +567,15 @@ private:
 			pr.log("Converted " + std::to_string(m.images) + " images and " + std::to_string(m.sounds) + " sounds (" +
 			       std::to_string(m.fromCache) + " from the cache): " + mb(m.bytesBefore) + " -> " + mb(m.bytesAfter));
 		}
+		if (m.movies) pr.log("Converted " + std::to_string(m.movies) + " movies into WebM");
+		if (m.smallerMovies) pr.log("Made the smaller versions of " + std::to_string(m.smallerMovies) + " movies (<name>_sd.webm)");
 		if (m.rewrittenScripts) pr.log("Rewrote the file names in " + std::to_string(m.rewrittenScripts) + " scripts");
 		for (const auto& n : m.notes) { pr.log(n); notes_.push_back(n); }
 		media_ = Json::object();
 		media_.set("images", Json(m.images));
 		media_.set("sounds", Json(m.sounds));
+		media_.set("movies", Json(m.movies));
+		media_.set("smallerMovies", Json(m.smallerMovies));
 		media_.set("fromCache", Json(m.fromCache));
 		media_.set("bytesBefore", Json((long long)m.bytesBefore));
 		media_.set("bytesAfter", Json((long long)m.bytesAfter));

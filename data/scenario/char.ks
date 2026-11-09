@@ -175,8 +175,11 @@ A quieter line, a whisper: [[pip voice=4 vol=35]
 【ai】The speaker's face shows by the window, just as their sprite looks now.
 [ai angry]
 【ai】Even when I'm cross!
-[pip facewin]
+; a voice effect (since 0.28.0, the voicefx plugin): Pip's voice through the phone, until
+; [pip voicefx=default] has it follow [env voicefx] again (VoiceEffects.tjs, voicefx.csv)
+[pip facewin voicefx=phone voice=5]
 【pip】And I'm not even on stage. I'm calling from somewhere else!
+[pip voicefx=default]
 Narration has no face.
 [EV file=event1 fade]
 【ai】Over a CG, the face steps aside.
@@ -229,6 +232,10 @@ Ai and Pip on the street, as they are now.
 [env grayscale=true]
 [endtrans trans=normal]
 A memory, in grey: Ai, long ago, on her own.
+; [memory] also gives the voices the memories' echo ([env voicefx=memory], since 0.28.0)
+[ai voice=1]
+【ai】Ninth-grade antiseptic hell!
+Her words from back then, echoing.
 [env restore trans=normal]
 And back to now, just as it was, with the music still playing.
 [bgm stop=1500]

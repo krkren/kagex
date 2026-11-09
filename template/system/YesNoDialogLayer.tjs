@@ -1667,19 +1667,37 @@ class AboutDialogLayer extends DialogLayer
 
         }
 
-        addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
+        // the game's website (sf.software_url), where pages can be opened (SystemSupport.tjs,
+        // since 0.28.0): Website and Close side by side, as Yes and No
+        website = (given === void && typeof global.KAGCanOpen != "undefined" && KAGCanOpen()) ? aboutText(sf.software_url) : "";
+        if (website != "") {
+            addButton(%[ name:"website", x:yesNoButtonX(frame, 0), y:frame.buttonY,
 
-                     normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+                         normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
 
+            drawYesNoLabel(names.website, tr("Website"));
+
+            addButton(%[ name:"close", x:yesNoButtonX(frame, 1), y:frame.buttonY,
+
+                         normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+
+        } else {
+            addButton(%[ name:"close", x:frame.centerX - (yesnoButtonWidth >> 1), y:frame.buttonY,
+
+                         normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+
+        }
         drawYesNoLabel(names.close, tr("Close"));
 
         var said = [];
 
         for (var i = 0; i < lines.count; i++) said.add(lines[i][0]);
 
-        a11yText = said.join("\n"), a11yLabels = [ tr("Close") ];
+        a11yText = said.join("\n"), a11yLabels = website != "" ? [ tr("Website"), tr("Close") ] : [ tr("Close") ];
 
     }
+
+    var website = "";
 
     function finalize() {
 
@@ -1691,7 +1709,7 @@ class AboutDialogLayer extends DialogLayer
 
     function onOpen() {
 
-        KAGOpenFocus(this, 0);
+        KAGOpenFocus(this, website != "" ? 1 : 0);
 
         openYesNoA11y(this);
 
@@ -1727,7 +1745,7 @@ class AboutDialogLayer extends DialogLayer
 
         if ((key == VK_RETURN || key == VK_SPACE) && keyLink == -1 && numLinks > 0) {
 
-            processLink(0);
+            processLink(numLinks - 1); // Close (the last: Website, where there's one, comes first)
 
             return;
 
@@ -1739,6 +1757,8 @@ class AboutDialogLayer extends DialogLayer
 
     function processLink(num) {
 
+        // Website opens the page and leaves About open (the page opens in another window)
+        if (website != "" && num == 0) { KAGOpen(website); return; }
         super.processLink(num);
 
         close() if (this isvalid);

@@ -8,6 +8,10 @@
 //            JPEG with a lossless mask (<name>_m.png) for transparent ones. Masks of separate
 //            main/mask pairs (<name>_m.*) and transition rules (rule/) are only converted to
 //            lossless formats.
+//   movies:  MP4, MOV, AVI, WMV, MPEG, OGV, MKV, FLV -> WebM (VP9 and Opus) through ffmpeg, which
+//            the engine plays; and <name>_sd.webm beside a movie a [movie] tag plays (or every
+//            WebM), at 540 lines, which [movie] plays on the web and phones (Movies.tjs).
+//            Without ffmpeg, movies stay as they are (with a note).
 //   never:   Ogg, Opus, JPEG (lossy already), and files whose names the scripts write with their
 //            extension, unless the references are rewritten.
 //
@@ -29,6 +33,8 @@ namespace kr {
 
 struct MediaResult {
 	int images = 0, sounds = 0;      ///< converted
+	int movies = 0;                  ///< converted into WebM
+	int smallerMovies = 0;           ///< <name>_sd.webm made
 	int fromCache = 0;
 	int keptByReference = 0;         ///< named with their extension in a script
 	int keptForEffects = 0;          ///< textures and sounds of Effekseer effects (.efk, .efkefc)

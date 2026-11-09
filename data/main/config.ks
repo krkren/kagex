@@ -97,7 +97,7 @@
 [eval exp="configOptionsPage()"]
 
 *nav
-; The pages' tabs (the save screens' page buttons), each with a tip of what it holds; eight of
+; The pages' tabs (the save screens' page buttons), each with a tip of what it holds; nine of
 ; them fit between the title and Default 3 px apart
 [locate x=584 y=78]
 [button name="page1" exp="setConfigPage(1)" hint="Sound and Text"]
@@ -117,6 +117,8 @@
 [locate x=997 y=78]
 [button name="page8" exp="setConfigPage(8)" hint="Languages"]
 [endif]
+[locate x=1056 y=78]
+[button name="page9" exp="setConfigPage(9)" hint="Reading Aloud, the Background and Screenshots"]
 
 ; Under the panels: the manual (Manual.tjs, since 0.26.0), Controls, the list of what each key and
 ; button does (Controls.tjs), where the engine can show it; Undo (the last change) and Revert
@@ -150,7 +152,7 @@
 [endif]
 
 [eval exp='configInit()']
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message1 page=fore]
 [s]
@@ -161,7 +163,7 @@
 [stoptrans]
 [backlay]
 [position layer=message1 page=back visible=false frame="" left=0 top=0 width=8 height=8]
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message0]
 [history enabled=true]

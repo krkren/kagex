@@ -24,7 +24,7 @@
   written into the engine's scnfile plugin (where the host's engine package has it, else the
   .scn.json the engine writes without it), a patch of one changed script, and on Linux the
   sample played from the package by tools/smoketest.py --packaged
-- --tests cli,keys,signing,server,build,hidden,web,android,ios,media,scripts,scenes,patch picks some of these (default: all)
+- --tests cli,keys,signing,server,build,hidden,web,android,ios,media,scripts,scenes,patch,movies picks some of these (default: all)
 """
 import argparse
 import hashlib
@@ -1385,6 +1385,103 @@ def cg_pieces_tests(exe, proj):
         shutil.rmtree(ja, ignore_errors=True)
 
 
+def movie_tests(exe, proj):
+    """Movies (0.28.0): a movie of another format becomes WebM, and a movie a [movie] tag plays gets
+    a smaller version, <name>_sd.webm, beside it (not one the tags don't play, nor one no taller
+    than the version, nor one that has its own); bit-exact, so a second build's are the same
+    bytes; without ffmpeg the movies stay as they are. Engine-free: patch builds. Needs ffmpeg"""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        print("  (movies: skipped, no ffmpeg here)")
+        return
+    video = proj / "data" / "video"
+    video.mkdir(parents=True, exist_ok=True)
+    ks = proj / "data" / "scenario" / "zz_movie.ks"
+    made = []
+    def make(name, w, h, codec):
+        out = video / name
+        args = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=%dx%d:rate=24:duration=1" % (w, h),
+                "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-shortest"]
+        args += ["-c:v", "libx264", "-c:a", "aac"] if codec == "mp4" else ["-c:v", "libvpx-vp9", "-b:v", "2M", "-c:a", "libopus"]
+        subprocess.run(args + [str(out)], check=True)
+        made.append(out)
+    make("zz_clip.mp4", 320, 180, "mp4")
+    make("zz_big.webm", 640, 360, "webm")
+    make("zz_other.webm", 640, 360, "webm")
+    make("zz_short.webm", 320, 180, "webm")
+    ks.write_text('*start\n[movie storage=zz_big]\n@movie storage="zz_short.webm" skip=always\n[s]\n', encoding="utf-8")
+    rel = proj / "release.json"
+    saved = rel.read_bytes()
+    try:
+        s = json.loads(saved.decode("utf-8"))
+        for p in s["platforms"]:
+            s["platforms"][p]["enabled"] = False
+        s["output"]["check"] = False
+        s["contents"]["compileScripts"] = False
+        s["scenes"] = {"compile": False, "encrypt": False}
+        s["media"]["movies"] = {"convert": True, "smaller": "played", "sdHeight": 240, "sdKbps": 400}
+        out = proj / "release"
+        out.mkdir(exist_ok=True)
+        (out / "nothing-files.json").write_text(json.dumps({"format": 1, "version": "0", "files": {}}), encoding="utf-8")
+        s["output"]["patchFrom"] = "release/nothing-files.json"
+
+        def build(version):
+            s["identity"]["version"] = version
+            rel.write_text(json.dumps(s, indent=2), encoding="utf-8")
+            code, text = run(exe, "--cli", "build", str(rel), "--json")
+            try:
+                r = json.loads(text[text.index("{"):])
+            except ValueError:
+                r = {"ok": False, "error": text[-1500:]}
+            zp = out / ("kagex-sample-%s-patch" % version) / "patch.zip"
+            return r, (zipfile.ZipFile(zp) if zp.exists() else None)
+
+        def height(z, name):
+            tmp = out / "zz_probe.webm"
+            tmp.write_bytes(z.read(name))
+            p = subprocess.run([ffmpeg, "-hide_banner", "-i", str(tmp)], capture_output=True, text=True)
+            m = re.search(r"Video:.*?, (\d+)x(\d+)", p.stderr)
+            tmp.unlink()
+            return int(m.group(2)) if m else 0
+
+        r, z = build("5.0.0")
+        step("movies: a build", r.get("ok") and z is not None, r.get("error", "") + " " + "; ".join(r.get("notes", [])))
+        if z is None:
+            return
+        names = set(z.namelist())
+        clip = z.read("video/zz_clip.webm") if "video/zz_clip.webm" in names else b""
+        step("movies: an MP4 becomes WebM", clip[:4] == b"\x1a\x45\xdf\xa3" and "video/zz_clip.mp4" not in names,
+             ", ".join(sorted(n for n in names if n.startswith("video/zz_"))))
+        step("movies: the movie a [movie] tag plays gets a smaller version, 240 lines high, beside it",
+             "video/zz_big_sd.webm" in names and "video/zz_big.webm" in names and height(z, "video/zz_big_sd.webm") == 240,
+             ", ".join(sorted(n for n in names if n.endswith("_sd.webm"))))
+        step("movies: none for a movie no tag plays, one no taller, or one with its own",
+             not ({"video/zz_other_sd.webm", "video/zz_short_sd.webm", "video/test_sd.webm"} & names)
+             and z.read("video/opening_sd.webm") == (proj / "data" / "video" / "opening_sd.webm").read_bytes(),
+             ", ".join(sorted(n for n in names if n.endswith("_sd.webm"))))
+        m = r.get("media", {})
+        step("movies: the build reports them", m.get("movies") == 1 and m.get("smallerMovies") == 1, json.dumps(m))
+        first = z.read("video/zz_big_sd.webm")
+        r, z = build("5.0.1")
+        step("movies: a second build takes them from the cache, the same bytes",
+             r.get("ok") and z is not None and z.read("video/zz_big_sd.webm") == first and r.get("media", {}).get("fromCache", 0) >= 2,
+             json.dumps(r.get("media")))
+        s["media"]["movies"]["smaller"] = "off"
+        r, z = build("5.0.2")
+        step("movies: none with smaller versions off", r.get("ok") and z is not None and "video/zz_big_sd.webm" not in z.namelist(), r.get("error", ""))
+        s["media"]["movies"]["ffmpeg"] = str(out / "no-such-ffmpeg")
+        s["media"]["movies"]["crf"] = 30   # not the cached conversion
+        r, z = build("5.0.3")
+        notes = " ".join(r.get("notes", []))
+        step("movies: without ffmpeg the movie stays as it is, with a note",
+             r.get("ok") and z is not None and "video/zz_clip.mp4" in z.namelist() and "zz_clip.mp4" in notes and "ffmpeg" in notes, notes)
+    finally:
+        rel.write_bytes(saved)
+        for f in made:
+            f.unlink(missing_ok=True)
+        ks.unlink(missing_ok=True)
+
+
 def patch_tests(exe, proj):
     """A build with output.patchFrom: the file list each build writes, then patch.zip of what
     changed since an earlier list. A patch alone needs no platform (and so no engines)"""
@@ -2360,7 +2457,7 @@ def main():
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,movies,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -2407,6 +2504,8 @@ def main():
             loudness_tests(exe, proj)
         if want("pieces"):
             cg_pieces_tests(exe, proj)
+        if want("movies"):
+            movie_tests(exe, proj)
         if want("layered"):
             layered_tests(exe, Path(t), args)
     print("%d failed" % len(failures) if failures else "all passed")

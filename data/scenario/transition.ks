@@ -58,6 +58,17 @@ This build doesn't have it, so they all run as crossfades here.
 [EV file=event1 trans=honeyturn time=1500 size=80]honeyturn: hexagons flip over one by one
 [EV hide trans=normal]
 
+*glitch|Glitch
+; kagex's own glitch transition (the glitchtrans plugin, since 0.28.0): the picture breaks up like
+; a damaged signal (bands shifted, colours split, rows of static, blocks out of place) and the new
+; one comes through in stripes; [glitch] (macro.ks) breaks up what's on the screen for a moment.
+; Without the plugin the transition is a crossfade, and [glitch] a short pause
+kagex's own glitch transition breaks the picture up on its way to the next.
+[EV file=event1 trans=glitch time=1200]glitch: the old picture breaks up and the new one comes through
+[EV hide trans=glitch time=800 strength=60 seed=7]A gentler one, the same every time: strength=60 seed=7
+[glitch]
+And [[glitch]: a moment of the same screen breaking up.
+
 [demodone name=transition]
 
 [jump storage=s0001.ks]

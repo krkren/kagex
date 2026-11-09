@@ -143,7 +143,7 @@
 
 [eval exp="titleGreeting()"]
 
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 
 [wt]
 
@@ -209,7 +209,7 @@
 
 [clearlayers page=back]
 
-[trans method=crossfade time=500]
+[trans screen method=crossfade time=500]
 
 [wt]
 

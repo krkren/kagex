@@ -747,7 +747,10 @@
 
 			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
 
-			"testVoices" => [ "ai000001" ]
+			"testVoices" => [ "ai000001" ],
+
+			// her lines read aloud by the system's voice (ReadAloud.tjs, since 0.28.0): a little higher
+			"speech" => %[ "pitch" => 115 ]
 
 			],
 
@@ -783,7 +786,10 @@
 
 			// Config's Test button and the volume sliders play one of these (Options.tjs, KAGVoiceTest)
 
-			"testVoices" => [ "pip000001", "pip000003", "pip000005", "pip000009" ]
+			"testVoices" => [ "pip000001", "pip000003", "pip000005", "pip000009" ],
+
+			// read aloud higher and a little quicker than Ai (ReadAloud.tjs, since 0.28.0)
+			"speech" => %[ "pitch" => 145, "rate" => 110 ]
 
 			],
 

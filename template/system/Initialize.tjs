@@ -836,6 +836,17 @@ KAGLinkTransitionPlugin("plugin/extrans.dll",
 KAGLinkTransitionPlugin("plugin/extNagano.dll",
 	["3duniversal", "blurfade", "scanline", "zoomfade", "rgbfade", "spin", "flutter", "book",
 	 "imagewipe", "honeyturn", "morphing", "multiripple"]);
+// kagex's own plugins of 0.28.0, each a repository of its own (github.com/krkren/<name>) built
+// into every engine: glitchtrans (the glitch transition), sdlsystem (pages, folders and programs,
+// the window's focus and the background, the system's low-memory warning, pictures on the
+// clipboard, a frame limit), voicefx (effects on voices) and speech (the system's text to
+// speech). Without one, what it gives is left out: the glitch runs as a crossfade, a voice plays
+// without its effect, and the settings that need one aren't offered
+if (typeof global.GlitchTrans != "undefined") KAGPluginTransitions.glitch = "linked";
+else KAGLinkTransitionPlugin("plugin/glitchtrans.dll", ["glitch"]);
+KAGLinkPlugin("plugin/sdlsystem.dll") if typeof global.SDLSystem == "undefined";
+KAGLinkPlugin("plugin/voicefx.dll") if typeof global.VoiceFX == "undefined";
+KAGLinkPlugin("plugin/speech.dll") if typeof global.Speech == "undefined";
 // krkr_richtext.dll - optional; message text uses it when MessageLayer useRichText is set
 KAGLinkPlugin("plugin/krkr_richtext.dll") if typeof global.RichText == "undefined";
 
@@ -1170,6 +1181,7 @@ KAGLoadScript("ScrollList.tjs"); // lists that scroll by dragging, flicks, the w
 KAGLoadScript("Display.tjs"); // the screen, controller and screenshot settings (since 0.19.0)
 KAGLoadScript("GameCursor.tjs"); // the game's own mouse pointers, and where prompts put the pointer (since 0.27.0)
 KAGLoadScript("Advanced.tjs"); // settings for when something goes wrong: memory, drawing threads (since 0.27.0)
+KAGLoadScript("SystemSupport.tjs"); // pages, folders and programs opened, the background, low memory, a frame limit (since 0.28.0)
 KAGLoadScript("TextSettings.tjs"); // the message font, outline and shadow, with a preview (since 0.22.0)
 KAGLoadScript("MessageStyles.tjs"); // the message window's styles per scene, in the player's colours (since 0.22.0)
 KAGLoadScript("Glossary.tjs"); // the glossary: its words marked in the text, a click shows the entry (since 0.22.0)
@@ -1177,6 +1189,8 @@ KAGLoadScript("ScenePreview.tjs"); // a compiled scene's opening on a card besid
 KAGLoadScript("MusicPlayer.tjs"); // the music playing: a turning picture, its title and a bar that seeks (since 0.24.0)
 KAGLoadScript("Greetings.tjs"); // a line for the title by the time of day, the date and the visit (since 0.24.0)
 KAGLoadScript("Voices.tjs"); // the voices heard, and the player's favourites in their own order (since 0.24.0)
+KAGLoadScript("VoiceEffects.tjs"); // effects on voices: an echo, a phone, through a door (since 0.28.0)
+KAGLoadScript("ReadAloud.tjs"); // lines read aloud with the system's voices (since 0.28.0)
 KAGLoadScript("SpriteMode.tjs"); // the characters one at a time in any pose and face, for a viewer (since 0.24.0)
 KAGLoadScript("Flowchart.tjs"); // the flowchart: the scenes, the ways between them, the route taken (since 0.24.0)
 KAGLoadScript("Manual.tjs"); // the manual: pages of help, links that change settings (since 0.26.0)
@@ -1298,6 +1312,7 @@ KAGTooltipsOf(kag); // tips (Tooltips.tjs)
 KAGGameCursorOf(kag); // the game's mouse pointers (GameCursor.tjs)
 
 KAGApplyDisplayOptions(); // the screen and controller settings kept (Display.tjs)
+KAGApplySystemOptions(); // the window's events and the frame limit (SystemSupport.tjs, since 0.28.0)
 KAGApplyTextLook(); // the player's outline and shadow (TextSettings.tjs)
 
 kag.tagHandlers.chapter = KAGChapterTag;

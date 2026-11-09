@@ -782,7 +782,11 @@ var configPages = [
       [ void, void, void, void, "glossaryMarks", "glossaryColor" ] ],
     // the languages (Language.tjs, since 0.26.0): the menus' own, and a second under the story's;
     // the mouse pointer (GameCursor.tjs, since 0.27.0): the game's own, where questions put it
-    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [ "gameCursor", "promptPointer", "hideCursorIdle" ] ]
+    [ [ "menuLanguage", "secondLanguage", "languageNote" ], [ "gameCursor", "promptPointer", "hideCursorIdle" ] ],
+    // lines read aloud (ReadAloud.tjs), the background and the frame limit (SystemSupport.tjs), how
+    // screens change and where screenshots go (Display.tjs): since 0.28.0, through kagex's plugins
+    [ [ "readAloud", "readAloudVoice", "readAloudSpeed", "readAloudTest", "backgroundMode", "frameLimit" ],
+      [ "screenTransition", "screenshotPlace", "screenshotOpen", "screenshotCopy" ] ]
     ];
 
 KAGDefineOption(%[ name:"languageNote", label:"Languages", kind:"note", rows:2,
@@ -897,6 +901,7 @@ function configOptionsPage()
 {
     var page = configPages[tf.configPage];
     if (tf.configPage == 5) page[0] = configVoiceOptions;
+    if (tf.configPage == 9) KAGReadAloudVoices(); // the voices of the story's language
     KAGOptionPage(kag.current, [ [ 290, 206, page[0] ], [ 990, 206, page[1] ] ]);
     KAGTextPreviewClose();
     if (tf.configPage == 7) {

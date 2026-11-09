@@ -9,6 +9,8 @@
 //   cache is emptied, so the game's new files are fetched.
 // - Same-origin fetches without ?v= revalidate with the server (cache: no-cache): the game's
 //   files, krkrz.wasm and krkrz.data never come from a stale HTTP cache.
+// - A game file whose name has %, # or ? is fetched by its escaped name (the engine sends it as
+//   it is).
 // - The engine's file cache (OPFS): a lookup of an entry the prefetch is still writing waits for
 //   the write, which the engine would otherwise have read as an empty file.
 // - Add to Home Screen: on phones and tablets, outside the home-screen app, a bar offers it: a
@@ -27,10 +29,27 @@
   var build = meta ? meta.getAttribute("content") : "";
   var origFetch = window.fetch;
 
+  // --- the game's files with %, # or ? in their names ----------------------------------------
+  // The engine (tTVPHttpStorageMedia::ToUrl) and krkrz.js's prefetch put a file's name into its
+  // URL as it is, so window@base%base.png asked for "%ba" and # or ? cut the name short
+  // (UPSTREAM.md). Their URLs under the web base (KRKRZ_WEB_DEFAULT_WEBBASE, webconfig.js) never
+  // carry a query or an escape of their own, so those three are escaped here, on the way out:
+  // the file cache's keys, made from the URL before the fetch, stay the engine's.
+  function gameFileURL(raw) {
+    var base = window.KRKRZ_WEB_DEFAULT_WEBBASE;
+    if (typeof base !== "string" || base === "" || !/[%#?]/.test(raw)) return raw;
+    var at = raw.indexOf(base);
+    if (at < 0) return raw;
+    var head = raw.substring(0, at + base.length);
+    if (at > 0 && head.indexOf(location.origin) !== 0) return raw;
+    return head + raw.substring(at + base.length).replace(/%/g, "%25").replace(/#/g, "%23").replace(/\?/g, "%3F");
+  }
+
   // --- fetches revalidate --------------------------------------------------------------------
   if (origFetch) {
     window.fetch = function (input, init) {
       try {
+        if (typeof input === "string") input = gameFileURL(input);
         var raw = typeof input === "string" ? input : input && input.url ? input.url : String(input);
         var url = new URL(raw, location.href);
         var explicit = (init && init.cache) || (typeof Request !== "undefined" && input instanceof Request && input.cache !== "default");

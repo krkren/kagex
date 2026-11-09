@@ -175,8 +175,11 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 【ai】話している人の顔が、立ち絵の今の姿のままウィンドウの横に出ます。
 [ai angry]
 【ai】怒っているときもね！
-[pip facewin]
+; a voice effect (since 0.28.0, the voicefx plugin): Pip's voice through the phone, until
+; [pip voicefx=default] has it follow [env voicefx] again (VoiceEffects.tjs, voicefx.csv)
+[pip facewin voicefx=phone voice=5]
 【pip】ぼくは舞台にもいないよ。よそから電話してるんだ！
+[pip voicefx=default]
 地の文には顔が出ません。
 [EV file=event1 fade]
 【ai】CGの上では、顔は引っ込みます。
@@ -225,6 +228,10 @@ char.ks を開いて実際のファイルを比較しながら見るとわかり
 [env grayscale=true]
 [endtrans trans=normal]
 灰色の思い出：ずっと前の、ひとりきりのあい。
+; [memory] also gives the voices the memories' echo ([env voicefx=memory], since 0.28.0)
+[ai voice=1]
+【ai】中三マキロン地獄
+あの頃の言葉が、こだまする。
 [env restore trans=normal]
 そして今へ。音楽は流れたまま、何もかも元どおり。
 [bgm stop=1500]

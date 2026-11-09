@@ -735,8 +735,10 @@ class KAGManualLayer extends Layer
 			KAGAfterDialogClosed(KAGManualDoPending);
 			break;
 		case "url":
-			var done = false;
-			if (typeof System.shellExecute != "undefined") { try { System.shellExecute(arg); done = true; } catch (e) {} }
+			// the browser (SystemSupport.tjs, the sdlsystem plugin, since 0.28.0); without it, or
+			// when the system won't, the address is copied for the player to paste
+			var done = typeof global.KAGOpen != "undefined" && KAGOpen(arg);
+			if (!done && typeof System.shellExecute != "undefined") { try { done = !!System.shellExecute(arg); } catch (e) {} }
 			if (!done) copyText(arg, true);
 			break;
 		case "copy": copyText(arg, false); break;
