@@ -31,7 +31,8 @@ for name in drop:
     if n == 0:
         # a rerun on a list that was already edited, or upstream moved it — nothing to drop
         print("%s: nothing to drop (already edited upstream?)" % name, file=sys.stderr)
-add = ["krkreffekseer", "minizip", "clipfile", "xp3crypt", "scnfile", "krkrlive2d", "krkrthreepp", "AlphaMovie"]
+add = ["krkreffekseer", "minizip", "clipfile", "xp3crypt", "scnfile", "krkrlive2d", "krkrthreepp", "AlphaMovie",
+       "sdlsystem", "voicefx", "glitchtrans", "speech"]
 start = s.index("LIST(APPEND TVP_PLUGINS_STATIC")
 close = re.compile(r"^[ \t]*\)", re.M).search(s, start)
 s = s[:close.start()] + "".join("  %s\n" % name for name in add if not re.search(r"^[ \t]*%s[ \t]*$" % name, s[start:close.start()], re.M)) + s[close.start():]
@@ -41,7 +42,11 @@ fstart = s.index(folders)
 fclose = re.compile(r"^[ \t]*\)", re.M).search(s, fstart)
 for name, entry in (("krkrlive2d", "${KRKRZ_BASE}/kagex/tools/live2d/build/src"),
                     ("xp3crypt", "${KRKRZ_BASE}/xp3crypt/plugins"),
-                    ("scnfile", "${KRKRZ_BASE}/scnfile/plugins")):
+                    ("scnfile", "${KRKRZ_BASE}/scnfile/plugins"),
+                    ("sdlsystem", "${KRKRZ_BASE}/sdlsystem/plugins"),
+                    ("voicefx", "${KRKRZ_BASE}/voicefx/plugins"),
+                    ("glitchtrans", "${KRKRZ_BASE}/glitchtrans/plugins"),
+                    ("speech", "${KRKRZ_BASE}/speech/plugins")):
     if entry not in s[fstart:fclose.start()]:
         # Live2D's copy goes first: the engine's own tree holds a submodule of the plugin, at
         # its unpatched state (krkrz_dev's plugin folders come first below), and build.py's

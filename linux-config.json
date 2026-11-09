@@ -17,7 +17,11 @@
         "pluginFolders": [
             "${KRKRZ_BASE}/krkrz_dev/src/plugins",
             "${KRKRZ_BASE}/xp3crypt/plugins",
-            "${KRKRZ_BASE}/scnfile/plugins"
+            "${KRKRZ_BASE}/scnfile/plugins",
+            "${KRKRZ_BASE}/sdlsystem/plugins",
+            "${KRKRZ_BASE}/voicefx/plugins",
+            "${KRKRZ_BASE}/glitchtrans/plugins",
+            "${KRKRZ_BASE}/speech/plugins"
         ],
         "plugins": [
             "KAGParserEx", "clipfile", "csvParser", "getSample", "json",
@@ -25,7 +29,7 @@
             "layerExRaster", "layerExVector", "lineParser", "minizip", "psdfile",
             "saveStruct", "scriptsEx", "shrinkCopy", "krkr_richtext", "extrans",
             "extNagano", "AlphaMovie", "expat", "layerExSave", "sigcheck",
-            "krkreffekseer", "krkrthreepp", "xp3crypt", "scnfile"
+            "krkreffekseer", "krkrthreepp", "xp3crypt", "scnfile", "sdlsystem", "voicefx", "glitchtrans", "speech"
         ],
         "staticPlugins": ["xp3crypt"]
     },

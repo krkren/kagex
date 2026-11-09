@@ -17,13 +17,17 @@
       "${BUILD_SYSTEM_DIR}/plugins",
       "${KRKRZ_BASE}/krkrz_dev/src/plugins",
       "${KRKRZ_BASE}/xp3crypt/plugins",
-      "${KRKRZ_BASE}/scnfile/plugins"
+      "${KRKRZ_BASE}/scnfile/plugins",
+      "${KRKRZ_BASE}/sdlsystem/plugins",
+      "${KRKRZ_BASE}/voicefx/plugins",
+      "${KRKRZ_BASE}/glitchtrans/plugins",
+      "${KRKRZ_BASE}/speech/plugins"
     ],
     "plugins": [
       "json", "KAGParserEx", "csvParser",
       "getSample", "layerExBTOA", "layerExImage", "layerExRaster", "layerExVector", "minizip", "clipfile", "saveStruct",
       "scriptsEx", "shrinkCopy", "extrans", "extNagano", "AlphaMovie", "krkrthreepp", "virtualpad", "iosconfig",
-      "xp3crypt", "scnfile"
+      "xp3crypt", "scnfile", "sdlsystem", "voicefx", "glitchtrans", "speech"
     ]
   },
   "assetPack": {
