@@ -1171,15 +1171,17 @@ presets: echo, phone, muffled, hall, cave, radio. voicefx.csv has a line per eff
 apart by tabs or commas: the name, a preset (or none), then settings as name=value; # starts a
 comment:
 
-    memory  echo   delay=320 feedback=48 echo=58 damping=50 room=40 reverb=16 dry=90
-    phone   phone  drive=34
+    memory  echo   delay=300 feedback=28 echo=28 damping=55 room=40 reverb=20
+    oldline phone  lowcut=300 highcut=3400 order=4 drive=20
 
 The settings (the plugin's README says more): lowcut and highcut (Butterworth filters, in Hz;
-0: none) of order 2 or 4; drive (0-100: a phone's or a radio's crackle); mono (0 or 1); delay (ms),
-feedback (0-95 %: how long the repeats go on), echo (0-100 %: how loud they are) and damping
-(0-100 %: how much darker each repeat is); room and reverb (0-100: the room's size and how loud it
-is); dry (0-100 %: the voice itself, 100); gain (%, 100); tail (ms the voice may ring on at most,
-8000). Without the plugin, voices play as they are.
+0: none) of order 2 or 4; drive (0-100: a phone's or a radio's crunch, which flattens the loud
+parts); mono (0 or 1); delay (ms), feedback (0-95 %: how long the repeats go on), echo (0-100 %:
+how loud they are) and damping (0-100 %: how much darker each repeat is); room and reverb (0-100:
+the room's size, and how loud it is, 100 about as loud as the voice); dry (0-100 %: the voice
+itself, 100); gain (%, 100); tail (ms the voice may ring on at most, 8000). The presets are meant
+to be heard without getting in the way of the line: a voice keeps its loudness, and an echo or a
+room stays about 10 dB under it (a cave 6). Without the plugin, voices play as they are.
 
 
 

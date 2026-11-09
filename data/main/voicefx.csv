@@ -3,7 +3,5 @@
 # damping, room, reverb, dry, gain, tail). Names not here are taken as the plugin's presets:
 # echo, phone, muffled, hall, cave, radio
 #
-# a memory ([memory] in macro.ks): repeats a little slower and longer than the plain echo, in a room
-memory	echo	delay=320 feedback=48 echo=58 damping=50 room=40 reverb=16 dry=90
-# a phone with a little more crackle than the preset
-phone	phone	drive=34
+# a memory ([memory] in macro.ks): repeats a little slower than the plain echo, in a larger room
+memory	echo	delay=300 feedback=28 echo=28 damping=55 room=40 reverb=20
