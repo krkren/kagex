@@ -39,7 +39,8 @@ FORMAT = "kagex-platform-engine 1"
 NOTE = "kagex-engine-build.json"
 REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
-COMMON_PINS = ["ENGINE_SHA", "XP3CRYPT_SHA", "SCNFILE_SHA"]
+COMMON_PINS = ["ENGINE_SHA", "XP3CRYPT_SHA", "SCNFILE_SHA", "SDLSYSTEM_SHA", "VOICEFX_SHA", "GLITCHTRANS_SHA",
+               "SPEECH_SHA"]
 # the workflow (every step of every job builds as it says), the clones
 COMMON_FILES = [".github/workflows/platforms.yml", ".github/platforms/setup.sh"]
 STATIC = [".github/platforms/monocypher-kit.cmake", ".github/platforms/scnfile-monocypher-names.h",
@@ -64,7 +65,7 @@ PLATFORMS = {
         "pins": ["KRKRZ_ANDROID_SHA"],
         "configs": {"app-config.json": ["versionCode", "versionName"]},
         "debug": True,
-        "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/kit-android-back.patch", ".github/platforms/krkreffekseer-odr.cpp",
+        "files": STATIC + KIT + [".github/platforms/kit-android-bootstrap.patch", ".github/platforms/kit-android-back.patch", ".github/platforms/kit-android-tts.py", ".github/platforms/krkreffekseer-odr.cpp",
                                  "tools/release/scripts/android-engine.py"],
     },
     "ios": {

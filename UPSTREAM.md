@@ -314,7 +314,7 @@ Script features that need these log the missing plugin and carry on without the 
 
 ## 52. Scripts can't change the options the engine reads at start, nor start the game again
 
-- **Where:** the engine reads a player's options from `<exe>.cfu` in the save folder (desktops; `generic/base/SysInitImpl.cpp`) through `TVPReadLines` (`common/base/StorageIntf.cpp`), which takes the file's bytes as one C string, while a script can only write text as UTF-16 with a BOM (`tTVPTextWriteStream`), so a `.cfu` a script wrote reads as nothing after its first byte. The `-userconf` screen writes the file, but only when the game is started with that option, and nothing starts the game again: the SDL engine binds no `System.shellExecute` (`app.cpp` has the code), and there's no restart call.
+- **Where:** the engine reads a player's options from `<exe>.cfu` in the save folder (desktops; `generic/base/SysInitImpl.cpp`) through `TVPReadLines` (`common/base/StorageIntf.cpp`), which takes the file's bytes as one C string, while a script can only write text as UTF-16 with a BOM (`tTVPTextWriteStream`), so a `.cfu` a script wrote reads as nothing after its first byte. The `-userconf` screen writes the file, but only when the game is started with that option, and nothing starts the game again: there's no restart call (the SDL engine binds no `System.shellExecute` either; since 0.28.0 kagex's sdlsystem plugin gives scripts one, but starting the game again from inside it isn't a restart: the save folder's lock and the single-instance check still belong to the running game).
 - **What it costs:** the Advanced settings (`Advanced.tjs`, 0.27.0) change only what the engine lets a running game change (`System.graphicCacheLimit`, `System.drawThreadNum`, `System.padEnabled`); the options it reads once as it starts (`-memusage`, `-renderer`, `-joypad`, `-gclim`, `-wsfreq` and the rest of optiondesc's `user` options) need the player to start the game with `-userconf`, which phones and the browser don't have, and no setting can say "restart now" and come back to the same place.
 - **Fix:** let scripts write the user options (a `System.setUserOption(name, value)` that writes `.cfu` in the `-userconf` screen's format, or a `TVPReadLines` that reads a UTF-16 file with a BOM), on every platform with a writable save folder, and a `System.restart()` that starts the game again (desktops: the executable with its arguments; elsewhere the platform's own way).
 
@@ -324,3 +324,32 @@ Script features that need these log the missing plugin and carry on without the 
 - **What it costs:** the first `std::string` such a plugin frees stops the game ("Scudo ERROR: corrupted chunk header", `SIGABRT`). Since 0.27.0 kagex-release puts a game's own Android plugins in the APK (`plugins/android/<ABI>/`), where the engine opens them at run time, so each has to take the engine's `new` and `delete` itself (`tools/release/README.md`, "Your own plugins"); plugins linked into the engine aren't touched.
 - **Fix:** don't export the replaced `new` and `delete` on Android (or don't replace them there), or have the plugin loader hand them to every plugin it opens.
 
+## 54. A `user://` name with a doubled slash saves nothing, without an error
+
+- **Where:** `SDLStorageMedia` (krkrz_dev `sdl3/base/`) splits `user://<domain>/<path>` at the first `/`, so a name with a doubled slash (a folder ending in `/`, then `/`, then a file, which `System.dataPath`, ending in `/`, invites) hands SDL's storage an absolute path, which it refuses. A write is held in memory and written as the stream closes, where a failure is only logged.
+- **What it costs:** the save "succeeds" and the next read throws "Cannot open storage": the save folder on Android, iOS and the web. The framework's own names have had one slash since 0.16.0 (`kag.saveDataFile`); `KAGOneSlash(name)` (`Porting.tjs`, since 0.28.0) folds the slashes of a game brought from elsewhere (`doc/porting.txt`).
+- **Fix:** collapse repeated slashes in `SDLStorageMedia`, and let a failed write reach the script (or at least the log in a release build).
+
+## 55. The file pool deadlocks when it fills
+
+- **Where:** the pooled allocator (`-filepoolsize`, 256 MB by default) calls the storage cache's pressure handler while it holds its own lock, at 75% of the pool, and the handler frees into the same pool.
+- **What it costs:** the engine hangs, and ignores SIGTERM: a game with about 240 MB of embedded fonts filled the pool at start-up. `filepoolsize=none` in the game's `krkrz.cf` avoids it, on Android, iOS and the web too since kagex-release writes the developer's options into their `config.cf` (`doc/porting.txt`). Passing `RichText.registerFont` (or `Font.getFontInfo`) a face the engine can't resolve opens every system font and runs into it too (`CLAUDE.md`, krkr_richtext).
+- **Fix:** run the pressure handler after letting go of the lock (collect what to free under it, free after), or give the cache its own allocator.
+
+## 56. `Storages.copyFile` throws for a file that isn't there
+
+- **Where:** `Storages.copyFile` (krkrz-core `common/base/StorageIntf.cpp`) throws "Cannot open storage" when the source is missing; fstat's `copyFile`, which Wamsoft's and older KAG scripts were written against, returned false.
+- **What it costs:** a game's rotating saves that copy an empty slot fail on its first quick save (the framework's own go round without copying, since 0.16.0). `Porting.tjs` (since 0.28.0) gives games brought from elsewhere fstat's behaviour back (`KAGPortingCompat`: `copyFile` returns false for a missing source; `doc/porting.txt`).
+- **Fix:** return false, as fstat did, or say it in the engine's documentation.
+
+## 57. The web engine can't fetch a file name with `%`, `#` or `?`
+
+- **Where:** `tTVPHttpStorageMedia::ToUrl` and `ResolveUrl` (krkrz_dev `sdl3/base/HttpStorageMedia.cpp`) put the name into the URL as it is, and krkrz_web's prefetch (`web/pre.js`) does the same.
+- **What it costs:** `window@base%base.png` asks for `%ba` and 404s, `#` and `?` cut the name short, and the missing picture stops the engine (`RuntimeError: null function` in `TVPLoadGraphic`). Games made with Wamsoft's framework name their UI pieces that way (79 files in one commercial game). Since 0.28.0 `kagex-web.js` escapes the three in the game's URLs (those under `KRKRZ_WEB_DEFAULT_WEBBASE`) as the page fetches them, after the engine has made its file cache's key from the name as it is; an engine with the fix would have them escaped twice, so the page's escaping goes when the engine's fix comes.
+- **Fix:** encode the three in both places alike (the prefetch's URLs are also its cache keys).
+
+## 58. Scripts hear nothing before the engine's own pools run out
+
+- **Where:** the engine's pooled allocators (`-filepoolsize`, `-krkrzpoolsize`, and on the web the fixed pools inside its 2 GB) fail an allocation with an exception or a crash; nothing tells scripts that a pool is nearly full. The system's own warning (`SDL_EVENT_LOW_MEMORY`, Android and iOS) reaches scripts since 0.28.0 through kagex's sdlsystem plugin (`SDLSystem.onEvent`), which the framework answers by writing the continue save and freeing caches (`SystemSupport.tjs`).
+- **What it costs:** a game that fills a pool (large pictures cached on the web, many files read at once) stops without its place saved, on desktops and the web where the system never warns.
+- **Fix:** post an event (or call a hook scripts can set) when a pool passes a share of its size and when an allocation from it fails, before failing it.

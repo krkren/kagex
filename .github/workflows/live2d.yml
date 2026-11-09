@@ -82,6 +82,10 @@ env:
   KRKRZ_IOS_SHA: 003abad6e7dc14ef597be566c8b3c4606fb9b7c1
   XP3CRYPT_SHA: 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
+  SDLSYSTEM_SHA: 0bbc4609572556276eb6562e30eb81c416bd05c0
+  VOICEFX_SHA: 56a4476c50f6fa775163a9e8c62fc0dbcc5eac70
+  GLITCHTRANS_SHA: b06ae2b38905f4ed1fc7bbefc6f00998e30f3db0
+  SPEECH_SHA: 55ee78f7e2acc38c545661d1fcd83788585ffb7f
   CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
 jobs:
@@ -492,6 +496,8 @@ jobs:
           # second copy alongside the first, which left the engine without its data)
           git -C kirikiri/krkrz_android apply "$PROJECT_DIR/.github/platforms/kit-android-bootstrap.patch"
           git -C kirikiri/krkrz_android apply "$PROJECT_DIR/.github/platforms/kit-android-back.patch"
+          # the system's speech engines, which apps since Android 11 see only when they ask (lines read aloud)
+          python3 "$PROJECT_DIR/.github/platforms/kit-android-tts.py" kirikiri/krkrz_android/app/src/main/AndroidManifest.xml
           echo "sdk.dir=$sdk" > kirikiri/krkrz_android/local.properties
           python3 kirikiri/kagex/.github/platforms/kit-vcpkg.py kirikiri/krkrz_android/app/src/main/cpp/vcpkg.json
           echo "include(\"$PROJECT_DIR/.github/platforms/krkreffekseer-kit.cmake\")" >> kirikiri/krkrz_android/app/src/main/cpp/CMakeLists.txt

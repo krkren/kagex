@@ -61,6 +61,9 @@
 
 ;   [eyecatch]                a card between scenes (time= ms; a click skips it)
 
+;   [glitch]                  the screen breaks up for a moment (time=, strength=, seed=, style=:
+;                             the glitchtrans plugin's glitch; a moment of nothing without it)
+
 [macro name=quake][env actioncamera=quake][endmacro]
 
 [macro name=thud][env actioncamera=thud][endmacro]
@@ -90,15 +93,19 @@
 [macro name=undim][veil delete trans=normal][endmacro]
 
 ; A memory (since 0.22.0): bars at the top and the bottom, a sepia edge and the memories' window
-; style (AfterInit.tjs, MessageStyles.tjs), shown with the next transition (between [begintrans] and
+; style (AfterInit.tjs, MessageStyles.tjs), and since 0.28.0 the voices' echo (voicefx.csv's
+; memory, VoiceEffects.tjs), shown with the next transition (between [begintrans] and
 ; [endtrans trans=...], with the scene's other changes, all in one); [memoryend] takes them off
 [macro name=letterbox][newlay name=letterbox file=letterbox level=6][endmacro]
 
 [macro name=memoryframe][newlay name=memoryframe file=memoryframe level=6][endmacro]
 
-[macro name=memory][letterbox][memoryframe][env msgstyle=memory][endmacro]
+[macro name=memory][letterbox][memoryframe][env msgstyle=memory voicefx=memory][endmacro]
 
-[macro name=memoryend][letterbox delete][memoryframe delete][env msgstyle=normal][endmacro]
+[macro name=memoryend][letterbox delete][memoryframe delete][env msgstyle=normal voicefx=none][endmacro]
+
+; A glitch over what's on the screen (since 0.28.0): the same picture, broken up and back
+[macro name=glitch][backlay][trans method=glitch time=%time|300 strength=%strength|70 seed=%seed|0 style=%style|mixed][wt][endmacro]
 
 [macro name=eyecatch]
 

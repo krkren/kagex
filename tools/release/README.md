@@ -273,6 +273,16 @@ Before packing, lossless media in the staged data are converted (the sources are
   A script of your own that looks for an image by adding an extension to its name
   (`Storages.isExistentStorage(name + ".png")`) won't find a converted one: use the framework's
   `getExistImageName(name)`, which tries every image format.
+- **Movies** (since 0.28.0, through ffmpeg: on `PATH`, *ffmpeg* (`media.movies.ffmpeg`) or
+  `KAGEX_RELEASE_FFMPEG`): MP4, MOV, AVI, WMV, MPEG, OGV, MKV and FLV become WebM (VP9 and Opus;
+  `media.movies.convert`), which the engine plays; a movie named without its extension finds its
+  `.webm`. And a movie a `[movie]` tag plays (its `storage=` written out; *For every movie*,
+  `media.movies.smaller: "all"`, takes every WebM, alpha movies included, side-by-side ones too)
+  gets a smaller version beside it, `<name>_sd.webm`, 540 lines high (`sdHeight`) at about 1200
+  kbps (`sdKbps`), which `[movie]` plays on the web, Android and iOS and where the player picks
+  the smaller movies (doc/kagex.txt, "Movies"); not for a movie that has one already, nor one no
+  taller than that. Both are bit-exact, so a movie that didn't change makes the same file (and no
+  patch carries it), and cached. Without ffmpeg the movies stay as they are, with a note.
 - **Never converted**: Ogg, Opus and JPEG (lossy already), and files the scripts (`.ks`, `.tjs`,
   `.csv`, `.txt`, `.asd`, `.json`, `.func`) name with their extension, including printf patterns
   like `"ai%s%06d.wav"`, unless *Names with extensions* is set to rewrite them; then the staged

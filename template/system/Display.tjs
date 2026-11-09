@@ -15,6 +15,14 @@
  *   padTest           a button that opens the controller test (PadTest.tjs)
  *   screenshotWindow  screenshots with the message windows, or without (MainWindow.tjs)
  *   screenshotFormat  PNG or JPEG
+ *   screenshotPlace   (since 0.28.0, desktops with the sdlsystem plugin) the save folder, or a
+ *                     folder of the game's own in the player's Pictures folder
+ *   screenshotOpen    a button that opens the folder they're saved in
+ *   screenshotCopy    each one also put on the clipboard (desktops with the sdlsystem plugin)
+ *   screenTransition  (since 0.28.0) how the game's screens come and go: their [trans screen ...]
+ *                     tags take the transition of KAGScreenTransitions named here ("crossfade",
+ *                     as written, or "glitch" where the glitchtrans plugin is); Reduce Motion
+ *                     keeps the crossfade
  *
  * [screenshot enabled=false] turns F12's screenshots off until [screenshot enabled=true], for
  * scenes with spoilers ([screenshot off] and [screenshot on] say the same); saves keep it.
@@ -99,11 +107,73 @@ KAGDefineOption(%[ name:"screenshotWindow", label:"Screenshots", kind:"toggle", 
 KAGDefineOption(%[ name:"screenshotFormat", label:"Screenshot Format", kind:"toggle", save:true, initial:"png",
 	values:[ ["PNG", "png"], ["JPEG", "jpg"] ] ]);
 
+// Where screenshots go (since 0.28.0): the save folder (or the game's own screenshotFolder), or
+// <Pictures>/<the game's title>/, made as the option is set; the folder opened by a button
+function KAGPicturesFolder()
+{
+	if (typeof global.SDLSystem == "undefined" || !KAGIsDesktop()) return "";
+	var p = "";
+	try { p = SDLSystem.userFolder("pictures"); } catch (e) {}
+	return p;
+}
+var KAGGameScreenshotFolder; // the game's own screenshotFolder (Config.tjs), noted at start
+function KAGScreenshotPlace(v)
+{
+	if (KAGGameScreenshotFolder === void) KAGGameScreenshotFolder = kag.screenshotFolder === void ? "" : kag.screenshotFolder;
+	var pictures = KAGPicturesFolder();
+	if (v == "pictures" && pictures != "") {
+		var name = sf.software_title !== void && sf.software_title != "" ? sf.software_title : System.title;
+		name = name.replace(/[\\\/:*?"<>|]/g, "_"); // a regex ends at the first unescaped /
+		var native = pictures + name + "/";
+		try { SDLSystem.makeFolder(native); } catch (e) {}
+		kag.screenshotFolder = kag.localStorageName(native);
+	} else {
+		kag.screenshotFolder = KAGGameScreenshotFolder == "" ? void : KAGGameScreenshotFolder;
+	}
+}
+function KAGScreenshotFolderNow() { return kag.screenshotFolder !== void ? kag.screenshotFolder : System.dataPath; }
+
+KAGDefineOption(%[ name:"screenshotPlace", label:"Screenshots Go To", kind:"toggle", save:true, initial:"save",
+	values:[ ["Save Folder", "save"], ["Pictures", "pictures"] ],
+	available:function { return KAGPicturesFolder() != ""; },
+	setValue:function(v) { KAGScreenshotPlace(v); } ]);
+
+KAGDefineOption(%[ name:"screenshotOpen", label:"Screenshot Folder", kind:"button", button:"Open",
+	available:function { return typeof global.KAGCanOpenFolders != "undefined" && KAGCanOpenFolders(); },
+	action:function { KAGOpen(KAGScreenshotFolderNow()); } ]);
+
+KAGDefineOption(%[ name:"screenshotCopy", label:"Copy Screenshots", kind:"toggle", save:true, initial:false,
+	values:[ ["Yes", true], ["No", false] ],
+	available:function { return typeof global.SDLSystem != "undefined" && SDLSystem.available && KAGIsDesktop(); } ]);
+
+// The screens' transitions (since 0.28.0): [trans screen method=crossfade time=300] in a screen's
+// script takes the named transition's attributes over its own; a game adds its own to the table
+var KAGScreenTransitions = %[
+	crossfade:%[],
+	glitch:%[ method:"glitch", strength:45, bands:10, blocks:6, noise:20, mosh:40, sort:0, flash:0 ] ];
+
+function KAGScreenTransitionFor(elm)
+{
+	var name = typeof global.KAGOptionGet != "undefined" ? KAGOptionGet("screenTransition") : void;
+	if (name === void || name == "" || KAGScreenTransitions[name] === void) return elm;
+	if (typeof global.KAGReduceMotion != "undefined" && KAGReduceMotion()) return elm;
+	var t = KAGScreenTransitions[name];
+	if (t.method !== void && typeof global.KAGPluginTransitions != "undefined" && KAGPluginTransitions[t.method] == "missing") return elm;
+	var e = %[];
+	(Dictionary.assign incontextof e)(elm);
+	foreach(t, function(k, v, d, e) { e[k] = v; }, e);
+	return e;
+}
+
+KAGDefineOption(%[ name:"screenTransition", label:"Screens Change With", kind:"toggle", save:true, initial:"crossfade",
+	values:[ ["Crossfade", "crossfade"], ["Glitch", "glitch"] ],
+	available:function { return typeof global.KAGPluginTransitions != "undefined" && KAGPluginTransitions.glitch == "linked"; } ]);
+
 // at start, once the window and its system variables are there
 function KAGApplyDisplayOptions()
 {
 	KAGOptions.windowSize.values = KAGWindowSizeValues() if KAGIsDesktop();
-	var names = [ "fullScreenFill", "fullScreenFit", "smoothScaling", "vsync", "padEnabled" ];
+	var names = [ "fullScreenFill", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "screenshotPlace" ];
 	for (var i = 0; i < names.count; i++) {
 		var o = KAGOptions[names[i]];
 		if (o.available !== void && !o.available()) continue;

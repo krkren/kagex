@@ -97,26 +97,28 @@
 [eval exp="configOptionsPage()"]
 
 *nav
-; The pages' tabs (the save screens' page buttons), each with a tip of what it holds; eight of
-; them fit between the title and Default 3 px apart
+; The pages' tabs, each with a tip of what it holds: nine 50 wide, 52 apart, end before Default
+; (x 1070 when Config opens from the story; the save screens' page buttons are 56 wide)
 [locate x=584 y=78]
-[button name="page1" exp="setConfigPage(1)" hint="Sound and Text"]
-[locate x=643 y=78]
-[button name="page2" exp="setConfigPage(2)" hint="Voices, Saves and Screenshots"]
-[locate x=702 y=78]
-[button name="page3" exp="setConfigPage(3)" hint="Reading"]
-[locate x=761 y=78]
-[button name="page4" exp="setConfigPage(4)" hint="On the Screen"]
-[locate x=820 y=78]
-[button name="page5" exp="setConfigPage(5)" hint="Each Character's Voice"]
-[locate x=879 y=78]
-[button name="page6" exp="setConfigPage(6)" hint="Screen and Controls"]
-[locate x=938 y=78]
-[button name="page7" exp="setConfigPage(7)" hint="How Text Looks"]
+[button name="config_tab1" exp="setConfigPage(1)" hint="Sound and Text"]
+[locate x=636 y=78]
+[button name="config_tab2" exp="setConfigPage(2)" hint="Voices, Saves and Screenshots"]
+[locate x=688 y=78]
+[button name="config_tab3" exp="setConfigPage(3)" hint="Reading"]
+[locate x=740 y=78]
+[button name="config_tab4" exp="setConfigPage(4)" hint="On the Screen"]
+[locate x=792 y=78]
+[button name="config_tab5" exp="setConfigPage(5)" hint="Each Character's Voice"]
+[locate x=844 y=78]
+[button name="config_tab6" exp="setConfigPage(6)" hint="Screen and Controls"]
+[locate x=896 y=78]
+[button name="config_tab7" exp="setConfigPage(7)" hint="How Text Looks"]
 [if exp="kag.languageAvailable"]
-[locate x=997 y=78]
-[button name="page8" exp="setConfigPage(8)" hint="Languages"]
+[locate x=948 y=78]
+[button name="config_tab8" exp="setConfigPage(8)" hint="Languages"]
 [endif]
+[locate x=1000 y=78]
+[button name="config_tab9" exp="setConfigPage(9)" hint="Reading Aloud, the Background and Screenshots"]
 
 ; Under the panels: the manual (Manual.tjs, since 0.26.0), Controls, the list of what each key and
 ; button does (Controls.tjs), where the engine can show it; Undo (the last change) and Revert
@@ -150,7 +152,7 @@
 [endif]
 
 [eval exp='configInit()']
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message1 page=fore]
 [s]
@@ -161,7 +163,7 @@
 [stoptrans]
 [backlay]
 [position layer=message1 page=back visible=false frame="" left=0 top=0 width=8 height=8]
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message0]
 [history enabled=true]

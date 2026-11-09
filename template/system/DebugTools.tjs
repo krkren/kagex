@@ -18,8 +18,9 @@
  *
  * The Debug menu adds: restart this script, a list of the script's lines to go to, the flags (to
  * read and change, flaglist.txt saying what the ones that matter are), copy the voice's file
- * name or where the game is, and a bug report (where it is, the flags, the World, the log's last
- * lines and a screenshot, in the save folder).
+ * name or where the game is, open the script at the line the game is at in an editor (-editor=,
+ * since 0.28.0) and a bug report (where it is, the flags, the World, the log's last lines and a
+ * screenshot, in the save folder).
  */
 
 // ------------------------------------------------------------------ the route runner
@@ -259,6 +260,35 @@ function KAGDebugCopyVoice()
 
 function KAGDebugCopyScene() { return KAGDebugCopy(KAGDebugDescribe(), "Scene"); }
 
+// Opens the script the game is in at its line, in the writer's editor (since 0.28.0, through the
+// sdlsystem plugin): -editor="<program> <arguments>", with %f for the file and %l for the line
+// (code --goto %f:%l, subl %f:%l, kate --line %l %f, notepad++ -n%l %f; words apart by spaces).
+// Without -editor the file opens with what the system opens it with, at its top
+function KAGDebugOpenInEditor()
+{
+	var h = KAGDebugHere();
+	var path = typeof global.KAGNativePath != "undefined" ? KAGNativePath(h.storage) : "";
+	if (path == "") {
+		try { showYesNoNotice(kag, tr("%s isn't a file of its own").sprintf(h.storage)); } catch (e) {}
+		return false;
+	}
+	var editor = System.getArgument("-editor");
+	if (editor === void || editor == "") return KAGOpen(path);
+	var words = editor.split(" ", , true), args = [];
+	for (var i = 1; i < words.count; i++) {
+		var w = words[i], out = "";
+		for (var k = 0; k < w.length; k++) {
+			if (w.charAt(k) == "%" && k + 1 < w.length && (w.charAt(k + 1) == "f" || w.charAt(k + 1) == "l"))
+				out += w.charAt(++k) == "f" ? path : (string)h.line;
+			else out += w.charAt(k);
+		}
+		args.add(out);
+	}
+	var ok = KAGRun(words[0], args);
+	if (!ok) try { showYesNoNotice(kag, tr("Couldn't start %s").sprintf(words[0])); } catch (e) {}
+	return ok;
+}
+
 // ------------------------------------------------------------------ restarting and going to a line
 
 function KAGDebugRestart()
@@ -477,6 +507,7 @@ function KAGDebugMenuItems(win, menu)
 		[ "Flags(&F) ...", function { KAGShowManual("debugflags"); } ],
 		[ "Copy the Voice's File Name", function { KAGDebugCopyVoice(); } ],
 		[ "Copy Where the Game Is", function { KAGDebugCopyScene(); } ],
+		[ "Open This Line in an Editor(&E)", function { KAGDebugOpenInEditor(); } ],
 		[ "Write a Bug Report(&B)", function { KAGDebugBugReport(); } ],
 		[ "Trace Tags in the Log", function { KAGDebugTrace(!KAGDebugTraceOn); } ],
 		[ "Layers and World into the Log", function { KAGDebugLayers(); KAGDebugWorld(); } ]

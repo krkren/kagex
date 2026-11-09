@@ -10,6 +10,8 @@ class VoiceTrack extends WaveSoundBuffer
 	var storage; // File currently playing
 	var fading = false; // fading out after a cut (fadeOut): its stop was told already
 	var lineVolume = 100; // the line's own volume, in % (the voice tag's vol=)
+	var effect;           // a VoiceFX (the voicefx plugin), made the first time an effect is set
+	var effectName = "";  // the effect it plays with ("": none)
 
 	function VoiceTrack(owner) {
 		this.owner = owner;
@@ -24,7 +26,27 @@ class VoiceTrack extends WaveSoundBuffer
 		stop();
 		filters.clear();
 		invalidate vocoder;
+		// not the effect: the buffer lets go of its filters only as it's invalidated, after this
+		// (a VoiceFX invalidated while a buffer has it waits for that, and goes with the buffer)
 		super.finalize();
+	}
+
+	/**
+	 * The effect the next voice opened plays with (VoiceEffects.tjs, since 0.28.0): a name and its
+	 * settings (VoiceFX.load's), or "" for none. The engine builds a buffer's filters as it opens
+	 * a sound, so it's set before open()
+	 */
+	function setEffect(name, settings) {
+		if (typeof global.VoiceFX == "undefined") return;
+		if (name == "" || settings === void) {
+			if (effect !== void) filters.remove(effect);
+			effectName = "";
+			return;
+		}
+		if (effect === void) effect = new global.VoiceFX();
+		if (effectName != name) effect.load(settings);
+		if (filters.find(effect) < 0) filters.add(effect);
+		effectName = name;
 	}
 
 	// For volume control
@@ -471,6 +493,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 		f.backVoiceName = backVoiceName if backVoiceName !== void;
 		f.backVoiceLoop = backVoiceLoop if backVoiceName !== void && backVoiceLoop;
 		f.backVoiceType = backVoiceType if backVoiceType != 0;
+		f.voiceEffect = voiceEffect if voiceEffect !== void;
     }
 
 	/**
@@ -488,6 +511,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 		backVoiceName = f.backVoiceName;
 		backVoiceLoop = f.backVoiceLoop !== void ? f.backVoiceLoop : false;
 		backVoiceType = f.backVoiceType !== void ? f.backVoiceType : 0;
+		voiceEffect = f.voiceEffect;
 		global.KAGEnvImage.onRestore(f);
 		global.KAGEnvLevelLayer.onRestore(f);
     }
@@ -861,6 +885,9 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	"delete" => function (param, elm) { deleteFlag=true; disp = CLEAR; } incontextof this,
 	stopvoice : null,
 	playvoice : null,
+	// the character's voice effect (VoiceEffects.tjs, since 0.28.0): a name; none for no effect
+	// even when [env voicefx] gives one; "" (or default) to follow [env voicefx] again
+	voicefx : function(param, elm) { voiceEffect = param === void || param == "" || param == "default" ? void : param; } incontextof this,
 	waitvoice : null,
 	noplayvoice : null,
 	facewin : function(param, elm) { disp = FACE; redraw = true; } incontextof this,
@@ -1642,6 +1669,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 	var doBackVoice = false; //< Flag for starting loop voice
 	var backVoiceLoop = false;
 	var backVoiceType = 0;
+	var voiceEffect;  // [<char> voicefx=<name>]: this character's voices' effect (void: [env voicefx]'s; since 0.28.0)
 
 	property backVoiceName {
 		getter() {
@@ -1747,6 +1775,7 @@ class KAGEnvCharacter extends KAGEnvImage, KAGEnvLevelLayer {
 					soundBuffer = new VoiceTrack(this);
 				}
 				soundBuffer.speed = env.getVoiceSpeed();
+				KAGApplyVoiceEffect(this, soundBuffer) if typeof global.KAGApplyVoiceEffect != "undefined";
 				soundBuffer.open(voicename);
 				soundBuffer.lineVolume = shape !== void && shape.vol !== void ? +shape.vol : 100;
 				placeVoice(soundBuffer, shape);

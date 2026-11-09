@@ -392,6 +392,17 @@ class DesktopEngine(FileChannel):
         env = dict(os.environ)
         env.setdefault("SDL_VIDEO_DRIVER", "offscreen")
         env.setdefault("SDL_AUDIO_DRIVER", "dummy")
+        # Linux: a stand-in for xdg-open ahead on PATH, so opening a page or a folder (the sdlsystem
+        # plugin, SDL_OpenURL) starts no browser and leaves what it was asked in opened.txt
+        self.opened = os.path.join(workdir, "opened.txt")
+        if sys.platform.startswith("linux"):
+            bindir = os.path.join(workdir, "bin")
+            os.makedirs(bindir, exist_ok=True)
+            opener = os.path.join(bindir, "xdg-open")
+            with open(opener, "w") as f:
+                f.write('#!/bin/sh\necho "$@" >> "%s"\n' % self.opened)
+            os.chmod(opener, 0o755)
+            env["PATH"] = bindir + os.pathsep + env.get("PATH", "")
         # without data: a package, which runs the data it holds
         args = [exe] + ([os.path.abspath(data)] if data else []) + \
             ["-datapath=" + self.savedir + "/", "-replfile=" + self.chan, "-replmodaltimeout=0"]
@@ -3138,6 +3149,207 @@ def sample_steps(eng):
         if got != "undefined,undefined,1,1":
             raise SmokeError("a transition of extNagano's isn't the plugin's own: %s" % got)
 
+    @step("kagex's plugins of 0.28.0 are linked: sdlsystem, voicefx, glitchtrans, speech (--kagexplugins required)")
+    def _():
+        got = str(eng.tjs('return [typeof global.SDLSystem, typeof global.VoiceFX, typeof global.GlitchTrans, typeof global.Speech,'
+                          ' typeof global.KAGPluginTransitions != "undefined" ? KAGPluginTransitions.glitch : "?"].join(",");'))
+        print("     SDLSystem, VoiceFX, GlitchTrans, Speech, the glitch transition: %s" % got, flush=True)
+        if got != "Object,Object,Object,Object,linked" and eng.opts.kagexplugins == "required":
+            raise SmokeError("--kagexplugins required, but they aren't all here: %s" % got)
+
+    @step("sdlsystem: pages and folders open, programs start, the window's events pause or mute the game, a low-memory warning saves")
+    def _():
+        if eng.tjs('return typeof global.SDLSystem != "undefined" && typeof global.KAGSystemEventsOf != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no sdlsystem plugin here)", flush=True)
+            return
+        info = str(eng.tjs('return [SDLSystem.available, SDLSystem.platform, SDLSystem.where, SDLSystem.canRun, SDLSystem.frameLimitPossible].join(" | ");'))
+        print("     SDL found, platform, where, programs, frame limit: %s" % info, flush=True)
+        if not info.startswith("1 |"):
+            raise SmokeError("the sdlsystem plugin didn't find SDL's functions in the engine: %s" % info)
+        if isinstance(eng, DesktopEngine) and sys.platform.startswith("linux"):
+            # a page and a folder, through the stand-in xdg-open (DesktopEngine)
+            if os.path.exists(eng.opened):
+                os.remove(eng.opened)
+            ok = str(eng.tjs('return [KAGOpen("https://github.com/krkren/kagex"), KAGOpen(System.dataPath)].join(",");'))
+            time.sleep(1.0)
+            said = open(eng.opened).read() if os.path.exists(eng.opened) else ""
+            print("     opened (%s): %s" % (ok, said.strip().replace("\n", " | ")), flush=True)
+            if ok != "1,1" or "https://github.com/krkren/kagex" not in said or "file://" not in said:
+                raise SmokeError("a page and a folder didn't open through xdg-open: %s, %r" % (ok, said))
+            # a program, its arguments as given
+            out = os.path.join(eng.workdir, "ran.txt")
+            ran = eng.tjs('return KAGRun("sh", ["-c", "echo \\"$1\\" > %s", "sh", "one two"]);' % out)
+            time.sleep(1.0)
+            got = open(out).read().strip() if os.path.exists(out) else ""
+            if ran != 1 or got != "one two":
+                raise SmokeError("a program didn't start with its arguments: %s, %r" % (ran, got))
+        # the background: pause stops the story and mutes, coming back puts both back; mute only mutes
+        got = str(eng.tjs("""var ev = KAGSystemEventsOf(kag), was = KAGOptionGet("backgroundMode"), v = WaveSoundBuffer.globalVolume, r = [];
+            KAGOptionSet("backgroundMode", "pause");
+            ev.note("blur"); r.add(ev.paused ? 1 : 0); r.add(kag.mainConductor.interrupted ? 1 : 0); r.add(WaveSoundBuffer.globalVolume == 0 ? 1 : 0);
+            ev.note("focus"); r.add(ev.paused ? 1 : 0); r.add(WaveSoundBuffer.globalVolume == v ? 1 : 0);
+            KAGOptionSet("backgroundMode", "mute");
+            ev.note("minimize"); r.add(ev.paused ? 1 : 0); r.add(WaveSoundBuffer.globalVolume == 0 ? 1 : 0);
+            ev.note("restore"); r.add(WaveSoundBuffer.globalVolume == v ? 1 : 0);
+            KAGOptionSet("backgroundMode", was === void ? "play" : was);
+            return r.join(",");"""))
+        print("     paused, story waits, muted / back / mute: %s" % got, flush=True)
+        if got != "1,1,1,0,1,0,1,1":
+            raise SmokeError("the background modes didn't pause and mute as they should: %s" % got)
+        # the system's low-memory warning: the place saved and a notice
+        got = eng.tjs('KAGSystemUrgentEvent("lowmemory"); return kag.systemEvents.lowMemoryNotice || kag.systemEvents.log.find("lowmemory") >= 0 ? 1 : 0;')
+        if got != 1:
+            raise SmokeError("a low-memory warning wasn't taken")
+        # a frame limit (not on the web, where the browser paces the frames)
+        if eng.tjs('return SDLSystem.frameLimitPossible ? 1 : 0;') == 1:
+            eng.tjs('global.__frames = 0; global.__frameCount = function { global.__frames++; } incontextof global;'
+                    ' System.addContinuousHandler(global.__frameCount); KAGOptionSet("frameLimit", 30); return 1;')
+            time.sleep(0.3)
+            eng.tjs('global.__frames = 0; return 1;')
+            time.sleep(2.0)
+            n = eng.tjs('var n = global.__frames; System.removeContinuousHandler(global.__frameCount); KAGOptionSet("frameLimit", 0); return n;')
+            print("     frames in 2 s at a limit of 30: %s" % n, flush=True)
+            if int(n) > 80:
+                raise SmokeError("the frame limit didn't hold: %s frames in 2 s at 30" % n)
+        # pictures on the clipboard (desktops)
+        if isinstance(eng, DesktopEngine):
+            got = str(eng.tjs('var l = new Layer(kag, kag.primaryLayer); l.setImageSize(32, 16); l.fillRect(0, 0, 32, 16, 0xff336699);'
+                              ' var r = SDLSystem.copyImage(l); invalidate l; return [r, SDLSystem.clipboardHas("image/png"), SDLSystem.lastError].join(",");'))
+            if not got.startswith("1,1"):
+                raise SmokeError("a picture didn't go on the clipboard: %s" % got)
+
+    @step("voicefx: a character's voice plays through its effect, and an echo rings on past the voice's end")
+    def _():
+        if eng.tjs('return typeof global.VoiceFX != "undefined" && typeof global.KAGApplyVoiceEffect != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no voicefx plugin here)", flush=True)
+            return
+        got = str(eng.tjs("""var env = world_object.env, ch = env.getCharacter("pip");
+            env.doCommand("voicefx", "echo", %[]); ch.doCommand("voicefx", "default", %[]);
+            if (!ch.playVoice("pip000001", false)) return "no voice";
+            var b = ch.soundBuffer; global.__fxStart = System.getTickCount(); global.__fxTotal = b.totalTime;
+            return [b.effectName, b.effect.connected, b.effect.preset, b.status].join(",");"""))
+        print("     effect, connected, preset, status: %s" % got, flush=True)
+        if got == "no voice":
+            print("     (skipped: voices don't play here)", flush=True)
+            eng.tjs('world_object.env.doCommand("voicefx", "none", %[]); return 1;')
+            return
+        if got != "echo,1,echo,play":
+            raise SmokeError("the voice didn't play through its effect: %s" % got)
+        eng.wait("the voice and its echo", 'world_object.env.getCharacter("pip").soundBuffer.status != "play"', timeout=30)
+        took = int(eng.tjs('return System.getTickCount() - global.__fxStart;'))
+        total = int(eng.tjs('return global.__fxTotal;'))
+        print("     the voice is %d ms, it played %d ms with its echo" % (total, took), flush=True)
+        eng.tjs('world_object.env.doCommand("voicefx", "none", %[]); return 1;')
+        if took > 0 and total > 0 and took < total + 200 and isinstance(eng, DesktopEngine):
+            raise SmokeError("the echo didn't ring on: %d ms for a %d ms voice" % (took, total))
+        # a VoiceFX invalidated while its buffer plays goes when the buffer does (the engine keeps
+        # its pointer until then: 0.28.0's first VoiceTrack.finalize freed it under the buffer)
+        got = str(eng.tjs("""var b = new WaveSoundBuffer(kag), fx = new VoiceFX(); fx.preset = "hall";
+            b.filters.add(fx); b.open("pip000001.ogg"); b.play(); var c = fx.connected;
+            invalidate fx; b.open("pip000002.ogg"); b.play(); b.stop(); invalidate b;
+            var b2 = new WaveSoundBuffer(kag), fx2 = new VoiceFX(); b2.filters.add(fx2); b2.open("pip000001.ogg"); b2.play();
+            invalidate b2; var c2 = fx2.connected; invalidate fx2;
+            return [c ? 1 : 0, c2 ? 1 : 0].join(",");"""))
+        if got != "1,0":
+            raise SmokeError("a VoiceFX wasn't connected, or stayed so after its buffer went: %s" % got)
+
+    @step("glitchtrans: the glitch is the plugin's own transition; a still glitch is the same for the same seed; the screens can change with it")
+    def _():
+        if eng.tjs('return typeof global.GlitchTrans != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: no glitchtrans plugin here)", flush=True)
+            return
+        got = str(eng.tjs("""var a = new Layer(kag, kag.primaryLayer), b = new Layer(kag, kag.primaryLayer), c = new Layer(kag, kag.primaryLayer), d = new Layer(kag, kag.primaryLayer);
+            var ls = [a, b, c, d];
+            for (var i = 0; i < 4; i++) { var l = ls[i]; l.setImageSize(320, 180); for (var y = 0; y < 180; y += 6) l.fillRect(0, y, 320, 6, 0xff000000 | (y * 1300 + 0x203040)); }
+            GlitchTrans.apply(a, %[ seed: 5 ]); GlitchTrans.apply(b, %[ seed: 5 ]); GlitchTrans.apply(c, %[ seed: 6 ]);
+            var styled = typeof GlitchTrans.version != "undefined" && GlitchTrans.version != "1.0";
+            if (styled) GlitchTrans.apply(d, %[ seed: 5, style: "analog" ]);
+            var same = 0, differ = 0, other = 0;
+            for (var y = 3; y < 180; y += 7) for (var x = 5; x < 320; x += 11) {
+                same += a.getMainPixel(x, y) == b.getMainPixel(x, y) ? 1 : 0;
+                differ += a.getMainPixel(x, y) != c.getMainPixel(x, y) ? 1 : 0;
+                other += a.getMainPixel(x, y) != d.getMainPixel(x, y) ? 1 : 0; }
+            invalidate a; invalidate b; invalidate c; invalidate d;
+            return [same, differ, styled ? other : -1].join(",");"""))
+        same, differ, other = [int(v) for v in got.split(",")]
+        print("     the same seed's pixels alike, another seed's different, another style's different: %d, %d, %d (of 754)"
+              % (same, differ, other), flush=True)
+        if same != 754 or differ < 50 or (other >= 0 and other < 50):
+            raise SmokeError("a still glitch isn't the same for the same seed, or the same for another seed or style: %s" % got)
+        got = str(eng.tjs("""kag.tagHandlers.image(%[ layer: "0", page: "back", storage: "event1", visible: "true" ]);
+            kag.tagHandlers.trans(%[ layer: "0", method: "glitch", time: "600", seed: "3", style: "mosh", children: "false" ]);
+            var r = [ kag.transCount, kag.fore.layers[0].inTransition ? 1 : 0 ];
+            var e = KAGScreenTransitionFor(%[ screen: "", method: "crossfade", time: "300" ]), was = KAGOptionGet("screenTransition");
+            KAGOptionSet("screenTransition", "glitch"); var g = KAGScreenTransitionFor(%[ screen: "", method: "crossfade", time: "300" ]);
+            KAGOptionSet("screenTransition", was === void ? "crossfade" : was);
+            r.add(e.method); r.add(g.method); r.add(g.time);
+            return r.join(",");"""))
+        print("     going, the layer's; a screen's transition, then the glitch: %s" % got, flush=True)
+        whole = str(eng.tjs('var env = world_object.env; if (typeof env.screenGlitch == "undefined") return "-";'
+                            ' return [env.getTrans("glitch", %[]).transall ? 1 : 0, env.getTrans("glitch", %[ transall: "false" ]).transall ? 1 : 0,'
+                            ' env.getTrans("crossfade", %[]).transall ? 1 : 0].join(",");'))
+        print("     the World's glitch takes the whole screen, transall=false the layer, a crossfade as before: %s" % whole, flush=True)
+        if whole not in ("-", "1,0,0"):
+            raise SmokeError("the World's trans=glitch doesn't take the whole screen by default: %s" % whole)
+        eng.wait("the glitch to end", "kag.transCount == 0", timeout=20)
+        eng.tjs('kag.tagHandlers.freeimage(%[ layer: "0", page: "fore" ]); kag.tagHandlers.freeimage(%[ layer: "0", page: "back" ]); return 1;')
+        if got != "1,1,crossfade,glitch,300":
+            raise SmokeError("the glitch transition didn't run as the engine's, or the screens' didn't follow the option: %s" % got)
+
+    @step("speech: a line spoken with the system's voice plays like a voice line (--speech required)")
+    def _():
+        if eng.tjs('return typeof global.Speech != "undefined" && typeof global.KAGReadAloud == "Object" ? 1 : 0;') != 1:
+            print("     (skipped: no speech plugin here)", flush=True)
+            return
+        info = str(eng.tjs('return [Speech.available, Speech.mode, Speech.voices().count].join(",");'))
+        print("     available, mode, voices: %s" % info, flush=True)
+        if not info.startswith("1,"):
+            if eng.opts.speech == "required":
+                raise SmokeError("--speech required, but the system has no speech engine here: %s" % info)
+            print("     (skipped: no speech engine on this system)", flush=True)
+            return
+        if info.split(",")[1] != "file":
+            # the web: the browser speaks it itself; a headless one may refuse, which is told
+            eng.tjs('KAGReadAloud.start("Hello there.", %[ voice: "", rate: 100, pitch: 100, volume: 100 ]); return 1;')
+            time.sleep(2.0)
+            print("     the browser's line: %s %s" % (eng.tjs('return Speech.state;'), eng.tjs('return Speech.lastError;')), flush=True)
+            eng.tjs('KAGReadAloud.cancel(); return 1;')
+            return
+        got = str(eng.tjs("""var before = world_object.env.playVoiceCount;
+            var ok = KAGReadAloud.start("Hello there. This line is read aloud.", %[ voice: "", rate: 100, pitch: 100, volume: 100 ]);
+            return [ok ? 1 : 0, world_object.env.playVoiceCount - before].join(",");"""))
+        if got != "1,1":
+            raise SmokeError("a line didn't start, or doesn't count as a voice: %s (%s)" % (got, eng.tjs('return Speech.lastError;')))
+        eng.wait("the line to be made", 'KAGReadAloud.state != "making"', timeout=30)
+        state = eng.tjs('return KAGReadAloud.state;')
+        print("     made, then: %s (%s)" % (state, eng.tjs('return Speech.lastError;')), flush=True)
+        if state != "playing" and state != "idle":
+            raise SmokeError("the line wasn't made: %s" % state)
+        eng.wait("the line to play", 'KAGReadAloud.state == "idle"', timeout=30)
+        if eng.tjs('return world_object.env.playVoiceCount;') != 0:
+            raise SmokeError("the line still counts as a voice after it ended")
+
+    @step("Porting.tjs: Plugins.link through a table (renamed, skipped, stood in for, missing), copyFile of a missing file, one slash")
+    def _():
+        got = str(eng.tjs("""var oldLink = Plugins.link, oldCopy = Storages.copyFile, r = [];
+            Scripts.execStorage("Porting.tjs");
+            try {
+                r.add(Storages.copyFile("file://./kagex-no-such-file", "file://./kagex-no-such-copy") ? 1 : 0);
+                try { Plugins.link("plugin/menu.dll"); r.add("linked"); } catch (e) { r.add("missing"); }
+                KAGPortingPlugins["textrender.dll"] = "skip";
+                try { Plugins.link("plugin/textrender.dll"); r.add("skipped"); } catch (e) { r.add("thrown"); }
+                global.__portCalls = 0;
+                KAGPortingPlugins["getlangname.dll"] = function(n) { global.__portCalls++; } incontextof global;
+                Plugins.link("getLangName.dll"); Plugins.link("plugin/getlangname.dll"); r.add(global.__portCalls);
+                r.add(KAGOneSlash("user://./saves//data1.png"));
+                r.add(typeof System.readRegValue);
+            } catch (e) { r.add("error " + e.message); }
+            Plugins.link = oldLink; Storages.copyFile = oldCopy;
+            return r.join(",");"""))
+        print("     copy of a missing file, menu.dll, a skipped one, stand-in calls, one slash, a stub: %s" % got, flush=True)
+        if got != "0,missing,skipped,1,user://./saves/data1.png,Object":
+            raise SmokeError("Porting.tjs didn't do what it says: %s" % got)
+
     @step("a movie named without its extension is found as .webm, the format the engine plays")
     def _():
         found = str(eng.tjs('if (!Storages.isExistentStorage("test.webm")) return "none";'
@@ -3450,6 +3662,20 @@ def sample_steps(eng):
             eng.tjs(opener + "; return 1;")
             eng.wait(what, wait_open, timeout=20)
             time.sleep(0.3)
+            if what == "Config":
+                # opened from the story, the header has Default, Title and Return: no page tab
+                # under them (0.28.0's ninth tab was under Default until the tabs got narrower)
+                hit = str(eng.tjs('var m = kag.current, r = [], tabs = [], heads = [];'
+                                  ' for (var i = 1; i < 10; i++) { var b = m.names["config_tab" + i]; if (b === void) b = m.names["page" + i]; if (b !== void && b.visible) tabs.add(b); }'
+                                  ' var hn = ["config_initial", "config_title", "return"];'
+                                  ' for (var i = 0; i < hn.count; i++) if (m.names[hn[i]] !== void) heads.add(m.names[hn[i]]);'
+                                  ' for (var i = 0; i < tabs.count; i++) for (var j = 0; j < heads.count; j++) {'
+                                  '  var t = tabs[i], h = heads[j];'
+                                  '  if (t.left < h.left + h.width && h.left < t.left + t.width && t.top < h.top + h.height && h.top < t.top + t.height) r.add(t.name + "/" + h.name); }'
+                                  ' return tabs.count + ":" + r.join(",");'))
+                print("     Config from the story: %s page tabs; under a header button: %s" % tuple((hit.split(":") + ["-"])[:2]), flush=True)
+                if hit.split(":")[1] != "":
+                    raise SmokeError("Config's page tabs lie under its header buttons: %s" % hit)
             r = str(eng.tjs(tap % button))
             if r != "tapped":
                 raise SmokeError("%s: %s" % (what, r))
@@ -4812,12 +5038,23 @@ def sample_steps(eng):
         line("[env keep], a grey flashback", memory)
         eng.tjs("kag.saveBookMark(5); return 1;")
         eng.wait("data5 to be written", "Storages.isExistentStorage(kag.getBookMarkFileNameAtNum(5))", timeout=10)
-        eng.tjs("kag.onPrimaryClick(); return 1;")
+        # the memory's lines (since 0.28.0 Ai's voice echoes there), a click each, up to the restore
+        def click_until(what, cond, clicks=6):
+            for i in range(clicks):
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                try:
+                    eng.wait(what, cond, timeout=4 if i < clicks - 1 else 10, interval=0.05)
+                    return
+                except SmokeError:
+                    if i == clicks - 1:
+                        raise
         if fades:
-            eng.wait("[env restore]'s transition from the memory still on the front page",
-                     '(kag.fore.base.inTransition && world_object.env.transLeftovers.count > 0'
-                     ' && kag.fore.messages[0].frameGraphic == "messagewindow_memory" && kag.back.messages[0].frameGraphic == "messagewindow") ? 1 : 0', timeout=10, interval=0.05)
+            click_until("[env restore]'s transition from the memory still on the front page",
+                        '(kag.fore.base.inTransition && world_object.env.transLeftovers.count > 0'
+                        ' && kag.fore.messages[0].frameGraphic == "messagewindow_memory" && kag.back.messages[0].frameGraphic == "messagewindow") ? 1 : 0')
             print("     back to now: one transition from the memory as it was", flush=True)
+        else:
+            click_until("[env restore]", '(string)%s == "%s"' % (state, now))
         line("[env restore]", now)
         if fades:
             eng.wait("the transition's end", "!kag.fore.base.inTransition && world_object.env.transLeftovers.count == 0", timeout=10)
@@ -4830,7 +5067,7 @@ def sample_steps(eng):
                 raise SmokeError("the window's style after the flashback: %s" % r)
         eng.tjs("kag.loadBookMark(5); return 1;")
         line("loaded in the flashback, the kept scene with it", memory)
-        eng.tjs("kag.onPrimaryClick(); return 1;")
+        click_until("[env restore] after the load", '(string)%s == "%s"' % (state, now))
         line("[env restore] after the load", now)
         eng.tjs('kag.process("title.ks", "*backtotitle"); return 1;')
         eng.wait("the title", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
@@ -7297,6 +7534,12 @@ def main():
     ap.add_argument("--clip", choices=["required", "optional"], default="optional",
                     help="whether the build must load CLIP STUDIO PAINT layers (the clipfile plugin): "
                     "required fails when it can't; optional reports it")
+    ap.add_argument("--kagexplugins", choices=["required", "optional"], default="optional",
+                    help="whether the engine must have kagex's plugins of 0.28.0 (sdlsystem, voicefx, "
+                    "glitchtrans, speech): required fails without them; optional skips their checks")
+    ap.add_argument("--speech", choices=["required", "optional"], default="optional",
+                    help="whether the system must speak (the speech plugin with a speech engine: SAPI, "
+                    "AVSpeechSynthesizer, eSpeak NG): required fails when it can't; optional reports it")
     ap.add_argument("--encryption", choices=["required", "optional"], default="optional",
                     help="whether the engine must have the xp3crypt plugin built in and the scnfile plugin "
                     "(encrypted data.xp3 and compiled scenarios): required fails without them; optional reports it")

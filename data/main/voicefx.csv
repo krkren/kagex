@@ -1,0 +1,7 @@
+# The sample's voice effects (since 0.28.0, VoiceEffects.tjs): name, preset, then settings as
+# name=value (the voicefx plugin's: lowcut, highcut, order, drive, mono, delay, feedback, echo,
+# damping, room, reverb, dry, gain, tail). Names not here are taken as the plugin's presets:
+# echo, phone, muffled, hall, cave, radio
+#
+# a memory ([memory] in macro.ks): repeats a little slower than the plain echo, in a larger room
+memory	echo	delay=300 feedback=28 echo=28 damping=55 room=40 reverb=20

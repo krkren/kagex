@@ -905,6 +905,12 @@ def make_config_pages():
     c.save(out("name_base.png"), opaque=True)
     if LANG != "en":
         return
+    # Config's page tabs (config.ks), narrower than the save screens' page buttons: nine 50 wide,
+    # 52 apart from x 584, end at 1050, before Default (1070 when Config opens from the story)
+    for i in range(1, 10):
+        for st in ("normal", "over"):
+            button(50, 64, str(i), st, size=28, weight="Black", r=10, bw=3).save(
+                out("config_tab%d_%s.png" % (i, st), False))
     for w in (240, 180, 130):
         for st in ("normal", "over"):
             button(w, 60, "", st).save(out("config_choice%d_%s.png" % (w, st), False))

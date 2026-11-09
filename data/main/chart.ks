@@ -50,7 +50,7 @@
 [emb exp="tf.chartStatus"]
 [resetfont]
 
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 [wt]
 [current layer=message0 page=fore]
 [s]

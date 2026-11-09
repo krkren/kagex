@@ -1,0 +1,89 @@
+/**
+ * Porting.tjs (since 0.28.0): helps a game brought to KAGEX's engines from another Kirikiri
+ * engine (doc/porting.txt). Nothing loads it on its own: a game that wants it runs it first
+ * thing in its startup.tjs, before linking any plugin, then adds its own entries:
+ *
+ *   Scripts.execStorage("Porting.tjs");          // on the auto path, or with its folder
+ *   KAGPortingPlugins["textrender.dll"] = "skip";
+ *   KAGPortingPlugins["getlangname.dll"] = function(name) { ...defines what the game asks of it... };
+ *
+ * At once it
+ *   - sends Plugins.link through KAGPortingPlugins (below), by the plugin's file name in lower case
+ *   - makes Storages.copyFile return false when the file to copy isn't there, as fstat's did,
+ *     where the engine's throws (UPSTREAM.md 56), and true when it copied
+ *   - gives the System calls of Windows Kirikiri the SDL engine lacks a stand-in that does
+ *     nothing (KAGPortingStubs), so a game's settings code goes on to its defaults
+ * and KAGOneSlash(name) folds a doubled slash in a storage name (UPSTREAM.md 54).
+ *
+ * KAGPortingPlugins maps a plugin's file name (lower case, no folder) to
+ *   "<other>.dll"  link that plugin instead (the same folder rules apply)
+ *   "builtin"      the engine has it: nothing to link
+ *   "skip"         nothing to link, and no error: the game does without it
+ *   "missing"      link fails, as for a plugin that isn't there, so the game's own fallback runs
+ *   a function     a script stand-in: called once, with the name, instead of linking
+ * A plugin the table doesn't name is linked as it is. Each name is linked or stood in for once.
+ */
+
+var KAGPortingPlugins = %[
+	// System.shellExecute on every platform (sdlsystem, built into KAGEX's engines)
+	"shellexecute.dll" => "sdlsystem.dll",
+	// Windows-only: KAGEX's engines have none of them (README, "Not available on the SDL3 build")
+	"windowex.dll" => "missing",
+	"menu.dll" => "missing",
+	"win32dialog.dll" => "missing",
+	"gfxeffect.dll" => "missing",
+	"flashplayer.dll" => "missing",
+	"process.dll" => "missing"
+];
+
+var KAGPortingLinked = %[];       // the names linked or stood in for
+var KAGPortingLink = Plugins.link;
+var KAGPortingCopyFile = Storages.copyFile;
+
+Plugins.link = function(name) {
+	var leaf = Storages.extractStorageName(name);
+	var key = leaf.toLowerCase();
+	var what = global.KAGPortingPlugins[key];
+	if (what === void) return global.KAGPortingLink(name);
+	if (global.KAGPortingLinked[key] !== void) return;
+	if (typeof what == "Object") {
+		global.KAGPortingLinked[key] = true;
+		what(name);
+		return;
+	}
+	if (what == "builtin" || what == "skip") {
+		global.KAGPortingLinked[key] = true;
+		return;
+	}
+	if (what == "missing") throw new Exception("plugin " + leaf + " isn't on KAGEX's engines (doc/porting.txt)");
+	global.KAGPortingLink(name.substring(0, name.length - leaf.length) + what);
+	global.KAGPortingLinked[key] = true;
+};
+
+Storages.copyFile = function(from, to) {
+	if (!Storages.isExistentStorage(from)) return false;
+	global.KAGPortingCopyFile(from, to);
+	return true;
+};
+
+// one slash between the parts of a storage name, after its "scheme://"
+function KAGOneSlash(name)
+{
+	var at = name.indexOf("://");
+	var head = at >= 0 ? name.substring(0, at + 3) : "";
+	var rest = at >= 0 ? name.substring(at + 3) : name;
+	return head + rest.replace(/\/\/+/g, "/");
+}
+
+// the Windows engine's System calls a game may make for its settings: nothing to read or write
+var KAGPortingStubs = %[
+	readRegValue: function(key) { return void; },
+	writeRegValue: function(key, value) { return false; }
+];
+(function() {
+	var names = [];
+	names.assign(global.KAGPortingStubs);
+	for (var i = 0; i < names.count; i += 2) {
+		if (typeof System[names[i]] == "undefined") System[names[i]] = names[i + 1];
+	}
+})();

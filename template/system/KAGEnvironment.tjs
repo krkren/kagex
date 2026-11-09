@@ -102,9 +102,11 @@ class KAGEnvironment extends KAGEnvTrans {
 	}
 
 	var playVoiceCount;
+	var voiceStarts = 0; // voices started, but lines read aloud (ReadAloud.tjs tells voiced lines by it)
 	
 	function onStartVoice(name) {
 		voiceAfterTimer.enabled = false if voiceAfterTimer !== void;
+		voiceStarts++ if name != "kagex-readaloud";
 		playVoiceCount++;
 		if (playVoiceCount == 1) { // the first voice playing (it was == 0, so the BGM never went down)
 			env.setBGMDown(true);
@@ -342,6 +344,7 @@ class KAGEnvironment extends KAGEnvTrans {
     // Fade specification for expressions
     var faceFadeTime;
 	var faceWindowOff = false; //< [env facewindow=off]: no face window in this scene (World state)
+	var voiceEffect;           //< [env voicefx=<name>]: every voice's effect (VoiceEffects.tjs; World state, since 0.28.0)
 	var messageStyle;          //< [env msgstyle=<name>]: the message window's style (MessageStyles.tjs; World state, since 0.22.0)
 
 	// the message window's style: void, "" or "normal" for the game's own
@@ -879,6 +882,7 @@ class KAGEnvironment extends KAGEnvTrans {
 
 		f.grayscale = _grayscale if _grayscale !== void;
 		f.faceWindowOff = true if faceWindowOff;
+		f.voiceEffect = voiceEffect if voiceEffect !== void;
 		f.messageStyle = messageStyle if messageStyle !== void;
 		if (keptScenes.count > 0) { f.keptScenes = []; f.keptScenes.assign(keptScenes); }
 		if (Scripts.getObjectCount(keptNamed) > 0) { f.keptNamed = %[]; (Dictionary.assign incontextof f.keptNamed)(keptNamed); }
@@ -965,6 +969,7 @@ class KAGEnvironment extends KAGEnvTrans {
         
 		_grayscale  = f.grayscale;
 		faceWindowOff = !!f.faceWindowOff;
+		voiceEffect = f.voiceEffect;
 		if (f.messageStyle !== messageStyle) { messageStyle = f.messageStyle; applyMessageStyle(); }
 		keptScenes.clear();
 		keptScenes.assign(f.keptScenes) if f.keptScenes !== void;
@@ -1201,6 +1206,7 @@ class KAGEnvironment extends KAGEnvTrans {
 @endif
 		
 		faceWindowOff = false;
+		voiceEffect = void;
 		if (messageStyle !== void) { messageStyle = void; applyMessageStyle(); }
 
 		// behind a transition ([env restore trans=...]) the front page keeps showing them
@@ -1424,6 +1430,18 @@ class KAGEnvironment extends KAGEnvTrans {
 		return getParameter(name, "transitions", "trans_");
 	}
 
+	/**
+	 * A glitch breaks up the whole screen, as a broken signal would (since 0.28.0): an image's
+	 * trans=glitch goes through the screen's transition (transall) unless the tag or the
+	 * transition says transall=false, which glitches that image's layer alone
+	 */
+	function screenGlitch(tr) {
+		if (tr === void) return tr;
+		if (typeof tr.transall == "String") tr.transall = !(tr.transall == "false" || tr.transall == "0" || tr.transall == "");
+		if (tr.method !== void && tr.method == "glitch" && tr.transall === void) tr.transall = true;
+		return tr;
+	}
+
 	function copyTransParam(tr, elm) {
 		foreach(elm, function(name, value, elm, tr) {
 			var en = transitionParam[name];
@@ -1462,7 +1480,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			(Dictionary.assign incontextof tr)(info, false); 
 			// Copy parameters
 			copyTransParam(tr, elm);
-			return tr;
+			return screenGlitch(tr);
 		} else if (elm != null && (transitionName[name] !== void)) {
 			//dm("Defined system transition:" + name);
 			var tr = %[];
@@ -1470,7 +1488,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			// Copy parameters
 			copyTransParam(tr, elm);
 			tr.method = name;
-			return tr;
+			return screenGlitch(tr);
 		}
     }
 	
@@ -1895,6 +1913,8 @@ class KAGEnvironment extends KAGEnvTrans {
 	layout : function(param, elm) { layoutPlace(elm); } incontextof this,
 	makeroom : function(param, elm) { layoutMakeRoom(+param, elm); } incontextof this,
 	facewindow : function(param, elm) { faceWindowOff = param == "off" || param == "false" || param == "0"; redrawCurrentFace(faceFadeTime); } incontextof this,
+	// every voice's effect (VoiceEffects.tjs, since 0.28.0): a name, or none
+	voicefx : function(param, elm) { voiceEffect = param === void || param == "" || param == "none" ? void : param; } incontextof this,
 	msgstyle : function(param, elm) { setMessageStyle(param); } incontextof this,
 	rgamma : function(param, elm) { rgamma = param; } incontextof this,
 	ggamma : function(param, elm) { ggamma = param; } incontextof this,

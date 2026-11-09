@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.28.0
+
+### Added
+
+- **Four plugins of kagex's own, built into every engine** (Windows, Linux, macOS, Steam, the web, Android, iOS), each in a repository of its own under the 0BSD licence and pinned by commit as xp3crypt and scnfile are: [sdlsystem](https://github.com/krkren/sdlsystem) (what SDL knows and the engine doesn't hand scripts), [voicefx](https://github.com/krkren/voicefx) (voice effects), [glitchtrans](https://github.com/krkren/glitchtrans) (the glitch transition) and [speech](https://github.com/krkren/speech) (the system's voices). A game on an engine without them gets none of what they do, and nothing fails.
+- **Opening pages, folders and programs**: `System.shellExecute` works on every platform (it threw on the SDL engine), with `KAGOpen` and `KAGRun` for scripts. About has a Website button (`sf.software_url`), the manual's web links open the browser instead of copying the address, Help > Contents opens, Config can open the screenshot folder, and the Debug menu opens the script at the line the game is on in the writer's editor (`-editor=`).
+- **The game in the background**: Config's In the Background keeps playing, mutes, or pauses the game (the story waits under a dimmed screen that says Paused) while its window is behind another or minimized, or a phone or a browser tab has put it away. When a phone puts the game away, warns that memory is low or is about to end it, the continue save is written at once; a low-memory warning also frees what it can and says so.
+- **A frame-rate limit**: 30 or 60 frames a second at most, for a laptop's battery (not on the web, where the browser paces the frames).
+- **Voice effects**: an echo for memories, a phone's thin voice, a muffled one through a door, a hall, a cave, a radio, for one character (`[pip voicefx=phone]`) or every voice (`[env voicefx=memory]`), kept in saves, compiled scenes and going back; `voicefx.csv` names a game's own. The effects are kept subtle: a voice keeps its loudness, and an echo or a room sits about 10 dB under it, so the line stays easy to follow. An echo rings on after the voice, and auto mode waits for it. The Character demo has Pip on the phone and the flashback's voice echoing (`[memory]`).
+- **Glitch transitions**: `method=glitch`, the old picture breaking up as a damaged video stream or a bad signal would, in stages, while the new one arrives in patches: a datamosh (the old picture's blocks sliding and smearing along the new one's motion, its outlines coming through), a broken JPEG stream (colours drifting and blocks sliding from a point on), damaged cells, pixel sorting, a rolling, slanting analog picture with a tracking band and colour lag, bands, split colours, static and garbage rows and frames of signal failure. `style=` picks which lead (`mixed`, `digital`, `analog`, `mosh`), each fault has its own amount, and a seed gives the same glitch every time. A World image's or character's `trans=glitch` breaks up the whole screen (`transall=false` keeps it to that layer, whose pieces then move with their shape). The techniques follow MIT-licensed effects (KinoGlitch, gl-transitions' GlitchMemories and GlitchDisplace, glitch-canvas), reimplemented; the plugin draws on the engine's draw threads. `[glitch]` in the sample's macros, `GlitchTrans.apply` for a single broken frame, and Config's Screens Change With, which turns every system screen's crossfade into a glitch. The transitions demo shows each style.
+- **Lines read aloud with the system's voices**, for players who can't or don't want to read: each message is spoken as it waits for a click and plays like a voice line (auto mode waits for it, it lowers the music, it plays at the voice volume), for every line or only the unvoiced ones, with the reading voice, its speed, a pitch and speed per character (`envinit.tjs`'s `speech`), and a pronunciation list (`readaloud.csv`). Windows, macOS, Linux (espeak-ng), Android and iOS speak into a sound the game plays; the browser speaks the line itself. Config's new ninth page holds it, with the background and screenshot settings.
+- **Screenshots to the pictures folder, and on the clipboard**: Config's Screenshots Go To (the save folder or, on desktops, a folder named after the game in the player's pictures folder), a button that opens it, and Copy Screenshots, which puts each picture on the clipboard too.
+- **kagex-release makes movies' smaller versions and converts movies**: a movie a `[movie]` tag plays gets `<name>_sd.webm` beside it (540 lines), which plays on the web and phones and when the player picks the smaller movies, and MP4, MOV, AVI, WMV, MPEG and other movies become WebM, through ffmpeg (bit-exact and cached; without ffmpeg, movies stay as they are).
+- **Notes and helpers for games brought from other Kirikiri engines**: `doc/porting.txt` (what differs on KAGEX's engines), and `Porting.tjs`, which sends `Plugins.link` through a table (renamed, built in, skipped, missing or a script stand-in), stubs Windows-only calls and has `Storages.copyFile` return false for a missing file as fstat's did.
+- **Web games whose file names have `%`, `#` or `?`** load them: the page escapes them as it fetches the game's files (`UPSTREAM.md` 57).
+
+### Fixed
+
+- **The sample's Android app finds the system's speech engines**: since Android 11 an app sees them only when its manifest asks, which kagex-release's game builds did since 0.17.0 but the sample's own APK didn't.
+
+### Changed
+
+- Four engine problems moved from `TODO.md` to `UPSTREAM.md` with what the framework does about them (54-57: a `user://` name with a doubled slash, the file pool's deadlock, `Storages.copyFile` of a missing file, web file names with `%`, `#` or `?`), and one more (58: no warning before the engine's own pools run out).
+
 ## 0.27.0
 
 ### Added

@@ -11673,7 +11673,10 @@ class KAGWindow extends Window
 
 	function a11yNoteText(text)
 	{
-		if (a11yReadText && skipMode <= SKIP_PAGE && text !== void && KAGA11y.available) a11yText += text;
+		// for the screen reader, or to be read aloud (ReadAloud.tjs, since 0.28.0)
+		if (skipMode <= SKIP_PAGE && text !== void &&
+			((a11yReadText && KAGA11y.available) || (typeof global.KAGReadAloud == "Object" && KAGReadAloud.on)))
+			a11yText += text;
 	}
 
 	/**
@@ -11683,6 +11686,11 @@ class KAGWindow extends Window
 	{
 		var text = a11yText, name = a11yName;
 		a11yText = "", a11yName = "";
+		// read aloud by the game's speech (ReadAloud.tjs), and then not by the screen reader too
+		if (typeof global.KAGReadAloud == "Object" && KAGReadAloud.on) {
+			KAGReadAloud.line(text, name);
+			return;
+		}
 		if (!a11yReadText || text === void) return;
 		text = text.trim();
 		if (text == "") return;
@@ -14220,6 +14228,9 @@ class KAGWindow extends Window
 			lay.face = dfMask;
 			lay.fillRect(0, 0, w, h, 0xffffffff);
 			lay.face = dfAlpha;
+			// on the clipboard too, where the player asked (Display.tjs, the sdlsystem plugin; since 0.28.0)
+			if (typeof global.SDLSystem != "undefined" && typeof global.KAGOptionGet != "undefined" && KAGOptionGet("screenshotCopy") === true)
+				try { SDLSystem.copyImage(lay); } catch (e) { dm("The screenshot couldn't go on the clipboard: " + e.message); }
 			// the card's picture (a small copy: the screenshot's own layer goes at once)
 			invalidate screenshotPicture if (screenshotPicture !== void && isvalid screenshotPicture);
 			screenshotPicture = new global.Layer(this, primaryLayer);
@@ -18394,6 +18405,8 @@ class KAGWindow extends Window
 
 	trans : function(elm)
 	{
+		// a screen's own ([trans screen ...]): the transition the screens use (Display.tjs, since 0.28.0)
+		elm = KAGScreenTransitionFor(elm) if (elm.screen !== void && typeof global.KAGScreenTransitionFor != "undefined");
 		// Start transition
 		var layer = getLayerPageFromElm(elm, false);
 		if (layer == fore.base)  {

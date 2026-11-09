@@ -157,7 +157,7 @@
 
 
 
-[trans method=crossfade time=500]
+[trans screen method=crossfade time=500]
 
 [wt]
 

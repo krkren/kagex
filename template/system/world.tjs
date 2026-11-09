@@ -367,6 +367,9 @@ var transitionName = %[
 	"honeyturn" => true,
 	"morphing" => true,
 	"multiripple" => true,
+
+	// glitchtrans (since 0.28.0)
+	"glitch" => true,
 	];
 
 var transitionParam = %[
@@ -452,6 +455,28 @@ var transitionParam = %[
 //	"maxdrift" => true, // Duplicate
 //	"roundness" => true, // Duplicate
 	"delaylast" => true,
+
+	// glitchtrans (since 0.28.0). noise and spread are World commands too (an image's still
+	// noise, a layout's spread), so a World tag gives those two as glitchnoise and glitchspread
+	"seed" => true,
+	"strength" => true,
+	"bands" => true,
+	"shift" => true,
+	"split" => true,
+	"blocks" => true,
+	"step" => true,
+	"glitchnoise" => "noise",
+	"glitchspread" => "spread",
+	// glitchtrans 2.0: the style and each fault's amount; transall=false glitches an image's
+	// layer alone (a glitch takes the whole screen by default: KAGEnvironment.screenGlitch)
+	"transall" => true,
+	"style" => true,
+	"damage" => true,
+	"jpeg" => true,
+	"mosh" => true,
+	"sort" => true,
+	"analog" => true,
+	"flash" => true,
     ];
 
 

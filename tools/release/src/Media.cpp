@@ -13,6 +13,7 @@
 
 #include "Archive.h"
 #include "Host.h"
+#include "Subprocess.h"
 #include "krt/app/Progress.h"
 #include "krt/app/Text.h"
 #include "krt/audio/Audio.h"
@@ -54,6 +55,12 @@ std::string leafOf(const std::string& name)
 
 bool isAudioSource(const std::string& ext) { return ext == ".wav" || ext == ".flac"; }
 bool isImageSource(const std::string& ext) { return ext == ".png" || ext == ".bmp" || ext == ".tlg"; }
+// movies the engine doesn't play (it plays WebM: VP8/VP9 with Vorbis/Opus)
+bool isVideoSource(const std::string& ext)
+{
+	return ext == ".mp4" || ext == ".m4v" || ext == ".mov" || ext == ".avi" || ext == ".wmv" || ext == ".mpg" ||
+	       ext == ".mpeg" || ext == ".ogv" || ext == ".mkv" || ext == ".flv";
+}
 bool isScript(const std::string& ext)
 {
 	return ext == ".ks" || ext == ".tjs" || ext == ".csv" || ext == ".txt" || ext == ".asd" || ext == ".json" || ext == ".func";
@@ -263,6 +270,8 @@ struct Job {
 	bool        audio = false;
 	bool        mask = false;      // the mask of a main/mask pair
 	bool        rule = false;      // a transition's rule image (data/rule): its exact values count
+	bool        video = false;     // a movie into WebM
+	bool        smaller = false;   // a movie's smaller version (<name>_sd.webm), beside it
 	std::string params;            // what decides the output
 	// results
 	bool        ok = false;
@@ -300,10 +309,85 @@ bool decodeFlac(const fs::path& file, krt::audio::Pcm& pcm, int& bits, std::stri
 	return true;
 }
 
+// ffmpeg: media.movies.ffmpeg, KAGEX_RELEASE_FFMPEG, or the one on PATH; empty when there's none
+fs::path ffmpegProgram(const Json& s)
+{
+	const std::string set = str(s, "media.movies.ffmpeg");
+	if (!set.empty()) return krt::toPath(set);
+	const std::string env = getEnv("KAGEX_RELEASE_FFMPEG");
+	if (!env.empty()) return krt::toPath(env);
+	return findProgram("ffmpeg");
+}
+
+int paramInt(const std::string& params, const std::string& name, int fallback)
+{
+	const size_t at = params.find("|" + name + "=");
+	if (at == std::string::npos) return fallback;
+	try { return std::stoi(params.substr(at + name.size() + 2)); } catch (...) { return fallback; }
+}
+
+// A movie into WebM (VP9 and Opus), as the engine plays it: every movie of another format, and
+// the smaller versions [movie] plays on the web and phones (Movies.tjs's <name>_sd). Bit-exact,
+// so a movie that didn't change makes the same file and a patch doesn't carry it
+void convertVideo(Job& j, const fs::path& dir, const Json& s)
+{
+	const fs::path ffmpeg = ffmpegProgram(s);
+	if (ffmpeg.empty()) { j.error = "ffmpeg isn't on this computer (Media > Movies)"; return; }
+	RunOptions ro;
+	ro.timeoutSeconds = 3600;
+	// what the source holds: its picture's height, and whether it has an alpha channel (VP9 keeps
+	// one as side data, which only libvpx's own decoder reads)
+	const RunResult probe = run(krt::fromPath(ffmpeg), { "-hide_banner", "-i", krt::fromPath(j.source) }, ro);
+	if (!probe.started) { j.error = "ffmpeg didn't start: " + probe.output; return; }
+	int height = 0;
+	bool hasVideo = false;
+	{
+		std::smatch m;
+		const std::regex video(R"(Stream #[^\n]*Video:[^\n]*?, (\d{2,5})x(\d{2,5}))");
+		if (std::regex_search(probe.output, m, video)) { hasVideo = true; height = std::stoi(m[2].str()); }
+	}
+	if (!hasVideo) { j.error = "ffmpeg found no picture in it"; return; }
+	std::string lowerProbe = lower(probe.output);
+	const bool alpha = lowerProbe.find("alpha_mode") != std::string::npos && lowerProbe.find("alpha_mode      : 1") != std::string::npos;
+	std::vector<std::string> args = { "-hide_banner", "-nostdin", "-y" };
+	if (alpha) { args.push_back("-c:v"); args.push_back("libvpx-vp9"); }
+	args.insert(args.end(), { "-i", krt::fromPath(j.source), "-map", "0:v:0", "-map", "0:a:0?", "-map_metadata", "-1",
+	                          "-fflags", "+bitexact", "-flags:v", "+bitexact", "-flags:a", "+bitexact",
+	                          "-c:v", "libvpx-vp9", "-row-mt", "1", "-threads", "4", "-deadline", "good", "-cpu-used", "4",
+	                          "-pix_fmt", alpha ? "yuva420p" : "yuv420p" });
+	std::string suffix = ".webm";
+	if (j.smaller) {
+		const int sdHeight = paramInt(j.params, "h", 540);
+		if (height <= sdHeight) { j.skipped = true; return; }   // small already
+		args.insert(args.end(), { "-vf", "scale=-2:" + std::to_string(sdHeight), "-b:v", std::to_string(paramInt(j.params, "kbps", 1200)) + "k",
+		                          "-crf", "36", "-c:a", "libopus", "-b:a", "96k" });
+		suffix = "_sd.webm";
+	} else {
+		args.insert(args.end(), { "-crf", std::to_string(paramInt(j.params, "crf", 31)), "-b:v", "0", "-c:a", "libopus", "-b:a", "128k" });
+	}
+	const fs::path out = dir / "out.webm";
+	args.push_back(krt::fromPath(out));
+	const RunResult r = run(krt::fromPath(ffmpeg), args, ro);
+	std::error_code ec;
+	if (!r.ok() || !fs::is_regular_file(out, ec) || fs::file_size(out, ec) == 0) {
+		std::string tail = r.output.size() > 400 ? r.output.substr(r.output.size() - 400) : r.output;
+		j.error = "ffmpeg failed" + std::string(r.timedOut ? " (it took over an hour)" : "") + ": " + tail;
+		return;
+	}
+	// a smaller version that isn't smaller isn't made
+	if (j.smaller && fs::file_size(out, ec) >= fs::file_size(j.source, ec)) { j.skipped = true; return; }
+	j.outputs.push_back({ suffix, out });
+	j.ok = true;
+}
+
 // Converts one file into dir (out.<ext>, out_m.png), per job.params
 void convert(Job& j, const fs::path& dir, const Json& s)
 {
 	std::string err;
+	if (j.video || j.smaller) {
+		convertVideo(j, dir, s);
+		return;
+	}
 	if (j.audio) {
 		namespace au = krt::audio;
 		au::Pcm pcm;
@@ -438,6 +522,40 @@ void runJob(Job& j, const Json& s, const fs::path& cache)
 	}
 }
 
+// Runs the jobs through the cache, in parallel; false when canceled
+bool runJobs(std::vector<Job>& jobs, const Json& s, const fs::path& cache, krt::Progress& progress, const std::string& what)
+{
+	if (jobs.empty()) return true;
+	std::atomic<size_t> next{ 0 }, done{ 0 };
+	// a movie's ffmpeg uses several threads of its own
+	bool movies = false;
+	for (const auto& j : jobs) if (j.video || j.smaller) movies = true;
+	const unsigned most = movies ? 4u : 16u;
+	const unsigned workers = std::max(1u, std::min<unsigned>(std::thread::hardware_concurrency(), most));
+	std::vector<std::thread> threads;
+	for (unsigned w = 0; w < workers; ++w) {
+		threads.emplace_back([&]() {
+			for (;;) {
+				const size_t i = next++;
+				if (i >= jobs.size() || progress.canceled()) break;
+				try {
+					runJob(jobs[i], s, cache);
+				} catch (const std::exception& e) {
+					jobs[i].error = e.what();
+				}
+				++done;
+			}
+		});
+	}
+	while (done < jobs.size()) {
+		progress.progress((double)done / jobs.size(), what + " (" + std::to_string(done.load()) + " of " + std::to_string(jobs.size()) + ")");
+		if (progress.canceled()) break;
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	}
+	for (auto& t : threads) t.join();
+	return !progress.canceled();
+}
+
 // Replaces a staged file (a hard link to the source) without writing to it
 bool replaceStaged(const fs::path& staged, const fs::path& from, std::string& error)
 {
@@ -500,6 +618,8 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 	const std::string audioTo = str(s, "media.audio.convert");
 	const bool imagesKept = str(s, "media.images.opaque") == "keep" && str(s, "media.images.alpha") == "keep";
 	const bool rewrite = str(s, "media.references") == "rewrite";
+	const bool convertMovies = at(s, "media.movies.convert").asBool(true);
+	const std::string smaller = str(s, "media.movies.smaller");
 	std::error_code ec;
 
 	// the staged files
@@ -584,6 +704,10 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 			} else {
 				j.params = "audio|wav";
 			}
+		} else if (isVideoSource(f.ext) && convertMovies) {
+			if (referenced && !rewrite) { ++result.keptByReference; continue; }
+			j.video = true;
+			j.params = "video|webm|crf=" + std::to_string(at(s, "media.movies.crf").asInt(31));
 		} else if (isImageSource(f.ext) && !imagesKept) {
 			if (forEffects.count(leaf)) { ++result.keptForEffects; continue; }
 			if (referenced && !rewrite) { ++result.keptByReference; continue; }
@@ -603,35 +727,10 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		result.notes.push_back(std::to_string(result.keptByReference) + " files weren't converted because scripts name them with their extension (Media > Names with extensions)");
 	if (result.keptForEffects)
 		result.notes.push_back(std::to_string(result.keptForEffects) + " files weren't converted because Effekseer effects use them");
-	if (jobs.empty()) return true;
-
 	// convert, in parallel
 	const fs::path cache = cacheDir() / "media";
 	fs::create_directories(cache, ec);
-	std::atomic<size_t> next{ 0 }, done{ 0 };
-	const unsigned workers = std::max(1u, std::min<unsigned>(std::thread::hardware_concurrency(), 16));
-	std::vector<std::thread> threads;
-	for (unsigned w = 0; w < workers; ++w) {
-		threads.emplace_back([&]() {
-			for (;;) {
-				const size_t i = next++;
-				if (i >= jobs.size() || progress.canceled()) break;
-				try {
-					runJob(jobs[i], s, cache);
-				} catch (const std::exception& e) {
-					jobs[i].error = e.what();
-				}
-				++done;
-			}
-		});
-	}
-	while (done < jobs.size()) {
-		progress.progress((double)done / jobs.size(), "Converting media (" + std::to_string(done.load()) + " of " + std::to_string(jobs.size()) + ")");
-		if (progress.canceled()) break;
-		std::this_thread::sleep_for(std::chrono::milliseconds(200));
-	}
-	for (auto& t : threads) t.join();
-	if (progress.canceled()) { error = "Canceled"; return false; }
+	if (!runJobs(jobs, s, cache, progress, "Converting media")) { error = "Canceled"; return false; }
 
 	// put the results in place of the sources, first come first served for each name. Files of the
 	// same name in different folders (a language's folder, lang/<code>/, standing in for
@@ -679,7 +778,7 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		result.bytesBefore += before;
 		result.bytesAfter += after;
 		renamed[lower(leaf)] = stem + j.outputs.front().first;
-		(j.audio ? result.sounds : result.images)++;
+		(j.video ? result.movies : j.audio ? result.sounds : result.images)++;
 
 		// loop points go along, at the new sample rate
 		const fs::path sli = dir / krt::toPath(leaf + ".sli");
@@ -697,6 +796,62 @@ bool convertMedia(const Json& s, const fs::path& stage, krt::Progress& progress,
 		}
 	}
 	if (failed > 20) result.notes.push_back(std::to_string(failed - 20) + " more files were kept as they are");
+
+	// the smaller versions of movies (<name>_sd.webm, beside them), which [movie] plays on the web
+	// and phones or when the player asks for it (Movies.tjs): "played", for the movies a [movie]
+	// tag names (a name written out: one an expression gives needs "all"), or "all", for every
+	// WebM; never for a movie that has one, nor where the movie is no taller than the version
+	if (smaller == "played" || smaller == "all") {
+		std::set<std::string> played;   // lower stems
+		if (smaller == "played") {
+			const std::regex tag(R"([\[@]movie\b[^\]\r\n]*?\bstorage\s*=\s*["']?([^"'\s\]&]+))", std::regex::icase);
+			for (const auto& f : files) {
+				if (f.ext != ".ks") continue;
+				std::string raw;
+				if (!krt::readFile(f.path, raw)) continue;
+				const ScriptText t = readScript(raw);
+				for (std::sregex_iterator it(t.text.begin(), t.text.end(), tag), e; it != e; ++it)
+					played.insert(lower(stemOf(leafOf((*it)[1].str()))));
+			}
+		}
+		std::set<std::string> stems;   // lower stems of the staged movies
+		std::vector<fs::path> movies;
+		for (fs::recursive_directory_iterator it(stage, ec), end; it != end; it.increment(ec)) {
+			if (ec || !it->is_regular_file(ec)) continue;
+			const std::string leaf = krt::fromPath(it->path().filename());
+			if (extOf(leaf) != ".webm") continue;
+			stems.insert(lower(stemOf(leaf)));
+			movies.push_back(it->path());
+		}
+		std::sort(movies.begin(), movies.end());
+		std::vector<Job> sd;
+		for (const auto& m : movies) {
+			const std::string stem = lower(stemOf(krt::fromPath(m.filename())));
+			if (stem.size() > 3 && stem.compare(stem.size() - 3, 3, "_sd") == 0) continue;
+			if (stems.count(stem + "_sd")) continue;
+			if (smaller == "played" && !played.count(stem)) continue;
+			Job j;
+			j.source = m;
+			j.name = krt::fromPath(fs::relative(m, stage, ec));
+			j.ext = ".webm";
+			j.smaller = true;
+			j.params = "video|sd|h=" + std::to_string(at(s, "media.movies.sdHeight").asInt(540)) +
+			           "|kbps=" + std::to_string(at(s, "media.movies.sdKbps").asInt(1200));
+			sd.push_back(std::move(j));
+		}
+		if (!runJobs(sd, s, cache, progress, "Making smaller movies")) { error = "Canceled"; return false; }
+		for (auto& j : sd) {
+			if (j.skipped) continue;
+			if (!j.ok) {
+				result.notes.push_back(j.name + "'s smaller version wasn't made: " + j.error);
+				continue;
+			}
+			if (j.cached) ++result.fromCache;
+			const fs::path to = j.source.parent_path() / krt::toPath(stemOf(leafOf(j.name)) + "_sd.webm");
+			if (!replaceStaged(to, j.outputs.front().second, error)) return false;
+			++result.smallerMovies;
+		}
+	}
 
 	// rewrite the names in the scripts
 	if (!renamed.empty()) {

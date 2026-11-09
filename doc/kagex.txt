@@ -1360,6 +1360,8 @@ Besides the engine's transitions (universal, crossfade, scroll) and extrans's (w
 
 A transition whose plugin didn't load runs as a crossfade, and the console says so once. KAGPluginTransitions (Initialize.tjs) says which loaded.
 
+Since 0.28.0 method=glitch is kagex's own (the glitchtrans plugin, https://github.com/krkren/glitchtrans, built into every engine): the old picture breaks up as a damaged video stream or a bad signal would and comes back as the new one, in stages: its strength rises, holds and falls with hiccups on either side, the faults jump at steps of irregular length and take turns, and the new picture arrives in macroblocks (in patches, stripes or sweeps), the same glitch each time for one seed. The faults: a datamosh (the new picture's motion applied to the old one, whose blocks slide and smear while the new picture's outlines come through, each block refreshed into the new picture at its own moment), a broken JPEG stream (colours drifting and blocks sliding from a point on, frequency patterns, lost blocks), damaged cells (KinoGlitch's runs: moved, from the other picture, colours shuffled or crushed), pixel sorting, a bad analog signal (jitter, shake, roll with its blanking bar, slant, a tracking band, colour lag, scan lines, interlaced fields), bands slid, stretched or smeared, the colours split, rows of static and garbage, displaced rectangles and frames of signal failure. style= picks which lead: mixed (the default), digital, analog or mosh. Attributes: time (needed), style, seed (a number: the same glitch every time; by default a new one), strength (0-100: how wild, 100), each fault's amount by the style's default: bands (how many), shift (how far a band slides, in pixels: a twelfth of the width), split (how far the colours part: a 96th), noise, blocks, damage, jpeg, mosh, sort, analog and flash (0-100 but blocks, a count), step (about how long a jump of the glitch holds, in ms, 50) and spread (0-100: how much of the time the new picture takes to arrive, 60). The World's trans=glitch takes them too, with noise and spread as glitchnoise= and glitchspread= (a World tag's noise= is every picture's own), and breaks up the whole screen, as a broken signal would: an image's or a character's trans=glitch goes through the screen's transition unless transall=false, which glitches that layer alone; a piece a fault moves takes its alpha with it, so a layer glitched alone breaks up with its shape over the scene. The sample's macro.ks has [glitch time= strength= seed= style=], a glitch of the whole screen. GlitchTrans.apply(layer, %[ frame, seed, style, ... ]) draws one glitched frame of a layer's own picture over it (the same options; frame picks the moment), for a broken screen held still. The plugin draws on the engine's draw threads. The screens' own transitions can be the glitch too ("Screens Change With", below).
+
 Five of extNagano's transitions, as krkrz_dev rebuilt the plugin, don't do what they say (UPSTREAM.md 42): book's page stops three quarters of the way and the rest of the old picture vanishes at the end, multiripple brings the old picture back where two or three ripples have passed, rgbfade's colours each take the shortest one's time and a pixel without alpha comes out in a solid colour, zoomfade's zoom is jagged, and spin shows a flat panel growing from the middle instead of a turning box. kagex runs them as the plugin draws them (from 0.18.0 to 0.26.1 it drew these five itself, ScriptTransitions.tjs, under the plugin's names; that's gone), and the sample's transition.ks shows the seven others.
 
 
@@ -3398,6 +3400,17 @@ variables and applied at start; one the platform can't do leaves its row empty:
   screenshotWindow  F12's pictures with the message windows, or without (the quick menu and the
                     tips are left out too)
   screenshotFormat  PNG or JPEG
+  screenshotPlace   (since 0.28.0, desktops) where F12's pictures go: the save folder, or a
+                    folder named after the game in the player's pictures folder
+                    (SDLSystem.userFolder("pictures"), KAGScreenshotPlace)
+  screenshotOpen    (since 0.28.0, desktops) a button that opens the folder they go to
+  screenshotCopy    (since 0.28.0, desktops) each picture is also put on the clipboard, opaque
+                    (SDLSystem.copyImage: PNG and BMP)
+  screenTransition  (since 0.28.0) what the system screens change with: the crossfade they were
+                    written with, or the glitch (where glitchtrans is there). A screen script's
+                    [trans screen ...] takes the named entry of KAGScreenTransitions over its own
+                    attributes (KAGScreenTransitionFor, from the trans tag); a game adds its own
+                    to that table. Reduce Motion keeps the crossfade
 
 For the game, in KAGWindow (AfterInit.tjs):
 
@@ -3492,6 +3505,96 @@ changeUserConf(name, value) keeps an option the game's own scripts read (System.
 name)) for the next start, and sets it now: the values are kept in the system variables
 (scflags.userConf) and set with System.setArgument as the game starts. standview.tjs's sub-window
 font size uses it; void forgets one.
+
+
+
+● Opening Pages, Folders and Programs
+
+Since 0.28.0, through kagex's sdlsystem plugin (https://github.com/krkren/sdlsystem), built into
+every engine (template/system/SystemSupport.tjs):
+
+  KAGOpen(target)         opens a page or anything with a URL scheme (https:, mailto:) in the
+                          browser or the program the system has for it, or a file or folder (a
+                          storage name or a native path) in the file manager; true when the
+                          system took it. KAGCanOpen() says whether it can; KAGCanOpenFolders()
+                          whether folders open (desktops)
+  KAGRun(program, args)   starts a program with its arguments (an array), without a shell and
+                          without waiting (desktops; KAGCanRun())
+  System.shellExecute(target, params = "")
+                          Kirikiri's, on every platform: Windows' ShellExecute there; elsewhere a
+                          program starts with params split as a shell would split them, and
+                          anything else opens as with KAGOpen
+
+What uses them: About's Website button (sf.software_url, set in first.ks like the title), the
+manual's url: links (which copied the address before), Help > Contents, the Config row that
+opens the screenshot folder, and the Debug menu's Open This Line in an Editor: the engine's
+-editor= option is the command, with %f for the script's file and %l for the line ("code --goto
+%f:%l", "subl %f:%l", "kate --line %l %f"), started for the script and line the game is on;
+without it the script opens with what the system opens it with.
+
+SDLSystem itself (the plugin's README has every member): platform, focused, minimized,
+background, lowMemory, takeEvents(), onEvent, copyImage(layer), clipboardHas(type),
+userFolder(name), makeFolder(path), frameLimit, lastError.
+
+
+
+● The Game in the Background
+
+Since 0.28.0 (SystemSupport.tjs, through the sdlsystem plugin). The option backgroundMode ("In
+the Background") decides what the game does while its window has lost the focus or is
+minimized, and while a phone or a browser tab has put it away: keep playing ("play", the
+default), mute ("mute": WaveSoundBuffer.globalVolume 0 until it comes back), or pause ("pause":
+muted, and the story waits as it does for a dialog, under a dimmed screen that says Paused; the
+click that brings the window back doesn't go on with the story). kag.systemEvents (a KAG plugin
+of the window, KAGSystemEventsOf(kag)) reads the window's events four times a second;
+.note(name) takes one by name (focus, blur, minimize, restore, show, hide, background,
+foreground), .log has the last ones seen.
+
+The urgent ones come at once, on the engine's thread (KAGSystemUrgentEvent): when a phone puts
+the game away ("background"), when the system warns that memory is low ("lowmemory", Android and
+iOS) and when it's about to end the game ("terminating"), the continue save and the system
+variables are written there and then (KAGSaveBeforeError), since the system may stop the game
+without another word; a low-memory warning also frees what the engine can (System.doCompact)
+and shows "Memory is low: your place has been saved".
+
+frameLimit ("Frame Rate Limit": none, 30 or 60) holds the game to that many frames a second,
+for a laptop's battery or a fan (desktops, Android and iOS; the browser paces the frames on the
+web).
+
+
+
+● Reading Lines Aloud
+
+Since 0.28.0 (template/system/ReadAloud.tjs, through kagex's speech plugin,
+https://github.com/krkren/speech), for players who can't or don't want to read: each message is
+spoken with one of the system's voices when it waits for a click, and played like a voice line:
+auto mode waits for it, it lowers the music as voices do, and it plays at the voice volume (the
+speaker's own, where they have one). A new line, a skip or the title ends the one before. While
+it's on, the screen reader isn't given the lines too. The plugin speaks into a WAV file
+(Windows' SAPI, macOS' and iOS' AVSpeechSynthesizer, espeak-ng on Linux, Android's
+TextToSpeech), which plays on a sound buffer; on the web the browser's speechSynthesis speaks the
+line itself, at the browser's volume (Speech.mode: "file" or "direct").
+
+The options (Config's ninth page in the sample):
+
+  readAloud        "off", "unvoiced" (lines without a voice of their own: narration, and
+                   speakers who aren't voiced) or "all"
+  readAloudVoice   the system voice: "" for the system's own, or a voice's id; the choices are
+                   the first three voices of the story's language (KAGReadAloudVoices() fills
+                   them before a Config page is drawn; not on the web)
+  readAloudSpeed   how fast, in % (50-200)
+  readAloudTest    a button that reads a sentence
+
+envinit.tjs gives a character a voice of their own: "speech" => %[ voice: <id>, pitch: <%>,
+rate: <%> ] (pitch and rate as a share of the player's: the sample's pitches tell Ai and Pip
+apart with one system voice). readaloud.csv (on the search path, optional) says how to say the
+words the system gets wrong: a line per word, its fields apart by tabs or commas: the language's
+code (or * for any), the word as written, and as it's to be said.
+
+KAGReadAloud.line(text, name) reads a message (MainWindow's a11yAnnounceText calls it),
+.start(text, %[ voice, rate, pitch, volume ]) speaks any text, .cancel() stops, .state is idle,
+making, playing or speaking. On Android, a game's APK has to declare the speech service it asks
+for: kagex-release adds the query (platforms.android.ttsQuery).
 
 
 

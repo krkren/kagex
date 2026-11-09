@@ -99,7 +99,7 @@
 
 [eval exp='setSavePageButton()']
 
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 
 [wt]
 
@@ -119,7 +119,7 @@
 
 [position layer=message1 page=back visible=false frame="" left=0 top=0 width=8 height=8]
 
-[trans method=crossfade time=300]
+[trans screen method=crossfade time=300]
 
 [wt]
 

@@ -26,7 +26,7 @@
 
 // Version
 
-sf.software_version = "0.27.0";
+sf.software_version = "0.28.0";
 
 
 
@@ -45,6 +45,12 @@ sf.software_title = "KAGEX Sample";
 // Year
 
 sf.software_year = "2026";
+
+
+
+// Website (since 0.28.0: About's Website button opens it)
+
+sf.software_url = "https://github.com/krkren/kagex";
 
 
 
