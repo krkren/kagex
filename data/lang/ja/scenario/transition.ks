@@ -55,15 +55,18 @@ extNagano プラグインでトランジションがさらに増えます。そ�
 [EV hide trans=normal]
 
 *glitch|グリッチ
-; kagex's own glitch transition (the glitchtrans plugin, since 0.28.0): the picture breaks up like
-; a damaged signal (bands shifted, colours split, rows of static, blocks out of place) and the new
-; one comes through in stripes; [glitch] (macro.ks) breaks up what's on the screen for a moment.
+; kagex's own glitch transition (the glitchtrans plugin, since 0.28.0): the picture breaks up as a
+; damaged stream or signal would, in stages (a datamosh, a broken JPEG, damaged blocks, sorted
+; pixels, a rolling analog picture, frames of signal failure), and the new one arrives in patches;
+; style= picks which faults lead. [glitch] (macro.ks) breaks up what's on the screen for a moment.
 ; Without the plugin the transition is a crossfade, and [glitch] a short pause
 kagex 独自のグリッチ・トランジションは、絵を乱しながら次の絵へ移ります。
-[EV file=event1 trans=glitch time=1200]glitch：古い絵が崩れ、新しい絵が透けてくる
-[EV hide trans=glitch time=800 strength=60 seed=7]控えめで、毎回同じもの：strength=60 seed=7
-[glitch]
-そして [[glitch]：同じ画面が一瞬だけ乱れます。
+[EV file=event1 trans=glitch time=1400]glitch：データモッシュ、壊れたストリーム、崩れたブロックが次々に
+[EV hide trans=glitch time=1400 style=mosh]style=mosh：古い絵が新しい絵の動きに沿って溶けていく
+[EV file=event1 trans=glitch time=1100 style=digital]style=digital：欠けたブロック、壊れた JPEG、並べ替えられた画素
+[EV hide trans=glitch time=1100 style=analog]style=analog：流れ、傾き、色のずれる乱れた信号
+[glitch strength=60 seed=7]
+そして [[glitch]：同じ画面が一瞬だけ乱れます。ここでは控えめに、毎回同じものを。
 
 [demodone name=transition]
 

@@ -3258,22 +3258,26 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.GlitchTrans != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: no glitchtrans plugin here)", flush=True)
             return
-        got = str(eng.tjs("""var a = new Layer(kag, kag.primaryLayer), b = new Layer(kag, kag.primaryLayer), c = new Layer(kag, kag.primaryLayer);
-            var ls = [a, b, c];
-            for (var i = 0; i < 3; i++) { var l = ls[i]; l.setImageSize(320, 180); for (var y = 0; y < 180; y += 6) l.fillRect(0, y, 320, 6, 0xff000000 | (y * 1300 + 0x203040)); }
+        got = str(eng.tjs("""var a = new Layer(kag, kag.primaryLayer), b = new Layer(kag, kag.primaryLayer), c = new Layer(kag, kag.primaryLayer), d = new Layer(kag, kag.primaryLayer);
+            var ls = [a, b, c, d];
+            for (var i = 0; i < 4; i++) { var l = ls[i]; l.setImageSize(320, 180); for (var y = 0; y < 180; y += 6) l.fillRect(0, y, 320, 6, 0xff000000 | (y * 1300 + 0x203040)); }
             GlitchTrans.apply(a, %[ seed: 5 ]); GlitchTrans.apply(b, %[ seed: 5 ]); GlitchTrans.apply(c, %[ seed: 6 ]);
-            var same = 0, differ = 0;
+            var styled = typeof GlitchTrans.version != "undefined" && GlitchTrans.version != "1.0";
+            if (styled) GlitchTrans.apply(d, %[ seed: 5, style: "analog" ]);
+            var same = 0, differ = 0, other = 0;
             for (var y = 3; y < 180; y += 7) for (var x = 5; x < 320; x += 11) {
                 same += a.getMainPixel(x, y) == b.getMainPixel(x, y) ? 1 : 0;
-                differ += a.getMainPixel(x, y) != c.getMainPixel(x, y) ? 1 : 0; }
-            invalidate a; invalidate b; invalidate c;
-            return [same, differ].join(",");"""))
-        same, differ = [int(v) for v in got.split(",")]
-        print("     the same seed's pixels alike, another seed's different: %d, %d (of 754)" % (same, differ), flush=True)
-        if same != 754 or differ < 50:
-            raise SmokeError("a still glitch isn't the same for the same seed, or the same for another: %s" % got)
+                differ += a.getMainPixel(x, y) != c.getMainPixel(x, y) ? 1 : 0;
+                other += a.getMainPixel(x, y) != d.getMainPixel(x, y) ? 1 : 0; }
+            invalidate a; invalidate b; invalidate c; invalidate d;
+            return [same, differ, styled ? other : -1].join(",");"""))
+        same, differ, other = [int(v) for v in got.split(",")]
+        print("     the same seed's pixels alike, another seed's different, another style's different: %d, %d, %d (of 754)"
+              % (same, differ, other), flush=True)
+        if same != 754 or differ < 50 or (other >= 0 and other < 50):
+            raise SmokeError("a still glitch isn't the same for the same seed, or the same for another seed or style: %s" % got)
         got = str(eng.tjs("""kag.tagHandlers.image(%[ layer: "0", page: "back", storage: "event1", visible: "true" ]);
-            kag.tagHandlers.trans(%[ layer: "0", method: "glitch", time: "600", seed: "3", children: "false" ]);
+            kag.tagHandlers.trans(%[ layer: "0", method: "glitch", time: "600", seed: "3", style: "mosh", children: "false" ]);
             var r = [ kag.transCount, kag.fore.layers[0].inTransition ? 1 : 0 ];
             var e = KAGScreenTransitionFor(%[ screen: "", method: "crossfade", time: "300" ]), was = KAGOptionGet("screenTransition");
             KAGOptionSet("screenTransition", "glitch"); var g = KAGScreenTransitionFor(%[ screen: "", method: "crossfade", time: "300" ]);

@@ -61,8 +61,8 @@
 
 ;   [eyecatch]                a card between scenes (time= ms; a click skips it)
 
-;   [glitch]                  the screen breaks up for a moment (time=, strength=, seed=: the
-;                             glitchtrans plugin's glitch; a moment of nothing without it)
+;   [glitch]                  the screen breaks up for a moment (time=, strength=, seed=, style=:
+;                             the glitchtrans plugin's glitch; a moment of nothing without it)
 
 [macro name=quake][env actioncamera=quake][endmacro]
 
@@ -105,7 +105,7 @@
 [macro name=memoryend][letterbox delete][memoryframe delete][env msgstyle=normal voicefx=none][endmacro]
 
 ; A glitch over what's on the screen (since 0.28.0): the same picture, broken up and back
-[macro name=glitch][backlay][trans method=glitch time=%time|300 strength=%strength|70 seed=%seed|0][wt][endmacro]
+[macro name=glitch][backlay][trans method=glitch time=%time|300 strength=%strength|70 seed=%seed|0 style=%style|mixed][wt][endmacro]
 
 [macro name=eyecatch]
 

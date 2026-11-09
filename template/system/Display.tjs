@@ -150,7 +150,7 @@ KAGDefineOption(%[ name:"screenshotCopy", label:"Copy Screenshots", kind:"toggle
 // script takes the named transition's attributes over its own; a game adds its own to the table
 var KAGScreenTransitions = %[
 	crossfade:%[],
-	glitch:%[ method:"glitch", strength:45, bands:10, blocks:6, noise:20 ] ];
+	glitch:%[ method:"glitch", strength:45, bands:10, blocks:6, noise:20, mosh:40, sort:0, flash:0 ] ];
 
 function KAGScreenTransitionFor(elm)
 {
