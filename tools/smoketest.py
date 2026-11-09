@@ -3126,8 +3126,10 @@ def sample_steps(eng):
         if eng.tjs('return typeof global.KAGPluginTransitions != "undefined" ? 1 : 0;') != 1:
             print("     (skipped: this build's framework predates the extNagano transitions)", flush=True)
             return
+        # glitch is glitchtrans's, which an engine older than 0.28.0 lacks (kagex-release's tests run
+        # the last release's engines): the kagexplugins step checks it, with --kagexplugins required
         missing = eng.tjs('var a = []; foreach(KAGPluginTransitions, function(k, v, d, a) {'
-                          ' if (v != "linked") a.add(k); }, a); return a.join(" ");')
+                          ' if (v != "linked" && k != "glitch") a.add(k); }, a); return a.join(" ");')
         if missing:
             raise SmokeError("these transitions' plugin isn't loaded: " + missing)
 
