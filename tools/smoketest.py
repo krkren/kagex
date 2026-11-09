@@ -3285,6 +3285,12 @@ def sample_steps(eng):
             r.add(e.method); r.add(g.method); r.add(g.time);
             return r.join(",");"""))
         print("     going, the layer's; a screen's transition, then the glitch: %s" % got, flush=True)
+        whole = str(eng.tjs('var env = world_object.env; if (typeof env.screenGlitch == "undefined") return "-";'
+                            ' return [env.getTrans("glitch", %[]).transall ? 1 : 0, env.getTrans("glitch", %[ transall: "false" ]).transall ? 1 : 0,'
+                            ' env.getTrans("crossfade", %[]).transall ? 1 : 0].join(",");'))
+        print("     the World's glitch takes the whole screen, transall=false the layer, a crossfade as before: %s" % whole, flush=True)
+        if whole not in ("-", "1,0,0"):
+            raise SmokeError("the World's trans=glitch doesn't take the whole screen by default: %s" % whole)
         eng.wait("the glitch to end", "kag.transCount == 0", timeout=20)
         eng.tjs('kag.tagHandlers.freeimage(%[ layer: "0", page: "fore" ]); kag.tagHandlers.freeimage(%[ layer: "0", page: "back" ]); return 1;')
         if got != "1,1,crossfade,glitch,300":

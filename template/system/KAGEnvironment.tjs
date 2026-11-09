@@ -1430,6 +1430,18 @@ class KAGEnvironment extends KAGEnvTrans {
 		return getParameter(name, "transitions", "trans_");
 	}
 
+	/**
+	 * A glitch breaks up the whole screen, as a broken signal would (since 0.28.0): an image's
+	 * trans=glitch goes through the screen's transition (transall) unless the tag or the
+	 * transition says transall=false, which glitches that image's layer alone
+	 */
+	function screenGlitch(tr) {
+		if (tr === void) return tr;
+		if (typeof tr.transall == "String") tr.transall = !(tr.transall == "false" || tr.transall == "0" || tr.transall == "");
+		if (tr.method !== void && tr.method == "glitch" && tr.transall === void) tr.transall = true;
+		return tr;
+	}
+
 	function copyTransParam(tr, elm) {
 		foreach(elm, function(name, value, elm, tr) {
 			var en = transitionParam[name];
@@ -1468,7 +1480,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			(Dictionary.assign incontextof tr)(info, false); 
 			// Copy parameters
 			copyTransParam(tr, elm);
-			return tr;
+			return screenGlitch(tr);
 		} else if (elm != null && (transitionName[name] !== void)) {
 			//dm("Defined system transition:" + name);
 			var tr = %[];
@@ -1476,7 +1488,7 @@ class KAGEnvironment extends KAGEnvTrans {
 			// Copy parameters
 			copyTransParam(tr, elm);
 			tr.method = name;
-			return tr;
+			return screenGlitch(tr);
 		}
     }
 	
