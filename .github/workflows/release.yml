@@ -31,8 +31,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.27.0"
-  KAGEX_SHA: bd753f80eae209b4314c2de50eb9c79f06ab2b51
+  RELEASE_TAG: "0.28.0"
+  KAGEX_SHA: 7c14d0cee7a844d3cffb91ae31e2d9a6b2005a19
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -42,6 +42,12 @@ env:
   # (encrypted data.xp3, built into the engine) and scnfile (compiled scenarios, a plugin)
   XP3CRYPT_SHA: 08ad5f7f8737f2ebea137acefa03b9aa8a41e380
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
+  # kagex's plugins of 0.28.0: sdlsystem (pages, folders, programs, the window's events), voicefx
+  # (voice effects), glitchtrans (the glitch transition), speech (the system's text to speech)
+  SDLSYSTEM_SHA: 0bbc4609572556276eb6562e30eb81c416bd05c0
+  VOICEFX_SHA: 56a4476c50f6fa775163a9e8c62fc0dbcc5eac70
+  GLITCHTRANS_SHA: b06ae2b38905f4ed1fc7bbefc6f00998e30f3db0
+  SPEECH_SHA: 55ee78f7e2acc38c545661d1fcd83788585ffb7f
 
 jobs:
   release-commit:
@@ -113,7 +119,7 @@ jobs:
             {
               echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
               echo "engine $ASSET of release $tag, not rebuilt: $ENGINE_REPO @ $ENGINE_SHA"
-              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA"
+              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA, sdlsystem $SDLSYSTEM_SHA, voicefx $VOICEFX_SHA, glitchtrans $GLITCHTRANS_SHA, speech $SPEECH_SHA"
               echo "windows $CONFIG, runner $ImageOS $ImageVersion"
             } | tee results/versions.txt
           fi
@@ -130,7 +136,8 @@ jobs:
             git -C krkrz_dev checkout "$ENGINE_SHA"
             git -C krkrz_dev submodule update --init --recursive
           fi
-          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA" sdlsystem:"$SDLSYSTEM_SHA" voicefx:"$VOICEFX_SHA" \
+                   glitchtrans:"$GLITCHTRANS_SHA" speech:"$SPEECH_SHA"; do
             git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
             git -C "${p%%:*}" checkout -q "${p#*:}"
           done
@@ -138,6 +145,7 @@ jobs:
             echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
             echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
             echo "xp3crypt $(git -C xp3crypt rev-parse HEAD), scnfile $(git -C scnfile rev-parse HEAD)"
+            for n in sdlsystem voicefx glitchtrans speech; do echo "$n $(git -C $n rev-parse HEAD)"; done
             echo "windows $CONFIG, runner $ImageOS $ImageVersion"
           } | tee results/versions.txt
 
@@ -179,7 +187,8 @@ jobs:
           $p = "$ws/krkrz_dev/src/plugins"
           # quoted: PowerShell splits an unquoted -DNAME=3.5 at the dot
           cmake --preset x64-windows '-DKRKRZ_BUILD_TOOLS=OFF' '-DCMAKE_POLICY_VERSION_MINIMUM=3.5' `
-            "-DTVP_PLUGIN_FOLDERS=$ws/xp3crypt/plugins;$ws/scnfile/plugins" '-DTVP_PLUGINS=xp3crypt;scnfile' '-DTVP_PLUGINS_STATIC=xp3crypt' `
+            "-DTVP_PLUGIN_FOLDERS=$ws/xp3crypt/plugins;$ws/scnfile/plugins;$ws/sdlsystem/plugins;$ws/voicefx/plugins;$ws/glitchtrans/plugins;$ws/speech/plugins" `
+            '-DTVP_PLUGINS=xp3crypt;scnfile;sdlsystem;voicefx;glitchtrans;speech' '-DTVP_PLUGINS_STATIC=xp3crypt' `
             "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder" 2>&1 |
             Tee-Object -FilePath "$env:GITHUB_WORKSPACE\results\configure.log" | Select-Object -Last 20
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
@@ -228,7 +237,8 @@ jobs:
                             'plugin\json.dll', 'plugin\sigcheck.dll', 'template\system\SceneParser.tjs',
                             'template\system\KAGEnvPlayer.tjs', 'template\system\SignatureCheck.tjs',
                             'template\system\hashed-bootstrap.tjs', 'data\scenario\!scnlist.txt', 'data\main\searchmode.ks',
-                            'plugin\scnfile.dll') {
+                            'plugin\scnfile.dll', 'plugin\sdlsystem.dll', 'plugin\voicefx.dll', 'plugin\glitchtrans.dll',
+                            'plugin\speech.dll') {
             if (-not (Test-Path "pkg\$need")) { throw "package is missing $need" }
           }
           # kagex-release writes a game's keys into these slots: xp3crypt's in the engine (built in),
@@ -348,7 +358,7 @@ jobs:
             {
               echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
               echo "engine $ASSET of release $tag, not rebuilt: $ENGINE_REPO @ $ENGINE_SHA"
-              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA"
+              echo "xp3crypt $XP3CRYPT_SHA, scnfile $SCNFILE_SHA, sdlsystem $SDLSYSTEM_SHA, voicefx $VOICEFX_SHA, glitchtrans $GLITCHTRANS_SHA, speech $SPEECH_SHA"
               echo "linux $CONFIG, runner $ImageOS $ImageVersion"
             } | tee results/versions.txt
           fi
@@ -363,7 +373,8 @@ jobs:
             git -C krkrz_dev checkout "$ENGINE_SHA"
             git -C krkrz_dev submodule update --init --recursive
           fi
-          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA"; do
+          for p in xp3crypt:"$XP3CRYPT_SHA" scnfile:"$SCNFILE_SHA" sdlsystem:"$SDLSYSTEM_SHA" voicefx:"$VOICEFX_SHA" \
+                   glitchtrans:"$GLITCHTRANS_SHA" speech:"$SPEECH_SHA"; do
             git clone -q "https://github.com/krkren/${p%%:*}.git" "${p%%:*}"
             git -C "${p%%:*}" checkout -q "${p#*:}"
           done
@@ -371,6 +382,7 @@ jobs:
             echo "kagex $KAGEX_SHA ($(git -C kagex log -1 --format=%s))"
             echo "engine $ENGINE_REPO @ $(git -C krkrz_dev rev-parse HEAD)"
             echo "xp3crypt $(git -C xp3crypt rev-parse HEAD), scnfile $(git -C scnfile rev-parse HEAD)"
+            for n in sdlsystem voicefx glitchtrans speech; do echo "$n $(git -C $n rev-parse HEAD)"; done
             echo "linux $CONFIG, runner $ImageOS $ImageVersion"
           } | tee results/versions.txt
 
@@ -405,7 +417,8 @@ jobs:
           # xp3crypt built into the engine, scnfile a plugin beside it (see the Windows job)
           p="$GITHUB_WORKSPACE/krkrz_dev/src/plugins"
           cmake --preset x64-linux -DKRKRZ_BUILD_TOOLS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-            "-DTVP_PLUGIN_FOLDERS=$GITHUB_WORKSPACE/xp3crypt/plugins;$GITHUB_WORKSPACE/scnfile/plugins" "-DTVP_PLUGINS=xp3crypt;scnfile" -DTVP_PLUGINS_STATIC=xp3crypt \
+            "-DTVP_PLUGIN_FOLDERS=$GITHUB_WORKSPACE/xp3crypt/plugins;$GITHUB_WORKSPACE/scnfile/plugins;$GITHUB_WORKSPACE/sdlsystem/plugins;$GITHUB_WORKSPACE/voicefx/plugins;$GITHUB_WORKSPACE/glitchtrans/plugins;$GITHUB_WORKSPACE/speech/plugins" \
+            "-DTVP_PLUGINS=xp3crypt;scnfile;sdlsystem;voicefx;glitchtrans;speech" -DTVP_PLUGINS_STATIC=xp3crypt \
             "-DTPSTUB_DIR=$p/tp_stub" "-DNCBIND_DIR=$p/ncbind" "-DSIMPLEBIND_DIR=$p/simplebinder" \
             -DCMAKE_PROJECT_INCLUDE="$GITHUB_WORKSPACE/ci/.github/release-build/krkreffekseer-odr.cmake" \
             -DKAGEX_EFK_ODR="$GITHUB_WORKSPACE/kagex/.github/platforms/krkreffekseer-odr.cpp" \
@@ -486,8 +499,9 @@ jobs:
           cp -a kagex/data kagex/template kagex/doc "kagex/KAGEX Initial Setup.txt" kagex/krkrz.cf pkg/
           # libkrkr_richtext.so has linked without libpng & co. on some toolchains (CLAUDE.md);
           # it, libkrkreffekseer.so, the transition plugins, liblayerExVector.so, libminizip.so,
-          # libclipfile.so, libjson.so (compiled scenarios), libsigcheck.so (signed builds) and
-          # libscnfile.so (compiled scenarios as .scn) must load on their own
+          # libclipfile.so, libjson.so (compiled scenarios), libsigcheck.so (signed builds),
+          # libscnfile.so (compiled scenarios as .scn) and kagex's plugins of 0.28.0 must load on
+          # their own
           python3 - <<'EOF'
           import ctypes, glob, os, sys
           bad = []
@@ -495,7 +509,7 @@ jobs:
               try: ctypes.CDLL(so, mode=os.RTLD_NOW | os.RTLD_LOCAL)
               except OSError as e: bad.append(f"{so}: {e}")
           print("\n".join(bad) or "all plugins load")
-          sys.exit(1 if any(n in b for b in bad for n in ("krkr_richtext", "krkreffekseer", "extNagano", "extrans", "layerExVector", "minizip", "clipfile", "libjson", "sigcheck", "scnfile")) else 0)
+          sys.exit(1 if any(n in b for b in bad for n in ("krkr_richtext", "krkreffekseer", "extNagano", "extrans", "layerExVector", "minizip", "clipfile", "libjson", "sigcheck", "scnfile", "sdlsystem", "voicefx", "glitchtrans", "libspeech")) else 0)
           EOF
           for need in krkrz libSDL3.so.0 license.txt licenses data/startup.tjs krkrz.cf template/system/notosansjp-regular.otf \
                       template/system/YesNoDialogLayer.tjs plugin/libKAGParserEx.so plugin/libcsvParser.so \
@@ -506,7 +520,8 @@ jobs:
                       data/fgimage/emblem.clip data/main/charinit.csv data/fgimage/pip/pip_0.txt data/voice/pip000001.ogg \
                       plugin/libjson.so plugin/libsigcheck.so template/system/SceneParser.tjs template/system/KAGEnvPlayer.tjs \
                       template/system/SignatureCheck.tjs template/system/hashed-bootstrap.tjs 'data/scenario/!scnlist.txt' \
-                      data/main/searchmode.ks plugin/libscnfile.so; do
+                      data/main/searchmode.ks plugin/libscnfile.so plugin/libsdlsystem.so plugin/libvoicefx.so \
+                      plugin/libglitchtrans.so plugin/libspeech.so; do
             [ -e "pkg/$need" ] || { echo "package is missing $need"; exit 1; }
           done
           python3 ci/.github/release-build/key-slots.py pkg/krkrz pkg/plugin/libscnfile.so
@@ -968,7 +983,7 @@ jobs:
         run: |
           ls -l dist
           # the engine these release's packages hold, by commit: a later release of kagex reuses
-          # their build instead of compiling it when these three still match (.github/release-build);
+          # their build instead of compiling it when these commits still match (.github/release-build);
           # and each platform build's key (kagex-engine-key-<platform>), which the platform jobs of a
           # later release look for (platforms.yml, .github/platforms/platform-engine.py)
           python3 - > dist/kagex-engine-build.json <<'PY'
@@ -978,7 +993,9 @@ jobs:
               with open(f) as k:
                   platforms[os.path.basename(f)[:-len(".key")]] = k.read().strip()
           note = {"format": 1, "engine": os.environ["ENGINE_SHA"], "xp3crypt": os.environ["XP3CRYPT_SHA"],
-                  "scnfile": os.environ["SCNFILE_SHA"], "platforms": platforms}
+                  "scnfile": os.environ["SCNFILE_SHA"], "sdlsystem": os.environ["SDLSYSTEM_SHA"],
+                  "voicefx": os.environ["VOICEFX_SHA"], "glitchtrans": os.environ["GLITCHTRANS_SHA"],
+                  "speech": os.environ["SPEECH_SHA"], "platforms": platforms}
           print(json.dumps(note, indent=2))
           PY
           cat dist/kagex-engine-build.json
