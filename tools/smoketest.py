@@ -3652,6 +3652,20 @@ def sample_steps(eng):
             eng.tjs(opener + "; return 1;")
             eng.wait(what, wait_open, timeout=20)
             time.sleep(0.3)
+            if what == "Config":
+                # opened from the story, the header has Default, Title and Return: no page tab
+                # under them (0.28.0's ninth tab was under Default until the tabs got narrower)
+                hit = str(eng.tjs('var m = kag.current, r = [], tabs = [], heads = [];'
+                                  ' for (var i = 1; i < 10; i++) { var b = m.names["config_tab" + i]; if (b === void) b = m.names["page" + i]; if (b !== void && b.visible) tabs.add(b); }'
+                                  ' var hn = ["config_initial", "config_title", "return"];'
+                                  ' for (var i = 0; i < hn.count; i++) if (m.names[hn[i]] !== void) heads.add(m.names[hn[i]]);'
+                                  ' for (var i = 0; i < tabs.count; i++) for (var j = 0; j < heads.count; j++) {'
+                                  '  var t = tabs[i], h = heads[j];'
+                                  '  if (t.left < h.left + h.width && h.left < t.left + t.width && t.top < h.top + h.height && h.top < t.top + t.height) r.add(t.name + "/" + h.name); }'
+                                  ' return tabs.count + ":" + r.join(",");'))
+                print("     Config from the story: %s page tabs; under a header button: %s" % tuple((hit.split(":") + ["-"])[:2]), flush=True)
+                if hit.split(":")[1] != "":
+                    raise SmokeError("Config's page tabs lie under its header buttons: %s" % hit)
             r = str(eng.tjs(tap % button))
             if r != "tapped":
                 raise SmokeError("%s: %s" % (what, r))

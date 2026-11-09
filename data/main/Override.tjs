@@ -928,7 +928,7 @@ function gotoTitle()
  */
 function configInit()
 {
-    for (var i = 1; i < configPages.count; i++) setButtonOver("page" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
+    for (var i = 1; i < configPages.count; i++) setButtonOver("config_tab" + i, i == (tf.configPage > 1 ? tf.configPage : 1));
     configUndoButtons();
     if (tf.configPage > 1) return; // the options draw themselves (Options.tjs)
     setScreenButton();
