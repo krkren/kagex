@@ -1,0 +1,1119 @@
+12:12:26 TVP Log system initialized with level: 2
+12:12:26 App name: SDL Application
+12:12:26 App version: <unspecified>
+12:12:26 App ID: <unspecified>
+12:12:26 SDL revision: SDL-3.4.0-release-3.4.0
+12:12:26 Found resource: SysInitScript.tjs
+12:12:26 Found resource: config.cf
+12:12:26 Found resource: elements_basic.ttf
+12:12:26 Found resource: gamecontrollerdb.txt
+12:12:26 Found resource: messages-chs.json
+12:12:26 Found resource: messages-cht.json
+12:12:26 Found resource: messages-en.json
+12:12:26 Found resource: messages.json
+12:12:26 Found resource: optiondesc-chs.json
+12:12:26 Found resource: optiondesc-cht.json
+12:12:26 Found resource: optiondesc-en.json
+12:12:26 Found resource: optiondesc.json
+12:12:26 Found resource: roboto-regular.ttf
+12:12:26 Total resources loaded: 13
+12:12:26 [stdapp.cpp:InitPath:234] data/startup.tjs found, using data/ as project path
+12:12:26 [stdapp.cpp:InitPath:262] appPath: /home/runner/work/kagex/kagex/smoke/
+12:12:26 ! [stdapp.cpp:InitPath:263] projectPath: /home/runner/work/kagex/kagex/smoke/data/
+12:12:26 [stdapp.cpp:InitPath:298] pluginPath: /home/runner/work/kagex/kagex/smoke/plugin/
+12:12:26 [Application.cpp:LoadMessageResource:209] message file: resource://./messages.json (language tag: unknown)
+12:12:26 Audio stream created with channels: 2, sample rate: 48000
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:12:26 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/config.cf" failed (ignoring) : file not found.
+12:12:26 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/krkrz.cf" succeeded.
+12:12:26 ! (info) Loading configuration file "/home/runner/work/kagex/kagex/smoke/savedata/krkrz.cfu" failed (ignoring) : file not found.
+12:12:26 ! (info) Data path : file://./home/runner/work/kagex/kagex/smoke/savedata/
+12:12:26 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+12:12:26 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x7fae0b18a010
+12:12:26 [AudioStream.cpp:InitMiniAudio:138] miniaudio engine initialized: 2 channels, 48000 Hz
+12:12:26 ! Linux 6.8.0-1070-azure (Linux) 上で実行が開始されました
+12:12:26 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x7fade3fff010
+12:12:26 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x7fadd3ffe010
+12:12:26 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:584] StorageCache: budget set to FileAllocator capacity=256MB
+12:12:26 ! (info) Total physical memory : 16764633088
+12:12:26 ! (info) Selected project directory : file://./home/runner/work/kagex/kagex/smoke/data/
+12:12:26 ! 吉里吉里[きりきり] Z 実行コア/2.6.5.0 (Compiled on Nov 10 2026 12:08:41) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+12:12:26 ! バージョン情報の詳細は -about を付けて起動すると閲覧できます
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:12:26 system fonts: 20 name(s) registered (loaded on first use)
+12:12:26 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+12:12:26 ! (info) Data path does not exist, trying to make it ... 成功。
+12:12:26 [SysInitImpl.cpp:TVPAfterSystemInit:337] ImageCache enabled: limit=512MB (physmem=15988MB, source=BitmapPool)
+12:12:26 ! (info) Specified option(s) (earlier item has more priority) : -datapath=savedata/ -replfile=/home/runner/work/kagex/kagex/smoke/ci-chan -orgname=krkren -appname=kagex -padinterval=70
+12:12:26 [SysInitImpl.cpp:TVPAfterSystemInit:445] CPU SIMD: MMX SSE SSE2 SSE3 SSSE3 SSE4.1 SSE4.2 AVX AVX2 FMA3 (TVPCPUType=0xffdbf120)
+12:12:26 ! (info) Auto Loading Static Plugin:xp3crypt
+12:12:26 xp3crypt
+12:12:26 [PooledAllocator.cpp:TVPPooledAllocator:436] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x7fadc3ffd010
+12:12:26 [GlobalAllocStats.cpp:Initialize:526] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+12:12:26 ! ReplFileChannel: watching /home/runner/work/kagex/kagex/smoke/ci-chan
+12:12:26 (info) 起動スクリプト読込み中 : startup.tjs
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 183 file(s) found, 183 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 183 file(s) found, 183 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 188 file(s) found, 188 file(s) activated. (2ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 193 file(s) found, 193 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 195 file(s) found, 195 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 205 file(s) found, 205 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 206 file(s) found, 206 file(s) activated. (1ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 229 file(s) found, 229 file(s) activated. (2ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 233 file(s) found, 233 file(s) activated. (2ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 246 file(s) found, 246 file(s) activated. (2ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 550 file(s) found, 550 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 550 file(s) found, 550 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 573 file(s) found, 573 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 573 file(s) found, 573 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 573 file(s) found, 573 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 573 file(s) found, 573 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 619 file(s) found, 617 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 650 file(s) found, 648 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 655 file(s) found, 653 file(s) activated. (5ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 655 file(s) found, 653 file(s) activated. (4ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 663 file(s) found, 661 file(s) activated. (5ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 808 file(s) found, 806 file(s) activated. (6ms)
+12:12:26 ! OS : Linux 6.8.0-1070-azure (Linux)
+12:12:26 ! KAG : EX 3.27-dev.20070519
+12:12:26 ! Kirikiri : 2.6.5.0
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 ! 
+----- MiniZip Copyright START -----
+Condition of use and distribution are the same as zlib:
+https://github.com/zlib-ng/minizip-ng
+----- MiniZip Copyright END -----
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 ! RichText: using the engine's font service
+12:12:26 Fonts.tjs loaded (2ms)
+12:12:26 Config.tjs loaded (1ms)
+12:12:26 Language.tjs loaded (2ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 950 file(s) found, 807 file(s) activated. (10ms)
+12:12:26 Language: ja (was en)
+12:12:26 Loading KAG System scripts...
+12:12:26 LayerEx.tjs loaded (1ms)
+12:12:26 Utils.tjs loaded (5ms)
+12:12:26 Accessibility.tjs loaded (3ms)
+12:12:26 KAGLayer.tjs loaded (2ms)
+12:12:26 AnimKAGLayer.tjs loaded (0ms)
+12:12:26 ButtonLayer.tjs loaded (4ms)
+12:12:26 TransLayer.tjs loaded (1ms)
+12:12:26 SelectLayer.tjs loaded (6ms)
+12:12:26 MapSelectLayer.tjs loaded (2ms)
+12:12:26 DialogLayer.tjs loaded (7ms)
+12:12:26 HistoryLayer.tjs loaded (8ms)
+12:12:26 BGM.tjs loaded (3ms)
+12:12:26 SE.tjs loaded (1ms)
+12:12:26 Movie.tjs loaded (3ms)
+12:12:26 Conductor.tjs loaded (3ms)
+12:12:26 UpdateRegion.tjs loaded (0ms)
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 AffineLayer.tjs loaded (12ms)
+12:12:26 CGVariations.tjs loaded (1ms)
+12:12:26 AnimationLayer.tjs loaded (4ms)
+12:12:26 GraphicLayer.tjs loaded (5ms)
+12:12:26 ==== An exception occured at Initialize.tjs(56)[(function expression) (anonymous)], VM ip = 33 ====
+12:12:26 -- Disassembled VM code --
+12:12:26 #(56) 		return origPluginsLink(name);
+12:12:26 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+12:12:26 -- Register dump --
+12:12:26 %-3=(string)"gfxEffect.dll"  %-2=(object)(object 0x7fffdba7d4f0:0x0)
+12:12:26 %-1=(object)(object 0x5596a93d20e0:0x5596a93d20e0)  %0=(void)  %1=(void)
+12:12:26 %2=(string)"gfxEffect.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+12:12:26 ---------------------------------------------------------------------------------------------------
+12:12:26 GFX_Fire.tjs loaded (1ms)
+12:12:26 GFX_Movie.tjs loaded (2ms)
+12:12:26 ==== An exception occured at Initialize.tjs(56)[(function expression) (anonymous)], VM ip = 33 ====
+12:12:26 -- Disassembled VM code --
+12:12:26 #(56) 		return origPluginsLink(name);
+12:12:26 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+12:12:26 -- Register dump --
+12:12:26 %-3=(string)"flashPlayer.dll"  %-2=(object)(object 0x7fffdba7d4f0:0x0)
+12:12:26 %-1=(object)(object 0x5596a93d20e0:0x5596a93d20e0)  %0=(void)  %1=(void)
+12:12:26 %2=(string)"flashPlayer.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+12:12:26 ---------------------------------------------------------------------------------------------------
+12:12:26 GFX_Flash.tjs loaded (1ms)
+12:12:26 GFX_Particle.tjs loaded (1ms)
+12:12:26 TVP_PLUGIN_NAME
+12:12:26 GFX_AMovie.tjs loaded (1ms)
+12:12:26 GFX_Effekseer.tjs loaded (2ms)
+12:12:26 GFX_Live2D.tjs loaded (3ms)
+12:12:26 GFX_Three.tjs loaded (4ms)
+12:12:26 GFX_Static.tjs loaded (2ms)
+12:12:26 GFX_Roll.tjs loaded (1ms)
+12:12:26 MessageLayer.tjs loaded (29ms)
+12:12:26 Menus.tjs loaded (4ms)
+12:12:26 ElementsScreen.tjs loaded (2ms)
+12:12:26 TextEntry.tjs loaded (2ms)
+12:12:26 MenuBar.tjs loaded (4ms)
+12:12:26 Controls.tjs loaded (7ms)
+12:12:26 DefaultMover.tjs loaded (1ms)
+12:12:26 Action.tjs loaded (5ms)
+12:12:26 Actions.tjs loaded (3ms)
+12:12:26 MainWindow.tjs loaded (58ms)
+12:12:26 Options.tjs loaded (9ms)
+12:12:26 QuickMenu.tjs loaded (4ms)
+12:12:26 QuickPanels.tjs loaded (3ms)
+12:12:26 Tooltips.tjs loaded (2ms)
+12:12:26 ScrollList.tjs loaded (3ms)
+12:12:26 Display.tjs loaded (2ms)
+12:12:26 GameCursor.tjs loaded (2ms)
+12:12:26 Advanced.tjs loaded (2ms)
+12:12:26 SystemSupport.tjs loaded (2ms)
+12:12:26 TextSettings.tjs loaded (2ms)
+12:12:26 MessageStyles.tjs loaded (1ms)
+12:12:26 Glossary.tjs loaded (1ms)
+12:12:26 ScenePreview.tjs loaded (3ms)
+12:12:26 MusicPlayer.tjs loaded (3ms)
+12:12:26 Greetings.tjs loaded (1ms)
+12:12:26 Voices.tjs loaded (1ms)
+12:12:26 VoiceEffects.tjs loaded (0ms)
+12:12:26 ReadAloud.tjs loaded (2ms)
+12:12:26 SpriteMode.tjs loaded (2ms)
+12:12:26 Flowchart.tjs loaded (7ms)
+12:12:26 Manual.tjs loaded (7ms)
+12:12:26 DebugTools.tjs loaded (4ms)
+12:12:26 YAML.tjs loaded (1ms)
+12:12:26 KAGEnvBase.tjs loaded (1ms)
+12:12:26 警告: 論理値が求められている場所で = 演算子が使用されています(== 演算子の間違いですか？代入した上でゼロと値を比較したい場合は、(A=B) != 0 の形式を使うことをお勧めします) at KAGEnvImage.tjs line 2540
+12:12:26 KAGEnvImage.tjs loaded (9ms)
+12:12:26 KAGEnvLinks.tjs loaded (2ms)
+12:12:26 KAGEnvLayer.tjs loaded (2ms)
+12:12:26 KAGEnvEvent.tjs loaded (0ms)
+12:12:26 KAGEnvStage.tjs loaded (1ms)
+12:12:26 KAGEnvLevelLayer.tjs loaded (1ms)
+12:12:26 KAGEnvSimpleLayer.tjs loaded (0ms)
+12:12:26 KAGEnvCharacter.tjs loaded (8ms)
+12:12:26 KAGEnvBGM.tjs loaded (1ms)
+12:12:26 KAGEnvSE.tjs loaded (2ms)
+12:12:26 KAGEnvironment.tjs loaded (15ms)
+12:12:26 KAGEnvCharacterEyeLip.tjs loaded (3ms)
+12:12:26 psdlayer.tjs loaded (5ms)
+12:12:26 KAGEnvCharacterEx.tjs loaded (16ms)
+12:12:26 KAGEnvCharacterModel.tjs loaded (3ms)
+12:12:26 KAGEnvCharacterLive2D.tjs loaded (2ms)
+12:12:26 KAGEnvCharacterVRM.tjs loaded (2ms)
+12:12:26 world.tjs loaded (72ms)
+12:12:26 MyHistoryLayer.tjs loaded (7ms)
+12:12:26 Scenes3D.tjs loaded (1ms)
+12:12:26 Override.tjs loaded (27ms)
+12:12:26 Script loading took 393ms
+12:12:26 [form.cpp:TVPUpdateBaselineTextInput:118] BaselineTextInput: driver=x11 screenKB=0 hasKB=1 steamdeck=0 imeMode=0 -> start
+12:12:26 [OpenGLError.cpp:InitGLES:49] Loaded GLES 3.2
+12:12:26 Save data storage location: file://./home/runner/work/kagex/kagex/smoke/savedata/
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 950 file(s) found, 807 file(s) activated. (9ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:26 (info) 自動検索パステーブルを再構築しています ...
+12:12:26 (info) Total 950 file(s) found, 807 file(s) activated. (6ms)
+12:12:26 Plugin.tjs loaded (7ms)
+12:12:27 standview.tjs loaded (10ms)
+12:12:27 Indicators.tjs loaded (2ms)
+12:12:27 Movies.tjs loaded (3ms)
+12:12:27 Loudness.tjs loaded (1ms)
+12:12:27 InterfaceSounds.tjs loaded (2ms)
+12:12:27 KAGMainWindow constructor took 216ms
+12:12:27 AfterInit.tjs loaded (2ms)
+12:12:27 (info) 起動スクリプト実行終了。
+12:12:27 Window shown: KAGEX Sample
+12:12:27 window show:No gamepads connected
+12:12:27 [GLTexture.cpp:InitSupported:685] GLES: Texture Swizzle Supported
+12:12:27 [GLTexture.cpp:InitSupported:688] GLES: Copy Image Extension Supported
+12:12:27 [GLTexture.cpp:InitSupported:691] GLES: sRGB Write Control Supported
+12:12:27 (info) 自動検索パステーブルを再構築しています ...
+12:12:27 (info) Total 950 file(s) found, 807 file(s) activated. (8ms)
+12:12:31 (info) 自動検索パステーブルを再構築しています ...
+12:12:31 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:32 (info) 自動検索パステーブルを再構築しています ...
+12:12:32 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:32 [VideoOvlIntf.cpp:SetStatusAsync:131] VideoOverlay status changed async: play
+12:12:32 (info) 自動検索パステーブルを再構築しています ...
+12:12:32 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:32 YesNoDialogLayer.tjs loaded (5ms)
+12:12:32 YesNoDialog.tjs loaded (14ms)
+12:12:32 [a11y] [polite] KAGEX：吉里吉里Zで作るビジュアルノベルを、あらゆるプラットフォームへ。
+12:12:35 [a11y] [polite] キャラクタも、舞台も、時間帯も、ひとつのワールドで。
+12:12:39 [a11y] [polite] 絵も、ムービーも、エフェクトも、ボイスも、どのレイヤにも。
+12:12:43 [a11y] [polite] サンプルへようこそ。
+12:12:46 [VideoOvlIntf.cpp:SetStatus:102] VideoOverlay status changed: unload
+12:12:46 (info) 自動検索パステーブルを再構築しています ...
+12:12:46 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:46 (info) 自動検索パステーブルを再構築しています ...
+12:12:46 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:46 (info) 自動検索パステーブルを再構築しています ...
+12:12:46 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:47 (info) 自動検索パステーブルを再構築しています ...
+12:12:47 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:47 (info) 自動検索パステーブルを再構築しています ...
+12:12:47 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:48 (info) 自動検索パステーブルを再構築しています ...
+12:12:48 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:49 (info) 自動検索パステーブルを再構築しています ...
+12:12:49 (info) Total 950 file(s) found, 807 file(s) activated. (8ms)
+12:12:49 EditLayer.tjs loaded (4ms)
+12:12:49 [form.cpp:TVPUpdateBaselineTextInput:118] BaselineTextInput: driver=x11 screenKB=0 hasKB=1 steamdeck=0 imeMode=3 -> start
+12:12:49 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:49 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:49 [a11y] [focus] Tf.heroGiven: カイ, group
+12:12:50 (info) 自動検索パステーブルを再構築しています ...
+12:12:50 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:50 (info) 自動検索パステーブルを再構築しています ...
+12:12:50 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:51 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:51 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:51 [a11y] [focus] OK, button
+12:12:51 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:51 ElementsDialog.setGameA11y: 知らない role です (group として扱います): text_box
+12:12:51 [form.cpp:TVPUpdateBaselineTextInput:118] BaselineTextInput: driver=x11 screenKB=0 hasKB=1 steamdeck=0 imeMode=0 -> start
+12:12:51 (info) 自動検索パステーブルを再構築しています ...
+12:12:51 (info) Total 950 file(s) found, 807 file(s) activated. (7ms)
+12:12:51 SceneParser.tjs loaded (11ms)
+12:12:51 KAGEnvPlayer.tjs loaded (26ms)
+12:12:51 -- Conversion Start --
+12:12:51 Converting:s0001.ks
+12:12:51 (info) 自動検索パステーブルを再構築しています ...
+12:12:51 (info) Total 951 file(s) found, 808 file(s) activated. (7ms)
+12:12:51 (info) 自動検索パステーブルを再構築しています ...
+12:12:51 (info) Total 951 file(s) found, 808 file(s) activated. (6ms)
+12:12:51 scn: s0001.ks: 1 scenes, 0 texts, 0 warnings (30 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/s0001.ks.scn
+12:12:51 -- Conversion Complete --
+12:12:51 (info) 自動検索パステーブルを再構築しています ...
+12:12:51 (info) Total 951 file(s) found, 808 file(s) activated. (7ms)
+12:12:52 (info) 自動検索パステーブルを再構築しています ...
+12:12:52 (info) Total 951 file(s) found, 808 file(s) activated. (8ms)
+12:12:54 (info) 自動検索パステーブルを再構築しています ...
+12:12:54 (info) Total 951 file(s) found, 808 file(s) activated. (7ms)
+12:12:54 [a11y] [focus] KAGEX 拡張レイヤ, list item, selected
+12:12:54 Choice complete:KAGEX Extended Layer
+12:12:54 -- Conversion Start --
+12:12:54 Converting:layer.ks
+12:12:54 (info) 自動検索パステーブルを再構築しています ...
+12:12:54 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:54 (info) 自動検索パステーブルを再構築しています ...
+12:12:54 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:54 scn: layer.ks: 20 scenes, 39 texts, 0 warnings (139 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/layer.ks.scn
+12:12:54 -- Conversion Complete --
+12:12:55 [a11y] [polite] KAGEX のレイヤ拡張機能のサンプルです。
+レイヤに対して回転・拡大縮小の制御ができます。
+12:12:55 (info) 自動検索パステーブルを再構築しています ...
+12:12:55 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+12:12:55 (info) 自動検索パステーブルを再構築しています ...
+12:12:55 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:55 (info) 自動検索パステーブルを再構築しています ...
+12:12:55 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:56 (info) 自動検索パステーブルを再構築しています ...
+12:12:56 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+12:12:56 [a11y] [polite] スタート
+12:12:56 (info) 自動検索パステーブルを再構築しています ...
+12:12:56 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:56 [a11y] [polite] 半透明
+12:12:57 (info) 自動検索パステーブルを再構築しています ...
+12:12:57 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:57 [a11y] [polite] 回転
+12:12:57 [a11y] [polite] 回転原点変更（左上隅）
+12:12:57 (info) 自動検索パステーブルを再構築しています ...
+12:12:57 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:58 (info) 自動検索パステーブルを再構築しています ...
+12:12:58 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:59 (info) 自動検索パステーブルを再構築しています ...
+12:12:59 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:12:59 [a11y] [polite] 回転原点変更（座標指定）
+12:12:59 [a11y] [polite] 回転原点変更（センターに戻す）
+12:13:00 (info) 自動検索パステーブルを再構築しています ...
+12:13:00 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:00 [a11y] [polite] 拡大
+12:13:00 (info) 自動検索パステーブルを再構築しています ...
+12:13:00 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+12:13:01 (info) 自動検索パステーブルを再構築しています ...
+12:13:01 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+12:13:01 [a11y] [polite] X拡大
+12:13:02 (info) 自動検索パステーブルを再構築しています ...
+12:13:02 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:02 [a11y] [polite] 合成モード
+12:13:03 (info) 自動検索パステーブルを再構築しています ...
+12:13:03 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:03 [a11y] [polite] ガクブル
+12:13:03 (info) 自動検索パステーブルを再構築しています ...
+12:13:03 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:04 (info) 自動検索パステーブルを再構築しています ...
+12:13:04 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:04 [a11y] [polite] 縦ゆれ
+12:13:04 (info) 自動検索パステーブルを再構築しています ...
+12:13:04 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:04 [a11y] [polite] 横ゆれ
+12:13:05 (info) 自動検索パステーブルを再構築しています ...
+12:13:05 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:08 [a11y] [polite] 指定角度に移動してみるテストだよ
+12:13:09 (info) 自動検索パステーブルを再構築しています ...
+12:13:09 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:09 (info) 自動検索パステーブルを再構築しています ...
+12:13:09 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:09 [a11y] [polite] くるくるまわる
+12:13:10 (info) 自動検索パステーブルを再構築しています ...
+12:13:10 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:10 [a11y] [polite] キャラをズーム（時間指定）
+12:13:10 (info) 自動検索パステーブルを再構築しています ...
+12:13:10 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:11 [a11y] [polite] ズームを利用した回転っぽいなにか
+12:13:12 (info) 自動検索パステーブルを再構築しています ...
+12:13:12 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:12 (info) 自動検索パステーブルを再構築しています ...
+12:13:12 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:13 [a11y] [polite] 指定した不透明度に（時間指定）
+12:13:13 (info) 自動検索パステーブルを再構築しています ...
+12:13:13 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:13 [a11y] [polite] フェード点滅
+12:13:13 (info) 自動検索パステーブルを再構築しています ...
+12:13:13 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:14 [VideoOvlIntf.cpp:SetStatusAsync:131] VideoOverlay status changed async: play
+12:13:14 [a11y] [polite] 動画ロード
+12:13:14 [a11y] [polite] ズーム変更
+12:13:14 (info) 自動検索パステーブルを再構築しています ...
+12:13:14 (info) Total 952 file(s) found, 809 file(s) activated. (9ms)
+12:13:16 (info) 自動検索パステーブルを再構築しています ...
+12:13:16 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:16 [a11y] [polite] 回転
+12:13:16 (info) 自動検索パステーブルを再構築しています ...
+12:13:16 (info) Total 952 file(s) found, 809 file(s) activated. (9ms)
+12:13:16 (info) 自動検索パステーブルを再構築しています ...
+12:13:16 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:16 [VideoOvlIntf.cpp:SetStatus:102] VideoOverlay status changed: unload
+12:13:17 [a11y] [polite] 同じ絵を二つ：左は PNG、右は SVG のベクター画像です。
+12:13:18 [a11y] [polite] 拡大すると PNG はぼやけますが、SVG は大きさごとに描き直されるのでくっきりしたままです。
+12:13:18 (info) 自動検索パステーブルを再構築しています ...
+12:13:18 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:19 [a11y] [polite] どちらもほかのレイヤと同じように回転します。
+12:13:20 (info) 自動検索パステーブルを再構築しています ...
+12:13:20 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:21 [a11y] [polite] CLIP STUDIO PAINT のファイルひとつから、レイヤを二枚それぞれ clip:// で読み込んでいます。
+12:13:22 [a11y] [polite] なので、パーツごとに別々に動かせます。
+12:13:22 (info) 自動検索パステーブルを再構築しています ...
+12:13:22 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:23 (info) 自動検索パステーブルを再構築しています ...
+12:13:23 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:23 ==== An exception occured at Initialize.tjs(56)[(function expression) (anonymous)], VM ip = 33 ====
+12:13:23 -- Disassembled VM code --
+12:13:23 #(56) 		return origPluginsLink(name);
+12:13:23 00000033 calld %1, %-2.*4(%-3)	// *4 = (string)"origPluginsLink"
+12:13:23 -- Register dump --
+12:13:23 %-3=(string)"krkrlive2d.dll"  %-2=(object)(object 0x7fffdba7ad80:0x0)
+12:13:23 %-1=(object)(object 0x5596a93d20e0:0x5596a93d20e0)  %0=(void)  %1=(void)
+12:13:23 %2=(string)"krkrlive2d.dll"  %3=(string)"plugin/"  %4=(string)"plugin/"
+12:13:23 ---------------------------------------------------------------------------------------------------
+12:13:23 Plugin not loaded: plugin/krkrlive2d.dll (プラグイン krkrlive2d.dll を読み込めません)
+12:13:23 Live2D models are unavailable: the krkrlive2d plugin isn't there (a game builds it with Live2D's Cubism SDK)
+12:13:26 [a11y] [polite] このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
+12:13:26 (info) 自動検索パステーブルを再構築しています ...
+12:13:26 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:26 TVP_PLUGIN_NAME
+12:13:28 [a11y] [polite] レイヤには 3D のシーンも表示できます。これはスクリプトで組み立てたシーンで、形とマテリアルとライトがあり、カメラがまわりを回ります。
+12:13:29 [a11y] [polite] 3donce は何かを一度だけ再生します。このシーンのスクリプトでは結び目が跳びます。
+12:13:30 (info) 自動検索パステーブルを再構築しています ...
+12:13:30 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:30 (info) 自動検索パステーブルを再構築しています ...
+12:13:30 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:32 [a11y] [polite] glTF のモデルは自分のアニメーションを再生します。spin がずっと続き、3donce=hop で跳びます。
+12:13:32 (info) 自動検索パステーブルを再構築しています ...
+12:13:32 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+[VRM] springBone: joints=10 colliders=4
+[VRM] MToon materials applied: 12 primitives (12 materials), outlines=5 rims=0 uvAnims=0
+[VRM] loaded (1.0): bones=19 expressions=15 meta.name="Vee"
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=4
+12:13:34 [a11y] [polite] VRM のアバターは立って、まばたきして、VRM アニメーションを再生します。3dmotion はずっと続き、3donce=vee_wave で一度手を振ります。
+12:13:34 (info) 自動検索パステーブルを再構築しています ...
+12:13:34 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=2.6
+12:13:35 (info) 自動検索パステーブルを再構築しています ...
+12:13:35 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:36 [a11y] [polite] 3dturn はモデルを回します。絵はふつうのレイヤと同じように、動かしたり、拡大したり、回したりできます。
+12:13:36 (info) 自動検索パステーブルを再構築しています ...
+12:13:36 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:37 (info) 自動検索パステーブルを再構築しています ...
+12:13:37 (info) Total 952 file(s) found, 809 file(s) activated. (8ms)
+12:13:38 (info) 自動検索パステーブルを再構築しています ...
+12:13:38 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:38 (info) 自動検索パステーブルを再構築しています ...
+12:13:38 (info) Total 952 file(s) found, 809 file(s) activated. (7ms)
+12:13:38 Patch mounted: file://./home/runner/work/kagex/kagex/smoke/savedata/zz_dlc.zip (1 files)
+12:13:38 (info) 自動検索パステーブルを再構築しています ...
+12:13:38 (info) Total 953 file(s) found, 810 file(s) activated. (6ms)
+12:13:39 (info) 自動検索パステーブルを再構築しています ...
+12:13:39 (info) Total 953 file(s) found, 810 file(s) activated. (7ms)
+12:13:39 [a11y] [focus] ワールド拡張：トランジション, list item, selected
+12:13:39 Choice complete:World Extension: Transition
+12:13:39 -- Conversion Start --
+12:13:39 Converting:transition.ks
+12:13:39 (info) 自動検索パステーブルを再構築しています ...
+12:13:39 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:39 (info) 自動検索パステーブルを再構築しています ...
+12:13:39 (info) Total 954 file(s) found, 811 file(s) activated. (6ms)
+12:13:39 scn: transition.ks: 3 scenes, 27 texts, 0 warnings (111 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/transition.ks.scn
+12:13:39 -- Conversion Complete --
+12:13:40 [a11y] [polite] World 機能におけるトランジション記述の例
+12:13:40 (info) 自動検索パステーブルを再構築しています ...
+12:13:40 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:40 (info) 自動検索パステーブルを再構築しています ...
+12:13:40 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:41 (info) 自動検索パステーブルを再構築しています ...
+12:13:41 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:42 [a11y] [polite] 個別更新
+12:13:42 (info) 自動検索パステーブルを再構築しています ...
+12:13:42 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:42 (info) 自動検索パステーブルを再構築しています ...
+12:13:42 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:43 [a11y] [polite] 個別更新
+12:13:44 (info) 自動検索パステーブルを再構築しています ...
+12:13:44 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:44 [a11y] [polite] びょんびょんアクション
+12:13:44 (info) 自動検索パステーブルを再構築しています ...
+12:13:44 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:45 (info) 自動検索パステーブルを再構築しています ...
+12:13:45 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:45 [a11y] [polite] 一気に更新
+12:13:45 (info) 自動検索パステーブルを再構築しています ...
+12:13:45 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:46 (info) 自動検索パステーブルを再構築しています ...
+12:13:46 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:47 (info) 自動検索パステーブルを再構築しています ...
+12:13:47 (info) Total 954 file(s) found, 811 file(s) activated. (8ms)
+12:13:47 [a11y] [polite] wave
+12:13:48 (info) 自動検索パステーブルを再構築しています ...
+12:13:48 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:49 (info) 自動検索パステーブルを再構築しています ...
+12:13:49 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:49 [a11y] [polite] mosaic
+12:13:49 (info) 自動検索パステーブルを再構築しています ...
+12:13:49 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:50 (info) 自動検索パステーブルを再構築しています ...
+12:13:50 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:50 [a11y] [polite] turn
+12:13:51 (info) 自動検索パステーブルを再構築しています ...
+12:13:51 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:52 (info) 自動検索パステーブルを再構築しています ...
+12:13:52 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:52 [a11y] [polite] rotatezoom
+12:13:52 (info) 自動検索パステーブルを再構築しています ...
+12:13:52 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:53 (info) 自動検索パステーブルを再構築しています ...
+12:13:53 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:54 (info) 自動検索パステーブルを再構築しています ...
+12:13:54 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:54 [a11y] [polite] rotatevanish
+12:13:55 (info) 自動検索パステーブルを再構築しています ...
+12:13:55 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:56 (info) 自動検索パステーブルを再構築しています ...
+12:13:56 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:56 [a11y] [polite] rotateswap
+12:13:56 (info) 自動検索パステーブルを再構築しています ...
+12:13:56 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:57 (info) 自動検索パステーブルを再構築しています ...
+12:13:57 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:57 [a11y] [polite] ripple
+12:13:58 (info) 自動検索パステーブルを再構築しています ...
+12:13:58 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:13:59 (info) 自動検索パステーブルを再構築しています ...
+12:13:59 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:01 [a11y] [polite] extNagano プラグインでトランジションがさらに増えます。そのうち7種類をご覧ください。
+12:14:01 (info) 自動検索パステーブルを再構築しています ...
+12:14:01 (info) Total 954 file(s) found, 811 file(s) activated. (8ms)
+12:14:02 (info) 自動検索パステーブルを再構築しています ...
+12:14:02 (info) Total 954 file(s) found, 811 file(s) activated. (8ms)
+12:14:03 (info) 自動検索パステーブルを再構築しています ...
+12:14:03 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:04 [a11y] [polite] blurfade：ぼかしを通したクロスフェード
+12:14:04 (info) 自動検索パステーブルを再構築しています ...
+12:14:04 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:06 [a11y] [polite] flutter：絵が紙のようにはがれていく
+12:14:06 (info) 自動検索パステーブルを再構築しています ...
+12:14:06 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:08 [a11y] [polite] scanline：線が左右交互にすべり込む
+12:14:09 (info) 自動検索パステーブルを再構築しています ...
+12:14:09 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:11 [a11y] [polite] 3duniversal：ルール画像で破片が飛び散る（ここではガラス片）
+12:14:12 (info) 自動検索パステーブルを再構築しています ...
+12:14:12 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:12 (info) 自動検索パステーブルを再構築しています ...
+12:14:12 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:14 [a11y] [polite] imagewipe：画像に沿ったワイプ（ここでは筆のストローク）
+12:14:18 [a11y] [polite] morphing：三角形で絵をゆがめる（ここでは渦巻き、envinit.tjs）
+12:14:18 (info) 自動検索パステーブルを再構築しています ...
+12:14:18 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:20 [a11y] [polite] honeyturn：六角形がひとつずつ裏返る
+12:14:21 (info) 自動検索パステーブルを再構築しています ...
+12:14:21 (info) Total 954 file(s) found, 811 file(s) activated. (8ms)
+12:14:22 [a11y] [polite] kagex 独自のグリッチ・トランジションは、絵を乱しながら次の絵へ移ります。
+12:14:22 (info) 自動検索パステーブルを再構築しています ...
+12:14:22 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:23 (info) 自動検索パステーブルを再構築しています ...
+12:14:23 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:25 (info) 自動検索パステーブルを再構築しています ...
+12:14:25 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:25 [a11y] [polite] glitch：データモッシュ、壊れたストリーム、崩れたブロックが次々に
+12:14:26 (info) 自動検索パステーブルを再構築しています ...
+12:14:26 (info) Total 954 file(s) found, 811 file(s) activated. (8ms)
+12:14:27 (info) 自動検索パステーブルを再構築しています ...
+12:14:27 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:28 [a11y] [polite] style=mosh：古い絵が新しい絵の動きに沿って溶けていく
+12:14:28 (info) 自動検索パステーブルを再構築しています ...
+12:14:28 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:29 (info) 自動検索パステーブルを再構築しています ...
+12:14:29 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:30 [a11y] [polite] style=digital：欠けたブロック、壊れた JPEG、並べ替えられた画素
+12:14:30 (info) 自動検索パステーブルを再構築しています ...
+12:14:30 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:31 (info) 自動検索パステーブルを再構築しています ...
+12:14:31 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:32 [a11y] [polite] style=analog：流れ、傾き、色のずれる乱れた信号
+12:14:32 (info) 自動検索パステーブルを再構築しています ...
+12:14:32 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:33 (info) 自動検索パステーブルを再構築しています ...
+12:14:33 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:34 [a11y] [polite] そして [glitch]：同じ画面が一瞬だけ乱れます。ここでは控えめに、毎回同じものを。
+12:14:34 (info) 自動検索パステーブルを再構築しています ...
+12:14:34 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:34 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:14:34 [a11y] [focus] ワールド拡張：トランジション, list item, selected
+12:14:36 (info) 自動検索パステーブルを再構築しています ...
+12:14:36 (info) Total 954 file(s) found, 811 file(s) activated. (7ms)
+12:14:36 [a11y] [focus] Effekseer エフェクト, list item, selected
+12:14:36 Choice complete:Effekseer Effects
+12:14:36 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:14:36 -- Conversion Start --
+12:14:36 Converting:effect.ks
+12:14:36 (info) 自動検索パステーブルを再構築しています ...
+12:14:36 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:36 (info) 自動検索パステーブルを再構築しています ...
+12:14:36 (info) Total 955 file(s) found, 812 file(s) activated. (6ms)
+12:14:36 scn: effect.ks: 3 scenes, 19 texts, 0 warnings (127 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/effect.ks.scn
+12:14:36 -- Conversion Complete --
+12:14:37 (info) 自動検索パステーブルを再構築しています ...
+12:14:37 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:38 (info) 自動検索パステーブルを再構築しています ...
+12:14:38 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:38 TVP_PLUGIN_NAME
+12:14:40 [a11y] [polite] 光る花びらが道に舞います。World レイヤに置いた Effekseer エフェクトを krkreffekseer プラグインが描いています。
+12:14:40 (info) 自動検索パステーブルを再構築しています ...
+12:14:40 (info) Total 955 file(s) found, 812 file(s) activated. (8ms)
+12:14:41 (info) 自動検索パステーブルを再構築しています ...
+12:14:41 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:41 (info) 自動検索パステーブルを再構築しています ...
+12:14:41 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:41 (info) 自動検索パステーブルを再構築しています ...
+12:14:41 (info) Total 955 file(s) found, 812 file(s) activated. (8ms)
+12:14:42 [a11y] [polite] あい：花びら……光ってる？
+12:14:42 (info) 自動検索パステーブルを再構築しています ...
+12:14:42 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:42 (info) 自動検索パステーブルを再構築しています ...
+12:14:42 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:43 [a11y] [polite] あい：キラキラも、まわりじゅうに！
+12:14:45 [a11y] [polite] エフェクトはそれぞれ独立したレイヤです。efk= で指定し、efkmag で大きさを決め、efkwidth と efkheight でキャンバスの大きさを決めます。配置はふつうのレイヤと同じです。
+12:14:45 (info) 自動検索パステーブルを再構築しています ...
+12:14:45 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:46 [a11y] [polite] あい：花火だ！
+12:14:46 (info) 自動検索パステーブルを再構築しています ...
+12:14:46 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:47 [a11y] [polite] レイヤが再生されているあいだ、だいたい一秒に一発ずつ打ち上がります。
+12:14:47 (info) 自動検索パステーブルを再構築しています ...
+12:14:47 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:48 [a11y] [polite] あい：ん？ あっちで何か光ってる……
+12:14:48 (info) 自動検索パステーブルを再構築しています ...
+12:14:48 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:48 [a11y] [polite] あい：わっ！
+12:14:49 [a11y] [polite] 今のような爆発は一度だけ再生され、終わるとレイヤも消えます。
+12:14:50 (info) 自動検索パステーブルを再構築しています ...
+12:14:50 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:50 (info) 自動検索パステーブルを再構築しています ...
+12:14:50 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:51 [a11y] [polite] efkstop を指定すると、エフェクトはパーティクルを出すのをやめてフェードアウトします。
+12:14:52 (info) 自動検索パステーブルを再構築しています ...
+12:14:52 (info) Total 955 file(s) found, 812 file(s) activated. (9ms)
+12:14:52 (info) 自動検索パステーブルを再構築しています ...
+12:14:52 (info) Total 955 file(s) found, 812 file(s) activated. (8ms)
+12:14:53 [a11y] [polite] あい：今度は、わざと調子の悪くなるエフェクトだよ。
+12:14:53 (info) 自動検索パステーブルを再構築しています ...
+12:14:53 (info) Total 955 file(s) found, 812 file(s) activated. (8ms)
+12:14:54 [a11y] [polite] 画面が砂嵐に乱れます。level=message の World レイヤに置いた static フリップを、レイヤの不透明度で場面とこのウィンドウに重ねて描いています。
+12:14:55 (info) 自動検索パステーブルを再構築しています ...
+12:14:55 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:55 [a11y] [polite] あい：音楽も……テープが伸びたみたいに、ゆっくりになってく！
+12:14:56 (info) 自動検索パステーブルを再構築しています ...
+12:14:56 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:57 [a11y] [polite] pitch= は音の速さと高さをいっしょに変えます。ここでは二秒半かけて音楽を 35% まで落としています。
+12:14:57 (info) 自動検索パステーブルを再構築しています ...
+12:14:57 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:58 [a11y] [polite] あい：今、誰か通った？
+12:14:59 [a11y] [polite] pan= は音を左右に動かします。ここでは足音が片側からもう片側へ横切ります。
+12:14:59 (info) 自動検索パステーブルを再構築しています ...
+12:14:59 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:14:59 [a11y] [polite] あい：ふう、元どおり。
+12:14:59 (info) 自動検索パステーブルを再構築しています ...
+12:14:59 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:15:00 (info) 自動検索パステーブルを再構築しています ...
+12:15:00 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:15:00 [a11y] [polite] あい：見てくれてありがとう！
+12:15:00 (info) 自動検索パステーブルを再構築しています ...
+12:15:00 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:15:01 (info) 自動検索パステーブルを再構築しています ...
+12:15:01 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:15:01 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:15:02 (info) 自動検索パステーブルを再構築しています ...
+12:15:02 (info) Total 955 file(s) found, 812 file(s) activated. (7ms)
+12:15:02 [a11y] [focus] ワールド拡張：アニメキャラクタ, list item, selected
+12:15:02 Choice complete:World Extension: Animated Character
+12:15:02 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:15:02 -- Conversion Start --
+12:15:02 Converting:anim.ks
+12:15:02 (info) 自動検索パステーブルを再構築しています ...
+12:15:02 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:02 (info) 自動検索パステーブルを再構築しています ...
+12:15:02 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:02 scn: anim.ks: 4 scenes, 51 texts, 0 warnings (278 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/anim.ks.scn
+12:15:02 -- Conversion Complete --
+12:15:03 (info) 自動検索パステーブルを再構築しています ...
+12:15:03 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:05 [a11y] [polite] ピップは表示するときにレイヤを組み合わせて描かれます。体がひとつ、衣装がふたつ、腕のポーズが三つ、表情が六つです。
+12:15:05 (info) 自動検索パステーブルを再構築しています ...
+12:15:06 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:06 (info) 自動検索パステーブルを再構築しています ...
+12:15:06 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:06 (info) 自動検索パステーブルを再構築しています ...
+12:15:06 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:07 [a11y] [polite] ピップ：やあ！ ぼくはピップ。
+12:15:07 (info) 自動検索パステーブルを再構築しています ...
+12:15:07 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:07 (info) 自動検索パステーブルを再構築しています ...
+12:15:07 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:07 [a11y] [polite] ピップ：ひとりでまばたきするし、声にあわせて口も動くよ。
+12:15:08 (info) 自動検索パステーブルを再構築しています ...
+12:15:08 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:08 [a11y] [polite] 目は数秒ごとにまばたきし、しゃべっているあいだは声の大きさに応じて口が開きます。
+12:15:09 (info) 自動検索パステーブルを再構築しています ...
+12:15:09 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:09 (info) 自動検索パステーブルを再構築しています ...
+12:15:09 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:10 (info) 自動検索パステーブルを再構築しています ...
+12:15:10 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:10 [a11y] [polite] ピップ：もう一回こんにちは！ よく聞いてね。本物の声でしゃべると、ぼくの口は言った母音ひとつひとつの形になるんだ。あー、いー、うー、えー、おー。もごもご言うより、ずっといいでしょ？
+12:15:11 (info) 自動検索パステーブルを再構築しています ...
+12:15:11 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:11 (info) 自動検索パステーブルを再構築しています ...
+12:15:11 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:13 [a11y] [polite] このせりふでは、kagex-lipsync が声とその文からそれぞれの母音を言うタイミングを割り出し、声の隣に pip000009.lip を書きました。ほかの声はどれも、声の大きさだけで口を動かします。
+12:15:14 (info) 自動検索パステーブルを再構築しています ...
+12:15:14 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:14 [a11y] [polite] ピップ：おっ！ 新しい顔だ！
+12:15:15 [a11y] [polite] xsurprised のように表情の前に x をつけると、表情が変わるあいだ目を閉じます。
+12:15:16 (info) 自動検索パステーブルを再構築しています ...
+12:15:16 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:16 (info) 自動検索パステーブルを再構築しています ...
+12:15:16 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:16 [a11y] [polite] ピップ：おっと、びっくりさせちゃった？
+12:15:16 (info) 自動検索パステーブルを再構築しています ...
+12:15:16 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:17 (info) 自動検索パステーブルを再構築しています ...
+12:15:17 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:17 [a11y] [polite] ピップ：どうかな、似合う？
+12:15:17 (info) 自動検索パステーブルを再構築しています ...
+12:15:17 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:18 [a11y] [polite] ピップ：あはは！ 気に入った！
+12:15:18 (info) 自動検索パステーブルを再構築しています ...
+12:15:18 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:18 [a11y] [polite] 笑い顔は目を閉じた絵なのでまばたきはしませんが、口は動きます。
+12:15:19 (info) 自動検索パステーブルを再構築しています ...
+12:15:19 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:19 [a11y] [polite] ピップ：ちょっと！ あの帽子、気に入ってたのに！
+12:15:19 (info) 自動検索パステーブルを再構築しています ...
+12:15:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:21 [a11y] [polite] 衣装も表情と同じように変わります。beret で帽子をかぶり、plain で脱ぎます。
+12:15:21 (info) 自動検索パステーブルを再構築しています ...
+12:15:21 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:21 (info) 自動検索パステーブルを再構築しています ...
+12:15:21 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:21 (info) 自動検索パステーブルを再構築しています ...
+12:15:21 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:22 (info) 自動検索パステーブルを再構築しています ...
+12:15:22 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:23 [a11y] [polite] World のレベルごとにその大きさで描いたレイヤがあるので、近づいてもピップはくっきりしたままです。
+12:15:23 (info) 自動検索パステーブルを再構築しています ...
+12:15:23 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:23 (info) 自動検索パステーブルを再構築しています ...
+12:15:24 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:25 [a11y] [polite] 目と口は命令でも動かせます。eyecloseto は目を閉じ、閉じ終わるまで待ちます。
+12:15:25 (info) 自動検索パステーブルを再構築しています ...
+12:15:25 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:25 [a11y] [polite] そして eyeopento でまた開きます。
+12:15:26 (info) 自動検索パステーブルを再構築しています ...
+12:15:26 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:26 (info) 自動検索パステーブルを再構築しています ...
+12:15:26 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:28 [a11y] [polite] eyeflip=3 で三回まばたきします。
+12:15:28 (info) 自動検索パステーブルを再構築しています ...
+12:15:28 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:32 [a11y] [polite] lipflip=4 なら、声なしで口を四回動かします。
+12:15:32 (info) 自動検索パステーブルを再構築しています ...
+12:15:32 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:32 [a11y] [polite] ピップ：またね！
+12:15:32 (info) 自動検索パステーブルを再構築しています ...
+12:15:32 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:33 (info) 自動検索パステーブルを再構築しています ...
+12:15:33 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:33 (info) 自動検索パステーブルを再構築しています ...
+12:15:33 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:33 (info) 自動検索パステーブルを再構築しています ...
+12:15:33 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:33 (info) 自動検索パステーブルを再構築しています ...
+12:15:33 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:34 (info) 自動検索パステーブルを再構築しています ...
+12:15:34 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:34 [a11y] [polite] あの手を振る動きはアニメーションです。data/main/charanim.csv の waving が、ほかの変化があるまでタイマーで腕のポーズを切り替えています。
+12:15:34 (info) 自動検索パステーブルを再構築しています ...
+12:15:34 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:34 (info) 自動検索パステーブルを再構築しています ...
+12:15:34 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:35 (info) 自動検索パステーブルを再構築しています ...
+12:15:35 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:35 (info) 自動検索パステーブルを再構築しています ...
+12:15:35 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:36 (info) 自動検索パステーブルを再構築しています ...
+12:15:36 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:38 [a11y] [polite] ひとつのレイヤーファイルから作った CG です。空、丘、ピップ、その腕や表情がそれぞれレイヤーで、この絵はその一部を見せています。
+12:15:38 (info) 自動検索パステーブルを再構築しています ...
+12:15:38 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:39 (info) 自動検索パステーブルを再構築しています ...
+12:15:39 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:40 [a11y] [polite] pipcg_laugh は同じファイルの別のレイヤーを見せたもの。ばんざいの腕と笑顔です。
+12:15:40 (info) 自動検索パステーブルを再構築しています ...
+12:15:40 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:41 (info) 自動検索パステーブルを再構築しています ...
+12:15:41 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:42 [a11y] [polite] pipcg_evening は夕方の空と、全体にかかるオレンジ色の光、それにベレー帽。
+12:15:42 (info) 自動検索パステーブルを再構築しています ...
+12:15:42 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:44 (info) 自動検索パステーブルを再構築しています ...
+12:15:44 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:45 [a11y] [polite] pipcg_night は月と星と眠そうな顔。ファイルはひとつ、絵は四枚で、ギャラリーではそれぞれの名前で並びます。
+12:15:45 (info) 自動検索パステーブルを再構築しています ...
+12:15:45 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:47 (info) 自動検索パステーブルを再構築しています ...
+12:15:47 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:49 [a11y] [polite] このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
+12:15:49 (info) 自動検索パステーブルを再構築しています ...
+12:15:49 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+[VRM] springBone: joints=10 colliders=4
+[VRM] MToon materials applied: 12 primitives (12 materials), outlines=5 rims=0 uvAnims=0
+[VRM] loaded (1.0): bones=19 expressions=15 meta.name="Vee"
+12:15:50 (info) 自動検索パステーブルを再構築しています ...
+12:15:50 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:52 [a11y] [polite] こちらはヴィー、VRM のアバターです。VRoid Studio が書き出すのと同じ形式の 3D モデルで、このサンプルのためにスクリプトが簡単な形から組み立て、krkrthreepp プラグインが描いています。
+12:15:52 (info) 自動検索パステーブルを再構築しています ...
+12:15:52 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:54 [a11y] [polite] ヴィー：こんにちは！ヴィーです。3D モデルだから、向きを変えたり、手を振ったり、跳びはねたりできます。話すときは、母音ごとに口の形も変わるんですよ！
+12:15:55 (info) 自動検索パステーブルを再構築しています ...
+12:15:55 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:15:56 [a11y] [polite] 口は、声から kagex-lipsync が作ったリップトラックに従います。母音ごとに、アバター自身の aa、ih、ou、ee、oh の表情が使われます。
+12:15:57 (info) 自動検索パステーブルを再構築しています ...
+12:15:57 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:57 (info) 自動検索パステーブルを再構築しています ...
+12:15:57 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:15:59 [a11y] [polite] 顔はアバターの表情の重みの組み合わせです。laugh は happy をいっぱいに、smile はそれより少なめにしたものです。
+12:15:59 (info) 自動検索パステーブルを再構築しています ...
+12:15:59 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:01 [a11y] [polite] happy、sad、angry、relaxed、surprised のようなよく使う表情は VRM が名前を決めているので、同じ顔がそれを持つどのアバターにも使えます。
+12:16:02 (info) 自動検索パステーブルを再構築しています ...
+12:16:02 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:02 [a11y] [polite] アバターは自分だけの表情も持てます。blush はヴィーのものです。
+12:16:03 (info) 自動検索パステーブルを再構築しています ...
+12:16:03 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:05 (info) 自動検索パステーブルを再構築しています ...
+12:16:05 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:07 [a11y] [polite] wave は VRM アニメーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとはポーズのアニメーションに戻ります。
+12:16:08 (info) 自動検索パステーブルを再構築しています ...
+12:16:08 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:08 (info) 自動検索パステーブルを再構築しています ...
+12:16:08 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=4
+12:16:10 [a11y] [polite] ポーズはループする VRM アニメーションです。think は、次のポーズが来るまで手をあごに当てたままにします。
+12:16:10 (info) 自動検索パステーブルを再構築しています ...
+12:16:10 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=1.4
+12:16:11 (info) 自動検索パステーブルを再構築しています ...
+12:16:11 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:12 (info) 自動検索パステーブルを再構築しています ...
+12:16:12 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:13 [a11y] [polite] アニメーションは次のアニメーションへフェードするので、nod はポーズのとちゅうの姿勢からそのまま始まります。
+12:16:13 (info) 自動検索パステーブルを再構築しています ...
+12:16:13 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=1.8
+12:16:15 (info) 自動検索パステーブルを再構築しています ...
+12:16:15 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:15 (info) 自動検索パステーブルを再構築しています ...
+12:16:15 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:16 [a11y] [polite] 動くとツインテールが揺れます。VRM のスプリングボーンです。
+12:16:16 (info) 自動検索パステーブルを再構築しています ...
+12:16:16 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+[VRMA] loaded: boneTracks=19 exprTracks=0 hips=1 vrmaHipsY=0.6 duration=2.4
+12:16:19 (info) 自動検索パステーブルを再構築しています ...
+12:16:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:19 (info) 自動検索パステーブルを再構築しています ...
+12:16:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:19 (info) 自動検索パステーブルを再構築しています ...
+12:16:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:19 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:16:19 (info) 自動検索パステーブルを再構築しています ...
+12:16:19 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:19 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:16:19 (info) 自動検索パステーブルを再構築しています ...
+12:16:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:20 (info) 自動検索パステーブルを再構築しています ...
+12:16:20 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:21 (info) 自動検索パステーブルを再構築しています ...
+12:16:21 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:23 [a11y] [polite] ピップは表示するときにレイヤを組み合わせて描かれます。体がひとつ、衣装がふたつ、腕のポーズが三つ、表情が六つです。
+12:16:25 (info) 自動検索パステーブルを再構築しています ...
+12:16:25 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:25 [a11y] [polite] ピップ：やあ！ ぼくはピップ。
+12:16:27 (info) 自動検索パステーブルを再構築しています ...
+12:16:27 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:27 (info) 自動検索パステーブルを再構築しています ...
+12:16:27 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:28 [a11y] [polite] ピップ：ひとりでまばたきするし、声にあわせて口も動くよ。
+12:16:29 [a11y] [polite] 目は数秒ごとにまばたきし、しゃべっているあいだは声の大きさに応じて口が開きます。
+12:16:29 (info) 自動検索パステーブルを再構築しています ...
+12:16:29 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:30 (info) 自動検索パステーブルを再構築しています ...
+12:16:30 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:30 (info) 自動検索パステーブルを再構築しています ...
+12:16:30 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:30 (info) 自動検索パステーブルを再構築しています ...
+12:16:30 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:31 [a11y] [polite] ピップ：もう一回こんにちは！ よく聞いてね。本物の声でしゃべると、ぼくの口は言った母音ひとつひとつの形になるんだ。あー、いー、うー、えー、おー。もごもご言うより、ずっといいでしょ？
+12:16:31 (info) 自動検索パステーブルを再構築しています ...
+12:16:31 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:33 [a11y] [polite] このせりふでは、kagex-lipsync が声とその文からそれぞれの母音を言うタイミングを割り出し、声の隣に pip000009.lip を書きました。ほかの声はどれも、声の大きさだけで口を動かします。
+12:16:33 (info) 自動検索パステーブルを再構築しています ...
+12:16:33 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:34 (info) 自動検索パステーブルを再構築しています ...
+12:16:34 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:34 [a11y] [polite] ピップ：おっ！ 新しい顔だ！
+12:16:34 (info) 自動検索パステーブルを再構築しています ...
+12:16:34 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:36 [a11y] [polite] xsurprised のように表情の前に x をつけると、表情が変わるあいだ目を閉じます。
+12:16:36 (info) 自動検索パステーブルを再構築しています ...
+12:16:36 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:36 [a11y] [polite] ピップ：おっと、びっくりさせちゃった？
+12:16:36 (info) 自動検索パステーブルを再構築しています ...
+12:16:36 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:37 (info) 自動検索パステーブルを再構築しています ...
+12:16:37 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:37 [a11y] [polite] ピップ：どうかな、似合う？
+12:16:37 (info) 自動検索パステーブルを再構築しています ...
+12:16:37 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:38 (info) 自動検索パステーブルを再構築しています ...
+12:16:38 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:38 [a11y] [polite] ピップ：あはは！ 気に入った！
+12:16:39 [a11y] [polite] 笑い顔は目を閉じた絵なのでまばたきはしませんが、口は動きます。
+12:16:39 (info) 自動検索パステーブルを再構築しています ...
+12:16:39 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:40 [a11y] [polite] ピップ：ちょっと！ あの帽子、気に入ってたのに！
+12:16:41 [a11y] [polite] 衣装も表情と同じように変わります。beret で帽子をかぶり、plain で脱ぎます。
+12:16:41 (info) 自動検索パステーブルを再構築しています ...
+12:16:41 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:41 (info) 自動検索パステーブルを再構築しています ...
+12:16:41 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:42 (info) 自動検索パステーブルを再構築しています ...
+12:16:42 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:42 (info) 自動検索パステーブルを再構築しています ...
+12:16:42 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:43 [a11y] [polite] World のレベルごとにその大きさで描いたレイヤがあるので、近づいてもピップはくっきりしたままです。
+12:16:44 (info) 自動検索パステーブルを再構築しています ...
+12:16:44 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:44 (info) 自動検索パステーブルを再構築しています ...
+12:16:44 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:45 [a11y] [polite] 目と口は命令でも動かせます。eyecloseto は目を閉じ、閉じ終わるまで待ちます。
+12:16:45 (info) 自動検索パステーブルを再構築しています ...
+12:16:45 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:46 [a11y] [polite] そして eyeopento でまた開きます。
+12:16:46 (info) 自動検索パステーブルを再構築しています ...
+12:16:46 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:48 [a11y] [polite] eyeflip=3 で三回まばたきします。
+12:16:48 (info) 自動検索パステーブルを再構築しています ...
+12:16:48 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:48 (info) 自動検索パステーブルを再構築しています ...
+12:16:48 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:52 [a11y] [polite] lipflip=4 なら、声なしで口を四回動かします。
+12:16:52 (info) 自動検索パステーブルを再構築しています ...
+12:16:52 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:52 [a11y] [polite] ピップ：またね！
+12:16:53 (info) 自動検索パステーブルを再構築しています ...
+12:16:53 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:53 (info) 自動検索パステーブルを再構築しています ...
+12:16:53 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:53 (info) 自動検索パステーブルを再構築しています ...
+12:16:53 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:53 (info) 自動検索パステーブルを再構築しています ...
+12:16:53 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:54 (info) 自動検索パステーブルを再構築しています ...
+12:16:54 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:54 (info) 自動検索パステーブルを再構築しています ...
+12:16:54 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:54 [a11y] [polite] あの手を振る動きはアニメーションです。data/main/charanim.csv の waving が、ほかの変化があるまでタイマーで腕のポーズを切り替えています。
+12:16:54 (info) 自動検索パステーブルを再構築しています ...
+12:16:54 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:55 (info) 自動検索パステーブルを再構築しています ...
+12:16:55 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:55 (info) 自動検索パステーブルを再構築しています ...
+12:16:55 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:56 (info) 自動検索パステーブルを再構築しています ...
+12:16:56 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:57 [a11y] [polite] ひとつのレイヤーファイルから作った CG です。空、丘、ピップ、その腕や表情がそれぞれレイヤーで、この絵はその一部を見せています。
+12:16:58 (info) 自動検索パステーブルを再構築しています ...
+12:16:58 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:16:58 (info) 自動検索パステーブルを再構築しています ...
+12:16:58 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:16:59 (info) 自動検索パステーブルを再構築しています ...
+12:16:59 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:00 [a11y] [polite] pipcg_laugh は同じファイルの別のレイヤーを見せたもの。ばんざいの腕と笑顔です。
+12:17:00 (info) 自動検索パステーブルを再構築しています ...
+12:17:00 (info) Total 956 file(s) found, 813 file(s) activated. (9ms)
+12:17:01 (info) 自動検索パステーブルを再構築しています ...
+12:17:01 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:02 [a11y] [polite] pipcg_evening は夕方の空と、全体にかかるオレンジ色の光、それにベレー帽。
+12:17:03 (info) 自動検索パステーブルを再構築しています ...
+12:17:03 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:04 (info) 自動検索パステーブルを再構築しています ...
+12:17:04 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:05 [a11y] [polite] pipcg_night は月と星と眠そうな顔。ファイルはひとつ、絵は四枚で、ギャラリーではそれぞれの名前で並びます。
+12:17:06 (info) 自動検索パステーブルを再構築しています ...
+12:17:06 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:09 [a11y] [polite] このビルドでは Live2D モデルを再生できません。Live2D の Cubism SDK でビルドした krkrlive2d プラグインとモデルが必要です。追加のしかたは doc/world.txt の「Live2D Characters」にあります。
+12:17:09 (info) 自動検索パステーブルを再構築しています ...
+12:17:09 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:17:10 (info) 自動検索パステーブルを再構築しています ...
+12:17:10 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+[VRM] springBone: joints=10 colliders=4
+[VRM] MToon materials applied: 12 primitives (12 materials), outlines=5 rims=0 uvAnims=0
+[VRM] loaded (1.0): bones=19 expressions=15 meta.name="Vee"
+12:17:10 (info) 自動検索パステーブルを再構築しています ...
+12:17:10 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:12 [a11y] [polite] こちらはヴィー、VRM のアバターです。VRoid Studio が書き出すのと同じ形式の 3D モデルで、このサンプルのためにスクリプトが簡単な形から組み立て、krkrthreepp プラグインが描いています。
+12:17:13 (info) 自動検索パステーブルを再構築しています ...
+12:17:13 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:17:14 [a11y] [polite] ヴィー：こんにちは！ヴィーです。3D モデルだから、向きを変えたり、手を振ったり、跳びはねたりできます。話すときは、母音ごとに口の形も変わるんですよ！
+12:17:15 (info) 自動検索パステーブルを再構築しています ...
+12:17:15 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:17 [a11y] [polite] 口は、声から kagex-lipsync が作ったリップトラックに従います。母音ごとに、アバター自身の aa、ih、ou、ee、oh の表情が使われます。
+12:17:17 (info) 自動検索パステーブルを再構築しています ...
+12:17:17 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:18 [a11y] [polite] 顔はアバターの表情の重みの組み合わせです。laugh は happy をいっぱいに、smile はそれより少なめにしたものです。
+12:17:19 (info) 自動検索パステーブルを再構築しています ...
+12:17:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:19 (info) 自動検索パステーブルを再構築しています ...
+12:17:19 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:21 [a11y] [polite] happy、sad、angry、relaxed、surprised のようなよく使う表情は VRM が名前を決めているので、同じ顔がそれを持つどのアバターにも使えます。
+12:17:21 (info) 自動検索パステーブルを再構築しています ...
+12:17:21 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:22 [a11y] [polite] アバターは自分だけの表情も持てます。blush はヴィーのものです。
+12:17:23 (info) 自動検索パステーブルを再構築しています ...
+12:17:23 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:26 (info) 自動検索パステーブルを再構築しています ...
+12:17:26 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:27 [a11y] [polite] wave は VRM アニメーションを一度だけ再生し、motionwait はその終わりを待ちます。そのあとはポーズのアニメーションに戻ります。
+12:17:28 (info) 自動検索パステーブルを再構築しています ...
+12:17:28 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:29 [a11y] [polite] ポーズはループする VRM アニメーションです。think は、次のポーズが来るまで手をあごに当てたままにします。
+12:17:29 (info) 自動検索パステーブルを再構築しています ...
+12:17:29 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:17:30 (info) 自動検索パステーブルを再構築しています ...
+12:17:30 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:32 (info) 自動検索パステーブルを再構築しています ...
+12:17:32 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:32 (info) 自動検索パステーブルを再構築しています ...
+12:17:32 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:33 [a11y] [polite] アニメーションは次のアニメーションへフェードするので、nod はポーズのとちゅうの姿勢からそのまま始まります。
+12:17:33 (info) 自動検索パステーブルを再構築しています ...
+12:17:33 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:35 (info) 自動検索パステーブルを再構築しています ...
+12:17:35 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:36 [a11y] [polite] 動くとツインテールが揺れます。VRM のスプリングボーンです。
+12:17:36 (info) 自動検索パステーブルを再構築しています ...
+12:17:36 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:17:39 (info) 自動検索パステーブルを再構築しています ...
+12:17:39 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:39 (info) 自動検索パステーブルを再構築しています ...
+12:17:39 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:39 (info) 自動検索パステーブルを再構築しています ...
+12:17:39 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:39 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:17:39 (info) 自動検索パステーブルを再構築しています ...
+12:17:39 (info) Total 956 file(s) found, 813 file(s) activated. (8ms)
+12:17:41 (info) 自動検索パステーブルを再構築しています ...
+12:17:41 (info) Total 956 file(s) found, 813 file(s) activated. (7ms)
+12:17:41 [a11y] [focus] ワールド拡張：キャラクタ, list item, selected
+12:17:41 Choice complete:World Extension: Character
+12:17:41 scn: s0001.ks: the scripts that go to it leave different screens, so it starts from an empty World
+12:17:41 -- Conversion Start --
+12:17:41 Converting:char.ks
+12:17:41 (info) 自動検索パステーブルを再構築しています ...
+12:17:41 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:41 (info) 自動検索パステーブルを再構築しています ...
+12:17:41 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:41 scn: char.ks: 11 scenes, 118 texts, 0 warnings (482 ms) -> file://./home/runner/work/kagex/kagex/smoke/data/scenario/char.ks.scn
+12:17:41 -- Conversion Complete --
+12:17:43 [a11y] [polite] KAGEX ワールド拡張を用いたスクリプティングのサンプルです。
+12:17:43 (info) 自動検索パステーブルを再構築しています ...
+12:17:43 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:44 [a11y] [polite] 比較的シンプルな記述で高度な演出を行うことができます。
+12:17:44 (info) 自動検索パステーブルを再構築しています ...
+12:17:44 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:45 [a11y] [polite] char.ks を開いて実際のファイルを比較しながら見るとわかりやすいです。
+12:17:46 (info) 自動検索パステーブルを再構築しています ...
+12:17:46 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:47 (info) 自動検索パステーブルを再構築しています ...
+12:17:47 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:47 SliderLayer.tjs loaded (2ms)
+12:17:47 (info) 自動検索パステーブルを再構築しています ...
+12:17:47 (info) Total 957 file(s) found, 814 file(s) activated. (7ms)
+12:17:48 (info) 自動検索パステーブルを再構築しています ...
+12:17:48 (info) Total 957 file(s) found, 814 file(s) activated. (8ms)
+12:17:48 ! ReplFileChannel: stopped
+12:17:49 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [FileAllocator] tag=FileCache alloc=4 free=0 current=5.60MB total_alloc=5.60MB total_freed=0B
+12:17:49 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [BitmapAllocator] tag=BitmapBits alloc=9808 free=9707 current=176.05MB total_alloc=54.28GB total_freed=54.11GB
+12:17:49 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:316] MemoryAllocator leak [SoundAllocator] tag=Sound alloc=20230 free=19074 current=500.41KB total_alloc=16.26MB total_freed=15.77MB
