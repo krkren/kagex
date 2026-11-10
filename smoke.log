@@ -1,0 +1,601 @@
+== sample (data, desktop)
+ok   start-up reaches the title screen                               20.3s
+     memory (MB): pictures 133, files 6, sound 1, scripts 42, process 442
+     the system's language here: ja (System.uiLanguage "", candidates ja)
+ok   the sample is in English for the steps that read its text (KAGLanguageList)   0.7s
+     memory (MB): pictures 130, files 6, sound 1, scripts 42, process 444
+ok   Extras start locked                                              0.1s
+     memory (MB): pictures 130, files 6, sound 1, scripts 42, process 444
+     60 checks while 590 of kag's methods were looked up 1371 times
+ok   signature checks leave the game window's members alone (sigcheck)   1.6s
+     memory (MB): pictures 130, files 6, sound 1, scripts 42, process 451
+     the pointer at 699,300 (scale 1.875), a button's at 350,554; prompts: stays, then on No
+ok   the game's own pointer follows the mouse, a button's over buttons; prompts leave it unless asked   1.4s
+     memory (MB): pictures 138, files 6, sound 1, scripts 42, process 446
+     the engine's: 536870912 bytes, 0 threads; Low 64 MB, 256 MB and 1 thread at once, then back
+ok   Advanced settings change the picture cache and the drawing threads at once, Default puts them back   0.8s
+     memory (MB): pictures 98, files 6, sound 1, scripts 42, process 449
+     9 compiled to .scn, 0 warning(s)
+ok   the scripts in !scnlist.txt compile, so the demos play compiled   2.4s
+     memory (MB): pictures 106, files 6, sound 1, scripts 48, process 452
+     compiled, Ai in B's first state, its stage, B's entry key, still to compile: 2,1,yes,302c4ffd,0
+ok   a compiled script starts from the World the script that goes to it leaves   0.3s
+     memory (MB): pictures 106, files 6, sound 1, scripts 48, process 454
+ok   demo layer.ks plays to the end                                   5.2s
+     memory (MB): pictures 152, files 6, sound 1, scripts 49, process 627
+ok   demo char.ks plays to the end                                   14.5s
+     memory (MB): pictures 253, files 6, sound 2, scripts 51, process 854
+ok   demo envlayer.ks plays to the end                                1.7s
+     memory (MB): pictures 253, files 6, sound 2, scripts 51, process 854
+ok   demo transition.ks plays to the end                              5.1s
+     memory (MB): pictures 263, files 6, sound 2, scripts 51, process 848
+ok   demo action.ks plays to the end                                  1.7s
+     memory (MB): pictures 263, files 6, sound 2, scripts 51, process 848
+ok   demo effect.ks plays to the end                                  3.7s
+     memory (MB): pictures 263, files 6, sound 2, scripts 51, process 1009
+ok   demo anim.ks plays to the end                                    5.5s
+     memory (MB): pictures 325, files 6, sound 2, scripts 52, process 1010
+ok   demo text.ks plays to the end                                    3.5s
+     memory (MB): pictures 325, files 6, sound 2, scripts 53, process 1024
+ok   finishing every demo unlocks Extras                              0.1s
+     memory (MB): pictures 325, files 6, sound 2, scripts 53, process 1024
+ok   compiled text gets the word wrap                                 2.9s
+     memory (MB): pictures 326, files 6, sound 2, scripts 55, process 1024
+     greedy from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     quality from x 900, 20 lines a page: 3 lines, 0 page(s), planned by krkr_richtext
+     balanced from the line's start, 20 lines a page: 6 lines, 0 page(s), planned by krkr_richtext
+     quality from x 600, 3 lines a page: 14 lines, 4 page(s), planned by krkr_richtext
+ok   English lines break between words, where krkr_richtext draws as its line breaker plans them   1.0s
+     memory (MB): pictures 326, files 6, sound 2, scripts 55, process 1024
+     'あ。あ。あ。'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'あ「い」あ「'... from the line's start: 3 lines (41, 40, 39), planned by krkr_richtext
+     'きゃきゃきゃ'... from the line's start: 3 lines (40, 40, 40), planned by krkr_richtext
+     'ああああああ'... from the line's start: 3 lines (45, 45, 16), planned by krkr_richtext
+     'ああああああ'... from x 900: 3 lines (19, 49, 38), planned by krkr_richtext
+ok   Japanese lines break where krkr_richtext's line breaker plans them, with its rules for Japanese   0.6s
+     memory (MB): pictures 326, files 6, sound 2, scripts 55, process 1024
+     1 run(s); ink to x 1036 (2154568) together, 1036 (2236566) a character at a time
+ok   krkr_richtext draws a line's characters together, where KAG put them   0.3s
+     memory (MB): pictures 326, files 6, sound 2, scripts 55, process 1024
+     saved at char.ks*start,6,5,1
+ok   a compiled scene saves in the middle and loads where it was      5.1s
+     memory (MB): pictures 325, files 6, sound 2, scripts 56, process 1034
+     at char.ks*start,6,5; the save's texts, its own text, the last block's print and text, blocks: 3,1,1,1,1
+     moved: char.ks*start,6,5,1,6; its text changed: char.ks*start,6,5,1,6; nothing found: char.ks*start,1,0,1,1
+ok   a save made before a patch of its script loads at the text it was made at: the save point and the history found again by their texts, or the top of the scene when the text is gone  11.8s
+     memory (MB): pictures 325, files 6, sound 2, scripts 56, process 1034
+     smoke.ks: since it was last compiled, 2 texts are new and 1 gone (*a: 1 new, 1 gone); scenes gone: *gone. A save made at a text that's gone finds its place by the two before it, else starts its scene again
+     nothing
+     alike
+ok   a compile tells the texts it made new and the ones gone since the script was last compiled, as the player finds them   0.2s
+     memory (MB): pictures 325, files 6, sound 2, scripts 56, process 1034
+     text, history, backlog marks, Ai shown: 6,6,6,1, then BACK: 5,5,5,1
+ok   BACK goes back a message, and the backlog's marks go back to theirs   6.6s
+     memory (MB): pictures 355, files 6, sound 2, scripts 57, process 1044
+ok   a demo chosen from the menu: BACK goes back to the menu, and another choice plays   5.6s
+     memory (MB): pictures 355, files 6, sound 2, scripts 54, process 1044
+     layer 0 at *label2,1,1,255,154, after BACK *label1,1,1,200,110 (label, text, visible, opacity, pen y)
+     the pen at Start and Translucent while playing: 66,110
+     loaded there: *label1,1,1,200,110, 1 line(s) "Start" in the backlog
+ok   BACK in a scene on KAG's own layers brings them back as they were   2.8s
+     memory (MB): pictures 342, files 6, sound 2, scripts 54, process 1044
+     Pip: 1000 of its samples drawn, from y 10 to 747
+     lip-sync from level: 55 mouth samples while the voice played (0 0 0 0 0 0 0 0 2 2 2 2 2 2 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0), at 46 positions
+     ms:position:samplePosition:level there:readVoice's last, at 44100 Hz, 13:0:0:0.00:- 13:0:0:0.00:- 31:21:940:0.00:- 48:42:1881:0.00:- 65:63:2822:0.00:- 83:85:3763:0.07:- 101:106:4704:0.05:- 118:106:4704:0.05:- 139:127:5644:0.14:0.19 173:170:7526:0.21:0.19 191:191:8467:0.14:0.19 209:213:9408:0.03:0.19 229:234:10348:0.00:0.19 247:255:11289:0.00:0.19 267:255:11289:0.00:0.05 291:298:13171:0.04:0.05 308:298:13171:0.04:0.05 327:320:14112:0.04:0.05 336:341:15052:0.15:0.05 355:362:15993:0.33:0.15 377:383:16934:0.35:0.15 396:405:17875:0.28:0.15 416:426:18816:0.09:0.15 436:426:18816:0.09:0.15 455:447:19756:0.00:0.15 476:469:20697:0.00:0.15 495:490:21638:0.00:0.15 516:511:22579:0.02:0.15 536:533:23520:0.08:0.15 555:554:24460:0.04:0.15 577:575:25401:0.20:0.15 596:597:26342:0.26:0.24 616:618:27283:0.27:0.24 636:640:28224:0.26:0.24 656:661:29164:0.24:0.24 676:682:30105:0.22:0.24 695:703:31046:0.21:0.24 716:725:31987:0.21:0.06 736:746:32928:0.21:0.06 754:767:33868:0.12:0.06 776:789:34809:0.02:0.06 794:789:34809:0.02:0.06 816:810:35750:0.00:0.06 836:831:36691:0.00:0.00 856:853:37632:0.00:0.00 876:874:38572:0.00:0.00 896:895:39513:0.00:0.00 916:917:40454:0.00:0.00 937:938:41395:0.00:0.00 956:960:42336:0.00:0.00 977:981:43276:0.00:0.00 997:984:43409:0.00:0.00 1015:984:43409:0.00:0.00 1037:0:0:0.00:0.00 1056:0:0:0.00:0.00
+     its synthesized line: a lip track of 111 marks; vowel mouths shown: a e i
+     a voice with no lip track: 103 mouth samples (0 0 0 0 2 2 2 2 2 2 2 2 2 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 2 2 2 2)
+ok   the animated character blinks, and its mouth follows its voice  15.0s
+     memory (MB): pictures 357, files 6, sound 2, scripts 53, process 1044
+     Live2D: unavailable (the krkrlive2d plugin isn't there (a game builds it with Live2D's Cubism SDK)): the stand-in plugin plays her
+     Hiyori: 2496 of her picture's samples drawn, 1176x1650 at (372, 15)
+     Hiyori's face window: shown 1, 832 samples drawn, drawn again at 135619 then 136273
+     upright: shutting her eyes changes 120 samples, 22% of the way down
+     the World's parameters: 13; her copy is off by at most 0
+     blinking: the eyes from 0.999971948935112 down to 0.031547677065153; the smile face: ParamEyeLSmile 0.5 halfway through its fade, then 1
+     lip-sync: the mouth open up to 1.00, vowels e u a o i, mouth forms 0.9 0.3 0.2 0.8 0.6 0.4 0.5 1.0 0.7; after it 0.00 (the face's 0.00)
+     over 670 samples: her copy off by at most +0.0, the drawn values off the World's by at most 2.22044604925031e-16
+     the stand-in drew the eyes from 0.999976225605758 down to 0.0254308459464624, and the mouth last at +0.0
+     idle5: Hiyori_m06
+...
+ok   3D on layers: a VRM avatar, a glTF model and a scene built in script (the 3d flip)  14.7s
+     memory (MB): pictures 354, files 6, sound 2, scripts 53, process 1116
+     found smokepip_0.psd: 47 layers, 0 differing from pip_0.txt
+     composited: 0 of 47724 samples differ with the open mouth, 0 of 47724 with the O mouth
+     psd:// Mouth O differs in 0,0,0 pixels (by name, by ID, from the split pip_0.txt; -1: didn't load)
+ok   a character's layers read from a PSD match its layer structure, vowel mouths included   1.4s
+     memory (MB): pictures 354, files 6, sound 2, scripts 53, process 1116
+ok   extrans's and extNagano's transitions are there, not crossfades   0.2s
+     memory (MB): pictures 354, files 6, sound 2, scripts 53, process 1116
+     a script stand-in, its table, transitions going, the layer's: undefined,undefined,1,1
+ok   the transitions demo's extNagano transitions are the plugin's own: a layer's transition is the engine's, nothing stands in for it   0.2s
+     memory (MB): pictures 354, files 6, sound 2, scripts 53, process 1116
+     SDLSystem, VoiceFX, GlitchTrans, Speech, the glitch transition: Object,Object,Object,Object,linked
+ok   kagex's plugins of 0.28.0 are linked: sdlsystem, voicefx, glitchtrans, speech (--kagexplugins required)   0.1s
+     memory (MB): pictures 354, files 6, sound 2, scripts 53, process 1116
+     SDL found, platform, where, programs, frame limit: 1 | Linux | the engine's SDL | 1 | 1
+     opened (1,1): https://github.com/krkren/kagex | file:///tmp/kagex-smoke-a6gg7zmu/savedata/
+     paused, story waits, muted / back / mute: 1,1,1,0,1,0,1,1
+     frames in 2 s at a limit of 30: 62
+ok   sdlsystem: pages and folders open, programs start, the window's events pause or mute the game, a low-memory warning saves   5.2s
+     memory (MB): pictures 152, files 6, sound 2, scripts 53, process 1116
+     effect, connected, preset, status: echo,1,echo,play
+     the voice is 981 ms, it played 3130 ms with its echo
+ok   voicefx: a character's voice plays through its effect, and an echo rings on past the voice's end   3.5s
+     memory (MB): pictures 152, files 6, sound 3, scripts 53, process 1116
+     the same seed's pixels alike, another seed's different, another style's different: 754, 528, 579 (of 754)
+     going, the layer's; a screen's transition, then the glitch: 1,1,crossfade,glitch,300
+     the World's glitch takes the whole screen, transall=false the layer, a crossfade as before: 1,0,0
+ok   glitchtrans: the glitch is the plugin's own transition; a still glitch is the same for the same seed; the screens can change with it   0.6s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1116
+     available, mode, voices: 0,file,0
+     (skipped: no speech engine on this system)
+ok   speech: a line spoken with the system's voice plays like a voice line (--speech required)   0.2s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1116
+     copy of a missing file, menu.dll, a skipped one, stand-in calls, one slash, a stub: 0,missing,skipped,1,user://./saves/data1.png,Object
+ok   Porting.tjs: Plugins.link through a table (renamed, skipped, stood in for, missing), copyFile of a missing file, one slash   0.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1116
+ok   a movie named without its extension is found as .webm, the format the engine plays   0.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1116
+     the slot after a movie played and stopped: new,layer,layer 0
+     layer 0 after the movie stopped: 1920x1080 (the screen 1920x1080)
+ok   a video slot that played and was stopped gets a new movie object, with its layer, before its next movie, which plays   1.2s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     Effekseer: available
+ok   an Effekseer effect draws (--effekseer required), or the build says why not   0.9s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     plain: 2083 opaque samples, average red 144, blue 249
+     zoomed: 8330 opaque samples, average red 144, blue 250
+     turned: 2073 opaque samples, average red 144, blue 249
+ok   an SVG image draws, zoomed and turned too (--vector required), or the build says why not   2.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     from emblem.clip, through clipfile
+     badge: 2085 opaque samples
+     star: 257 opaque samples
+     star by id, turned: 257 opaque samples
+ok   a CLIP STUDIO PAINT layer loads through clip:// and turns (--clip required)   2.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     xp3crypt: built in, filter installed; scnfile: reads what it writes
+ok   encryption: xp3crypt is in the engine and scnfile reads compiled scenarios (--encryption required)   0.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     AlphaMovie: there
+ok   AlphaMovie: the plugin behind the amv flip type (movies with transparency) is in the engine   0.1s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+     at start: 3 zip(s); zz_bootpatch.txt zip://kagexpatch1/zz_bootpatch.txt ('from patch2'), about.ks zip://kagexpatch0/main/about.ks, zz_deep.txt zip://kagexpatch0/scenario/deep/zz_deep.txt
+     DLC zip in the save folder: zz_zipcheck.tjs ran: True
+ok   zip patches: the ones in the save folder were mounted at start, and DLC mounts later   0.5s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+ok   the demo menu's choices are drawn in a text font                 0.2s
+     memory (MB): pictures 160, files 6, sound 3, scripts 53, process 1126
+ok   screen readers: the demo menu's choices are a list, one picked through it plays, and its text is read   3.4s
+     memory (MB): pictures 187, files 6, sound 2, scripts 55, process 1126
+ok   save and load a bookmark                                         5.1s
+     memory (MB): pictures 196, files 6, sound 2, scripts 54, process 1126
+ok   the save.ks screen opens from the game and closes with Esc       1.5s
+     memory (MB): pictures 181, files 6, sound 2, scripts 54, process 1126
+ok   the load.ks screen opens from the game and closes with Esc       1.5s
+     memory (MB): pictures 189, files 6, sound 2, scripts 54, process 1126
+ok   the config.ks screen opens from the game and closes with Esc     1.2s
+     memory (MB): pictures 200, files 6, sound 2, scripts 54, process 1126
+     the save list: 90,2,650 (slots, columns, a slot's width)
+     the load list's slot 88: Slot 88: Start 2026/11/10 12:26
+ok   the save and load screens show every slot in one scrolling list: a pick saves, the page buttons scroll to their ten, the load screen lists the save   4.6s
+     memory (MB): pictures 200, files 6, sound 2, scripts 54, process 1126
+     the system's keyboard for the field: unused
+     the prompt (name, multi-line, rows shown, lines, text): TextPromptDialog,1,3,3,Before the flashback|Ai remembers|a third linex
+     kept: Before the flashback|Ai remembers|a third linex; in the save file: Before the flashback|Ai remembers|a third linex
+     the load list's slot 87: Slot 87: Start 2026/11/10 12:26. Before the flashback Ai remembers a third linex
+ok   save comments: with the option on, a save asks for a comment; three lines typed (Return between them, a fourth refused) are kept in the save, drawn on the slot and listed on the load screen; Cancel keeps the old one   5.0s
+     memory (MB): pictures 208, files 6, sound 2, scripts 54, process 1126
+     (skipped: no photo gallery here)
+ok   screenshots go to the phone's photo gallery where there is one (Android's MediaStore, iOS's photo library), and the card says so   0.1s
+     memory (MB): pictures 208, files 6, sound 2, scripts 54, process 1126
+     Config from the story: 9 page tabs; under a header button: 
+     left with a tap: the history, Config, save, load, a Yes/No prompt, About, the controller test, the controls list, Change Controls, a quick menu panel
+ok   every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel   9.6s
+     memory (MB): pictures 222, files 6, sound 2, scripts 56, process 1137
+ok   controller: Y switches auto mode, X shows the history, B closes it   1.9s
+     memory (MB): pictures 226, files 6, sound 2, scripts 56, process 1137
+ok   controller: START opens config.ks and B closes it                1.1s
+     memory (MB): pictures 217, files 6, sound 2, scripts 56, process 1137
+ok   controller: BACK opens save.ks and B closes it                   1.5s
+     memory (MB): pictures 218, files 6, sound 2, scripts 56, process 1137
+ok   controller: L1 opens load.ks and B closes it                     1.5s
+     memory (MB): pictures 218, files 6, sound 2, scripts 56, process 1137
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.6s
+     memory (MB): pictures 218, files 6, sound 2, scripts 56, process 1137
+ok   the About screen opens in the game window and closes             0.6s
+     memory (MB): pictures 218, files 6, sound 2, scripts 56, process 1137
+ok   screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers   0.5s
+     memory (MB): pictures 218, files 6, sound 2, scripts 56, process 1137
+     window 960x570, the game 960x540 under a 30 px strip
+     the sounds: menu.open,menu.open,menu.click,controls.open,controls.cancel
+ok   in a window the menu bar sits above the game: F10 and a click on a title drop its menus down, Help > Controls works, and full screen has no bar   5.3s
+     memory (MB): pictures 218, files 6, sound 2, scripts 57, process 1137
+     sections: Keyboard (20), Mouse (4), Controller (12), Debug mode (3)
+ok   the controls list reads the window's key and controller bindings, and opens and closes   1.0s
+     memory (MB): pictures 218, files 6, sound 2, scripts 57, process 1137
+     B (VK_PAD2) pressed: still open, named, the pad's name: 1,B,B
+     the controls list's Test Controller and Change... open theirs
+ok   the controller test: a button pressed is named and lit without closing it, Esc closes it; the controls list hands over to it and to Change Controls   1.4s
+     memory (MB): pictures 218, files 6, sound 2, scripts 57, process 1137
+     screenshot-20261110-122703.png, 1920x1080 (written in the background)
+     its card: 723x212
+ok   F12 saves the screen as a PNG and says so                        1.0s
+     memory (MB): pictures 235, files 6, sound 2, scripts 57, process 1167
+     without the window, the watermark; then with the window (ext, ext, window difference, watermark difference, a window shown): .jpg,.jpg,4397,5140,1
+     [screenshot enabled=false]: nothing saved, kept in saves, [screenshot on], restored off: 1,1,0,0
+     100% offered, the fit, smoothing off, vsync off, the controller off: 1,cover,no,0,0
+ok   screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings   3.8s
+     memory (MB): pictures 273, files 6, sound 2, scripts 56, process 1167
+     a press held (held, clicks), clicks after its swipe, a tap's clicks at its press and release, a slow drag's clicks and history: 1,0; 0; 0,1; 0,0
+     a long press: auto mode, no click; a finger held on the quick menu's first button: Back to the start of the scene
+     the mouse's back and forward buttons: back,next,1 (and the clicks forward made)
+     J after Change Controls: auto,1,Auto mode on or off: set
+     the pointer on Change Controls' rows: bindings.row_load.enter bindings.row_quicksave.enter
+     the quick menu's Config button off, then on: 1,0
+     Config's button one place earlier (at, before it, now at, after it, the game's order after Reset): 13,screenshot,12,screenshot,1
+     the strip: prevScene dragged two places on (now at 2, prevChoice first)
+     the mouse's back button in Change Controls: hide
+ok   actions: keys, controller buttons and gestures run one table; Change Controls binds a key, the binding is kept, and Reset puts the game's back  18.0s
+     memory (MB): pictures 285, files 6, sound 2, scripts 55, process 1198
+     buttons (- dimmed, + lit): prevScene- prevChoice- rewind- back- auto skip nextScene quickSave quickLoad- save load backlog screenshot config
+     width at 100% and 140% (at most the screen's), opacity at 50%, Config left out (has, back), the screen: 956,1337,127,0,1,1920
+     inside the window's bottom under the text at 100% and 140%, just over the window: 1,1,1
+ok   the quick menu: the window's buttons as a strip, dimmed and lit by their actions; a click runs one; unpinned it fades and its handle brings it back   7.1s
+     memory (MB): pictures 273, files 6, sound 2, scripts 56, process 1198
+     (Android only: real taps through adb)
+ok   Android: with the quick menu near the pointer, a real tap on its handle brings it, and it goes again though the finger's pointer rests on it   0.1s
+     memory (MB): pictures 273, files 6, sound 2, scripts 56, process 1198
+     the volume panel: rows, the music before, after Left, after a click halfway: 4,80,79,50; clicks that went on: 0
+     the quick saves panel's rows | the quick saves: note|
+     Pointing at It: opened as the pointer rested on Config, closed as it went
+     the strip's nodes for screen readers: 15
+ok   the quick menu's panels: a right-click opens Config's volumes, the keys and a drag change them, a click outside closes it; a long press on Auto opens the text's; Q.LOAD's lists the quick saves; screen readers get the strip   3.7s
+     memory (MB): pictures 273, files 6, sound 2, scripts 56, process 1198
+     the save panel: save:new:5 save:save:86 save:save:87 save:save:0 (the first empty slot 5)
+     the load panel: save:load:5 save:load:86 save:load:87
+     the wheel over the volume panel (pointer on it, the music before, a notch down, a notch up): 1,80,75,80
+     a [sysbutton] faded out with the pointer away and came back near it
+ok   the quick menu's save and load panels: a new save in one click, the newest saves first; the wheel over the volume panel; a message window's own buttons fade away from the pointer (buttonsfade=)   1.9s
+     memory (MB): pictures 274, files 6, sound 2, scripts 56, process 1198
+     Auto mode on or off: at 1090,902,282,1
+     off, the help line, back beside it: 1|Auto mode on or off|1|1
+ok   tips: a quick menu button's tip beside the pointer resting on it, at once for the focus, off in Config, or on a help line   1.1s
+     memory (MB): pictures 274, files 6, sound 2, scripts 56, process 1198
+ok   the controls list has the sample's own keys and buttons (AfterInit.tjs)   0.3s
+     memory (MB): pictures 274, files 6, sound 2, scripts 56, process 1198
+     x: far left -2.20, far right 2.20, xpos=0 0.00, unplaced off
+ok   positional sound: an SE placed at the stage's far left or right is panned there (World pos=, xpos=)   0.5s
+     memory (MB): pictures 274, files 6, sound 3, scripts 56, process 1198
+     the music at 44100 Hz, then 43614 Hz (moving), then 22050,-80000,50,-80
+     a sound at 44100 Hz, with pitch=150 pan=60 at 66150 Hz and pan 60 (saved 150, 60), centred when it stops: 0
+ok   World sound: pitch= and pan= move the music and a sound over time=, a play starts as recorded, a save keeps them   2.0s
+     memory (MB): pictures 274, files 6, sound 3, scripts 56, process 1198
+     on a KAG layer: 19 frames in 0.6 s, mean 110, 1404 of 1410 samples changed, opaque 1
+     on a World layer: static,1,10,4,1,1,1
+ok   TV static: the static flip draws new static every frame, on a KAG layer and a World layer, and a save keeps it   2.9s
+     memory (MB): pictures 274, files 6, sound 3, scripts 56, process 1198
+     Config: the music's slider, Title, nothing, Read Text Speed: The music's volume | Back to the title screen | Point at a setting to see what it does | The speed of text you've read before
+     Extras, its Music tab: The music
+ok   help lines: Config, the save screen and Extras say what the pointer is on at their bottom, from helptexts.csv and the options' help, and what the screen is for   4.4s
+     memory (MB): pictures 285, files 6, sound 3, scripts 56, process 1198
+     page 2: 11 options, 38 controls
+     page 3: 12 options, 37 controls
+     page 6: 12 options, 39 controls
+     read colour and mark picked, then Default: 11841736,1,none,-1,0
+     the movie volume at 40, the music's as it was: 40,1
+ok   Config's option pages: rows drawn from the options table, a pick sets the option, Default puts them back   3.5s
+     memory (MB): pictures 285, files 6, sound 3, scripts 57, process 1198
+     the window's frame: alpha 228, at opacity 100 89, back 228
+     text fade 400 ms: 1,400, 8 layers taking turns, off: 0,0
+ok   reading settings: window opacity, text that fades in, dramatic mode, the pause after a voice, Don't ask again   7.7s
+     memory (MB): pictures 297, files 6, sound 3, scripts 56, process 1198
+ok   the name box: a long name squeezed into it, crossfades between speakers, fades away, follows the window's opacity   6.4s
+     memory (MB): pictures 297, files 6, sound 3, scripts 56, process 1198
+     skipping: Skipping,36; then Skipping stopped
+     the voice bar: 0.05 0.15 0.25 0.36 0.46 0.56 0.67 0.77
+ok   indicators: a compiled scene's title and the music's title show in the corners, auto mode's mark, the voice bar, [chapter stay=true] kept in saves   6.8s
+     memory (MB): pictures 318, files 6, sound 3, scripts 61, process 1198
+     Search finds Alex in 1 lines
+ok   naming the hero: the name screen refuses and trims names, the name shows in the text and the name box, and Search finds it  14.7s
+     memory (MB): pictures 303, files 6, sound 3, scripts 56, process 1198
+ok   typing on a phone: a tap on an [edit] field opens a box with its text, typing shows in the field, Cancel puts it back and OK keeps it and runs enter=   3.0s
+     memory (MB): pictures 303, files 6, sound 3, scripts 55, process 1198
+     (skipped: only in a phone's browser, --target web --touch)
+ok   a swipe in a phone's browser: up shows the message history, and the swipe's own click doesn't go on to the next text   0.1s
+     memory (MB): pictures 303, files 6, sound 3, scripts 55, process 1198
+     (skipped: only in a phone's browser, --target web --touch)
+ok   typing in a phone's browser: a tap on an [edit] field gives the page's hidden field the keyboard with the field's text, what's typed shows in the game's field and Enter runs enter=   0.1s
+     memory (MB): pictures 303, files 6, sound 3, scripts 55, process 1198
+ok   writers' shorthands: a code sets a pose and a face, and presets move a character back or forward at once   3.0s
+     memory (MB): pictures 324, files 6, sound 3, scripts 58, process 1198
+     level:face:picture:width:zoom 1:happy:ch_1_0_1:324:60 1:angry:ch_1_0_2:324:60 1:sad:ch_1_0_3:324:60 0:happy:ch_0_0_1:540:100 0:angry:ch_0_0_2:540:100 0:sad:ch_0_0_3:540:100 2:happy:ch_2_0_1:810:150 2:angry:ch_2_0_2:810:150 2:sad:ch_2_0_3:810:150
+     a level without pictures: ch_0_0_3:323:60
+ok   a character has the right size at every level with every face, and a level without the picture draws another level's, scaled   9.4s
+     memory (MB): pictures 345, files 6, sound 3, scripts 60, process 1198
+ok   [vo]: a voice file's speaker worked out from the characters' voiceFile patterns, in the compiled scene too   0.3s
+     memory (MB): pictures 345, files 6, sound 3, scripts 60, process 1198
+     25 lines and pictures, 1717 px, over 78550 ms
+     from rollfrom to rollto (6 s to 84.55 s into bgm01): 78550 ms
+ok   the credits roll over the music between two places in it, keep their place in a save, and send rollend when seen to the end   9.2s
+     memory (MB): pictures 344, files 6, sound 3, scripts 55, process 1198
+     the opening seen at start: 1
+     the movie on the screen: 1080 of its samples not the black backdrop
+     the smaller movie: opening_sd,4, shown at 1920,1080
+     a movie whose picture stopped ended 4001 ms later
+ok   [movie]: the opening was noted as seen, its subtitles come from opening.vtt, a seen movie skips with a click, Replay's Movies tab plays it, its smaller version fills the screen, and a movie whose picture stops ends  11.8s
+     memory (MB): pictures 385, files 6, sound 3, scripts 56, process 1239
+     Ai speaks: ai,105,1
+     Ai, cross: ai,105,1
+     Pip, a face only (not on stage): pip,105,1
+     narration: -,0,1
+     Ai over a CG: ai,0,1
+     [env facewindow=off]: ai,0,1
+     [env facewindow=on]: ai,105,1
+     Config's Face Window off: ai,0,1
+     loaded at Ai's cross line: ai,105,1
+ok   face windows: the speaker's face cut from the sprite, a face-only speaker, none for narration, a CG or a scene that turns them off, Config's switch, a load  11.1s
+     memory (MB): pictures 386, files 6, sound 3, scripts 63, process 1290
+     Ai alone: ai@0
+     [pip join]: ai@-420 pip@420
+     [ai2 join=middle]: ai@-660 ai2@0 pip@660
+     [ai leave]: ai2@-420 pip@420
+     [env makeroom=0]: ai2@-840 pip@840
+ok   layouts: a character joining at the right and in the middle, one leaving, [env makeroom], everyone evenly spaced on the screen   9.3s
+     memory (MB): pictures 399, files 6, sound 3, scripts 66, process 1270
+     the scene: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+     into the memory: one transition, the window's style with it
+     [env keep], a grey flashback: ai@0:sad grey=true kept=1 bgm=bgm01
+     back to now: one transition from the memory as it was
+     [env restore]: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+     the pages' layers after the flashback, as before it: front: stage Fore Foreground Layer 0(hidden) Fore Foreground Layer 1(hidden) Fore Foreground Layer 2(hidden) ai pip Fore Message Layer 0 Fore Message Layer 0:Expression Quick menu Quick menu handle(hidden) Fore Message Layer 1(hidden) History Layer(hidden) (hidden) (hidden) (hidden) (hidden) (hidden) (hidden) src_Fore-Background(hidden) | back: Back Foreground Layer 0(hidden) Back Foreground Layer 1(hidden) Back Foreground Layer 2(hidden) Back Message Layer 0 Back Message Layer 0:Expression Quick menu (back page) Back Message Layer 1(hidden) src_Back-Background(hidden) Quick menu handle (back page)(hidden)
+     loaded in the flashback, the kept scene with it: ai@0:sad grey=true kept=1 bgm=bgm01
+     [env restore] after the load: ai@0:happy pip@480:neutral grey=- kept=0 bgm=bgm01
+ok   keeping a scene: [env keep], a grey flashback, a save and a load in it, [env restore] back to the scene as it was with the music playing on  31.7s
+     memory (MB): pictures 413, files 6, sound 3, scripts 71, process 1311
+     the screen shakes, the camera back where it was
+     [closeup]: the camera at 140% and the background blurred
+     [dim]: a black veil
+     [whiten]: a white veil
+     Pip slid in (showslide)
+     [eyecatch]: the card came and a click took it away
+ok   the staging kit: twenty gestures ending where they began, the screen shakes, a close-up, a dim and a white veil, an eyecatch card  48.5s
+     memory (MB): pictures 412, files 6, sound 3, scripts 72, process 1321
+     the bubble (distance from where it should be, turn and zoom against Pip's, depth over Pip, shown): 0,0,0,1,1; moved 0,0,0,1,1; during the move, 41 notes, at most 0 px off
+     the light: clipped, 0 samples lit outside Ai, 466 of her 486 lit; the copy: a 1920-wide picture, 76 samples of it shown, behind her
+     after a load: pip,ai,ai,0,0,0,1,1; Pip gone (bubble, light cleared): 1,0; Ai gone (light, copy, let go): 1,1,1
+ok   objects that move with others: a bubble attached to Pip moves, zooms and turns with him (during the move too), a light clipped to Ai's outline, a copy following her picture, all leaving with them, kept in a save  18.4s
+     memory (MB): pictures 420, files 6, sound 3, scripts 72, process 1341
+     Pip by the park, by the station (script's outfit:shown): plain:beret, plain:plain; the station's flag turned to the park's: beret; imagenamemap: bg01_01,BG_Other,event1
+ok   pictures and outfits an earlier choice changes: Pip's beret by the park route (dressnamemap.txt), decided as he's drawn (a flag changed after a save), and imagenamemap.txt's pictures, a stage's too   6.4s
+     memory (MB): pictures 447, files 6, sound 3, scripts 70, process 1341
+     size, sky, sun or moon, cloud, face: 1920,1080,62abff,ffe278,eaf4ff,1629509643  1920,1080,62abff,ffe278,eaf4ff,406838449  1920,1080,855182,ffc966,b26177,1698451033  1920,1080,0d0e3e,fff6ce,111146,1055610105
+     a KAG layer: 0d0e3e:1920; the event layer: 62abff:1920; seen in the gallery and the tile's picture: 1,1,1,1,0e0e3a; a missing layer: smokebad: no layer or folder No Such Layer in pipcg.txt (cgvariations.txt)
+ok   CG variations: four pictures from one layered file (cgvariations.txt), by name in a plain layer, a KAG layer and the World's event layer, one starting from another's layers, unlocked in the gallery by their own names, and a layer the file hasn't named   4.9s
+     memory (MB): pictures 466, files 6, sound 3, scripts 69, process 1362
+     the picture put together: 1920x1080 ff0000 ff0000 edges ff0000/base/1920
+ok   CG pieces: a picture kagex-release keeps as the part that differs (cgpieces.txt) is drawn over its base, in a plain layer and a KAG layer   0.2s
+     memory (MB): pictures 467, files 6, sound 3, scripts 69, process 1362
+     index (title, links): Help,10,demos|controls|saves|settings|slow|display|sound|movies|access|support
+     keys: demos,1, back index, forward demos; a click and the wheel: settings,18,1; an option link (set, box, other way): 1,1,0; screen readers' nodes/links: 47/27; Japanese: ヘルプ,ゲームが重い、カクつく,kagexmanual_slow_ja.txt
+ok   the manual: F1's action opens its index, the keys follow a link, Back and Forward, a click, the wheel, a link that sets an option, the Japanese pages, screen readers' nodes, and a link that closes it and opens About   2.1s
+     memory (MB): pictures 275, files 6, sound 3, scripts 69, process 1362
+     the message's end and second-language records (off, on): 110,1 / 154,1; swapped: ja,en; menus (story, menus, Yes, picture, fonts): en,ja,はい,1,en,ja; the compiler's Japanese (texts, still as written, places): 118,0,0
+ok   languages: a second one drawn under each line, swapped with the story's, the menus in a language of their own, and the compiler's count of texts still as written  11.2s
+     memory (MB): pictures 214, files 6, sound 3, scripts 73, process 1219
+     here: char.ks(14) *start Character appearance; the lines page's links and one gone to: 97|goto:char.ks|*start|12 -> char.ks|*start|12; flags page (title, set, value): Flags|1|station; layers, World lines, bug report: 10|2|1|1|file://./tmp/kagex-smoke-a6gg7zmu/savedata/bugreport-20261110-123143.txt; traced: True; route: done|s0001.ks:3 (s0001.ks text , line 3)|0/2|5111||park
+ok   debug helpers: the script's lines page and a go-to from it, the flags page and a flag set, the tag trace, the layer and World dumps, a bug report, and the route runner taking a choice  16.7s
+     memory (MB): pictures 241, files 6, sound 3, scripts 71, process 1219
+     zoom at 0%, 50%, 100%, then the bars' and the fill's; the Screen menu's sizes: 0.533,0.622,0.711,0.533,0.711,50/100,1
+ok   full screen filled part way: the zoom from the bars to filling the screen by a percentage, and the Screen menu's window sizes   0.2s
+     memory (MB): pictures 241, files 6, sound 3, scripts 71, process 1219
+     the petals: a still picture, 1920x1080, no effect playing
+     the petals: the effect when the option went off, the still when it came on
+     the static: still, moving when the option went off, still again when it came on
+     an action of 3 s, 300 px: moved, still running; the click glyph's .asd animation running (then with the option off, on): 300,0,0,1,0
+ok   Reduce Motion: stills stand in for the Effects demo's looping effects, and the static stops on its frame and moves again as the option changes   9.4s
+     memory (MB): pictures 286, files 6, sound 3, scripts 72, process 1219
+     KAG's own player: *m2 *m2 *m1 *m2 *m3 *m2:choice (two in, the scene's start, the one before, the next, past the choice, the choice again)
+ok   moving through a script KAG plays itself: back to the scene's start and the one before, on to the next scene, back to the last choice  11.1s
+     memory (MB): pictures 250, files 6, sound 3, scripts 72, process 1219
+     previous scene: back at the scene's first line
+     rewind: a line at a time, back to the scene's first line
+     previous choice: the demo menu again
+     next scene: char.ks*voices
+     a read scene: the offer to skip it, and Yes skips
+ok   moving through the story: the scene's start, a rewind, the last choice again, the next scene, and the offer to skip a scene read before  27.6s
+     memory (MB): pictures 297, files 6, sound 3, scripts 73, process 1219
+     V on a voiced line: pip000004.ogg kept as pip000004.ogg
+     the backlog's star on pip000004.ogg, clicked: kept 0
+     faces: 218 samples; the preview: 480/480 of its samples not black
+     the last line at 188, the scene before at 105, dragged down three lines: 102
+     flicked four lines up: at line 3 when let go, then 16 (the last step 39 ms after the one before, 90 ms in all)
+ok   the backlog: the speakers' faces, a picture of the scene at a message's mark, the scene buttons, dragging to scroll  14.5s
+     memory (MB): pictures 307, files 6, sound 3, scripts 84, process 1219
+     dragged two lines and a half: 21 px into a line, 105 px from the end (lines 42 px)
+     pulled past the newest line: 210,1,Let go to close
+     the title asked whether to quit, and No left it with 7 buttons
+ok   the history closes without keys: its close button, a pull past the newest line, Android's Back; it scrolls by the pixel; Back at the title asks to quit  25.1s
+     memory (MB): pictures 294, files 6, sound 3, scripts 78, process 1219
+     the wheel: zoom 1.520 at 1110,457; a drag to 979,392; a pinch to 2; a click to variation 1
+ok   the CG viewer: a CG full screen, zoomed by the wheel about the pointer and by a pinch, moved by dragging, the next one on a click, the bar fading at rest, Esc back to the CGs   2.6s
+     memory (MB): pictures 305, files 6, sound 3, scripts 78, process 1219
+     bgm01, hiyori000001, pip000009, pip000001, se_chime's kind: -4,2.5,5,+0.0,se
+     ai000001's level: 0.280, with +6 dB 0.536
+     the engine's last gain query: ai000001.ogg,6
+ok   loudness: loudness.csv's gains by kind, speaker and file, and a gain heard as a voice is decoded   4.2s
+     memory (MB): pictures 305, files 6, sound 3, scripts 78, process 1219
+     title.start.click, config.config_title.click, config.config_window.click, dialog.open, save.page3.click, message.msg_save.enter, menu.cancel: ui_ok,ui_click,ui_toggle,-,ui_page,ui_hover,-
+     the title's Start and Exit: KAGInterfaceSounds.play("title.start.click") | KAGInterfaceSounds.play("title.exit.click"),(kag.close())
+     the prompt answered No with Esc played dialog.no.click;play
+     a sound started twice in debug mode was noted 1 time(s); a hover straight after played 0
+ok   interface sounds: uisounds.csv's sounds by wildcard, weight and alias, the title's buttons, a prompt's No, a sound played twice logged   1.0s
+     memory (MB): pictures 305, files 6, sound 3, scripts 78, process 1219
+     at the start 80,100,0,1,0 (volumes, skip mode, recording, can undo); after the changes ['25', '55', '1', '3', 'bgm01', 'sound:se_chime']
+     Undo: skip mode back 1, the sound 55 then 100; Revert: the music 80, can undo 0, changed 0
+     Pip's volume 40, then undone 100; the samples: voice:pip000001 voice:ai000001
+     the movies' slider at 60: its sample playing, its volume and the movies' at 60, the music waiting, the samples: 1,60000,60000,1,movie:bgm01
+ok   Config: a volume plays a sample as it's set, each character's voice has a volume and a Test, Undo and Revert take changes back   2.4s
+     memory (MB): pictures 323, files 6, sound 4, scripts 78, process 1229
+     CG screen (playing, Stop button, pictures, on page 1): 1,1,7,1
+ok   Extras: CG counts, the last tab, the music room's track playing on through CG and Replay and kept on the title, the evening title   5.8s
+     memory (MB): pictures 341, files 6, sound 4, scripts 78, process 1229
+     four quick saves went to 90,91,92,90; the newest 90, newest first 90,92,91
+     the quick save's card: 539x212
+ok   quick saves go round their bookmarks, and quick load asks, then loads the newest   5.4s
+     memory (MB): pictures 349, files 6, sound 3, scripts 72, process 1229
+ok   the continue save: kept as the game goes, and the title offers to carry on from it   3.9s
+     memory (MB): pictures 349, files 6, sound 3, scripts 72, process 1229
+     cut: 1,play,1,0,1,play,1
+     Ai at x -1.00, Pip at x 1.00; pan=-100 vol=50: -100000,50; centred: 0
+ok   voices: a cut voice fades out on a track of its own, voices come from where their speakers stand, and vol= makes a line quieter   9.6s
+     memory (MB): pictures 349, files 6, sound 3, scripts 72, process 1229
+ok   back to the title through the Yes/No prompt                      1.1s
+     memory (MB): pictures 325, files 6, sound 3, scripts 72, process 1229
+     Effect Speed Normal: Config pressed at transCount 1, opened
+     Effect Speed Skip: Config pressed at transCount 1, opened
+ok   a title button pressed during the title's own crossfade opens its screen, with Effect Speed at Skip too   2.2s
+     memory (MB): pictures 333, files 6, sound 3, scripts 72, process 1229
+ok   Extras: cgmode.ks opens and returns to the title                 1.4s
+     memory (MB): pictures 333, files 6, sound 3, scripts 72, process 1229
+ok   Extras: replay.ks opens and returns to the title                 1.5s
+     memory (MB): pictures 342, files 6, sound 3, scripts 72, process 1229
+ok   Extras: musicmode.ks opens and returns to the title              1.7s
+     memory (MB): pictures 342, files 6, sound 3, scripts 72, process 1229
+ok   a Replay tile plays its scene from the script's start, and comes back to Replay   3.8s
+     memory (MB): pictures 334, files 6, sound 3, scripts 72, process 1229
+     "layer": 22 lines
+     the list: 22 lines, 1278 px to scroll, a link of the window: 1
+     dragged 160 px: at 160 when let go, then 762,401,1278,16 (position, speed, end, the last step's ms)
+     End, then Home and Down: 21,1,1
+     the list back as it was: 120,1
+ok   Search finds a word typed in the lines read, and plays from one   9.1s
+     memory (MB): pictures 355, files 6, sound 3, scripts 72, process 1229
+     eye levels ['2', '1', '0'], mouth levels while the voice played ['2', '1', '0']
+ok   after a search jump into Pip's scene he still blinks and lip-syncs   7.5s
+     memory (MB): pictures 361, files 6, sound 3, scripts 73, process 1239
+     the chart: ['s0001.ks*start@0,0=Demo Menu', 'char.ks*crossroads>char.ks*park:choice char.ks*crossroads>char.ks*station:choice char.ks*park>char.ks*staging:next char.ks*station>char.ks*staging:next', '8', 'placed', 'Characters']
+     the route: seen,locked,park,
+     the keys: char.ks*park char.ks*station char.ks*staging smaller
+     the preview card: ['shown', '255', 'Ai and Pip on the street, as they are now.', 'none']
+     the card playing: ['5', '4', '1', '1', '0 1 2 3 4']
+     a long press: shown no-prompt
+     from the chart's choice: before it ; after it station,char.ks*station,station,new
+     from the park: park,there,char.ks*park
+ok   the flowchart: the demos' scenes and the choice between them, the route taken, a scene played from its start with the choices made on the way there  14.6s
+     memory (MB): pictures 397, files 6, sound 3, scripts 75, process 1311
+     12 voices heard: ai000001.ogg,pip000003.ogg,pip000004.ogg,pip000005.ogg...
+     favourites ['ai000001.ogg', 'pip000003.ogg', 'pip000004.ogg']; dragged pip000003.ogg,pip000004.ogg,ai000001.ogg; Shift+Up pip000003.ogg,ai000001.ogg,pip000004.ogg
+     rows with a face: 3; protected, the star: 3 left, unprotected: 2; Play all: 1,0, then 1,1; Playlist 1 (at, count, favourites): 1,1,2
+ok   the music room's voices: the voices heard, a star keeps one, the favourites put in order by a drag, a click plays one   9.4s
+     memory (MB): pictures 379, files 6, sound 4, scripts 75, process 1311
+     greetings: first 'Welcome to the KAGEX sample! Press Start to see what it can do.', back "Welcome back, Sam! It's been a while.", today's date 10, another's -1
+     the player: ['turns', 'titled', '0.51', 'on']
+     the meter's peak 0.30; paused 1,54314,45, then 1,54314,45; played on 0,1,54629
+     drawn again while it plays, the button: musicmode_pause_normal,,
+     shuffle and a playlist: shuffle|0|0|0
+     Pip's greeting: ['pip', 'pipgreet01', "Hi! I'm Pip! Press Start and I'll show you around!"]
+ok   the title's greeting by the visit and the day, and the music room's player: its record turns, a click on its bar seeks   6.9s
+     memory (MB): pictures 379, files 6, sound 4, scripts 75, process 1311
+     the music room: 'Music' (Pick a track to play it), 'Stop the music', 'Voices' (The music, the voices heard, or your favourite voices), 'Tracks', 'Now playing'
+ok   screen readers: a screen drawn on a message layer gives its buttons with their help lines, its own lists merged in, and a press through it works   2.5s
+     memory (MB): pictures 379, files 6, sound 4, scripts 75, process 1311
+     ai:angry|day|3|road, then ai:angry,pip:smile/wave|night|6|road (who's shown:face/variation|time|faces|stage)
+     a drag on Ai: 1,-150,20,ai,1,0 (hit, moved by, down by, picked, there now, not where she was)
+     turned round and saying a line: 1|Ai|Hello from the stage.|spriteown0|My Picture
+     screenshots: 3, then 4
+ok   Sprite Mode: characters together in their poses, outfits, faces and variations, one dragged and turned round, a line said, the street by night or a picture of the player's own, a screenshot without the panel   6.3s
+     memory (MB): pictures 396, files 6, sound 3, scripts 75, process 1311
+     marked on the line: kagex,world (met kagex, world, pip: 110)
+     the entry: "KAGEX\nWamsoft's extension of KAG3, the Kirikiri engine's visual novel framework: layers that turn and zoom, layers ordered by level, actions that move them, and the World."
+     the Glossary tab: 3:0:Not met yet:2 of 3 terms met
+ok   the glossary: its words marked in the text, a click on one shows its entry, Extras lists them   6.6s
+     memory (MB): pictures 412, files 6, sound 3, scripts 75, process 1311
+     message fonts to choose: Noto Sans JP,Noto Serif JP; licences: Noto Sans SC,Noto Sans TC,Noto Sans JP,Noto Serif JP,Roboto; dialog.title 40, slot 36; edgeWithShadow 1
+     outline, shadow and gradient: blue at the top 278, red at the bottom 254, shadow 570, outline 9
+     a [font] before the line's text, after the clear: 0x123456
+     a size change mid-line: 12 line lengths each way, 0 broke inside a word
+ok   text: the game's fonts and text styles, an outline with a shadow, gradient text, About's fonts   3.0s
+     memory (MB): pictures 421, files 6, sound 3, scripts 75, process 1311
+     moving characters, of each kind how many moved in 0.4 s: pulse 23 of 23, rainbow 28 of 28, shake 20 of 21, wave 21 of 23
+     held still by Reduce Motion; [backlay] copied 95/95 of them to the back page
+     coming in: 63 characters, 59 samples while the line typed, 59 of them with characters showing; at the end 63/63
+     vertical text: two characters went 82 px down the line; the bracket's ink 228, 172 right of the line's middle (turned); face @Noto Sans JP,@Noto Serif JP,@Roboto
+     the scene's title in Japanese: 名前と言葉
+ok   text effects: characters that move and come in ([font anim= appear=]), vertical text, a [style] before a line's text  10.9s
+     memory (MB): pictures 245, files 6, sound 3, scripts 74, process 1311
+     outline set: 1:3368601; shadow off: 0:0; Default: 1:1; font: Noto Serif JP, back 1
+     the preview typed up to line/position 2008
+     picked: 0x335c99 from 0x336699
+ok   text settings: the player's outline, shadow and font reach the message windows, with a preview; the colour picker   3.4s
+     memory (MB): pictures 245, files 6, sound 3, scripts 75, process 1311
+     in the flashback: memory,messagewindow_memory,namebox_memory
+     the player's tint: 0x3060ff; after a load: memory
+ok   message window styles: a flashback's window, the player's tint, kept by a save  10.7s
+     memory (MB): pictures 242, files 6, sound 3, scripts 77, process 1311
+     Japanese: start_normal from file://./home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/package/krkrz/data/lang/ja/start_normal.png, 0 samples unlike it
+ok   languages: F9 shows the title screen in Japanese, with its own images, then English again   2.9s
+     memory (MB): pictures 205, files 10, sound 3, scripts 78, process 1321
+     English: [Ai] Name display, text display, and key input wait are automaticallyperformed in the prescribed format.
+     Japanese: [あい] 規定の書式で自動的に名前表示・テキスト表示・キー入力待ちが行われます
+     next: [？？？] 表示名を変更する場合はスラッシュにつづけて表示名を記載すればＯＫです
+ok   languages: the line on screen is drawn again in the other language, and the backlog keeps what was shown  13.2s
+     memory (MB): pictures 210, files 10, sound 3, scripts 78, process 1321
+     KAGEX 拡張レイヤ, ワールド拡張：キャラクタ, ワールド拡張：レイヤ
+ok   languages: the demo menu's choices are drawn again in the other language   3.2s
+     memory (MB): pictures 203, files 10, sound 3, scripts 73, process 1321
+     chosen, saved, config_base: 1|ja|file://./home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/package/krkrz/data/lang/ja/config_base.png
+ok   languages: Config's buttons choose one, the screen is drawn in it, and the choice is saved   2.6s
+     memory (MB): pictures 218, files 10, sound 3, scripts 73, process 1321
+     zh-cn: start_normal from file://./home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/package/krkrz/data/lang/zh-cn/start_normal.png; 简体中文; message face Noto Sans SC,Noto Sans JP,Noto Serif JP,Roboto, 40 px for 爱
+     [爱] 按规定的格式书写，就会自动显示名字、显示文字并等待按键。
+     zh-tw: start_normal from file://./home/runner/work/kagex/kagex/kirikiri/kagex/build/linux/package/krkrz/data/lang/zh-tw/start_normal.png; 繁體中文; message face Noto Sans TC,Noto Sans JP,Noto Serif JP,Roboto, 40 px for 愛
+     [愛] 按規定的格式書寫，就會自動顯示名字、顯示文字並等待按鍵。
+ok   languages: Simplified and Traditional Chinese: the title's images, Ai's first line and its name, their own fonts  13.0s
+     memory (MB): pictures 208, files 10, sound 3, scripts 78, process 1321
+ok   quit: the game closes and the engine exits with 0                0.5s
+== data: -scncompile
+ok   -scncompile=all compiles the listed scripts and exits            3.1s
+     9 compiled, 0 up to date, 0 failed, 0 warnings
+== template (template, desktop)
+ok   start-up reaches first.ks                                        1.1s
+     memory (MB): pictures 99, files 5, sound 1, scripts 37, process 301
+ok   one language (KAGLanguageList): F9 leaves it as it is            1.0s
+     memory (MB): pictures 99, files 5, sound 1, scripts 37, process 309
+     dragged two lines and a half (px into a line, px from the end, the line's height), then pulled: 21,105,42|Let go to close
+ok   the history: dragged by the pixel, pulled past the newest line it closes, and its close button closes it   0.8s
+     memory (MB): pictures 129, files 5, sound 1, scripts 37, process 334
+ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.7s
+     memory (MB): pictures 137, files 5, sound 1, scripts 38, process 352
+ok   the About screen opens in the game window and closes             0.6s
+     memory (MB): pictures 137, files 5, sound 1, scripts 38, process 361
+ok   screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers   0.5s
+     memory (MB): pictures 137, files 5, sound 1, scripts 38, process 361
+     window 960x570, the game 960x540 under a 30 px strip
+ok   in a window the menu bar sits above the game: F10 and a click on a title drop its menus down, Help > Controls works, and full screen has no bar   5.3s
+     memory (MB): pictures 137, files 5, sound 1, scripts 38, process 453
+     sections: Keyboard (14), Mouse (4), Controller (8), Debug mode (3)
+ok   the controls list reads the window's key and controller bindings, and opens and closes   1.0s
+     memory (MB): pictures 137, files 5, sound 1, scripts 38, process 453
+     B (VK_PAD2) pressed: still open, named, the pad's name: 1,B,B
+     the controls list's Test Controller and Change... open theirs
+ok   the controller test: a button pressed is named and lit without closing it, Esc closes it; the controls list hands over to it and to Change Controls   1.4s
+     memory (MB): pictures 145, files 5, sound 1, scripts 38, process 499
+     screenshot-20261110-123631.png, 1920x1080 (written in the background)
+     its card: 723x212
+ok   F12 saves the screen as a PNG and says so                        1.1s
+     memory (MB): pictures 162, files 5, sound 1, scripts 38, process 509
+     without the window, the watermark; then with the window (ext, ext, window difference, watermark difference, a window shown): .jpg,.jpg,+0.0,12572,1
+     [screenshot enabled=false]: nothing saved, kept in saves, [screenshot on], restored off: 1,1,0,0
+     100% offered, the fit, smoothing off, vsync off, the controller off: 1,cover,no,0,0
+ok   screenshots without the message window, as JPEG with a watermark, off where a scene says so; the screen's settings   0.5s
+     memory (MB): pictures 177, files 5, sound 1, scripts 38, process 526
+     the dialog's answer: result=1 voice=1 1=0 speed=2 name=Pip 2=0
+     its rows: Name [Ai] | Text speed <Normal> | Voices on | OK Cancel; the button row 1080 of 1100 px; background [36, 22, 104, 248]
+     data pack, saveOctet, getCurrentUILangName: 1|1|1
+ok   porting (Porting.tjs, last: it rewires Plugins.link): win32dialog.dll's dialogs as Elements dialogs, data packs, Storages.saveOctet, getLangName   1.3s
+     memory (MB): pictures 177, files 5, sound 1, scripts 39, process 527
+ok   quit: the game closes and the engine exits with 0                0.4s
+smoke test: passed
