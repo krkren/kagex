@@ -31,8 +31,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  RELEASE_TAG: "0.28.0"
-  KAGEX_SHA: 187955d39b92c02875588c1a38a6a43febb4a534
+  RELEASE_TAG: "0.28.1"
+  KAGEX_SHA: 16d487d4dd7926b2880ba1ea427f072558f7497b
   # "true" tags and publishes after every package passed; anything else is a dry run
   PUBLISH: "true"
   ENGINE_REPO: https://github.com/wamsoft/krkrz_dev.git
@@ -44,7 +44,7 @@ env:
   SCNFILE_SHA: e39c354233ffea9ab850f23ac2c7ad4562ac4ca7
   # kagex's plugins of 0.28.0: sdlsystem (pages, folders, programs, the window's events), voicefx
   # (voice effects), glitchtrans (the glitch transition), speech (the system's text to speech)
-  SDLSYSTEM_SHA: 0bbc4609572556276eb6562e30eb81c416bd05c0
+  SDLSYSTEM_SHA: 6d189265ed90a3e55459ca787fde74d9b04004c5
   VOICEFX_SHA: 56a4476c50f6fa775163a9e8c62fc0dbcc5eac70
   GLITCHTRANS_SHA: b06ae2b38905f4ed1fc7bbefc6f00998e30f3db0
   SPEECH_SHA: 55ee78f7e2acc38c545661d1fcd83788585ffb7f
