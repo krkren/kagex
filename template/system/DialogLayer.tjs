@@ -206,6 +206,23 @@ class DialogEditLayer extends EditLayer
 	{
 		parent.keyLink = linkNum;
 		super.onFocus(...);
+		// on a phone: the system's keyboard while it has the focus (TextEntry.tjs, since 0.28.1)
+		KAGTextEntryKeyboard(this, true) if keyboardUsed();
+	}
+
+	function onBlur()
+	{
+		KAGTextEntryKeyboard(this, false) if keyboardUsed();
+		super.onBlur(...);
+	}
+
+	function keyboardUsed() { return typeof global.KAGTextEntryKeyboardThere != "undefined" && KAGTextEntryKeyboardThere() && KAGTextEntryUsed(); }
+
+	// the browser on a phone types into a field of the page's (kagex-web.js)
+	function onMouseDown(x, y, button, shift)
+	{
+		KAGTextEntryWebArm(this) if button == mbLeft && typeof global.KAGTextEntryWebArm != "undefined";
+		super.onMouseDown(...);
 	}
 
 	function commit()

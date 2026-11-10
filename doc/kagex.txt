@@ -3547,7 +3547,10 @@ without it the script opens with what the system opens it with.
 
 SDLSystem itself (the plugin's README has every member): platform, focused, minimized,
 background, lowMemory, takeEvents(), onEvent, copyImage(layer), clipboardHas(type),
-userFolder(name), makeFolder(path), frameLimit, lastError.
+userFolder(name), makeFolder(path), frameLimit, lastError; since 0.28.1 keyboard,
+screenKeyboard, textInputActive, startTextInput(multiline, x, y, w, h), stopTextInput()
+(● Fields of Several Lines) and galleryPossible, saveToGallery(layer, name, album),
+galleryError (● The Screen, the Controller and Screenshots).
 
 
 
@@ -4441,6 +4444,60 @@ template/system/TextEntry.tjs):
   the game's field; Enter runs enter=, and closing the keyboard keeps the text. There, full screen
   is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
   element have the keyboard).
+
+● Fields of Several Lines, and Asking for Text
+
+Since 0.28.1 an [edit] field can hold several lines, wrapped to its width (template/system/
+EditLayer.tjs):
+
+    [edit name="tf.note" multiline=true rows=4 maxlines=6 maxchars=300 length=700]
+
+  multiline  true: Return makes a new line (Ctrl+Return runs enter=), Up, Down, Page Up and Page
+             Down move by rows, Home and End go to a row's ends, a click places the cursor, and
+             the field scrolls (a mark at its right shows where) when the text has more rows
+             than it shows.
+  rows       The rows it shows (3); its height follows from them and the font.
+  maxlines   The most lines Return may make (none by default); maxchars still counts characters.
+
+The text has a "\n" between lines (a TJS string's new line). Words wrap at spaces, and a
+Japanese or Chinese line anywhere, but not before 、。」 and the like. On a phone the field
+takes the system's own keyboard in its multi-line mode while it has the focus (kagex's sdlsystem
+plugin, SDLSystem.startTextInput), so Return there makes a new line too; in a
+phone's browser the page types into a hidden <textarea>; where neither is there, the box above
+gives the field a line to type in for each of its rows. Elements' own input_box is one line
+(UPSTREAM.md 59), which is why the field is the framework's.
+
+KAGAskText(message, initial, onDone, options) asks for text in the Yes/No prompts' look: the
+message, a field and OK and Cancel. onDone(text, param) runs with what was typed on OK, and with
+void on Cancel (Esc, a right-click); false comes back when it can't open (another dialog is).
+
+  lines      The field's rows (3); 1 for a field of one line, where Return is OK.
+  maxLines   The most lines; maxChars the most characters.
+  ok         The OK button's label (through tr()).
+  param      Handed to onDone (TJS functions have no closures).
+
+    KAGAskText("What should the tea be called?", "", function(text) {
+        if (text !== void) f.teaName = text;
+    }, %[ lines:1, maxChars:20 ]);
+
+◇ Comments on saves
+
+As Wamsoft's games do, a save can carry a comment the player types (since 0.28.1): kept in the
+save file (beside its data, so a copy carries it) and in the bookmark index the save screens
+read.
+
+  kag.getBookMarkComment(num)        The comment, "" without one; several lines are "\n" apart.
+  kag.setBookMarkComment(num, text)  Writes it into the save; false for a missing or protected
+                                     bookmark.
+  KAGAskSaveComment(num, onDone, force)
+                                     Asks for it (three lines, 120 characters) when the player
+                                     turned on Config's "A Comment for Each Save", or always
+                                     with force; then onDone(num).
+
+A new save into a bookmark starts without a comment. The sample asks after a save on its save
+screen (saveAtSlot, Override.tjs) and draws the comment's first line in the slot, between the
+scene's title and the date (text style "slot.comment", textstyles.tjs); the load screen and the
+slots' names for screen readers show it too.
 
 ● Games on Phones and in the Browser
 

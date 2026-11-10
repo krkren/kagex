@@ -8414,9 +8414,8 @@ class KAGWindow extends Window
 		{
 
             // Update menu / bookMarkIndex
-
             getBookMarkInfoFromData(pcflags, num);
-
+            setBookMarkIndex(num, "Comment", ""); // a new save, without a comment (setBookMarkComment)
 		}
 
 		return ret;
@@ -8495,9 +8494,10 @@ class KAGWindow extends Window
 	{
 
 		var data = readBookMarkFromFile(getBookMarkFileNameAtNum(num));
-
-		getBookMarkInfoFromData(data.core, num) if (data !== void && data.core !== void && data.core.storeTime != "");
-
+		if (data !== void && data.core !== void && data.core.storeTime != "") {
+			getBookMarkInfoFromData(data.core, num);
+			setBookMarkIndex(num, "Comment", typeof data.comment == "String" ? data.comment : "");
+		}
 	}
 
 
@@ -9084,15 +9084,37 @@ class KAGWindow extends Window
 
 
 		rewriteBookMarkToFile(getBookMarkFileNameAtNum(to), data, fn);
-
 		getBookMarkInfoFromData(data.core, to);
-
+		setBookMarkIndex(to, "Comment", typeof data.comment == "String" ? data.comment : "");
 		return true;
-
 	}
 
-
-
+	// A comment the player typed for a save (since 0.28.1; Wamsoft's games take one after a
+	// save): in the save itself (data.comment, beside core and user, so a copy carries it) and
+	// in the bookmark index, which the save screens read. Several lines are fine ("\n").
+	function getBookMarkComment(num)
+	{
+		var c = getBookMarkIndex(num, "Comment", "");
+		return typeof c == "String" ? c : "";
+	}
+	function setBookMarkComment(num, text)
+	{
+		if (readOnlyMode || !isExistentBookMark(num) || getBookMarkProtectedState(num)) return false;
+		text = "" if typeof text != "String";
+		var fn = getBookMarkFileNameAtNum(num);
+		try {
+			var data = evalBookMarkFromFile(fn);
+			if (data === void) return false;
+			data.comment = text;
+			rewriteBookMarkToFile(fn, data, "");
+		} catch (e) {
+			dm("save comment: " + e.message);
+			return false;
+		}
+		setBookMarkIndex(num, "Comment", text);
+		saveSystemVariables();
+		return true;
+	}
 	function eraseBookMark(num)
 
 	{

@@ -22,7 +22,8 @@
 //   game (through the engine's krkrz_repl_eval) whether the tap went down on an [edit] field
 //   (KAGTextEntryWebTap in TextEntry.tjs), focuses a hidden field of its own with the text, and
 //   hands each change to the game; Enter runs the field's enter=, closing the keyboard keeps the
-//   text. A game whose framework predates it answers nothing, and nothing happens.
+//   text; a field of several lines types into a hidden textarea, where Enter makes a new line.
+//   A game whose framework predates it answers nothing, and nothing happens.
 (function () {
   "use strict";
   var meta = document.querySelector('meta[name="kagex-build"]');
@@ -328,30 +329,37 @@
     return s;
   }
 
-  var input = null, typing = false;
-  function field() {
-    if (input) return input;
-    input = document.createElement("input");
-    input.type = "text";
-    input.id = "kagex-text";
-    input.setAttribute("autocomplete", "off");
-    input.setAttribute("autocapitalize", "words");
-    input.setAttribute("enterkeyhint", "done");
-    input.setAttribute("aria-hidden", "true");
+  // the hidden field: an <input>, or a <textarea> for a field of several lines ([edit
+  // multiline=true]: Enter makes a new line there, and the field ends as it loses the focus)
+  var inputs = {}, input = null, typing = false;
+  function field(multi) {
+    var kind = multi ? "textarea" : "input";
+    if (inputs[kind]) return inputs[kind];
+    var f = document.createElement(kind);
+    if (!multi) f.type = "text";
+    f.id = "kagex-text" + (multi ? "-lines" : "");
+    f.setAttribute("autocomplete", "off");
+    f.setAttribute("autocapitalize", multi ? "sentences" : "words");
+    f.setAttribute("enterkeyhint", multi ? "enter" : "done");
+    f.setAttribute("aria-hidden", "true");
     // 16px: iPhones zoom the page into a field with smaller text
-    input.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;" +
-      "margin:0;font-size:16px;background:transparent;color:transparent;z-index:-1";
+    f.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;border:0;padding:0;" +
+      "margin:0;font-size:16px;background:transparent;color:transparent;z-index:-1;resize:none";
     // the keys go to the field, not to the game (SDL listens on the window)
     ["keydown", "keypress", "keyup"].forEach(function (t) {
-      input.addEventListener(t, function (e) {
+      f.addEventListener(t, function (e) {
         e.stopPropagation();
-        if (t === "keydown" && (e.key === "Enter" || e.keyCode === 13)) { e.preventDefault(); end(1); }
+        if (t === "keydown" && (e.key === "Enter" || e.keyCode === 13) && (!multi || e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          end(1);
+        }
       });
     });
-    input.addEventListener("input", function () { if (typing) tjs('KAGTextEntryWebInput("' + hex(input.value) + '")'); });
-    input.addEventListener("blur", function () { end(0); });
-    document.body.appendChild(input);
-    return input;
+    f.addEventListener("input", function () { if (typing && input === f) tjs('KAGTextEntryWebInput("' + hex(f.value) + '")'); });
+    f.addEventListener("blur", function () { if (input === f) end(0); });
+    document.body.appendChild(f);
+    inputs[kind] = f;
+    return f;
   }
   function end(ok) {
     if (!typing) return;
@@ -366,14 +374,15 @@
     if (typing) return;
     var r = tjs("KAGTextEntryWebTap()");
     if (!r) return;
-    var m = /^"?(\d+):([0-9a-f]*)"?$/.exec(r);   // a string comes back as a TJS literal
+    var m = /^"?(m?)(\d+):([0-9a-f]*)"?$/.exec(r);   // a string comes back as a TJS literal
     if (!m) return;
     // no mouse events made from the tap: their click would focus the canvas (tabindex) and
     // take the keyboard away again (the game has the tap from SDL's touch events already)
     e.preventDefault();
-    var f = field();
-    f.maxLength = +m[1] > 0 ? +m[1] : 524288;
-    f.value = unhex(m[2]);
+    var f = field(m[1] === "m");
+    f.maxLength = +m[2] > 0 ? +m[2] : 524288;
+    f.value = unhex(m[3]);
+    input = f;
     typing = true;
     f.focus();
     try { f.select(); } catch (e) {}

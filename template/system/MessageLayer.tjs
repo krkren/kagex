@@ -603,8 +603,21 @@ class LinkEditLayer extends EditLayer
 
 		}
 
+		// A field of several lines takes Return as a new line, Ctrl+Return as done, and Up and
+		// Down inside its text (EditLayer)
+		if (Edit_multiline && !Edit_vertical)
+		{
+			if (key == VK_RETURN && !(shift & ssCtrl))
+			{
+				// on a phone without a keyboard of its own: the box to type in
+				if (KAGTextEntryUsed() && !KAGTextEntryKeyboardUsed(this) && KAGTextEntryOpen(this)) return;
+				return super.onKeyDown(key, shift, process);
+			}
+			if (key == VK_UP || key == VK_DOWN || key == VK_PRIOR || key == VK_NEXT || key == VK_HOME || key == VK_END)
+				return super.onKeyDown(key, shift, process);
+		}
 		// On a phone, Return (a pad's A) opens the box to type in (TextEntry.tjs)
-		if (key == VK_RETURN && KAGTextEntryUsed() && KAGTextEntryOpen(this)) return;
+		if (key == VK_RETURN && KAGTextEntryUsed() && !KAGTextEntryKeyboardUsed(this) && KAGTextEntryOpen(this)) return;
 		// Return runs enter= ([edit enter=]) with the text committed
 
 		if (key == VK_RETURN && enterExp != "")
@@ -658,13 +671,17 @@ class LinkEditLayer extends EditLayer
 
 
 	function onFocus(prevfocused, direction)
-
 	{
-
 		parent.keyLink = linkNum;
-
         super.onFocus(...);
+		// a field of several lines on a phone: the system's keyboard, multi-line (TextEntry.tjs)
+		KAGTextEntryKeyboard(this, true) if KAGTextEntryKeyboardUsed(this);
+	}
 
+	function onBlur()
+	{
+		KAGTextEntryKeyboard(this, false) if KAGTextEntryKeyboardUsed(this);
+		super.onBlur(...);
 	}
 
 
@@ -706,8 +723,11 @@ class LinkEditLayer extends EditLayer
 	function onMouseUp(x, y, button, shift)
 	{
 		super.onMouseUp(...);
-		if (button == mbLeft && x >= 0 && y >= 0 && x < width && y < height && KAGTextEntryUsed())
-			KAGTextEntryOpen(this);
+		if (button == mbLeft && x >= 0 && y >= 0 && x < width && y < height && KAGTextEntryUsed()) {
+			// the keyboard back after the player put it away
+			if (KAGTextEntryKeyboardUsed(this)) KAGTextEntryKeyboard(this, true);
+			else KAGTextEntryOpen(this);
+		}
 	}
 }
 
@@ -8051,6 +8071,14 @@ class MessageLayer extends AnimKAGLayerTransMove
 
 		object.enterExp = elm.enter if elm.enter !== void;
 		object.entryPrompt = elm.prompt if elm.prompt !== void;
+		// [edit multiline=true rows=3 maxlines=]: a field of several lines (since 0.28.1)
+		var rows = 1;
+		if (!vertical && elm.multiline !== void && +elm.multiline) {
+			object.multiline = true;
+			object.maxLines = +elm.maxlines if elm.maxlines !== void;
+			rows = elm.rows !== void ? +elm.rows : 3;
+			rows = 1 if rows < 1;
+		}
 		// the box takes the typing on a phone: no keyboard of the system's for the field itself
 		object.imeMode = imDisable if KAGTextEntryUsed();
 
@@ -8097,8 +8125,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 			} else {
 
 				object.width  = len;
-
-				object.height = fh + 6;
+				object.height = rows > 1 ? object.heightForRows(rows) : fh + 6;
 
 			}
 
@@ -8129,8 +8156,7 @@ class MessageLayer extends AnimKAGLayerTransMove
 							  lineLayer.top + lineLayerBase - fontSize - 3);
 
 				object.width = elm.length === void ? 200: +elm.length;
-
-				object.height = lf.height + 6;
+				object.height = rows > 1 ? object.heightForRows(rows) : lf.height + 6;
 
 				x += len;
 

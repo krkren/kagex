@@ -471,7 +471,12 @@ function drawSaveSlot(target, savedatanum, name)
         // Text drawing
         var savedatadate = kag.getBookMarkDate(savedatanum);
         var savedatatitle = tr(kag.getBookMarkPageName(savedatanum)); // the scene's title, in the language shown (a compiled scene's own, or the strings')
-
+        // the comment's first line (the frame has room for one), with "…" when there's more
+        var comment = typeof kag.getBookMarkComment != "undefined" ? kag.getBookMarkComment(savedatanum) : "";
+        if (comment != "") {
+            var nl = comment.indexOf("\n");
+            comment = comment.substring(0, nl) + "…" if nl >= 0;
+        }
         var thum = new global.Layer(kag, kag.fore.base);
         thum.loadImages(savefilename);
         // "New!" badge in the thumbnail's bottom-right corner
@@ -489,9 +494,19 @@ function drawSaveSlot(target, savedatanum, name)
                 target.operateRect(x + 9 + thum.imageWidth - 6 - thum2.imageWidth, 9 + thum.imageHeight - 6 - thum2.imageHeight,
                                    thum2, 0, 0, thum2.imageWidth, thum2.imageHeight, omPsNormal);
             }
-            // the styles (textstyles.tjs) shrink a long title to fit, then cut it (since 0.22.0)
-            KAGDrawStyledText(target, "slot.title", savedatatitle, x + tx, ty1, w - tx - 12, 44);
-            KAGDrawStyledText(target, "slot.date", savedatadate, x + tx, ty2, w - tx - 12, 40);
+            // the styles (textstyles.tjs) shrink a long title to fit, then cut it (since 0.22.0);
+            // a comment the player typed (since 0.28.1) goes between the title and the date
+            if (comment != "") {
+                // the frame's rule between the rows (sl_win_base, y 74-75) under the comment: covered
+                // in the frame's own colour there
+                target.fillRect(x + tx - 4, 72, w - tx - 10, 6, 0xff000000 | (target.getMainPixel(x + tx + 4, 50) & 0xffffff));
+                KAGDrawStyledText(target, "slot.title", savedatatitle, x + tx, 12, w - tx - 12, 42);
+                KAGDrawStyledText(target, "slot.comment", comment, x + tx, 58, w - tx - 12, 34);
+                KAGDrawStyledText(target, "slot.date", savedatadate, x + tx, 98, w - tx - 12, 40);
+            } else {
+                KAGDrawStyledText(target, "slot.title", savedatatitle, x + tx, ty1, w - tx - 12, 44);
+                KAGDrawStyledText(target, "slot.date", savedatadate, x + tx, ty2, w - tx - 12, 40);
+            }
         }
 
         invalidate thum;
@@ -513,7 +528,9 @@ function slotItemName(index)
     var slot = tr("Slot %d").sprintf(index + 1);
     if (!kag.isExistentBookMark(index)) return slot + ": " + tr("Empty");
     var date = kag.getBookMarkDate(index);
-    return slot + ": " + tr(kag.getBookMarkPageName(index)) + (date !== void ? " " + date : "");
+    var comment = typeof kag.getBookMarkComment != "undefined" ? kag.getBookMarkComment(index) : "";
+    return slot + ": " + tr(kag.getBookMarkPageName(index)) + (date !== void ? " " + date : "") +
+        (comment != "" ? ". " + comment.replace(/\n/g, " ") : "");
 }
 // the list on the screen's message layer: prefix "save" or "load" (save.ks, load.ks)
 function slotList(prefix)
@@ -561,6 +578,8 @@ function saveAtSlot(savedatanum)
     saveFunction(savedatanum);
     refreshSlotList("save");
     setSavePageButton();
+    // a comment for it, when the player asked for one (Config, page 2; since 0.28.1)
+    if (typeof global.KAGAskSaveComment != "undefined") KAGAskSaveComment(savedatanum, function(num) { refreshSlotList("save"); });
 }
 
 /**
@@ -767,7 +786,7 @@ function setConfigPage(page)
 var configPages = [
     void, void,
     [ [ "voiceCut", "voiceFadeTime", "voicePlacement", "voiceSpeed", "autoVoiceWait", "dramaticMode" ],
-      [ "continueOn", "quickSaves", "askAgain", "screenshotWindow", "screenshotFormat" ] ],
+      [ "continueOn", "quickSaves", "askAgain", "screenshotWindow", "screenshotFormat", "saveComments" ] ],
     [ [ "readSpeed", "autoSpeed", "autoCharWait", "textFade", "readColor", "readMark" ],
       [ "windowOpacity", "afterauto", "afterskip", "enterSkip", "msgStyleTint:normal", "msgStyleTint:memory" ] ],
     [ [ "chapterTitles", "nowPlaying", "modeMark", "voiceBar", "faceWindow", "titleGreeter" ],

@@ -2,6 +2,7 @@
 - 存檔：{key:save}。讀檔：{key:load}。
 - 快速存檔：{key:quickSave}，快速讀檔：{key:quickLoad}。快速存檔會在幾個專用的存檔欄位之間輪流儲存，所以最新的存檔永遠不會覆蓋前一個。
 - 關閉遊戲時，遊戲也會記下你的進度：[啟動時從上次離開的地方繼續](option:continueOn=true)，或[不繼續](option:continueOn=false)。
+- 存檔可以附上幾行備註，顯示在存檔欄位裡：[每次存檔後填寫](option:saveComments=true)，或[不填寫](option:saveComments=false)。
 ## 存放位置
 你的存檔和設定儲存在 {savefolder}。[複製資料夾路徑](copy:{savefolder})
 

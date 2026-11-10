@@ -1849,3 +1849,118 @@ function showTextDialog(lines)
 
 }
 
+// --------------------------------------------------------
+// Asking for text (since 0.28.1): the wide frame with a message, a field of one or several lines
+// and OK and Cancel, as Wamsoft's games ask for a save's comment. KAGAskText(message, initial,
+// onDone, options) calls onDone(text, param) on OK (Ctrl+Return in a field of several lines,
+// Return in one of one) and onDone(void, param) on Cancel (Esc, a right-click). options: lines
+// (the rows the field shows, 3; 1 for a field of one line), maxLines, maxChars, ok (the OK
+// button's label), param (handed to onDone: TJS functions have no closures).
+// Whether it opened (not while another dialog is open)
+// --------------------------------------------------------
+var askTextFontSize = 34, askTextFieldColor = 0xffffff, askTextFieldTextColor = 0x010062;
+
+class TextPromptDialogLayer extends DialogLayer
+{
+    var onDone, param, answered = false, field, multi = false;
+
+    function TextPromptDialogLayer(message, initial, onDone, opts) {
+        super.DialogLayer(kag, kag.primaryLayer, "TextPromptDialog");
+        this.onDone = onDone;
+        opts = %[] if opts === void;
+        param = opts.param;
+        var frame = yesnoFrames[yesnoFrames.count - 1];
+        var temp = kag.temporaryLayer;
+        temp.loadImages(frame.storage);
+        var fx = (width - temp.imageWidth) >> 1, fy = (height - temp.imageHeight) >> 1;
+        setOption(%[frame : frame.storage, left : fx, top : fy]);
+        // the message, two lines at most, at the top of the text area
+        setYesNoFont(this, yesnoFontSize);
+        var lines = message != "" ? wrapYesNoText(this, message, frame.textWidth) : [];
+        lines.count = 2 if lines.count > 2;
+        var lh = font.getTextHeight("Ag") + yesnoLineGap, y = frame.textTop;
+        for (var i = 0; i < lines.count; i++) {
+            var w = measureYesNoText(this, lines[i]);
+            drawYesNoString(this, fx + frame.centerX - (w >> 1), fy + y, lines[i], 0xffffff, yesnoTextBase);
+            y += lh;
+        }
+        y += 6 if lines.count;
+        // the field, as many rows as fit above the buttons
+        var rows = opts.lines !== void ? +opts.lines : 3;
+        rows = 1 if rows < 1;
+        multi = rows > 1;
+        var e = %[ name:"text", x:frame.centerX - (frame.textWidth >> 1), y:y, length:frame.textWidth, exp:"''",
+            fontheight:askTextFontSize, fontface:typeof global.KAGFontFace != "undefined" ? KAGFontFace("interface") : kag.chDefaultFace,
+            bgcolor:askTextFieldColor, color:askTextFieldTextColor, opacity:255 ];
+        e.maxchars = +opts.maxChars if opts.maxChars !== void;
+        addEdit(e);
+        field = names.text;
+        if (multi) {
+            field.multiline = true;
+            field.maxLines = +opts.maxLines if opts.maxLines !== void;
+            while (rows > 2 && y + field.heightForRows(rows) > frame.buttonY - 12) rows--;
+            field.height = field.heightForRows(rows);
+            links[field.linkNum].h = [ field.height ];
+        }
+        field.text = typeof initial == "String" ? initial : "";
+        var ok = opts.ok !== void ? tr(opts.ok) : tr("OK");
+        addButton(%[ name:"ok", x:yesNoButtonX(frame, 0), y:frame.buttonY, normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+        addButton(%[ name:"cancel", x:yesNoButtonX(frame, 1), y:frame.buttonY, normal:"dialog_button_normal", over:"dialog_button_over", on:"dialog_button_over" ]);
+        drawYesNoLabel(names.ok, ok);
+        drawYesNoLabel(names.cancel, tr("Cancel"));
+        a11yText = message, a11yLabels = [ message != "" ? message : tr("Text"), ok, tr("Cancel") ];
+    }
+
+    function finalize() {
+        KAGA11y.removeNodes(this);
+        super.finalize(...);
+    }
+
+    function onOpen() {
+        field.focus();
+        // the text's end, ready to add to it
+        field.onKeyDown(VK_END, ssCtrl, true);
+        openYesNoA11y(this);
+    }
+
+    var a11yOpen = false, a11yText = "", a11yLabels = [];
+    property keyLink {
+        getter { return super.keyLink; }
+        setter(v) { super.keyLink = v; pushYesNoA11y(this); }
+    }
+    function onA11yAction(id, action, arg) { yesNoA11yAction(this, id, action); }
+
+    // Return in a field of one line, Ctrl+Return in one of several: OK
+    function onKeyDown(key, shift) {
+        if (key == VK_RETURN && (keyLink == field.linkNum || keyLink == -1) && (!multi || (shift & ssCtrl))) {
+            processLink(1);
+            return;
+        }
+        return super.onKeyDown(...);
+    }
+
+    // a close without an answer is Cancel (Esc, a right-click)
+    function close() {
+        if (!answered) { processLink(2); return; }
+        KAGA11y.removeNodes(this);
+        super.close(...);
+    }
+
+    function processLink(num) {
+        if (answered || num == 0) return; // the field
+        answered = true;
+        var text = num == 1 ? field.text : void;
+        var done = onDone, p = param;
+        close();
+        if (done !== void) done(text, p);
+    }
+}
+
+function KAGAskText(message, initial = "", onDone, opts)
+{
+    if (!yesNoCanUseLayer() || kag.currentDialog !== void) return false;
+    var dialog = new TextPromptDialogLayer(message !== void ? tr(message) : "", initial, onDone, opts);
+    dialog.open();
+    return true;
+}
+

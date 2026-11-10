@@ -3655,6 +3655,56 @@ def sample_steps(eng):
         eng.key("VK_ESCAPE")
         eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
 
+    @step("save comments: with the option on, a save asks for a comment; three lines typed (Return between them, a fourth refused) are kept in the save, drawn on the slot and listed on the load screen; Cancel keeps the old one")
+    def _():
+        if eng.tjs('return typeof global.KAGAskSaveComment != "undefined" && typeof kag.getBookMarkComment != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before save comments)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void', timeout=20)
+        eng.tjs("startSave(); return 1;")
+        eng.wait("save.ks", 'kag.conductor.curStorage == "save.ks" && kag.inStable', timeout=20)
+        n = eng.tjs("return kag.numBookMarks - 4;")
+        eng.tjs('KAGOptionSet("saveComments", true); kag.current.names.saveList.onPick(%d); return 1;' % n)
+        eng.wait("the save, or the prompt to write over it", "kag.currentDialog !== void", timeout=10)
+        if eng.tjs('return kag.currentDialog.name == "YesNoDialog" ? 1 : 0;') == 1:
+            eng.key("VK_LEFT"); eng.key("VK_RETURN")  # Yes
+            eng.wait("the comment prompt", 'kag.currentDialog !== void && kag.currentDialog.name == "TextPromptDialog"', timeout=10)
+        got = str(eng.tjs('var d = kag.currentDialog, f = d.field; f.text = "";'
+                          ' f.onKeyPress("Before the flashback"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("Ai remembers");'
+                          ' f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("a third line"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("x");'
+                          ' return [d.name, f.multiline ? 1 : 0, f.visibleRows, f.text.split("\\n").count, f.text.replace(/\\n/g, "|")].join(",");'))
+        print("     the prompt (name, multi-line, rows shown, lines, text): %s" % got, flush=True)
+        name, multi, rows, lines = got.split(",")[:4]
+        if name != "TextPromptDialog" or multi != "1" or int(rows) < 2 or lines != "3":
+            raise SmokeError("the comment prompt isn't a field of several lines holding at most three: %s" % got)
+        # Ctrl+Return is OK; a plain Return made the lines above
+        eng.tjs("kag.currentDialog.onKeyDown(VK_RETURN, ssCtrl); return 1;")
+        eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+        kept = str(eng.tjs('return kag.getBookMarkComment(%d).replace(/\\n/g, "|");' % n))
+        infile = str(eng.tjs('var d = kag.evalBookMarkFromFile(kag.getBookMarkFileNameAtNum(%d)); return typeof d.comment == "String" ? d.comment.replace(/\\n/g, "|") : "(none)";' % n))
+        print("     kept: %s; in the save file: %s" % (kept, infile), flush=True)
+        if not kept.startswith("Before the flashback|Ai remembers|a third line") or infile != kept:
+            raise SmokeError("the comment wasn't kept in the index and the save: %s / %s" % (kept, infile))
+        # Cancel leaves it as it was
+        eng.tjs('KAGAskSaveComment(%d, void, true); return 1;' % n)
+        eng.wait("the prompt again", 'kag.currentDialog !== void && kag.currentDialog.name == "TextPromptDialog"', timeout=10)
+        shown = str(eng.tjs('var f = kag.currentDialog.field; f.text = "changed"; return kag.currentDialog.field.text;'))
+        eng.key("VK_ESCAPE")
+        eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+        if str(eng.tjs('return kag.getBookMarkComment(%d).replace(/\\n/g, "|");' % n)) != kept:
+            raise SmokeError("Esc (Cancel) changed the comment")
+        eng.tjs('KAGOptionSet("saveComments", false); return 1;')
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startLoad(); return 1;")
+        eng.wait("load.ks", 'kag.conductor.curStorage == "load.ks" && kag.inStable', timeout=20)
+        name = str(eng.tjs('var l = kag.current.names.loadList; return l === void ? "" : l.itemName(%d);' % n))
+        print("     the load list's slot %d: %s" % (n + 1, name), flush=True)
+        if "Before the flashback" not in name:
+            raise SmokeError("the load screen's slot doesn't say the comment: %s" % name)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
     @step("every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel")
     def _():
         if eng.tjs('return typeof kag.historyLayer.setOverPull != "undefined" ? 1 : 0;') != 1:
