@@ -112,10 +112,12 @@ def main():
             if not voices.get("ai000001.ogg", {}).get("lines"):
                 raise Failed("the sample's scripts don't give ai000001.ogg a line")
             print("  %d voices; pip000009.ogg: %s, \"%s\"" % (len(voices), pip["status"], pip["lines"][0]["text"][:40]), flush=True)
-            # in the order they come, each once (the Character demo says ai000001 on two lines)
+            # in the order they come, each once (the Character demo says ai000001 on two lines): the
+            # source language first, then the others in KAGLanguageList's order (the sample's since
+            # 0.28.1: en, ja, zh-cn, zh-tw)
             langs = list(dict.fromkeys(l.get("language") for l in voices["ai000001.ogg"]["lines"]))
-            if langs != ["en", "ja"]:
-                raise Failed("ai000001.ogg's lines aren't in English, then Japanese: %s" % langs)
+            if langs[:2] != ["en", "ja"] or any(l not in ("zh-cn", "zh-tw") for l in langs[2:]):
+                raise Failed("ai000001.ogg's lines aren't in English, then Japanese (then Chinese): %s" % langs)
 
             print("A voice recorded in another of the game's languages (Ai's, in Japanese)", flush=True)
             game = os.path.join(work, "sample")
