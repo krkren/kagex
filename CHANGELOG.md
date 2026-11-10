@@ -16,6 +16,7 @@
 
 - **The second message font, and the new Chinese ones, drew in a system font outside the message window**: the engine's own drawing (prompts, the help line, measuring) finds a registered font file by the name inside it, and the subsets kept Noto CJK's names ("Noto Serif CJK JP"), so it fell back to a system font and drew a "?" for each character that font lacked. The subsets are named after their faces now.
 - **The help line stayed in the old language after a switch** until the pointer moved to something else.
+- **A line read aloud whose sound never said it ended** counted as a voice for ever, which auto mode waits for (once on the macOS runner, a 3 s line's buffer stayed playing for 30 s): it's stopped 2 s past its length, and the log says so.
 
 ### Changed
 
