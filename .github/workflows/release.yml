@@ -55,6 +55,26 @@ jobs:
     outputs:
       sha: ${{ steps.sha.outputs.sha }}
     steps:
+      # the publish job reads the notes and makes the tag at the end of the run: fail here,
+      # not an hour and a half later (0.28.0's second run built everything, then found no notes)
+      - name: Check out the CI scripts
+        uses: actions/checkout@v4
+        with:
+          path: ci
+      - name: The release notes are here and the tag isn't taken
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          [ -s "ci/.github/release-notes/$RELEASE_TAG.md" ] || { echo "no .github/release-notes/$RELEASE_TAG.md on this branch"; exit 1; }
+          # a tag at the release commit with no release is one a publish left when it stopped: the
+          # publish job uses it
+          if [ "$PUBLISH" = true ] && at=$(gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" --jq .object.sha 2>/dev/null); then
+            if [ "$at" != "$KAGEX_SHA" ] || gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
+              echo "tag $RELEASE_TAG already exists ($at)"; exit 1
+            fi
+            echo "tag $RELEASE_TAG is at $KAGEX_SHA with no release: the publish job will use it"
+          fi
       - id: sha
         run: echo "sha=$KAGEX_SHA" >> "$GITHUB_OUTPUT"
 
@@ -1003,10 +1023,14 @@ jobs:
           # 9 packages, 10 engine packages, the two tools for 3 systems and that note
           [ "$(ls dist/* | wc -l)" = 26 ] || { echo "expected 26 files"; exit 1; }
           sha256sum dist/*
-          if gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
-            echo "tag $RELEASE_TAG already exists"; exit 1
+          if at=$(gh api "repos/$REPO/git/ref/tags/$RELEASE_TAG" --jq .object.sha 2>/dev/null); then
+            # left by a publish that stopped after making it (0.28.0's second run): used as it is
+            if [ "$at" != "$KAGEX_SHA" ] || gh release view "$RELEASE_TAG" --repo "$REPO" > /dev/null 2>&1; then
+              echo "tag $RELEASE_TAG already exists ($at)"; exit 1
+            fi
+          else
+            gh api "repos/$REPO/git/refs" -f ref="refs/tags/$RELEASE_TAG" -f sha="$KAGEX_SHA" > /dev/null
           fi
-          gh api "repos/$REPO/git/refs" -f ref="refs/tags/$RELEASE_TAG" -f sha="$KAGEX_SHA" > /dev/null
           gh release create "$RELEASE_TAG" dist/* --repo "$REPO" --title "$RELEASE_TAG" \
             --notes-file "ci/.github/release-notes/$RELEASE_TAG.md" --prerelease --verify-tag
           gh release view "$RELEASE_TAG" --repo "$REPO" --json tagName,isPrerelease,assets \
