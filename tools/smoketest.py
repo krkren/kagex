@@ -6008,8 +6008,14 @@ def sample_steps(eng):
                     ' else { h.onMouseUp(800, y, mbLeft, 0); d.at = h.dispStart; global.__smokeFlickTimer.enabled = false; }'
                     ' d.step++; }, ""); __smokeFlickTimer.interval = 16; __smokeFlickTimer.enabled = true; return 1;' % (h, h))
             eng.wait("the flick let go", "global.__smokeFlick.at >= 0", timeout=5)
+            # the coast moves on from the next 16 ms tick; a slow runner (the Live2D job's macOS
+            # one once) may not get to one in 0.6 s, so give it up to 3 s before reading it
+            t_end = time.time() + 3.0
             time.sleep(0.6)
+            while time.time() < t_end and eng.tjs("return %s.dispStart > global.__smokeFlick.at ? 1 : 0;" % h) != 1:
+                time.sleep(0.2)
             flick = str(eng.tjs('with (global.__smokeFlick) return [.at, %s.dispStart, .gap, .total].join(",");' % h)).split(",")
+            state = str(eng.tjs('var h = %s; return "speed %%d, timer %%s".sprintf((int)h.coastSpeed, h.coastTimer === void ? "none" : (h.coastTimer.enabled ? "on" : "off"));' % h))
             print("     flicked four lines up: at line %s when let go, then %s (the last step %s ms after the one before, %s ms in all)" % tuple(flick), flush=True)
             # a finger that stops before it lifts (80 ms) makes no flick: where the game's 16 ms
             # timer ran that slow (an emulator), the coast can't be checked; nor where its steps
@@ -6017,7 +6023,7 @@ def sample_steps(eng):
             if not (int(flick[1]) > int(flick[0])) and (int(flick[2]) >= 40 or int(flick[3]) < 10):
                 print("     (the coast: not checked, this machine's timer stepped %s ms apart, %s ms in all)" % (flick[2], flick[3]), flush=True)
             elif not (int(flick[1]) > int(flick[0])):
-                coast = "the backlog didn't coast on after a flick: %s" % flick
+                coast = "the backlog didn't coast on after a flick: %s (the coast: %s)" % (flick, state)
         # (closed before a failure is told, so the steps after don't start with it open)
         eng.tjs("kag.hideHistory(); return 1;")
         eng.wait("the backlog closed", "!kag.historyShowing", timeout=10)
