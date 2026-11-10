@@ -1,0 +1,14 @@
+﻿# 声音
+## 完全没有声音
+- 游戏的声音开着吗？[开启声音](option:soundOn=true)
+- 调高 BGM、音效和语音的音量：[BGM](option:bgmVolume=80) [音效](option:seVolume=80) [语音](option:voiceVolume=80)。
+- 检查电脑本身的音量，并确认声音是从你正在使用的设备（扬声器或耳机）中输出的。
+> 在网页浏览器中，只有在你点击页面或按下按键之后才会发出声音：请点击一次游戏画面。
+## 声音太大或太小
+每种声音都有各自的音量：
+- BGM：[较小](option:bgmVolume=40) [较大](option:bgmVolume=80)
+- 音效：[较小](option:seVolume=40) [较大](option:seVolume=80)
+- 语音：[较小](option:voiceVolume=40) [较大](option:voiceVolume=80)
+- 影片：[较小](option:movieVolume=40) [较大](option:movieVolume=80)
+## 语音被打断
+有人说话时点击，语音会[停止](option:voiceCut=stop)、[淡出](option:voiceCut=fade)或[一直播放到最后](option:voiceCut=keep)。{key:voiceReplay} 可以重播这句台词的语音。

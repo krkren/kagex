@@ -1,0 +1,14 @@
+﻿# 聲音
+## 完全沒有聲音
+- 遊戲的聲音開著嗎？[開啟聲音](option:soundOn=true)
+- 調高 BGM、音效和語音的音量：[BGM](option:bgmVolume=80) [音效](option:seVolume=80) [語音](option:voiceVolume=80)。
+- 檢查電腦本身的音量，並確認聲音是從你正在使用的裝置（揚聲器或耳機）中輸出的。
+> 在網頁瀏覽器中，只有在你點選頁面或按下按鍵之後才會發出聲音：請點選一次遊戲畫面。
+## 聲音太大或太小
+每種聲音都有各自的音量：
+- BGM：[較小](option:bgmVolume=40) [較大](option:bgmVolume=80)
+- 音效：[較小](option:seVolume=40) [較大](option:seVolume=80)
+- 語音：[較小](option:voiceVolume=40) [較大](option:voiceVolume=80)
+- 影片：[較小](option:movieVolume=40) [較大](option:movieVolume=80)
+## 語音被打斷
+有人說話時點選，語音會[停止](option:voiceCut=stop)、[淡出](option:voiceCut=fade)或[一直播放到最後](option:voiceCut=keep)。{key:voiceReplay} 可以重播這句臺詞的語音。

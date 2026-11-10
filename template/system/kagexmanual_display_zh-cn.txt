@@ -1,0 +1,15 @@
+﻿# 画面被拉伸、模糊，或有黑边
+## 黑边
+在比例不同的屏幕上，游戏会保持自己的比例，在左右或上下留出黑边。全屏时：
+- [保留黑边](option:fullScreenFit=contain)：完整显示画面，与制作时一致。
+- [填满](option:fullScreenFit=cover)：没有黑边，但边缘会被裁掉。
+- [拉伸](option:fullScreenFit=fill)：没有黑边，也不会裁切，但画面会变形。
+## 模糊或有锯齿
+画面放大或缩小到与原始尺寸不同时，会进行平滑处理：
+- [平滑](option:smoothScaling=true)看起来更柔和；[锐利](option:smoothScaling=false)让边缘保持清晰，但会有锯齿。
+- 在窗口模式下，[100%](option:windowSize=100)是游戏的原始尺寸，也是最清晰的。
+## 画面撕裂
+画面移动时有一条横线贯穿画面：请[开启垂直同步](option:vsync=true)。
+## 窗口还是全屏
+[窗口](option:fullScreen=false)或[全屏](option:fullScreen=true)。窗口模式下：[50%](option:windowSize=50) [75%](option:windowSize=75) [100%](option:windowSize=100)。
+> 在手机或平板上，请横过来使用：游戏画面的宽度大于高度。

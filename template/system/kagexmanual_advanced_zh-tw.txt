@@ -1,0 +1,11 @@
+﻿# 高階設定
+這些設定是為出現問題時準備的。每一項都會立即生效，[預設值](action:resetAdvanced)可以把它們全部恢復原樣。
+## 記憶體
+- 記憶體用量：[普通](option:memoryMode=normal)或[較少](option:memoryMode=low)。選擇“較少”時，記憶體中保留的圖片會更少，適合記憶體不足的手機、平板或舊電腦，但遊戲可能會更頻繁地重新讀取圖片。
+- 圖片快取：[自動](option:pictureCache=0)、[128 MB](option:pictureCache=128)、[256 MB](option:pictureCache=256)或[512 MB](option:pictureCache=512)：決定有多少已經顯示過的圖片會保留下來，隨時可用。
+## 繪製
+- 繪製執行緒：[自動](option:drawThreads=0)、[1](option:drawThreads=1)、[2](option:drawThreads=2)或[4](option:drawThreads=4)。如果圖片顯示異常，或者遊戲在繪製時卡住，請試試 1。
+## 控制器與影片
+- [開啟控制器](option:padEnabled=true)或[關閉控制器](option:padEnabled=false)：沒在使用的控制器讓遊戲自己動起來時，可以把它關掉。
+- 影片：[自動](option:movieQuality=auto)、[完整](option:movieQuality=full)或[較小](option:movieQuality=small)。
+> 在電腦上，引擎還有自己的一些設定，會在遊戲啟動時讀取（聲音輸出、圖形驅動等）：用 -userconf 啟動遊戲即可檢視。

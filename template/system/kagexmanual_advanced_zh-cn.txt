@@ -1,0 +1,11 @@
+﻿# 高级设置
+这些设置是为出现问题时准备的。每一项都会立即生效，[默认设置](action:resetAdvanced)可以把它们全部恢复原样。
+## 内存
+- 内存用量：[普通](option:memoryMode=normal)或[较少](option:memoryMode=low)。选择“较少”时，内存中保留的图片会更少，适合内存不足的手机、平板或旧电脑，但游戏可能会更频繁地重新读取图片。
+- 图片缓存：[自动](option:pictureCache=0)、[128 MB](option:pictureCache=128)、[256 MB](option:pictureCache=256)或[512 MB](option:pictureCache=512)：决定有多少已经显示过的图片会保留下来，随时可用。
+## 绘制
+- 绘制线程：[自动](option:drawThreads=0)、[1](option:drawThreads=1)、[2](option:drawThreads=2)或[4](option:drawThreads=4)。如果图片显示异常，或者游戏在绘制时卡住，请试试 1。
+## 手柄与影片
+- [开启手柄](option:padEnabled=true)或[关闭手柄](option:padEnabled=false)：没在使用的手柄让游戏自己动起来时，可以把它关掉。
+- 影片：[自动](option:movieQuality=auto)、[完整](option:movieQuality=full)或[较小](option:movieQuality=small)。
+> 在电脑上，引擎还有自己的一些设置，会在游戏启动时读取（声音输出、图形驱动等）：用 -userconf 启动游戏即可查看。

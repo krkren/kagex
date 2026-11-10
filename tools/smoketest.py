@@ -2166,10 +2166,16 @@ def page_text(eng):
 
 
 def switch_language(eng, lang, where):
-    """F9 (the sample has two languages) when the game isn't in lang, then waits for the screen
-    at where (a script) drawn again in it"""
-    if eng.tjs("return KAGLanguage.current;") != lang:
+    """F9 (the next language: the sample has four since 0.28.1, en, ja, zh-cn, zh-tw) until the
+    game is in lang, each time waiting for the screen at where (a script) drawn again in the one
+    it went to"""
+    for _ in range(8):
+        now = eng.tjs("return KAGLanguage.current;")
+        if now == lang:
+            break
         eng.key("VK_F9")
+        eng.wait("the language after " + now, 'KAGLanguage.current != "%s" && kag.languagePending === void'
+                 ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (now, where), timeout=20)
     eng.wait(lang + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
              ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (lang, where), timeout=20)
 
@@ -7294,6 +7300,53 @@ def sample_steps(eng):
                  ' && kag.transCount == 0', timeout=20)
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("languages: Simplified and Traditional Chinese: the title's images, Ai's first line and its name, their own fonts")
+    def _():
+        if not language_framework(eng) or eng.tjs('return KAGLanguage.has("zh-cn") && KAGLanguage.has("zh-tw") ? 1 : 0;') != 1:
+            print("     (skipped: this build has no Chinese)", flush=True)
+            return
+        compiled = eng.tjs('KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.scnFindCompiled == "undefined";'
+                           ' return scnFindCompiled("char.ks") !== void && world_object.scenePlayEnabled ? 1 : 0;') == 1
+        names = {"zh-cn": ("爱", "Noto Sans SC", "简体中文"), "zh-tw": ("愛", "Noto Sans TC", "繁體中文")}
+        in_lang = lambda p, code: re.search(r"(^|[/>])lang/%s/" % code, p.replace("\\", "/")) is not None
+        squeeze = lambda t: "".join(t.split())
+        for code in ("zh-cn", "zh-tw"):
+            ai, face, own = names[code]
+            eng.tjs('kag.setLanguage("%s"); return 1;' % code)
+            eng.wait(code + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
+                     ' && kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0' % code, timeout=30)
+            # its images, its strings, the face its text is drawn in (fonts.csv) and that face's
+            # glyphs: a face the engine can't find draws the icon font, 0 wide
+            r = str(eng.tjs('var f = KAGFontFace("message"), l = new global.Layer(kag, kag.primaryLayer);'
+                            ' l.font.face = f; l.font.height = 40; var w = l.font.getTextWidth("%s");'
+                            ' invalidate l; return [Storages.getPlacedPath(getExistImageName("start_normal")),'
+                            ' KAGLanguage.nameOf("%s"), f, w].join("|");' % (ai, code)))
+            placed, name, faces, width = r.split("|")
+            print("     %s: start_normal from %s; %s; message face %s, %s px for %s" % (code, placed, name, faces, width, ai), flush=True)
+            if not in_lang(placed, code) or name != own or not faces.startswith(face) or int(width) < 30:
+                raise SmokeError("%s isn't shown with its own images, name and font: %s" % (code, r))
+            if not compiled:
+                continue
+            eng.tjs('kag.process("char.ks", "*start"); return 1;')
+            eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.clickWaiting', timeout=30)
+            for _ in range(12):
+                spoken, units = page_text(eng)
+                if spoken == ai and units:
+                    break
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.2)
+                eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
+            else:
+                raise SmokeError("no line of %s's in char.ks's first lines in %s (the page: %s %s)" % (ai, code, spoken, units))
+            line = units[-1][0].get(code, "")
+            print("     [%s] %s" % (spoken, units[-1][1]), flush=True)
+            if line == "" or line == units[-1][0].get("en") or squeeze(units[-1][1]) != squeeze(line):
+                raise SmokeError("Ai's line isn't drawn in %s: %s" % (code, units))
+            eng.tjs("kag.goToStart(); return 1;")
+            eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        eng.tjs('kag.setLanguage("en"); return 1;')
+        eng.wait("English", 'KAGLanguage.current == "en" && kag.languagePending === void && kag.inStable', timeout=30)
 
     return steps
 

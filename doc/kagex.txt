@@ -2766,11 +2766,12 @@ Config.tjs lists the languages, the one the scenarios and scripts are written in
 language) first:
 
 
-    ;global.KAGLanguageList = "en,ja";
+    ;global.KAGLanguageList = "en,ja,zh-cn,zh-tw";
 
 
-With one language (the template's "en") nothing changes. Each other language has a folder,
-data/lang/<code>/ (lang/ja/ for Japanese):
+(The sample's, since 0.28.1: English, Japanese, and Simplified and Traditional Chinese.) With one
+language (the template's "en") nothing changes. Each other language has a folder,
+data/lang/<code>/ (lang/ja/ for Japanese, lang/zh-cn/ and lang/zh-tw/ for Chinese):
 
 
     lang/ja/scenario/   The scripts in !scnlist.txt, translated (◇ Translating the story)
@@ -2786,6 +2787,18 @@ language, after every other path: a file in it stands in for the file of the sam
 anywhere else. The image cache keys on the name a script loads, so a switch empties it
 (System.clearGraphicCache). A zip patch (patch.zip and on, or DLC through KAGMountPatchZip)
 can carry lang/<code>/ folders of its own, which join the language's.
+
+A language whose characters the engine's own fonts don't have (Chinese: the engine brings
+Roboto, and the template Noto Sans JP, whose kanji are Japanese forms) needs a font of its
+own: list it in fonts.csv with the language in its languages column (● Fonts and Text Styles), and the text
+of that language is drawn in it first. The sample ships Noto Sans SC for zh-cn and Noto Sans TC
+for zh-tw, cut down by tools/assets/make_fonts.py to the characters its texts use and the
+common ones (GB2312's first level, Big5's), about 1.6 and 3.2 MB. The name inside a font file
+has to be the face fonts.csv gives it: the engine's own drawing (Layer.drawText, a Yes/No
+prompt, the help line) finds a registered file's font by that name, and with another one draws
+a system font in its place, a "?" for every character that font lacks (make_fonts.py renames
+Noto CJK's "Noto Sans CJK SC" and the like; up to 0.28.0 the serif font drew this way outside
+the message window).
 
 
 ◇ Translating the story
@@ -4257,7 +4270,7 @@ pages of help with links between them, Back and Forward, and links that change a
 and then or open a screen. Help > Contents opens it, as do the action "manual" (F1, unless the
 game binds F1 to something else) and KAGShowManual(page) from a script or a button
 (exp="KAGShowManual()"). Every game gets the framework's pages (template/system/kagexmanual_*.txt,
-in English and Japanese): an index, the controls, saving and loading, the settings, and answers
+in English, Japanese and Chinese): an index, the controls, saving and loading, the settings, and answers
 for a game that's slow, a picture stretched or blurry, no sound, movies that don't play, and
 making the game easier to see, hear and play, and getting help. KAGManualEnabled = false turns
 it off (Help > Contents then opens helpFile, as before).

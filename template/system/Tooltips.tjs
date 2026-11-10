@@ -114,6 +114,8 @@ class KAGTooltips extends KAGPlugin
 		return "";
 	}
 
+	function menuLanguage() { return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.menuCode : ""; }
+
 	// the help line (helpArea)
 	var helpArea, helpLayer, helpShown, helpRect = "";
 	function showHelp(area, text)
@@ -126,9 +128,10 @@ class KAGTooltips extends KAGPlugin
 			helpLayer.hitThreshold = 256;
 			helpLayer.absolute = absolute;
 		}
-		var rect = area.join(",");
-		if (text === helpShown && rect == helpRect && helpLayer.visible) return;
-		helpShown = text, helpRect = rect;
+		// (with the menus' language: the same text is drawn again in another, tr())
+		var rect = area.join(","), key = text + "\n" + menuLanguage();
+		if (key === helpShown && rect == helpRect && helpLayer.visible) return;
+		helpShown = key, helpRect = rect;
 		var w = +area[2], h = +area[3];
 		helpLayer.setImageSize(w, h);
 		helpLayer.setSizeToImageSize();
@@ -194,7 +197,8 @@ class KAGTooltips extends KAGPlugin
 	function show(text, x, y)
 	{
 		if (helpLine !== void) {
-			if (text != shown) { shown = text; KAGBindToGlobal(helpLine)(text != "" ? tr(text) : ""); }
+			var key = text + "\n" + menuLanguage();
+			if (key != shown) { shown = key; KAGBindToGlobal(helpLine)(text != "" ? tr(text) : ""); }
 			layer.visible = false if layer !== void;
 			return;
 		}

@@ -698,8 +698,8 @@ function setLanguageButton(work=void)
 {
     if (work !== void && global.KAGLanguage !== void) kag.setLanguage(work);
     var cur = global.KAGLanguage !== void ? KAGLanguage.current : "en";
-    setButtonOver("config_lang_en", cur == "en");
-    setButtonOver("config_lang_ja", cur == "ja");
+    var codes = ["en", "ja", "zh-cn", "zh-tw"];
+    for (var i = 0; i < codes.count; i++) setButtonOver("config_lang_" + codes[i], cur == codes[i]);
 }
 
 /**

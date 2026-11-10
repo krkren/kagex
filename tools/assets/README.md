@@ -14,11 +14,22 @@ The sample's images are generated here rather than edited by hand.
   `data/lang/<code>/` (the game's language folder, `doc/kagex.txt`, "Languages"), with the
   labels from `LABELS` (keyed by the English): `--lang ja` draws only those, `--lang en,ja`
   both; with no `--lang`, every language.
-- `subset_fonts.py` makes the Japanese subsets `make_ui.py` draws Japanese labels with
-  (`fonts/NotoSansCJKjp-*-Japanese.otf`: Latin, the kana and every character of the Japanese
-  labels) from the full Noto Sans CJK JP, the system's (`fonts-noto-cjk`, `noto-fonts-cjk`) or
-  `--source <folder>`. Run it after adding a label with a character they don't have:
-  `make_ui.py` stops on one.
+- `subset_fonts.py` makes the subsets `make_ui.py` draws Japanese and Chinese labels with
+  (`fonts/NotoSansCJKjp-*-Japanese.otf`, `NotoSansCJKsc-*-SC.otf`, `NotoSansCJKtc-*-TC.otf`:
+  Latin, the kana or punctuation, and every character of that language's labels) from the full
+  Noto Sans CJK, the system's (`fonts-noto-cjk`, `noto-fonts-cjk`) or `--source <folder>`;
+  `--lang ja,zh-cn,zh-tw` picks which. Run it after adding a label with a character they
+  don't have: `make_ui.py` stops on one.
+- `make_fonts.py` makes the fonts the game itself draws with that the engine lacks
+  (`data/others`, listed in `data/main/fonts.csv`): the second message font (Noto Serif JP) and
+  the Chinese faces (Noto Sans SC and TC), each cut down to the characters the sample's texts use
+  plus the common ones (GB2312's first level, Big5's), so a typed name mostly finds its
+  characters. `--check` lists what the subsets lack after the texts change; `--source-dir`
+  takes a folder of the full fonts instead of downloading them.
+- `make_zhtw.py` makes the Traditional Chinese (`data/lang/zh-tw`,
+  `template/system/*_zh-tw.*`) from the Simplified (`zh-cn`) with OpenCC's `s2twp` and a table of
+  the words Taiwan's menus use (`pip install opencc-python-reimplemented`); run it after
+  changing a `zh-cn` file, then `make_ui.py --lang zh-tw` for the pictures.
 - `make_effects.py` makes the Effekseer effects in `data/effect` (sparkle, petals, fireworks,
   shockwave, magiccircle) and their textures in `data/effect/Texture` (a glow, a sparkle, a dot,
   a ring band, a petal and a magic circle, drawn in NumPy). Each effect is a function
@@ -100,7 +111,9 @@ python3 tools/assets/make_ui.py          # all UI images; or name groups: title 
                                          # config saveload extras history star thumbs icons preview
                                          # dialog
                                          # (--lang ja: only the Japanese ones)
-python3 tools/assets/subset_fonts.py     # the Japanese label fonts (needs fontTools)
+python3 tools/assets/subset_fonts.py     # the Japanese and Chinese label fonts (needs fontTools)
+python3 tools/assets/make_fonts.py       # the serif and Chinese fonts the game draws with
+python3 tools/assets/make_zhtw.py        # Traditional Chinese from Simplified (needs OpenCC)
 python3 tools/assets/make_effects.py     # effect textures and effects; or: textures effects
 python3 tools/assets/make_rules.py       # rule images for the transitions
 python3 tools/assets/make_vector.py      # the layer demo's SVG emblem and its PNG

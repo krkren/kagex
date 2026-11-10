@@ -186,22 +186,47 @@
   try { closedAt = +localStorage.getItem(KEY) || 0; } catch (e) {}
   if (!mobile || installed || Date.now() - closedAt < DAYS * 864e5) return;
 
-  var ja = (typeof KRKRZ_LANG !== "undefined" ? KRKRZ_LANG : (navigator.language || "")).toLowerCase().indexOf("ja") === 0;
+  // English, Japanese or Chinese (Traditional for zh-tw, zh-hk, zh-hant...), by KRKRZ_LANG or the browser's
+  var langCode = (typeof KRKRZ_LANG !== "undefined" ? KRKRZ_LANG : (navigator.language || "")).toLowerCase();
+  var lang = langCode.indexOf("ja") === 0 ? "ja" : langCode.indexOf("zh") !== 0 ? "en" :
+    /^zh[-_](tw|hk|mo|hant)/.test(langCode) ? "zh-tw" : "zh-cn";
   var titleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   var name = (titleMeta && titleMeta.getAttribute("content")) || document.title;
   var shareIcon = '<svg viewBox="0 0 16 20" width="14" height="17" aria-hidden="true" style="vertical-align:-3px">' +
     '<path d="M8 1.5v11M4.5 5 8 1.5 11.5 5" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
     '<path d="M5.5 8H2.5v10.5h11V8h-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  var text = {
-    prompt: ja ? esc(name) + "をホーム画面に追加すると、全画面で遊べます。" : "Add " + esc(name) + " to your home screen to play full screen.",
-    add: ja ? "追加" : "Add",
-    ios: ja ? "全画面で遊ぶには、共有ボタン " + shareIcon + " から「ホーム画面に追加」を選んでください。"
-            : "To play full screen, tap Share " + shareIcon + ", then Add to Home Screen.",
-    menu: ja ? "全画面で遊ぶには、ブラウザのメニュー（⋮）から「ホーム画面に追加」または「インストール」を選んでください。"
-             : "To play full screen, open the browser menu (⋮) and choose Add to Home screen or Install.",
-    close: ja ? "閉じる" : "Close"
+  var texts = {
+    en: {
+      prompt: "Add " + esc(name) + " to your home screen to play full screen.",
+      add: "Add",
+      ios: "To play full screen, tap Share " + shareIcon + ", then Add to Home Screen.",
+      menu: "To play full screen, open the browser menu (⋮) and choose Add to Home screen or Install.",
+      close: "Close"
+    },
+    ja: {
+      prompt: esc(name) + "をホーム画面に追加すると、全画面で遊べます。",
+      add: "追加",
+      ios: "全画面で遊ぶには、共有ボタン " + shareIcon + " から「ホーム画面に追加」を選んでください。",
+      menu: "全画面で遊ぶには、ブラウザのメニュー（⋮）から「ホーム画面に追加」または「インストール」を選んでください。",
+      close: "閉じる"
+    },
+    "zh-cn": {
+      prompt: "将" + esc(name) + "添加到主屏幕，即可全屏游玩。",
+      add: "添加",
+      ios: "要全屏游玩，请点按分享按钮 " + shareIcon + "，然后选择“添加到主屏幕”。",
+      menu: "要全屏游玩，请打开浏览器菜单（⋮），选择“添加到主屏幕”或“安装”。",
+      close: "关闭"
+    },
+    "zh-tw": {
+      prompt: "將" + esc(name) + "加入主畫面，即可全螢幕遊玩。",
+      add: "加入",
+      ios: "要全螢幕遊玩，請點一下分享按鈕 " + shareIcon + "，然後選擇「加入主畫面」。",
+      menu: "要全螢幕遊玩，請開啟瀏覽器選單（⋮），選擇「加到主畫面」或「安裝」。",
+      close: "關閉"
+    }
   };
+  var text = texts[lang];
 
   var bar = null, deferred = null, started = false;
   function show(html, withButton) {

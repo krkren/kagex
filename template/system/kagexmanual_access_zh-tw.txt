@@ -1,0 +1,15 @@
+﻿# 讓遊戲更易看、易聽、易玩
+## 螢幕閱讀器
+遊戲會把文字、選項和按鈕交給系統的螢幕閱讀器：Windows 上的“講述人”、Mac 上的 VoiceOver、Linux 上的 Orca。請先啟動螢幕閱讀器，再啟動遊戲。
+## 視覺
+- [減少動態效果](option:reduceMotion=true)會讓持續運動的特效靜止下來。
+- 對話方塊的背景可以設為[不透明](option:windowOpacity=255)。
+- 文字速度：[慢](option:textSpeed=3) [最快](option:textSpeed=10)。字型、文字描邊和陰影也可以在設定中調整。
+- 開啟[提示](option:tooltips=true)後，指標停在按鈕上時會說明這個按鈕的作用。
+## 聽覺
+- 為影片顯示[字幕](option:subtitles=true)。
+- [語音從說話人所在的位置傳出](option:voicePlacement=true)，或[全部從中間傳出](option:voicePlacement=false)。
+- 語音[放慢](option:voiceSpeed=0.8)、[保持錄音原速](option:voiceSpeed=1.0)或[加快](option:voiceSpeed=1.25)。
+## 遊玩
+- 每個動作都可以設定你喜歡的按鍵：[操作方式](action:controls)。
+- [自動模式](action:auto)會自動推進劇情，速度可以在設定中調整。
