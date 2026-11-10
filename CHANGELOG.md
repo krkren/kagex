@@ -18,6 +18,7 @@
 - **The help line stayed in the old language after a switch** until the pointer moved to something else.
 - **kagex-release refused to build an Android game with `manifestAdditions`** with 0.28.0's Android engine package ("AndroidManifest.xml has no <application>"): that package has the text-to-speech query before `<application>`, which left the tag indented, and the tool looked for it at the start of a line.
 - **A line read aloud whose sound never said it ended** counted as a voice for ever, which auto mode waits for (once on the macOS runner, a 3 s line's buffer stayed playing for 30 s): it's stopped 2 s past its length, and the log says so.
+- **A phone's keyboard could stay up after a field closed**: SDL hides the keyboard only once it has heard it's up, so a field closed while Android's UI thread was still busy showing the keyboard left it on the screen for good, over the game (0.28.1's fourth release run: the next taps hit the keyboard). The window's events put away a keyboard left up with no text input on, four times a second.
 
 ### Changed
 

@@ -77,6 +77,17 @@ function KAGTextEntryKeyboardAgain()
 	if (f === void || !isvalid f || !f.focused) return;
 	try { if (!SDLSystem.textInputActive) KAGTextEntryKeyboardStart(f); } catch {}
 }
+// A keyboard left on the screen with no text input on. SDL hides the keyboard on a stop only
+// once it has heard the keyboard is up, which it hears when Android's UI thread has run the show:
+// with that thread busy (1.2 s in a release run's smoke test), a field opened and closed in the
+// meantime stopped text input twice and sent no hide, the shows queued before then ran, and the
+// keyboard stayed up for good (a tap meant for the game hit it). With text input off a stop does
+// nothing but hide a keyboard SDL knows is up, so the window's events (SystemSupport.tjs) call
+// this four times a second on a phone.
+function KAGTextEntryKeyboardLeftUp()
+{
+	try { if (!SDLSystem.textInputActive) SDLSystem.stopTextInput(); } catch {}
+}
 function KAGTextEntryKeyboardStart(field)
 {
 	try {
