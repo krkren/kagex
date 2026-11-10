@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.28.1
+
+### Added
+
+- **The sample in Chinese, Simplified and Traditional** (#33): every demo's script, the interface's strings and pictures, the manual, the credits, the glossary and the opening's subtitles, with the characters' names (爱/愛, 皮普, 日和, 薇). Config's Language row has four buttons, F9 and the controller's L2 go round all four, and the browser's Add to Home Screen bar speaks Chinese too. The text is drawn in Noto Sans SC and TC, cut down to the characters the sample uses and the common ones (GB2312's and Big5's first levels), and `fonts.csv` gives each language its own face. `tools/assets/make_zhtw.py` makes the Traditional from the Simplified (OpenCC with Taiwan's words for menus), `make_fonts.py` the font subsets.
+- **Fields of several lines** (#32): `[edit multiline=true rows=4 maxlines=6]` wraps its text, takes Return as a new line (Ctrl+Return runs `enter=`), moves by rows with the arrows and Page Up/Down, and scrolls. On a phone the system's own keyboard comes up in its multi-line mode while the field has the focus; in a phone's browser the page types into a hidden text area. Elements' own field is one line (`UPSTREAM.md` 59), so the field is the framework's.
+- **Asking for text, and comments on saves** (#32): `KAGAskText(message, initial, onDone, options)` asks in the look of the Yes/No prompts, with a field of one or several lines. A save can carry a comment the player types, kept in the save itself (`kag.getBookMarkComment`, `setBookMarkComment`); with Config's new A Comment for Each Save, the sample asks after each save on its save screen, and the save and load screens show the comment's first line in the slot.
+- **Screenshots into the phone's photo gallery** (#34): on Android and iOS, Config's Screenshots Go To offers Photos, and that's where screenshots go unless the player picks the save folder (Android's MediaStore, in `Pictures/<the game's title>`, from Android 10; iOS's photo library, asking once). kagex-release writes the reason iOS shows (`platforms.ios.photosUsage`, `NSPhotoLibraryAddUsageDescription`).
+- **A report when the game stops answering** (#35): a thread of the sdlsystem plugin notices when the game hasn't run for 20 seconds (not while it's put away) and writes what it was doing to the system's log and to `freeze-report.txt` in the save folder: the script and line, and every thread's state, so a loop and a deadlock tell apart. The next start logs it once. The manual's "slow" page asks players to send it. The Android freeze in the first demo's rotation still doesn't happen on the emulator, now with real taps too (`smoketest.py --hunt ...:touch`).
+- **Stand-ins for older Kirikiri games' plugins** (#36): with `Porting.tjs`, win32dialog.dll's dialogs show as Elements dialogs over the game, on every platform (the framework's `win32dialog.tjs` and a game's own templates: text, buttons, check and radio boxes, fields and lists, `onCommand` and the results as the plugin gave them); getLangName.dll's `System.getCurrentUILangName`; the original engine's data packs (`Scripts.saveDataPack`, `loadDataPack`, `Storages.saveOctet`). kagex-release takes a game's icon from its old Windows `.exe` or an `.ico` (`identity.icon`; `--cli icon` shows it).
+- **The sdlsystem plugin** grows the system keyboard (`startTextInput`, multi-line), the photo gallery (`saveToGallery`), the watchdog (`watchdog`, `alive`), SDL's folder of the app (`prefFolder`) and raw writes (`writeOctet`).
+
+### Fixed
+
+- **The second message font, and the new Chinese ones, drew in a system font outside the message window**: the engine's own drawing (prompts, the help line, measuring) finds a registered font file by the name inside it, and the subsets kept Noto CJK's names ("Noto Serif CJK JP"), so it fell back to a system font and drew a "?" for each character that font lacked. The subsets are named after their faces now.
+- **The help line stayed in the old language after a switch** until the pointer moved to something else.
+
+### Changed
+
+- `UPSTREAM.md` 59: Elements has no field of several lines.
+
 ## 0.28.0
 
 ### Added
