@@ -3432,7 +3432,17 @@ def sample_steps(eng):
         print("     made, then: %s (%s)" % (state, eng.tjs('return Speech.lastError;')), flush=True)
         if state != "playing" and state != "idle":
             raise SmokeError("the line wasn't made: %s" % state)
-        eng.wait("the line to play", 'KAGReadAloud.state == "idle"', timeout=30)
+        try:
+            eng.wait("the line to play", 'KAGReadAloud.state == "idle"', timeout=30)
+        except SmokeError:
+            where = eng.tjs('var b = KAGReadAloud.buffer; return b === void ? "no buffer" : [b.status, (int)b.position, (int)b.totalTime].join(",");')
+            eng.tjs('KAGReadAloud.cancel(); return 1;')
+            raise SmokeError("the line didn't end; its buffer (status, position, length): %s" % where)
+        stuck = eng.tjs('return KAGReadAloud.stuckStops;')
+        if stuck:
+            # the engine's buffer didn't say the sound ended (seen once on the macOS runner):
+            # ReadAloud.tjs stops it 2 s past the line's length, which this run needed
+            print("     the line's buffer didn't say it ended: stopped past its length (%s)" % stuck, flush=True)
         if eng.tjs('return world_object.env.playVoiceCount;') != 0:
             raise SmokeError("the line still counts as a voice after it ended")
 
