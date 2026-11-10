@@ -1,0 +1,127 @@
+12:14:12 TVP Log system initialized with level: 2
+12:14:12 App name: SDL Application
+12:14:12 App version: <unspecified>
+12:14:12 App ID: <unspecified>
+12:14:12 SDL revision: SDL-3.4.0-release-3.4.0
+12:14:12 Found resource: messages-cht.json
+12:14:12 Found resource: optiondesc.json
+12:14:12 Found resource: roboto-regular.ttf
+12:14:12 Found resource: messages.json
+12:14:12 Found resource: config.cf
+12:14:12 Found resource: messages-en.json
+12:14:12 Found resource: elements_basic.ttf
+12:14:12 Found resource: messages-chs.json
+12:14:12 Found resource: optiondesc-cht.json
+12:14:12 Found resource: SysInitScript.tjs
+12:14:12 Found resource: optiondesc-en.json
+12:14:12 Found resource: kagex.icns
+12:14:12 Found resource: optiondesc-chs.json
+12:14:12 Found resource: gamecontrollerdb.txt
+12:14:12 [stdapp.cpp:InitPath:262] appPath: /private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/Resources/
+12:14:12 ! [stdapp.cpp:InitPath:263] projectPath: /private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile/
+12:14:12 [stdapp.cpp:InitPath:298] pluginPath: /private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/MacOS/
+12:14:12 Resource path: messages-en.json
+12:14:12 Resource path: messages-en.json
+12:14:12 [Application.cpp:LoadMessageResource:210] message file: resource://./messages-en.json (language tag: en-US)
+12:14:12 Audio stream created with channels: 2, sample rate: 48000
+12:14:12 Resource path: config_macos.cf
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 Resource path: config.cf
+12:14:12 Resource path: config.cf
+12:14:12 ! (info) Loading configuration file "/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/Resources/config.cf" succeeded.
+12:14:12 ! (info) Loading configuration file "/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/MacOS/krkrz.cf" failed (ignoring) : file not found.
+12:14:12 ! (info) Loading configuration file "/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/krkrz.cfu" failed (ignoring) : file not found.
+12:14:12 ! (info) Data path : file://./private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/
+12:14:12 [AudioStream.cpp:InitMiniAudio:117] Initializing miniaudio engine...
+12:14:12 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [SoundPool]: pool 16777216 bytes (16 MB) initialized at 0x110f8c000
+12:14:12 [AudioStream.cpp:InitMiniAudio:139] miniaudio engine initialized: 2 channels, 48000 Hz
+12:14:12 ! Program started on macOS 24.6.0 (macOS)
+12:14:12 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [BitmapPool]: pool 536870912 bytes (512 MB) initialized at 0x138000000
+12:14:12 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [FilePool]: pool 268435456 bytes (256 MB) initialized at 0x158004000
+12:14:12 [StorageCache.cpp:TVPNegotiateStorageCacheBudget:585] StorageCache: budget set to FileAllocator capacity=256MB
+12:14:12 ! (info) Total physical memory : 7516192768
+12:14:12 ! (info) Selected project directory : file://./private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile/
+12:14:12 Resource path: SysInitScript.tjs
+12:14:12 Resource path: SysInitScript.tjs
+12:14:12 ! Kirikiri Z Executable core /2.6.5.0 (Compiled on Nov 10 2026 00:46:34) TJS2/2.4.28 Copyright (C) 1997-2013 W.Dee and contributors All rights reserved.
+12:14:12 ! The details of version information can be perused if -about is attached and started. 
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 Resource path: 
+12:14:12 Resource path: roboto-regular.ttf
+12:14:12 Resource path: roboto-regular.ttf
+12:14:12 Resource path: elements_basic.ttf
+12:14:12 Resource path: elements_basic.ttf
+12:14:12 [app.cpp:GetDefaultDrawDevice:1236] GetDefaultDrawDevice: default -> SDLOGLDrawDevice
+12:14:12 [SysInitImpl.cpp:TVPAfterSystemInit:340] ImageCache enabled: limit=512MB (physmem=7168MB, source=BitmapPool)
+12:14:12 ! (info) Specified option(s) (earlier item has more priority) : -datapath=/private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/ -forcelog=clear -readencoding=Shift_JIS -padinterval=70 -padinterval=70
+12:14:12 [SysInitImpl.cpp:TVPAfterSystemInit:446] CPU SIMD: NEON ASIMD (TVPCPUType=0x00000003)
+12:14:12 ! (info) Auto Loading Static Plugin:xp3crypt
+12:14:12 xp3crypt
+12:14:12 [PooledAllocator.cpp:TVPPooledAllocator:438] PooledAllocator [GlobalKrkrz]: pool 268435456 bytes (256 MB) initialized at 0x16d44c000
+12:14:12 [GlobalAllocStats.cpp:Initialize:527] GlobalAllocStats: tracking activated (Krkrz pool=268435456 bytes, SDL pool=disabled)
+12:14:12 [main.cpp:SDL_AppInit:501] ANGLE: /private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/Resources/../Frameworks/liblibGLESv2_angle.dylib / /private/var/folders/2s/vty41l455yv698g4xkgfv7z00000gn/T/tmp7tmyut7l/Scripts Game/release/.work/compile-engine/KAGEX.app/Contents/Resources/../Frameworks/liblibEGL_angle.dylib
+12:14:12 (info) Loading startup script : startup.tjs
+12:14:12 kagex-compile canary
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (1ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 0
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 1
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 Syntax error (syntax error) at line 1
+12:14:12 Syntax error (syntax error) at line 1
+12:14:12 kagex-compile 2
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 3
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 4
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 5
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 6
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 7
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 8
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 kagex-compile 9
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (0ms)
+12:14:12 (info) Rebuilding Auto Path Table ...
+12:14:12 (info) Total 0 file(s) found, 0 file(s) activated. (1ms)
+12:14:12 [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:328] MemoryAllocator [SoundAllocator] clean (alloc=4 free=4 peak=1.01MB)
+12:14:12 ! [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:321] MemoryAllocator leak [FileAllocator] tag=FileCache alloc=2 free=0 current=188.33KB total_alloc=188.33KB total_freed=0B
+12:14:12 [MemoryAllocatorStats.h:TVPDumpAllocatorLeakReport:328] MemoryAllocator [BitmapAllocator] clean (alloc=0 free=0 peak=0B)
