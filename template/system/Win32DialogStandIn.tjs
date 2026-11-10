@@ -257,8 +257,12 @@ class WIN32Dialog
 		}
 	}
 
-	// the template as an Elements layout: rows of controls, by their place in it
-	var unit = 3; // pixels of the layout per dialog unit
+	// the template as an Elements layout: rows of controls, by their place in it, in the game's
+	// pixels ("base": "content") with text about the size of the game's own, on the colours of the
+	// game's prompts (KAGTextEntry's)
+	var unit = 5;         // pixels of the layout per dialog unit
+	var rowHeight = 64;   // a row of controls
+	var fontScale = 2.4;  // the text's scale (the layout's "font_scale"; an input_box and a picker take their own)
 	function makeLayout(vars) {
 		var sorted = [];
 		sorted.assign(items);
@@ -269,42 +273,59 @@ class WIN32Dialog
 			if (row === void || c.y >= rowBottom) {
 				row = [];
 				rows.add(row);
-				rowBottom = c.y + (c.cy > 4 ? c.cy * 2 \ 3 : 4);
+				// (a combo box's height counts its list, which drops down over the rows under it)
+				var ch = KAGWin32Class(c.windowClass) == COMBOBOX && c.cy > 14 ? 14 : c.cy;
+				rowBottom = c.y + (ch > 4 ? ch * 2 \ 3 : 4);
 			}
 			row.add(c);
 		}
 		var children = [], height = 0;
 		for (var i = 0; i < rows.count; i++) {
-			var cells = [], x = 0, h = 40;
-			rows[i].sort(KAGWin32ByX, true);
-			for (var j = 0; j < rows[i].count; j++) {
-				var c = rows[i][j];
-				if (c.x > x + 2) cells.add(%[ "type" => "hspacer", "width" => (c.x - x) * unit ]);
+			var cells = [], x = 0, r = rows[i];
+			r.sort(KAGWin32ByX, true);
+			// controls on top of each other (buttons a template gave no width, which a dialog's
+			// script places when it opens): side by side across the space they share, 16 apart
+			var shared = false, left = r[0].x, right = 0;
+			for (var j = 0; j < r.count; j++) {
+				shared = true if j > 0 && r[j].x < r[j - 1].x + r[j - 1].cx;
+				right = r[j].x + r[j].cx if r[j].x + r[j].cx > right;
+			}
+			for (var j = 0; j < r.count; j++) {
+				var c = r[j], cx = c.x, cw = c.cx > 8 ? c.cx : 8;
+				if (shared) {
+					var each = (right - left) * unit \ r.count;
+					cx = left + (each * j) \ unit, cw = (each - (j < r.count - 1 ? 16 : 0)) \ unit;
+				}
+				if (cx > x + 2) cells.add(%[ "type" => "hspacer", "width" => (cx - x) * unit ]);
 				var w = control(c, vars);
 				if (w === void) continue;
-				cells.add(%[ "type" => "hsize", "width" => (c.cx > 8 ? c.cx : 8) * unit, "child" => w ]);
-				x = c.x + c.cx;
+				cells.add(%[ "type" => "hsize", "width" => cw * unit, "child" => w ]);
+				x = cx + cw;
 			}
 			if (cells.count == 0) continue;
-			children.add(%[ "type" => "vspacer", "height" => 10 ]) if children.count;
-			children.add(%[ "type" => "htile", "children" => cells ]);
-			height += h + 10;
+			if (children.count) { children.add(%[ "type" => "vspacer", "height" => 12 ]); height += 12; }
+			children.add(%[ "type" => "vsize", "height" => rowHeight, "child" => %[ "type" => "htile", "children" => cells ] ]);
+			height += rowHeight;
 		}
-		var w = head !== void && head.cx > 0 ? head.cx * unit + 80 : 760;
-		w = 640 if w < 640;
+		var w = head !== void && head.cx > 0 ? head.cx * unit + 64 : 1000;
+		w = 800 if w < 800;
+		w = 1800 if w > 1800;
 		var title = head !== void && typeof head.title == "String" ? head.title : "";
 		var content = [];
 		if (title != "") {
-			content.add(%[ "type" => "label", "text" => title, "font_scale" => 1.2 ]);
-			content.add(%[ "type" => "vspacer", "height" => 16 ]);
-			height += 56;
+			content.add(%[ "type" => "align_left", "child" => %[ "type" => "label", "text" => title, "size_scale" => fontScale * 1.2 ] ]);
+			content.add(%[ "type" => "vspacer", "height" => 20 ]);
+			height += 76;
 		}
 		content.add(%[ "type" => "vtile", "children" => children ]);
 		return %[
-			"size" => [ w, height + 80 ],
+			"size" => [ w, height + 88 ],
 			"base" => "content",
 			"margin" => 40,
-			"content" => %[ "type" => "margin", "padding" => 28, "child" => %[ "type" => "vtile", "children" => content ] ]
+			"font_scale" => fontScale,
+			"background" => [ 36, 22, 104, 248 ],
+			"a11y" => %[ "title" => title ],
+			"content" => %[ "type" => "margin", "padding" => 32, "child" => %[ "type" => "vtile", "children" => content ] ]
 		];
 	}
 	// one control (void: left out)
@@ -312,6 +333,8 @@ class WIN32Dialog
 		var s = state(c.id), cls = KAGWin32Class(c.windowClass), style = c.style, text = s.text, id = c.id;
 		var e;
 		if (cls == STATIC) {
+			// labels without an id of their own (IDC_STATIC, -1) all share it: their own words
+			if (id == -1 || id == 0xFFFF) text = typeof c.title == "String" ? c.title : "";
 			var t = style & 0x1F;
 			if (t == SS_ICON || t == SS_BITMAP) return void;
 			e = %[ "type" => "label", "text" => text ];
@@ -321,7 +344,7 @@ class WIN32Dialog
 		}
 		if (cls == BUTTON) {
 			var t = style & BS_TYPEMASK;
-			if (t == BS_GROUPBOX) return %[ "type" => "label", "text" => text, "font_scale" => 1.1 ];
+			if (t == BS_GROUPBOX) return %[ "type" => "label", "text" => text, "size_scale" => fontScale * 1.1 ];
 			if (t == BS_CHECKBOX || t == BS_AUTOCHECKBOX || t == BS_3STATE || t == BS_AUTO3STATE)
 				e = %[ "type" => "checkbox", "id" => "k" + id, "text" => text, "value" => s.check != 0 ];
 			else if (t == BS_RADIOBUTTON || t == BS_AUTORADIOBUTTON)
@@ -333,12 +356,13 @@ class WIN32Dialog
 				e["initial_focus"] = true if t == BS_DEFPUSHBUTTON;
 			}
 		} else if (cls == EDIT) {
-			e = %[ "type" => "input_box", "id" => "e" + id, "text" => text ];
+			e = %[ "type" => "input_box", "id" => "e" + id, "text" => text, "size" => fontScale ];
 		} else if (cls == COMBOBOX || cls == LISTBOX) {
 			if (s.list.count == 0) return %[ "type" => "label", "text" => text ];
 			var v = "p" + id + "_index";
-			vars[v] = (string)(s.cursel >= 0 ? s.cursel : 0);
-			e = %[ "type" => "cycle_picker", "id" => "p" + id, "options" => s.list, "index_var" => v ];
+			var at = s.cursel >= 0 && s.cursel < s.list.count ? s.cursel : 0;
+			vars[v] = (string)at;
+			e = %[ "type" => "cycle_picker", "id" => "p" + id, "options" => s.list, "initial" => at, "index_var" => v, "font_size_scale" => fontScale ];
 		} else {
 			return void; // list views, scroll bars, anything else
 		}

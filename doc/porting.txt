@@ -84,13 +84,16 @@ Stand-ins it has (since 0.28.1):
   win32dialog.dll   The WIN32Dialog class, in script (Win32DialogStandIn.tjs), so the framework's
                     win32dialog.tjs (WIN32DialogEX, WIN32GenericDialogEX) and a game's own
                     dialogs on it run on every platform. The dialog template is shown as an
-                    Elements dialog over the game window, blocking as the Windows dialog did:
-                    its controls in rows as their places put them, each as wide as the
-                    template made it (static text, push buttons, check boxes, radio buttons, a
-                    group box's title, an edit box as a field of one line, a combo or list box
-                    as a picker of its strings). onInit runs before it shows; a button runs
-                    onCommand(WM_COMMAND, id, ...) as Windows sends it, and the dialog closes on
-                    close() (IDOK and IDCANCEL do by default), Esc being IDCANCEL; the
+                    Elements dialog over the game window, blocking as the Windows dialog did,
+                    on the colours of the game's prompts with text about the size of the
+                    game's own: its controls in rows as their places put them, each as wide as
+                    the template made it (static text, push buttons, check boxes, radio
+                    buttons, a group box's title, an edit box as a field of one line, a combo
+                    or list box as a picker of its strings); controls a template left on top
+                    of each other, such as buttons given no width, go side by side. onInit runs
+                    before it shows; a button runs onCommand(WM_COMMAND, id, ...) as Windows
+                    sends it, and the dialog closes on close() (IDOK and IDCANCEL do by
+                    default), Esc being IDCANCEL; the
                     controls' text, checks and selections are kept in script, so getItemText,
                     getCheckBox, sendItemMessage's BM_*, CB_*, LB_* and the results read what
                     the player changed. List views, scroll bars, bitmaps on controls, dialog

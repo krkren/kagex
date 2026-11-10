@@ -1300,6 +1300,46 @@ def template_steps(eng):
         for want in ("result=1", "name=Pip", "speed=2", "voice=1"):
             if want not in got.split(" "):
                 raise SmokeError("the win32dialog stand-in's answer lacks %s: %s" % (want, got))
+        # what it shows: the same dialog's layout as open() makes it (labels without ids of their
+        # own keep their words, the combo box's list doesn't pull the rows under it into its row,
+        # OK and Cancel, which the template leaves on top of each other, side by side, the picker
+        # at its first selection, the game's colours)
+        lay = json.loads(str(eng.tjs(
+            'var d = new WIN32GenericDialogEX(%[ title:"Settings", width:220 ]);'
+            ' d.addLineInput(%[ id:"name", text:"Name" ], void, "Ai"); d.nextLine();'
+            ' d.addDropSelect(%[ id:"speed", text:"Text speed" ], 60, void, 1, [ "Slow", "Normal", "Fast" ]); d.nextLine();'
+            ' d.addToggle(%[ id:"voice", text:"Voices on" ]); d.nextLine();'
+            ' d.addDefPush(%[ id:IDOK, text:"OK" ]); d.addButton(%[ id:IDCANCEL, text:"Cancel" ]);'
+            ' d.nextLine(); d._templ.cy = d._maxy; d._stored = true; d.store(d._templ); d.setInitParams(d._inits); d.onInit();'
+            ' var vars = %[], j = ElementsDialog.dictToJson(d.makeLayout(vars)); invalidate d; return j;')))
+
+        def walk(node, out):
+            if isinstance(node, dict):
+                out.append(node)
+                for v in node.values():
+                    walk(v, out)
+            elif isinstance(node, list):
+                for v in node:
+                    walk(v, out)
+            return out
+        rows = [n for n in walk(lay, []) if n.get("type") == "vsize" and n.get("child", {}).get("type") == "htile"]
+        shown = []
+        for row in rows:
+            parts = []
+            for n in walk(row, []):
+                if n.get("type") in ("label", "checkbox", "button") and "text" in n:
+                    parts.append(n["text"])
+                elif n.get("type") == "input_box":
+                    parts.append("[%s]" % n.get("text", ""))
+                elif n.get("type") == "cycle_picker":
+                    parts.append("<%s>" % n["options"][n.get("initial", 0)])
+            shown.append(" ".join(parts))
+        widths = [n["width"] for n in walk(rows[-1], []) if n.get("type") in ("hsize", "hspacer")] if rows else []
+        print("     its rows: %s; the button row %d of %d px; background %s" % (" | ".join(shown), sum(widths),
+              lay["size"][0] - 64, lay.get("background")), flush=True)
+        if shown != ["Name [Ai]", "Text speed <Normal>", "Voices on", "OK Cancel"] or sum(widths) > lay["size"][0] - 64 \
+                or not lay.get("background"):
+            raise SmokeError("the win32dialog stand-in's layout: %s" % json.dumps(lay)[:800])
         r = str(eng.tjs('var p = System.dataPath; Scripts.saveDataPack(p + "smokepack.txt", %[ a:1, b:[ "x", "y" ] ]);'
                         ' var d = Scripts.loadDataPack(p + "smokepack.txt"); var ok = d.a == 1 && d.b.join("+") == "x+y";'
                         ' var oct = 0;'
