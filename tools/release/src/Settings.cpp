@@ -267,6 +267,9 @@ Json defaultSettings(const Project& p)
 		{ "enabled", Json(false) }, { "target", Json("device") }, { "data", Json("xp3") },
 		{ "bundleId", Json(bundle) }, { "buildNumber", Json(0) },
 		{ "identity", Json("") }, { "profile", Json("") },
+		// why the game adds pictures to the photo library: Info.plist's NSPhotoLibraryAddUsageDescription,
+		// which iOS shows as it asks the player (screenshots into Photos, since 0.28.1); "" leaves it out
+		{ "photosUsage", Json("Screenshots you take in the game are added to your photo library.") },
 	}));
 	s.set("platforms", std::move(pl));
 	return s;

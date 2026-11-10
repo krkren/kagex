@@ -119,7 +119,9 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   opens or brings a `<manifest>` or `<application>` of its own.
 - **iOS** (on a Mac with Xcode): the engine's app with the game's bundle ID, name, version
   (build number from the version unless set) and icon (an asset catalog compiled by `actool`),
-  and `data.xp3` or `data/` in the bundle. For devices it is signed with your certificate
+  and `data.xp3` or `data/` in the bundle, and `photosUsage` as `NSPhotoLibraryAddUsageDescription`
+  (what iOS shows as it asks the player to let screenshots into Photos; empty leaves it out, and
+  the game then keeps its screenshots in the save folder). For devices it is signed with your certificate
   (Apple Development or Apple Distribution) and provisioning profile, whose entitlements it
   takes, as `<file name>-<version>.ipa`; for the Simulator, signed ad hoc, as a zip of the app.
   Identity `-` signs a device build ad hoc, to check the package.
@@ -472,7 +474,7 @@ Writing a plugin of your own, for the engines kagex-release uses:
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
 | `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |
 | `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (store the files in `data.xp3` and the media archives under hashed names; desktop only) |
-| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore, the speech engines' query (`ttsQuery`) and the manifest's additions (`manifestAdditions`, `applicationAdditions`); iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
+| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore, the speech engines' query (`ttsQuery`) and the manifest's additions (`manifestAdditions`, `applicationAdditions`); iOS target (`device`/`simulator`), bundle ID, build number, the photo library's reason (`photosUsage`), certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
 `sf.software_version` and `sf.software_maker` in its `first.ks`, and `krkrz.cf`. Passwords

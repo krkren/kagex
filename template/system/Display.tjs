@@ -16,7 +16,10 @@
  *   screenshotWindow  screenshots with the message windows, or without (MainWindow.tjs)
  *   screenshotFormat  PNG or JPEG
  *   screenshotPlace   (since 0.28.0, desktops with the sdlsystem plugin) the save folder, or a
- *                     folder of the game's own in the player's Pictures folder
+ *                     folder of the game's own in the player's Pictures folder; on Android and
+ *                     iOS (since 0.28.1) the save folder, or the phone's photo gallery
+ *                     (SDLSystem.saveToGallery: an album of the game's title on Android), which
+ *                     is where they go unless the player says otherwise
  *   screenshotOpen    a button that opens the folder they're saved in
  *   screenshotCopy    each one also put on the clipboard (desktops with the sdlsystem plugin)
  *   screenTransition  (since 0.28.0) how the game's screens come and go: their [trans screen ...]
@@ -133,9 +136,30 @@ function KAGScreenshotPlace(v)
 }
 function KAGScreenshotFolderNow() { return kag.screenshotFolder !== void ? kag.screenshotFolder : System.dataPath; }
 
+// The phone's photo gallery (since 0.28.1): Android's MediaStore and iOS's photo library, through
+// the sdlsystem plugin; iOS asks the player the first time (the app's Info.plist must say why,
+// NSPhotoLibraryAddUsageDescription, which kagex-release writes)
+function KAGGalleryPossible()
+{
+	if (typeof global.SDLSystem == "undefined" || KAGIsDesktop()) return false;
+	try { return typeof SDLSystem.galleryPossible != "undefined" && SDLSystem.galleryPossible; } catch (e) { return false; }
+}
+function KAGScreenshotsToGallery()
+{
+	if (!KAGGalleryPossible()) return false;
+	var v = KAGOptionGet("screenshotPlace");
+	return (v === void ? KAGOptions.screenshotPlace.initial : v) == "gallery";
+}
+// the album on Android (Pictures/<album>): the game's title, as a folder name
+function KAGGalleryAlbum()
+{
+	var name = sf.software_title !== void && sf.software_title != "" ? sf.software_title : System.title;
+	return name.replace(/[\\\/:*?"<>|]/g, "_");
+}
+
 KAGDefineOption(%[ name:"screenshotPlace", label:"Screenshots Go To", kind:"toggle", save:true, initial:"save",
 	values:[ ["Save Folder", "save"], ["Pictures", "pictures"] ],
-	available:function { return KAGPicturesFolder() != ""; },
+	available:function { return KAGPicturesFolder() != "" || KAGGalleryPossible(); },
 	setValue:function(v) { KAGScreenshotPlace(v); } ]);
 
 KAGDefineOption(%[ name:"screenshotOpen", label:"Screenshot Folder", kind:"button", button:"Open",
@@ -173,6 +197,11 @@ KAGDefineOption(%[ name:"screenTransition", label:"Screens Change With", kind:"t
 function KAGApplyDisplayOptions()
 {
 	KAGOptions.windowSize.values = KAGWindowSizeValues() if KAGIsDesktop();
+	// a phone: the save folder (out of the player's reach) or Photos, Photos at first
+	if (KAGGalleryPossible()) {
+		KAGOptions.screenshotPlace.values = [ ["Save Folder", "save"], ["Photos", "gallery"] ];
+		KAGOptions.screenshotPlace.initial = "gallery";
+	}
 	var names = [ "fullScreenFill", "fullScreenFit", "smoothScaling", "vsync", "padEnabled", "screenshotPlace" ];
 	for (var i = 0; i < names.count; i++) {
 		var o = KAGOptions[names[i]];

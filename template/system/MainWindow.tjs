@@ -14258,7 +14258,16 @@ class KAGWindow extends Window
 			screenshotPicture = new global.Layer(this, primaryLayer);
 			screenshotPicture.setImageSize(w \ 4, h \ 4);
 			KAGShrinkCopy(screenshotPicture, 0, 0, w \ 4, h \ 4, lay, 0, 0, w, h);
-			if (jpeg) {
+			if (typeof global.KAGScreenshotsToGallery != "undefined" && KAGScreenshotsToGallery()) {
+				// the phone's photo gallery (Display.tjs, the sdlsystem plugin; since 0.28.1): a PNG
+				// made from the layer at once, its result an event later (onGallerySaved)
+				name = Storages.chopStorageExt(Storages.extractStorageName(name)) + ".png";
+				if (!SDLSystem.saveToGallery(lay, name, KAGGalleryAlbum())) {
+					var why = ""; try { why = SDLSystem.lastError; } catch (e2) {}
+					throw new Exception("the photo gallery: " + why);
+				}
+				galleryPending = name;
+			} else if (jpeg) {
 				lay.saveLayerImage(name, "jpg");
 				onScreenshotSaved(name, screenshotPicture);
 			} else if (typeof this.startSaveLayerImage == "Object" && name.substring(0, 7) == "file://") {
@@ -14288,15 +14297,33 @@ class KAGWindow extends Window
 
 	function onSaveLayerImageProgress(handler, progress, layer, filename) {}
 
-	function onScreenshotSaved(name, picture)
+	function onScreenshotSaved(name, picture, where = void)
 	{
 		if (name !== void) {
-			dm("Screenshot saved: " + name);
+			dm("Screenshot saved: " + name + (where !== void ? " (" + where + ")" : ""));
 			KAGA11y.announce(tr("Screenshot saved"));
-			// a card with the picture (since 0.20.0) and the file's name
-			showScreenshotCard(picture, [ tr("Screenshot saved"), Storages.extractStorageName(name) ]) if (screenshotNotice);
+			// a card with the picture (since 0.20.0) and the file's name, or where it went
+			showScreenshotCard(picture, [ tr("Screenshot saved"), where !== void ? tr(where) : Storages.extractStorageName(name) ]) if (screenshotNotice);
 		}
 		callHook(screenshotHook, name);
+	}
+
+	// the photo gallery's answer (SDLSystem's events "gallerysaved" and "galleryfailed",
+	// SystemSupport.tjs): the card, or why not
+	var galleryPending;
+	function onGallerySaved(ok)
+	{
+		var name = galleryPending;
+		galleryPending = void;
+		if (ok) {
+			onScreenshotSaved(name !== void ? name : "", screenshotPicture, "In Photos");
+			return;
+		}
+		var why = "";
+		try { why = SDLSystem.galleryError; } catch (e) {}
+		dm("The screenshot couldn't go to Photos: " + why);
+		showScreenshotNotice(tr("The screenshot couldn't go to Photos"));
+		onScreenshotSaved(void);
 	}
 
 	// a notice card with a picture (YesNoDialogLayer.tjs, showYesNoCard), or the words alone

@@ -3415,7 +3415,16 @@ variables and applied at start; one the platform can't do leaves its row empty:
   screenshotFormat  PNG or JPEG
   screenshotPlace   (since 0.28.0, desktops) where F12's pictures go: the save folder, or a
                     folder named after the game in the player's pictures folder
-                    (SDLSystem.userFolder("pictures"), KAGScreenshotPlace)
+                    (SDLSystem.userFolder("pictures"), KAGScreenshotPlace). On Android and iOS
+                    (since 0.28.1) the save folder, out of the player's reach there, or the
+                    phone's photo gallery, which is where they go at first: a PNG added through
+                    SDLSystem.saveToGallery (Android's MediaStore, in Pictures/<the game's
+                    title>, from Android 10; iOS's photo library, asking the player the first
+                    time, which needs NSPhotoLibraryAddUsageDescription in the app's
+                    Info.plist: kagex-release writes platforms.ios.photosUsage there, and
+                    without it the choice isn't offered). Its card says "In Photos"; a refusal
+                    says the screenshot couldn't go there (KAGGalleryPossible,
+                    KAGScreenshotsToGallery, kag.onGallerySaved)
   screenshotOpen    (since 0.28.0, desktops) a button that opens the folder they go to
   screenshotCopy    (since 0.28.0, desktops) each picture is also put on the clipboard, opaque
                     (SDLSystem.copyImage: PNG and BMP)

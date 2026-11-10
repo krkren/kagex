@@ -160,6 +160,10 @@ class KAGSystemEvents extends KAGPlugin
 		case "show": delete awayReasons.hide; break;
 		case "background": awayReasons.background = true; break;
 		case "foreground": delete awayReasons.background; break;
+		// a screenshot's trip to the photo gallery ended (MainWindow.saveScreenshot, since 0.28.1)
+		case "gallerysaved": case "galleryfailed":
+			if (typeof window.onGallerySaved != "undefined") window.onGallerySaved(name == "gallerysaved");
+			return;
 		}
 		var now = awayReasons.blur !== void || awayReasons.minimize !== void || awayReasons.hide !== void || awayReasons.background !== void;
 		if (now == away) return;

@@ -460,6 +460,9 @@ class SimulatorEngine(Engine):
         self.url = "http://127.0.0.1:%d/pad/exec" % port
         self.log_path = os.path.join(workdir, "simulator.log")
         self.simctl("install", device, app)
+        # screenshots into Photos (since 0.28.1): granted beforehand, or the system's question would
+        # wait for a tap no one makes
+        subprocess.run(["xcrun", "simctl", "privacy", device, "grant", "photos-add", bundle_id], capture_output=True)
         self.container = self.simctl("get_app_container", device, bundle_id, "data").strip()
         self.started = time.time()
         self.simctl("launch", "--terminate-running-process", device, bundle_id,
@@ -3669,6 +3672,13 @@ def sample_steps(eng):
         if eng.tjs('return kag.currentDialog.name == "YesNoDialog" ? 1 : 0;') == 1:
             eng.key("VK_LEFT"); eng.key("VK_RETURN")  # Yes
             eng.wait("the comment prompt", 'kag.currentDialog !== void && kag.currentDialog.name == "TextPromptDialog"', timeout=10)
+        # a phone: the system's keyboard, in its multi-line mode, while the field has the focus
+        # (sdlsystem's startTextInput; the engine stops text input for a layer of its own accord)
+        time.sleep(0.5)
+        kb = str(eng.tjs('var f = kag.currentDialog.field; return typeof global.KAGTextEntryKeyboardUsed == "undefined" || !KAGTextEntryKeyboardUsed(f) ? "unused" : (SDLSystem.textInputActive ? "on" : "off");'))
+        print("     the system's keyboard for the field: %s" % kb, flush=True)
+        if kb == "off":
+            raise SmokeError("the comment field has the focus but the system's keyboard isn't on")
         got = str(eng.tjs('var d = kag.currentDialog, f = d.field; f.text = "";'
                           ' f.onKeyPress("Before the flashback"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("Ai remembers");'
                           ' f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("a third line"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("x");'
@@ -3704,6 +3714,33 @@ def sample_steps(eng):
             raise SmokeError("the load screen's slot doesn't say the comment: %s" % name)
         eng.key("VK_ESCAPE")
         eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
+    @step("screenshots go to the phone's photo gallery where there is one (Android's MediaStore, iOS's photo library), and the card says so")
+    def _():
+        if eng.tjs('return typeof global.KAGGalleryPossible != "undefined" && KAGGalleryPossible() ? 1 : 0;') != 1:
+            print("     (skipped: no photo gallery here)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.inStable && kag.currentDialog === void', timeout=20)
+        name = str(eng.tjs('KAGOptionSet("screenshotPlace", "gallery"); kag.systemEvents.log.clear();'
+                           ' var n = kag.saveScreenshot(); return n === void ? "" : n;'))
+        print("     sent to the gallery as %s" % name, flush=True)
+        if name == "":
+            raise SmokeError("the screenshot didn't start its way to the gallery: %s" % eng.tjs("return SDLSystem.lastError;"))
+        eng.wait("the gallery's answer", "kag.galleryPending === void", timeout=60)
+        r = str(eng.tjs('return [kag.systemEvents.log.join(","), SDLSystem.galleryError].join("|");'))
+        print("     events, error: %s" % r, flush=True)
+        events, why = r.split("|", 1)
+        if "gallerysaved" not in events:
+            if "needs Android 10" in why:
+                print("     (an Android before 10: no MediaStore folders, as the plugin says)", flush=True)
+            else:
+                raise SmokeError("the screenshot didn't reach the gallery: %s" % r)
+        if isinstance(eng, AndroidEngine) and "gallerysaved" in events:
+            out = eng.run_adb("shell", "content", "query", "--uri", "content://media/external/images/media",
+                              "--projection", "_display_name:relative_path", "--where", "\"_display_name='%s'\"" % name)
+            print("     MediaStore: %s" % out.strip()[:200], flush=True)
+            if name not in out:
+                raise SmokeError("MediaStore has no %s: %s" % (name, out))
 
     @step("every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel")
     def _():
