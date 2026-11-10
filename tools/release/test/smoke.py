@@ -483,7 +483,13 @@ def build_tests(exe, proj, args):
              "engine %d bytes, xp3 at %d of %d" % (original, at, len(data)))
         step("windows: the media archives beside the bound exe", {n + f for f in SPLIT_PARTS} <= set(z.namelist()))
         plugins = [x for x in z.namelist() if x.startswith(n + "plugin/") and not x.endswith("/")]
-        step("windows: only the linked plugins", 0 < len(plugins) < 27, "%d plugins" % len(plugins))
+        # fewer than the engine package has (the engines' plugins grow from release to release:
+        # 0.28.0's four of kagex's own, all linked, took a fixed limit of 26 past it)
+        with zipfile.ZipFile(Path(args.engines) / "kagex_engine_windows.zip") as ez:
+            offered = [x for x in ez.namelist() if x.startswith("plugin/") and not x.endswith("/")]
+        game_own = 1 if (proj / "plugins" / "windows").is_dir() else 0
+        step("windows: only the linked plugins", 0 < len(plugins) < len(offered) + game_own,
+             "%d plugins of the engine's %d" % (len(plugins), len(offered)))
         if (proj / "plugins" / "windows").is_dir():
             step("windows: the game's own plugin too", n + "plugin/krkrgame.dll" in z.namelist())
     lz = outdir / (base + "steam.zip")
