@@ -15,6 +15,7 @@ kagex-release                              # the window, for the game here or ab
 kagex-release path/to/game                 # the window, for that game
 kagex-release --cli init  [path]           # write release.json with the defaults (--force replaces it)
 kagex-release --cli check [release.json]   # problems in the settings, and what this computer can build
+kagex-release --cli icon <png|ico|exe> <out.png>  # the icon a build takes from that file (--size=N)
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
 kagex-release --cli keygen <keys file>     # write the game's keys file, or add the keys it lacks
@@ -465,7 +466,7 @@ Writing a plugin of your own, for the engines kagex-release uses:
 
 | Section | What it holds |
 |---|---|
-| `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
+| `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG; since 0.28.1 also an `.ico`, or a Windows game's old `.exe`, whose largest icon is taken: `--cli icon <file> <out.png>` shows it) |
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.bak` anywhere, `bgimage/raw/**`, `work/`; the defaults are `*.bak`, `*.tmp`, `Thumbs.db`, `desktop.ini` and `.DS_Store`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, or that is a pose `charinit.csv` names, goes in all the same; every `.psd` and `.clip` that goes in is split into its layers: see "Photoshop and CLIP STUDIO PAINT files"), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |

@@ -1,5 +1,6 @@
 #include "Settings.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <regex>
@@ -379,7 +380,14 @@ std::vector<Issue> validate(const Json& s, const Project& p)
 	const std::string icon = str(s, "identity.icon");
 	if (!icon.empty()) {
 		if (!exists(icon)) error("identity.icon", "The icon " + icon + " doesn't exist");
-		else if (krt::toPath(icon).extension() != ".png" && krt::toPath(icon).extension() != ".PNG") error("identity.icon", "The icon must be a PNG (1024x1024 is best)");
+		else {
+			// a PNG (1024x1024 is best), or since 0.28.1 a Windows .ico or the old game's .exe, whose
+			// largest icon is taken (Icons.cpp)
+			std::string ext = krt::toPath(icon).extension().string();
+			std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+			if (ext != ".png" && ext != ".ico" && ext != ".exe")
+				error("identity.icon", "The icon is a PNG (1024x1024 is best), an .ico, or a Windows game's .exe to take its icon from");
+		}
 	} else {
 		warn("identity.icon", "No icon: the packages get the KAGEX icon");
 	}

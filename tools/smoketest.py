@@ -1271,6 +1271,45 @@ def template_steps(eng):
 
     prompt_steps(eng, step)
     interface_steps(eng, step)
+
+    @step("porting (Porting.tjs, last: it rewires Plugins.link): win32dialog.dll's dialogs as Elements dialogs, data packs, Storages.saveOctet, getLangName")
+    def _():
+        if eng.tjs('return Storages.isExistentStorage("Win32DialogStandIn.tjs") ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the stand-ins)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs('Scripts.execStorage("Porting.tjs"); Plugins.link("plugin/win32dialog.dll"); Plugins.link("plugin/getLangName.dll");'
+                ' Scripts.execStorage("win32dialog.tjs") if typeof global.WIN32GenericDialogEX == "undefined"; return 1;')
+        # a settings dialog built as games build them, answered by a timer as a player would: a new
+        # name typed, a choice picked, a box ticked, OK
+        got = str(eng.tjs(
+            'var d = new WIN32GenericDialogEX(%[ title:"Settings", width:220 ]);'
+            ' d.addLineInput(%[ id:"name", text:"Name" ], void, "Ai"); d.nextLine();'
+            ' d.addDropSelect(%[ id:"speed", text:"Text speed" ], 60, void, 1, [ "Slow", "Normal", "Fast" ]); d.nextLine();'
+            ' d.addToggle(%[ id:"voice", text:"Voices on" ]); d.nextLine();'
+            ' d.addDefPush(%[ id:IDOK, text:"OK" ]); d.addButton(%[ id:IDCANCEL, text:"Cancel" ]);'
+            ' global.__w32 = d;'
+            ' global.__w32answer = new Timer(function() { global.__w32answer.enabled = false; var dd = global.__w32;'
+            '  dd.onAction("e" + dd.getNumberdId("name"), "Pip"); dd.onAction("k" + dd.getNumberdId("voice"), true);'
+            '  dd.onAction("p" + dd.getNumberdId("speed"), 2); dd.onAction("c1", void); }, "");'
+            ' __w32answer.interval = 800; __w32answer.enabled = true;'
+            ' var r = d.open(kag), a = [ "result=" + r.result ], n = []; n.assign(r.items);'
+            ' for (var i = 0; i < n.count; i += 2) a.add(n[i] + "=" + n[i + 1]);'
+            ' invalidate d; return a.join(" ");', 60))
+        print("     the dialog's answer: %s" % got, flush=True)
+        for want in ("result=1", "name=Pip", "speed=2", "voice=1"):
+            if want not in got.split(" "):
+                raise SmokeError("the win32dialog stand-in's answer lacks %s: %s" % (want, got))
+        r = str(eng.tjs('var p = System.dataPath; Scripts.saveDataPack(p + "smokepack.txt", %[ a:1, b:[ "x", "y" ] ]);'
+                        ' var d = Scripts.loadDataPack(p + "smokepack.txt"); var ok = d.a == 1 && d.b.join("+") == "x+y";'
+                        ' var oct = 0;'
+                        ' try { Storages.saveOctet(p + "smoke.bin", <% 00 41 42 ff %>); oct = 1; } catch (e) { oct = e.message; }'
+                        ' return [ ok ? 1 : 0, oct, typeof System.getCurrentUILangName != "undefined" ? 1 : 0 ].join("|");'))
+        print("     data pack, saveOctet, getCurrentUILangName: %s" % r, flush=True)
+        pack, octet, lang = r.split("|")
+        if pack != "1" or lang != "1" or (octet != "1" and "sdlsystem" not in octet):
+            raise SmokeError("the porting stand-ins: %s" % r)
+
     return steps
 
 
