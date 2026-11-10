@@ -3774,6 +3774,11 @@ def sample_steps(eng):
         kb = str(eng.tjs('var f = kag.currentDialog.field; return typeof global.KAGTextEntryKeyboardUsed == "undefined" || !KAGTextEntryKeyboardUsed(f) ? "unused" : (SDLSystem.textInputActive ? "on" : "off");'))
         print("     the system's keyboard for the field: %s" % kb, flush=True)
         if kb == "off":
+            # close what this step opened, so the steps after it start from the game
+            eng.tjs('KAGOptionSet("saveComments", false); return 1;')
+            eng.key("VK_ESCAPE")
+            eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+            eng.key("VK_ESCAPE")
             raise SmokeError("the comment field has the focus but the system's keyboard isn't on")
         got = str(eng.tjs('var d = kag.currentDialog, f = d.field; f.text = "";'
                           ' f.onKeyPress("Before the flashback"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("Ai remembers");'

@@ -225,6 +225,14 @@ class DialogEditLayer extends EditLayer
 		super.onMouseDown(...);
 	}
 
+	// a tap brings the system's keyboard back after the player put it away
+	function onMouseUp(x, y, button, shift)
+	{
+		super.onMouseUp(...);
+		if (button == mbLeft && x >= 0 && y >= 0 && x < width && y < height && keyboardUsed() && isvalid this && focused)
+			KAGTextEntryKeyboard(this, true);
+	}
+
 	function commit()
 	{
 		if (exp == "") return;

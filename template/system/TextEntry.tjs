@@ -49,11 +49,37 @@ function KAGTextEntryKeyboardUsed(field)
 	return KAGTextEntryKeyboardThere() && KAGTextEntryUsed();
 }
 // The system's keyboard for the field (multi-line), or away; where the field is goes with it,
-// in the window's pixels, so the system keeps the field in sight
+// in the window's pixels, so the system keeps the field in sight. Started from a field's onFocus,
+// it's started again once the focus change is over: the engine sets the focused layer's imeMode
+// after onFocus, and on a phone without a keyboard of its own that stops text input
+// (form.cpp's TVPUpdateBaselineTextInput, "imeMode=3 -> stop" in the log)
+var KAGTextEntryKeyboardField;    // the field to start it for again
+var KAGTextEntryKeyboardTrigger;
 function KAGTextEntryKeyboard(field, on)
 {
+	if (!on) {
+		KAGTextEntryKeyboardField = void;
+		try { SDLSystem.stopTextInput(); } catch (e) { dm("text entry: the keyboard: " + e.message); }
+		return;
+	}
+	KAGTextEntryKeyboardStart(field);
+	KAGTextEntryKeyboardField = field;
+	if (KAGTextEntryKeyboardTrigger === void) {
+		KAGTextEntryKeyboardTrigger = new AsyncTrigger(KAGTextEntryKeyboardAgain, "");
+		KAGTextEntryKeyboardTrigger.cached = true;
+	}
+	KAGTextEntryKeyboardTrigger.trigger();
+}
+function KAGTextEntryKeyboardAgain()
+{
+	var f = KAGTextEntryKeyboardField;
+	KAGTextEntryKeyboardField = void;
+	if (f === void || !isvalid f || !f.focused) return;
+	try { if (!SDLSystem.textInputActive) KAGTextEntryKeyboardStart(f); } catch {}
+}
+function KAGTextEntryKeyboardStart(field)
+{
 	try {
-		if (!on) { SDLSystem.stopTextInput(); return; }
 		var x = 0, y = 0, l = field;
 		while (l !== void && l !== null && isvalid l && l !== kag.primaryLayer) { x += l.left; y += l.top; l = l.parent; }
 		var w = kag.primaryLayer.width, h = kag.primaryLayer.height;
