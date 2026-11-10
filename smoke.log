@@ -1,0 +1,183 @@
+ok   --help: kagex-release 0.28.1
+ok   --version: kagex-release 0.28.1
+ok   plan before init (defaults): Game files: 1271 (54.8 MB), 1 excluded; framework: template/system, copied in as data/system
+ok   init writes release.json: Wrote C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/release.json
+ok   defaults from first.ks: KAGEX Sample / 0.28.1 / kagex-sample
+ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+ok   icon found: platform/icon-1024.png
+ok   init refuses to replace: error: C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/release.json is already there (--force replaces it)
+ok   check: the defaults have no errors
+ok   check: the host platform is listed: windows
+ok   check: reports a bad version and reserved names: identity.version, identity.appName
+ok   check: web file names with %, # or ? are listed: 1 file name has %, # or ?, which the web engine can't fetch as a loose file (image/window@base%base.png): choose "xp3" data for the web, or rename them along with the scripts that name them
+ok   check: Android manifest additions left open, or with an <application> of their own: {'platforms.android.manifestAdditions': ["<uses-permission> isn't closed"], 'platforms.android.applicationAdditions': ["Only what goes inside <application>: the tool adds it to the engine's own <application>"]}
+ok   check: well-formed Android manifest additions pass: {}
+ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+ok   plan: the chosen platforms: windows, linux, web, android, ios
+ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 1271 files, 1 excluded, 1 .psd
+ok   plan: images and sounds to convert: 929 images, 0 sounds
+ok   plan: framework copied in: template/system, copied in as data/system
+ok   an unknown platform is refused: unknown platform: nowhere
+ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmp3gmurtfi\keys\game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: each kind of protection has a key of its own
+ok   keys: keygen won't replace keys: error: C:/Users/RUNNER~1/AppData/Local/Temp/tmp3gmurtfi/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to C:\Users\RUNNER~1\AppData\Local\Temp\tmp3gmurtfi\keys\game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmp3gmurtfi\keys\game-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u00e2\u20ac\u00a6 (kagex-release --cli keygen <file>)"]}
+ok   keys: a keys file outside the game's folder passes: {}
+ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/../keys/no-signing.txt has no signing key: Create keys\u00e2\u20ac\u00a6 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u00e2\u20ac\u00a6 makes a new one)"]}
+ok   keys: a misspelt key name is an error: {"keys.file": ["C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"]}
+ok   icons from .ico and .exe (skipped: no Pillow to read the PNG)
+ok   signing: no keys file is an error: keys.file
+ok   signing: a signed desktop build can't use a data folder: platforms.windows.data
+ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.web.url, signing.enabled
+ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+ok   own plugins: the plan lists them: kagex-sample | kagex-sample.cf | libSDL3.so.0 | plugin/ (with the game's own: libkrkrgame.so) | data.xp3 | bgimage.xp3, bgm.xp3, effect.xp3, evimage.xp3, fgimage.xp3, image.xp3, others.xp3, rule.xp3, scenario.xp3, sound.xp3, thum.xp3, video.xp3, voice.xp3 | kagex-sample.desktop, kagex-sample.png / application ID com.krkren.kagexsample, versionCode 2801 | assets/data.xp3 | the game's own plugins: arm64-v8a/libkrkrgame.so
+ok   own plugins: check warns about stray files, a folder that isn't an ABI, and plugins/ios: plugins/linux/notes.txt isn't a Linux (lib*.so) plugin: it stays out of the packages plugins/ios/ stays out of the packages: the iOS engine has its plugins linked in and opens none at run time, so a game's own plugins need an engine package built with them (engines/ next to data/) plugins/android/arm64-v8a/readme.txt isn't an Android plugin (lib*.so): it stays out of the APK plugins/android/mips stays out of the APK: a plugin goes in plugins/android/<ABI>/ (arm64-v8a, x86_64, armeabi-v7a or x86) plugins/android/notes.txt stays out of the APK: a plugin goes in plugins/android/<ABI>/ (arm64-v8a, x86_64, armeabi-v7a or x86)
+ok   own plugins: an Android plugin named as the engine is refused: ["plugins/android/arm64-v8a/libkrkrz.so has the name of one of the engine's own libraries"]
+ok   own plugins: a Live2D model without the plugin is warned about, per platform: The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it
+ok   own plugins: a web game with Live2D models and no Web Core is warned about: The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it The game has Live2D models, but plugins/web/ has no live2dcubismcore.min.js: its web package won't draw its Live2D characters. Put the one from your Cubism SDK for Web there (Core/live2dcubismcore.min.js)
+ok   own plugins: the web's Core is listed, a stray file there is warned about: index.html, krkrz.js, krkrz.wasm, coi-serviceworker.js, manifest.webmanifest, icons | the game's own: live2dcubismcore.min.js | gamedata/ (each file loaded when the game needs it) | plugins/web/notes.txt isn't a web (live2dcubismcore.min.js, Live2D's Web Core) plugin: it stays out of the packages The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it
+ok   the page is served
+ok   the client library is embedded
+ok   state: C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/release.json
+ok   state: the tool encrypts archives and scenarios: archive True, scenarios True
+ok   check from the screen: scenes.encrypt; platforms.android.applicationId; platforms.android.keystore
+ok   host status for every platform: windows=True, linux=True, steam=True, macos=False, web=True, android=False, ios=False
+ok   save
+ok   build: every platform: windows=True; linux=True; steam=True 
+ok   windows: zip with the exe, .cf, SDL3.dll, plugins and data.xp3
+ok   windows: an archive per media folder beside data.xp3, and no data folder: bgimage.xp3 bgm.xp3 data.xp3 effect.xp3 evimage.xp3 fgimage.xp3 image.xp3 others.xp3 rule.xp3 scenario.xp3 sound.xp3 thum.xp3 video.xp3 voice.xp3
+ok   windows: the .cf: ; KAGEX Sample 0.28.1: engine options (each line is a command-line option without its "-") | orgname=krkren | appname=kagex-sample | debugwin=no | 
+ok   windows: the icon and version info
+ok   linux: tar.gz with an executable engine: 0o755
+ok   linux: the .cf
+ok   linux: an archive per media folder beside data.xp3
+ok   linux: menu entry and icon
+ok   linux: the game's own plugin
+ok   steam: tar.gz with an executable engine: 0o755
+ok   steam: the .cf
+ok   steam: an archive per media folder beside data.xp3
+ok   steam: the game's own plugin
+ok   SHA256SUMS: 3 lines
+ok   test run of this computer's build: The game started without script errors 
+ok   build variants: ; ; 
+ok   windows: data bound into the exe: engine 15529984 bytes, xp3 at 15333888 of 24978298
+ok   windows: the media archives beside the bound exe
+ok   windows: only the linked plugins: 28 plugins of the engine's 32
+ok   windows: the game's own plugin too
+ok   steam: zip with a data folder and the executable flag
+ok   steam: the game's own plugin (plugins/linux)
+ok   steam: the data folder has the media folders the other platforms' archives took
+ok   test run with the data bound into the executable: The game started without script errors 
+ok   windows: a relative --engines, with the icon and version info
+ok   web (files): build
+ok   web (files): engine options: _WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_PROJECT_XP3 = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = "gamedata/"; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (files): the game's engine options in resource/config.cf, ahead of the engine's: soundpoolsize=97 | kagexreleasetest=web | debugwin=no | padinterval="\x37\x30"
+ok   web (files): title, manifest and icons
+ok   web (files): the build's id in the page and its scripts: 6e5b2d0b52b3afe3 ['coi-serviceworker.js', 'kagex-web.js?v=6e5b2d0b52b3afe3', 'webconfig.js?v=6e5b2d0b52b3afe3', 'krkrz.js?v=6e5b2d0b52b3afe3']
+ok   web (files): link previews
+ok   web (files): krkrz.data is what krkrz.js expects: 0 bytes
+ok   web (files): the files, in lower case: 1245 files
+ok   web (xp3): build
+ok   web (xp3): engine options: var KRKRZ_WEB_DATA_PRELOAD = false; | var KRKRZ_WEB_PROJECT_XP3 = false; | var KRKRZ_WEB_RESOURCE_BASE = "resource/"; | var KRKRZ_WEB_DEFAULT_WEBBASE = ""; | var KRKRZ_WEB_DEFAULT_ARGS = "-orgname=krkren -appname=kagex-sample -bitmappoolsize=640 -filepoolsize=320 -krkrzpoolsize=128 -debugwin=no"; | 
+ok   web (xp3): the game's engine options in resource/config.cf, ahead of the engine's: soundpoolsize=97 | kagexreleasetest=web | debugwin=no | padinterval="\x37\x30"
+ok   web (xp3): title, manifest and icons
+ok   web (xp3): the build's id in the page and its scripts: f35ff880102940da ['coi-serviceworker.js', 'kagex-web.js?v=f35ff880102940da', 'webconfig.js?v=f35ff880102940da', 'krkrz.js?v=f35ff880102940da']
+ok   web (xp3): link previews
+ok   web (xp3): krkrz.data is what krkrz.js expects: 54924350 bytes
+ok   web (xp3): data.xp3 preloaded
+ok   web: another build, another id (players' pages and caches update): 6e5b2d0b52b3afe3 / f35ff880102940da
+ok   media: build:  {"images": 918, "sounds": 2, "movies": 0, "smallerMovies": 0, "fromCache": 918, "bytesBefore": 17617450, "bytesAfter": 16935694, "keptByReference": 6, "keptForEffects": 6, "rewrittenScripts": 0}
+ok   media: WAV to Opus, its loop points at 48 kHz: #2.00
+# Sound Loop Information (utf-8)
+# Generated by krkrz_tools
+Link { From=96000;            To=48000;            Smooth=False; Condition=no; RefValue=0;          CondVar=0;  }
+ok   media: FLAC to Opus
+ok   media: a file the scripts name is kept
+ok   media: files a name pattern covers are kept
+ok   media: images to TLG
+ok   media: rule images stay PNG (the engine loads no TLG as a rule): rule_shatter.png, wipe_brush.png
+ok   media: the framework's images too
+ok   media: textures an Effekseer effect names are kept: kept for effects: 6
+ok   media: sizes: 17617450 -> 16935694 bytes
+ok   media: the test run with converted media: The game started without script errors 
+ok   converted game: a button finds its hover image, the CG screen its thumbnail: start_over.tlg|thum_event1.tlg
+ok   converted game: hovering a button highlights it: changed
+ok   converted game: a rule transition loads its rule: rule_shatter: ok, wipe_brush: ok
+ok   converted game: an effect's textures stay PNG: png
+ok   converted game: an effect draws: drawn
+ok   media: build with the names rewritten
+ok   media: the script names the new files: *start | [playse storage="kr_ref.opus"] | [eval exp="tf.v = 'tv%03d.opus'"] | [s] | 
+ok   media: the source script is untouched
+ok   media: those files converted
+ok   media: the cache: 920 from the cache, of 921 images and 5 sounds
+ok   media: build with JPEG for opaque images
+ok   media: rule images stay PNG: rule_shatter.png, wipe_brush.png
+skip signing build tests: not a Linux host
+ok   hidden names (windows): built with a file named in Japanese, encrypted with the names hidden:  {'archive': 'encrypted, names hidden', 'scenes': 'plain .scn', 'signed': False}
+ok   hidden names: the test run starts the game: The game started without script errors 
+ok   hidden names: the game's startup.tjs runs: 12:06:20 kagex-test: startup.tjs ran | 12:06:20 kagex-test: an upper-case extension loads 1920
+ok   hidden names: an image named in Japanese with an upper-case extension loads: 12:06:20 kagex-test: startup.tjs ran | 12:06:20 kagex-test: an upper-case extension loads 1920
+ok   scripts: build
+ok   scripts: compiled, and kept as source only where needed: {"compiled": 8, "expressions": 3, "fixed": 0, "truncates": false, "kept": [{"name": "main/constfunc.tjs", "why": "it has (const) arrays or dictionaries, which the engine's bytecode has no form for (it would read them as null)"}, {"name": "main/table.tjs", "why": "it has (const) arrays or dictionaries, which the engine's bytecode has no form for (it would read them as null)"}], "log": "C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/Scripts Game/release/compile-scripts.log"}
+ok   scripts: (const) objects keep their script as source: [{"name": "main/constfunc.tjs", "why": "it has (const) arrays or dictionaries, which the engine's bytecode has no form for (it would read them as null)"}, {"name": "main/table.tjs", "why": "it has (const) arrays or dictionaries, which the engine's bytecode has no form for (it would read them as null)"}]
+ok   scripts: the expression scripts: 3 as expressions
+ok   scripts: the packaged scripts are bytecode: main/consts.tjs, main/data.tjs, main/fold.tjs, main/func.tjs, main/sjis.tjs, main/utf16.tjs, startup.tjs, system/Initialize.tjs
+ok   scripts: the compiled game's checks: 25 checks
+ok   scripts: a patch holds only the script that changed, compiled: main/consts.tjs
+ok   scenes: keygen writes the keys file: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmp3gmurtfi\keys\scenes-keys.txt.
+Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+ok   scenes: plan lists the scripts to compile: {"compile": true, "scripts": 9, "encrypted": true, "format": ""}
+ok   scenes: engines/ next to data/ is used, and check and plan name the format: From C:/Users/runneradmin/AppData/Local/Temp/tmp3gmurtfi/My Game/engines | .scn | Scenarios compile to .scn with this engine (it has the scnfile plugin)
+ok   scenes: an encrypted build:  
+ok   scenes: a .scn for each listed script, encrypted: action.ks.scn, anim.ks.scn, char.ks.scn, effect.ks.scn, envlayer.ks.scn, layer.ks.scn, s0001.ks.scn, text.ks.scn, transition.ks.scn
+ok   scenes: the compiled scripts, their translations (built into them) and the compiler's files are left out
+ok   scenes: the key is in the package's plugin: scnfile.dll
+ok   scenes: test run: The game started without script errors 
+ok   scenes: a patch after one script changed holds its compiled file only: scenario/layer.ks.scn
+ok   patch: a build of a patch alone writes the file list and patch.zip
+ok   patch: from an empty list it holds every file: 1280 in the zip, 1280 listed
+ok   patch: the defaults keep .clip and .psd files, split into their layers where they can be read: fgimage/emblem.svg, fgimage/emblem.txt, fgimage/emblem_3.tlg, fgimage/emblem_5.tlg, fgimage/emblem_bitmap.png, image/layers.psd
+ok   patch: says a .psd it can't read went in as it is: image/layers.psd couldn't be split into its layers (not a Photoshop file it can read (it has no picture size)), so it went in as it is Patch since 0: 1280 files new or changed The patch changes main/Storages.tjs, startup.tjs, system/Initialize.tjs, which the game reads before it loads patches: those changes need a full release
+ok   patch: with *.psd and *.clip left out, a .clip a script loads layers from is kept (split), a .psd nothing names isn't
+ok   patch: a release.json with 0.9.2's default exclusions keeps .psd files
+ok   patch: only what changed since 1.0.0: others/zz_patch.txt, scenario/layer.ks
+ok   patch: says a file removed since stays in the game: image/layers.psd couldn't be split into its layers (not a Photoshop file it can read (it has no picture size)), so it went in as it is Patch since 1.0.0: 2 files new or changed; 1 file removed since then stays in the game (a patch can't remove files)
+ok   patch: listed with the outputs
+ok   loudness: --cli loudness measures the sounds as ffmpeg does, with loudness.csv's gains: ai000001 -15.90210891178882, bgm01 -16.27086367284988 (37 sounds)
+ok   loudness: check refuses a target for a kind there isn't: {'loudness.targets': ['A target is for voice, bgm or se (not "lufs")']}
+ok   loudness: a build writes the report
+ok   loudness: the staged loudness.csv brings the far voices to the target, keeps the game's lines: bgm=-4 hiyori000001.ogg=+2.4 pip000003.ogg=+1.2 pip000005.ogg=-1.3 pip000007.ogg=+2.8 pip000008.ogg=-2.5 pip000009=+5 pipgreet01.ogg=+1.9 pipgreet06.ogg=+1.3 vee000001.ogg=+2.3 voice:hiyori=+2.5 voice:vee=+2.5
+ok   loudness: the report notes what the table does: ['voice/pip000008.ogg', 'voice', '-13.5', '-13.5', '-16.0', '+0.0', 'brought to its target']
+ok   pieces: the defaults look at evimage: {'opaque': 'png', 'alpha': 'png', 'jpegQuality': 90, 'cgPieces': ['evimage']}
+ok   pieces: check refuses a path for a CG folder: {'media.images.cgPieces': ["A CG folder is a folder's name, as evimage (not a path)"]}
+ok   pieces: a build with CG pieces
+ok   pieces: a picture that's its run's first with a rectangle changed is that rectangle, listed with its base and place: {'zz_b': ['zz_a', '100', '50'], 'zz_d': ['zz_c', '10', '10']}; zz_b (40, 30), zz_d (5, 5)
+ok   pieces: bases, another size, a masked picture and a language's are kept whole: ['zz_b', 'zz_d']
+ok   pieces: a layered file's layer pictures stay as they are: ['zz_b', 'zz_d']
+ok   pieces: the build reports them: {'pictures': 5, 'pieces': 2, 'fromCache': 0, 'bytesBefore': 226903, 'bytesAfter': 175}
+ok   pieces: a second build takes them from the cache, the same bytes: {'pictures': 5, 'pieces': 2, 'fromCache': 4, 'bytesBefore': 226903, 'bytesAfter': 175}
+ok   pieces: pictures that become JPEG stay whole
+ok   pieces: none without CG folders
+  (movies: skipped, no ffmpeg here)
+ok   layered: the plan splits Pip's PSDs, emblem.clip and layers.psd (every one the game has): 5
+ok   layered: build: {"files": 4, "pictures": 143, "bytesBefore": 1843391, "bytesAfter": 609710}
+ok   layered: no .psd or .clip in the game but the one it can't read: image/layers.psd
+ok   layered: says layers.psd couldn't be read and went in as it is: image/layers.psd couldn't be split into its layers (not a Photoshop file it can read (it has no picture size)), so it went in as it is 3 files weren't converted because scripts name them with their extension (Media > Names with extensions) 6 files weren't converted because Effekseer effects use them Patch since 0: 1272 files new or changed The patch changes main/Storages.tjs, startup.tjs, system/Initialize.tjs, which the game reads before it loads patches: those changes need a full release
+ok   layered: the files and pictures split: {"files": 4, "pictures": 143, "bytesBefore": 1843391, "bytesAfter": 609710}
+ok   layered: pip_0.psd split into pip_0.txt, Pip's layer structure: 56 rows, 56 expected
+ok   layered: pip_1.psd split into pip_1.txt, Pip's layer structure: 56 rows, 56 expected
+ok   layered: pip_2.psd split into pip_2.txt, Pip's layer structure: 56 rows, 56 expected
+ok   layered: Pip's pictures, pixel for pixel: 141 the same, 0 not
+ok   layered: emblem.clip split into its badge (3) and star (5): [('', '', '', '', '320', '320', '', '', '', '', ''), ('0', 'star', '0', '0', '320', '320', '13', '255', '1', '5', ''), ('0', 'badge', '0', '0', '320', '320', '13', '255', '1', '3', '')]
+ok   layered: a file named like the layer structure stops the build: Splitting PSD and CLIP files: fgimage/emblem.clip: the game already has emblem.txt, the name its layer structure would be written to (rename one of them)
+ok   layered: a PSD whose pose has its layer structure (.txt) stays out: 4
+all passed
