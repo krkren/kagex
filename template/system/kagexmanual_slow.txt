@@ -7,4 +7,5 @@ Try these, one at a time:
 - [Vertical sync on](option:vsync=true) evens the frames out; [off](option:vsync=false) may help a slow computer keep up.
 - Close other programs, and on a laptop, plug it in: saving power slows the graphics down.
 - Still slow? The [advanced settings](advanced) have memory and drawing settings.
+- If the game stops answering altogether, close it and start it again: after 20 seconds it writes what it was doing to `freeze-report.txt` in its save folder, which helps whoever made the game find the cause. Send it with your report.
 > In a web browser, the game fetches its pictures and sounds the first time it needs them, so the first play is slower than the next.

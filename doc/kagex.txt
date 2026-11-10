@@ -3563,6 +3563,23 @@ galleryError (● The Screen, the Controller and Screenshots).
 
 
 
+● When the Game Stops Answering
+
+Since 0.28.1 the framework keeps a watch on its own thread through the sdlsystem plugin
+(SystemSupport.tjs, SDLSystem.watchdog): four times a second the window's event timer tells the
+plugin it's running, and where (KAGFreezeNote: the script and line, stable or running, an
+extra screen, transitions, a dialog, skip or auto). When that stops for KAGFreezeWatchSeconds
+(20; 0 turns it off) while the game isn't put away or minimized, the plugin's own thread writes
+a report to the system's log (logcat on Android, the engine's stderr elsewhere) and to
+freeze-report.txt in the save folder (where that folder isn't a local one, as on phones, SDL's
+folder of the app: SDLSystem.prefFolder): the last place noted and, on Linux and Android, every
+thread of the game with its state, its processor time over half a second and what it waits on
+in the kernel, so a thread looping (state R, about 50 ticks) stands apart from threads waiting on
+each other (state S, 0, futex). At the next start the framework logs the report and keeps it as
+freeze-report-earlier.txt. Not on the web. The manual's "slow" page asks players to send it.
+
+
+
 ● The Game in the Background
 
 Since 0.28.0 (SystemSupport.tjs, through the sdlsystem plugin). The option backgroundMode ("In

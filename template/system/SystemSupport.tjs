@@ -25,7 +25,18 @@
  * And always, with the plugin: when the system puts the game away (phones), warns that memory is
  * low, or ends it, the continue save and the system variables are written there and then
  * (KAGSaveBeforeError), and on a low-memory warning the caches are let go and a notice says so.
+ *
+ * The freeze watch (since 0.28.1, the plugin's watchdog): the window's event timer tells the
+ * plugin four times a second that the game is running, and where it is (KAGFreezeNote); when
+ * that stops for KAGFreezeWatchSeconds (20) while the game isn't put away, the plugin's own
+ * thread writes a report (the last place noted, and every thread's state and processor time)
+ * to the system's log (logcat on Android) and to freeze-report.txt in the save folder (SDL's
+ * folder of the app where the save folder isn't a local one). At the next start the framework
+ * logs an earlier report. Not on the web; 0 turns it off.
  */
+
+var KAGFreezeWatchSeconds = 20;
+var KAGFreezeReportName = "freeze-report.txt";
 
 function KAGCanOpen() { return typeof global.SDLSystem != "undefined"; }
 function KAGCanOpenFolders() { return KAGCanOpen() && KAGIsDesktop(); }
@@ -125,6 +136,8 @@ class KAGSystemEvents extends KAGPlugin
 		if (typeof global.SDLSystem != "undefined") SDLSystem.onEvent = KAGSystemUrgentEvent;
 	}
 
+	var freezeWatch = false; // the plugin's watchdog is on (KAGStartFreezeWatch)
+
 	function finalize()
 	{
 		leave();
@@ -137,6 +150,7 @@ class KAGSystemEvents extends KAGPlugin
 	function onTimer()
 	{
 		if (typeof global.SDLSystem == "undefined") return;
+		if (freezeWatch) try { SDLSystem.alive(KAGFreezeNote(window)); } catch (e) {}
 		var events;
 		try { events = SDLSystem.takeEvents(); } catch (e) { return; }
 		for (var i = 0; i < events.count; i++) note(events[i]);
@@ -295,11 +309,69 @@ function KAGSystemEventsOf(win)
 	return win.systemEvents;
 }
 
+// The freeze watch: where the game is, for a report (the script and line, the conductor's state,
+// a transition or a dialog)
+function KAGFreezeNote(win)
+{
+	var c = win.conductor, s = "";
+	try { s = "%s:%d".sprintf(c.curStorage, c.curLine); } catch (e) {}
+	try {
+		s += win.inStable ? " stable" : " running";
+		s += " (extra screen)" if win.usingExtraConductor;
+		s += " transitions:" + win.transCount if win.transCount > 0;
+		s += " dialog" if win.currentDialog !== void;
+		s += " skipping" if win.skipMode > 0;
+		s += " auto" if win.autoMode;
+	} catch (e) {}
+	return s;
+}
+
+// where the report goes: the save folder's native path, or SDL's own folder of the app there
+function KAGFreezeReportPath()
+{
+	var p = KAGNativePath(System.dataPath);
+	if (p != "") return p + (p.charAt(p.length - 1) == "/" || p.charAt(p.length - 1) == "\\" ? "" : "/") + KAGFreezeReportName;
+	var v, org = (v = System.getArgument("-orgname")) !== void && v != "" ? v : "wamsoft";
+	var app = (v = System.getArgument("-appname")) !== void && v != "" ? v : "krkrz";
+	try { p = SDLSystem.prefFolder(org, app); } catch (e) { p = ""; }
+	return p != "" ? p + KAGFreezeReportName : "";
+}
+
+function KAGStartFreezeWatch(win)
+{
+	if (typeof global.SDLSystem == "undefined" || typeof SDLSystem.watchdog == "undefined") return;
+	if (typeof System.platformTag != "undefined" && System.platformTag == "web") return;
+	var path = KAGFreezeReportPath();
+	// an earlier report: in the log, where a player's log reaches the developer
+	if (path != "") try {
+		var name = win.localStorageName(path);
+		if (Storages.isExistentStorage(name)) {
+			var lines = [].load(name);
+			dm("The game stopped answering in an earlier run (" + path + "):");
+			for (var i = 0; i < lines.count && i < 60; i++) dm("  " + lines[i]);
+			// kept as freeze-report-earlier.txt, so it's told once
+			var earlier = name.substring(0, name.length - 4) + "-earlier.txt";
+			try { Storages.deleteFile(earlier) if Storages.isExistentStorage(earlier); } catch (e) {}
+			Storages.copyFile(name, earlier);
+			Storages.deleteFile(name);
+		}
+	} catch (e) {}
+	if (KAGFreezeWatchSeconds <= 0) return;
+	var events = KAGSystemEventsOf(win);
+	try {
+		SDLSystem.alive(KAGFreezeNote(win));
+		events.freezeWatch = SDLSystem.watchdog(KAGFreezeWatchSeconds, path);
+	} catch (e) {
+		dm("The freeze watch: " + e.message);
+	}
+}
+
 // at start, once the window and its system variables are there
 function KAGApplySystemOptions()
 {
 	if (typeof global.SDLSystem == "undefined") return;
 	KAGSystemEventsOf(kag);
+	KAGStartFreezeWatch(kag);
 	var v = KAGOptionGet("frameLimit");
 	if (v !== void && KAGOptions.frameLimit.available()) KAGOptions.frameLimit.setValue(v);
 }

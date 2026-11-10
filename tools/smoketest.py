@@ -52,6 +52,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import random
 import tempfile
 import time
 
@@ -2188,9 +2189,14 @@ def hunt_steps(eng):
     the sample again and again, clicking at a player's changing pace (80 ms to 1.3 s), until the
     game stops answering; then writes what its threads were doing (hang-stacks.txt in the work
     folder: debuggerd on Android, gdb here) and fails. For hangs a player meets now and then
-    (Android's in the first demo's rotation)"""
+    (Android's in the first demo's rotation). A fifth field "touch" (Android) taps the screen
+    through adb instead (input tap: the touch screen's own events, held clicks, the gestures),
+    anywhere in the middle of the picture, the rotating character's place included"""
     steps, step = collector()
-    storage, start, end, rounds = eng.opts.hunt.split(":")
+    fields = eng.opts.hunt.split(":")
+    storage, start, end, rounds = fields[:4]
+    touch = len(fields) > 4 and fields[4] == "touch" and isinstance(eng, AndroidEngine)
+    screen = eng.screen_size() if touch else None
 
     @step("start-up reaches the title screen")
     def _():
@@ -2211,6 +2217,7 @@ def hunt_steps(eng):
             '  global.__huntTimer.interval = 80 + (int)(Math.random() * 1200);'
             '  if (!kag.inStable) return;'
             '  if (global.__huntLabel == global.__huntEnd) { global.__huntTimer.enabled = false; global.__huntDone = true; return; }'
+            '  if (global.__huntTouch) return;'
             '  kag.onPrimaryClick();'
             '  global.__huntClicks++;'
             ' };'
@@ -2218,9 +2225,9 @@ def hunt_steps(eng):
             '} return 1;')
         report = os.path.join(eng.workdir, "hang-stacks.txt")
         for r in range(int(rounds)):
-            eng.tjs('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0;'
-                    ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
-                    ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;' % (storage, end, storage, start))
+            eng.tjs(('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0; global.__huntTouch = %d;'
+                     ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
+                     ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;') % (1 if touch else 0, storage, end, storage, start))
             last, since, began = None, time.time(), time.time()
             while True:
                 try:
@@ -2238,7 +2245,17 @@ def hunt_steps(eng):
                     got = eng.hang_report(report)
                     raise SmokeError("round %d: still at %s after 2 minutes of clicks, though the game answers%s"
                                      % (r + 1, label, "; its threads are in " + report if got else ""))
-                time.sleep(2)
+                if not touch:
+                    time.sleep(2)
+                    continue
+                # taps for about two seconds, at a player's changing pace, over the middle of the
+                # picture (the message window, the character, the stage)
+                until = time.time() + 2
+                while time.time() < until:
+                    w, h = screen
+                    eng.tap(w * random.uniform(0.2, 0.8), h * random.uniform(0.25, 0.85))
+                    eng.tjs("global.__huntClicks++; return 1;", 30)
+                    time.sleep(random.uniform(0.05, 1.2))
             print("     round %d: %s clicks, %.0f s" % (r + 1, clicks, time.time() - began), flush=True)
         eng.tjs("__huntTimer.enabled = false; return 1;")
 
