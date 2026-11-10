@@ -14412,7 +14412,7 @@ class KAGWindow extends Window
 	//----------------------------------------------- Continue and quick saves --
 	// The save folder and a file in it: saveDataLocation may end with "/" (System.dataPath
 	// does), and a doubled slash in a user:// name hands SDL's storage an absolute path, which
-	// it refuses (TODO.md)
+	// it refuses (UPSTREAM.md 54)
 	function saveDataFile(name)
 	{
 		var d = saveDataLocation;
