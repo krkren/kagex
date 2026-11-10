@@ -134,9 +134,12 @@ class KAGSystemEvents extends KAGPlugin
 		timer.interval = 250;
 		timer.enabled = true;
 		if (typeof global.SDLSystem != "undefined") SDLSystem.onEvent = KAGSystemUrgentEvent;
+		var tag = typeof System.platformTag != "undefined" ? System.platformTag : "";
+		keyboardWatch = (tag == "android" || tag == "ios") && typeof global.KAGTextEntryKeyboardLeftUp != "undefined" && KAGTextEntryKeyboardThere();
 	}
 
 	var freezeWatch = false; // the plugin's watchdog is on (KAGStartFreezeWatch)
+	var keyboardWatch = false; // a phone's keyboard left up is put away (KAGTextEntryKeyboardLeftUp)
 
 	function finalize()
 	{
@@ -151,6 +154,7 @@ class KAGSystemEvents extends KAGPlugin
 	{
 		if (typeof global.SDLSystem == "undefined") return;
 		if (freezeWatch) try { SDLSystem.alive(KAGFreezeNote(window)); } catch (e) {}
+		if (keyboardWatch) KAGTextEntryKeyboardLeftUp();
 		var events;
 		try { events = SDLSystem.takeEvents(); } catch (e) { return; }
 		for (var i = 0; i < events.count; i++) note(events[i]);

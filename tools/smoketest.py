@@ -622,6 +622,13 @@ class AndroidEngine(Engine):
         """a real tap on the screen at x, y (the device's pixels), through the touch screen"""
         self.run_adb("shell", "input", "tap", str(int(x)), str(int(y)))
 
+    def keyboard_shown(self):
+        """whether the system's keyboard is on the screen (dumpsys input_method's mInputShown;
+        None where it doesn't say)"""
+        out = self.run_adb("shell", "dumpsys", "input_method")
+        m = re.findall(r"mInputShown=(true|false)", out)
+        return None if not m else "true" in m
+
     def screen_size(self):
         """the screen's size, landscape (wm size gives the device's natural, portrait one)"""
         out = self.run_adb("shell", "wm", "size")
@@ -3825,6 +3832,20 @@ def sample_steps(eng):
             raise SmokeError("the load screen's slot doesn't say the comment: %s" % name)
         eng.key("VK_ESCAPE")
         eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        # the keyboard went with the prompts: with Android's UI thread busy, SDL sent no hide for
+        # a field closed before the keyboard's show had run, and in 0.28.1's fourth release run
+        # the keyboard stayed up and took the next step's taps (KAGTextEntryKeyboardLeftUp)
+        if hasattr(eng, "keyboard_shown"):
+            shown = None
+            for _ in range(20):
+                shown = eng.keyboard_shown()
+                if not shown:
+                    break
+                time.sleep(0.25)
+            print("     the system's keyboard after the prompts: %s" % {True: "up", False: "down", None: "(not said)"}[shown], flush=True)
+            if shown:
+                eng.back()  # Back puts the keyboard away, so the steps after this start from the game
+                raise SmokeError("the system's keyboard stayed up after the comment prompts closed")
 
     @step("screenshots go to the phone's photo gallery where there is one (Android's MediaStore, iOS's photo library), and the card says so")
     def _():
