@@ -1707,9 +1707,19 @@ private:
 			inManifest = std::string("<queries>\n    <intent>\n        <action android:name=\"") + tts + "\" />\n    </intent>\n</queries>\n" + inManifest;
 		if (inManifest.empty() && inApp.empty()) return;
 		if (!inManifest.empty()) {
-			const size_t at = text.find("\n<application");
+			// the <application> tag, however it's indented (0.28.0's engine packages have the TTS
+			// query before it, which left it indented: a search for it at a line's start found none),
+			// and the additions go in before its line
+			size_t at = std::string::npos;
+			for (size_t p = text.find("<application"); p != std::string::npos; p = text.find("<application", p + 1)) {
+				const char c = p + 12 < text.size() ? text[p + 12] : '\0';
+				if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '>') { at = p; break; }
+			}
 			if (at == std::string::npos) throw Failure{ "The Android engine package's AndroidManifest.xml has no <application>" };
-			text.insert(at + 1, "<!-- kagex-release: platforms.android (ttsQuery, manifestAdditions) -->\n" + inManifest + "\n\n");
+			size_t line = text.rfind('\n', at);
+			line = line == std::string::npos ? 0 : line + 1;
+			if (text.find_first_not_of(" \t", line) != at) line = at;   // something before it on its line
+			text.insert(line, "<!-- kagex-release: platforms.android (ttsQuery, manifestAdditions) -->\n" + inManifest + "\n\n");
 		}
 		if (!inApp.empty()) {
 			const size_t at = text.rfind("</application>");
