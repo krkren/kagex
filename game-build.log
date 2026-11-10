@@ -1,0 +1,72 @@
+Engine packages from /home/runner/work/kagex/kagex/kirikiri/kagex/engines
+Game files: 1279
+Split 1 PSD and CLIP files into 2 layer pictures: 0 MB -> 0 MB
+Converted 918 images and 0 sounds (49 from the cache): 16 MB -> 16 MB
+3 files weren't converted because scripts name them with their extension (Media > Names with extensions)
+6 files weren't converted because Effekseer effects use them
+Downloading https://github.com/krkren/kagex/releases/download/0.28.1/kagex_engine_linux.zip
+Compiling the scenarios with /home/runner/.cache/kagex-release/engines/0.28.1/kagex_engine_linux/krkrz
+Compiled scenarios: 9 compiled, 0 up to date, 0 failed, 0 warnings
+Scenarios: 9 compiled to .scn; their scripts and translations are left out
+Compiled 120 scripts to bytecode (2 as expressions; 40 with constants beyond 32 bits put right)
+File list: /home/runner/work/kagex/kagex/kirikiri/kagex/release/kagex-sample-0.28.1-files.json
+data.xp3 (android): 1244 files, 56 MB
+Gradle :app:assembleReleaseDebugSigned (the first build downloads Gradle and the Android build tools)
+gradle: To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+gradle: Daemon will be stopped at the end of the build 
+gradle: > Configure project :app
+gradle: WARNING: The option setting 'android.usesSdkInManifest.disallowed=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.sdk.defaultTargetSdkToCompileSdkIfUnset=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.enableAppCompileTimeRClass=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.newDsl=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.r8.optimizedResourceShrinking=false' is deprecated.
+gradle: The current default is 'true'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: WARNING: The option setting 'android.defaults.buildfeatures.resvalues=true' is deprecated.
+gradle: The current default is 'false'.
+gradle: It will be removed in version 10.0 of the Android Gradle plugin.
+gradle: [build-layout] BUILD_SYSTEM_DIR=/home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android
+gradle: [build-layout] PROJECT_DIR     =/home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android
+gradle: [playGames] disabled (from app-config.json cmake.plugins)
+gradle: [a11y] disabled (from app-config.json cmake.plugins)
+gradle: [playGames] disabled: stripped Play Games manifest entries -> /home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android/build/android/app/generated/manifest/AndroidManifest.xml
+gradle: WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+gradle: To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+gradle: WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+gradle: To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+gradle: WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+gradle: To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+gradle: WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+gradle: To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+gradle: WARNING: The property android.dependency.excludeLibraryComponentsFromConstraints improves project import performance for very large projects. It should be enabled to improve performance.
+gradle: To suppress this warning, add android.generateSyncIssueWhenLibraryConstraintsAreEnabled=false to gradle.properties
+gradle: [generateMyappCmake] wrote /home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android/build/android/app/generated/cmake/myapp.cmake
+gradle: [generatePadRes] 0 fetch pack(s): []
+gradle: [assetPack] 16 file(s) total: 16 copied, 0 unchanged, 0 removed
+gradle: Note: /home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android/app/src/main/java/jp/wamsoft/krkrz/BootstrapActivity.java uses or overrides a deprecated API.
+gradle: Note: Recompile with -Xlint:deprecation for details.
+gradle: [Incubating] Problems report is available at: file:///home/runner/work/kagex/kagex/kirikiri/kagex/release/.work/android/build/android/root/reports/problems/problems-report.html
+gradle: Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+gradle: You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+gradle: For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+gradle: BUILD SUCCESSFUL in 31s
+gradle: 45 actionable tasks: 45 executed
+gradle: Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.3.1/userguide/configuration_cache_enabling.html
+Android: /home/runner/work/kagex/kagex/kirikiri/kagex/release/kagex-sample-0.28.1.apk
+PSD and CLIP files: 1 split into 2 layer pictures
+Scripts: 120 compiled to bytecode, 0 kept as source
+note: 3 files weren't converted because scripts name them with their extension (Media > Names with extensions)
+note: 6 files weren't converted because Effekseer effects use them
+note: Scenarios: compiled, not encrypted (no key)
+note: android: signed with a debug key, for testing (Google Play needs your own key)

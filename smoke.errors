@@ -1,0 +1,16 @@
+159-     the system's keyboard after the prompts: down
+160-ok   save comments: with the option on, a save asks for a comment; three lines typed (Return between them, a fourth refused) are kept in the save, drawn on the slot and listed on the load screen; Cancel keeps the old one   6.4s
+161-     sent to the gallery as screenshot-20261110-145128.png
+162:     events, error: gallerysaved|
+163-     MediaStore: Row: 0 _display_name=screenshot-20261110-145128.png, relative_path=Pictures/KAGEX Sample/
+164-ok   screenshots go to the phone's photo gallery where there is one (Android's MediaStore, iOS's photo library), and the card says so   3.5s
+165-     Config from the story: 9 page tabs; under a header button: 
+166-     left with a tap: the history, Config, save, load, a Yes/No prompt, About, the controller test, the controls list, Change Controls, a quick menu panel
+167-ok   every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel   9.8s
+168-ok   controller: Y switches auto mode, X shows the history, B closes it   1.1s
+169-ok   controller: START opens config.ks and B closes it                1.2s
+170-ok   controller: BACK opens save.ks and B closes it                   1.5s
+171-ok   controller: L1 opens load.ks and B closes it                     1.5s
+172-ok   a Yes/No prompt is drawn in the game window, Esc answers No      0.4s
+173-ok   the About screen opens in the game window and closes             0.4s
+174-ok   screen readers: a Yes/No prompt's buttons are read, and one pressed through it answers   0.2s
