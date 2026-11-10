@@ -2766,11 +2766,12 @@ Config.tjs lists the languages, the one the scenarios and scripts are written in
 language) first:
 
 
-    ;global.KAGLanguageList = "en,ja";
+    ;global.KAGLanguageList = "en,ja,zh-cn,zh-tw";
 
 
-With one language (the template's "en") nothing changes. Each other language has a folder,
-data/lang/<code>/ (lang/ja/ for Japanese):
+(The sample's, since 0.28.1: English, Japanese, and Simplified and Traditional Chinese.) With one
+language (the template's "en") nothing changes. Each other language has a folder,
+data/lang/<code>/ (lang/ja/ for Japanese, lang/zh-cn/ and lang/zh-tw/ for Chinese):
 
 
     lang/ja/scenario/   The scripts in !scnlist.txt, translated (◇ Translating the story)
@@ -2786,6 +2787,18 @@ language, after every other path: a file in it stands in for the file of the sam
 anywhere else. The image cache keys on the name a script loads, so a switch empties it
 (System.clearGraphicCache). A zip patch (patch.zip and on, or DLC through KAGMountPatchZip)
 can carry lang/<code>/ folders of its own, which join the language's.
+
+A language whose characters the engine's own fonts don't have (Chinese: the engine brings
+Roboto, and the template Noto Sans JP, whose kanji are Japanese forms) needs a font of its
+own: list it in fonts.csv with the language in its languages column (● Fonts and Text Styles), and the text
+of that language is drawn in it first. The sample ships Noto Sans SC for zh-cn and Noto Sans TC
+for zh-tw, cut down by tools/assets/make_fonts.py to the characters its texts use and the
+common ones (GB2312's first level, Big5's), about 1.6 and 3.2 MB. The name inside a font file
+has to be the face fonts.csv gives it: the engine's own drawing (Layer.drawText, a Yes/No
+prompt, the help line) finds a registered file's font by that name, and with another one draws
+a system font in its place, a "?" for every character that font lacks (make_fonts.py renames
+Noto CJK's "Noto Sans CJK SC" and the like; up to 0.28.0 the serif font drew this way outside
+the message window).
 
 
 ◇ Translating the story
@@ -3402,7 +3415,16 @@ variables and applied at start; one the platform can't do leaves its row empty:
   screenshotFormat  PNG or JPEG
   screenshotPlace   (since 0.28.0, desktops) where F12's pictures go: the save folder, or a
                     folder named after the game in the player's pictures folder
-                    (SDLSystem.userFolder("pictures"), KAGScreenshotPlace)
+                    (SDLSystem.userFolder("pictures"), KAGScreenshotPlace). On Android and iOS
+                    (since 0.28.1) the save folder, out of the player's reach there, or the
+                    phone's photo gallery, which is where they go at first: a PNG added through
+                    SDLSystem.saveToGallery (Android's MediaStore, in Pictures/<the game's
+                    title>, from Android 10; iOS's photo library, asking the player the first
+                    time, which needs NSPhotoLibraryAddUsageDescription in the app's
+                    Info.plist: kagex-release writes platforms.ios.photosUsage there, and
+                    without it the choice isn't offered). Its card says "In Photos"; a refusal
+                    says the screenshot couldn't go there (KAGGalleryPossible,
+                    KAGScreenshotsToGallery, kag.onGallerySaved)
   screenshotOpen    (since 0.28.0, desktops) a button that opens the folder they go to
   screenshotCopy    (since 0.28.0, desktops) each picture is also put on the clipboard, opaque
                     (SDLSystem.copyImage: PNG and BMP)
@@ -3534,7 +3556,27 @@ without it the script opens with what the system opens it with.
 
 SDLSystem itself (the plugin's README has every member): platform, focused, minimized,
 background, lowMemory, takeEvents(), onEvent, copyImage(layer), clipboardHas(type),
-userFolder(name), makeFolder(path), frameLimit, lastError.
+userFolder(name), makeFolder(path), frameLimit, lastError; since 0.28.1 keyboard,
+screenKeyboard, textInputActive, startTextInput(multiline, x, y, w, h), stopTextInput()
+(● Fields of Several Lines) and galleryPossible, saveToGallery(layer, name, album),
+galleryError (● The Screen, the Controller and Screenshots).
+
+
+
+● When the Game Stops Answering
+
+Since 0.28.1 the framework keeps a watch on its own thread through the sdlsystem plugin
+(SystemSupport.tjs, SDLSystem.watchdog): four times a second the window's event timer tells the
+plugin it's running, and where (KAGFreezeNote: the script and line, stable or running, an
+extra screen, transitions, a dialog, skip or auto). When that stops for KAGFreezeWatchSeconds
+(20; 0 turns it off) while the game isn't put away or minimized, the plugin's own thread writes
+a report to the system's log (logcat on Android, the engine's stderr elsewhere) and to
+freeze-report.txt in the save folder (where that folder isn't a local one, as on phones, SDL's
+folder of the app: SDLSystem.prefFolder): the last place noted and, on Linux and Android, every
+thread of the game with its state, its processor time over half a second and what it waits on
+in the kernel, so a thread looping (state R, about 50 ticks) stands apart from threads waiting on
+each other (state S, 0, futex). At the next start the framework logs the report and keeps it as
+freeze-report-earlier.txt. Not on the web. The manual's "slow" page asks players to send it.
 
 
 
@@ -4257,7 +4299,7 @@ pages of help with links between them, Back and Forward, and links that change a
 and then or open a screen. Help > Contents opens it, as do the action "manual" (F1, unless the
 game binds F1 to something else) and KAGShowManual(page) from a script or a button
 (exp="KAGShowManual()"). Every game gets the framework's pages (template/system/kagexmanual_*.txt,
-in English and Japanese): an index, the controls, saving and loading, the settings, and answers
+in English, Japanese and Chinese): an index, the controls, saving and loading, the settings, and answers
 for a game that's slow, a picture stretched or blurry, no sound, movies that don't play, and
 making the game easier to see, hear and play, and getting help. KAGManualEnabled = false turns
 it off (Help > Contents then opens helpFile, as before).
@@ -4428,6 +4470,60 @@ template/system/TextEntry.tjs):
   the game's field; Enter runs enter=, and closing the keyboard keeps the text. There, full screen
   is the whole page's rather than the canvas's (a browser lets nothing outside the full-screen
   element have the keyboard).
+
+● Fields of Several Lines, and Asking for Text
+
+Since 0.28.1 an [edit] field can hold several lines, wrapped to its width (template/system/
+EditLayer.tjs):
+
+    [edit name="tf.note" multiline=true rows=4 maxlines=6 maxchars=300 length=700]
+
+  multiline  true: Return makes a new line (Ctrl+Return runs enter=), Up, Down, Page Up and Page
+             Down move by rows, Home and End go to a row's ends, a click places the cursor, and
+             the field scrolls (a mark at its right shows where) when the text has more rows
+             than it shows.
+  rows       The rows it shows (3); its height follows from them and the font.
+  maxlines   The most lines Return may make (none by default); maxchars still counts characters.
+
+The text has a "\n" between lines (a TJS string's new line). Words wrap at spaces, and a
+Japanese or Chinese line anywhere, but not before 、。」 and the like. On a phone the field
+takes the system's own keyboard in its multi-line mode while it has the focus (kagex's sdlsystem
+plugin, SDLSystem.startTextInput), so Return there makes a new line too; in a
+phone's browser the page types into a hidden <textarea>; where neither is there, the box above
+gives the field a line to type in for each of its rows. Elements' own input_box is one line
+(UPSTREAM.md 59), which is why the field is the framework's.
+
+KAGAskText(message, initial, onDone, options) asks for text in the Yes/No prompts' look: the
+message, a field and OK and Cancel. onDone(text, param) runs with what was typed on OK, and with
+void on Cancel (Esc, a right-click); false comes back when it can't open (another dialog is).
+
+  lines      The field's rows (3); 1 for a field of one line, where Return is OK.
+  maxLines   The most lines; maxChars the most characters.
+  ok         The OK button's label (through tr()).
+  param      Handed to onDone (TJS functions have no closures).
+
+    KAGAskText("What should the tea be called?", "", function(text) {
+        if (text !== void) f.teaName = text;
+    }, %[ lines:1, maxChars:20 ]);
+
+◇ Comments on saves
+
+As Wamsoft's games do, a save can carry a comment the player types (since 0.28.1): kept in the
+save file (beside its data, so a copy carries it) and in the bookmark index the save screens
+read.
+
+  kag.getBookMarkComment(num)        The comment, "" without one; several lines are "\n" apart.
+  kag.setBookMarkComment(num, text)  Writes it into the save; false for a missing or protected
+                                     bookmark.
+  KAGAskSaveComment(num, onDone, force)
+                                     Asks for it (three lines, 120 characters) when the player
+                                     turned on Config's "A Comment for Each Save", or always
+                                     with force; then onDone(num).
+
+A new save into a bookmark starts without a comment. The sample asks after a save on its save
+screen (saveAtSlot, Override.tjs) and draws the comment's first line in the slot, between the
+scene's title and the date (text style "slot.comment", textstyles.tjs); the load screen and the
+slots' names for screen readers show it too.
 
 ● Games on Phones and in the Browser
 

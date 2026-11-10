@@ -6,7 +6,8 @@
 // the save and load screens' slots: the scene's title, then the date
 KAGDefineTextStyle("slot", %[ size:36, color:0x24107a, minSize:22 ]);
 KAGDefineTextStyle("slot.date", %[ size:32, color:0x5c4cb4 ]);
-
+// a comment the player typed for the save (since 0.28.1): its first line, between the two
+KAGDefineTextStyle("slot.comment", %[ size:26, italic:true, color:0x8a3cc8, minSize:20 ]);
 // the title on a CG or Replay tile's band, and the Extras tabs' labels
 KAGDefineTextStyle("tile", %[ size:20, bold:true, minSize:13, align:"center", valign:"middle" ]);
 KAGDefineTextStyle("tab", %[ size:30, bold:true, minSize:18, align:"center", valign:"middle" ]);

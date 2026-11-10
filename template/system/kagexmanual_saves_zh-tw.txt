@@ -1,0 +1,12 @@
+﻿# 存檔與讀檔
+- 存檔：{key:save}。讀檔：{key:load}。
+- 快速存檔：{key:quickSave}，快速讀檔：{key:quickLoad}。快速存檔會在幾個專用的存檔欄位之間輪流儲存，所以最新的存檔永遠不會覆蓋前一個。
+- 關閉遊戲時，遊戲也會記下你的進度：[啟動時從上次離開的地方繼續](option:continueOn=true)，或[不繼續](option:continueOn=false)。
+- 存檔可以附上幾行備註，顯示在存檔欄位裡：[每次存檔後填寫](option:saveComments=true)，或[不填寫](option:saveComments=false)。
+## 存放位置
+你的存檔和設定儲存在 {savefolder}。[複製資料夾路徑](copy:{savefolder})
+
+截圖（{key:screenshot}）儲存在 {screenshots}。
+
+要把存檔帶到另一臺電腦上，請在遊戲沒有執行時，把這個資料夾中的檔案複製到那臺電腦上的同一個資料夾中。
+> 在網頁瀏覽器中，存檔由瀏覽器為這個網站儲存：清除網站資料，或者關閉無痕視窗時，存檔都會消失。

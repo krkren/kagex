@@ -180,6 +180,7 @@ const PLATFORM_FIELDS = {
 		{ path: 'data', label: 'Data', type: 'select', options: [DATA_XP3, DATA_FOLDER] },
 		{ path: 'bundleId', label: 'Bundle ID', type: 'text', help: 'Like com.studio.game; it must match the provisioning profile' },
 		{ path: 'buildNumber', label: 'Build number', type: 'number', min: 0, help: '0 = from the version' },
+		{ path: 'photosUsage', label: 'Photos', type: 'text', help: 'Why screenshots go to the photo library: iOS shows it as it asks the player (empty: none)' },
 		{ path: 'identity', label: 'Certificate', type: 'text', showIf: (p) => p.target === 'device', help: 'Apple Development: ... or Apple Distribution: ... (in your keychain)' },
 		{ path: 'profile', label: 'Provisioning profile', type: 'file', showIf: (p) => p.target === 'device' },
 	],

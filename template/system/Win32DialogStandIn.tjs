@@ -1,0 +1,411 @@
+/**
+ * Win32DialogStandIn.tjs (since 0.28.1): a stand-in for win32dialog.dll, the Windows-only plugin
+ * many older Kirikiri games build their settings and save dialogs on (doc/porting.txt). It
+ * defines the WIN32Dialog class the plugin did, in script, so the framework's win32dialog.tjs
+ * (WIN32DialogEX, WIN32GenericDialogEX) and a game's own dialogs run on every platform: the
+ * dialog template is shown as an Elements dialog over the game window (ElementsDialog's
+ * blocking overlay), not as a Windows dialog.
+ *
+ * Porting.tjs links it in place of the plugin (KAGPortingPlugins["win32dialog.dll"]), or a game
+ * runs it itself. What it does:
+ *   - the template (makeTemplate: Header, Items) is laid out in rows, as its controls' y places
+ *     them, each control as wide as the template made it: static text as labels, push buttons
+ *     as buttons, check boxes and radio buttons as theirs, a group box as a heading, an edit
+ *     box as a field (one line), a combo or list box as a picker of its strings
+ *   - open(window) shows it and returns when it closes, with close()'s result (IDCANCEL for
+ *     Esc); onInit runs before it shows, so the game's initial values (setItemText,
+ *     setCheckBox, CB_ADDSTRING...) are in it
+ *   - a button runs onCommand(WM_COMMAND, id, 0) as Windows would; its handler may close() the
+ *     dialog (IDOK and IDCANCEL do by default, WIN32DialogEX.defaultCommand)
+ *   - the controls' state lives here: getItemText, setItemText, getItemInt, setItemInt,
+ *     enabled, check, a list's strings and selection (sendItemMessage's BM_*, CB_*, LB_*,
+ *     WM_GETTEXT/WM_SETTEXT); what the player changed is in it as onCommand runs and after
+ * What it doesn't: list views, scroll bars, bitmaps on controls, a dialog's own resources
+ * (loadResource) and modeless dialogs are left out, and the layout keeps the template's rows
+ * and widths, not its exact places.
+ */
+
+// the constants win32dialog.tjs and games use (winuser.h, commctrl.h), where the plugin isn't
+var KAGWin32Constants = %[
+	IDOK:1, IDCANCEL:2, IDABORT:3, IDRETRY:4, IDIGNORE:5, IDYES:6, IDNO:7,
+	WM_SETTEXT:0x000C, WM_GETTEXT:0x000D, WM_GETTEXTLENGTH:0x000E, WM_COMMAND:0x0111,
+	BN_CLICKED:0, BM_GETCHECK:0x00F0, BM_SETCHECK:0x00F1, BM_GETSTATE:0x00F2, BST_UNCHECKED:0, BST_CHECKED:1,
+	EN_CHANGE:0x0300, EM_LIMITTEXT:0x00C5, EM_SETLIMITTEXT:0x00C5,
+	CB_ADDSTRING:0x0143, CB_DELETESTRING:0x0144, CB_GETCOUNT:0x0146, CB_GETCURSEL:0x0147, CB_GETLBTEXT:0x0148,
+	CB_RESETCONTENT:0x014B, CB_SETCURSEL:0x014E, CBN_SELCHANGE:1,
+	LB_ADDSTRING:0x0180, LB_DELETESTRING:0x0182, LB_RESETCONTENT:0x0184, LB_SETSEL:0x0185, LB_SETCURSEL:0x0186,
+	LB_GETSEL:0x0187, LB_GETCURSEL:0x0188, LB_GETTEXT:0x0189, LB_GETCOUNT:0x018B, LBN_SELCHANGE:1,
+	SBM_SETPOS:0x00E0, SBM_GETPOS:0x00E1,
+	WS_OVERLAPPED:0, WS_POPUP:0x80000000, WS_CHILD:0x40000000, WS_VISIBLE:0x10000000, WS_DISABLED:0x08000000,
+	WS_CAPTION:0x00C00000, WS_BORDER:0x00800000, WS_SYSMENU:0x00080000, WS_VSCROLL:0x00200000, WS_HSCROLL:0x00100000,
+	WS_GROUP:0x00020000, WS_TABSTOP:0x00010000,
+	DS_SETFONT:0x40, DS_MODALFRAME:0x80, DS_CENTER:0x0800,
+	BS_PUSHBUTTON:0, BS_DEFPUSHBUTTON:1, BS_CHECKBOX:2, BS_AUTOCHECKBOX:3, BS_RADIOBUTTON:4, BS_3STATE:5,
+	BS_AUTO3STATE:6, BS_GROUPBOX:7, BS_AUTORADIOBUTTON:9, BS_TYPEMASK:0x0F,
+	SS_LEFT:0, SS_CENTER:1, SS_RIGHT:2, SS_ICON:3, SS_BITMAP:0x0E, SS_CENTERIMAGE:0x200, SS_SUNKEN:0x1000,
+	ES_LEFT:0, ES_CENTER:1, ES_RIGHT:2, ES_MULTILINE:4, ES_PASSWORD:0x20, ES_AUTOVSCROLL:0x40, ES_AUTOHSCROLL:0x80,
+	ES_READONLY:0x0800, ES_WANTRETURN:0x1000, ES_NUMBER:0x2000,
+	CBS_SIMPLE:1, CBS_DROPDOWN:2, CBS_DROPDOWNLIST:3, LBS_NOTIFY:1, LBS_MULTIPLESEL:8,
+	LVS_REPORT:1, LVS_EX_GRIDLINES:1, LVCF_FMT:1, LVCF_WIDTH:2, LVCF_TEXT:4, LVCFMT_RIGHT:1, LVCFMT_CENTER:2,
+	LVM_DELETEALLITEMS:0x1009, LVM_DELETECOLUMN:0x101C, LVM_INSERTCOLUMNW:0x1061, ICC_LISTVIEW_CLASSES:1,
+	FW_NORMAL:400, FW_BOLD:700,
+	// the predefined classes, as a dialog template's ordinals
+	BUTTON:0x80, EDIT:0x81, STATIC:0x82, LISTBOX:0x83, SCROLLBAR:0x84, COMBOBOX:0x85, LISTVIEW:"SysListView32"
+];
+(function() {
+	var a = [];
+	a.assign(global.KAGWin32Constants);
+	for (var i = 0; i < a.count; i += 2) global[a[i]] = a[i + 1] if typeof global[a[i]] == "undefined";
+})();
+
+class WIN32Dialog
+{
+	// the template's parts, as the plugin had them: fields copied from a dictionary by store()
+	class Header {
+		var style = 0, exStyle = 0, dlgItems = 0, x = 0, y = 0, cx = 200, cy = 100, menu, windowClass, title = "";
+		var pointSize = 9, weight = 400, italic = 0, charset = 1, typeFace = "";
+		function Header() {}
+		function store(elm) { KAGWin32Copy(this, elm); }
+	}
+	class Items {
+		var helpID = 0, exStyle = 0, style = 0, x = 0, y = 0, cx = 0, cy = 0, id = -1, windowClass, title = "", extraCount = 0;
+		function Items() {}
+		function store(elm) { KAGWin32Copy(this, elm); }
+	}
+	// a picture for a control (kept, not shown)
+	class Bitmap {
+		var layer;
+		function Bitmap(l) { layer = l; }
+	}
+	// pointers have no meaning here: the string or octet itself stands for its address
+	function getStringAddress(s) { return s; }
+	function getStringFromAddress(s) { return s; }
+	function getOctetAddress(o) { return o; }
+
+	var head;         // the template
+	var items = [];
+	var states = %[]; // id -> %[ text, check, list, cursel, sels, enabled, focus ]
+	var result;       // close()'s value
+	var dialog;       // the ElementsDialog while it's open
+	var closing = false, opened = false;
+	var modeless = false;
+
+	// (the plugin sent the events to its owner, null for itself; here they always come to this
+	// object, whose script, WIN32DialogEX, sends them on: its own member is "owner", untouched)
+	function WIN32Dialog(o = null) {}
+	function finalize() { invalidate dialog if dialog !== void && isvalid dialog; }
+
+	function makeTemplate(h, list*) {
+		// copies: the script invalidates the parts once they're handed over, as the plugin copied them
+		head = %[];
+		KAGWin32Copy(head, h);
+		items = [];
+		for (var i = 0; i < list.count; i++) {
+			var src = list[i], c = %[];
+			KAGWin32Copy(c, src);
+			items.add(c);
+			var s = state(c.id);
+			s.text = c.title if typeof c.title == "String" && c.title != "";
+			s.enabled = !(c.style & WS_DISABLED);
+			s.style = c.style;
+			s.cls = KAGWin32Class(c.windowClass);
+		}
+		return true;
+	}
+	function loadResource(dll, res) { throw new Exception("win32dialog stand-in: dialog resources can't be loaded (doc/porting.txt)"); }
+
+	function state(id) {
+		var s = states[id];
+		if (s === void) s = states[id] = %[ text:"", check:0, list:[], cursel:-1, sels:[], enabled:true, style:0, cls:0 ];
+		return s;
+	}
+
+	// the controls' state
+	function getItem(id) { return states[id] !== void ? id : 0; }
+	function setItemText(id, s) { state(id).text = s === void ? "" : (string)s; return true; }
+	function getItemText(id) { return state(id).text; }
+	function setItemInt(id, v) { state(id).text = (string)(int)v; return true; }
+	function getItemInt(id) { var t = state(id).text; return t == "" ? 0 : +t; }
+	function setItemEnabled(id, v) { state(id).enabled = !!v; return true; }
+	function getItemEnabled(id) { return state(id).enabled; }
+	function setItemFocus(id) { focusId = id; return true; }
+	var focusId;
+	function setItemPos(id, x, y) { return true; }
+	function setItemSize(id, w, h) { return true; }
+	function setItemBitmap(id, bmp) { return true; }
+	function sendItemMessage(id, msg, wp = 0, lp = 0) {
+		var s = state(id);
+		switch (msg) {
+		case BM_GETCHECK: case BM_GETSTATE: return s.check;
+		case BM_SETCHECK: s.check = +wp; return 0;
+		case WM_SETTEXT: s.text = lp === void ? "" : (string)lp; return 1;
+		case WM_GETTEXT: return s.text;
+		case WM_GETTEXTLENGTH: return s.text.length;
+		case CB_ADDSTRING: case LB_ADDSTRING: s.list.add(lp === void ? "" : (string)lp); s.sels.add(0); return s.list.count - 1;
+		case CB_DELETESTRING: case LB_DELETESTRING: s.list.erase(+wp); s.sels.erase(+wp); return s.list.count;
+		case CB_RESETCONTENT: case LB_RESETCONTENT: s.list.clear(); s.sels.clear(); s.cursel = -1; return 0;
+		case CB_GETCOUNT: case LB_GETCOUNT: return s.list.count;
+		case CB_SETCURSEL: case LB_SETCURSEL: s.cursel = +wp; s.text = s.list[s.cursel] if s.cursel >= 0 && s.cursel < s.list.count; return s.cursel;
+		case CB_GETCURSEL: case LB_GETCURSEL: return s.cursel;
+		case CB_GETLBTEXT: case LB_GETTEXT: return s.list[+wp];
+		case LB_SETSEL: if (+lp >= 0 && +lp < s.sels.count) s.sels[+lp] = +wp; return 0;
+		case LB_GETSEL: return +wp >= 0 && +wp < s.sels.count ? s.sels[+wp] : 0;
+		case SBM_SETPOS: s.pos = +wp; return 0;
+		case SBM_GETPOS: return s.pos !== void ? s.pos : 0;
+		}
+		return 0;
+	}
+
+	// the events: the game's subclass overrides them (WIN32DialogEX sends them on to its owner)
+	function onInit(*) { return true; }
+	function onCommand(*) { return false; }
+	function onSize(*) {}
+	function onHScroll(*) {}
+	function onVScroll(*) {}
+	function onNotify(*) {}
+
+	// shows the dialog and returns close()'s result as it closes
+	function open(win) {
+		if (opened) return result;
+		opened = true;
+		result = IDCANCEL;
+		closing = false;
+		onInit();
+		try {
+			dialog = new ElementsDialog();
+			dialog.onAction = this.onAction;
+			var vars = %[];
+			var layout = makeLayout(vars);
+			var r = dialog.showModalDict(layout, vars);
+			if (!closing && typeof r == "Object" && r !== void) {
+				takeValues(r.values);
+				var a = r.action;
+				// a button that closes it (IDOK, IDCANCEL...), or Esc: as Windows sends them
+				if (typeof a == "String" && a.length > 1 && a.charAt(0) == "c") onCommand(WM_COMMAND, +a.substring(1), 0);
+				else if (!closing) onCommand(WM_COMMAND, IDCANCEL, 0);
+			}
+		} catch (e) {
+			dm("win32dialog stand-in: " + e.message);
+		}
+		invalidate dialog if dialog !== void && isvalid dialog;
+		dialog = void;
+		opened = false;
+		return result;
+	}
+	function close(r = IDCANCEL) {
+		result = r;
+		if (closing) return true;
+		closing = true;
+		if (dialog !== void && isvalid dialog) try { dialog.close(); } catch (e) {}
+		return true;
+	}
+
+	// what the player changed, as the Elements dialog says it
+	function onAction(id, payload) {
+		if (typeof id != "String" || id.length < 2) return;
+		var kind = id.charAt(0), n = +id.substring(1), s = states[n];
+		if (s === void) return;
+		switch (kind) {
+		case "c": // a button
+			if (s.cls == BUTTON && ((s.style & BS_TYPEMASK) == BS_AUTOCHECKBOX || (s.style & BS_TYPEMASK) == BS_AUTO3STATE)) return;
+			onCommand(WM_COMMAND, n | (BN_CLICKED << 16), n);
+			return;
+		case "k": // a check box
+			s.check = payload ? 1 : 0;
+			onCommand(WM_COMMAND, n | (BN_CLICKED << 16), n);
+			return;
+		case "r": // a radio button: the others of its group go off
+			if (!payload) return;
+			radioOn(n);
+			onCommand(WM_COMMAND, n | (BN_CLICKED << 16), n);
+			return;
+		case "e": // a field
+			s.text = typeof payload == "String" ? payload : "";
+			onCommand(WM_COMMAND, n | (EN_CHANGE << 16), n);
+			return;
+		case "p": // a picker
+			s.cursel = +payload;
+			s.text = s.list[s.cursel] if s.cursel >= 0 && s.cursel < s.list.count;
+			onCommand(WM_COMMAND, n | (CBN_SELCHANGE << 16), n);
+			return;
+		}
+	}
+	// the radio buttons from the last WS_GROUP before n to the next: one on
+	function radioOn(n) {
+		var at = -1;
+		for (var i = 0; i < items.count; i++) if (items[i].id == n) at = i;
+		if (at < 0) return;
+		var from = at, to = at;
+		while (from > 0 && !(items[from].style & WS_GROUP) && KAGWin32IsRadio(items[from - 1])) from--;
+		while (to + 1 < items.count && !(items[to + 1].style & WS_GROUP) && KAGWin32IsRadio(items[to + 1])) to++;
+		for (var i = from; i <= to; i++) state(items[i].id).check = items[i].id == n ? 1 : 0;
+	}
+	function takeValues(values) {
+		if (typeof values != "Object" || values === void) return;
+		var a = [];
+		a.assign(values);
+		for (var i = 0; i < a.count; i += 2) {
+			var id = a[i], v = a[i + 1];
+			if (typeof id != "String" || id.length < 2) continue;
+			var s = states[+id.substring(1)];
+			if (s === void) continue;
+			switch (id.charAt(0)) {
+			case "k": s.check = v ? 1 : 0; break;
+			case "r": s.check = v ? 1 : 0; break;
+			case "e": s.text = typeof v == "String" ? v : s.text; break;
+			}
+		}
+	}
+
+	// the template as an Elements layout: rows of controls, by their place in it, in the game's
+	// pixels ("base": "content") with text about the size of the game's own, on the colours of the
+	// game's prompts (KAGTextEntry's)
+	var unit = 5;         // pixels of the layout per dialog unit
+	var rowHeight = 64;   // a row of controls
+	var fontScale = 2.4;  // the text's scale (the layout's "font_scale"; an input_box and a picker take their own)
+	function makeLayout(vars) {
+		var sorted = [];
+		sorted.assign(items);
+		sorted.sort(KAGWin32ByPlace, true);
+		var rows = [], row, rowBottom = -1;
+		for (var i = 0; i < sorted.count; i++) {
+			var c = sorted[i];
+			if (row === void || c.y >= rowBottom) {
+				row = [];
+				rows.add(row);
+				// (a combo box's height counts its list, which drops down over the rows under it)
+				var ch = KAGWin32Class(c.windowClass) == COMBOBOX && c.cy > 14 ? 14 : c.cy;
+				rowBottom = c.y + (ch > 4 ? ch * 2 \ 3 : 4);
+			}
+			row.add(c);
+		}
+		var children = [], height = 0;
+		for (var i = 0; i < rows.count; i++) {
+			var cells = [], x = 0, r = rows[i];
+			r.sort(KAGWin32ByX, true);
+			// controls on top of each other (buttons a template gave no width, which a dialog's
+			// script places when it opens): side by side across the space they share, 16 apart
+			var shared = false, left = r[0].x, right = 0;
+			for (var j = 0; j < r.count; j++) {
+				shared = true if j > 0 && r[j].x < r[j - 1].x + r[j - 1].cx;
+				right = r[j].x + r[j].cx if r[j].x + r[j].cx > right;
+			}
+			for (var j = 0; j < r.count; j++) {
+				var c = r[j], cx = c.x, cw = c.cx > 8 ? c.cx : 8;
+				if (shared) {
+					var each = (right - left) * unit \ r.count;
+					cx = left + (each * j) \ unit, cw = (each - (j < r.count - 1 ? 16 : 0)) \ unit;
+				}
+				if (cx > x + 2) cells.add(%[ "type" => "hspacer", "width" => (cx - x) * unit ]);
+				var w = control(c, vars);
+				if (w === void) continue;
+				cells.add(%[ "type" => "hsize", "width" => cw * unit, "child" => w ]);
+				x = cx + cw;
+			}
+			if (cells.count == 0) continue;
+			if (children.count) { children.add(%[ "type" => "vspacer", "height" => 12 ]); height += 12; }
+			children.add(%[ "type" => "vsize", "height" => rowHeight, "child" => %[ "type" => "htile", "children" => cells ] ]);
+			height += rowHeight;
+		}
+		var w = head !== void && head.cx > 0 ? head.cx * unit + 64 : 1000;
+		w = 800 if w < 800;
+		w = 1800 if w > 1800;
+		var title = head !== void && typeof head.title == "String" ? head.title : "";
+		var content = [];
+		if (title != "") {
+			content.add(%[ "type" => "align_left", "child" => %[ "type" => "label", "text" => title, "size_scale" => fontScale * 1.2 ] ]);
+			content.add(%[ "type" => "vspacer", "height" => 20 ]);
+			height += 76;
+		}
+		content.add(%[ "type" => "vtile", "children" => children ]);
+		return %[
+			"size" => [ w, height + 88 ],
+			"base" => "content",
+			"margin" => 40,
+			"font_scale" => fontScale,
+			"background" => [ 36, 22, 104, 248 ],
+			"a11y" => %[ "title" => title ],
+			"content" => %[ "type" => "margin", "padding" => 32, "child" => %[ "type" => "vtile", "children" => content ] ]
+		];
+	}
+	// one control (void: left out)
+	function control(c, vars) {
+		var s = state(c.id), cls = KAGWin32Class(c.windowClass), style = c.style, text = s.text, id = c.id;
+		var e;
+		if (cls == STATIC) {
+			// labels without an id of their own (IDC_STATIC, -1) all share it: their own words
+			if (id == -1 || id == 0xFFFF) text = typeof c.title == "String" ? c.title : "";
+			var t = style & 0x1F;
+			if (t == SS_ICON || t == SS_BITMAP) return void;
+			e = %[ "type" => "label", "text" => text ];
+			if (t == SS_CENTER) e = %[ "type" => "align_center", "child" => e ];
+			else if (t == SS_RIGHT) e = %[ "type" => "align_right", "child" => e ];
+			return e;
+		}
+		if (cls == BUTTON) {
+			var t = style & BS_TYPEMASK;
+			if (t == BS_GROUPBOX) return %[ "type" => "label", "text" => text, "size_scale" => fontScale * 1.1 ];
+			if (t == BS_CHECKBOX || t == BS_AUTOCHECKBOX || t == BS_3STATE || t == BS_AUTO3STATE)
+				e = %[ "type" => "checkbox", "id" => "k" + id, "text" => text, "value" => s.check != 0 ];
+			else if (t == BS_RADIOBUTTON || t == BS_AUTORADIOBUTTON)
+				e = %[ "type" => "radio_button", "id" => "r" + id, "text" => text, "selected" => s.check != 0 ];
+			else {
+				e = %[ "type" => "button", "id" => "c" + id, "text" => text ];
+				// the buttons that end a dialog close it at once; others run onCommand, which may
+				e["close_on_click"] = true if id == IDOK || id == IDCANCEL || id == IDABORT || id == IDYES || id == IDNO;
+				e["initial_focus"] = true if t == BS_DEFPUSHBUTTON;
+			}
+		} else if (cls == EDIT) {
+			e = %[ "type" => "input_box", "id" => "e" + id, "text" => text, "size" => fontScale ];
+		} else if (cls == COMBOBOX || cls == LISTBOX) {
+			if (s.list.count == 0) return %[ "type" => "label", "text" => text ];
+			var v = "p" + id + "_index";
+			var at = s.cursel >= 0 && s.cursel < s.list.count ? s.cursel : 0;
+			vars[v] = (string)at;
+			e = %[ "type" => "cycle_picker", "id" => "p" + id, "options" => s.list, "initial" => at, "index_var" => v, "font_size_scale" => fontScale ];
+		} else {
+			return void; // list views, scroll bars, anything else
+		}
+		// a control turned off: its words only
+		if (!s.enabled && e.type != "label") return %[ "type" => "label", "text" => (e.type == "cycle_picker" ? s.text : text) ];
+		return e;
+	}
+}
+
+// copies a template part's fields from a dictionary or another part
+function KAGWin32Copy(dst, src)
+{
+	if (typeof src != "Object" || src === void) return;
+	var names = [ "style", "exStyle", "dlgItems", "x", "y", "cx", "cy", "menu", "windowClass", "title", "pointSize",
+		"weight", "italic", "charset", "typeFace", "helpID", "id", "extraCount" ];
+	for (var i = 0; i < names.count; i++) {
+		var n = names[i];
+		var v;
+		try { v = src[n]; } catch (e) { continue; }
+		if (v !== void) dst[n] = v;
+	}
+}
+// a control's class as an ordinal (a class name in the template too)
+function KAGWin32Class(c)
+{
+	if (typeof c == "Integer") return c;
+	if (typeof c != "String") return 0;
+	switch (c.toLowerCase()) {
+	case "button": return BUTTON;
+	case "edit": return EDIT;
+	case "static": return STATIC;
+	case "listbox": return LISTBOX;
+	case "scrollbar": return SCROLLBAR;
+	case "combobox": return COMBOBOX;
+	}
+	return c;
+}
+// the controls in reading order: by row, then across
+function KAGWin32ByPlace(a, b) { return a.y < b.y || (a.y == b.y && a.x < b.x); }
+function KAGWin32ByX(a, b) { return a.x < b.x; }
+function KAGWin32IsRadio(c)
+{
+	if (KAGWin32Class(c.windowClass) != BUTTON) return false;
+	var t = c.style & BS_TYPEMASK;
+	return t == BS_RADIOBUTTON || t == BS_AUTORADIOBUTTON;
+}

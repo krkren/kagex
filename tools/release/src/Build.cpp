@@ -1920,6 +1920,9 @@ private:
 		plistSet(xml, "CFBundleShortVersionString", version);
 		plistSet(xml, "CFBundleVersion", std::to_string(build));
 		plistSet(xml, "NSHumanReadableCopyright", str(s_, "identity.copyright"));
+		// iOS asks the player before a screenshot goes to Photos, with this text; without the key it
+		// ends the app instead (SDLSystem.saveToGallery refuses then)
+		if (!str(s_, base + "photosUsage").empty()) plistSet(xml, "NSPhotoLibraryAddUsageDescription", str(s_, base + "photosUsage"));
 		const std::string minOs = plistGet(xml, "MinimumOSVersion").empty() ? "16.0" : plistGet(xml, "MinimumOSVersion");
 		writeText(plist, xml);
 

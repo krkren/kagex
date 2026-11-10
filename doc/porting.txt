@@ -42,7 +42,7 @@ the check (KAGEX's KAGLinkPlugin does).
 
 The Windows-only plugins (README, "Not available on the SDL3 build"): menu.dll and windowEx.dll
 (KAGEX's framework draws a game's KAGWindow_createMenus menu as a menu bar in a window),
-win32dialog.dll, gfxEffect.dll, flashPlayer.dll, layerExDraw.dll's GDI+ (krkr_richtext draws
+win32dialog.dll (Porting.tjs stands in for it since 0.28.1: below), gfxEffect.dll, flashPlayer.dll, layerExDraw.dll's GDI+ (krkr_richtext draws
 outlines; layerExVector draws SVG), shellExecute.dll and process.dll. System.shellExecute is
 there on every platform through kagex's sdlsystem plugin (since 0.28.0): Windows' ShellExecute
 on Windows; elsewhere a program starts with its parameters split as a shell would split them,
@@ -67,7 +67,6 @@ own entries:
 
   Scripts.execStorage("Porting.tjs");
   KAGPortingPlugins["textrender.dll"] = "skip";
-  KAGPortingPlugins["getlangname.dll"] = function(name) { System.getLangName = ...; } incontextof global;
 
 It sends Plugins.link through KAGPortingPlugins, by the plugin's file name in lower case:
 
@@ -79,6 +78,43 @@ It sends Plugins.link through KAGPortingPlugins, by the plugin's file name in lo
   a function     a stand-in, called once with the name instead of linking
 
 A name the table doesn't have is linked as it is; each name is linked or stood in for once.
+
+Stand-ins it has (since 0.28.1):
+
+  win32dialog.dll   The WIN32Dialog class, in script (Win32DialogStandIn.tjs), so the framework's
+                    win32dialog.tjs (WIN32DialogEX, WIN32GenericDialogEX) and a game's own
+                    dialogs on it run on every platform. The dialog template is shown as an
+                    Elements dialog over the game window, blocking as the Windows dialog did,
+                    on the colours of the game's prompts with text about the size of the
+                    game's own: its controls in rows as their places put them, each as wide as
+                    the template made it (static text, push buttons, check boxes, radio
+                    buttons, a group box's title, an edit box as a field of one line, a combo
+                    or list box as a picker of its strings); controls a template left on top
+                    of each other, such as buttons given no width, go side by side. onInit runs
+                    before it shows; a button runs onCommand(WM_COMMAND, id, ...) as Windows
+                    sends it, and the dialog closes on close() (IDOK and IDCANCEL do by
+                    default), Esc being IDCANCEL; the
+                    controls' text, checks and selections are kept in script, so getItemText,
+                    getCheckBox, sendItemMessage's BM_*, CB_*, LB_* and the results read what
+                    the player changed. List views, scroll bars, bitmaps on controls, dialog
+                    resources (loadResource) and modeless dialogs aren't there. The Windows
+                    constants the plugin defined (IDOK, BS_*, WS_*, CB_* ...) are defined too.
+  getlangname.dll   System.getCurrentUILangName(): the system language's English name
+                    ("Japanese", "English", "Chinese"), as the plugin answered on Windows, from
+                    the engine's System.systemLanguage. A new game reads System.systemLanguage
+                    (a BCP-47 tag) itself.
+
+And where the engine has no such member, the original engine's data packs:
+  Scripts.saveDataPack(storage, data)  a dictionary or array written to a file (saveStruct)
+  Scripts.loadDataPack(storage)        read back (void when the file isn't there)
+  Storages.saveOctet(storage, octet)   an octet written as it is, through kagex's sdlsystem
+                                       plugin (SDLSystem.writeOctet: a storage that is a local
+                                       file, not user:// on a phone)
+Either order of the storage and the data is taken.
+
+kagex-release takes a game's icon from its old Windows .exe (or an .ico) since 0.28.1:
+identity.icon may name either, and the largest icon in it is used. kagex-release --cli icon
+<file> <out.png> shows what it takes.
 
 It also makes Storages.copyFile return false when the file to copy isn't there, as fstat's
 copyFile did (the engine's throws, UPSTREAM.md 56: a game's rotating saves that copy an empty

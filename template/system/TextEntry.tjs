@@ -16,13 +16,19 @@
  * of its own with the text, and hands what's typed to the game (KAGTextEntryWebInput), Enter
  * running the field's enter= (KAGTextEntryWebDone). Those calls come through the engine's
  * REPL bridge, so they only note things; a Timer does the rest.
+ *
+ * A field of several lines ([edit multiline=true], since 0.28.1) is typed into where it is: on
+ * a phone the sdlsystem plugin starts the system's own keyboard in its multi-line mode while the
+ * field has the focus (KAGTextEntryKeyboard: Return makes a new line there), and the browser's
+ * page types into a hidden textarea. An engine without the plugin's keyboard gets the box, with
+ * a line to type in for each of the field's rows.
  */
 var KAGTextEntryMode = "auto";
 var KAGTextEntryOpenNow;   // the box that's open
 
 function KAGTextEntryUsed()
 {
-	if (typeof global.ElementsDialog == "undefined") return false;
+	if (typeof global.ElementsDialog == "undefined" && !KAGTextEntryKeyboardThere()) return false;
 	var m = KAGTextEntryMode;
 	if (typeof m != "String") return m ? true : false;
 	if (m != "auto") return false;
@@ -30,6 +36,60 @@ function KAGTextEntryUsed()
 	if (tag != "android" && tag != "ios") return false;
 	// a keyboard plugged in types into the field itself (iOS always reports none)
 	try { return !ElementsDialog.hasPhysicalKeyboard; } catch { return true; }
+}
+// Whether the sdlsystem plugin can start the system's keyboard itself
+function KAGTextEntryKeyboardThere()
+{
+	try { return typeof global.SDLSystem != "undefined" && SDLSystem.keyboard; } catch { return false; }
+}
+// A field of several lines on a phone, with the plugin's keyboard
+function KAGTextEntryKeyboardUsed(field)
+{
+	if (field === void || !isvalid field || !field.multiline) return false;
+	return KAGTextEntryKeyboardThere() && KAGTextEntryUsed();
+}
+// The system's keyboard for the field (multi-line), or away; where the field is goes with it,
+// in the window's pixels, so the system keeps the field in sight. Started from a field's onFocus,
+// it's started again once the focus change is over: the engine sets the focused layer's imeMode
+// after onFocus, and on a phone without a keyboard of its own that stops text input
+// (form.cpp's TVPUpdateBaselineTextInput, "imeMode=3 -> stop" in the log)
+var KAGTextEntryKeyboardField;    // the field to start it for again
+var KAGTextEntryKeyboardTrigger;
+function KAGTextEntryKeyboard(field, on)
+{
+	if (!on) {
+		KAGTextEntryKeyboardField = void;
+		try { SDLSystem.stopTextInput(); } catch (e) { dm("text entry: the keyboard: " + e.message); }
+		return;
+	}
+	KAGTextEntryKeyboardStart(field);
+	KAGTextEntryKeyboardField = field;
+	if (KAGTextEntryKeyboardTrigger === void) {
+		KAGTextEntryKeyboardTrigger = new AsyncTrigger(KAGTextEntryKeyboardAgain, "");
+		KAGTextEntryKeyboardTrigger.cached = true;
+	}
+	KAGTextEntryKeyboardTrigger.trigger();
+}
+function KAGTextEntryKeyboardAgain()
+{
+	var f = KAGTextEntryKeyboardField;
+	KAGTextEntryKeyboardField = void;
+	if (f === void || !isvalid f || !f.focused) return;
+	try { if (!SDLSystem.textInputActive) KAGTextEntryKeyboardStart(f); } catch {}
+}
+function KAGTextEntryKeyboardStart(field)
+{
+	try {
+		var x = 0, y = 0, l = field;
+		while (l !== void && l !== null && isvalid l && l !== kag.primaryLayer) { x += l.left; y += l.top; l = l.parent; }
+		var w = kag.primaryLayer.width, h = kag.primaryLayer.height;
+		var s = kag.innerWidth / w;
+		s = kag.innerHeight / h if kag.innerHeight / h < s;
+		var ox = (kag.innerWidth - w * s) / 2, oy = (kag.innerHeight - h * s) / 2;
+		SDLSystem.startTextInput(!!field.multiline, (int)(ox + x * s), (int)(oy + y * s), (int)(field.width * s), (int)(field.height * s));
+	} catch (e) {
+		dm("text entry: the keyboard: " + e.message);
+	}
 }
 
 // Opens the box for field (a LinkEditLayer); false when it can't be shown
@@ -76,10 +136,16 @@ class KAGTextEntry
 			rows.add(%[ "type" => "align_left", "child" => %[ "type" => "label", "text" => title ] ]);
 			rows.add(%[ "type" => "vspacer", "height" => 16 ]);
 		}
-		var box = %[ "type" => "input_box", "id" => "text", "text" => text, "initial_focus" => true,
-			"size" => 2.6, "a11y" => %[ "label" => title != "" ? title : label("Text") ] ];
-		box["max_chars"] = field.maxChars if field.maxChars > 0;
-		rows.add(%[ "type" => "vsize", "height" => 84, "child" => box ]);
+		// a field of several lines: a line to type in for each of its rows
+		var lines = field.multiline ? lineCount() : 1;
+		for (var i = 0; i < lines; i++) {
+			var box = %[ "type" => "input_box", "id" => field.multiline ? "line" + i : "text",
+				"text" => field.multiline ? lineText(i) : text, "initial_focus" => i == 0,
+				"size" => 2.6, "a11y" => %[ "label" => title != "" ? title : label("Text") ] ];
+			box["max_chars"] = field.maxChars if field.maxChars > 0 && !field.multiline;
+			rows.add(%[ "type" => "vspacer", "height" => 8 ]) if i > 0;
+			rows.add(%[ "type" => "vsize", "height" => 84, "child" => box ]);
+		}
 		rows.add(%[ "type" => "vspacer", "height" => 24 ]);
 		var buttons = [];
 		var ids = [ "cancel", "ok" ], texts = [ label("Cancel"), label("OK") ];
@@ -90,7 +156,7 @@ class KAGTextEntry
 		}
 		rows.add(%[ "type" => "align_right", "child" => %[ "type" => "htile", "children" => buttons ] ]);
 		return %[
-			"size" => [ 1200, title != "" ? 266 : 214 ],
+			"size" => [ 1200, (title != "" ? 266 : 214) + 92 * (lines - 1) ],
 			"align" => "top",
 			"margin" => 40,
 			"base" => "content",
@@ -123,6 +189,9 @@ class KAGTextEntry
 		if (id == "text") {
 			text = typeof payload == "String" ? payload : "";
 			if (isvalid field) field.text = clip(text);
+		} else if (id.length > 4 && id.substring(0, 4) == "line") {
+			setLine(+id.substring(4), typeof payload == "String" ? payload : "");
+			if (isvalid field) field.text = clip(text);
 		} else if (id == "ok") {
 			answer(true);
 		} else if (id == "cancel") {
@@ -136,6 +205,28 @@ class KAGTextEntry
 		answer(false) if !done;
 	}
 
+	// The lines of a field of several lines: as many as it shows, or has
+	function lineCount()
+	{
+		var n = text.split("\n").count;
+		var r = isvalid field ? field.visibleRows : 3;
+		r = 6 if r > 6;
+		return n > r ? (n > 8 ? 8 : n) : r;
+	}
+	function lineText(i)
+	{
+		var a = text.split("\n");
+		return i < a.count ? a[i] : "";
+	}
+	function setLine(i, s)
+	{
+		var a = text.split("\n");
+		while (a.count <= i) a.add("");
+		a[i] = s;
+		// no empty lines left at the end
+		while (a.count > 1 && a[a.count - 1] == "") a.count--;
+		text = a.join("\n");
+	}
 	function clip(s)
 	{
 		var n = isvalid field ? field.maxChars : 0;
@@ -224,7 +315,8 @@ function KAGTextEntryWebTap()
 		KAGTextEntryWebTimer.interval = 30;
 	}
 	KAGTextEntryWebTimer.enabled = true;
-	return "%d:%s".sprintf(f.maxChars, KAGTextEntryHex(f.text));
+	// a field of several lines: "m" before the count, and the page types into a textarea
+	return "%s%d:%s".sprintf(f.multiline ? "m" : "", f.maxChars, KAGTextEntryHex(f.text));
 }
 
 // The page's field changed (its text in hex)
@@ -262,6 +354,7 @@ function KAGTextEntryWebStep()
 		KAGTextEntryWebTyping = false;
 		KAGTextEntryWebField = void;
 		f.commit();
-		Scripts.eval(f.enterExp) if ok && f.enterExp != "";
+		// a field of a dialog (KAGAskText) has no enter=: its OK is the dialog's
+		Scripts.eval(f.enterExp) if ok && typeof f.enterExp == "String" && f.enterExp != "";
 	}
 }

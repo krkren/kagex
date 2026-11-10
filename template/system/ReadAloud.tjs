@@ -27,6 +27,8 @@ class KAGReadAloudReader
 	var buffer;          // plays the WAV a line was spoken into
 	var timer;           // follows the line being made and played
 	var file = "";       // the WAV being made (a native path)
+	var playEnd;         // the tick by which the line's sound should have ended (playing)
+	var stuckStops = 0;  // lines stopped that way
 	var counted = false; // the line counts as a voice on the World (auto mode waits for it)
 	var lastVoiceStarts = 0;
 	var words;           // readaloud.csv: [ [language, written, spoken], ... ]
@@ -140,6 +142,12 @@ class KAGReadAloudReader
 				buffer.volume2 = (int)((ch !== void && ch.init !== void ? kag.getVoiceVolume(ch.init.voiceName) : kag.voicevolume) * 1000);
 				buffer.play();
 				state = "playing";
+				// a line whose buffer doesn't say it ended (once on the macOS runner the status
+				// stayed "play" for 30 s after a 3 s line) is stopped 2 s past its length, so it
+				// doesn't count as a voice for ever (auto mode waits for voices)
+				var len = 0;
+				try { len = +buffer.totalTime; } catch (e) {}
+				playEnd = System.getTickCount() + (len > 0 && len < 600000 ? len : 60000) + 2000;
 			} catch (e) {
 				dm("read aloud: " + e.message);
 				done();
@@ -147,6 +155,12 @@ class KAGReadAloudReader
 			return; }
 		case "playing":
 			if (buffer.status != "play") done();
+			else if (System.getTickCount() > playEnd) {
+				dm("read aloud: the line's sound didn't say it ended; stopped " + (int)(+buffer.position) + " ms in, of " + (int)(+buffer.totalTime));
+				stuckStops++;
+				buffer.stop();
+				done();
+			}
 			return;
 		case "speaking":
 			if (Speech.state != "busy") done();

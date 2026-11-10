@@ -38,6 +38,7 @@ class KAGTooltips extends KAGPlugin
 	var focused;               // the layer with the focus when it was last looked at
 	var focusTip = false;      // the tip shown is the focused layer's
 	var shown = "";            // the tip on show
+	var shownLang = "";        // the menus' language it was shown in (a help line, helpLine)
 	var absolute = 3900000;    // over the quick menu, under the backlog (4000000)
 
 	function KAGTooltips(win)
@@ -114,8 +115,10 @@ class KAGTooltips extends KAGPlugin
 		return "";
 	}
 
+	function menuLanguage() { return typeof global.KAGLanguage == "Object" && KAGLanguage !== void ? KAGLanguage.menuCode : ""; }
+
 	// the help line (helpArea)
-	var helpArea, helpLayer, helpShown, helpRect = "";
+	var helpArea, helpLayer, helpShown, helpLang, helpRect = "";
 	function showHelp(area, text)
 	{
 		if (helpLayer === void) {
@@ -126,9 +129,10 @@ class KAGTooltips extends KAGPlugin
 			helpLayer.hitThreshold = 256;
 			helpLayer.absolute = absolute;
 		}
-		var rect = area.join(",");
-		if (text === helpShown && rect == helpRect && helpLayer.visible) return;
-		helpShown = text, helpRect = rect;
+		// (with the menus' language: the same text is drawn again in another, tr())
+		var rect = area.join(","), lang = menuLanguage();
+		if (text === helpShown && lang == helpLang && rect == helpRect && helpLayer.visible) return;
+		helpShown = text, helpLang = lang, helpRect = rect;
 		var w = +area[2], h = +area[3];
 		helpLayer.setImageSize(w, h);
 		helpLayer.setSizeToImageSize();
@@ -194,7 +198,8 @@ class KAGTooltips extends KAGPlugin
 	function show(text, x, y)
 	{
 		if (helpLine !== void) {
-			if (text != shown) { shown = text; KAGBindToGlobal(helpLine)(text != "" ? tr(text) : ""); }
+			var lang = menuLanguage();
+			if (text != shown || lang != shownLang) { shown = text, shownLang = lang; KAGBindToGlobal(helpLine)(text != "" ? tr(text) : ""); }
 			layer.visible = false if layer !== void;
 			return;
 		}

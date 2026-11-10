@@ -64,10 +64,14 @@
 [button name="config_skipalrdy" exp="setSkipButton(false)"]
 
 ; Language: the screen is drawn again in the one chosen (setLanguageButton, Override.tjs)
-[locate x=322 y=916]
+[locate x=306 y=916]
 [button name="config_lang_en" exp="setLanguageButton('en')"]
-[locate x=578 y=916]
+[locate x=460 y=916]
 [button name="config_lang_ja" exp="setLanguageButton('ja')"]
+[locate x=614 y=916]
+[button name="config_lang_zh-cn" exp="setLanguageButton('zh-cn')"]
+[locate x=768 y=916]
+[button name="config_lang_zh-tw" exp="setLanguageButton('zh-tw')"]
 
 ; BGM Volume
 [locate x=1102 y=266]

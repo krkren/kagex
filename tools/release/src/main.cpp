@@ -14,6 +14,8 @@
 //   kagex-release --cli loudness [<release.json>] [--json]    every sound's loudness (EBU R128), with
 //                                                             what loudness.csv and loudness.targets
 //                                                             make of it: nothing is changed
+//   kagex-release --cli icon <png|ico|exe> <out.png>         the icon a build takes from that file (an
+//                                                             old game's .exe: its largest icon)
 //
 // check, plan and build take --platform=a,b (only those platforms); build takes --engines=DIR
 // (engine packages to use instead of downloading them) and --keep-work. keygen takes --bits
@@ -31,6 +33,7 @@
 #include "Build.h"
 #include "Encrypt.h"
 #include "Host.h"
+#include "Icons.h"
 #include "Keys.h"
 #include "Layered.h"
 #include "Loudness.h"
@@ -63,6 +66,7 @@ struct Options {
 	std::vector<std::string> only;   // --platform=a,b
 	int bits = 2048;                 // keygen
 	std::string format = "tlg6";     // split: the pictures' format
+	int size = 0;                    // icon: the picture's size (256)
 };
 
 // The settings file and project for a path given on the command line (or none)
@@ -177,7 +181,7 @@ bool selected(const Options& o, const std::string& id)
 int runCli(const Options& o, const std::vector<std::string>& args)
 {
 	if (args.empty()) {
-		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen|split|loudness [<path>] (see --help)\n");
+		std::fprintf(stderr, "usage: kagex-release --cli init|check|plan|build|keygen|split|loudness|icon [<path>] (see --help)\n");
 		return 2;
 	}
 	const std::string cmd = args[0];
@@ -220,6 +224,20 @@ int runCli(const Options& o, const std::vector<std::string>& args)
 			std::printf("%s: %s and %d layer pictures in %s\n", path.c_str(), krt::fromPath(written.front().filename()).c_str(),
 			            (int)written.size() - 1, krt::fromPath(dir).c_str());
 		}
+		return 0;
+	}
+	if (cmd == "icon") {
+		// the icon a build would take from a PNG, an .ico or an old game's .exe, written as a PNG
+		if (path.empty() || args.size() < 3) { std::fprintf(stderr, "usage: kagex-release --cli icon <icon.png|.ico|game.exe> <out.png> [--size=N]\n"); return 2; }
+		IconSource icon;
+		std::string png;
+		const int size = o.size > 0 ? o.size : 256;
+		if (!icon.load(krt::toPath(path), err) || !icon.png(size, png, err)) { std::fprintf(stderr, "error: %s: %s\n", path.c_str(), err.c_str()); return 2; }
+		std::FILE* f = std::fopen(args[2].c_str(), "wb");
+		if (!f) { std::fprintf(stderr, "error: can't write %s\n", args[2].c_str()); return 2; }
+		std::fwrite(png.data(), 1, png.size(), f);
+		std::fclose(f);
+		std::printf("%s: the icon, %dx%d, in %s\n", path.c_str(), size, size, args[2].c_str());
 		return 0;
 	}
 	Target t;
@@ -563,6 +581,8 @@ int main(int argc, char** argv)
 	                [&o](const std::string& v) { o.bits = std::atoi(v.c_str()); return true; } });
 	app.addOption({ "format", "FMT", "split: the layer pictures' format, tlg6 (default), tlg5 or png",
 	                [&o](const std::string& v) { o.format = v; return true; } });
+	app.addOption({ "size", "N", "icon: the picture's size in pixels (default 256)",
+	                [&o](const std::string& v) { o.size = std::atoi(v.c_str()); return true; } });
 	app.addOption({ "platform", "LIST", "check, plan, build: only these platforms (windows,linux,steam,macos,web,android,ios)",
 	                [&o](const std::string& v) {
 		                size_t start = 0;

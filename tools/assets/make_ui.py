@@ -48,7 +48,7 @@ def rgba(c, a=255):
 # translated through LABELS, keyed by the English; the Japanese ones are drawn with the
 # Japanese subsets in fonts/ (subset_fonts.py makes them).
 LANG = "en"
-LANGUAGE_NAMES = [("en", "English"), ("ja", "日本語")]   # the Config screen's language buttons
+LANGUAGE_NAMES = [("en", "English"), ("ja", "日本語"), ("zh-cn", "简体中文"), ("zh-tw", "繁體中文")]   # Config's language buttons
 LABELS = {
     "ja": {
         # title
@@ -79,6 +79,64 @@ LABELS = {
         "Repeat All": "全曲リピート", "Keep on Title": "タイトルでも流す",
         "One": "1曲", "In Order": "全曲", "Shuffle": "ランダム", "Pause": "一時停止",
     },
+    "zh-cn": {
+        # title
+        "START": "开始游戏", "CONTINUE": "继续游戏", "EXTRA": "特典", "CONFIG": "设置", "EXIT": "退出",
+        # the message window's buttons
+        "SAVE": "存档", "LOAD": "读档", "BACK": "回退", "SKIP": "快进", "AUTO": "自动", "LOG": "记录",
+        "HIDE": "隐藏", "Q.SAVE": "快存", "Q.LOAD": "快读",
+        # config
+        "Config": "设置", "Screen Mode": "画面模式", "Text Speed": "文字速度", "Auto Speed": "自动速度",
+        "Effect Speed": "演出速度", "Skip Mode": "快进模式", "Language / 言語": "语言 / Language", "BGM Volume": "BGM 音量",
+        "SE Volume": "音效音量", "Voice Volume": "语音音量", "Voice Settings": "语音设置",
+        "Slow": "慢", "Fast": "快", "Min": "小", "Max": "大",
+        "Click a name to mute or unmute their voice.": "点击名字可将其语音静音或恢复。",
+        "Each one's volume and a test: page 5.": "各自的音量与试听：第 5 页。",
+        "Ai": "爱", "Pip": "皮普", "Hiyori": "日和", "Vee": "薇", "Undo": "撤销", "Revert": "全部还原",
+        "Window": "窗口", "Full Screen": "全屏", "Normal": "普通", "Skip": "跳过",
+        "All": "全部", "Read Only": "仅已读",
+        "Default": "默认设置", "Title": "标题画面", "Return": "返回", "Controls": "操作方式", "Manual": "手册",
+        "Your Name": "名字",
+        # save / load
+        "Save": "存档", "Load": "读档", "NO DATA": "无数据",
+        # Extras
+        "CG Mode": "CG 鉴赏", "Replay": "回想", "Music": "音乐", "Search": "搜索", "CG": "CG", "Glossary": "词汇表",
+        "Chart": "流程图", "Characters": "角色",
+        "Character 1": "角色 1", "Character 2": "角色 2", "Character 3": "角色 3",
+        "Character 4": "角色 4", "Character 5": "角色 5", "Other": "其他",
+        "Track %02d": "曲目 %02d", "Stop": "停止", "Play": "播放", "Repeat": "循环",
+        "Repeat All": "全部循环", "Keep on Title": "标题画面也播放",
+        "One": "单曲", "In Order": "全部", "Shuffle": "随机", "Pause": "暂停",
+    },
+    "zh-tw": {
+        # title
+        "START": "開始遊戲", "CONTINUE": "繼續遊戲", "EXTRA": "特典", "CONFIG": "設定", "EXIT": "結束",
+        # the message window's buttons
+        "SAVE": "存檔", "LOAD": "讀檔", "BACK": "回退", "SKIP": "快轉", "AUTO": "自動", "LOG": "紀錄",
+        "HIDE": "隱藏", "Q.SAVE": "快存", "Q.LOAD": "快讀",
+        # config
+        "Config": "設定", "Screen Mode": "畫面模式", "Text Speed": "文字速度", "Auto Speed": "自動速度",
+        "Effect Speed": "演出速度", "Skip Mode": "快轉模式", "Language / 言語": "語言 / Language", "BGM Volume": "BGM 音量",
+        "SE Volume": "音效音量", "Voice Volume": "語音音量", "Voice Settings": "語音設定",
+        "Slow": "慢", "Fast": "快", "Min": "小", "Max": "大",
+        "Click a name to mute or unmute their voice.": "點擊名字可將其語音靜音或恢復。",
+        "Each one's volume and a test: page 5.": "各自的音量與試聽：第 5 頁。",
+        "Ai": "愛", "Pip": "皮普", "Hiyori": "日和", "Vee": "薇", "Undo": "復原", "Revert": "全部還原",
+        "Window": "視窗", "Full Screen": "全螢幕", "Normal": "一般", "Skip": "略過",
+        "All": "全部", "Read Only": "僅已讀",
+        "Default": "預設值", "Title": "標題畫面", "Return": "返回", "Controls": "操作方式", "Manual": "手冊",
+        "Your Name": "名字",
+        # save / load
+        "Save": "存檔", "Load": "讀檔", "NO DATA": "無資料",
+        # Extras
+        "CG Mode": "CG 鑑賞", "Replay": "回想", "Music": "音樂", "Search": "搜尋", "CG": "CG", "Glossary": "詞彙表",
+        "Chart": "流程圖", "Characters": "角色",
+        "Character 1": "角色 1", "Character 2": "角色 2", "Character 3": "角色 3",
+        "Character 4": "角色 4", "Character 5": "角色 5", "Other": "其他",
+        "Track %02d": "曲目 %02d", "Stop": "停止", "Play": "播放", "Repeat": "循環",
+        "Repeat All": "全部循環", "Keep on Title": "標題畫面也播放",
+        "One": "單曲", "In Order": "全部", "Shuffle": "隨機", "Pause": "暫停",
+    },
 }
 
 
@@ -93,8 +151,9 @@ def L(label):
 
 
 def all_labels(lang):
-    """every label drawn in a language (subset_fonts.py: the characters its fonts need)"""
-    return list(LABELS.get(lang, {}).values()) + [name for _, name in LANGUAGE_NAMES] + ["0123456789"]
+    """every label drawn in a language (subset_fonts.py: the characters its fonts need); a
+    language's name on its Config button is drawn in its own font"""
+    return list(LABELS.get(lang, {}).values()) + [name for code, name in LANGUAGE_NAMES if code == lang] + ["0123456789"]
 
 
 def out(name, words=True):
@@ -115,12 +174,21 @@ _fonts = {}
 def font(weight, size):
     key = (weight, size, LANG)
     if key not in _fonts:
-        _fonts[key] = ImageFont.truetype(font_file(weight, LANG != "en"), int(round(size * SS)))
+        _fonts[key] = ImageFont.truetype(font_file(weight, LANG), int(round(size * SS)))
     return _fonts[key]
 
 
-def font_file(weight, japanese=False):
-    return os.path.join(HERE, "fonts", "NotoSansCJKjp-%s-%s.otf" % (weight, "Japanese" if japanese else "Latin"))
+# each language's label fonts in fonts/ (subset_fonts.py)
+FONT_FILES = {"en": "NotoSansCJKjp-%s-Latin.otf", "ja": "NotoSansCJKjp-%s-Japanese.otf",
+              "zh-cn": "NotoSansCJKsc-%s-SC.otf", "zh-tw": "NotoSansCJKtc-%s-TC.otf"}
+
+
+def font_file(weight, lang="en"):
+    if lang is True:
+        lang = "ja"
+    elif lang is False:
+        lang = "en"
+    return os.path.join(HERE, "fonts", FONT_FILES[lang] % weight)
 
 
 def missing_glyphs(f, s):
@@ -828,6 +896,7 @@ CFG_L, CFG_R, CFG_TOP, CFG_ROW, CFG_W = 290, 990, 206, 130, 640
 
 
 def make_config():
+    global LANG
     c = Canvas(1920, 1080)
     screen_bg(c)
     header(c, L("Config"))
@@ -868,10 +937,19 @@ def make_config():
     for name, label in toggles:
         for st in ("normal", "over"):
             button(240, 60, L(label), st, size=28).save(out("config_%s_%s.png" % (name, st)))
-    # a language's button says its name in that language, the same in every language
+    # a language's button says its name in that language, the same in every language, in its
+    # own font; four side by side across the left panel (config.ks)
     for code, label in LANGUAGE_NAMES:
         for st in ("normal", "over"):
-            button(240, 60, label, st, size=28).save(out("config_lang_%s_%s.png" % (code, st), False))
+            path = out("config_lang_%s_%s.png" % (code, st), False)
+            if path is None:
+                continue
+            drawing, LANG = LANG, code
+            try:
+                img = button(146, 60, label, st, size=26)
+            finally:
+                LANG = drawing
+            img.save(path)
     # the voices' switches, a character's each (envinit.tjs's voiceName voice0 to voice3)
     for i, name in enumerate(("Ai", "Pip", "Hiyori", "Vee")):
         button(180, 60, L(name), "over", size=26, icon=ic_dot, icon_size=14).save(

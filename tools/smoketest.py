@@ -52,6 +52,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import random
 import tempfile
 import time
 
@@ -460,6 +461,9 @@ class SimulatorEngine(Engine):
         self.url = "http://127.0.0.1:%d/pad/exec" % port
         self.log_path = os.path.join(workdir, "simulator.log")
         self.simctl("install", device, app)
+        # screenshots into Photos (since 0.28.1): granted beforehand, or the system's question would
+        # wait for a tap no one makes
+        subprocess.run(["xcrun", "simctl", "privacy", device, "grant", "photos-add", bundle_id], capture_output=True)
         self.container = self.simctl("get_app_container", device, bundle_id, "data").strip()
         self.started = time.time()
         self.simctl("launch", "--terminate-running-process", device, bundle_id,
@@ -1267,6 +1271,85 @@ def template_steps(eng):
 
     prompt_steps(eng, step)
     interface_steps(eng, step)
+
+    @step("porting (Porting.tjs, last: it rewires Plugins.link): win32dialog.dll's dialogs as Elements dialogs, data packs, Storages.saveOctet, getLangName")
+    def _():
+        if eng.tjs('return Storages.isExistentStorage("Win32DialogStandIn.tjs") ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before the stand-ins)", flush=True)
+            return
+        eng.wait("a stable point", "kag.inStable && kag.currentDialog === void", timeout=20)
+        eng.tjs('Scripts.execStorage("Porting.tjs"); Plugins.link("plugin/win32dialog.dll"); Plugins.link("plugin/getLangName.dll");'
+                ' Scripts.execStorage("win32dialog.tjs") if typeof global.WIN32GenericDialogEX == "undefined"; return 1;')
+        # a settings dialog built as games build them, answered by a timer as a player would: a new
+        # name typed, a choice picked, a box ticked, OK
+        got = str(eng.tjs(
+            'var d = new WIN32GenericDialogEX(%[ title:"Settings", width:220 ]);'
+            ' d.addLineInput(%[ id:"name", text:"Name" ], void, "Ai"); d.nextLine();'
+            ' d.addDropSelect(%[ id:"speed", text:"Text speed" ], 60, void, 1, [ "Slow", "Normal", "Fast" ]); d.nextLine();'
+            ' d.addToggle(%[ id:"voice", text:"Voices on" ]); d.nextLine();'
+            ' d.addDefPush(%[ id:IDOK, text:"OK" ]); d.addButton(%[ id:IDCANCEL, text:"Cancel" ]);'
+            ' global.__w32 = d;'
+            ' global.__w32answer = new Timer(function() { global.__w32answer.enabled = false; var dd = global.__w32;'
+            '  dd.onAction("e" + dd.getNumberdId("name"), "Pip"); dd.onAction("k" + dd.getNumberdId("voice"), true);'
+            '  dd.onAction("p" + dd.getNumberdId("speed"), 2); dd.onAction("c1", void); }, "");'
+            ' __w32answer.interval = 800; __w32answer.enabled = true;'
+            ' var r = d.open(kag), a = [ "result=" + r.result ], n = []; n.assign(r.items);'
+            ' for (var i = 0; i < n.count; i += 2) a.add(n[i] + "=" + n[i + 1]);'
+            ' invalidate d; return a.join(" ");', 60))
+        print("     the dialog's answer: %s" % got, flush=True)
+        for want in ("result=1", "name=Pip", "speed=2", "voice=1"):
+            if want not in got.split(" "):
+                raise SmokeError("the win32dialog stand-in's answer lacks %s: %s" % (want, got))
+        # what it shows: the same dialog's layout as open() makes it (labels without ids of their
+        # own keep their words, the combo box's list doesn't pull the rows under it into its row,
+        # OK and Cancel, which the template leaves on top of each other, side by side, the picker
+        # at its first selection, the game's colours)
+        lay = json.loads(str(eng.tjs(
+            'var d = new WIN32GenericDialogEX(%[ title:"Settings", width:220 ]);'
+            ' d.addLineInput(%[ id:"name", text:"Name" ], void, "Ai"); d.nextLine();'
+            ' d.addDropSelect(%[ id:"speed", text:"Text speed" ], 60, void, 1, [ "Slow", "Normal", "Fast" ]); d.nextLine();'
+            ' d.addToggle(%[ id:"voice", text:"Voices on" ]); d.nextLine();'
+            ' d.addDefPush(%[ id:IDOK, text:"OK" ]); d.addButton(%[ id:IDCANCEL, text:"Cancel" ]);'
+            ' d.nextLine(); d._templ.cy = d._maxy; d._stored = true; d.store(d._templ); d.setInitParams(d._inits); d.onInit();'
+            ' var vars = %[], j = ElementsDialog.dictToJson(d.makeLayout(vars)); invalidate d; return j;')))
+
+        def walk(node, out):
+            if isinstance(node, dict):
+                out.append(node)
+                for v in node.values():
+                    walk(v, out)
+            elif isinstance(node, list):
+                for v in node:
+                    walk(v, out)
+            return out
+        rows = [n for n in walk(lay, []) if n.get("type") == "vsize" and n.get("child", {}).get("type") == "htile"]
+        shown = []
+        for row in rows:
+            parts = []
+            for n in walk(row, []):
+                if n.get("type") in ("label", "checkbox", "button") and "text" in n:
+                    parts.append(n["text"])
+                elif n.get("type") == "input_box":
+                    parts.append("[%s]" % n.get("text", ""))
+                elif n.get("type") == "cycle_picker":
+                    parts.append("<%s>" % n["options"][n.get("initial", 0)])
+            shown.append(" ".join(parts))
+        widths = [n["width"] for n in walk(rows[-1], []) if n.get("type") in ("hsize", "hspacer")] if rows else []
+        print("     its rows: %s; the button row %d of %d px; background %s" % (" | ".join(shown), sum(widths),
+              lay["size"][0] - 64, lay.get("background")), flush=True)
+        if shown != ["Name [Ai]", "Text speed <Normal>", "Voices on", "OK Cancel"] or sum(widths) > lay["size"][0] - 64 \
+                or not lay.get("background"):
+            raise SmokeError("the win32dialog stand-in's layout: %s" % json.dumps(lay)[:800])
+        r = str(eng.tjs('var p = System.dataPath; Scripts.saveDataPack(p + "smokepack.txt", %[ a:1, b:[ "x", "y" ] ]);'
+                        ' var d = Scripts.loadDataPack(p + "smokepack.txt"); var ok = d.a == 1 && d.b.join("+") == "x+y";'
+                        ' var oct = 0;'
+                        ' try { Storages.saveOctet(p + "smoke.bin", <% 00 41 42 ff %>); oct = 1; } catch (e) { oct = e.message; }'
+                        ' return [ ok ? 1 : 0, oct, typeof System.getCurrentUILangName != "undefined" ? 1 : 0 ].join("|");'))
+        print("     data pack, saveOctet, getCurrentUILangName: %s" % r, flush=True)
+        pack, octet, lang = r.split("|")
+        if pack != "1" or lang != "1" or (octet != "1" and "sdlsystem" not in octet):
+            raise SmokeError("the porting stand-ins: %s" % r)
+
     return steps
 
 
@@ -2166,10 +2249,16 @@ def page_text(eng):
 
 
 def switch_language(eng, lang, where):
-    """F9 (the sample has two languages) when the game isn't in lang, then waits for the screen
-    at where (a script) drawn again in it"""
-    if eng.tjs("return KAGLanguage.current;") != lang:
+    """F9 (the next language: the sample has four since 0.28.1, en, ja, zh-cn, zh-tw) until the
+    game is in lang, each time waiting for the screen at where (a script) drawn again in the one
+    it went to"""
+    for _ in range(8):
+        now = eng.tjs("return KAGLanguage.current;")
+        if now == lang:
+            break
         eng.key("VK_F9")
+        eng.wait("the language after " + now, 'KAGLanguage.current != "%s" && kag.languagePending === void'
+                 ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (now, where), timeout=20)
     eng.wait(lang + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
              ' && kag.conductor.curStorage == "%s" && kag.inStable && kag.transCount == 0' % (lang, where), timeout=20)
 
@@ -2179,9 +2268,14 @@ def hunt_steps(eng):
     the sample again and again, clicking at a player's changing pace (80 ms to 1.3 s), until the
     game stops answering; then writes what its threads were doing (hang-stacks.txt in the work
     folder: debuggerd on Android, gdb here) and fails. For hangs a player meets now and then
-    (Android's in the first demo's rotation)"""
+    (Android's in the first demo's rotation). A fifth field "touch" (Android) taps the screen
+    through adb instead (input tap: the touch screen's own events, held clicks, the gestures),
+    anywhere in the middle of the picture, the rotating character's place included"""
     steps, step = collector()
-    storage, start, end, rounds = eng.opts.hunt.split(":")
+    fields = eng.opts.hunt.split(":")
+    storage, start, end, rounds = fields[:4]
+    touch = len(fields) > 4 and fields[4] == "touch" and isinstance(eng, AndroidEngine)
+    screen = eng.screen_size() if touch else None
 
     @step("start-up reaches the title screen")
     def _():
@@ -2202,6 +2296,7 @@ def hunt_steps(eng):
             '  global.__huntTimer.interval = 80 + (int)(Math.random() * 1200);'
             '  if (!kag.inStable) return;'
             '  if (global.__huntLabel == global.__huntEnd) { global.__huntTimer.enabled = false; global.__huntDone = true; return; }'
+            '  if (global.__huntTouch) return;'
             '  kag.onPrimaryClick();'
             '  global.__huntClicks++;'
             ' };'
@@ -2209,9 +2304,9 @@ def hunt_steps(eng):
             '} return 1;')
         report = os.path.join(eng.workdir, "hang-stacks.txt")
         for r in range(int(rounds)):
-            eng.tjs('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0;'
-                    ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
-                    ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;' % (storage, end, storage, start))
+            eng.tjs(('global.__huntDone = false; global.__huntLabel = ""; global.__huntClicks = 0; global.__huntTouch = %d;'
+                     ' global.__huntStorage = "%s"; global.__huntEnd = "%s"; kag.process("%s", "%s");'
+                     ' __huntTimer.interval = 300; __huntTimer.enabled = true; return 1;') % (1 if touch else 0, storage, end, storage, start))
             last, since, began = None, time.time(), time.time()
             while True:
                 try:
@@ -2229,7 +2324,17 @@ def hunt_steps(eng):
                     got = eng.hang_report(report)
                     raise SmokeError("round %d: still at %s after 2 minutes of clicks, though the game answers%s"
                                      % (r + 1, label, "; its threads are in " + report if got else ""))
-                time.sleep(2)
+                if not touch:
+                    time.sleep(2)
+                    continue
+                # taps for about two seconds, at a player's changing pace, over the middle of the
+                # picture (the message window, the character, the stage)
+                until = time.time() + 2
+                while time.time() < until:
+                    w, h = screen
+                    eng.tap(w * random.uniform(0.2, 0.8), h * random.uniform(0.25, 0.85))
+                    eng.tjs("global.__huntClicks++; return 1;", 30)
+                    time.sleep(random.uniform(0.05, 1.2))
             print("     round %d: %s clicks, %.0f s" % (r + 1, clicks, time.time() - began), flush=True)
         eng.tjs("__huntTimer.enabled = false; return 1;")
 
@@ -3327,7 +3432,17 @@ def sample_steps(eng):
         print("     made, then: %s (%s)" % (state, eng.tjs('return Speech.lastError;')), flush=True)
         if state != "playing" and state != "idle":
             raise SmokeError("the line wasn't made: %s" % state)
-        eng.wait("the line to play", 'KAGReadAloud.state == "idle"', timeout=30)
+        try:
+            eng.wait("the line to play", 'KAGReadAloud.state == "idle"', timeout=30)
+        except SmokeError:
+            where = eng.tjs('var b = KAGReadAloud.buffer; return b === void ? "no buffer" : [b.status, (int)b.position, (int)b.totalTime].join(",");')
+            eng.tjs('KAGReadAloud.cancel(); return 1;')
+            raise SmokeError("the line didn't end; its buffer (status, position, length): %s" % where)
+        stuck = eng.tjs('return KAGReadAloud.stuckStops;')
+        if stuck:
+            # the engine's buffer didn't say the sound ended (seen once on the macOS runner):
+            # ReadAloud.tjs stops it 2 s past the line's length, which this run needed
+            print("     the line's buffer didn't say it ended: stopped past its length (%s)" % stuck, flush=True)
         if eng.tjs('return world_object.env.playVoiceCount;') != 0:
             raise SmokeError("the line still counts as a voice after it ended")
 
@@ -3648,6 +3763,95 @@ def sample_steps(eng):
             raise SmokeError("the load screen's list doesn't show the save: %s" % name)
         eng.key("VK_ESCAPE")
         eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
+    @step("save comments: with the option on, a save asks for a comment; three lines typed (Return between them, a fourth refused) are kept in the save, drawn on the slot and listed on the load screen; Cancel keeps the old one")
+    def _():
+        if eng.tjs('return typeof global.KAGAskSaveComment != "undefined" && typeof kag.getBookMarkComment != "undefined" ? 1 : 0;') != 1:
+            print("     (skipped: a framework from before save comments)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.conductor.curStorage == "layer.ks" && kag.inStable && kag.currentDialog === void', timeout=20)
+        eng.tjs("startSave(); return 1;")
+        eng.wait("save.ks", 'kag.conductor.curStorage == "save.ks" && kag.inStable', timeout=20)
+        n = eng.tjs("return kag.numBookMarks - 4;")
+        eng.tjs('KAGOptionSet("saveComments", true); kag.current.names.saveList.onPick(%d); return 1;' % n)
+        eng.wait("the save, or the prompt to write over it", "kag.currentDialog !== void", timeout=10)
+        if eng.tjs('return kag.currentDialog.name == "YesNoDialog" ? 1 : 0;') == 1:
+            eng.key("VK_LEFT"); eng.key("VK_RETURN")  # Yes
+            eng.wait("the comment prompt", 'kag.currentDialog !== void && kag.currentDialog.name == "TextPromptDialog"', timeout=10)
+        # a phone: the system's keyboard, in its multi-line mode, while the field has the focus
+        # (sdlsystem's startTextInput; the engine stops text input for a layer of its own accord)
+        time.sleep(0.5)
+        kb = str(eng.tjs('var f = kag.currentDialog.field; return typeof global.KAGTextEntryKeyboardUsed == "undefined" || !KAGTextEntryKeyboardUsed(f) ? "unused" : (SDLSystem.textInputActive ? "on" : "off");'))
+        print("     the system's keyboard for the field: %s" % kb, flush=True)
+        if kb == "off":
+            # close what this step opened, so the steps after it start from the game
+            eng.tjs('KAGOptionSet("saveComments", false); return 1;')
+            eng.key("VK_ESCAPE")
+            eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+            eng.key("VK_ESCAPE")
+            raise SmokeError("the comment field has the focus but the system's keyboard isn't on")
+        got = str(eng.tjs('var d = kag.currentDialog, f = d.field; f.text = "";'
+                          ' f.onKeyPress("Before the flashback"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("Ai remembers");'
+                          ' f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("a third line"); f.onKeyDown(VK_RETURN, 0, true); f.onKeyPress("x");'
+                          ' return [d.name, f.multiline ? 1 : 0, f.visibleRows, f.text.split("\\n").count, f.text.replace(/\\n/g, "|")].join(",");'))
+        print("     the prompt (name, multi-line, rows shown, lines, text): %s" % got, flush=True)
+        name, multi, rows, lines = got.split(",")[:4]
+        if name != "TextPromptDialog" or multi != "1" or int(rows) < 2 or lines != "3":
+            raise SmokeError("the comment prompt isn't a field of several lines holding at most three: %s" % got)
+        # Ctrl+Return is OK; a plain Return made the lines above
+        eng.tjs("kag.currentDialog.onKeyDown(VK_RETURN, ssCtrl); return 1;")
+        eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+        kept = str(eng.tjs('return kag.getBookMarkComment(%d).replace(/\\n/g, "|");' % n))
+        infile = str(eng.tjs('var d = kag.evalBookMarkFromFile(kag.getBookMarkFileNameAtNum(%d)); return typeof d.comment == "String" ? d.comment.replace(/\\n/g, "|") : "(none)";' % n))
+        print("     kept: %s; in the save file: %s" % (kept, infile), flush=True)
+        if not kept.startswith("Before the flashback|Ai remembers|a third line") or infile != kept:
+            raise SmokeError("the comment wasn't kept in the index and the save: %s / %s" % (kept, infile))
+        # Cancel leaves it as it was
+        eng.tjs('KAGAskSaveComment(%d, void, true); return 1;' % n)
+        eng.wait("the prompt again", 'kag.currentDialog !== void && kag.currentDialog.name == "TextPromptDialog"', timeout=10)
+        shown = str(eng.tjs('var f = kag.currentDialog.field; f.text = "changed"; return kag.currentDialog.field.text;'))
+        eng.key("VK_ESCAPE")
+        eng.wait("the prompt closed", "kag.currentDialog === void", timeout=10)
+        if str(eng.tjs('return kag.getBookMarkComment(%d).replace(/\\n/g, "|");' % n)) != kept:
+            raise SmokeError("Esc (Cancel) changed the comment")
+        eng.tjs('KAGOptionSet("saveComments", false); return 1;')
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+        eng.tjs("startLoad(); return 1;")
+        eng.wait("load.ks", 'kag.conductor.curStorage == "load.ks" && kag.inStable', timeout=20)
+        name = str(eng.tjs('var l = kag.current.names.loadList; return l === void ? "" : l.itemName(%d);' % n))
+        print("     the load list's slot %d: %s" % (n + 1, name), flush=True)
+        if "Before the flashback" not in name:
+            raise SmokeError("the load screen's slot doesn't say the comment: %s" % name)
+        eng.key("VK_ESCAPE")
+        eng.wait("the game", 'kag.conductor.curStorage == "layer.ks" && kag.inStable', timeout=20)
+
+    @step("screenshots go to the phone's photo gallery where there is one (Android's MediaStore, iOS's photo library), and the card says so")
+    def _():
+        if eng.tjs('return typeof global.KAGGalleryPossible != "undefined" && KAGGalleryPossible() ? 1 : 0;') != 1:
+            print("     (skipped: no photo gallery here)", flush=True)
+            return
+        eng.wait("a stable point", 'kag.inStable && kag.currentDialog === void', timeout=20)
+        name = str(eng.tjs('KAGOptionSet("screenshotPlace", "gallery"); kag.systemEvents.log.clear();'
+                           ' var n = kag.saveScreenshot(); return n === void ? "" : n;'))
+        print("     sent to the gallery as %s" % name, flush=True)
+        if name == "":
+            raise SmokeError("the screenshot didn't start its way to the gallery: %s" % eng.tjs("return SDLSystem.lastError;"))
+        eng.wait("the gallery's answer", "kag.galleryPending === void", timeout=60)
+        r = str(eng.tjs('return [kag.systemEvents.log.join(","), SDLSystem.galleryError].join("|");'))
+        print("     events, error: %s" % r, flush=True)
+        events, why = r.split("|", 1)
+        if "gallerysaved" not in events:
+            if "needs Android 10" in why:
+                print("     (an Android before 10: no MediaStore folders, as the plugin says)", flush=True)
+            else:
+                raise SmokeError("the screenshot didn't reach the gallery: %s" % r)
+        if isinstance(eng, AndroidEngine) and "gallerysaved" in events:
+            out = eng.run_adb("shell", "content", "query", "--uri", "content://media/external/images/media",
+                              "--projection", "_display_name:relative_path", "--where", "\"_display_name='%s'\"" % name)
+            print("     MediaStore: %s" % out.strip()[:200], flush=True)
+            if name not in out:
+                raise SmokeError("MediaStore has no %s: %s" % (name, out))
 
     @step("every screen can be left with taps alone (a phone has no keys or right button): the history, Config, save, load, a prompt, About, the controls list, Change Controls, the controller test, a quick menu panel")
     def _():
@@ -7294,6 +7498,53 @@ def sample_steps(eng):
                  ' && kag.transCount == 0', timeout=20)
         eng.key("VK_ESCAPE")
         eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable', timeout=30)
+
+    @step("languages: Simplified and Traditional Chinese: the title's images, Ai's first line and its name, their own fonts")
+    def _():
+        if not language_framework(eng) or eng.tjs('return KAGLanguage.has("zh-cn") && KAGLanguage.has("zh-tw") ? 1 : 0;') != 1:
+            print("     (skipped: this build has no Chinese)", flush=True)
+            return
+        compiled = eng.tjs('KAGLoadScript("KAGEnvPlayer.tjs") if typeof global.scnFindCompiled == "undefined";'
+                           ' return scnFindCompiled("char.ks") !== void && world_object.scenePlayEnabled ? 1 : 0;') == 1
+        names = {"zh-cn": ("爱", "Noto Sans SC", "简体中文"), "zh-tw": ("愛", "Noto Sans TC", "繁體中文")}
+        in_lang = lambda p, code: re.search(r"(^|[/>])lang/%s/" % code, p.replace("\\", "/")) is not None
+        squeeze = lambda t: "".join(t.split())
+        for code in ("zh-cn", "zh-tw"):
+            ai, face, own = names[code]
+            eng.tjs('kag.setLanguage("%s"); return 1;' % code)
+            eng.wait(code + " shown", 'KAGLanguage.current == "%s" && kag.languagePending === void'
+                     ' && kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0' % code, timeout=30)
+            # its images, its strings, the face its text is drawn in (fonts.csv) and that face's
+            # glyphs: a face the engine can't find draws the icon font, 0 wide
+            r = str(eng.tjs('var f = KAGFontFace("message"), l = new global.Layer(kag, kag.primaryLayer);'
+                            ' l.font.face = f; l.font.height = 40; var w = l.font.getTextWidth("%s");'
+                            ' invalidate l; return [Storages.getPlacedPath(getExistImageName("start_normal")),'
+                            ' KAGLanguage.nameOf("%s"), f, w].join("|");' % (ai, code)))
+            placed, name, faces, width = r.split("|")
+            print("     %s: start_normal from %s; %s; message face %s, %s px for %s" % (code, placed, name, faces, width, ai), flush=True)
+            if not in_lang(placed, code) or name != own or not faces.startswith(face) or int(width) < 30:
+                raise SmokeError("%s isn't shown with its own images, name and font: %s" % (code, r))
+            if not compiled:
+                continue
+            eng.tjs('kag.process("char.ks", "*start"); return 1;')
+            eng.wait("char.ks", 'kag.conductor.curStorage == "char.ks" && kag.inStable && kag.clickWaiting', timeout=30)
+            for _ in range(12):
+                spoken, units = page_text(eng)
+                if spoken == ai and units:
+                    break
+                eng.tjs("kag.onPrimaryClick(); return 1;")
+                time.sleep(0.2)
+                eng.wait("a click wait", 'kag.inStable && kag.clickWaiting && kag.transCount == 0', timeout=30)
+            else:
+                raise SmokeError("no line of %s's in char.ks's first lines in %s (the page: %s %s)" % (ai, code, spoken, units))
+            line = units[-1][0].get(code, "")
+            print("     [%s] %s" % (spoken, units[-1][1]), flush=True)
+            if line == "" or line == units[-1][0].get("en") or squeeze(units[-1][1]) != squeeze(line):
+                raise SmokeError("Ai's line isn't drawn in %s: %s" % (code, units))
+            eng.tjs("kag.goToStart(); return 1;")
+            eng.wait("title.ks", 'kag.conductor.curStorage == "title.ks" && kag.inStable && kag.transCount == 0', timeout=30)
+        eng.tjs('kag.setLanguage("en"); return 1;')
+        eng.wait("English", 'KAGLanguage.current == "en" && kag.languagePending === void && kag.inStable', timeout=30)
 
     return steps
 

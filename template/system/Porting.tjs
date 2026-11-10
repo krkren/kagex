@@ -5,7 +5,7 @@
  *
  *   Scripts.execStorage("Porting.tjs");          // on the auto path, or with its folder
  *   KAGPortingPlugins["textrender.dll"] = "skip";
- *   KAGPortingPlugins["getlangname.dll"] = function(name) { ...defines what the game asks of it... };
+ *   KAGPortingPlugins["mydll.dll"] = function(name) { ...defines what the game asks of it... };
  *
  * At once it
  *   - sends Plugins.link through KAGPortingPlugins (below), by the plugin's file name in lower case
@@ -30,7 +30,10 @@ var KAGPortingPlugins = %[
 	// Windows-only: KAGEX's engines have none of them (README, "Not available on the SDL3 build")
 	"windowex.dll" => "missing",
 	"menu.dll" => "missing",
-	"win32dialog.dll" => "missing",
+	// a script stand-in: its dialogs as Elements dialogs over the game (Win32DialogStandIn.tjs)
+	"win32dialog.dll" => function(name) { Scripts.execStorage("Win32DialogStandIn.tjs") if typeof global.WIN32Dialog == "undefined"; },
+	// the system language's English name (KAGPortingLangName), as the plugin gave it on Windows
+	"getlangname.dll" => function(name) { System.getCurrentUILangName = KAGPortingLangName if typeof System.getCurrentUILangName == "undefined"; },
 	"gfxeffect.dll" => "missing",
 	"flashplayer.dll" => "missing",
 	"process.dll" => "missing"
@@ -74,6 +77,58 @@ function KAGOneSlash(name)
 	var rest = at >= 0 ? name.substring(at + 3) : name;
 	return head + rest.replace(/\/\/+/g, "/");
 }
+
+// getLangName.dll's System.getCurrentUILangName (since 0.28.1): the system's language as its
+// English name, as the plugin answered on Windows ("Japanese", "English", "Chinese"), from the
+// engine's System.systemLanguage (a BCP-47 tag); "" where the system says none
+var KAGPortingLangNames = %[
+	ja:"Japanese", en:"English", zh:"Chinese", ko:"Korean", fr:"French", de:"German", es:"Spanish",
+	it:"Italian", pt:"Portuguese", ru:"Russian", nl:"Dutch", sv:"Swedish", pl:"Polish", tr:"Turkish",
+	th:"Thai", vi:"Vietnamese", id:"Indonesian", ar:"Arabic", uk:"Ukrainian", cs:"Czech", fi:"Finnish",
+	da:"Danish", nb:"Norwegian", no:"Norwegian", hu:"Hungarian", el:"Greek", he:"Hebrew", ms:"Malay"
+];
+function KAGPortingLangName()
+{
+	var tag = "";
+	try { tag = typeof System.systemLanguage == "String" ? System.systemLanguage : ""; } catch (e) {}
+	if (tag == "") try { tag = System.uiLanguage; } catch (e) {}
+	if (typeof tag != "String" || tag == "") return "";
+	var main = tag.replace(/_/g, "-").split("-")[0].toLowerCase();
+	var n = global.KAGPortingLangNames[main];
+	return n !== void ? n : main;
+}
+
+// The original engine's data packs (since 0.28.1): a dictionary or array kept in a file and read
+// back (Scripts.saveDataPack, loadDataPack), and an octet written as it is (Storages.saveOctet,
+// through the sdlsystem plugin; a storage that is a local file only). Either order of the
+// storage and the data is taken. Only where the engine has no such member
+function KAGPortingSplit(a, b) { return typeof a == "String" ? [ a, b ] : [ b, a ]; }
+var KAGPortingData = %[
+	saveDataPack: function(a, b) {
+		var p = global.KAGPortingSplit(a, b), data = p[1];
+		if (typeof data != "Object" || data === void) throw new Exception("saveDataPack: a dictionary or an array to save");
+		if (data instanceof "Array") (Array.saveStruct incontextof data)(p[0]);
+		else (Dictionary.saveStruct incontextof data)(p[0]);
+		return true;
+	},
+	loadDataPack: function(storage) {
+		return Storages.isExistentStorage(storage) ? Scripts.evalStorage(storage) : void;
+	}
+];
+(function() {
+	var names = [];
+	names.assign(global.KAGPortingData);
+	for (var i = 0; i < names.count; i += 2) {
+		if (typeof Scripts[names[i]] == "undefined") Scripts[names[i]] = names[i + 1];
+	}
+	if (typeof Storages.saveOctet == "undefined") Storages.saveOctet = function(a, b) {
+		var p = global.KAGPortingSplit(a, b);
+		if (typeof global.SDLSystem == "undefined" || typeof SDLSystem.writeOctet == "undefined")
+			throw new Exception("Storages.saveOctet needs kagex's sdlsystem plugin (doc/porting.txt)");
+		if (!SDLSystem.writeOctet(p[0], p[1])) throw new Exception("Storages.saveOctet: " + SDLSystem.lastError);
+		return true;
+	};
+})();
 
 // the Windows engine's System calls a game may make for its settings: nothing to read or write
 var KAGPortingStubs = %[

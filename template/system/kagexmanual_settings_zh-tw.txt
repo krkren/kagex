@@ -1,0 +1,16 @@
+﻿# 設定
+這些連結會立即更改設定；方框被填滿的就是當前使用的設定。設定畫面中有全部設定。
+## 文字
+- 文字速度：[慢](option:textSpeed=3) [中](option:textSpeed=6) [快](option:textSpeed=9) [最快](option:textSpeed=10)
+- 快轉的範圍：[僅已讀文字](option:allSkip=false) [所有文字](option:allSkip=true)
+- 標記已讀文字：[是](option:readMark=true) [否](option:readMark=false)
+## 聲音
+- BGM：[關閉](option:bgmVolume=0) [較小](option:bgmVolume=40) [較大](option:bgmVolume=80) [最大](option:bgmVolume=100)
+- 語音：[關閉](option:voiceVolume=0) [較小](option:voiceVolume=40) [較大](option:voiceVolume=80) [最大](option:voiceVolume=100)
+- 有人說話時點選：[停止語音](option:voiceCut=stop) [淡出語音](option:voiceCut=fade) [讓語音播完](option:voiceCut=keep)
+## 畫面
+- [視窗](option:fullScreen=false) [全螢幕](option:fullScreen=true)
+- 畫面之間的轉場：[正常播放](option:noEffect=false) [跳過](option:noEffect=true)
+- [減少動態效果](option:reduceMotion=true)，或[保留所有動態效果](option:reduceMotion=false)
+## 更多
+[開啟設定](action:config)可以檢視所有設定，在[操作方式](action:controls)中可以更改按鍵。

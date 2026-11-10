@@ -2451,13 +2451,127 @@ def script_tests(exe, tmp, args):
          and zipfile.ZipFile(zip_path).read("main/consts.tjs")[:8] == b"TJS2100\0", ", ".join(sorted(names)) or r.get("error", ""))
 
 
+def icon_tests(exe, tmp):
+    """--cli icon (since 0.28.1): the icon a build takes from an .ico or an old Windows game's
+    .exe: the largest image, a PNG or a DIB (its AND mask making the transparent part)"""
+    import struct, zlib
+
+    def png(w, h, rgba):
+        raw = b"".join(b"\0" + bytes(rgba) * w for _ in range(h))
+        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+        return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)) +
+                chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+    def dib4(w, h, colour, clear_top):
+        # 4 bits a pixel, every pixel palette entry 1; the AND mask clears the top half if asked
+        head = struct.pack("<IiiHHIIiiII", 40, w, h * 2, 1, 4, 0, 0, 0, 0, 16, 0)
+        pal = struct.pack("<I", 0) + struct.pack("<I", colour) + b"\0" * 4 * 14
+        row = bytes([0x11] * ((w * 4 + 31) // 32 * 4))
+        xor = row * h
+        mrow_clear = b"\xff" * ((w + 31) // 32 * 4)
+        mrow_keep = b"\0" * ((w + 31) // 32 * 4)
+        # bottom-up: the first rows of the mask are the picture's bottom
+        mask = mrow_keep * (h // 2) + (mrow_clear if clear_top else mrow_keep) * (h - h // 2)
+        return head + pal + xor + mask
+
+    def ico(images):  # [(w, h, bpp, bytes)]
+        out = struct.pack("<HHH", 0, 1, len(images))
+        at = 6 + 16 * len(images)
+        for w, h, bpp, data in images:
+            out += struct.pack("<BBBBHHII", w % 256, h % 256, 0, 0, 1, bpp, len(data), at)
+            at += len(data)
+        return out + b"".join(d for _, _, _, d in images)
+
+    def make_exe(group_entries, icons):  # a PE32 with only a .rsrc section: RT_GROUP_ICON 1, RT_ICON by id
+        # the resource section, laid out from its start; directories, then data entries, then data
+        def directory(entries):  # [(id, offset, is_dir)]
+            b = struct.pack("<IIHHHH", 0, 0, 0, 0, 0, len(entries))
+            for i, off, sub in entries:
+                b += struct.pack("<II", i, off | (0x80000000 if sub else 0))
+            return b
+        grp = struct.pack("<HHH", 0, 1, len(group_entries))
+        for w, h, bpp, size, nid in group_entries:
+            grp += struct.pack("<BBBBHHIH", w % 256, h % 256, 0, 0, 1, bpp, size, nid)
+        blobs = [grp] + [d for _, d in icons]
+        # sizes: root (2 types), type 3 (n icons), each icon's language dir, type 14, its language dir
+        n = len(icons)
+        size_dir = lambda k: 16 + 8 * k
+        root = 0
+        t3 = root + size_dir(2)
+        langs3 = t3 + size_dir(n)
+        t14 = langs3 + n * size_dir(1)
+        lang14 = t14 + size_dir(1)
+        entries_at = lang14 + size_dir(1)
+        data_at = entries_at + 16 * (n + 1)
+        rva = 0x1000
+        offs, at = [], data_at
+        for bl in blobs:
+            offs.append(at)
+            at += (len(bl) + 3) // 4 * 4
+        sec = directory([(3, t3, True), (14, t14, True)])
+        sec += directory([(icons[i][0], langs3 + i * size_dir(1), True) for i in range(n)])
+        for i in range(n):
+            sec += directory([(0x409, entries_at + 16 * (i + 1), False)])
+        sec += directory([(1, lang14, True)])
+        sec += directory([(0x409, entries_at, False)])
+        sec += struct.pack("<IIII", rva + offs[0], len(blobs[0]), 0, 0)
+        for i in range(n):
+            sec += struct.pack("<IIII", rva + offs[i + 1], len(blobs[i + 1]), 0, 0)
+        for bl in blobs:
+            sec += bl + b"\0" * ((len(bl) + 3) // 4 * 4 - len(bl))
+        raw_size = (len(sec) + 0x1ff) // 0x200 * 0x200
+        dos = b"MZ" + b"\0" * 58 + struct.pack("<I", 0x40)
+        coff = struct.pack("<HHIIIHH", 0x14c, 1, 0, 0, 0, 224, 0x102)
+        opt = struct.pack("<HBBIIIIIIIIIHHHHHHIIIIHHIIIIII", 0x10b, 0, 0, 0, raw_size, 0, 0, 0, 0, 0x400000, 0x1000, 0x200,
+                          4, 0, 0, 0, 4, 0, 0, 0x2000, 0x200, 0, 2, 0, 0x100000, 0x1000, 0x100000, 0x1000, 0, 16)
+        dirs = b"\0" * 16 + struct.pack("<II", rva, len(sec)) + b"\0" * 8 * 13  # 16 directories
+        opt += dirs
+        shdr = b".rsrc\0\0\0" + struct.pack("<IIIIIIHHI", len(sec), rva, raw_size, 0x200, 0, 0, 0, 0, 0x40000040)
+        head = dos + b"PE\0\0" + coff + opt + shdr
+        return head + b"\0" * (0x200 - len(head)) + sec + b"\0" * (raw_size - len(sec))
+
+    def picture(path):
+        from PIL import Image  # the runners have Pillow (the media tests use it)
+        im = Image.open(path).convert("RGBA")
+        return im.size, im.getpixel((im.width // 2, im.height // 4)), im.getpixel((im.width // 2, im.height * 3 // 4))
+
+    red, blue = (255, 0, 0, 255), (0, 0, 255, 255)
+    files = {
+        "two.ico": ico([(16, 16, 32, dib4(16, 16, 0x00ff00, False)), (48, 48, 32, png(48, 48, blue))]),
+        "masked.ico": ico([(32, 32, 4, dib4(32, 32, 0xff0000, True))]),
+        "game.exe": make_exe([(16, 16, 4, 0, 1), (64, 64, 32, 0, 2)], [(1, dib4(16, 16, 0x00ff00, False)), (2, png(64, 64, red))]),
+    }
+    for name, data in files.items():
+        (tmp / name).write_bytes(data)
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        step("icons from .ico and .exe (skipped: no Pillow to read the PNG)", True)
+        return
+    for name, want_top, want_bottom in (("two.ico", blue, blue), ("masked.ico", None, (255, 0, 0, 255)), ("game.exe", red, red)):
+        out = tmp / (name + ".png")
+        code, text = run(exe, "--cli", "icon", str(tmp / name), str(out), "--size=64")
+        if code != 0:
+            step("--cli icon " + name, False, text.strip())
+            continue
+        size, top, bottom = picture(out)
+        ok = size == (64, 64) and bottom == want_bottom and (top == want_top if want_top else top[3] == 0)
+        step("--cli icon %s: the largest image%s" % (name, ", the AND mask's clear half" if want_top is None else ""), ok,
+             "%s, top %s, bottom %s" % (size, top, bottom))
+    code, text = run(exe, "--cli", "icon", str(tmp / "two.ico.png"), str(tmp / "again.png"))
+    step("--cli icon of a PNG", code == 0, text.strip())
+    (tmp / "not.exe").write_bytes(b"MZ" + b"\0" * 100)
+    code, text = run(exe, "--cli", "icon", str(tmp / "not.exe"), str(tmp / "x.png"))
+    step("--cli icon refuses an .exe without an icon", code == 2 and "error" in text, text.strip())
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe")
     ap.add_argument("--browser", action="store_true")
     ap.add_argument("--out")
     ap.add_argument("--engines")
-    ap.add_argument("--tests", help="some of cli,keys,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,movies,layered (default: all)")
+    ap.add_argument("--tests", help="some of cli,keys,icons,signing,plugins,server,build,hidden,web,android,ios,media,scripts,scenes,patch,loudness,pieces,movies,layered (default: all)")
     args = ap.parse_args()
     chosen = set(args.tests.split(",")) if args.tests else None
     want = lambda name: chosen is None or name in chosen
@@ -2471,6 +2585,8 @@ def main():
             cli_tests(exe, proj)
         if want("keys"):
             keys_tests(exe, proj, Path(t))
+        if want("icons"):
+            icon_tests(exe, Path(t))
         if want("signing"):
             signing_validation_tests(exe, proj)
         if want("plugins") or (args.engines and want("build")):

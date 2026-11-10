@@ -6,7 +6,11 @@
 
 /*
 
-This layer acts as a single-line edit control.
+This layer acts as a single-line edit control, or, with multiline set (since 0.28.1: [edit
+multiline=true rows=3]), a field of several lines: Return makes a new line (maxLines limits how
+many), the text wraps to the width (between words where there are spaces, anywhere in Chinese
+and Japanese), Up and Down move between the rows, Home and End to a row's ends (with Ctrl, the
+text's), and the field scrolls when the text has more rows than it shows.
 
 
 
@@ -65,6 +69,14 @@ class EditLayer extends KAGLayer
 	var Edit_highlightTextColor = System.toActualColor(clHighlightText);
 
 
+
+	// Several lines (multiline)
+	var Edit_multiline = false;
+	var Edit_maxLines = 0;     // most lines (0: no limit)
+	var Edit_topRow = 0;       // the first row in view
+	var Edit_goalX = -1;       // the x Up and Down keep to
+	var Edit_rows;             // the text in rows: [start, end] (a hard row's end is its "\n")
+	var Edit_rowsKey = "";
 
 	var Edit_selLength = 0; // Deprecated.
 
@@ -173,6 +185,10 @@ class EditLayer extends KAGLayer
 		Edit_passwordView = src.Edit_passwordView;
 
 		Edit_passwordMark = src.Edit_passwordMark;
+		Edit_multiline = src.Edit_multiline;
+		Edit_maxLines = src.Edit_maxLines;
+		Edit_topRow = src.Edit_topRow;
+		Edit_rowsKey = "";
 
 		var f = font;
 
@@ -270,6 +286,8 @@ class EditLayer extends KAGLayer
 
 		// Scroll until the caret is definitely visible
 
+		if (Edit_multiline && !Edit_vertical) return mlEnsureCaretVisible();
+
 		var sp_save = Edit_scrollPos;
 
 		var txtlen = Edit_text.length;
@@ -301,6 +319,8 @@ class EditLayer extends KAGLayer
 	{
 
 		resizeCaret();
+
+		if (Edit_multiline && !Edit_vertical) return mlSetCaretLayerPos();
 
 		var xpos = getCaretXPos() -1;
 
@@ -378,7 +398,7 @@ class EditLayer extends KAGLayer
 
 		var oldStart  = Edit_selStart;
 
-
+		Edit_goalX = -1 if !mlKeepGoal;
 
 		// Move caret
 
@@ -486,9 +506,15 @@ class EditLayer extends KAGLayer
 
 				Edit_selStart = getCaretPosFromX(y);
 
+			else if(Edit_multiline)
+
+				Edit_selStart = mlPosFromXY(x, y);
+
 			else
 
 				Edit_selStart = getCaretPosFromX(x);
+
+			Edit_goalX = -1;
 
 
 
@@ -542,7 +568,19 @@ class EditLayer extends KAGLayer
 
 	{
 
-		if(Edit_mouseDown)
+		if(Edit_mouseDown && Edit_multiline && !Edit_vertical)
+
+		{
+
+			// a drag above or below the field scrolls it
+			var oldStart = Edit_selStart;
+			Edit_selStart = mlPosFromXY(x, y);
+			if(oldStart != Edit_selStart) update();
+			ensureCaretVisible();
+			showCaret();
+		}
+
+		else if(Edit_mouseDown)
 
 		{
 
@@ -994,6 +1032,21 @@ class EditLayer extends KAGLayer
 
 		// Key pressed
 
+		if(Edit_multiline && key.length > 1)
+
+		{
+
+			// a phone's keyboard hands over a word at once; its new lines come as Return
+			var kept = "";
+			for (var i = 0; i < key.length; i++) kept += key[i] if #key[i] >= 32;
+			key = kept;
+			if (key == "") return;
+			if(Edit_maxChars) key = key.substring(0, Edit_maxChars - (Edit_text.length - selectLength));
+			insertCharacter(key) if key != "";
+			window.hideMouseCursor();
+			return;
+		}
+
 		if(#key >= 32)
 
 		{
@@ -1045,6 +1098,8 @@ class EditLayer extends KAGLayer
 
 
 		var sft = ((shift & ssShift) == ssShift);
+
+		if (Edit_multiline && !Edit_vertical && mlKeyDown(key, shift, sft)) return;
 
 		switch (key) {
 
@@ -1113,6 +1168,8 @@ class EditLayer extends KAGLayer
 	{
 
 		// Called just before drawing
+
+		if (Edit_multiline && !Edit_vertical) return mlPaint();
 
 		// Draw contents
 
@@ -1292,6 +1349,270 @@ class EditLayer extends KAGLayer
 
 	}
 
+	// ---- Several lines (multiline, since 0.28.1) ----
+
+	property multiline
+	{
+		setter(v) { Edit_multiline = v ? true : false; Edit_topRow = 0; Edit_rowsKey = ""; update(); }
+		getter { return Edit_multiline; }
+	}
+
+	property maxLines
+	{
+		setter(v) { Edit_maxLines = int v; }
+		getter { return Edit_maxLines; }
+	}
+
+	// A row's height: the font's and a quarter of it between the rows
+	property lineHeight
+	{
+		getter { var fh = font.height; fh = -fh if fh < 0; return fh + ((fh + 3) >> 2); }
+	}
+
+	// The rows the field shows at once
+	property visibleRows
+	{
+		getter { var n = (imageHeight - 6) \ lineHeight; return n < 1 ? 1 : n; }
+	}
+
+	// The height a field of n rows needs
+	function heightForRows(n)
+	{
+		var fh = font.height; fh = -fh if fh < 0;
+		return lineHeight * n + 6;
+	}
+
+	var mlKeepGoal = false;
+	// Characters a row doesn't start with: the row before takes them
+	var mlClosers = "、。，．,.！？!?）)」』】〕》〉…‥・ー：；:;";
+
+	function mlWordChar(ch)
+	{
+		var c = #ch;
+		return (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) ||
+			(c >= 0xc0 && c <= 0x24f) || ch == "'" || ch == "-";
+	}
+
+	// The text cut into rows to the width
+	function mlRows()
+	{
+		var w = imageWidth - 9;
+		var text = _viewtext;
+		var key = "%d:%s:%d:%d:%s".sprintf(w, font.face, font.height, font.bold ? 1 : 0, text);
+		if (key == Edit_rowsKey && Edit_rows !== void) return Edit_rows;
+		var rows = [];
+		var n = text.length, at = 0;
+		for (;;) {
+			var nl = text.indexOf("\n", at);
+			var end = nl < 0 ? n : nl;
+			var s = at;
+			if (s == end) rows.add([s, s]);
+			while (s < end) {
+				// as many characters as fit, at least one
+				var fit = s + 1;
+				while (fit < end && font.getTextWidth(text.substring(s, fit + 1 - s)) <= w) fit++;
+				var cut = fit;
+				if (fit < end) {
+					var ch = text[fit];
+					if (ch == " ") cut = fit + 1;   // the space hangs at the row's end
+					else if (mlWordChar(ch) && mlWordChar(text[fit - 1])) {
+						// inside a word: break after the space before it
+						for (var k = fit - 1; k > s; k--) if (text[k] == " ") { cut = k + 1; break; }
+					} else if (mlClosers.indexOf(ch) >= 0 && fit - 1 > s) cut = fit - 1;
+				}
+				rows.add([s, cut]);
+				s = cut;
+			}
+			if (nl < 0) break;
+			at = nl + 1;
+		}
+		rows.add([0, 0]) if rows.count == 0;
+		Edit_rows = rows;
+		Edit_rowsKey = key;
+		return rows;
+	}
+
+	// The row the character position is on (a wrapped row's end is the next row's start)
+	function mlRowOf(pos)
+	{
+		var rows = mlRows();
+		var r = 0;
+		for (var i = 1; i < rows.count; i++) {
+			if (rows[i][0] > pos) break;
+			r = i;
+		}
+		return r;
+	}
+
+	// The position in row r nearest to x
+	function mlPosInRow(r, x)
+	{
+		var rows = mlRows();
+		var text = _viewtext;
+		r = 0 if r < 0;
+		r = rows.count - 1 if r >= rows.count;
+		var st = rows[r][0], en = rows[r][1];
+		// a wrapped row stops before its end, which shows on the next row
+		if (r + 1 < rows.count && rows[r + 1][0] == en && en > st) en--;
+		x -= 3;
+		var prev = 0;
+		for (var i = st; i < en; i++) {
+			var cw = font.getTextWidth(text.substring(st, i + 1 - st));
+			if (x < (prev + cw) / 2) return i;
+			prev = cw;
+		}
+		return en;
+	}
+
+	function mlPosFromXY(x, y)
+	{
+		var r = Edit_topRow + (y < 3 ? -1 : (y - 3) \ lineHeight);
+		return mlPosInRow(r, x);
+	}
+
+	// The caret's x, y and row
+	function mlCaretXY()
+	{
+		var rows = mlRows();
+		var r = mlRowOf(Edit_selStart);
+		var st = rows[r][0];
+		var x = 3 + font.getTextWidth(_viewtext.substring(st, Edit_selStart - st));
+		return [ x, 3 + (r - Edit_topRow) * lineHeight, r ];
+	}
+
+	function mlEnsureCaretVisible()
+	{
+		var rows = mlRows();
+		var r = mlRowOf(Edit_selStart);
+		var vis = visibleRows, top = Edit_topRow;
+		top = r if r < top;
+		top = r - vis + 1 if r >= top + vis;
+		top = rows.count - vis if top > rows.count - vis;
+		top = 0 if top < 0;
+		if (top != Edit_topRow) { Edit_topRow = top; update(); }
+	}
+
+	function mlSetCaretLayerPos()
+	{
+		var c = mlCaretXY();
+		Edit_caretLayer.left = c[0] - 1;
+		Edit_caretLayer.top = c[1];
+		setAttentionPos(c[0] - 1, c[1]);
+	}
+
+	// Moves the caret by rows (Up, Down, Page Up, Page Down), keeping to the x it started at
+	function mlMoveRows(d, keepAnchor)
+	{
+		var c = mlCaretXY();
+		Edit_goalX = c[0] if Edit_goalX < 0;
+		var rows = mlRows();
+		var r = c[2] + d;
+		var pos;
+		if (r < 0) pos = 0;
+		else if (r >= rows.count) pos = Edit_text.length;
+		else pos = mlPosInRow(r, Edit_goalX);
+		mlKeepGoal = true;
+		moveCaret(pos, keepAnchor);
+		mlKeepGoal = false;
+	}
+
+	// The lines the text has (its new lines + 1)
+	function mlLineCount()
+	{
+		var n = 1, t = Edit_text;
+		for (var i = t.indexOf("\n"); i >= 0; i = t.indexOf("\n", i + 1)) n++;
+		return n;
+	}
+
+	// The keys a field of several lines takes itself: true when it took the key
+	function mlKeyDown(key, shift, sft)
+	{
+		var rows = mlRows();
+		switch (key) {
+		case VK_RETURN:
+			// Ctrl+Return goes on to what the field does when it's done ([edit enter=])
+			if (shift & ssCtrl) return false;
+			var from = Edit_selStart < Edit_selAnchor ? Edit_selStart : Edit_selAnchor;
+			var takesLine = Edit_text.substring(from, selectLength).indexOf("\n") >= 0;
+			if (Edit_maxLines > 0 && mlLineCount() >= Edit_maxLines && !takesLine) return true;
+			if (Edit_maxChars && (Edit_text.length - selectLength) >= Edit_maxChars) return true;
+			insertCharacter("\n");
+			return true;
+		case VK_UP:    mlMoveRows(-1, sft); return true;
+		case VK_DOWN:  mlMoveRows(1, sft); return true;
+		case VK_PRIOR: mlMoveRows(-visibleRows, sft); return true;
+		case VK_NEXT:  mlMoveRows(visibleRows, sft); return true;
+		case VK_HOME:
+			if (shift & ssCtrl) return false;
+			moveCaret(rows[mlRowOf(Edit_selStart)][0], sft);
+			return true;
+		case VK_END:
+			if (shift & ssCtrl) return false;
+			var r = mlRowOf(Edit_selStart);
+			var en = rows[r][1];
+			if (r + 1 < rows.count && rows[r + 1][0] == en && en > rows[r][0]) en--;
+			moveCaret(en, sft);
+			return true;
+		}
+		return false;
+	}
+
+	function mlPaint()
+	{
+		fillRect(0, 0, imageWidth, imageHeight, 0);
+		colorRect(0, 0, imageWidth, imageHeight, Edit_color, Edit_opacity);
+		var fh = font.height;
+		fh = -fh if fh < 0;
+		var lh = lineHeight;
+		var rows = mlRows();
+		var text = _viewtext;
+		var highlightbg = 0xff000000 | Edit_highlightColor;
+		var highlighttext = Edit_highlightTextColor;
+		var anti = Edit_antialiased;
+		var textcolor = Edit_textColor;
+		var last = Edit_topRow + visibleRows;
+		last = rows.count if last > rows.count;
+		for (var r = Edit_topRow; r < last; r++) {
+			var y = 3 + (r - Edit_topRow) * lh;
+			var st = rows[r][0], en = rows[r][1];
+			for (var i = st; i < en; i++) {
+				var x = 3 + font.getTextWidth(text.substring(st, i - st));
+				var ch = text[i];
+				if (isSelected(i)) {
+					fillRect(x, y, font.getTextWidth(ch), fh, highlightbg);
+					drawText(x, y, ch, highlighttext, 255, anti);
+				} else {
+					drawText(x, y, ch, textcolor, 255, anti);
+				}
+			}
+			// a selected new line shows as a little of the row after its text
+			if (en < text.length && text[en] == "\n" && isSelected(en))
+				fillRect(3 + font.getTextWidth(text.substring(st, en - st)), y, fh >> 2, fh, highlightbg);
+		}
+		// nothing past the right edge, nor under the last row in view
+		fillRect(imageWidth - 3, 0, 3, imageHeight, 0);
+		colorRect(imageWidth - 3, 0, 3, imageHeight, Edit_color, Edit_opacity);
+		var bottom = 3 + (last - Edit_topRow) * lh;
+		if (bottom < imageHeight - 3) {
+			fillRect(0, bottom, imageWidth, imageHeight - bottom, 0);
+			colorRect(0, bottom, imageWidth, imageHeight - bottom, Edit_color, Edit_opacity);
+		}
+		// where the rows in view are, when there are more than it shows
+		if (rows.count > visibleRows) {
+			var track = imageHeight - 6;
+			var th = track * visibleRows \ rows.count;
+			th = 8 if th < 8;
+			var ty = 3 + (track - th) * Edit_topRow \ (rows.count - visibleRows);
+			colorRect(imageWidth - 6, ty, 3, th, Edit_textColor, 128);
+		}
+		if (!Edit_noborder) {
+			colorRect(0, 0, imageWidth, 1, 0x000000, 128);
+			colorRect(0, 1, 1, imageHeight-2, 0x000000, 128);
+			colorRect(imageWidth-1, 1, 1, imageHeight-1, 0xffffff, 128);
+			colorRect(1, imageHeight-1, imageWidth-2, 1, 0xffffff, 128);
+		}
+	}
+
 	// Apply drawing offset to drawText
 
 	function drawText(x, y, *) {
@@ -1359,6 +1680,8 @@ class EditLayer extends KAGLayer
 			Edit_selAnchor = 0;
 
 			Edit_scrollPos = 0;
+
+			Edit_topRow = 0;
 
 			setCaretLayerPos();
 

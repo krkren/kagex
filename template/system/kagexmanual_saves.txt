@@ -2,6 +2,7 @@
 - Save: {key:save}. Load: {key:load}.
 - Quick save: {key:quickSave}, and quick load: {key:quickLoad}. Quick saves take turns in a few slots of their own, so the newest never writes over the one before.
 - The game also keeps your place when you close it: [carry on where you left off when it starts](option:continueOn=true), or [don't](option:continueOn=false).
+- A save can have a comment of a few lines, which its slot shows: [ask for one after each save](option:saveComments=true), or [don't](option:saveComments=false).
 ## Where they are
 Your saves and settings are kept in {savefolder}. [Copy the folder's path](copy:{savefolder})
 

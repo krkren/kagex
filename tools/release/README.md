@@ -15,6 +15,7 @@ kagex-release                              # the window, for the game here or ab
 kagex-release path/to/game                 # the window, for that game
 kagex-release --cli init  [path]           # write release.json with the defaults (--force replaces it)
 kagex-release --cli check [release.json]   # problems in the settings, and what this computer can build
+kagex-release --cli icon <png|ico|exe> <out.png>  # the icon a build takes from that file (--size=N)
 kagex-release --cli plan  [release.json]   # what a build would make
 kagex-release --cli build [release.json]   # build the packages
 kagex-release --cli keygen <keys file>     # write the game's keys file, or add the keys it lacks
@@ -119,7 +120,9 @@ For each platform, `<output>/<file name>-<version>-<platform>/` and its package 
   opens or brings a `<manifest>` or `<application>` of its own.
 - **iOS** (on a Mac with Xcode): the engine's app with the game's bundle ID, name, version
   (build number from the version unless set) and icon (an asset catalog compiled by `actool`),
-  and `data.xp3` or `data/` in the bundle. For devices it is signed with your certificate
+  and `data.xp3` or `data/` in the bundle, and `photosUsage` as `NSPhotoLibraryAddUsageDescription`
+  (what iOS shows as it asks the player to let screenshots into Photos; empty leaves it out, and
+  the game then keeps its screenshots in the save folder). For devices it is signed with your certificate
   (Apple Development or Apple Distribution) and provisioning profile, whose entitlements it
   takes, as `<file name>-<version>.ipa`; for the Simulator, signed ad hoc, as a zip of the app.
   Identity `-` signs a device build ad hoc, to check the package.
@@ -463,7 +466,7 @@ Writing a plugin of your own, for the engines kagex-release uses:
 
 | Section | What it holds |
 |---|---|
-| `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG) |
+| `identity` | title, short name (home screens), file name (the executable and its `.cf`), version (`1.2.3`), copyright, organization and app names (the save folder on Linux and macOS; `krkren`/`kagex` is the sample's and is refused), icon (a 1024x1024 PNG; since 0.28.1 also an `.ico`, or a Windows game's old `.exe`, whose largest icon is taken: `--cli icon <file> <out.png>` shows it) |
 | `engine` | `debug`: the debug engine instead of the release one |
 | `contents` | `framework` (copy `template/system` in as `data/system` when the game has none), `font` (Noto Sans JP), `licenses`, `exclude` (patterns: `*.bak` anywhere, `bgimage/raw/**`, `work/`; the defaults are `*.bak`, `*.tmp`, `Thumbs.db`, `desktop.ini` and `.DS_Store`; a `.clip` or `.psd` that a script loads layers from, `clip://name.clip/...` or `psd://name.psd/...`, or that is a pose `charinit.csv` names, goes in all the same; every `.psd` and `.clip` that goes in is split into its layers: see "Photoshop and CLIP STUDIO PAINT files"), `extraFiles` (beside the executable), `plugins` (`all` or `linked`), `compileScripts` (TJS to bytecode) |
 | `scenes` | `compile` (the scripts in `!scnlist.txt` into `.scn` files, without the scripts), `encrypt` (with the keys file's scenes key) |
@@ -472,7 +475,7 @@ Writing a plugin of your own, for the engines kagex-release uses:
 | `keys` | `file`: the game's keys file (the archive, scenes and signing keys; `KAGEX_KEYS_FILE` overrides it) |
 | `signing` | `enabled` (sign with the keys file's signing key, and check for tampering before the game starts) |
 | `archive` | `encrypt` (pack `data.xp3` encrypted with the keys file's archive key; the engine needs the xp3crypt plugin), `hideNames` (store the files in `data.xp3` and the media archives under hashed names; desktop only) |
-| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore, the speech engines' query (`ttsQuery`) and the manifest's additions (`manifestAdditions`, `applicationAdditions`); iOS target (`device`/`simulator`), bundle ID, build number, certificate, provisioning profile |
+| `platforms` | for each platform `enabled` and `data` (`xp3` or `folder`; Windows also `bind`, the web `files` or `xp3`), and its own settings: the web's site address (`url`), `description` and `preview` image; macOS bundle ID, signing (`adhoc` or `developer-id`), notarization, zip or dmg; Android format (`apk`/`aab`), application ID, version code, keystore, the speech engines' query (`ttsQuery`) and the manifest's additions (`manifestAdditions`, `applicationAdditions`); iOS target (`device`/`simulator`), bundle ID, build number, the photo library's reason (`photosUsage`), certificate, provisioning profile |
 
 Missing members take their defaults, which come from the game: `sf.software_title`,
 `sf.software_version` and `sf.software_maker` in its `first.ks`, and `krkrz.cf`. Passwords

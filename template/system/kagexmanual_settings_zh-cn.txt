@@ -1,0 +1,16 @@
+﻿# 设置
+这些链接会立即更改设置；方框被填满的就是当前使用的设置。设置画面中有全部设置。
+## 文字
+- 文字速度：[慢](option:textSpeed=3) [中](option:textSpeed=6) [快](option:textSpeed=9) [最快](option:textSpeed=10)
+- 快进的范围：[仅已读文字](option:allSkip=false) [所有文字](option:allSkip=true)
+- 标记已读文字：[是](option:readMark=true) [否](option:readMark=false)
+## 声音
+- BGM：[关闭](option:bgmVolume=0) [较小](option:bgmVolume=40) [较大](option:bgmVolume=80) [最大](option:bgmVolume=100)
+- 语音：[关闭](option:voiceVolume=0) [较小](option:voiceVolume=40) [较大](option:voiceVolume=80) [最大](option:voiceVolume=100)
+- 有人说话时点击：[停止语音](option:voiceCut=stop) [淡出语音](option:voiceCut=fade) [让语音播完](option:voiceCut=keep)
+## 画面
+- [窗口](option:fullScreen=false) [全屏](option:fullScreen=true)
+- 画面之间的转场：[正常播放](option:noEffect=false) [跳过](option:noEffect=true)
+- [减少动态效果](option:reduceMotion=true)，或[保留所有动态效果](option:reduceMotion=false)
+## 更多
+[打开设置](action:config)可以查看所有设置，在[操作方式](action:controls)中可以更改按键。

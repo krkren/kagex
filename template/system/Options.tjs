@@ -243,6 +243,9 @@ KAGDefineOption(%[ name:"quickSaves", label:"Quick Saves", kind:"note", rows:2,
 KAGDefineOption(%[ name:"askAgain", label:"Prompts You Turned Off", kind:"button", button:"Ask Again",
 	action:function { sf.yesnoSkip = void; },
 	enabled:function { if (typeof sf.yesnoSkip != "Object" || sf.yesnoSkip === void) return false; var a = []; a.assign(sf.yesnoSkip); return a.count > 0; } ]);
+// after a save on the save screen, a prompt for a comment on it (KAGAskSaveComment, since 0.28.1)
+KAGDefineOption(%[ name:"saveComments", label:"A Comment for Each Save", kind:"toggle", save:true, initial:false,
+	values:[ ["Ask", true], ["Off", false] ] ]);
 KAGDefineOption(%[ name:"hideCursorIdle", label:"Hide the Pointer When Still", kind:"toggle", prop:"hideCursorIdle", apply:"startIdleCursor", initial:false,
 	values:[ ["On", true], ["Off", false] ] ]);
 KAGDefineOption(%[ name:"readSpeed", label:"Read Text Speed", kind:"slider", initial:0,
@@ -669,8 +672,21 @@ var KAGOptionHelpTexts = %[
 	"quickMenuPanels" => "How a quick menu button's panel opens",
 	"soundOn" => "All sound on, or muted",
 	"tooltips" => "Tips like this one beside what the pointer rests on",
-	"heroName" => "Your name in the story"
+	"heroName" => "Your name in the story",
+	"saveComments" => "After a save, type a note to see beside it"
 ];
+
+// A comment for bookmark num, typed in a prompt of several lines (KAGAskText), when the player
+// asked for one (the saveComments option) or always (force); then onDone(num), saved or not
+function KAGAskSaveComment(num, onDone, force = false)
+{
+	if ((!force && !KAGOptionGet("saveComments")) || !kag.isExistentBookMark(num) ||
+		!KAGAskText("A comment for this save", kag.getBookMarkComment(num), function(text, p) {
+			kag.setBookMarkComment(p.num, text) if text !== void;
+			p.onDone(p.num) if p.onDone !== void;
+		}, %[ lines:3, maxLines:3, maxChars:120, param:%[ num:num, onDone:onDone ] ]))
+		onDone(num) if onDone !== void;
+}
 
 function KAGOptionHelp(o)
 {
