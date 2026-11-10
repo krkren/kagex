@@ -1,0 +1,46 @@
+5-ok   defaults from first.ks: KAGEX Sample / 0.28.1 / kagex-sample
+6-ok   the sample's save-folder names aren't taken over: krkren/kagex-sample
+7-ok   icon found: platform/icon-1024.png
+8:ok   init refuses to replace: error: C:/Users/runneradmin/AppData/Local/Temp/tmp1m7kd238/My Game/release.json is already there (--force replaces it)
+9-ok   check: the defaults have no errors
+10-ok   check: the host platform is listed: windows
+11-ok   check: reports a bad version and reserved names: identity.version, identity.appName
+12-ok   check: web file names with %, # or ? are listed: 1 file name has %, # or ?, which the web engine can't fetch as a loose file (image/window@base%base.png): choose "xp3" data for the web, or rename them along with the scripts that name them
+13-ok   check: Android manifest additions left open, or with an <application> of their own: {'platforms.android.manifestAdditions': ["<uses-permission> isn't closed"], 'platforms.android.applicationAdditions': ["Only what goes inside <application>: the tool adds it to the engine's own <application>"]}
+14-ok   check: well-formed Android manifest additions pass: {}
+15-ok   check: an older framework refuses Opus and TLG: media.audio.convert, media.images.alpha
+16-ok   plan: the chosen platforms: windows, linux, web, android, ios
+17-ok   plan: exclusions (*.bak by default; work/ and *.psd aren't): 1271 files, 1 excluded, 1 .psd
+18-ok   plan: images and sounds to convert: 929 images, 0 sounds
+19-ok   plan: framework copied in: template/system, copied in as data/system
+20-ok   an unknown platform is refused: unknown platform: nowhere
+21-ok   keys: keygen writes the archive, scenes and signing keys: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmp1m7kd238\keys\game-keys.txt.
+22-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+23-ok   keys: each kind of protection has a key of its own
+24:ok   keys: keygen won't replace keys: error: C:/Users/RUNNER~1/AppData/Local/Temp/tmp1m7kd238/keys/game-keys.txt already has every key (archive, scenes and signing); --force replaces them all, which a released game's patches can't follow
+25-ok   keys: keygen adds the key a file lacks and keeps the rest: Wrote the scenes key to C:\Users\RUNNER~1\AppData\Local\Temp\tmp1m7kd238\keys\game-keys.txt.
+26-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+27-ok   keys: keygen --force makes every key new: Wrote the archive, scenes and signing keys to C:\Users\RUNNER~1\AppData\Local\Temp\tmp1m7kd238\keys\game-keys.txt.
+28-Keep it secret, outside the game's folder and out of its repository, and back it up: patches and later builds need these keys. Name it in release.json's keys.file (or KAGEX_KEYS_FILE).
+29:ok   keys: signing without a keys file is an error: {"keys.file": ["Encrypting and signing take the game's keys file: choose it in Keys (keys.file), or make one with Create keys\u00e2\u20ac\u00a6 (kagex-release --cli keygen <file>)"]}
+30-ok   keys: a keys file outside the game's folder passes: {}
+31-ok   keys: KAGEX_KEYS_FILE names the keys file: {}
+32:ok   keys: a keys file inside data/ is an error: {"keys.file": ["The keys file is inside data/, so it would be packed into the game: keep it outside the game's folder"]}
+33:ok   keys: a keys file without the key a setting needs is an error: {"keys.file": ["The keys file C:/Users/runneradmin/AppData/Local/Temp/tmp1m7kd238/My Game/../keys/no-signing.txt has no signing key: Create keys\u00e2\u20ac\u00a6 (or --cli keygen) adds the keys a file lacks and keeps the rest"]}
+34-ok   keys: the archive and scenes keys can't be the same: {"keys.file": ["The archive and scenes keys in C:/Users/runneradmin/AppData/Local/Temp/tmp1m7kd238/My Game/../keys/same.txt are the same: each kind of encryption needs a key of its own (delete one line, and Create keys\u00e2\u20ac\u00a6 makes a new one)"]}
+35:ok   keys: a misspelt key name is an error: {"keys.file": ["C:/Users/runneradmin/AppData/Local/Temp/tmp1m7kd238/My Game/../keys/bad.txt: line 1: no key is called \"archve\" (archive, scenes, or the signing key's PEM block)"]}
+36-ok   keys: a release.json from before the keys file is told: {"scenes.encrypt": ["The compiled scenarios aren't encrypted: a PSB viewer opens them"], "signing.privateKey": ["No longer used: every key is in the keys file (Keys, keys.file)"]}
+37-ok   icons from .ico and .exe (skipped: no Pillow to read the PNG)
+38:ok   signing: no keys file is an error: keys.file
+39-ok   signing: a signed desktop build can't use a data folder: platforms.windows.data
+40-ok   signing: web build warns it isn't signature-checked: warns=scenes.encrypt, platforms.web.url, signing.enabled
+41-ok   signing: a framework without SignatureCheck.tjs is refused: signing.enabled
+42-ok   own plugins: the plan lists them: kagex-sample | kagex-sample.cf | libSDL3.so.0 | plugin/ (with the game's own: libkrkrgame.so) | data.xp3 | bgimage.xp3, bgm.xp3, effect.xp3, evimage.xp3, fgimage.xp3, image.xp3, others.xp3, rule.xp3, scenario.xp3, sound.xp3, thum.xp3, video.xp3, voice.xp3 | kagex-sample.desktop, kagex-sample.png / application ID com.krkren.kagexsample, versionCode 2801 | assets/data.xp3 | the game's own plugins: arm64-v8a/libkrkrgame.so
+43-ok   own plugins: check warns about stray files, a folder that isn't an ABI, and plugins/ios: plugins/linux/notes.txt isn't a Linux (lib*.so) plugin: it stays out of the packages plugins/ios/ stays out of the packages: the iOS engine has its plugins linked in and opens none at run time, so a game's own plugins need an engine package built with them (engines/ next to data/) plugins/android/arm64-v8a/readme.txt isn't an Android plugin (lib*.so): it stays out of the APK plugins/android/mips stays out of the APK: a plugin goes in plugins/android/<ABI>/ (arm64-v8a, x86_64, armeabi-v7a or x86) plugins/android/notes.txt stays out of the APK: a plugin goes in plugins/android/<ABI>/ (arm64-v8a, x86_64, armeabi-v7a or x86)
+44-ok   own plugins: an Android plugin named as the engine is refused: ["plugins/android/arm64-v8a/libkrkrz.so has the name of one of the engine's own libraries"]
+45-ok   own plugins: a Live2D model without the plugin is warned about, per platform: The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it
+46-ok   own plugins: a web game with Live2D models and no Web Core is warned about: The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it The game has Live2D models, but plugins/web/ has no live2dcubismcore.min.js: its web package won't draw its Live2D characters. Put the one from your Cubism SDK for Web there (Core/live2dcubismcore.min.js)
+47-ok   own plugins: the web's Core is listed, a stray file there is warned about: index.html, krkrz.js, krkrz.wasm, coi-serviceworker.js, manifest.webmanifest, icons | the game's own: live2dcubismcore.min.js | gamedata/ (each file loaded when the game needs it) | plugins/web/notes.txt isn't a web (live2dcubismcore.min.js, Live2D's Web Core) plugin: it stays out of the packages The game has Live2D models, but plugins/windows/ has no krkrlive2d.dll: its windows package won't draw its Live2D characters. tools/live2d/setup.py builds it
+48-ok   the page is served
+49-ok   the client library is embedded
+50-ok   state: C:/Users/runneradmin/AppData/Local/Temp/tmp1m7kd238/My Game/release.json
